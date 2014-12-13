@@ -63,7 +63,7 @@ import com.google.common.collect.Lists;
  * @author Ben Manes (ben.manes@gmail.com)
  */
 @ThreadSafe
-final class EliminationStack<E> extends AbstractCollection<E> implements Serializable {
+public final class EliminationStack<E> extends AbstractCollection<E> implements Serializable {
 
   /*
    * A Treiber's stack is represented as a singly-linked list with an atomic top reference and uses

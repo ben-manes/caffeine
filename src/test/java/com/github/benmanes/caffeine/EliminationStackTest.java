@@ -27,7 +27,6 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -159,14 +158,12 @@ public final class EliminationStackTest {
     final LongAdder pushed = new LongAdder();
     final LongAdder popped = new LongAdder();
 
-    ConcurrentTestHarness.timeTasks(10, new Runnable() {
-      @Override public void run() {
-        stack.push(ThreadLocalRandom.current().nextInt());
-        pushed.increment();
+    ConcurrentTestHarness.timeTasks(10, () -> {
+      stack.push(ThreadLocalRandom.current().nextInt());
+      pushed.increment();
 
-        if (stack.pop() != null) {
-          popped.increment();
-        }
+      if (stack.pop() != null) {
+        popped.increment();
       }
     });
 
@@ -182,25 +179,21 @@ public final class EliminationStackTest {
     final AtomicBoolean done = new AtomicBoolean();
     final String value = "test";
     final int startIndex = 1;
-    new Thread() {
-      @Override public void run() {
-        started.set(true);
-        while (!done.get()) {
-          if (stack.scanAndTransferToWaiter(value, startIndex)) {
-            done.set(true);
-          }
+    new Thread(() -> {
+      started.set(true);
+      while (!done.get()) {
+        if (stack.scanAndTransferToWaiter(value, startIndex)) {
+          done.set(true);
         }
       }
-    }.start();
+    }).start();
     await().untilTrue(started);
 
     try {
       final AtomicReference<String> found = new AtomicReference<>();
-      await().until(new Callable<Boolean>() {
-        @Override public Boolean call() {
-          found.set(stack.awaitMatch(startIndex));
-          return (found.get() != null);
-        }
+      await().until(() -> {
+        found.set(stack.awaitMatch(startIndex));
+        return (found.get() != null);
       });
       assertThat(found.get(), is(equalTo(value)));
     } finally {
@@ -214,25 +207,21 @@ public final class EliminationStackTest {
     final AtomicBoolean done = new AtomicBoolean();
     final String value = "test";
     final int startIndex = 1;
-    new Thread() {
-      @Override public void run() {
-        started.set(true);
-        while (!done.get()) {
-          if (stack.awaitExchange(value, startIndex)) {
-            done.set(true);
-          }
+    new Thread(() -> {
+      started.set(true);
+      while (!done.get()) {
+        if (stack.awaitExchange(value, startIndex)) {
+          done.set(true);
         }
       }
-    }.start();
+    }).start();
     await().untilTrue(started);
 
     try {
       final AtomicReference<String> found = new AtomicReference<>();
-      await().until(new Callable<Boolean>() {
-        @Override public Boolean call() {
-          found.set(stack.awaitMatch(startIndex));
-          return (found.get() != null);
-        }
+      await().until(() -> {
+        found.set(stack.awaitMatch(startIndex));
+        return (found.get() != null);
       });
       assertThat(found.get(), is(equalTo(value)));
     } finally {
@@ -246,25 +235,21 @@ public final class EliminationStackTest {
     final AtomicBoolean done = new AtomicBoolean();
     final String value = "test";
     final int startIndex = 1;
-    new Thread() {
-      @Override public void run() {
-        started.set(true);
-        while (!done.get()) {
-          if (stack.awaitExchange(value, startIndex)) {
-            done.set(true);
-          }
+    new Thread(() -> {
+      started.set(true);
+      while (!done.get()) {
+        if (stack.awaitExchange(value, startIndex)) {
+          done.set(true);
         }
       }
-    }.start();
+    }).start();
     await().untilTrue(started);
 
     try {
       final AtomicReference<String> found = new AtomicReference<>();
-      await().until(new Callable<Boolean>() {
-        @Override public Boolean call() {
-          found.set(stack.scanAndMatch(startIndex));
-          return (found.get() != null);
-        }
+      await().until(() -> {
+        found.set(stack.scanAndMatch(startIndex));
+        return (found.get() != null);
       });
       assertThat(found.get(), is(equalTo(value)));
     } finally {
