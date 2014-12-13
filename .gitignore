@@ -1,5 +1,8 @@
+bin
+build
+test-output
+.DS_Store
+.classpath
+.settings
+.project
 .gradle
-build/
-
-# Ignore Gradle GUI config
-gradle-app.setting
