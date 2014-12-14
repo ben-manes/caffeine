@@ -1,0 +1,46 @@
+/* Java object layout: http://openjdk.java.net/projects/code-tools/jol */
+
+configurations {
+  objectLayout
+}
+
+dependencies {
+  objectLayout 'org.openjdk.jol:jol-cli:0.2'
+}
+
+task objectEstimates(type: JavaExec, description: 'Print the field layout within the object') {
+  it.main = 'org.openjdk.jol.MainObjectEstimates'
+}
+
+task objectExternals(type: JavaExec, description: 'Print the reachable objects') {
+  main = 'org.openjdk.jol.MainObjectExternals'
+}
+
+task objectFootprint(type: JavaExec, description: 'Print the object footprint estimated') {
+  main = 'org.openjdk.jol.MainObjectFootprint'
+}
+
+task objectInternals(type: JavaExec, description: 'Print the object layout estimated') {
+  main = 'org.openjdk.jol.MainObjectInternals'
+}
+
+task objectIdealPacking(type: JavaExec, group: 'Object Layout',
+    description: 'Print the ideal jar layout') {
+  it.dependsOn(jar)
+  it.classpath configurations.objectLayout
+  main = 'org.openjdk.jol.MainObjectIdealPacking'
+  args jar.archivePath
+}
+
+[objectEstimates, objectExternals, objectFootprint, objectInternals, objectInternals]*.each {
+  it.dependsOn(compileJava)
+  it.classpath configurations.objectLayout, sourceSets.main.runtimeClasspath
+  it.group 'Object Layout'
+  it.doFirst {
+    if (!project.hasProperty('className')) {
+      throw new GradleException("Usage: $it.name " + 
+        "-PclassName=com.github.benmanes.caffeine.[CLASS_NAME]")
+    }
+    it.args 'com.github.benmanes.caffeine.' + className
+  }
+}

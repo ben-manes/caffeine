@@ -2,6 +2,8 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'me.champeau.gradle.jmh'
 apply plugin: 'java'
 
+apply from: "${rootDir}/gradle/object_layout.gradle"
+
 group = 'com.github.ben-manes'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
