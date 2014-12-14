@@ -129,7 +129,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
   }
 
   /** The top of the stack. */
-  final AtomicReference<Node<E>> top;
+  final PaddedAtomicReference<Node<E>> top;
 
   /** The arena where slots can be used to perform an exchange */
   final PaddedAtomicReference<Object>[] arena;
@@ -586,7 +586,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
 
     @Override
     public boolean offer(E e) {
-      return add(e);
+      return stack.add(e);
     }
 
     @Override

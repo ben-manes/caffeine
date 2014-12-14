@@ -56,7 +56,13 @@ test {
 }
 
 jmh {
+  if (project.hasProperty('jmhIncludePattern')) {
+    include = project.jmhIncludePattern
+  }
+  jvmArgs = '-XX:+UseG1GC -XX:+AlwaysPreTouch'
   warmupIterations = 10
+  failOnError = true
   iterations = 10
+  forceGC = true
   fork = 2
 }
