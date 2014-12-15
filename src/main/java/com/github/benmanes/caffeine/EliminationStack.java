@@ -61,7 +61,9 @@ import com.google.common.collect.Lists;
  * current number of elements requires a traversal of the elements, and so may report inaccurate
  * results if this collection is modified during traversal.
  *
- * @author Ben Manes (ben.manes@gmail.com)
+ * @author ben.manes@gmail.com (Ben Manes)
+ * @see https://github.com/ben-manes/caffeine
+ * @param <E> the type of elements held in this collection
  */
 @ThreadSafe
 public final class EliminationStack<E> extends AbstractCollection<E> implements Serializable {

@@ -15,9 +15,15 @@
  */
 package com.github.benmanes.caffeine;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Queue;
+
+import javax.annotation.Nullable;
 
 import sun.misc.Contended;
 
@@ -56,6 +62,8 @@ import sun.misc.Contended;
  * results if this collection is modified during traversal.
  *
  * @author ben.manes@gmail.com (Ben Manes)
+ * @see https://github.com/ben-manes/caffeine
+ * @param <E> the type of elements held in this collection
  */
 public final class SingleConsumerQueue<E> implements Queue<E> {
 
@@ -94,21 +102,103 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
       UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "tail");
 
   private volatile Node<E> head;
-
   private volatile Node<E> tail;
 
   public SingleConsumerQueue() {
-    head = new Node<E>(null);
-    tail = head;
+    // Uses relaxed writes because these fields can only be seen after publication
+    Node<E> node = new Node<E>(null);
+    lazySetHead(node);
+    lazySetTail(node);
+  }
+
+  private void lazySetHead(Node<E> next) {
+    UnsafeAccess.UNSAFE.putOrderedObject(this, HEAD_OFFSET, next);
+  }
+
+  private boolean casHead(Node<E> expect, Node<E> update) {
+    return UnsafeAccess.UNSAFE.compareAndSwapObject(this, HEAD_OFFSET, expect, update);
+  }
+
+  private void lazySetTail(Node<E> next) {
+    UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return (head == tail);
+  }
+
+  @Override
+  public int size() {
+    Node<E> t = tail;
+
+    // Uses relaxed reads as `next` is lazily set and accessing the tail issued a load barrier
+    Node<E> cursor = t.getNextRelaxed();
+    int size = 0;
+    while (cursor != null) {
+      cursor = cursor.getNextRelaxed();
+      size++;
+    }
+    return size;
+  }
+
+  @Override
+  public void clear() {
+    head = tail;
+  }
+
+  @Override
+  public boolean contains(Object o) {
+    Objects.requireNonNull(o);
+
+    Node<E> cursor = tail.getNextRelaxed();
+    while (cursor != null) {
+      if (o.equals(cursor.value)) {
+        return true;
+      }
+      cursor = cursor.next;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean containsAll(Collection<?> c) {
+    Objects.requireNonNull(c);
+    for (Object e : c) {
+      if (!contains(e)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public E peek() {
+    Node<E> next = tail.getNextRelaxed();
+    return (next == null) ? null : next.value;
+  }
+
+  @Override
+  public E element() {
+    E e = peek();
+    if (e == null) {
+      throw new NoSuchElementException();
+    }
+    return e;
   }
 
   @Override
   public boolean offer(E e) {
-    Node<E> node = new Node<E>(e);
+    Objects.requireNonNull(e);
+    return offer(new Node<E>(e));
+  }
+
+  /** Inserts the node, which may result in a batch insertion if the node has a link chain. */
+  private boolean offer(Node<E> node) {
     for (;;) {
       Node<E> h = head;
-      if (UnsafeAccess.UNSAFE.compareAndSwapObject(this, HEAD_OFFSET, h, node)) {
-        node.lazySetNext(node);
+      if (casHead(h, node)) {
+        h.lazySetNext(node);
         return true;
       }
 
@@ -118,91 +208,15 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
 
   @Override
   public E poll() {
-    Node<E> next = tail.next;
+    Node<E> next = tail.getNextRelaxed();
     if (next == null) {
       return null;
     }
-    UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
+    lazySetTail(next);
     E e = next.value;
     next.value = null;
     return e;
   }
-
-  @Contended
-  static final class Node<E> {
-    private final static long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
-
-    private Node<E> next;
-    private E value;
-
-    Node(E value) {
-      this.value = value;
-    }
-
-    void lazySetNext(Node<E> newNext) {
-      UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, newNext);
-    }
-  }
-
-  // TODO(ben)
-
-  @Override
-  public int size() {
-    return 0;
-  }
-
-  @Override
-  public boolean isEmpty() {
-    return false;
-  }
-
-  @Override
-  public boolean contains(Object o) {
-    return false;
-  }
-
-  @Override
-  public Iterator<E> iterator() {
-    return null;
-  }
-
-  @Override
-  public Object[] toArray() {
-    return null;
-  }
-
-  @Override
-  public <T> T[] toArray(T[] a) {
-    return null;
-  }
-
-  @Override
-  public boolean remove(Object o) {
-    return false;
-  }
-
-  @Override
-  public boolean containsAll(Collection<?> c) {
-    return false;
-  }
-
-  @Override
-  public boolean addAll(Collection<? extends E> c) {
-    return false;
-  }
-
-  @Override
-  public boolean removeAll(Collection<?> c) {
-    return false;
-  }
-
-  @Override
-  public boolean retainAll(Collection<?> c) {
-    return false;
-  }
-
-  @Override
-  public void clear() {}
 
   @Override
   public boolean add(E e) {
@@ -210,17 +224,154 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
   }
 
   @Override
+  public boolean addAll(Collection<? extends E> c) {
+    Objects.requireNonNull(c);
+
+    Node<E> node = null;
+    for (E e : c) {
+      node = new Node<E>(e, node);
+    }
+    if (node == null) {
+      return false;
+    }
+    return offer(node);
+  }
+
+  @Override
   public E remove() {
-    return null;
+    E e = poll();
+    if (e == null) {
+      throw new NoSuchElementException();
+    }
+    return e;
   }
 
   @Override
-  public E element() {
-    return null;
+  public boolean remove(Object o) {
+    Objects.requireNonNull(o);
+
+    Node<E> prev = tail;
+    Node<E> cursor = prev.getNextRelaxed();
+    while (cursor != null) {
+      if (o.equals(cursor.value)) {
+        prev.lazySetNext(cursor.next);
+        return true;
+      }
+      prev = cursor;
+      cursor = prev.getNextRelaxed();
+    }
+    return false;
   }
 
   @Override
-  public E peek() {
-    return null;
+  public boolean removeAll(Collection<?> c) {
+    return removeIfPresent(c, false);
+  }
+
+  @Override
+  public boolean retainAll(Collection<?> c) {
+    return removeIfPresent(c, true);
+  }
+
+  /**
+   * Removes elements based on whether they are also present in the provided collection.
+   *
+   * @param c collection containing elements to keep or discard
+   * @param retain whether to retain or remove elements present in both collections
+   */
+  boolean removeIfPresent(Collection<?> c, boolean retain) {
+    Objects.requireNonNull(c);
+
+    Node<E> prev = tail;
+    Node<E> cursor = prev.getNextRelaxed();
+    boolean modified = false;
+    while (cursor != null) {
+      boolean present = c.contains(cursor.value);
+      if (present == retain) {
+        prev.lazySetNext(cursor.next);
+        modified = true;
+      }
+      prev = cursor;
+      cursor = prev.getNextRelaxed();
+    }
+    return modified;
+  }
+
+  @Override
+  public Iterator<E> iterator() {
+    return new Iterator<E>() {
+      Node<E> cursor = tail;
+      Node<E> prev = null;
+      Node<E> next = cursor.getNextRelaxed();
+
+      @Override public boolean hasNext() {
+        return (next != null);
+      }
+
+      @Override public E next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        E e = cursor.value;
+        prev = cursor;
+        cursor = next;
+        next = cursor.getNextRelaxed();
+        return e;
+      }
+
+      @Override public void remove() {
+        if (prev == null) {
+          throw new IllegalStateException();
+        }
+        prev.lazySetNext(next);
+        prev = null;
+        cursor = next;
+        next = cursor.getNextRelaxed();
+      }
+    };
+  }
+
+  @Override
+  public Object[] toArray() {
+    List<E> list = new ArrayList<E>();
+    for (E e : this) {
+      list.add(e);
+    }
+    return list.toArray();
+  }
+
+  @Override
+  public <T> T[] toArray(T[] a) {
+    List<E> list = new ArrayList<E>();
+    for (E e : this) {
+      list.add(e);
+    }
+    return list.toArray(a);
+  }
+
+  @Contended
+  static final class Node<E> {
+    final static long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
+
+    Node<E> next;
+    E value;
+
+    Node(@Nullable E value, @Nullable Node<E> next) {
+      this(value);
+      this.next = next;
+    }
+
+    Node(@Nullable E value) {
+      this.value = value;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable Node<E> getNextRelaxed() {
+      return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, NEXT_OFFSET);
+    }
+
+    void lazySetNext(@Nullable Node<E> newNext) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, newNext);
+    }
   }
 }

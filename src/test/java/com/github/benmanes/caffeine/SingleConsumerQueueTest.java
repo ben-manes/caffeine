@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -23,6 +24,8 @@ import java.util.Queue;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+
+import com.github.benmanes.caffeine.matchers.IsEmptyCollection;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -35,13 +38,13 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "empty")
   public void offer_whenEmpty(Queue<Integer> queue) {
     assertThat(queue.offer(1), is(true));
-    //assertThat(queue, hasSize(1));
+    assertThat(queue, hasSize(1));
   }
 
   @Test(dataProvider = "populated")
   public void offer_whenPopulated(Queue<Integer> queue) {
     assertThat(queue.offer(1), is(true));
-    //assertThat(queue, hasSize(POPULATED_SIZE));
+    assertThat(queue, hasSize(POPULATED_SIZE + 1));
   }
 
   /* ---------------- Poll -------------- */
@@ -55,7 +58,7 @@ public class SingleConsumerQueueTest {
   public void poll_whenPopulated(Queue<Integer> queue) {
     Integer first = queue.peek();
     assertThat(queue.poll(), is(first));
-    //assertThat(queue, hasSize(POPULATED_SIZE));
+    assertThat(queue, hasSize(POPULATED_SIZE));
     assertThat(queue.contains(first), is(false));
   }
 
@@ -65,7 +68,7 @@ public class SingleConsumerQueueTest {
     while ((value = queue.poll()) != null) {
       assertThat(queue.contains(value), is(false));
     }
-    // assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(IsEmptyCollection.emptyCollection()));
   }
 
   /* ---------------- Queue providers -------------- */
