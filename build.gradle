@@ -38,9 +38,13 @@ dependencies {
   testCompile 'org.assertj:assertj-core:1.7.0'
   testCompile 'org.assertj:assertj-guava:1.3.0'
   testCompile 'com.jayway.awaitility:awaitility:1.6.3'
-  testCompile "com.google.guava:guava-testlib:${guava}"
-  testCompile 'org.testng:testng:6.8.8'
-
+  testCompile dependencies.create('org.testng:testng:6.8.8') {
+    exclude group: 'junit'
+  }
+  testCompile dependencies.create("com.google.guava:guava-testlib:${guava}") {
+    exclude group: 'junit'
+  }
+  
   // benchmarking
   jmh 'com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:1.4'
   jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.3.4'

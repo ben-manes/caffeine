@@ -15,7 +15,11 @@
  */
 package com.github.benmanes.caffeine;
 
-import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Queue;
+
+import sun.misc.Contended;
 
 /**
  * A lock-free unbounded queue based on linked nodes that supports concurrent producers and is
@@ -53,7 +57,7 @@ import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class SingleConsumerQueue<E> /* implements Queue<E> */ {
+public final class SingleConsumerQueue<E> implements Queue<E> {
 
   /*
    * The queue is represented as a singly-linked list with an atomic head and tail reference. It is
@@ -83,45 +87,140 @@ public final class SingleConsumerQueue<E> /* implements Queue<E> */ {
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.59.7396
    */
 
-  private final PaddedAtomicReference<Node<E>> head;
+  private final static long HEAD_OFFSET =
+      UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "head");
+
+  private final static long TAIL_OFFSET =
+      UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "tail");
+
+  private volatile Node<E> head;
+
   private volatile Node<E> tail;
 
   public SingleConsumerQueue() {
-    head = new PaddedAtomicReference<>();
-    tail = new Node<E>(null);
+    head = new Node<E>(null);
+    tail = head;
   }
 
-  public void offer(E e) {
+  @Override
+  public boolean offer(E e) {
     Node<E> node = new Node<E>(e);
-    head.getAndSet(node).lazySet(node);
-  }
-
-  public E poll() {
     for (;;) {
-      Node<E> next = tail.next;
-      if (next != null) {
-        tail = next;
-        E e = next.value;
-        next = null;
-        return e;
+      Node<E> h = head;
+      if (UnsafeAccess.UNSAFE.compareAndSwapObject(this, HEAD_OFFSET, h, node)) {
+        node.lazySetNext(node);
+        return true;
       }
+
+      // TODO(ben): Add combining handoff
     }
   }
 
+  @Override
+  public E poll() {
+    Node<E> next = tail.next;
+    if (next == null) {
+      return null;
+    }
+    UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
+    E e = next.value;
+    next.value = null;
+    return e;
+  }
+
+  @Contended
   static final class Node<E> {
+    private final static long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
+
     private Node<E> next;
-    private final E value;
+    private E value;
 
     Node(E value) {
-      // TODO(ben):
-      // Uses relaxed write because item can only be seen after publication
-      // UnsafeAccess.UNSAFE.putObject(this, ...);
       this.value = value;
     }
 
-    void lazySet(Node<E> node) {
-      // TODO(ben): lazy set
-      next = node;
+    void lazySetNext(Node<E> newNext) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, newNext);
     }
+  }
+
+  // TODO(ben)
+
+  @Override
+  public int size() {
+    return 0;
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return false;
+  }
+
+  @Override
+  public boolean contains(Object o) {
+    return false;
+  }
+
+  @Override
+  public Iterator<E> iterator() {
+    return null;
+  }
+
+  @Override
+  public Object[] toArray() {
+    return null;
+  }
+
+  @Override
+  public <T> T[] toArray(T[] a) {
+    return null;
+  }
+
+  @Override
+  public boolean remove(Object o) {
+    return false;
+  }
+
+  @Override
+  public boolean containsAll(Collection<?> c) {
+    return false;
+  }
+
+  @Override
+  public boolean addAll(Collection<? extends E> c) {
+    return false;
+  }
+
+  @Override
+  public boolean removeAll(Collection<?> c) {
+    return false;
+  }
+
+  @Override
+  public boolean retainAll(Collection<?> c) {
+    return false;
+  }
+
+  @Override
+  public void clear() {}
+
+  @Override
+  public boolean add(E e) {
+    return offer(e);
+  }
+
+  @Override
+  public E remove() {
+    return null;
+  }
+
+  @Override
+  public E element() {
+    return null;
+  }
+
+  @Override
+  public E peek() {
+    return null;
   }
 }
