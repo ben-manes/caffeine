@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ForwardingIterator;
 import com.google.common.collect.Lists;
@@ -553,24 +554,6 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
     Node<E> next;
 
     Node(E value) {
-      super(value);
-    }
-  }
-
-  /**
-   * An AtomicReference with heuristic padding to lessen cache effects of this heavily CAS'ed
-   * location. While the padding adds noticeable space, the improved throughput outweighs
-   * using extra space.
-   */
-  static class PaddedAtomicReference<T> extends AtomicReference<T> {
-    private static final long serialVersionUID = 1L;
-
-    // Improve likelihood of isolation on <= 64 byte cache lines
-    long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
-
-    PaddedAtomicReference() {}
-
-    PaddedAtomicReference(T value) {
       super(value);
     }
   }
