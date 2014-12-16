@@ -25,8 +25,6 @@ import java.util.Queue;
 
 import javax.annotation.Nullable;
 
-import sun.misc.Contended;
-
 /**
  * A lock-free unbounded queue based on linked nodes that supports concurrent producers and is
  * restricted to a single consumer. This queue orders elements FIFO (first-in-first-out). The
@@ -102,6 +100,10 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
       UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "tail");
 
   volatile Node<E> head;
+
+  // Improve likelihood of isolation on <= 64 byte cache lines (volatile to avoid reordering)
+  volatile long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
+
   volatile Node<E> tail;
 
   public SingleConsumerQueue() {
@@ -117,6 +119,11 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
 
   boolean casHead(Node<E> expect, Node<E> update) {
     return UnsafeAccess.UNSAFE.compareAndSwapObject(this, HEAD_OFFSET, expect, update);
+  }
+
+  @SuppressWarnings("unchecked")
+  Node<E> getTailRelaxed() {
+    return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, TAIL_OFFSET);
   }
 
   void lazySetTail(Node<E> next) {
@@ -144,7 +151,7 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
 
   @Override
   public void clear() {
-    tail = head;
+    lazySetTail(head);
   }
 
   @Override
@@ -252,15 +259,20 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
   public boolean remove(Object o) {
     Objects.requireNonNull(o);
 
+    Node<E> h = head;
     Node<E> prev = tail;
     Node<E> cursor = prev.getNextRelaxed();
     while (cursor != null) {
+      Node<E> next = cursor.getNextRelaxed();
       if (o.equals(cursor.value)) {
-        prev.lazySetNext(cursor.next);
+        if ((h == cursor) && !casHead(h, prev) && (next == null)) {
+          next = h.next;
+        }
+        prev.lazySetNext(next);
         return true;
       }
       prev = cursor;
-      cursor = prev.getNextRelaxed();
+      cursor = next;
     }
     return false;
   }
@@ -289,7 +301,7 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
     boolean modified = false;
     while (cursor != null) {
       boolean present = c.contains(cursor.value);
-      if (present == retain) {
+      if (present != retain) {
         prev.lazySetNext(cursor.next);
         modified = true;
       }
@@ -302,33 +314,44 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
   @Override
   public Iterator<E> iterator() {
     return new Iterator<E>() {
-      Node<E> cursor = tail.getNextRelaxed();
+      Node<E> h = head;
       Node<E> prev = null;
-      Node<E> next = (cursor == null) ? null : cursor.getNextRelaxed();
+      Node<E> cursor = getTailRelaxed();
+      boolean failOnRemoval = true;
 
-      @Override public boolean hasNext() {
-        return (cursor != null);
+      @Override
+      public boolean hasNext() {
+        return (cursor != h);
       }
 
-      @Override public E next() {
+      @Override
+      public E next() {
         if (!hasNext()) {
           throw new NoSuchElementException();
         }
-        E e = cursor.value;
-        prev = cursor;
-        cursor = next;
-        next = (cursor == null) ? null : cursor.getNextRelaxed();
-        return e;
+        advance();
+        failOnRemoval = false;
+        return cursor.value;
       }
 
-      @Override public void remove() {
-        if (prev == null) {
+      private void advance() {
+        if ((prev == null) || !failOnRemoval) {
+          prev = cursor;
+        }
+        cursor = cursor.getNextRelaxed();
+      }
+
+      @Override
+      public void remove() {
+        if (failOnRemoval) {
           throw new IllegalStateException();
         }
-        prev.lazySetNext(next);
-        prev = null;
-        cursor = next;
-        next = cursor.getNextRelaxed();
+        if ((h == cursor) && !casHead(h, prev) && (cursor.getNextRelaxed() == null)) {
+          prev.lazySetNext(h.next);
+        } else {
+          prev.lazySetNext(cursor.getNextRelaxed());
+        }
+        failOnRemoval = true;
       }
     };
   }
@@ -370,11 +393,10 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
     }
   }
 
-  @Contended
   static final class Node<E> {
     final static long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
 
-    Node<E> next;
+    volatile Node<E> next;
     E value;
 
     Node(@Nullable E value, @Nullable Node<E> next) {
@@ -393,6 +415,11 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
 
     void lazySetNext(@Nullable Node<E> newNext) {
       UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, newNext);
+    }
+
+    @Override
+    public String toString() {
+      return "Node[" + value + "]";
     }
   }
 }

@@ -23,6 +23,10 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
@@ -36,7 +40,7 @@ import com.google.common.collect.Iterables;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class SingleConsumerQueueTest {
-  private static final int POPULATED_SIZE = 100;
+  private static final int POPULATED_SIZE = 5;
 
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(Queue<?> queue) {
@@ -155,11 +159,11 @@ public class SingleConsumerQueueTest {
     assertThat(queue.poll(), is(nullValue()));
   }
 
-  @Test(enabled = false, dataProvider = "populated")
+  @Test(dataProvider = "populated")
   public void poll_whenPopulated(Queue<Integer> queue) {
     Integer first = queue.peek();
     assertThat(queue.poll(), is(first));
-    assertThat(queue, hasSize(POPULATED_SIZE));
+    assertThat(queue, hasSize(POPULATED_SIZE - 1));
     assertThat(queue.contains(first), is(false));
   }
 
@@ -209,7 +213,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.contains(first), is(false));
   }
 
-  @Test(enabled = false, dataProvider = "populated")
+  @Test(dataProvider = "populated")
   public void removeElement_toEmpty(Queue<Integer> queue) {
     while (!queue.isEmpty()) {
       Integer value = queue.peek();
@@ -225,8 +229,8 @@ public class SingleConsumerQueueTest {
     assertThat(queue, is(emptyCollection()));
   }
 
-  @Test(enabled = false, dataProvider = "populated")
-  public void remove_withPopulated(Queue<Integer> queue) {
+  @Test(dataProvider = "populated")
+  public void removeAll_withPopulated(Queue<Integer> queue) {
     Integer first = queue.peek();
     assertThat(queue.removeAll(ImmutableList.of(first)), is(true));
     assertThat(queue, hasSize(POPULATED_SIZE - 1));
@@ -236,6 +240,28 @@ public class SingleConsumerQueueTest {
   @Test(enabled = false, dataProvider = "populated")
   public void removeAll_toEmpty(Queue<Integer> queue) {
     assertThat(queue.removeAll(ImmutableList.copyOf(queue)), is(true));
+    assertThat(queue, is(emptyCollection()));
+  }
+
+  /* ---------------- Retain -------------- */
+
+  @Test(dataProvider = "empty")
+  public void retainAll_withEmpty(Queue<Integer> queue) {
+    assertThat(queue.retainAll(ImmutableList.of()), is(false));
+    assertThat(queue, is(emptyCollection()));
+  }
+
+  @Test(enabled = false, dataProvider = "populated")
+  public void retainAll_withPopulated(Queue<Integer> queue) {
+    Integer first = queue.peek();
+    assertThat(queue.retainAll(ImmutableList.of(first)), is(true));
+    assertThat(queue, hasSize(1));
+    assertThat(queue.contains(first), is(true));
+  }
+
+  @Test(enabled = false, dataProvider = "populated")
+  public void retainAll_toEmpty(Queue<Integer> queue) {
+    assertThat(queue.retainAll(ImmutableList.of()), is(true));
     assertThat(queue, is(emptyCollection()));
   }
 
@@ -252,14 +278,44 @@ public class SingleConsumerQueueTest {
   }
 
   @Test(dataProvider = "populated")
-  public void iterator_whenWarmed(Queue<Integer> queue) {
-    assertThat(elementsEqual(queue.iterator(), makePopulated().iterator()), is(true));
+  public void iterator_whenPopulated(Queue<Integer> queue) {
+    List<Integer> copy = new ArrayList<>();
+    populate(copy);
+    assertThat(elementsEqual(queue.iterator(), copy.iterator()), is(true));
   }
 
-  @Test(enabled = false, dataProvider = "populated", expectedExceptions = UnsupportedOperationException.class)
-  public void iterator_removal(Queue<Integer> queue) {
+  @Test(dataProvider = "populated", expectedExceptions = IllegalStateException.class)
+  public void iterator_removal_unread(Queue<Integer> queue) {
     queue.iterator().remove();
   }
+
+  @Test(dataProvider = "populated", expectedExceptions = IllegalStateException.class)
+  public void iterator_removal_duplicate(Queue<Integer> queue) {
+    Iterator<Integer> it = queue.iterator();
+    it.next();
+    it.remove();
+    it.remove();
+  }
+
+  @Test(dataProvider = "populated")
+  public void iterator_removal(Queue<Integer> queue) {
+    Iterator<Integer> it = queue.iterator();
+    it.next();
+    it.remove();
+  }
+
+  @Test(dataProvider = "populated")
+  public void iterator_removal_toEmpty(Queue<Integer> queue) {
+    for (Iterator<Integer> it = queue.iterator(); it.hasNext();) {
+      it.next();
+      it.remove();
+    }
+    assertThat(queue, is(emptyCollection()));
+  }
+
+  /* ---------------- toArray -------------- */
+
+  /* ---------------- toString -------------- */
 
   /* ---------------- Queue providers -------------- */
 
@@ -280,9 +336,13 @@ public class SingleConsumerQueueTest {
 
   static SingleConsumerQueue<Integer> makePopulated() {
     SingleConsumerQueue<Integer> queue = new SingleConsumerQueue<>();
-    for (int i = 0; i < POPULATED_SIZE; i++) {
-      queue.add(i);
-    }
+    populate(queue);
     return queue;
+  }
+
+  static void populate(Collection<Integer> collection) {
+    for (int i = 0; i < POPULATED_SIZE; i++) {
+      collection.add(i);
+    }
   }
 }
