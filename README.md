@@ -11,11 +11,11 @@ This project is in early development and released under the
 
 ## Collections
 
-#### EliminationStack
+#### [EliminationStack](https://github.com/ben-manes/caffeine/blob/master/src/main/java/com/github/benmanes/caffeine/EliminationStack.java)
 A lock-free stack that employs an elimination backoff arena to cancel operations with reverse
 semantics.
 
-#### SingleConsumerQueue
+#### [SingleConsumerQueue](https://github.com/ben-manes/caffeine/blob/master/src/main/java/com/github/benmanes/caffeine/SingleConsumerQueue.java)
 A lock-free queue that supports concurrent producers and is restricted to a single consumer. This
 implementation employs a combining backoff arena, the inverse of elimination, to reduce contention
 caused by multiple producers.
