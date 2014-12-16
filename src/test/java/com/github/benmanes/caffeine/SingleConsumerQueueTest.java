@@ -20,6 +20,7 @@ import static com.google.common.collect.Iterators.elementsEqual;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.emptyArray;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
@@ -73,12 +74,14 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "empty")
   public void size_whenEmpty(Queue<?> queue) {
     assertThat(queue.size(), is(0));
+    assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
   }
 
   @Test(dataProvider = "populated")
   public void size_whenPopulated(Queue<?> queue) {
     assertThat(queue.size(), is(POPULATED_SIZE));
     assertThat(Iterables.size(queue), is(POPULATED_SIZE));
+    assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
   }
 
   @Test(dataProvider = "empty")
@@ -148,6 +151,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.peek(), is(1));
     assertThat(Iterables.getLast(queue), is(1));
     assertThat(queue, hasSize(1));
+    assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
   }
 
   @Test(dataProvider = "populated")
@@ -156,6 +160,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.peek(), is(not(-1)));
     assertThat(Iterables.getLast(queue), is(-1));
     assertThat(queue, hasSize(POPULATED_SIZE + 1));
+    assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
   }
 
   @Test(dataProvider = "empty")
@@ -387,6 +392,7 @@ public class SingleConsumerQueueTest {
       }
     });
     assertThat(queue, hasSize(NUM_THREADS * POPULATED_SIZE));
+    assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
   }
 
   /* ---------------- Queue providers -------------- */

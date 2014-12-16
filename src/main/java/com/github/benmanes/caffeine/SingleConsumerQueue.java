@@ -37,21 +37,21 @@ import javax.annotation.Nullable;
  * elements at the head of the queue. Like most other concurrent collection implementations, this
  * class does not permit the use of {@code null} elements.
  * <p>
- * A {@code SingleConsumerQueue} is an appropriate choice when many producers threads will share
+ * A {@code SingleConsumerQueue} is an appropriate choice when many producer threads will share
  * access to a common collection and a single consumer thread drains it. This collection is useful
- * in scenarios that leverage techniques such as flat combining, actors, or lock amortization.
+ * in scenarios such as implementing flat combining, actors, or lock amortization.
  * <p>
  * This implementation employs combination to transfer elements between threads that are producing
- * concurrently. This approach avoids contention on the queue by combining operations when the
- * colliding operations have identical semantics. When a pair of producers collide, the task of
- * performing the combined set of operations is delegated to one of the threads and the other
- * thread optionally waits for its operation to be performed. This decision of whether to be
- * <em>linearizable</em> or <em>optimistic</em> is determined when the queue is constructed.
+ * concurrently. This approach avoids contention on the queue by combining colliding operations
+ * that have identical semantics. When a pair of producers collide, the task of performing the
+ * combined set of operations is delegated to one of the threads and the other thread optionally
+ * waits for its operation to be performed. This decision of whether to wait for completion is
+ * determined by constructing either a <em>linearizable</em> or <em>optimistic</em> queue.
  * <p>
- * Iterators are <i>weakly consistent</i>, returning elements reflecting the state of the stack at
+ * Iterators are <i>weakly consistent</i>, returning elements reflecting the state of the queue at
  * some point at or since the creation of the iterator. They do <em>not</em> throw {@link
  * java.util.ConcurrentModificationException}, and may proceed concurrently with other operations.
- * Elements contained in the stack since the creation of the iterator will be returned exactly once.
+ * Elements contained in the queue since the creation of the iterator will be returned exactly once.
  * <p>
  * Beware that it is the responsibility of the caller to ensure that a consumer has exclusive
  * access to the queue. This implementation does <em>not</em> include fail-fast behavior to guard
@@ -70,12 +70,12 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   /*
    * The queue is represented as a singly-linked list with an atomic head and tail reference. It is
-   * and uses based on non-intrusive single-consumer / multi-producer node-based queue described by
+   * based on the non-intrusive single-consumer / multi-producer node queue described by
    * Dmitriy Vyukov [1].
    *
    * The backoff strategy of combining operations with identical semantics is based on inverting
    * the elimination technique [1]. Elimination allows pairs of operations with reverse semantics,
-   * like pushes and pops on a stack, to complete without any central coordination, and therefore
+   * like pushes and pops on a stack, to complete without any central coordination and therefore
    * substantially aids scalability. The approach of applying elimination and reversing its
    * semantics was explored in [3, 4].
    *
