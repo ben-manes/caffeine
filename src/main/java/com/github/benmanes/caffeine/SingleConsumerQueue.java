@@ -15,8 +15,12 @@
  */
 package com.github.benmanes.caffeine;
 
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -24,6 +28,8 @@ import java.util.Objects;
 import java.util.Queue;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * A lock-free unbounded queue based on linked nodes that supports concurrent producers and is
@@ -63,7 +69,7 @@ import javax.annotation.Nullable;
  * @see https://github.com/ben-manes/caffeine
  * @param <E> the type of elements held in this collection
  */
-public final class SingleConsumerQueue<E> implements Queue<E> {
+public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   /*
    * The queue is represented as a singly-linked list with an atomic head and tail reference. It is
@@ -105,6 +111,11 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
   volatile long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
 
   volatile Node<E> tail;
+
+  public SingleConsumerQueue(Collection<E> c) {
+    this();
+    addAll(c);
+  }
 
   public SingleConsumerQueue() {
     // Uses relaxed writes because these fields can only be seen after publication
@@ -236,14 +247,20 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
   public boolean addAll(Collection<? extends E> c) {
     Objects.requireNonNull(c);
 
-    Node<E> node = null;
-    for (E e : c) {
-      node = new Node<E>(e, node);
+    // FIXME(ben): Fix optimized form to follow this behavior
+    for (E e : ImmutableList.copyOf(c).reverse()) {
+      offer(e);
     }
-    if (node == null) {
-      return false;
-    }
-    return offer(node);
+    return !c.isEmpty();
+
+//    Node<E> node = null;
+//    for (E e : c) {
+//      node = new Node<E>(e, node);
+//    }
+//    if (node == null) {
+//      return false;
+//    }
+//    return offer(node);
   }
 
   @Override
@@ -394,6 +411,34 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
     }
     sb.append(']');
     return sb.toString();
+  }
+
+  /* ---------------- Serialization Support -------------- */
+
+  static final long serialVersionUID = 1;
+
+  Object writeReplace() {
+    return new SerializationProxy<E>(this);
+  }
+
+  private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+    throw new InvalidObjectException("Proxy required");
+  }
+
+  /** A proxy that is serialized instead of the queue. */
+  static final class SerializationProxy<E> implements Serializable {
+    final List<E> list;
+
+    SerializationProxy(SingleConsumerQueue<E> queue) {
+      this.list = new ArrayList<>(queue);
+    }
+
+    Object readResolve() {
+      Collections.reverse(list);
+      return new SingleConsumerQueue<E>(list);
+    }
+
+    static final long serialVersionUID = 1;
   }
 
   static final class Node<E> {

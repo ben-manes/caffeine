@@ -18,7 +18,10 @@ package com.github.benmanes.caffeine;
 import static com.github.benmanes.caffeine.matchers.IsEmptyCollection.emptyCollection;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.arrayContaining;
+import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -35,6 +38,7 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.testing.SerializableTester;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -200,7 +204,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, is(emptyCollection()));
   }
 
-  @Test(dataProvider = "empty,populated")
+  @Test(dataProvider = "empty,singleton,populated")
   public void removeElement_notFound(Queue<Integer> queue) {
     assertThat(queue.remove(-1), is(false));
   }
@@ -277,10 +281,10 @@ public class SingleConsumerQueueTest {
     assertThat(queue.iterator().hasNext(), is(false));
   }
 
-  @Test(dataProvider = "populated")
+  @Test(dataProvider = "singleton,populated")
   public void iterator_whenPopulated(Queue<Integer> queue) {
     List<Integer> copy = new ArrayList<>();
-    populate(copy);
+    populate(copy, queue.size());
     assertThat(elementsEqual(queue.iterator(), copy.iterator()), is(true));
   }
 
@@ -315,7 +319,37 @@ public class SingleConsumerQueueTest {
 
   /* ---------------- toArray -------------- */
 
+  @Test(dataProvider = "empty,singleton,populated")
+  public void toArray(Queue<Integer> queue) {
+    Object[] expect = new ArrayList<>(queue).toArray();
+    Object[] actual = queue.toArray();
+    assertThat(actual, queue.isEmpty() ? emptyArray() : arrayContaining(expect));
+  }
+
+  @Test(dataProvider = "empty,singleton,populated")
+  public void toTypedArray(Queue<Integer> queue) {
+    Integer[] expect = new ArrayList<>(queue).toArray(new Integer[] {});
+    Integer[] actual = queue.toArray(new Integer[] {});
+    assertThat(actual, queue.isEmpty() ? emptyArray() : arrayContaining(expect));
+  }
+
   /* ---------------- toString -------------- */
+
+  @Test(dataProvider = "empty,singleton,populated")
+  public void toString(Queue<Integer> queue) {
+    List<Integer> list = new ArrayList<>();
+    populate(list, queue.size());
+    assertThat(queue, hasToString(list.toString()));
+  }
+
+  /* ---------------- Serialization -------------- */
+
+  @Test(dataProvider = "empty,singleton,populated")
+  public void serializable(Queue<Integer> queue) {
+    Queue<Integer> clone = SerializableTester.reserialize(queue);
+    assertThat(String.format("\nExpected: %s%n     but: %s", queue, clone),
+        elementsEqual(queue.iterator(), clone.iterator()));
+  }
 
   /* ---------------- Queue providers -------------- */
 
@@ -326,22 +360,32 @@ public class SingleConsumerQueueTest {
 
   @DataProvider(name = "populated")
   public Object[][] providesPopulated() {
-    return new Object[][] {{ makePopulated() }};
+    return new Object[][] {{ makePopulated(POPULATED_SIZE) }};
   }
 
-  @DataProvider(name = "empty,populated")
-  public Object[][] providesEmptyAndPopulated() {
-    return new Object[][] { { new SingleConsumerQueue<Integer>() }, { makePopulated() }};
+  @DataProvider(name = "singleton,populated")
+  public Object[][] providesSingletonAndPopulated() {
+    return new Object[][] {
+        { makePopulated(1) },
+        { makePopulated(POPULATED_SIZE) }};
   }
 
-  static SingleConsumerQueue<Integer> makePopulated() {
+  @DataProvider(name = "empty,singleton,populated")
+  public Object[][] providesEmptyAndSingletonAndPopulated() {
+    return new Object[][] {
+        { new SingleConsumerQueue<Integer>() },
+        { makePopulated(1) },
+        { makePopulated(POPULATED_SIZE) }};
+  }
+
+  static SingleConsumerQueue<Integer> makePopulated(int size) {
     SingleConsumerQueue<Integer> queue = new SingleConsumerQueue<>();
-    populate(queue);
+    populate(queue, size);
     return queue;
   }
 
-  static void populate(Collection<Integer> collection) {
-    for (int i = 0; i < POPULATED_SIZE; i++) {
+  static void populate(Collection<Integer> collection, int size) {
+    for (int i = 0; i < size; i++) {
       collection.add(i);
     }
   }
