@@ -52,6 +52,13 @@ public final class DescriptionBuilder {
     }
   }
 
+  public <T> void expected(String reason) {
+    description.appendText(reason).appendText("\nExpected to not be reachable");
+    description.appendText("\nLocation: ").appendText(
+        Throwables.getStackTraceAsString(new Exception()));
+    matches = false;
+  }
+
   public Description getDescription() {
     return description;
   }

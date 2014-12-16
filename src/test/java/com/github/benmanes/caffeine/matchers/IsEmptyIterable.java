@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 
@@ -34,12 +35,12 @@ import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 /**
- * A matcher that performs an exhaustive empty check throughout the {@link Collection}, {@link Set},
- * {@link List}, {@link Queue}, and {@link Deque} contracts.
+ * A matcher that performs an exhaustive empty check throughout the {@link Iterable},
+ * {@link Collection}, {@link Set}, {@link List}, {@link Queue}, and {@link Deque} contracts.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class IsEmptyCollection<E> extends TypeSafeDiagnosingMatcher<Collection<? extends E>> {
+public final class IsEmptyIterable<E> extends TypeSafeDiagnosingMatcher<Iterable<? extends E>> {
 
   @Override
   public void describeTo(Description description) {
@@ -47,29 +48,35 @@ public final class IsEmptyCollection<E> extends TypeSafeDiagnosingMatcher<Collec
   }
 
   @Override
-  protected boolean matchesSafely(Collection<? extends E> c, Description description) {
+  protected boolean matchesSafely(Iterable<? extends E> iterable, Description description) {
     DescriptionBuilder builder = new DescriptionBuilder(description);
 
-    checkCollection(c, builder);
-    if (c instanceof Set<?>) {
-      checkSet((Set<? extends E>) c, builder);
+    checkIterable(iterable, builder);
+    if (iterable instanceof Collection<?>) {
+      checkCollection((Collection<? extends E>) iterable, builder);
     }
-    if (c instanceof List<?>) {
-      checkList((List<? extends E>) c, builder);
+    if (iterable instanceof Set<?>) {
+      checkSet((Set<? extends E>) iterable, builder);
     }
-    if (c instanceof Queue<?>) {
-      checkQueue((Queue<? extends E>) c, builder);
+    if (iterable instanceof List<?>) {
+      checkList((List<? extends E>) iterable, builder);
     }
-    if (c instanceof Deque<?>) {
-      checkDeque((Deque<? extends E>) c, builder);
+    if (iterable instanceof Queue<?>) {
+      checkQueue((Queue<? extends E>) iterable, builder);
+    }
+    if (iterable instanceof Deque<?>) {
+      checkDeque((Deque<? extends E>) iterable, builder);
     }
     return builder.matches();
+  }
+
+  private void checkIterable(Iterable<? extends E> i, DescriptionBuilder builder) {
+    builder.expectThat("iterator has data", i.iterator().hasNext(), is(false));
   }
 
   private void checkCollection(Collection<? extends E> c, DescriptionBuilder builder) {
     builder.expectThat(c, hasSize(0));
     builder.expectThat("not empty", c.isEmpty(), is(true));
-    builder.expectThat("iterator has data", c.iterator().hasNext(), is(false));
     builder.expectThat("toArray has data", c.toArray(), is(arrayWithSize(0)));
     builder.expectThat("toArray has data", c.toArray(new Object[0]), is(arrayWithSize(0)));
   }
@@ -90,17 +97,21 @@ public final class IsEmptyCollection<E> extends TypeSafeDiagnosingMatcher<Collec
 
   private void checkQueue(Queue<? extends E> queue, DescriptionBuilder builder) {
     builder.expectThat(queue.peek(), is(nullValue()));
+
+    try {
+      queue.element();
+      builder.expected("element");
+    } catch (NoSuchElementException e) {}
   }
 
   private void checkDeque(Deque<? extends E> deque, DescriptionBuilder builder) {
     builder.expectThat(deque.peekFirst(), is(nullValue()));
     builder.expectThat(deque.peekLast(), is(nullValue()));
-    builder.expectThat(deque.iterator().hasNext(), is(false));
     builder.expectThat(deque.descendingIterator().hasNext(), is(false));
   }
 
   @Factory
-  public static <E> IsEmptyCollection<E> emptyCollection() {
-    return new IsEmptyCollection<E>();
+  public static <E> IsEmptyIterable<E> emptyIterable() {
+    return new IsEmptyIterable<E>();
   }
 }

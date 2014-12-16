@@ -15,8 +15,9 @@
  */
 package com.github.benmanes.caffeine;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyCollection.emptyCollection;
+import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.emptyIterable;
 import static com.google.common.collect.Iterators.elementsEqual;
+import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.emptyArray;
@@ -33,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -45,20 +47,20 @@ import com.google.common.testing.SerializableTester;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class SingleConsumerQueueTest {
-  private static final int NUM_THREADS = 10;
+  private static final int NUM_PRODUCERS = 10;
   private static final int POPULATED_SIZE = 100;
 
 
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(Queue<?> queue) {
     queue.clear();
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   @Test(dataProvider = "populated")
   public void clear_whenPopulated(Queue<?> queue) {
     queue.clear();
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   @Test(dataProvider = "empty")
@@ -208,7 +210,7 @@ public class SingleConsumerQueueTest {
     while ((value = queue.poll()) != null) {
       assertThat(queue.contains(value), is(false));
     }
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   /* ---------------- Remove -------------- */
@@ -232,7 +234,7 @@ public class SingleConsumerQueueTest {
       Integer value = queue.remove();
       assertThat(queue.contains(value), is(false));
     }
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   @Test(dataProvider = "empty,singleton,populated")
@@ -255,13 +257,13 @@ public class SingleConsumerQueueTest {
       assertThat(queue.remove(value), is(true));
       assertThat(queue.contains(value), is(false));
     }
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   @Test(dataProvider = "empty")
   public void removeAll_withEmpty(Queue<Integer> queue) {
     assertThat(queue.removeAll(ImmutableList.of()), is(false));
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   @Test(dataProvider = "populated")
@@ -275,7 +277,7 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "populated")
   public void removeAll_toEmpty(Queue<Integer> queue) {
     assertThat(queue.removeAll(ImmutableList.copyOf(queue)), is(true));
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   /* ---------------- Retain -------------- */
@@ -283,7 +285,7 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "empty")
   public void retainAll_withEmpty(Queue<Integer> queue) {
     assertThat(queue.retainAll(ImmutableList.of()), is(false));
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   @Test(dataProvider = "populated")
@@ -297,7 +299,7 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "populated")
   public void retainAll_toEmpty(Queue<Integer> queue) {
     assertThat(queue.retainAll(ImmutableList.of()), is(true));
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   /* ---------------- Iterators -------------- */
@@ -345,7 +347,7 @@ public class SingleConsumerQueueTest {
       it.next();
       it.remove();
     }
-    assertThat(queue, is(emptyCollection()));
+    assertThat(queue, is(emptyIterable()));
   }
 
   /* ---------------- toArray -------------- */
@@ -385,14 +387,68 @@ public class SingleConsumerQueueTest {
   /* ---------------- Concurrency -------------- */
 
   @Test(dataProvider = "empty")
-  public void multithreaded(Queue<Integer> queue) {
-    ConcurrentTestHarness.timeTasks(NUM_THREADS, () -> {
+  public void single_producer_single_consumer(Queue<Integer> queue) {
+    AtomicInteger active = new AtomicInteger();
+
+    Thread producer = new Thread(() -> {
+      active.incrementAndGet();
+      await().untilAtomic(active, is(2));
+      for (int i = 0; i < POPULATED_SIZE; i++) {
+        queue.add(i);
+      }
+      active.decrementAndGet();
+    });
+    Thread consumer = new Thread(() -> {
+      active.incrementAndGet();
+      await().untilAtomic(active, is(2));
+      for (int i = 0; i < POPULATED_SIZE; i++) {
+        while (queue.poll() == null) {}
+      }
+      active.decrementAndGet();
+    });
+
+    producer.start();
+    consumer.start();
+    await().untilAtomic(active, is(0));
+    assertThat(queue, is(emptyIterable()));
+  }
+
+  @Test(dataProvider = "empty")
+  public void multiple_producers_no_consumer(Queue<Integer> queue) {
+    ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       for (int i = 0; i < POPULATED_SIZE; i++) {
         queue.add(i);
       }
     });
-    assertThat(queue, hasSize(NUM_THREADS * POPULATED_SIZE));
+    assertThat(queue, hasSize(NUM_PRODUCERS * POPULATED_SIZE));
     assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
+  }
+
+  @Test(dataProvider = "empty")
+  public void multiple_producers_single_consumer(Queue<Integer> queue) {
+    AtomicInteger active = new AtomicInteger();
+
+    Thread consumer = new Thread(() -> {
+      active.incrementAndGet();
+      await().untilAtomic(active, is(NUM_PRODUCERS + 1));
+      for (int i = 0; i < (NUM_PRODUCERS * POPULATED_SIZE); i++) {
+        while (queue.poll() == null) {}
+      }
+      active.decrementAndGet();
+    });
+    consumer.start();
+
+    ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
+      active.incrementAndGet();
+      await().untilAtomic(active, is(NUM_PRODUCERS + 1));
+      for (int i = 0; i < POPULATED_SIZE; i++) {
+        queue.add(i);
+      }
+      active.decrementAndGet();
+    });
+
+    await().untilAtomic(active, is(0));
+    assertThat(queue, is(emptyIterable()));
   }
 
   /* ---------------- Queue providers -------------- */
