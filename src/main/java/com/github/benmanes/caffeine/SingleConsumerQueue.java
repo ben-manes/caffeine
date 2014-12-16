@@ -376,21 +376,24 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
 
   @Override
   public String toString() {
-    Iterator<E> it = iterator();
-    if (!it.hasNext()) {
+    if (isEmpty()) {
       return "[]";
     }
 
+    Node<E> t = tail;
+    Node<E> cursor = t.getNextRelaxed();
     StringBuilder sb = new StringBuilder();
     sb.append('[');
     for (;;) {
-      E e = it.next();
-      sb.append(e == this ? "(this Collection)" : e);
-      if (!it.hasNext()) {
-        return sb.append(']').toString();
+      sb.append(cursor.value);
+      cursor = cursor.getNextRelaxed();
+      if (cursor == null) {
+        break;
       }
       sb.append(',').append(' ');
     }
+    sb.append(']');
+    return sb.toString();
   }
 
   static final class Node<E> {
