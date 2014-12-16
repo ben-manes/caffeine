@@ -95,14 +95,14 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.59.7396
    */
 
-  private final static long HEAD_OFFSET =
+  final static long HEAD_OFFSET =
       UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "head");
 
-  private final static long TAIL_OFFSET =
+  final static long TAIL_OFFSET =
       UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "tail");
 
-  private volatile Node<E> head;
-  private volatile Node<E> tail;
+  volatile Node<E> head;
+  volatile Node<E> tail;
 
   public SingleConsumerQueue() {
     // Uses relaxed writes because these fields can only be seen after publication
@@ -111,15 +111,15 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
     lazySetTail(node);
   }
 
-  private void lazySetHead(Node<E> next) {
+  void lazySetHead(Node<E> next) {
     UnsafeAccess.UNSAFE.putOrderedObject(this, HEAD_OFFSET, next);
   }
 
-  private boolean casHead(Node<E> expect, Node<E> update) {
+  boolean casHead(Node<E> expect, Node<E> update) {
     return UnsafeAccess.UNSAFE.compareAndSwapObject(this, HEAD_OFFSET, expect, update);
   }
 
-  private void lazySetTail(Node<E> next) {
+  void lazySetTail(Node<E> next) {
     UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
   }
 
@@ -144,12 +144,14 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
 
   @Override
   public void clear() {
-    head = tail;
+    tail = head;
   }
 
   @Override
   public boolean contains(Object o) {
-    Objects.requireNonNull(o);
+    if (o == null) {
+      return false;
+    }
 
     Node<E> cursor = tail.getNextRelaxed();
     while (cursor != null) {
@@ -194,7 +196,7 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
   }
 
   /** Inserts the node, which may result in a batch insertion if the node has a link chain. */
-  private boolean offer(Node<E> node) {
+  boolean offer(Node<E> node) {
     for (;;) {
       Node<E> h = head;
       if (casHead(h, node)) {
@@ -202,7 +204,7 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
         return true;
       }
 
-      // TODO(ben): Add combining handoff
+      // TODO(ben): Add combining backoff
     }
   }
 
@@ -265,21 +267,21 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
 
   @Override
   public boolean removeAll(Collection<?> c) {
-    return removeIfPresent(c, false);
+    return removeByPresentce(c, false);
   }
 
   @Override
   public boolean retainAll(Collection<?> c) {
-    return removeIfPresent(c, true);
+    return removeByPresentce(c, true);
   }
 
   /**
    * Removes elements based on whether they are also present in the provided collection.
    *
    * @param c collection containing elements to keep or discard
-   * @param retain whether to retain or remove elements present in both collections
+   * @param retain whether to retain only or remove only elements present in both collections
    */
-  boolean removeIfPresent(Collection<?> c, boolean retain) {
+  boolean removeByPresentce(Collection<?> c, boolean retain) {
     Objects.requireNonNull(c);
 
     Node<E> prev = tail;
@@ -300,12 +302,12 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
   @Override
   public Iterator<E> iterator() {
     return new Iterator<E>() {
-      Node<E> cursor = tail;
+      Node<E> cursor = tail.getNextRelaxed();
       Node<E> prev = null;
-      Node<E> next = cursor.getNextRelaxed();
+      Node<E> next = (cursor == null) ? null : cursor.getNextRelaxed();
 
       @Override public boolean hasNext() {
-        return (next != null);
+        return (cursor != null);
       }
 
       @Override public E next() {
@@ -315,7 +317,7 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
         E e = cursor.value;
         prev = cursor;
         cursor = next;
-        next = cursor.getNextRelaxed();
+        next = (cursor == null) ? null : cursor.getNextRelaxed();
         return e;
       }
 
@@ -347,6 +349,25 @@ public final class SingleConsumerQueue<E> implements Queue<E> {
       list.add(e);
     }
     return list.toArray(a);
+  }
+
+  @Override
+  public String toString() {
+    Iterator<E> it = iterator();
+    if (!it.hasNext()) {
+      return "[]";
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append('[');
+    for (;;) {
+      E e = it.next();
+      sb.append(e == this ? "(this Collection)" : e);
+      if (!it.hasNext()) {
+        return sb.append(']').toString();
+      }
+      sb.append(',').append(' ');
+    }
   }
 
   @Contended

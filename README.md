@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/ben-manes/caffeine.svg)](https://travis-ci.org/ben-manes/caffeine)
+[![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
+[![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 # Caffeine
 
@@ -21,9 +23,11 @@ caused by multiple producers.
 ## Caching
 
 #### In-Memory (aka on-heap)
-A high-performance cache that is API compatible with Guava. This implementation draws on the authors
-experience designing [ConcurrentLinkedHashMap](https://code.google.com/p/concurrentlinkedhashmap/)
+A high-performance cache that is API compatible with Guava. This implementation draws on the
+author's experience designing [ConcurrentLinkedHashMap](https://code.google.com/p/concurrentlinkedhashmap/)
 and co-authoring [Guava's Cache](https://code.google.com/p/guava-libraries/wiki/CachesExplained).
+The API is extended to include an asynchronous `CompletableFuture` interface and to expose low-level
+options like changing the maximum size, expiration timeouts, and traversing in retention order. 
 
 #### Tracing and Simulator
 A lightweight cache tracing api can be enabled to capture information on how well an application's
