@@ -156,6 +156,30 @@ public class SingleConsumerQueueTest {
     assertThat(queue, hasSize(POPULATED_SIZE + 1));
   }
 
+  @Test(dataProvider = "empty")
+  public void addAll_whenEmpty(Queue<Integer> queue) {
+    List<Integer> list = new ArrayList<>();
+    populate(list, POPULATED_SIZE);
+
+    assertThat(queue.addAll(list), is(true));
+    assertThat(queue.peek(), is(0));
+    assertThat(Iterables.getLast(queue), is(POPULATED_SIZE - 1));
+    assertThat(String.format("\nExpected: %s%n     but: %s", queue, list),
+      elementsEqual(queue.iterator(), list.iterator()));
+  }
+
+  @Test(dataProvider = "singleton,populated")
+  public void addAll_whenPopulated(Queue<Integer> queue) {
+    List<Integer> list = ImmutableList.of(POPULATED_SIZE, POPULATED_SIZE + 1, POPULATED_SIZE + 2);
+    List<Integer> expect = ImmutableList.copyOf(Iterables.concat(queue, list));
+
+    assertThat(queue.addAll(list), is(true));
+    assertThat(queue.peek(), is(0));
+    assertThat(Iterables.getLast(queue), is(POPULATED_SIZE + 2));
+    assertThat(String.format("\nExpected: %s%n     but: %s", queue, expect),
+        elementsEqual(queue.iterator(), expect.iterator()));
+  }
+
   /* ---------------- Poll -------------- */
 
   @Test(dataProvider = "empty")
@@ -346,16 +370,21 @@ public class SingleConsumerQueueTest {
 
   @Test(dataProvider = "empty,singleton,populated")
   public void serializable(Queue<Integer> queue) {
-    Queue<Integer> clone = SerializableTester.reserialize(queue);
-    assertThat(String.format("\nExpected: %s%n     but: %s", queue, clone),
-        elementsEqual(queue.iterator(), clone.iterator()));
+    Queue<Integer> copy = SerializableTester.reserialize(queue);
+    assertThat(String.format("\nExpected: %s%n     but: %s", queue, copy),
+        elementsEqual(queue.iterator(), copy.iterator()));
   }
 
   /* ---------------- Queue providers -------------- */
 
-  @DataProvider
-  public Object[][] empty() {
-    return new Object[][] {{ new SingleConsumerQueue<Integer>() }};
+  @DataProvider(name = "empty")
+  public Object[][] providesEmpty() {
+    return new Object[][] {{ makePopulated(0) }};
+  }
+
+  @DataProvider(name = "singleton")
+  public Object[][] providesSingleton() {
+    return new Object[][] {{ makePopulated(1) }};
   }
 
   @DataProvider(name = "populated")
@@ -373,7 +402,7 @@ public class SingleConsumerQueueTest {
   @DataProvider(name = "empty,singleton,populated")
   public Object[][] providesEmptyAndSingletonAndPopulated() {
     return new Object[][] {
-        { new SingleConsumerQueue<Integer>() },
+        { makePopulated(0) },
         { makePopulated(1) },
         { makePopulated(POPULATED_SIZE) }};
   }
@@ -384,8 +413,8 @@ public class SingleConsumerQueueTest {
     return queue;
   }
 
-  static void populate(Collection<Integer> collection, int size) {
-    for (int i = 0; i < size; i++) {
+  static void populate(Collection<Integer> collection, int start) {
+    for (int i = 0; i < start; i++) {
       collection.add(i);
     }
   }

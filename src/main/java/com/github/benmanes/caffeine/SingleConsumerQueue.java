@@ -20,7 +20,6 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -28,8 +27,6 @@ import java.util.Objects;
 import java.util.Queue;
 
 import javax.annotation.Nullable;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * A lock-free unbounded queue based on linked nodes that supports concurrent producers and is
@@ -210,11 +207,8 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   @Override
   public boolean offer(E e) {
     Objects.requireNonNull(e);
-    return offer(new Node<E>(e));
-  }
 
-  /** Inserts the node, which may result in a batch insertion if the node has a link chain. */
-  boolean offer(Node<E> node) {
+    Node<E> node = new Node<E>(e);
     for (;;) {
       Node<E> h = head;
       if (casHead(h, node)) {
@@ -247,20 +241,31 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   public boolean addAll(Collection<? extends E> c) {
     Objects.requireNonNull(c);
 
-    // FIXME(ben): Fix optimized form to follow this behavior
-    for (E e : ImmutableList.copyOf(c).reverse()) {
-      offer(e);
+    Node<E> first = null;
+    Node<E> last = null;
+    for (E e : c) {
+      if (first == null) {
+        first = new Node<E>(e);
+        last = first;
+      } else {
+        Node<E> newLast = new Node<E>(e);
+        last.lazySetNext(newLast);
+        last = newLast;
+      }
     }
-    return !c.isEmpty();
+    if (first == null) {
+      return false;
+    }
 
-//    Node<E> node = null;
-//    for (E e : c) {
-//      node = new Node<E>(e, node);
-//    }
-//    if (node == null) {
-//      return false;
-//    }
-//    return offer(node);
+    for (;;) {
+      Node<E> h = head;
+      if (casHead(h, last)) {
+        h.lazySetNext(first);
+        return true;
+      }
+
+      // TODO(ben): Add combining backoff
+    }
   }
 
   @Override
@@ -440,7 +445,6 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     }
 
     Object readResolve() {
-      Collections.reverse(list);
       return new SingleConsumerQueue<E>(list);
     }
 
