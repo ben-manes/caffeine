@@ -44,7 +44,9 @@ import com.google.common.testing.SerializableTester;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class SingleConsumerQueueTest {
-  private static final int POPULATED_SIZE = 5;
+  private static final int NUM_THREADS = 10;
+  private static final int POPULATED_SIZE = 100;
+
 
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(Queue<?> queue) {
@@ -373,6 +375,18 @@ public class SingleConsumerQueueTest {
     Queue<Integer> copy = SerializableTester.reserialize(queue);
     assertThat(String.format("\nExpected: %s%n     but: %s", queue, copy),
         elementsEqual(queue.iterator(), copy.iterator()));
+  }
+
+  /* ---------------- Concurrency -------------- */
+
+  @Test(dataProvider = "empty")
+  public void multithreaded(Queue<Integer> queue) {
+    ConcurrentTestHarness.timeTasks(NUM_THREADS, () -> {
+      for (int i = 0; i < POPULATED_SIZE; i++) {
+        queue.add(i);
+      }
+    });
+    assertThat(queue, hasSize(NUM_THREADS * POPULATED_SIZE));
   }
 
   /* ---------------- Queue providers -------------- */
