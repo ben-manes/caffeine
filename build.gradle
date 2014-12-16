@@ -78,6 +78,20 @@ pmd {
   ruleSets = [/* "java-basic", */ "java-braces"]
 }
 
+tasks.withType(FindBugs) {
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+}
+
+tasks.withType(Pmd) {
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+}
+
 jacocoTestReport {
   reports {
     xml.enabled = true
