@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine;
 
-import static com.google.common.collect.Lists.newArrayListWithCapacity;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -67,7 +65,7 @@ public final class ConcurrentTestHarness {
     CountDownLatch endGate = new CountDownLatch(nThreads);
     AtomicReferenceArray<T> results = new AtomicReferenceArray<T>(nThreads);
 
-    List<Thread> threads = newArrayListWithCapacity(nThreads);
+    List<Thread> threads = new ArrayList<>(nThreads);
     for (int i = 0; i < nThreads; i++) {
       final int index = i;
       Thread thread = new Thread(() -> {

@@ -48,7 +48,7 @@ import com.google.common.testing.SerializableTester;
  */
 public class SingleConsumerQueueTest {
   private static final int NUM_PRODUCERS = 10;
-  private static final int POPULATED_SIZE = 100;
+  private static final int POPULATED_SIZE = 1000;
 
 
   @Test(dataProvider = "empty")
@@ -387,34 +387,35 @@ public class SingleConsumerQueueTest {
   /* ---------------- Concurrency -------------- */
 
   @Test(dataProvider = "empty")
-  public void single_producer_single_consumer(Queue<Integer> queue) {
-    AtomicInteger active = new AtomicInteger();
+  public void singleProducerSingleConsumer(Queue<Integer> queue) {
+    AtomicInteger started = new AtomicInteger();
+    AtomicInteger finished = new AtomicInteger();
 
     Thread producer = new Thread(() -> {
-      active.incrementAndGet();
-      await().untilAtomic(active, is(2));
+      started.incrementAndGet();
+      await().untilAtomic(started, is(2));
       for (int i = 0; i < POPULATED_SIZE; i++) {
         queue.add(i);
       }
-      active.decrementAndGet();
+      finished.incrementAndGet();
     });
     Thread consumer = new Thread(() -> {
-      active.incrementAndGet();
-      await().untilAtomic(active, is(2));
+      started.incrementAndGet();
+      await().untilAtomic(started, is(2));
       for (int i = 0; i < POPULATED_SIZE; i++) {
         while (queue.poll() == null) {}
       }
-      active.decrementAndGet();
+      finished.incrementAndGet();
     });
 
     producer.start();
     consumer.start();
-    await().untilAtomic(active, is(0));
+    await().untilAtomic(finished, is(2));
     assertThat(queue, is(emptyIterable()));
   }
 
   @Test(dataProvider = "empty")
-  public void multiple_producers_no_consumer(Queue<Integer> queue) {
+  public void multipleProducers_noConsumer(Queue<Integer> queue) {
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       for (int i = 0; i < POPULATED_SIZE; i++) {
         queue.add(i);
@@ -425,29 +426,30 @@ public class SingleConsumerQueueTest {
   }
 
   @Test(dataProvider = "empty")
-  public void multiple_producers_single_consumer(Queue<Integer> queue) {
-    AtomicInteger active = new AtomicInteger();
+  public void multipleProducers_singleConsumer(Queue<Integer> queue) {
+    AtomicInteger started = new AtomicInteger();
+    AtomicInteger finished = new AtomicInteger();
 
     Thread consumer = new Thread(() -> {
-      active.incrementAndGet();
-      await().untilAtomic(active, is(NUM_PRODUCERS + 1));
+      started.incrementAndGet();
+      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < (NUM_PRODUCERS * POPULATED_SIZE); i++) {
         while (queue.poll() == null) {}
       }
-      active.decrementAndGet();
+      finished.incrementAndGet();
     });
     consumer.start();
 
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
-      active.incrementAndGet();
-      await().untilAtomic(active, is(NUM_PRODUCERS + 1));
+      started.incrementAndGet();
+      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < POPULATED_SIZE; i++) {
         queue.add(i);
       }
-      active.decrementAndGet();
+      finished.incrementAndGet();
     });
 
-    await().untilAtomic(active, is(0));
+    await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
     assertThat(queue, is(emptyIterable()));
   }
 
