@@ -241,7 +241,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.contains(first), is(false));
   }
 
-  @Test(enabled = false, dataProvider = "populated")
+  @Test(dataProvider = "populated")
   public void removeAll_toEmpty(Queue<Integer> queue) {
     assertThat(queue.removeAll(ImmutableList.copyOf(queue)), is(true));
     assertThat(queue, is(emptyCollection()));
@@ -255,7 +255,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, is(emptyCollection()));
   }
 
-  @Test(enabled = false, dataProvider = "populated")
+  @Test(dataProvider = "populated")
   public void retainAll_withPopulated(Queue<Integer> queue) {
     Integer first = queue.peek();
     assertThat(queue.retainAll(ImmutableList.of(first)), is(true));
@@ -263,7 +263,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.contains(first), is(true));
   }
 
-  @Test(enabled = false, dataProvider = "populated")
+  @Test(dataProvider = "populated")
   public void retainAll_toEmpty(Queue<Integer> queue) {
     assertThat(queue.retainAll(ImmutableList.of()), is(true));
     assertThat(queue, is(emptyCollection()));

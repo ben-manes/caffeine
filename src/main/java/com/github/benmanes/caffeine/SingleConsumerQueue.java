@@ -277,7 +277,7 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     Objects.requireNonNull(o);
 
     Node<E> h = head;
-    Node<E> prev = tail;
+    Node<E> prev = getTailRelaxed();
     Node<E> cursor = prev.getNextRelaxed();
     while (cursor != null) {
       Node<E> next = cursor.getNextRelaxed();
@@ -313,16 +313,22 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   boolean removeByPresentce(Collection<?> c, boolean retain) {
     Objects.requireNonNull(c);
 
-    Node<E> prev = tail;
+    Node<E> h = head;
+    Node<E> prev = getTailRelaxed();
     Node<E> cursor = prev.getNextRelaxed();
     boolean modified = false;
     while (cursor != null) {
       boolean present = c.contains(cursor.value);
+      Node<E> next = cursor.getNextRelaxed();
       if (present != retain) {
-        prev.lazySetNext(cursor.next);
+        if ((h == cursor) && !casHead(h, prev) && (next == null)) {
+          next = h.next;
+        }
+        prev.lazySetNext(next);
         modified = true;
+      } else {
+        prev = cursor;
       }
-      prev = cursor;
       cursor = prev.getNextRelaxed();
     }
     return modified;
@@ -449,7 +455,7 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
     Node(@Nullable E value, @Nullable Node<E> next) {
       this(value);
-      this.next = next;
+      lazySetNext(next);
     }
 
     Node(@Nullable E value) {
