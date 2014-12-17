@@ -13,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.xfer;
+package com.github.benmanes.caffeine;
 
 import java.util.Queue;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.GroupThreads;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
 /**
@@ -29,50 +31,58 @@ import org.openjdk.jmh.annotations.State;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
-public abstract class AbstractTransferBenchmark {
+public class EliminationStackBenchmark {
+  @Param({"EliminationStack", "ConcurrentLinkedQueue", "ArrayBlockingQueue",
+    "LinkedBlockingQueueBenchmark", "LinkedTransferQueue", "SynchronousQueue",
+    "SynchronizedArrayDeque"})
+  QueueType queueType;
 
-  /** Returns the queue to benchmark. */
-  protected abstract Queue<Boolean> queue();
+  Queue<Boolean> queue;
+
+  @Setup
+  public void setup() {
+    queue = queueType.create();
+  }
 
   @Benchmark
   @GroupThreads(1)
   @Group("no_contention")
   public void no_contention_offer() {
-    queue().offer(Boolean.TRUE);
+    queue.offer(Boolean.TRUE);
   }
 
   @Benchmark
   @GroupThreads(1)
   @Group("no_contention")
   public void no_contention_poll() {
-    queue().poll();
+    queue.poll();
   }
 
   @Benchmark
   @GroupThreads(4)
   @Group("mild_contention")
   public void mild_contention_offer() {
-    queue().offer(Boolean.TRUE);
+    queue.offer(Boolean.TRUE);
   }
 
   @Benchmark
   @GroupThreads(4)
   @Group("mild_contention")
   public void mild_contention_poll() {
-    queue().poll();
+    queue.poll();
   }
 
   @Benchmark
   @GroupThreads(8)
   @Group("high_contention")
   public void high_contention_offer() {
-    queue().offer(Boolean.TRUE);
+    queue.offer(Boolean.TRUE);
   }
 
   @Benchmark
   @GroupThreads(8)
   @Group("high_contention")
   public void high_contention_poll() {
-    queue().poll();
+    queue.poll();
   }
 }

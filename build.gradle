@@ -112,6 +112,13 @@ jmh {
   if (project.hasProperty('includePattern')) {
     include = project.includePattern
   }
+  // Benchmark parameters: Seperated by '&' for parameter types, and ',' for multiple values
+  if (project.hasProperty('benchmarkParameters')) {
+    benchmarkParameters = data.split('&').inject([:]) { map, token -> 
+      token.split('=').with { map[it[0]] = it[1] }
+    }
+  }
+
   // Benchmark mode: Throughput/thrpt, AverageTime/avgt, SampleTime/sample, SingleShotTime/ss, All/all
   benchmarkMode = 'thrpt'
   // Available time units are: [m, s, ms, us, ns]
