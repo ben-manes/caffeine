@@ -317,6 +317,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
   @Override
   public Iterator<E> iterator() {
     final class ReadOnlyIterator extends AbstractIterator<E> {
+      Node<E> prev = null;
       Node<E> current = top.get();
 
       @Override
@@ -325,6 +326,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
           if (current == null) {
             return endOfData();
           }
+          prev = current;
           E e = current.get();
           current = current.next;
           if (e != null) {
@@ -338,10 +340,11 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
 
       @Override
       public void remove() {
-        if (delegate.current == null) {
+        if (delegate.prev == null) {
           throw new IllegalStateException();
         }
-        delegate.current.lazySet(null);
+        delegate.prev.lazySet(null);
+        delegate.prev = null;
       }
 
       @Override

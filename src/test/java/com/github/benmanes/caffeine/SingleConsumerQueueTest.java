@@ -344,7 +344,8 @@ public class SingleConsumerQueueTest {
   public void iterator_whenPopulated(Queue<Integer> queue) {
     List<Integer> copy = new ArrayList<>();
     populate(copy, queue.size());
-    assertThat(elementsEqual(queue.iterator(), copy.iterator()), is(true));
+    assertThat(String.format("\nExpected: %s%n     but: %s", queue, copy),
+        elementsEqual(queue.iterator(), copy.iterator()));
   }
 
   @Test(dataProvider = "populated", expectedExceptions = IllegalStateException.class)

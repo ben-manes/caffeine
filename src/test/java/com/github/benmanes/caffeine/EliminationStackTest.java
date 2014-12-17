@@ -25,6 +25,9 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -107,6 +110,24 @@ public final class EliminationStackTest {
     stack.push(1);
     assertThat(stack.peek(), is(1));
     assertThat(stack.size(), is(WARMED_SIZE + 1));
+  }
+
+  @Test(dataProvider = "emptyStack")
+  public void peek_whenEmpty(EliminationStack<Integer> stack) {
+    assertThat(stack.peek(), is(nullValue()));
+  }
+
+  @Test(dataProvider = "warmedStack")
+  public void peek_whenPopulated(EliminationStack<Integer> stack) {
+    assertThat(stack.peek(), is(WARMED_SIZE - 1));
+  }
+
+  @Test(dataProvider = "warmedStack")
+  public void peek_deadNode(EliminationStack<Integer> stack) {
+    Iterator<Integer> it = stack.iterator();
+    it.next();
+    it.remove();
+    assertThat(stack.peek(), is(WARMED_SIZE - 2));
   }
 
   @Test(dataProvider = "emptyStack")
@@ -262,6 +283,19 @@ public final class EliminationStackTest {
     stack.iterator().next();
   }
 
+  @Test(dataProvider = "warmedStack", expectedExceptions = IllegalStateException.class)
+  public void iterator_removal_unread(EliminationStack<Integer> stack) {
+    stack.iterator().remove();
+  }
+
+  @Test(dataProvider = "warmedStack", expectedExceptions = IllegalStateException.class)
+  public void iterator_removal_duplicate(EliminationStack<Integer> stack) {
+    Iterator<Integer> it = stack.iterator();
+    it.next();
+    it.remove();
+    it.remove();
+  }
+
   @Test(dataProvider = "emptyStack")
   public void iterator_whenEmpty(EliminationStack<Integer> stack) {
     assertThat(stack.iterator().hasNext(), is(false));
@@ -269,7 +303,11 @@ public final class EliminationStackTest {
 
   @Test(dataProvider = "warmedStack")
   public void iterator_whenWarmed(EliminationStack<Integer> stack) {
-    assertThat(elementsEqual(stack.iterator(), newWarmedStack().iterator()), is(true));
+    List<Integer> list = new ArrayList<>();
+    populate(list, WARMED_SIZE);
+    Collections.reverse(list);
+    assertThat(String.format("\nExpected: %s%n     but: %s", stack, list),
+        elementsEqual(stack.iterator(), list.iterator()));
   }
 
   @Test(dataProvider = "emptyStack", expectedExceptions = IllegalStateException.class)
@@ -279,7 +317,11 @@ public final class EliminationStackTest {
 
   @Test(dataProvider = "warmedStack")
   public void iterator_removalWhenPopulated(EliminationStack<Integer> stack) {
-    stack.iterator().remove();
+    Iterator<Integer> it = stack.iterator();
+    Integer first = stack.peek();
+    it.next();
+    it.remove();
+    assertThat(stack, not(contains(first)));
     assertThat(stack.size(), is(WARMED_SIZE - 1));
   }
 
@@ -311,9 +353,13 @@ public final class EliminationStackTest {
 
   EliminationStack<Integer> newWarmedStack() {
     EliminationStack<Integer> stack = new EliminationStack<Integer>();
-    for (int i = 0; i < WARMED_SIZE; i++) {
-      stack.push(i);
-    }
+    populate(stack, WARMED_SIZE);
     return stack;
+  }
+
+  static void populate(Collection<Integer> collection, int start) {
+    for (int i = 0; i < start; i++) {
+      collection.add(i);
+    }
   }
 }
