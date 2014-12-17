@@ -101,7 +101,7 @@ jacocoTestReport {
 
 tasks.coveralls {
   dependsOn 'check'
-  onlyIf { isCI }
+  onlyIf { System.env.'CI' }
 }
 
 bundle {
