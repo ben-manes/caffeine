@@ -341,12 +341,12 @@ public final class EliminationStackTest {
 
   /* ---------------- Stack providers -------------- */
 
-  @DataProvider
+  @DataProvider(name = "empty")
   public Object[][] emptyStack() {
     return new Object[][] {{ new EliminationStack<Integer>() }};
   }
 
-  @DataProvider
+  @DataProvider(name = "populated")
   public Object[][] populatedStack() {
     return new Object[][] {{ newPopulatedStack() }};
   }

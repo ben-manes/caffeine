@@ -24,6 +24,7 @@ import java.util.AbstractCollection;
 import java.util.AbstractQueue;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
@@ -35,7 +36,6 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ForwardingIterator;
-import com.google.common.collect.Lists;
 
 /**
  * An unbounded thread-safe stack based on linked nodes. This stack orders elements LIFO
@@ -543,7 +543,8 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
     }
 
     Object readResolve() {
-      return new EliminationStack<>(Lists.reverse(elements));
+      Collections.reverse(elements);
+      return new EliminationStack<>(elements);
     }
 
     static final long serialVersionUID = 1;
