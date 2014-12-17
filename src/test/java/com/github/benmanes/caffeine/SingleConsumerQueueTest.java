@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine;
 
+import static com.github.benmanes.caffeine.IsValidSingleConsumerQueue.validate;
 import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.emptyIterable;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static com.jayway.awaitility.Awaitility.await;
@@ -36,9 +37,14 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.testng.IInvokedMethod;
+import org.testng.IInvokedMethodListener;
+import org.testng.ITestResult;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.SingleConsumerQueueTest.ValidatingListener;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.SerializableTester;
@@ -46,10 +52,10 @@ import com.google.common.testing.SerializableTester;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Listeners(ValidatingListener.class)
 public class SingleConsumerQueueTest {
-  private static final int NUM_PRODUCERS = 10;
-  private static final int POPULATED_SIZE = 1000;
-
+  private static final int NUM_PRODUCERS = 100;
+  private static final int POPULATED_SIZE = 5;
 
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(Queue<?> queue) {
@@ -494,6 +500,28 @@ public class SingleConsumerQueueTest {
   static void populate(Collection<Integer> collection, int start) {
     for (int i = 0; i < start; i++) {
       collection.add(i);
+    }
+  }
+
+  /** A listener that validates the internal structure after a successful test execution. */
+  public static final class ValidatingListener implements IInvokedMethodListener {
+    @Override
+    public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
+
+    @Override
+    public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
+      try {
+        if (testResult.isSuccess()) {
+          for (Object param : testResult.getParameters()) {
+            if (param instanceof SingleConsumerQueue<?>) {
+              assertThat((SingleConsumerQueue<?>) param, is(validate()));
+            }
+          }
+        }
+      } catch (AssertionError caught) {
+        testResult.setStatus(ITestResult.FAILURE);
+        testResult.setThrowable(caught);
+      }
     }
   }
 }
