@@ -54,8 +54,8 @@ import com.google.common.testing.SerializableTester;
  */
 @Listeners(ValidatingListener.class)
 public class SingleConsumerQueueTest {
-  private static final int NUM_PRODUCERS = 100;
-  private static final int POPULATED_SIZE = 5;
+  private static final int NUM_PRODUCERS = 10;
+  private static final int POPULATED_SIZE = 10;
 
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(Queue<?> queue) {
@@ -92,6 +92,8 @@ public class SingleConsumerQueueTest {
     assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
   }
 
+  /* ---------------- Contains -------------- */
+
   @Test(dataProvider = "empty")
   public void contains_withNull(Queue<?> queue) {
     assertThat(queue.contains(null), is(false));
@@ -105,6 +107,24 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "populated")
   public void contains_whenNotFound(Queue<Integer> queue) {
     assertThat(queue.contains(-1), is(false));
+  }
+
+  @Test(dataProvider = "empty", expectedExceptions = NullPointerException.class)
+  public void containsAll_withNull(Queue<?> queue) {
+    queue.containsAll(null);
+  }
+
+  @Test(dataProvider = "populated")
+  public void containsAll_whenFound(Queue<Integer> queue) {
+    assertThat(queue.containsAll(
+        ImmutableList.of(0, POPULATED_SIZE / 2, POPULATED_SIZE - 1)), is(true));
+    assertThat(queue.containsAll(queue), is(true));
+  }
+
+  @Test(dataProvider = "populated")
+  public void containsAll_whenNotFound(Queue<Integer> queue) {
+    assertThat(queue.containsAll(
+        ImmutableList.of(-1, -(POPULATED_SIZE / 2), -POPULATED_SIZE)), is(false));
   }
 
   /* ---------------- Peek -------------- */

@@ -457,11 +457,6 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     volatile Node<E> next;
     E value;
 
-    Node(@Nullable E value, @Nullable Node<E> next) {
-      this(value);
-      lazySetNext(next);
-    }
-
     Node(@Nullable E value) {
       this.value = value;
     }

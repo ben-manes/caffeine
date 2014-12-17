@@ -7,4 +7,4 @@ env:
 - TERM=dumb
 
 after_success:
-- ./gradlew jacocoTestReport coveralls
+- ./gradlew -i jacocoTestReport coveralls
