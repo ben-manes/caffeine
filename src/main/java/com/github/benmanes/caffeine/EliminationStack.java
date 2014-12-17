@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -34,8 +35,6 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ForwardingIterator;
 
 /**
  * An unbounded thread-safe stack based on linked nodes. This stack orders elements LIFO
@@ -316,42 +315,65 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
 
   @Override
   public Iterator<E> iterator() {
-    final class ReadOnlyIterator extends AbstractIterator<E> {
-      Node<E> prev = null;
-      Node<E> current = top.get();
+    return new StackIterator();
+  }
 
-      @Override
-      protected E computeNext() {
-        for (;;) {
-          if (current == null) {
-            return endOfData();
-          }
-          prev = current;
-          E e = current.get();
-          current = current.next;
-          if (e != null) {
-            return e;
-          }
+  /** An iterator that traverses the stack, skipping elements that have been removed. */
+  final class StackIterator implements Iterator<E> {
+    Node<E> cursor;
+    Node<E> next;
+    E nextValue;
+
+    StackIterator() {
+      next = top.get();
+      if (next != null) {
+        nextValue = next.get();
+      }
+    }
+
+    @Override
+    public boolean hasNext() {
+      if (nextValue != null) {
+        return true;
+      } else if (next == null) {
+        return false;
+      }
+      computeNext();
+      return (nextValue != null);
+    }
+
+    void computeNext() {
+      for (;;) {
+        next = next.next;
+        if (next == null) {
+          break;
+        }
+        nextValue = next.get();
+        if (nextValue != null) {
+          break;
         }
       }
-    };
-    return new ForwardingIterator<E>() {
-      final ReadOnlyIterator delegate = new ReadOnlyIterator();
+    }
 
-      @Override
-      public void remove() {
-        if (delegate.prev == null) {
-          throw new IllegalStateException();
-        }
-        delegate.prev.lazySet(null);
-        delegate.prev = null;
+    @Override
+    public E next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
       }
+      cursor = next;
+      E value = nextValue;
+      nextValue = null;
+      return value;
+    }
 
-      @Override
-      protected Iterator<E> delegate() {
-        return delegate;
+    @Override
+    public void remove() {
+      if (cursor == null) {
+        throw new IllegalStateException();
       }
-    };
+      cursor.lazySet(null);
+      cursor = null;
+    }
   }
 
   /**

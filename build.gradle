@@ -34,21 +34,17 @@ repositories {
 dependencies {
   def guava = '18.0'
 
-  // TODO(ben): remove compile-time dependency
-  compile "com.google.guava:guava:${guava}"
-
   // compile time (annotations only)
   compile 'com.google.code.findbugs:jsr305:3.0.0'
 
   // unit testing
-  testCompile 'org.mockito:mockito-core:1.10.16'
-  testCompile 'org.assertj:assertj-core:1.7.0'
-  testCompile 'org.assertj:assertj-guava:1.3.0'
   testCompile 'com.jayway.awaitility:awaitility:1.6.3'
-  testCompile dependencies.create('org.testng:testng:6.8.8') {
+  testCompile 'org.mockito:mockito-core:1.10.16'
+  testCompile "com.google.guava:guava:${guava}"
+  testCompile dependencies.create("com.google.guava:guava-testlib:${guava}") {
     exclude group: 'junit'
   }
-  testCompile dependencies.create("com.google.guava:guava-testlib:${guava}") {
+  testCompile dependencies.create('org.testng:testng:6.8.8') {
     exclude group: 'junit'
   }
   
@@ -58,14 +54,16 @@ dependencies {
   jmh 'net.openhft:koloboke-api-jdk8:0.6.5'
   jmh 'net.openhft:koloboke-impl-jdk8:0.6.5'
   
-  // TODO(ben): Fix jmh to properly inform Eclipse of the library dependencies
-  testCompile 'net.openhft:koloboke-api-jdk8:0.6.5'
-  testCompile 'net.openhft:koloboke-impl-jdk8:0.6.5'
-  testCompile 'org.openjdk.jmh:jmh-core:1.3.4'
+  // Eclipse fails to include all of dependencies without this workaround
+  testCompile configurations.jmh.allDependencies
 }
 
 test {
   useTestNG()
+  options {
+    threadCount = 4
+    parallel = 'classes'
+  }
 }
 
 findbugs {

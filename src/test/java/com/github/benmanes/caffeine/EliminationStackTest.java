@@ -44,7 +44,7 @@ import com.google.common.testing.SerializableTester;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EliminationStackTest {
-  static final int POPULATED_SIZE = 100;
+  static final int POPULATED_SIZE = 5;
 
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(EliminationStack<Integer> stack) {
@@ -159,8 +159,8 @@ public final class EliminationStackTest {
 
   @Test(dataProvider = "populated")
   public void remove_whenPopulated(EliminationStack<Integer> stack) {
-    assertThat(stack.remove(10), is(true));
-    assertThat(stack, not(contains(10)));
+    assertThat(stack.remove(POPULATED_SIZE / 2), is(true));
+    assertThat(stack, not(contains(POPULATED_SIZE / 2)));
     assertThat(stack.size(), is(POPULATED_SIZE - 1));
   }
 
