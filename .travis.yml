@@ -6,8 +6,5 @@ jdk:
 env:
 - TERM=dumb
 
-script:
-- ./gradlew -i check jacocoTestReport coveralls
-
-#after_success:
-#- ./gradlew -i jacocoTestReport coveralls
+after_success:
+- ./gradlew jacocoTestReport coveralls
