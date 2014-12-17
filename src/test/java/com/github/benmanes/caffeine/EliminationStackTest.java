@@ -44,106 +44,106 @@ import com.google.common.testing.SerializableTester;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EliminationStackTest {
-  static final int WARMED_SIZE = 100;
+  static final int POPULATED_SIZE = 100;
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void clear_whenEmpty(EliminationStack<Integer> stack) {
     stack.clear();
     assertThat(stack.isEmpty(), is(true));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void clear_whenPopulated(EliminationStack<Integer> stack) {
     stack.clear();
     assertThat(stack.isEmpty(), is(true));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void isEmpty_whenEmpty(EliminationStack<Integer> stack) {
     assertThat(stack.isEmpty(), is(true));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void isEmpty_whenPopulated(EliminationStack<Integer> stack) {
     assertThat(stack.isEmpty(), is(false));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void size_whenEmpty(EliminationStack<Integer> stack) {
     assertThat(stack.size(), is(0));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void size_whenPopulated(EliminationStack<Integer> stack) {
-    assertThat(stack.size(), is(WARMED_SIZE));
+    assertThat(stack.size(), is(POPULATED_SIZE));
   }
 
-  @Test(dataProvider = "emptyStack", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "empty", expectedExceptions = NullPointerException.class)
   public void contains_withNull(EliminationStack<Integer> stack) {
     stack.contains(null);
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void contains_whenFound(EliminationStack<Integer> stack) {
     assertThat(stack.contains(1), is(true));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void contains_whenNotFound(EliminationStack<Integer> stack) {
     assertThat(stack.contains(-1), is(false));
   }
 
-  @Test(dataProvider = "emptyStack", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "empty", expectedExceptions = NullPointerException.class)
   public void push_withNull(EliminationStack<Integer> stack) {
     stack.push(null);
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void push_whenEmpty(EliminationStack<Integer> stack) {
     stack.push(1);
     assertThat(stack.peek(), is(1));
     assertThat(stack.size(), is(1));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void push_whenPopulated(EliminationStack<Integer> stack) {
     stack.push(1);
     assertThat(stack.peek(), is(1));
-    assertThat(stack.size(), is(WARMED_SIZE + 1));
+    assertThat(stack.size(), is(POPULATED_SIZE + 1));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void peek_whenEmpty(EliminationStack<Integer> stack) {
     assertThat(stack.peek(), is(nullValue()));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void peek_whenPopulated(EliminationStack<Integer> stack) {
-    assertThat(stack.peek(), is(WARMED_SIZE - 1));
+    assertThat(stack.peek(), is(POPULATED_SIZE - 1));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void peek_deadNode(EliminationStack<Integer> stack) {
     Iterator<Integer> it = stack.iterator();
     it.next();
     it.remove();
-    assertThat(stack.peek(), is(WARMED_SIZE - 2));
+    assertThat(stack.peek(), is(POPULATED_SIZE - 2));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void pop_whenEmpty(EliminationStack<Integer> stack) {
     assertThat(stack.pop(), is(nullValue()));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void pop_whenPopulated(EliminationStack<Integer> stack) {
     Integer first = stack.peek();
     assertThat(stack.pop(), is(first));
     assertThat(stack, not(contains(first)));
-    assertThat(stack.size(), is(WARMED_SIZE - 1));
+    assertThat(stack.size(), is(POPULATED_SIZE - 1));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void pop_toEmpty(EliminationStack<Integer> stack) {
     while (!stack.isEmpty()) {
       Integer value = stack.pop();
@@ -152,19 +152,19 @@ public final class EliminationStackTest {
     assertThat(stack.isEmpty(), is(true));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void remove_whenEmpty(EliminationStack<Integer> stack) {
     assertThat(stack.remove(123), is(false));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void remove_whenPopulated(EliminationStack<Integer> stack) {
     assertThat(stack.remove(10), is(true));
     assertThat(stack, not(contains(10)));
-    assertThat(stack.size(), is(WARMED_SIZE - 1));
+    assertThat(stack.size(), is(POPULATED_SIZE - 1));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void remove_toEmpty(EliminationStack<Integer> stack) {
     while (!stack.isEmpty()) {
       Integer value = stack.peek();
@@ -174,7 +174,7 @@ public final class EliminationStackTest {
     assertThat(stack.isEmpty(), is(true));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void concurrent(final EliminationStack<Integer> stack) throws Exception {
     final LongAdder pushed = new LongAdder();
     final LongAdder popped = new LongAdder();
@@ -194,7 +194,7 @@ public final class EliminationStackTest {
     assertThat(pushed.intValue(), is(equalTo(stack.size() + popped.intValue())));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void scanAndTransfer(final EliminationStack<String> stack) {
     final AtomicBoolean started = new AtomicBoolean();
     final AtomicBoolean done = new AtomicBoolean();
@@ -222,7 +222,7 @@ public final class EliminationStackTest {
     }
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void awaitExchange(final EliminationStack<String> stack) {
     final AtomicBoolean started = new AtomicBoolean();
     final AtomicBoolean done = new AtomicBoolean();
@@ -250,7 +250,7 @@ public final class EliminationStackTest {
     }
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void scanAndMatch(final EliminationStack<String> stack) {
     final AtomicBoolean started = new AtomicBoolean();
     final AtomicBoolean done = new AtomicBoolean();
@@ -278,17 +278,17 @@ public final class EliminationStackTest {
     }
   }
 
-  @Test(dataProvider = "emptyStack", expectedExceptions = NoSuchElementException.class)
+  @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
   public void iterator_noMoreElements(EliminationStack<Integer> stack) {
     stack.iterator().next();
   }
 
-  @Test(dataProvider = "warmedStack", expectedExceptions = IllegalStateException.class)
+  @Test(dataProvider = "populated", expectedExceptions = IllegalStateException.class)
   public void iterator_removal_unread(EliminationStack<Integer> stack) {
     stack.iterator().remove();
   }
 
-  @Test(dataProvider = "warmedStack", expectedExceptions = IllegalStateException.class)
+  @Test(dataProvider = "populated", expectedExceptions = IllegalStateException.class)
   public void iterator_removal_duplicate(EliminationStack<Integer> stack) {
     Iterator<Integer> it = stack.iterator();
     it.next();
@@ -296,43 +296,43 @@ public final class EliminationStackTest {
     it.remove();
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void iterator_whenEmpty(EliminationStack<Integer> stack) {
     assertThat(stack.iterator().hasNext(), is(false));
   }
 
-  @Test(dataProvider = "warmedStack")
-  public void iterator_whenWarmed(EliminationStack<Integer> stack) {
+  @Test(dataProvider = "populated")
+  public void iterator_whenPopulated(EliminationStack<Integer> stack) {
     List<Integer> list = new ArrayList<>();
-    populate(list, WARMED_SIZE);
+    populate(list, POPULATED_SIZE);
     Collections.reverse(list);
     assertThat(String.format("\nExpected: %s%n     but: %s", stack, list),
         elementsEqual(stack.iterator(), list.iterator()));
   }
 
-  @Test(dataProvider = "emptyStack", expectedExceptions = IllegalStateException.class)
+  @Test(dataProvider = "empty", expectedExceptions = IllegalStateException.class)
   public void iterator_removalWhenEmpty(EliminationStack<Integer> stack) {
     stack.iterator().remove();
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void iterator_removalWhenPopulated(EliminationStack<Integer> stack) {
     Iterator<Integer> it = stack.iterator();
     Integer first = stack.peek();
     it.next();
     it.remove();
     assertThat(stack, not(contains(first)));
-    assertThat(stack.size(), is(WARMED_SIZE - 1));
+    assertThat(stack.size(), is(POPULATED_SIZE - 1));
   }
 
-  @Test(dataProvider = "emptyStack")
+  @Test(dataProvider = "empty")
   public void serialize_whenEmpty(EliminationStack<Integer> stack) {
     List<Integer> expected = new ArrayList<>(stack);
     List<Integer> actual = new ArrayList<>(SerializableTester.reserialize(stack));
     assertThat(expected, is(equalTo(actual)));
   }
 
-  @Test(dataProvider = "warmedStack")
+  @Test(dataProvider = "populated")
   public void serialize_whenPopulated(EliminationStack<Integer> stack) {
     List<Integer> expected = new ArrayList<>(stack);
     List<Integer> actual = new ArrayList<>(SerializableTester.reserialize(stack));
@@ -347,13 +347,13 @@ public final class EliminationStackTest {
   }
 
   @DataProvider
-  public Object[][] warmedStack() {
-    return new Object[][] {{ newWarmedStack() }};
+  public Object[][] populatedStack() {
+    return new Object[][] {{ newPopulatedStack() }};
   }
 
-  EliminationStack<Integer> newWarmedStack() {
+  EliminationStack<Integer> newPopulatedStack() {
     EliminationStack<Integer> stack = new EliminationStack<Integer>();
-    populate(stack, WARMED_SIZE);
+    populate(stack, POPULATED_SIZE);
     return stack;
   }
 
