@@ -53,6 +53,7 @@ dependencies {
   jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.3.4'
   jmh 'net.openhft:koloboke-api-jdk8:0.6.5'
   jmh 'net.openhft:koloboke-impl-jdk8:0.6.5'
+  jmh configurations.testCompile.allDependencies
   
   // Eclipse fails to include all of dependencies without this workaround
   testCompile configurations.jmh.allDependencies
@@ -111,10 +112,10 @@ jmh {
   if (project.hasProperty('includePattern')) {
     include = project.includePattern
   }
-  jvmArgs = '-XX:+UseG1GC -XX:+AlwaysPreTouch'
+  jvmArgs = '-server -XX:+UseG1GC'
   warmupIterations = 10
   failOnError = true
   iterations = 10
   forceGC = true
-  fork = 2
+  fork = 1
 }

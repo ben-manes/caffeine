@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.xfer;
+package mpsc;
 
 import java.util.Queue;
 
@@ -24,12 +24,13 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 /**
- * A concurrent benchmark where threads transfer elements through a shared queue.
+ * A concurrent benchmark where multiple threads produce into, and a single thread consumes from,
+ * a shared queue.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
-public abstract class AbstractTransferBenchmark {
+public abstract class AbstractSingleConsumerBenchmark {
 
   /** Returns the queue to benchmark. */
   protected abstract Queue<Boolean> queue();
@@ -56,7 +57,7 @@ public abstract class AbstractTransferBenchmark {
   }
 
   @Benchmark
-  @GroupThreads(4)
+  @GroupThreads(1)
   @Group("mild_contention")
   public void mild_contention_poll() {
     queue().poll();
@@ -70,7 +71,7 @@ public abstract class AbstractTransferBenchmark {
   }
 
   @Benchmark
-  @GroupThreads(8)
+  @GroupThreads(1)
   @Group("high_contention")
   public void high_contention_poll() {
     queue().poll();
