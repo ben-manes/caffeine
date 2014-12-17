@@ -454,6 +454,9 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   static final class Node<E> {
     final static long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
 
+    // Improve likelihood of isolation on <= 64 byte cache lines (volatile to avoid reordering)
+    transient volatile long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
+
     volatile Node<E> next;
     E value;
 

@@ -112,10 +112,15 @@ jmh {
   if (project.hasProperty('includePattern')) {
     include = project.includePattern
   }
+  // Benchmark mode: Throughput/thrpt, AverageTime/avgt, SampleTime/sample, SingleShotTime/ss, All/all
+  benchmarkMode = 'thrpt'
+  // Available time units are: [m, s, ms, us, ns]
+  timeUnit = 's'
+
   jvmArgs = '-server -XX:+UseG1GC'
-  warmupIterations = 10
+  warmupIterations = 5
   failOnError = true
-  iterations = 10
+  iterations = 3
   forceGC = true
-  fork = 1
+  fork = 1  
 }
