@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/ben-manes/caffeine.png?label=ready&title=Ready)](https://waffle.io/ben-manes/caffeine)
 [![Build Status](https://travis-ci.org/ben-manes/caffeine.svg)](https://travis-ci.org/ben-manes/caffeine)
 [![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
 [![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
