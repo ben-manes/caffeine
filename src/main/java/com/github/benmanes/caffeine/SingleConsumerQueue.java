@@ -104,9 +104,6 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   transient volatile Node<E> head;
 
-  // Improve likelihood of isolation on <= 64 byte cache lines (volatile to avoid reordering)
-  transient volatile long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
-
   transient volatile Node<E> tail;
 
   public SingleConsumerQueue(Collection<E> c) {

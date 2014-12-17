@@ -133,7 +133,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
   /** The top of the stack. */
   final PaddedAtomicReference<Node<E>> top;
 
-  /** The arena where slots can be used to perform an exchange */
+  /** The arena where slots can be used to perform an exchange. */
   final PaddedAtomicReference<Object>[] arena;
 
   /** Creates a {@code EliminationStack} that is initially empty. */
