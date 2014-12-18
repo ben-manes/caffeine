@@ -16,25 +16,85 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 
-import com.google.common.cache.CacheLoader;
+import com.github.benmanes.caffeine.UnsafeAccess;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+// TODO(ben): Make sure to override default interface methods to delegate to optimized versions
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
-  final ConcurrentMap<K, V> cache;
+  final ConcurrentHashMap<K, V> cache;
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder) {
-    this.cache = new ConcurrentHashMap<K, V>();
+    this.cache = new ConcurrentHashMap<K, V>(builder.initialCapacity);
   }
 
-  // TODO(ben): Make sure to override default methods to delegate to optimized versions
+  /* ---------------- Cache -------------- */
+
+  @Override
+  public V getIfPresent(Object key) {
+    return cache.get(key);
+  }
+
+  @Override
+  public long mappingCount() {
+    return cache.mappingCount();
+  }
+
+  @Override
+  public V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException {
+    // optimistic fast path due to computeIfAbsent always locking
+    V value = cache.get(key);
+    if (value != null) {
+      return value;
+    }
+    return cache.computeIfAbsent(key, (K k) -> {
+      try {
+        return loader.load(key);
+      } catch (Exception e) {
+        UnsafeAccess.UNSAFE.throwException(new ExecutionException(e));
+        return null; // unreachable
+      }
+    });
+  }
+
+  @Override
+  public Map<K, V> getAllPresent(Iterable<?> keys) {
+    Map<K, V> result = new LinkedHashMap<>();
+    for (Object key : keys) {
+      V value = cache.get(key);
+      if (value != null) {
+        @SuppressWarnings("unchecked")
+        K castKey = (K) key;
+        result.put(castKey, value);
+      }
+    }
+    return Collections.unmodifiableMap(result);
+  }
+
+  @Override
+  public void invalidateAll() {
+    cache.clear();
+  }
+
+  @Override
+  public void invalidateAll(Iterable<?> keys) {
+    for (Object key : keys) {
+      cache.remove(key);
+    }
+  }
+
+  @Override
+  public void cleanUp() {}
+
+  /* ---------------- Concurrent Map -------------- */
 
   @Override
   public boolean isEmpty() {
@@ -73,58 +133,46 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V putIfAbsent(K key, V value) {
-    return null;
+    return cache.putIfAbsent(key, value);
   }
 
   @Override
-  public void putAll(Map<? extends K, ? extends V> m) {}
+  public void putAll(Map<? extends K, ? extends V> m) {
+    cache.putAll(m);
+  }
 
   @Override
   public V remove(Object key) {
-    return null;
+    return cache.remove(key);
   }
 
   @Override
   public boolean remove(Object key, Object value) {
-    return false;
-  }
-
-  @Override
-  public boolean replace(K key, V oldValue, V newValue) {
-    return false;
+    return cache.remove(key, value);
   }
 
   @Override
   public V replace(K key, V value) {
-    return null;
+    return cache.replace(key, value);
+  }
+
+  @Override
+  public boolean replace(K key, V oldValue, V newValue) {
+    return cache.replace(key, oldValue, newValue);
   }
 
   @Override
   public Set<K> keySet() {
-    return null;
+    return cache.keySet();
   }
 
   @Override
   public Collection<V> values() {
-    return null;
+    return cache.values();
   }
 
   @Override
   public Set<Entry<K, V>> entrySet() {
-    return null;
-  }
-
-
-
-  // TODO
-
-  @Override
-  public V getIfPresent(Object key) {
-    return null;
-  }
-
-  @Override
-  public V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException {
-    return null;
+    return cache.entrySet();
   }
 }

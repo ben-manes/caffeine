@@ -44,44 +44,32 @@ public class EliminationStackBenchmark {
     queue = queueType.create();
   }
 
-  @Benchmark
-  @GroupThreads(1)
-  @Group("no_contention")
+  @Benchmark @Group("no_contention") @GroupThreads(1)
   public void no_contention_offer() {
     queue.offer(Boolean.TRUE);
   }
 
-  @Benchmark
-  @GroupThreads(1)
-  @Group("no_contention")
+  @Benchmark @Group("no_contention") @GroupThreads(1)
   public void no_contention_poll() {
     queue.poll();
   }
 
-  @Benchmark
-  @GroupThreads(4)
-  @Group("mild_contention")
+  @Benchmark @Group("mild_contention") @GroupThreads(4)
   public void mild_contention_offer() {
     queue.offer(Boolean.TRUE);
   }
 
-  @Benchmark
-  @GroupThreads(4)
-  @Group("mild_contention")
+  @Benchmark @Group("mild_contention") @GroupThreads(4)
   public void mild_contention_poll() {
     queue.poll();
   }
 
-  @Benchmark
-  @GroupThreads(8)
-  @Group("high_contention")
+  @Benchmark @Group("high_contention") @GroupThreads(8)
   public void high_contention_offer() {
     queue.offer(Boolean.TRUE);
   }
 
-  @Benchmark
-  @GroupThreads(8)
-  @Group("high_contention")
+  @Benchmark @Group("high_contention") @GroupThreads(8)
   public void high_contention_poll() {
     queue.poll();
   }

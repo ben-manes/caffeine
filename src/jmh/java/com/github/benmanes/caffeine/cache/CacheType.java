@@ -21,6 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 
+import com.github.benmanes.caffeine.cache.map.BoundedLinkedHashMap;
+import com.github.benmanes.caffeine.cache.map.ConcurrentHashMapV7;
 import com.google.common.cache.CacheBuilder;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 

@@ -24,8 +24,6 @@ import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nullable;
 
-import com.google.common.cache.CacheStats;
-
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -37,52 +35,59 @@ final class LocalManualCache<K, V> implements Cache<K, V> {
   }
 
   @Override
+  public long size() {
+    return localCache.mappingCount();
+  }
+
+  @Override
+  public void cleanUp() {
+    localCache.cleanUp();
+  }
+
+  @Override
   public @Nullable V getIfPresent(Object key) {
     return localCache.getIfPresent(key);
   }
 
   @Override
   public V get(K key, Callable<? extends V> valueLoader) throws ExecutionException {
-    return null;
+    requireNonNull(valueLoader);
+    return localCache.get(key, (Object k) -> valueLoader.call());
   }
 
   @Override
   public /* Immutable */ Map<K, V> getAllPresent(Iterable<?> keys) {
-    return null;
+    return localCache.getAllPresent(keys);
   }
 
   @Override
-  public void put(K key, V value) {}
-
-  @Override
-  public void putAll(Map<? extends K, ? extends V> m) {}
-
-  @Override
-  public void invalidate(Object key) {}
-
-  @Override
-  public void invalidateAll(Iterable<?> keys) {}
-
-  @Override
-  public void invalidateAll() {}
-
-  @Override
-  public long size() {
-    return 0;
+  public void put(K key, V value) {
+    localCache.put(key, value);
   }
 
-  // @Override public CacheStats stats() { return null; }
+  @Override
+  public void putAll(Map<? extends K, ? extends V> map) {
+    localCache.putAll(map);
+  }
 
   @Override
-  public void cleanUp() {}
+  public void invalidate(Object key) {
+    requireNonNull(key);
+    localCache.remove(key);
+  }
+
+  @Override
+  public void invalidateAll() {
+    localCache.invalidateAll();
+  }
+
+  @Override
+  public void invalidateAll(Iterable<?> keys) {
+    localCache.invalidateAll(keys);
+  }
 
   @Override
   public ConcurrentMap<K, V> asMap() {
     return localCache;
-  }
-
-  @Override
-  public CacheStats stats() {
-    return null;
   }
 }

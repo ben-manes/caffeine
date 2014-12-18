@@ -15,25 +15,21 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import javax.annotation.concurrent.NotThreadSafe;
-
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@NotThreadSafe
-public class BoundedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
-  private static final long serialVersionUID = 1L;
-  private final int maximumSize;
+@FunctionalInterface
+public interface CacheLoader<K, V> {
 
-  public BoundedLinkedHashMap(boolean accessOrder, int maximumSize) {
-    super(maximumSize, 0.75f, accessOrder);
-    this.maximumSize = maximumSize;
-  }
-
-  @Override protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-    return size() > maximumSize;
-  }
+  /**
+   * Computes or retrieves the value corresponding to {@code key}.
+   *
+   * @param key the non-null key whose value should be loaded
+   * @return the value associated with {@code key}; <b>must not be null</b>
+   * @throws Exception if unable to load the result
+   * @throws InterruptedException if this method is interrupted. {@code InterruptedException} is
+   *     treated like any other {@code Exception} in all respects except that, when it is caught,
+   *     the thread's interrupt status is set
+   */
+  V load(K key) throws Exception;
 }

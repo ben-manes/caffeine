@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nullable;
 
-import com.google.common.cache.CacheStats;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
@@ -46,7 +45,7 @@ public interface Cache<K, V> {
 
   void put(K key, V value);
 
-  void putAll(Map<? extends K,? extends V> m);
+  void putAll(Map<? extends K,? extends V> map);
 
   void invalidate(Object key);
 
@@ -56,7 +55,7 @@ public interface Cache<K, V> {
 
   long size();
 
-  /* TODO */ CacheStats stats();
+  /* TODO(ben): CacheStats stats(); */
 
   ConcurrentMap<K, V> asMap();
 

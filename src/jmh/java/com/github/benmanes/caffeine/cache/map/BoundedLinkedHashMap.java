@@ -13,30 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.map;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 
-import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-interface LocalCache<K, V> extends ConcurrentMap<K, V> {
+@NotThreadSafe
+public class BoundedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
+  private static final long serialVersionUID = 1L;
+  private final int maximumSize;
 
-  long mappingCount();
+  public BoundedLinkedHashMap(boolean accessOrder, int maximumSize) {
+    super(maximumSize, 0.75f, accessOrder);
+    this.maximumSize = maximumSize;
+  }
 
-  @Nullable V getIfPresent(Object key);
-
-  V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException;
-
-  Map<K, V> getAllPresent(Iterable<?> keys);
-
-  void invalidateAll();
-
-  void invalidateAll(Iterable<?> keys);
-
-  void cleanUp();
+  @Override protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+    return size() > maximumSize;
+  }
 }

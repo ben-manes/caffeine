@@ -19,9 +19,14 @@ package com.github.benmanes.caffeine.cache;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Caffeine<K, V> {
+  int initialCapacity;
 
   public static Caffeine<Object, Object> newBuilder() {
     return new Caffeine<Object, Object>();
+  }
+
+  public void initialCapacity(int initialCapacity) {
+    this.initialCapacity = initialCapacity;
   }
 
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
