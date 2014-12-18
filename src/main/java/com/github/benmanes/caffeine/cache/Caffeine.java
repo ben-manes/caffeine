@@ -32,6 +32,20 @@ public final class Caffeine<K, V> {
     executor = ForkJoinPool.commonPool();
   }
 
+  /** Ensures that the argument expression is true. */
+  static void checkArgument(boolean expression) {
+    if (!expression) {
+      throw new IllegalArgumentException();
+    }
+  }
+
+  /** Ensures that the state expression is true. */
+  static void checkState(boolean expression) {
+    if (!expression) {
+      throw new IllegalStateException();
+    }
+  }
+
   @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener() {
     return (RemovalListener<K1, V1>)
