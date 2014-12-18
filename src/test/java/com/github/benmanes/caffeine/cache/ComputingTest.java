@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
@@ -35,6 +36,12 @@ public class ComputingTest {
   @Test(enabled = false, expectedExceptions = IllegalStateException.class)
   public void recursive_chm() {
     ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>();
+    map.computeIfAbsent(1, new RecursiveFunction(map));
+  }
+
+  @Test(expectedExceptions = StackOverflowError.class)
+  public void recursive_cslm() {
+    ConcurrentMap<Integer, Boolean> map = new ConcurrentSkipListMap<>();
     map.computeIfAbsent(1, new RecursiveFunction(map));
   }
 
