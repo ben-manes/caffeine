@@ -7,7 +7,7 @@
 
 Concurrent data-structures for Java 8.
 
-This project is in early development and released under the
+This project is in **early development** and released under the
 [Apache License](http://www.apache.org/licenses/LICENSE-2.0).
 
 ## Collections

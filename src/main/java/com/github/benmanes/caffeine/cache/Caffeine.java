@@ -17,12 +17,20 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Caffeine<K, V> {
   RemovalListener<? super K, ? super V> removalListener;
   int initialCapacity;
+  Executor executor;
+
+  public Caffeine() {
+    executor = ForkJoinPool.commonPool();
+  }
 
   @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener() {

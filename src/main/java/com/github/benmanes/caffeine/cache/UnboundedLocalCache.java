@@ -15,16 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
-
-import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.UnsafeAccess;
 
@@ -32,19 +27,12 @@ import com.github.benmanes.caffeine.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 // TODO(ben): Make sure to override default interface methods to delegate to optimized versions
-final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
-  final RemovalListener<K, V> removalListener;
+final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   final ConcurrentHashMap<K, V> cache;
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder) {
+    super(builder);
     this.cache = new ConcurrentHashMap<K, V>(builder.initialCapacity);
-    this.removalListener = builder.getRemovalListener();
-  }
-
-  void notifyRemoval(RemovalCause cause, K key, @Nullable V value) {
-    // TODO(ben): Provide pool from builder so it is user configurable
-    ForkJoinPool.commonPool().execute(
-        () -> removalListener.onRemoval(new RemovalNotification<K, V>()));
   }
 
   /* ---------------- Cache -------------- */
@@ -92,18 +80,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public void invalidateAll() {
-    cache.clear();
+    clear();
   }
 
   @Override
   public void invalidateAll(Iterable<?> keys) {
     for (Object key : keys) {
-      V value = cache.remove(key);
-      if (value != null) {
-        @SuppressWarnings("unchecked")
-        K castKey = (K) key;
-        notifyRemoval(RemovalCause.EXPLICIT, castKey, value);
-      }
+      remove(key);
     }
   }
 
@@ -119,7 +102,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public void clear() {
-    cache.clear();
+    for (K key : cache.keySet()) {
+      V value = cache.remove(key);
+      notifyRemoval(RemovalCause.EXPLICIT, key, value);
+    }
   }
 
   @Override
@@ -159,36 +145,43 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V remove(Object key) {
-    return cache.remove(key);
+    V value = cache.remove(key);
+    if (value != null) {
+      @SuppressWarnings("unchecked")
+      K castKey = (K) key;
+      notifyRemoval(RemovalCause.EXPLICIT, castKey, value);
+    }
+    return value;
   }
 
   @Override
   public boolean remove(Object key, Object value) {
-    return cache.remove(key, value);
+    boolean removed = cache.remove(key, value);
+    if (removed) {
+      @SuppressWarnings("unchecked")
+      K castKey = (K) key;
+      @SuppressWarnings("unchecked")
+      V castValue = (V) value;
+      notifyRemoval(RemovalCause.EXPLICIT, castKey, castValue);
+    }
+    return removed;
   }
 
   @Override
   public V replace(K key, V value) {
-    return cache.replace(key, value);
+    V prev = cache.replace(key, value);
+    if (prev != null) {
+      notifyRemoval(RemovalCause.REPLACED, key, value);
+    }
+    return prev;
   }
 
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
-    return cache.replace(key, oldValue, newValue);
-  }
-
-  @Override
-  public Set<K> keySet() {
-    return cache.keySet();
-  }
-
-  @Override
-  public Collection<V> values() {
-    return cache.values();
-  }
-
-  @Override
-  public Set<Entry<K, V>> entrySet() {
-    return cache.entrySet();
+    boolean replaced = cache.replace(key, oldValue, newValue);
+    if (replaced) {
+      notifyRemoval(RemovalCause.EXPLICIT, key, oldValue);
+    }
+    return replaced;
   }
 }
