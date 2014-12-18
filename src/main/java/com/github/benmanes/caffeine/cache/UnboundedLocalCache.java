@@ -22,6 +22,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+
+import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.UnsafeAccess;
 
@@ -30,10 +33,18 @@ import com.github.benmanes.caffeine.UnsafeAccess;
  */
 // TODO(ben): Make sure to override default interface methods to delegate to optimized versions
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
+  final RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> cache;
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder) {
     this.cache = new ConcurrentHashMap<K, V>(builder.initialCapacity);
+    this.removalListener = builder.getRemovalListener();
+  }
+
+  void notifyRemoval(RemovalCause cause, K key, @Nullable V value) {
+    // TODO(ben): Provide pool from builder so it is user configurable
+    ForkJoinPool.commonPool().execute(
+        () -> removalListener.onRemoval(new RemovalNotification<K, V>()));
   }
 
   /* ---------------- Cache -------------- */
@@ -87,7 +98,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public void invalidateAll(Iterable<?> keys) {
     for (Object key : keys) {
-      cache.remove(key);
+      V value = cache.remove(key);
+      if (value != null) {
+        @SuppressWarnings("unchecked")
+        K castKey = (K) key;
+        notifyRemoval(RemovalCause.EXPLICIT, castKey, value);
+      }
     }
   }
 
