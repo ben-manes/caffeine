@@ -37,7 +37,7 @@ public class GetPutBenchmark {
   private static final int MASK = (2 << 14) - 1;
 
   @Param({"ConcurrentLinkedHashMap", "Guava", "LinkedHashMap_Lru",
-    "ConcurrentHashMap", "ConcurrentHashMapV7"})
+    "ConcurrentHashMapV7", "ConcurrentHashMap", "NonBlockingHashMap"})
   CacheType cacheType;
   @Param("100000")
   int maximumSize;

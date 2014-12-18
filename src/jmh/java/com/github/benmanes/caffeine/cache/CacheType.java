@@ -19,6 +19,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.cliffc.high_scale_lib.NonBlockingHashMap;
+
 import com.google.common.cache.CacheBuilder;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 
@@ -43,14 +45,19 @@ public enum CacheType {
       return Collections.synchronizedMap(new BoundedLinkedHashMap<K, V>(true, maximumSize));
     }
   },
+  ConcurrentHashMapV7() { // unbounded, see OpenJDK/7u40-b43
+    @Override public <K, V> Map<K, V> create(int maximumSize) {
+      return new ConcurrentHashMapV7<K, V>(maximumSize);
+    }
+  },
   ConcurrentHashMap() { // unbounded
     @Override public <K, V> Map<K, V> create(int maximumSize) {
       return new ConcurrentHashMap<K, V>(maximumSize);
     }
   },
-  ConcurrentHashMapV7() { // unbounded, see OpenJDK/7u40-b43
+  NonBlockingHashMap() { // unbounded
     @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return new ConcurrentHashMapV7<K, V>(maximumSize);
+      return new NonBlockingHashMap<K, V>(maximumSize);
     }
   };
 
