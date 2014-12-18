@@ -15,17 +15,19 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+
+import javax.annotation.Nullable;
+
+import com.google.common.cache.CacheLoader;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Caffeine<K, V> {
+interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
-  public static Caffeine<Object, Object> newBuilder() {
-    return new Caffeine<Object, Object>();
-  }
+  @Nullable V getIfPresent(Object key);
 
-  public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
-    LocalCache<K1, V1> localCache = new UnboundedLocalCache<>(this);
-    return new LocalManualCache<K1, V1>(localCache);
-  }
+  V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException;
 }
