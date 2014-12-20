@@ -72,7 +72,7 @@ public final class Caffeine<K, V> {
   }
 
   public Caffeine<K, V> executor(Executor executor) {
-    executor = requireNonNull(executor);
+    this.executor = requireNonNull(executor);
     return this;
   }
 

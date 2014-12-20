@@ -87,8 +87,11 @@ public final class CacheProvider {
     Set<Caffeine<Object, Object>> combinations = new LinkedHashSet<>(combinationCount);
     for (Caffeine<Object, Object> builder : builders) {
       for (Class<RemovalListener<?, ?>> removalListenerClass : cacheSpec.removalListener()) {
+        @SuppressWarnings("unchecked")
+        RemovalListener<Object, Object> removalListener =
+            (RemovalListener<Object, Object>) removalListenerClass.newInstance();
         Caffeine<Object, Object> copy = builder.copy();
-        copy.removalListener(removalListenerClass.newInstance());
+        copy.removalListener(removalListener);
         combinations.add(copy);
       }
     }
