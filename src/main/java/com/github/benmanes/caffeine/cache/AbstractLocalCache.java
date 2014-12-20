@@ -31,7 +31,6 @@ import javax.annotation.Nullable;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-//TODO(ben): Override default (this & views) interface methods to delegate to optimized versions
 abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   protected final RemovalListener<K, V> removalListener;
   protected final Executor executor;

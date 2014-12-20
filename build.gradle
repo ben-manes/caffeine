@@ -82,6 +82,7 @@ test {
 checkstyle {
   toolVersion = '6.1.1'
   showViolations = false
+  sourceSets = [sourceSets.main]
 }
 
 findbugs {
