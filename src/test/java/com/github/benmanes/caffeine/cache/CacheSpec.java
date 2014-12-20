@@ -34,8 +34,8 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
-  static final int UNBOUNDED = -1;
-  static final int DEFAULT_MAXIMUM_SIZE = 100;
+  static final long UNBOUNDED = -1L;
+  static final long DEFAULT_MAXIMUM_SIZE = 100L;
   static final int DEFAULT_INITIAL_CAPACITY = -1;
 
   /** The initial capacities, each resulting in a new combination. */
@@ -97,28 +97,28 @@ public @interface CacheSpec {
   /** The population scenarios. */
   enum Population {
     EMPTY() {
-      @Override public void populate(Cache<Integer, Integer> cache, int maximum) {}
+      @Override public void populate(Cache<Integer, Integer> cache, long maximum) {}
     },
     SINGLETON() {
-      @Override public void populate(Cache<Integer, Integer> cache, int maximum) {
+      @Override public void populate(Cache<Integer, Integer> cache, long maximum) {
         cache.put(0, 0);
       }
     },
     PARTIAL() {
-      @Override public void populate(Cache<Integer, Integer> cache, int maximum) {
+      @Override public void populate(Cache<Integer, Integer> cache, long maximum) {
         for (int i = 0; i < (maximum / 2); i++) {
           cache.put(i, -i);
         }
       }
     },
     FULL() {
-      @Override public void populate(Cache<Integer, Integer> cache, int maximum) {
+      @Override public void populate(Cache<Integer, Integer> cache, long maximum) {
         for (int i = 0; i < maximum; i++) {
           cache.put(i, -i);
         }
       }
     };
 
-    abstract void populate(Cache<Integer, Integer> cache, int maximum);
+    abstract void populate(Cache<Integer, Integer> cache, long maximum);
   }
 }

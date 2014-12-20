@@ -84,7 +84,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void invalidateAll(Cache<Integer, Integer> cache) {
     // This test is run against 72 different cache configurations.
-    // (2 key types) * (3 value types) * (3 max size) * (4 population modes)
+    // (2 key types) * (3 value types) * (3 max sizes) * (4 population modes)
     cache.invalidateAll();
     assertThat(cache.size(), is(0L));
   }

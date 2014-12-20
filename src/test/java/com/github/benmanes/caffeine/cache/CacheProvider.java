@@ -59,6 +59,17 @@ public final class CacheProvider {
     return toTestCases(caches);
   }
 
+  /** Generates a new set of builders with the maximum size combinations. */
+  static Set<Caffeine<Object, Object>> makeMaximumSizes(
+      CacheSpec cacheSpec, Set<Caffeine<Object, Object>> builders) throws Exception {
+    assertThat(cacheSpec.maximumSize().length, is(greaterThan(0)));
+
+    // TODO(ben): Support eviction
+    assertThat(cacheSpec.maximumSize().length, is(1));
+    assertThat(cacheSpec.maximumSize()[0], is(CacheSpec.UNBOUNDED));
+    return builders;
+  }
+
   /** Generates a new set of builders with the key reference combinations. */
   static Set<Caffeine<Object, Object>> makeKeyReferences(
       CacheSpec cacheSpec, Set<Caffeine<Object, Object>> builders) throws Exception {
