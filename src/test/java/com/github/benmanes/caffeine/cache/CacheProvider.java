@@ -17,11 +17,13 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -32,7 +34,7 @@ import org.testng.annotations.DataProvider;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
-import com.google.common.collect.ImmutableSet;
+import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
@@ -40,16 +42,16 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheProvider {
-  public static final int UNSET_INT = -1;
-  public static final int POPULATED_SIZE = 100;
 
   @DataProvider(name = "caches")
   public static Iterator<Object[]> providesCaches(Method testMethod) throws Exception {
     CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
     requireNonNull(cacheSpec, "@CacheSpec not found");
 
-    Set<Caffeine<Object, Object>> builders = ImmutableSet.of(Caffeine.newBuilder());
+    Set<Caffeine<Object, Object>> builders = Collections.singleton(Caffeine.newBuilder());
     builders = makeInitialCapacities(cacheSpec, builders);
+    builders = makeKeyReferences(cacheSpec, builders);
+    builders = makeValueReferences(cacheSpec, builders);
     builders = makeRemovalListeners(cacheSpec, builders);
     builders = makeExecutors(cacheSpec, builders);
 
@@ -57,18 +59,41 @@ public final class CacheProvider {
     return toTestCases(caches);
   }
 
+  /** Generates a new set of builders with the key reference combinations. */
+  static Set<Caffeine<Object, Object>> makeKeyReferences(
+      CacheSpec cacheSpec, Set<Caffeine<Object, Object>> builders) throws Exception {
+    assertThat(cacheSpec.keys().length, is(greaterThan(0)));
+
+    // TODO(ben): Support soft keys
+    assertThat(cacheSpec.keys(), is(arrayContaining(ReferenceType.STRONG)));
+    return builders;
+  }
+
+  /** Generates a new set of builders with the value reference combinations. */
+  static Set<Caffeine<Object, Object>> makeValueReferences(
+      CacheSpec cacheSpec, Set<Caffeine<Object, Object>> builders) throws Exception {
+    assertThat(cacheSpec.values().length, is(greaterThan(0)));
+
+    // TODO(ben): Support soft and weak values
+    assertThat(cacheSpec.values(), is(arrayContaining(ReferenceType.STRONG)));
+    return builders;
+  }
+
   /** Generates a new set of builders with the executor combinations. */
   static Set<Caffeine<Object, Object>> makeExecutors(
       CacheSpec cacheSpec, Set<Caffeine<Object, Object>> builders) throws Exception {
-    if (cacheSpec.executor().length == 0) {
+    boolean isDefault = Arrays.equals(
+        cacheSpec.executor(), new CacheExecutor[] { CacheExecutor.DEFAULT });
+    if (isDefault) {
       return builders;
     }
+
     int combinationCount = cacheSpec.executor().length * builders.size();
     Set<Caffeine<Object, Object>> combinations = new LinkedHashSet<>(combinationCount);
     for (Caffeine<Object, Object> builder : builders) {
       for (CacheExecutor executor : cacheSpec.executor()) {
         Caffeine<Object, Object> copy = builder.copy();
-        if (executor != CacheExecutor.UNSET) {
+        if (executor != CacheExecutor.DEFAULT) {
           copy.executor(executor.get());
         }
         combinations.add(copy);
@@ -101,15 +126,18 @@ public final class CacheProvider {
   /** Generates a new set of builders with the initial capacity combinations. */
   static Set<Caffeine<Object, Object>> makeInitialCapacities(
       CacheSpec cacheSpec, Set<Caffeine<Object, Object>> builders) {
-    if (cacheSpec.initialCapacity().length == 0) {
+    boolean isDefault = Arrays.equals(
+        cacheSpec.initialCapacity(), new int[] { CacheSpec.DEFAULT_INITIAL_CAPACITY });
+    if (isDefault) {
       return builders;
     }
+
     int combinationCount = cacheSpec.initialCapacity().length * builders.size();
     Set<Caffeine<Object, Object>> combinations = new LinkedHashSet<>(combinationCount);
     for (Caffeine<Object, Object> builder : builders) {
       for (int initialCapacity : cacheSpec.initialCapacity()) {
         Caffeine<Object, Object> copy = builder.copy();
-        if (initialCapacity != UNSET_INT) {
+        if (initialCapacity != CacheSpec.DEFAULT_INITIAL_CAPACITY) {
           copy.initialCapacity(initialCapacity);
         }
         combinations.add(copy);
@@ -128,7 +156,7 @@ public final class CacheProvider {
     for (Caffeine<Object, Object> builder : builders) {
       for (Population population : cacheSpec.population()) {
         Cache<Integer, Integer> cache = builder.copy().build();
-        population.populate(cache, POPULATED_SIZE);
+        population.populate(cache, CacheSpec.DEFAULT_MAXIMUM_SIZE);
         combinations.add(cache);
       }
     }

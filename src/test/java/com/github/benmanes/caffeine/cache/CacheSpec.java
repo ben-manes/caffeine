@@ -34,12 +34,21 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
+  static final int UNBOUNDED = -1;
+  static final int DEFAULT_MAXIMUM_SIZE = 100;
+  static final int DEFAULT_INITIAL_CAPACITY = -1;
 
   /** The initial capacities, each resulting in a new combination. */
-  int[] initialCapacity() default {};
+  int[] initialCapacity() default { DEFAULT_INITIAL_CAPACITY };
 
   /** The maximum size, each resulting in a new combination. */
-  long[] maximumSize() default {};
+  long[] maximumSize() default { UNBOUNDED };
+
+  /** The reference type of that the cache holds a key with (strong or soft only). */
+  ReferenceType[] keys() default { ReferenceType.STRONG };
+
+  /** The reference type of that the cache holds a value with (strong, soft, or weak). */
+  ReferenceType[] values() default { ReferenceType.STRONG };
 
   /**
    * The number of entries to populate the cache with. The keys and values are integers starting
@@ -52,11 +61,26 @@ public @interface CacheSpec {
   Class<RemovalListener<?, ?>>[] removalListener() default {};
 
   /** The executors retrieved from a supplier, each resulting in a new combination. */
-  CacheExecutor[] executor() default {};
+  CacheExecutor[] executor() default { CacheExecutor.DEFAULT };
+
+  /** The reference type of cache keys and/or values. */
+  enum ReferenceType {
+    /** Prevents referent from being reclaimed by the garbage collector. */
+    STRONG,
+
+    /**
+     * Referent reclaimed in an LRU fashion when the VM runs low on memory and no strong
+     * references exist.
+     */
+    SOFT,
+
+    /** Referent reclaimed when no strong or soft references exist. */
+    WEAK
+  }
 
   /** The executors that the cache can be configured with. */
   enum CacheExecutor implements Supplier<Executor> {
-    UNSET() {
+    DEFAULT() {
       @Override public Executor get() { throw new AssertionError("Should never be called"); }
     },
     DIRECT() {

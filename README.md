@@ -60,3 +60,33 @@ gradlew [object-layout task] -PclassName=[class-name]
 ```
 
 For convenience, the project's package is prepended to the supplied class name.
+
+#### Parameterized testing
+
+Cache unit tests can opt into being run against all cache configurations that meet a specification
+constraint. A test method annotated with a configured `@CacheSpec` and using the `CacheProvider`
+[data provider](http://testng.org/doc/documentation-main.html#parameters-dataproviders) will be
+executed with all possible combinations.
+
+Parameterized tests can take advantage of automatic validation of the cache's internal data
+structures to detect corruption. The `CacheValidationListener` is run after a successful test case
+and if an error is detected then the test is set with the failure information.
+
+```java
+@Listeners(CacheValidationListener.class)
+@Test(dataProviderClass = CacheProvider.class)
+public final class CacheTest {
+
+  @CacheSpec(
+    keys = { ReferenceType.STRONG, ReferenceType.SOFT },
+    values = { ReferenceType.STRONG, ReferenceType.SOFT, ReferenceType.WEAK },
+    maximumSize = { 0, CacheSpec.DEFAULT_MAXIMUM_SIZE, CacheSpec.UNBOUNDED })
+  @Test(dataProvider = "caches")
+  public void invalidateAll(Cache<Integer, Integer> cache) {
+    // This test is run against 72 different cache configurations.
+    // (2 key types) * (3 value types) * (3 max size) * (4 population modes)
+    cache.invalidateAll();
+    assertThat(cache.size(), is(0L));
+  }
+}
+```
