@@ -21,6 +21,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.function.Supplier;
+
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * The cache test specification so that a {@link org.testng.annotations.DataProvider} can construct
@@ -47,8 +51,24 @@ public @interface CacheSpec {
   /** The removal listeners, each resulting in a new combination. */
   Class<RemovalListener<?, ?>>[] removalListener() default {};
 
-  /** The executors, each resulting in a new combination. */
-  Class<Executor>[] executor() default {};
+  /** The executors retrieved from a supplier, each resulting in a new combination. */
+  CacheExecutor[] executor() default {};
+
+  /** The executors that the cache can be configured with. */
+  enum CacheExecutor implements Supplier<Executor> {
+    UNSET() {
+      @Override public Executor get() { throw new AssertionError("Should never be called"); }
+    },
+    DIRECT() {
+      @Override public Executor get() { return MoreExecutors.directExecutor(); }
+    },
+    FORK_JOIN_COMMON_POOL() {
+      @Override public Executor get() { return ForkJoinPool.commonPool(); }
+    };
+
+    @Override
+    public abstract Executor get();
+  }
 
   /** The population scenarios. */
   enum Population {

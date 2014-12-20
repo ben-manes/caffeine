@@ -71,6 +71,11 @@ public final class Caffeine<K, V> {
     this.initialCapacity = initialCapacity;
   }
 
+  public Caffeine<K, V> executor(Executor executor) {
+    executor = requireNonNull(executor);
+    return this;
+  }
+
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> removalListener(
       RemovalListener<? super K1, ? super V1> listener) {
     // TODO(ben): Validate
