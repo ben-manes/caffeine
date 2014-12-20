@@ -39,6 +39,12 @@ public class ComputingTest {
     map.computeIfAbsent(1, new RecursiveFunction(map));
   }
 
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void recursive_chm2() {
+    ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap2<>();
+    map.computeIfAbsent(1, new RecursiveFunction(map));
+  }
+
   @Test(expectedExceptions = StackOverflowError.class)
   public void recursive_cslm() {
     ConcurrentMap<Integer, Boolean> map = new ConcurrentSkipListMap<>();

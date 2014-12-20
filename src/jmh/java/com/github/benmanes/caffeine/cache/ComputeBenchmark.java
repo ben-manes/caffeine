@@ -45,7 +45,7 @@ public class ComputeBenchmark {
   static final int MASK = INITIAL_CAPACITY - 1;
   static final Integer COMPUTE_KEY = INITIAL_CAPACITY / 2;
 
-  @Param({"ConcurrentHashMap", "Caffeine", "Guava"})
+  @Param({"ConcurrentHashMap", /* "Caffeine", "Guava", */ "ConcurrentHashMap2"})
   String computingType;
 
   Function<Integer, Boolean> benchmarkFunction;
@@ -60,7 +60,9 @@ public class ComputeBenchmark {
   @Setup
   public void setup() throws Exception {
     if (Objects.equals(computingType, "ConcurrentHashMap")) {
-      setupCHM();
+      setupConcurrentHashMap();
+    } else if (Objects.equals(computingType, "ConcurrentHashMap2")) {
+        setupConcurrentHashMap2();
     } else if (Objects.equals(computingType, "Caffeine")) {
       setupCaffeine();
     } else if (Objects.equals(computingType, "Guava")) {
@@ -87,8 +89,13 @@ public class ComputeBenchmark {
     benchmarkFunction.apply(ints[threadState.index++ & MASK]);
   }
 
-  private void setupCHM() {
+  private void setupConcurrentHashMap() {
     ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>(INITIAL_CAPACITY);
+    benchmarkFunction = (Integer key) -> map.computeIfAbsent(key, (Integer k) -> Boolean.TRUE);
+  }
+
+  private void setupConcurrentHashMap2() {
+    ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap2<>(INITIAL_CAPACITY);
     benchmarkFunction = (Integer key) -> map.computeIfAbsent(key, (Integer k) -> Boolean.TRUE);
   }
 

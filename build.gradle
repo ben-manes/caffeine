@@ -70,6 +70,7 @@ dependencies {
   // Eclipse fails to include all of dependencies without this workaround
   testCompile configurations.jmh.allDependencies
 }
+sourceSets.jmh.java.srcDirs += sourceSets.test.java.srcDirs
 
 test {
   useTestNG()
