@@ -17,10 +17,13 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.AbstractCollection;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
@@ -30,12 +33,12 @@ import javax.annotation.Nullable;
  */
 //TODO(ben): Override default (this & views) interface methods to delegate to optimized versions
 abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
-  final RemovalListener<K, V> removalListener;
-  final Executor executor;
+  protected final RemovalListener<K, V> removalListener;
+  protected final Executor executor;
 
-  transient Set<K> keySet;
-  transient Collection<V> values;
-  transient Set<Entry<K, V>> entrySet;
+  protected transient Set<K> keySet;
+  protected transient Collection<V> values;
+  protected transient Set<Entry<K, V>> entrySet;
 
   protected AbstractLocalCache(Caffeine<? super K, ? super V> builder) {
     this.removalListener = builder.getRemovalListener();
@@ -43,7 +46,11 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   protected void notifyRemoval(RemovalCause cause, K key, @Nullable V value) {
-    executor.execute(() -> removalListener.onRemoval(new RemovalNotification<K, V>()));
+    notifyRemoval(new RemovalNotification<K, V>(cause, key, value));
+  }
+
+  protected void notifyRemoval(RemovalNotification<K, V> notification) {
+    executor.execute(() -> removalListener.onRemoval(notification));
   }
 
   @Override
@@ -65,7 +72,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the keys. */
-  static final class KeySetView<K> implements Set<K> {
+  static final class KeySetView<K> extends AbstractSet<K> {
     final LocalCache<K, ?> cache;
 
     KeySetView(LocalCache<K, ?> cache) {
@@ -83,8 +90,18 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    public void clear() {
+      cache.clear();
+    }
+
+    @Override
     public boolean contains(Object o) {
-      return false;
+      return cache.containsKey(o);
+    }
+
+    @Override
+    public boolean remove(Object obj) {
+      return (cache.remove(obj) != null);
     }
 
     @Override
@@ -93,47 +110,19 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
+    public Spliterator<K> spliterator() {
+      return cache.keySet().spliterator();
+    }
+
+    @Override
     public Object[] toArray() {
-      return null;
+      return cache.keySet().toArray();
     }
 
     @Override
-    public <T> T[] toArray(T[] a) {
-      return null;
+    public <T> T[] toArray(T[] array) {
+      return cache.keySet().toArray(array);
     }
-
-    @Override
-    public boolean add(K e) {
-      return false;
-    }
-
-    @Override
-    public boolean remove(Object o) {
-      return false;
-    }
-
-    @Override
-    public boolean containsAll(Collection<?> c) {
-      return false;
-    }
-
-    @Override
-    public boolean addAll(Collection<? extends K> c) {
-      return false;
-    }
-
-    @Override
-    public boolean retainAll(Collection<?> c) {
-      return false;
-    }
-
-    @Override
-    public boolean removeAll(Collection<?> c) {
-      return false;
-    }
-
-    @Override
-    public void clear() {}
   }
 
   /** An adapter to safely externalize the key iterator. */
@@ -167,7 +156,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the values. */
-  final class ValuesView implements Collection<V> {
+  final class ValuesView extends AbstractCollection<V> {
     final LocalCache<K, V> cache;
 
     ValuesView(LocalCache<K, V> cache) {
@@ -175,71 +164,54 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public int size() {
-      return 0;
+    public boolean isEmpty() {
+      return cache.isEmpty();
     }
 
     @Override
-    public boolean isEmpty() {
-      return false;
+    public int size() {
+      return cache.size();
+    }
+
+    @Override
+    public void clear() {
+      cache.clear();
     }
 
     @Override
     public boolean contains(Object o) {
-      return false;
-    }
-
-    @Override
-    public Iterator<V> iterator() {
-      return null;
-    }
-
-    @Override
-    public Object[] toArray() {
-      return null;
-    }
-
-    @Override
-    public <T> T[] toArray(T[] a) {
-      return null;
-    }
-
-    @Override
-    public boolean add(V e) {
-      return false;
+      return cache.containsValue(o);
     }
 
     @Override
     public boolean remove(Object o) {
-      return false;
+      requireNonNull(o);
+      return super.remove(o);
     }
 
     @Override
-    public boolean containsAll(Collection<?> c) {
-      return false;
+    public Iterator<V> iterator() {
+      return new ValuesIterator<K, V>(cache);
     }
 
     @Override
-    public boolean addAll(Collection<? extends V> c) {
-      return false;
+    public Spliterator<V> spliterator() {
+      return cache.values().spliterator();
     }
 
     @Override
-    public boolean removeAll(Collection<?> c) {
-      return false;
+    public Object[] toArray() {
+      return cache.values().toArray();
     }
 
     @Override
-    public boolean retainAll(Collection<?> c) {
-      return false;
+    public <T> T[] toArray(T[] a) {
+      return cache.values().toArray(a);
     }
-
-    @Override
-    public void clear() {}
   }
 
   /** An adapter to safely externalize the value iterator. */
-  final class ValuesIterator implements Iterator<V> {
+  static final class ValuesIterator<K, V> implements Iterator<V> {
     final LocalCache<?, V> cache;
     final Iterator<Entry<K, V>> iterator;
     Entry<K, V> entry;
@@ -269,7 +241,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the entries. */
-  final class EntrySetView implements Set<Entry<K, V>> {
+  final class EntrySetView extends AbstractSet<Entry<K, V>> {
     final LocalCache<K, V> cache;
 
     EntrySetView(LocalCache<K, V> cache) {
@@ -277,75 +249,70 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public int size() {
-      return 0;
+    public boolean isEmpty() {
+      return cache.isEmpty();
     }
 
     @Override
-    public boolean isEmpty() {
-      return false;
+    public int size() {
+      return cache.size();
+    }
+
+    @Override
+    public void clear() {
+      cache.clear();
     }
 
     @Override
     public boolean contains(Object o) {
-      return false;
+      if (!(o instanceof Entry<?, ?>)) {
+        return false;
+      }
+      Entry<?, ?> entry = (Entry<?, ?>) o;
+      V value = cache.get(entry.getKey());
+      return value.equals(entry.getValue());
     }
 
     @Override
-    public Iterator<java.util.Map.Entry<K, V>> iterator() {
-      return null;
+    public boolean add(Entry<K, V> entry) {
+      return (cache.putIfAbsent(entry.getKey(), entry.getValue()) == null);
+    }
+
+    @Override
+    public boolean remove(Object obj) {
+      if (!(obj instanceof Entry<?, ?>)) {
+        return false;
+      }
+      Entry<?, ?> entry = (Entry<?, ?>) obj;
+      return cache.remove(entry.getKey(), entry.getValue());
+    }
+
+    @Override
+    public Iterator<Entry<K, V>> iterator() {
+      return new EntryIterator<K, V>(cache);
+    }
+
+    @Override
+    public Spliterator<Entry<K, V>> spliterator() {
+      return cache.entrySet().spliterator();
     }
 
     @Override
     public Object[] toArray() {
-      return null;
+      return cache.entrySet().toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-      return null;
+      return cache.entrySet().toArray(a);
     }
-
-    @Override
-    public boolean add(java.util.Map.Entry<K, V> e) {
-      return false;
-    }
-
-    @Override
-    public boolean remove(Object o) {
-      return false;
-    }
-
-    @Override
-    public boolean containsAll(Collection<?> c) {
-      return false;
-    }
-
-    @Override
-    public boolean addAll(Collection<? extends java.util.Map.Entry<K, V>> c) {
-      return false;
-    }
-
-    @Override
-    public boolean retainAll(Collection<?> c) {
-      return false;
-    }
-
-    @Override
-    public boolean removeAll(Collection<?> c) {
-      return false;
-    }
-
-    @Override
-    public void clear() {}
   }
 
   /** An adapter to safely externalize the entry iterator. */
-  final class EntryIterator implements Iterator<Entry<K, V>> {
+  static final class EntryIterator<K, V> implements Iterator<Entry<K, V>> {
     final Iterator<Entry<K, V>> iterator;
     final LocalCache<K, V> cache;
     Entry<K, V> entry;
-
 
     EntryIterator(LocalCache<K, V> cache) {
       this.cache = requireNonNull(cache);

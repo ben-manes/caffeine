@@ -22,6 +22,8 @@ import java.util.Map.Entry;
  */
 public final class RemovalNotification<K, V> implements Entry<K, V> {
 
+  public RemovalNotification(RemovalCause cause, K key, V value) {}
+
   @Override
   public K getKey() {
     return null;

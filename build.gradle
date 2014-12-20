@@ -15,6 +15,7 @@ group = 'com.github.ben-manes'
 version = '1.0-SNAPSHOT'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
+compileJava.options.incremental = true
 
 buildscript {
   repositories {

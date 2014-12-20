@@ -20,13 +20,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.github.benmanes.caffeine.UnsafeAccess;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-// TODO(ben): Make sure to override default interface methods to delegate to optimized versions
 final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   final ConcurrentHashMap<K, V> cache;
 
@@ -49,12 +51,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException {
-    // optimistic fast path due to computeIfAbsent always locking
-    V value = cache.get(key);
-    if (value != null) {
-      return value;
-    }
-    return cache.computeIfAbsent(key, (K k) -> {
+    return computeIfAbsent(key, (K k) -> {
       try {
         return loader.load(key);
       } catch (Exception e) {
@@ -92,6 +89,89 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public void cleanUp() {}
+
+  /* ---------------- JDK8+ Map extensions -------------- */
+
+  @Override
+  public V getOrDefault(Object key, V defaultValue) {
+    return cache.getOrDefault(key, defaultValue);
+  }
+
+  @Override
+  public void forEach(BiConsumer<? super K, ? super V> action) {
+    cache.forEach(action);
+  }
+
+  @Override
+  public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+    // optimistic fast path due to computeIfAbsent always locking
+    V value = cache.get(key);
+    return (value == null)
+        ? cache.computeIfAbsent(key, mappingFunction)
+        : value;
+  }
+
+  @Override
+  public V computeIfPresent(K key,
+      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    // optimistic fast path due to computeIfAbsent always locking
+    if (!cache.containsKey(key)) {
+      return null;
+    }
+    // ensures that the removal notification is processed after the removal has completed
+    @SuppressWarnings("unchecked")
+    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+    V nv = cache.computeIfPresent(key, (K k, V oldValue) -> {
+      V newValue = remappingFunction.apply(k, oldValue);
+      notification[0] = (newValue == null)
+          ? new RemovalNotification<K, V>(RemovalCause.EXPLICIT, key, oldValue)
+          : new RemovalNotification<K, V>(RemovalCause.REPLACED, key, oldValue);
+      return newValue;
+    });
+    if (notification[0] != null) {
+      notifyRemoval(notification[0]);
+    }
+    return nv;
+  }
+
+  @Override
+  public V compute(K key,
+      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    // ensures that the removal notification is processed after the removal has completed
+    @SuppressWarnings("unchecked")
+    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+    V nv = cache.compute(key, (K k, V oldValue) -> {
+      V newValue = remappingFunction.apply(k, oldValue);
+      if (oldValue != null) {
+        notification[0] = (newValue == null)
+            ? new RemovalNotification<K, V>(RemovalCause.EXPLICIT, key, oldValue)
+            : new RemovalNotification<K, V>(RemovalCause.REPLACED, key, oldValue);
+      }
+      return newValue;
+    });
+    if (notification[0] != null) {
+      notifyRemoval(notification[0]);
+    }
+    return nv;
+  }
+
+  @Override
+  public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+    // ensures that the removal notification is processed after the removal has completed
+    @SuppressWarnings("unchecked")
+    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+    V nv = cache.merge(key, value, (V oldValue, V val) -> {
+      V newValue = remappingFunction.apply(oldValue, val);
+      notification[0] = (newValue == null)
+          ? new RemovalNotification<K, V>(RemovalCause.EXPLICIT, key, oldValue)
+          : new RemovalNotification<K, V>(RemovalCause.REPLACED, key, oldValue);
+      return newValue;
+    });
+    if (notification[0] != null) {
+      notifyRemoval(notification[0]);
+    }
+    return nv;
+  }
 
   /* ---------------- Concurrent Map -------------- */
 
