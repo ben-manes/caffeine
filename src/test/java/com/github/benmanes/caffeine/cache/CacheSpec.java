@@ -34,34 +34,38 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
-  static final long UNBOUNDED = -1L;
-  static final long DEFAULT_MAXIMUM_SIZE = 100L;
+
+  /* ---------------- Initial capacity -------------- */
+
+  /** A flag indicating that the initial capacity is not configured. */
   static final int DEFAULT_INITIAL_CAPACITY = -1;
 
   /** The initial capacities, each resulting in a new combination. */
   int[] initialCapacity() default { DEFAULT_INITIAL_CAPACITY };
 
+  /* ---------------- General Eviction -------------- */
+
+  /** The removal listeners, each resulting in a new combination. */
+  Class<RemovalListener<?, ?>>[] removalListener() default {};
+
+  /* ---------------- Maximum size -------------- */
+
+  /** A flag indicating that entries are not evicted due to a maximum size threshold. */
+  static final long UNBOUNDED = -1L;
+
+  /** The default maximum number of size if eviction is enabled. */
+  static final long DEFAULT_MAXIMUM_SIZE = 100L;
+
   /** The maximum size, each resulting in a new combination. */
   long[] maximumSize() default { UNBOUNDED };
+
+  /* ---------------- Reference-based -------------- */
 
   /** The reference type of that the cache holds a key with (strong or soft only). */
   ReferenceType[] keys() default { ReferenceType.STRONG };
 
   /** The reference type of that the cache holds a value with (strong, soft, or weak). */
   ReferenceType[] values() default { ReferenceType.STRONG };
-
-  /**
-   * The number of entries to populate the cache with. The keys and values are integers starting
-   * from 0, with the value being the negated key. Each configuration results in a new combination.
-   */
-  Population[] population() default {
-      Population.EMPTY, Population.SINGLETON, Population.PARTIAL, Population.FULL };
-
-  /** The removal listeners, each resulting in a new combination. */
-  Class<RemovalListener<?, ?>>[] removalListener() default {};
-
-  /** The executors retrieved from a supplier, each resulting in a new combination. */
-  CacheExecutor[] executor() default { CacheExecutor.DEFAULT };
 
   /** The reference type of cache keys and/or values. */
   enum ReferenceType {
@@ -77,6 +81,11 @@ public @interface CacheSpec {
     /** Referent reclaimed when no strong or soft references exist. */
     WEAK
   }
+
+  /* ---------------- Executor -------------- */
+
+  /** The executors retrieved from a supplier, each resulting in a new combination. */
+  CacheExecutor[] executor() default { CacheExecutor.DEFAULT };
 
   /** The executors that the cache can be configured with. */
   enum CacheExecutor implements Supplier<Executor> {
@@ -94,31 +103,59 @@ public @interface CacheSpec {
     public abstract Executor get();
   }
 
+  /* ---------------- Populated -------------- */
+
+  /** The default maximum number of size if eviction is enabled. */
+  static final long DEFAULT_FULL = DEFAULT_MAXIMUM_SIZE;
+
+  /**
+   * The number of entries to populate the cache with. The keys and values are integers starting
+   * from 0, with the value being the negated key. Each configuration results in a new combination.
+   */
+  Population[] population() default {
+    Population.EMPTY, Population.SINGLETON, Population.PARTIAL, Population.FULL
+  };
+
   /** The population scenarios. */
   enum Population {
     EMPTY() {
-      @Override public void populate(Cache<Integer, Integer> cache, long maximum) {}
+      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {}
     },
     SINGLETON() {
-      @Override public void populate(Cache<Integer, Integer> cache, long maximum) {
+      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
+        context.firstKey = 0;
+        context.lastKey = 0;
+        context.midKey = 0;
         cache.put(0, 0);
       }
     },
     PARTIAL() {
-      @Override public void populate(Cache<Integer, Integer> cache, long maximum) {
-        for (int i = 0; i < (maximum / 2); i++) {
+      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
+        int maximum = context.isUnbounded()
+            ? (int) context.getMaximumSize()
+            : (int) (CacheSpec.DEFAULT_MAXIMUM_SIZE / 2);
+        context.firstKey = 0;
+        context.lastKey = maximum;
+        context.midKey = maximum / 2;
+        for (int i = 0; i < maximum; i++) {
           cache.put(i, -i);
         }
       }
     },
     FULL() {
-      @Override public void populate(Cache<Integer, Integer> cache, long maximum) {
+      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
+        int maximum = context.isUnbounded()
+            ? (int) context.getMaximumSize()
+            : (int) CacheSpec.DEFAULT_MAXIMUM_SIZE;
+        context.firstKey = 0;
+        context.lastKey = maximum;
+        context.midKey = maximum / 2;
         for (int i = 0; i < maximum; i++) {
           cache.put(i, -i);
         }
       }
     };
 
-    abstract void populate(Cache<Integer, Integer> cache, long maximum);
+    abstract void populate(CacheContext context, Cache<Integer, Integer> cache);
   }
 }

@@ -19,6 +19,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 
 /**

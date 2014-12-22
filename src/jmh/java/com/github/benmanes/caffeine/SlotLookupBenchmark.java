@@ -70,7 +70,7 @@ public class SlotLookupBenchmark {
         // Populates the internal hashmap to emulate other thread local usages
         ThreadLocal.withInitial(() -> Thread.currentThread().getId());
       }
-      return roundRobin(ThreadLocalRandom.current().nextInt());
+      return selectSlot(ThreadLocalRandom.current().nextInt());
     });
   }
 
@@ -79,7 +79,7 @@ public class SlotLookupBenchmark {
     array = new long[ARENA_SIZE];
     element = ThreadLocalRandom.current().nextLong(ARENA_SIZE);
     for (int i = 0; i < ARENA_SIZE; i++) {
-      array[i] = roundRobin(i);
+      array[i] = selectSlot(i);
     }
     Arrays.sort(array);
   }
@@ -95,7 +95,7 @@ public class SlotLookupBenchmark {
     int[] values = new int[ARENA_SIZE];
     for (int i = 0; i < ARENA_SIZE; i++) {
       keys[i] = i;
-      values[i] = roundRobin(i);
+      values[i] = selectSlot(i);
     }
     HashLongIntMapFactory factory = new LHashSeparateKVLongIntMapFactoryImpl();
     mapping = factory.newImmutableMap(keys, values);
@@ -106,7 +106,7 @@ public class SlotLookupBenchmark {
   public void setupSparseArray() {
     sparse = new int[SPARSE_SIZE];
     for (int i = 0; i < SPARSE_SIZE; i++) {
-      sparse[i] = roundRobin(i);
+      sparse[i] = selectSlot(i);
     }
   }
 
@@ -139,7 +139,7 @@ public class SlotLookupBenchmark {
     // Emulates finding the arena slot by hashing the thread id
     long id = Thread.currentThread().getId();
     int hash = (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
-    return roundRobin(hash);
+    return selectSlot(hash);
   }
 
   @Benchmark
@@ -147,7 +147,7 @@ public class SlotLookupBenchmark {
     // Emulates finding the arena slot by the thread's hashCode
     long id = Thread.currentThread().hashCode();
     int hash = (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
-    return roundRobin(hash);
+    return selectSlot(hash);
   }
 
   @Benchmark
@@ -159,7 +159,7 @@ public class SlotLookupBenchmark {
       hash = getProbe();
     }
     advanceProbe(hash);
-    int index = roundRobin(hash);
+    int index = selectSlot(hash);
     return array[index];
   }
 
@@ -174,8 +174,7 @@ public class SlotLookupBenchmark {
     UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), probeOffset, probe);
   }
 
-  private static int roundRobin(int i) {
-    // Emulate round-robin assignment of slots (jemalloc)
+  private static int selectSlot(int i) {
     return i & (ARENA_SIZE - 1);
   }
 }

@@ -31,10 +31,10 @@ The API is extended to include an asynchronous `CompletableFuture` interface and
 options like changing the maximum size, expiration timeouts, and traversing in retention order. 
 
 #### Tracing and Simulator
-A lightweight cache tracing api can be enabled to capture information on how well an application's
+A lightweight cache tracing api can be enabled to capture information on how well an application
 utilizes its caches. Typically caches are either too small due to statistics not being monitored, or
 too large due to over sizing to increase the hit rate. Running the simulator on traced data enables
-adjusting the cache size based on both the hit rate and active-content-ratio.
+adjusting the cache size based on both the hit rate and active content ratio.
 
 The simulator includes a family of eviction policies and distribution generators. As each policy is
 a decision of trade-offs, the simulator allows developers to determine which policies are best for
@@ -66,7 +66,8 @@ For convenience, the project's package is prepended to the supplied class name.
 Cache unit tests can opt into being run against all cache configurations that meet a specification
 constraint. A test method annotated with a configured `@CacheSpec` and using the `CacheProvider`
 [data provider](http://testng.org/doc/documentation-main.html#parameters-dataproviders) will be
-executed with all possible combinations.
+executed with all possible combinations. The test case can inspect the execution configuration by
+accepting the `CacheContext` as a parameter.
 
 Parameterized tests can take advantage of automatic validation of the cache's internal data
 structures to detect corruption. The `CacheValidationListener` is run after a successful test case
@@ -82,11 +83,10 @@ public final class CacheTest {
     values = { ReferenceType.STRONG, ReferenceType.SOFT, ReferenceType.WEAK },
     maximumSize = { 0, CacheSpec.DEFAULT_MAXIMUM_SIZE, CacheSpec.UNBOUNDED })
   @Test(dataProvider = "caches")
-  public void invalidateAll(Cache<Integer, Integer> cache) {
-    // This test is run against 72 different cache configurations.
+  public void getIfPresent_notFound(Cache<Integer, Integer> cache, CacheContext context) {
+    // This test is run against 72 different cache configurations
     // (2 key types) * (3 value types) * (3 max sizes) * (4 population modes)
-    cache.invalidateAll();
-    assertThat(cache.size(), is(0L));
+    cache.getIfPresent(context.getAbsentKey());
   }
 }
 ```

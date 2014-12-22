@@ -35,6 +35,10 @@ configurations {
   checkstyleConfig
 }
 
+sourceSets {
+  jmh.java.srcDirs += sourceSets.test.java.srcDirs
+}
+
 repositories {
   jcenter()
 }
@@ -47,9 +51,11 @@ dependencies {
   // compile time (annotations only)
   compile 'com.google.code.findbugs:jsr305:3.0.0'
 
+  // transition to test scope
+  compile "com.google.guava:guava:${versions.guava}"
+
   // unit testing
   testCompile 'com.jayway.awaitility:awaitility:1.6.3'
-  compile "com.google.guava:guava:${versions.guava}"
   testCompile 'org.mockito:mockito-core:1.10.17'
   testCompile dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
     exclude group: 'junit'
@@ -70,7 +76,6 @@ dependencies {
   // Eclipse fails to include all of dependencies without this workaround
   testCompile configurations.jmh.allDependencies
 }
-sourceSets.jmh.java.srcDirs += sourceSets.test.java.srcDirs
 
 test {
   useTestNG()

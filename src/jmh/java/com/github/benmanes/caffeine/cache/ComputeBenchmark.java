@@ -41,9 +41,9 @@ import com.google.common.cache.CacheBuilder;
  */
 @State(Scope.Benchmark)
 public class ComputeBenchmark {
-  static final int INITIAL_CAPACITY = (2 << 14);
-  static final int MASK = INITIAL_CAPACITY - 1;
-  static final Integer COMPUTE_KEY = INITIAL_CAPACITY / 2;
+  static final int SIZE = (2 << 14);
+  static final int MASK = SIZE - 1;
+  static final Integer COMPUTE_KEY = SIZE / 2;
 
   @Param({"ConcurrentHashMap", /* "Caffeine", "Guava", */ "ConcurrentHashMap2"})
   String computingType;
@@ -61,8 +61,6 @@ public class ComputeBenchmark {
   public void setup() throws Exception {
     if (Objects.equals(computingType, "ConcurrentHashMap")) {
       setupConcurrentHashMap();
-    } else if (Objects.equals(computingType, "ConcurrentHashMap2")) {
-        setupConcurrentHashMap2();
     } else if (Objects.equals(computingType, "Caffeine")) {
       setupCaffeine();
     } else if (Objects.equals(computingType, "Guava")) {
@@ -72,9 +70,9 @@ public class ComputeBenchmark {
     }
     requireNonNull(benchmarkFunction);
 
-    ints = new Integer[INITIAL_CAPACITY];
-    IntegerGenerator generator = new ScrambledZipfianGenerator(INITIAL_CAPACITY);
-    for (int i = 0; i < INITIAL_CAPACITY; i++) {
+    ints = new Integer[SIZE];
+    IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
+    for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextInt();
     }
   }
@@ -90,12 +88,7 @@ public class ComputeBenchmark {
   }
 
   private void setupConcurrentHashMap() {
-    ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>(INITIAL_CAPACITY);
-    benchmarkFunction = (Integer key) -> map.computeIfAbsent(key, (Integer k) -> Boolean.TRUE);
-  }
-
-  private void setupConcurrentHashMap2() {
-    ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap2<>(INITIAL_CAPACITY);
+    ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>(SIZE);
     benchmarkFunction = (Integer key) -> map.computeIfAbsent(key, (Integer k) -> Boolean.TRUE);
   }
 
@@ -103,7 +96,7 @@ public class ComputeBenchmark {
     Cache<Integer, Boolean> cache = Caffeine.newBuilder().build();
     benchmarkFunction = (Integer key) -> {
       try {
-        return cache.get(key, () -> {return Boolean.TRUE;});
+        return cache.get(key, () -> Boolean.TRUE);
       } catch (Exception e) {
         throw Throwables.propagate(e);
       }
@@ -112,10 +105,10 @@ public class ComputeBenchmark {
 
   private void setupGuava() {
     com.google.common.cache.Cache<Integer, Boolean> cache =
-        CacheBuilder.newBuilder().initialCapacity(INITIAL_CAPACITY).build();
+        CacheBuilder.newBuilder().initialCapacity(SIZE).build();
     benchmarkFunction = (Integer key) -> {
       try {
-        return cache.get(key, () -> {return Boolean.TRUE;});
+        return cache.get(key, () -> Boolean.TRUE);
       } catch (Exception e) {
         throw Throwables.propagate(e);
       }

@@ -23,6 +23,8 @@ import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
 import org.testng.ITestResult;
 
+import com.github.benmanes.caffeine.cache.Cache;
+
 /**
  * A listener that validates the internal structure after a successful test execution.
  *

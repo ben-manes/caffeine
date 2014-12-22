@@ -21,12 +21,28 @@ import static org.hamcrest.Matchers.is;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class CacheTest {
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getIfPresent_notFound(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.getIfPresent(context.getAbsentKey());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void getIfPresent_found(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.getIfPresent(context.getFirstKey());
+    cache.getIfPresent(context.getMiddleKey());
+    cache.getIfPresent(context.getLastKey());
+  }
 
   @CacheSpec
   @Test(dataProvider = "caches")

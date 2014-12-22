@@ -30,18 +30,12 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class ComputingTest {
+public class ComputeTest {
 
   // disabled due to live lock
   @Test(enabled = false, expectedExceptions = IllegalStateException.class)
   public void recursive_chm() {
     ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>();
-    map.computeIfAbsent(1, new RecursiveFunction(map));
-  }
-
-  @Test(expectedExceptions = IllegalStateException.class)
-  public void recursive_chm2() {
-    ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap2<>();
     map.computeIfAbsent(1, new RecursiveFunction(map));
   }
 
