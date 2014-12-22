@@ -34,6 +34,8 @@ import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 @Test(dataProviderClass = CacheProvider.class)
 public final class CacheTest {
 
+  /* ---------------- getIfPresent -------------- */
+
   @CacheSpec
   @Test(dataProvider = "caches")
   public void getIfPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
@@ -53,6 +55,8 @@ public final class CacheTest {
   public void getIfPresent_nullKey(Cache<Integer, Integer> cache) {
     cache.getIfPresent(null);
   }
+
+  /* ---------------- get -------------- */
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -75,10 +79,38 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(enabled = false, dataProvider = "caches", expectedExceptions = ExecutionException.class)
-  public void get_nullResult(Cache<Integer, Integer> cache, CacheContext context)
+  public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context)
       throws ExecutionException {
-    cache.get(context.getAbsentKey(), () -> null);
+    cache.get(context.getAbsentKey(), () -> { throw new Exception(); });
   }
+
+  /* ---------------- invalidate -------------- */
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void invalidate_absent(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.invalidate(context.getAbsentKey());
+    assertThat(cache.size(), is(context.getInitialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void invalidate_present(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.invalidate(context.firstKey);
+    assertThat(cache.size(), is(Math.max(0, context.getInitialSize() - 1)));
+    cache.invalidate(context.midKey);
+    assertThat(cache.size(), is(Math.max(0, context.getInitialSize() - 2)));
+    cache.invalidate(context.lastKey);
+    assertThat(cache.size(), is(Math.max(0, context.getInitialSize() - 3)));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void invalidate_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.invalidate(null);
+  }
+
+  /* ---------------- invalidateAll -------------- */
 
   @CacheSpec
   @Test(dataProvider = "caches")

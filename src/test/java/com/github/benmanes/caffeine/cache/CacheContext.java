@@ -51,11 +51,19 @@ public final class CacheContext {
   }
 
   public int getAbsentKey() {
-    int base = (lastKey == null) ? 0 : (lastKey + 1);
+    int base = initiallyEmpty() ? 0 : (lastKey + 1);
     return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
   }
 
-  public int getMaximumSize() {
+  public boolean initiallyEmpty() {
+    return (lastKey == null);
+  }
+
+  public long getInitialSize() {
+    return initiallyEmpty() ? 0 : (1 + lastKey - firstKey);
+  }
+
+  public long getMaximumSize() {
     assertThat("Invalid usage of context", maximumSize, is(not(nullValue())));
     return maximumSize;
   }
