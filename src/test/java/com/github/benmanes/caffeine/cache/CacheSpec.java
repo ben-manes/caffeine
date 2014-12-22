@@ -135,8 +135,8 @@ public @interface CacheSpec {
             ? (int) context.getMaximumSize()
             : (int) (CacheSpec.DEFAULT_MAXIMUM_SIZE / 2);
         context.firstKey = 0;
-        context.lastKey = maximum;
-        context.midKey = maximum / 2;
+        context.lastKey = maximum - 1;
+        context.midKey = (context.lastKey - context.firstKey) / 2;
         for (int i = 0; i < maximum; i++) {
           cache.put(i, -i);
         }
@@ -148,8 +148,8 @@ public @interface CacheSpec {
             ? (int) context.getMaximumSize()
             : (int) CacheSpec.DEFAULT_MAXIMUM_SIZE;
         context.firstKey = 0;
-        context.lastKey = maximum;
-        context.midKey = maximum / 2;
+        context.lastKey = maximum - 1;
+        context.midKey = (context.lastKey - context.firstKey) / 2;
         for (int i = 0; i < maximum; i++) {
           cache.put(i, -i);
         }

@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -32,16 +34,22 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void getIfPresent_notFound(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.getIfPresent(context.getAbsentKey());
+  public void getIfPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.getIfPresent(context.getAbsentKey()), is(nullValue()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getIfPresent_found(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.getIfPresent(context.getFirstKey());
-    cache.getIfPresent(context.getMiddleKey());
-    cache.getIfPresent(context.getLastKey());
+  public void getIfPresent_present(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.getIfPresent(context.getFirstKey()), is(not(nullValue())));
+    assertThat(cache.getIfPresent(context.getMiddleKey()), is(not(nullValue())));
+    assertThat(cache.getIfPresent(context.getLastKey()), is(not(nullValue())));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getIfPresent_nullKey(Cache<Integer, Integer> cache) {
+    cache.getIfPresent(null);
   }
 
   @CacheSpec
