@@ -20,6 +20,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.concurrent.ExecutionException;
+
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -50,6 +52,32 @@ public final class CacheTest {
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getIfPresent_nullKey(Cache<Integer, Integer> cache) {
     cache.getIfPresent(null);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void get_nullKey(Cache<Integer, Integer> cache) throws ExecutionException {
+    cache.get(null, () -> 0);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void get_nullLoader(Cache<Integer, Integer> cache, CacheContext context)
+      throws ExecutionException {
+    cache.get(context.getAbsentKey(), null);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void get_nullKeyAndLoader(Cache<Integer, Integer> cache) throws ExecutionException {
+    cache.get(null, null);
+  }
+
+  @CacheSpec
+  @Test(enabled = false, dataProvider = "caches", expectedExceptions = ExecutionException.class)
+  public void get_nullResult(Cache<Integer, Integer> cache, CacheContext context)
+      throws ExecutionException {
+    cache.get(context.getAbsentKey(), () -> null);
   }
 
   @CacheSpec

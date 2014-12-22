@@ -55,7 +55,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
       try {
         return loader.load(key);
       } catch (Exception e) {
-        UnsafeAccess.UNSAFE.throwException(new ExecutionException(e));
+        UnsafeAccess.UNSAFE.throwException(e);
         return null; // unreachable
       }
     });
