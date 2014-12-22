@@ -77,12 +77,12 @@ public final class Caffeine<K, V> {
   }
 
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> removalListener(
-      RemovalListener<? super K1, ? super V1> listener) {
-    // TODO(ben): Validate
-    this.removalListener = requireNonNull(removalListener);
+      RemovalListener<? super K1, ? super V1> removalListener) {
+    checkState(this.removalListener == null);
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    self.removalListener = requireNonNull(removalListener);
     return self;
   }
 

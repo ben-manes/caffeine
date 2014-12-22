@@ -34,6 +34,7 @@ import java.util.Map.Entry;
 import org.testng.annotations.DataProvider;
 
 import com.github.benmanes.caffeine.cache.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.CacheSpec.ReferenceType;
 
@@ -121,21 +122,19 @@ public final class CacheProvider {
   /** Generates a new set of builders with the removal listener combinations. */
   static Map<CacheContext, Caffeine<Object, Object>> makeRemovalListeners(
       CacheSpec cacheSpec, Map<CacheContext, Caffeine<Object, Object>> builders) throws Exception {
-    if (cacheSpec.removalListener().length == 0) {
-      return builders;
-    }
-
     int combinationCount = cacheSpec.removalListener().length * builders.size();
     Map<CacheContext, Caffeine<Object, Object>> combinations =
         new LinkedHashMap<>(combinationCount);
     for (Entry<CacheContext, Caffeine<Object, Object>> entry : builders.entrySet()) {
-      for (Class<RemovalListener<?, ?>> removalListenerClass : cacheSpec.removalListener()) {
-        @SuppressWarnings("unchecked")
-        RemovalListener<Object, Object> removalListener =
-            (RemovalListener<Object, Object>) removalListenerClass.newInstance();
+      for (Listener removalListenerType : cacheSpec.removalListener()) {
         CacheContext context = entry.getKey().copy();
         Caffeine<Object, Object> builder = entry.getValue().copy();
-        builder.removalListener(removalListener);
+        if (removalListenerType != Listener.DEFAULT) {
+          RemovalListener<Object, Object> removalListener = removalListenerType.get();
+          context.removalListener = removalListener;
+          builder.removalListener(removalListener);
+        }
+        context.removalListenerType = removalListenerType;
         combinations.put(context, builder);
       }
     }

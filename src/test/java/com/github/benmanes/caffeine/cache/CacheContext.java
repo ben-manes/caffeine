@@ -24,16 +24,24 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.google.common.base.MoreObjects;
+
 /**
  * The cache configuration context for a test case.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheContext {
+  @Nullable RemovalListener<Object, Object> removalListener;
+  Listener removalListenerType;
+  Population population;
+
+  @Nullable Integer maximumSize;
   @Nullable Integer firstKey;
   @Nullable Integer midKey;
   @Nullable Integer lastKey;
-  @Nullable Integer maximumSize;
 
   public int getFirstKey() {
     assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
@@ -69,7 +77,16 @@ public final class CacheContext {
   }
 
   public boolean isUnbounded() {
-    return (maximumSize != null);
+    return (maximumSize == null);
+  }
+
+  public Listener getRemovalListenerType() {
+    return removalListenerType;
+  }
+
+  @SuppressWarnings("unchecked")
+  public <R extends RemovalListener<K, V>, K, V> R getRemovalListener() {
+    return (R) removalListener;
   }
 
   public CacheContext copy() {
@@ -79,5 +96,14 @@ public final class CacheContext {
     context.midKey = midKey;
     context.lastKey = lastKey;
     return context;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+        .add("removal listener", removalListenerType)
+        .add("maximum size", isUnbounded() ? "UNBOUNDED" : String.format("%,d", maximumSize))
+        .add("population", population)
+        .toString();
   }
 }
