@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# PURPOSE
+#
+# The Gradle wrapper[1] is a simple and convenient way of making Gradle
+# builds self-contained and reproducible. However, in multi-project
+# builds, it can be cumbersome to type in relative paths e.g.:
+#   ./gradlew   # when in root
+#   ../gradlew  # when in subdir
+#
+# This script finds any Gradle wrapper (gradlew) executable in the
+# current directory or any directory above it. If none can be found,
+# it will fall back to the system-wide installation at $SYSTEM_GRADLE.
+#
+#
+# INSTALLATION
+#
+# 1. Remove GRADLE_HOME/bin from your PATH if it's already present.
+#
+#    $ which gradle # should return empty when finished
+#
+# 2. Symlink find-gradle somewhere on your path as 'gradle', e.g.:
+#
+#    $ ln -s $PWD/find-gradle /usr/local/bin/gradle
+#
+#
+# USAGE
+#
+# Use exactly like you would a normal Gradle executable. All arguments
+# supplied are `exec`d against the gradle(w) executable once found.
+#
+#     $ gradle [options]
+#
+#
+# DEBUGGING
+#
+# To observe the search for gradlew and to ensure which one is
+# ultimately used, invoke the script with Bash's "-x" option. Below you
+# can see the directory traversal at work, finally selecting the
+# 'gradlew' script one directory up from where 'gradle' was invoked.
+#
+#     $ cd /Work/spring-framework/spring-context
+#     $ bash -x $(which gradle) --version
+#     + GRADLEW=/Work/spring-framework/spring-context/gradlew
+#     + GRADLEW=/Work/spring-framework/gradlew
+#     + /Work/spring-framework/gradlew --version
+#
+#     ------------------------------------------------------------
+#     Gradle 1.0-milestone-8-20120112000036+0100
+#     ------------------------------------------------------------
+#     ...
+#
+#
+# AUTHOR
+#
+# Chris Beams (http://twitter.com/cbeams)
+#
+#
+# BUGS
+#
+# It doesn't look for 'gradlew' in the root directory. Why would you
+# want it to? Improvements welcome at http://github.com/cbeams/shell-scripts.
+#
+# [1] http://gradle.org/docs/current/userguide/gradle_wrapper.html
+
+
+SYSTEM_GRADLE=/opt/gradle/current/bin/gradle
+
+CWD=$PWD
+until [ $CWD == / ]; do
+    GRADLEW=$CWD/gradlew
+    if [ -e $GRADLEW ]; then
+        exec $GRADLEW $@
+    fi
+    CWD=$(dirname $CWD)
+done
+
+echo No Gradle wrapper found, using $SYSTEM_GRADLE
+exec $SYSTEM_GRADLE "$@"

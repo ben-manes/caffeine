@@ -83,7 +83,8 @@ public final class CacheTest {
     values = { ReferenceType.STRONG, ReferenceType.SOFT, ReferenceType.WEAK },
     maximumSize = { 0, CacheSpec.DEFAULT_MAXIMUM_SIZE, CacheSpec.UNBOUNDED })
   @Test(dataProvider = "caches")
-  public void getIfPresent_notFound(Cache<Integer, Integer> cache, CacheContext context) {
+  public void getIfPresent_notFound(
+      Cache<Integer, Integer> cache, CacheContext context) {
     // This test is run against 72 different cache configurations
     // (2 key types) * (3 value types) * (3 max sizes) * (4 population modes)
     cache.getIfPresent(context.getAbsentKey());
