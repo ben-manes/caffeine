@@ -71,7 +71,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the keys. */
-  static final class KeySetView<K> extends AbstractSet<K> {
+  static class KeySetView<K> extends AbstractSet<K> {
     final LocalCache<K, ?> cache;
 
     KeySetView(LocalCache<K, ?> cache) {
@@ -110,7 +110,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Spliterator<K> spliterator() {
-      return cache.keySet().spliterator();
+      return cache.keySpliterator();
     }
 
     @Override
@@ -132,7 +132,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
     KeyIterator(LocalCache<K, ?> cache) {
       this.cache = requireNonNull(cache);
-      this.iterator = cache.keys();
+      this.iterator = cache.keyIterator();
     }
 
     @Override

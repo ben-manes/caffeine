@@ -24,9 +24,12 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -142,7 +145,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_present_some(Cache<Integer, Integer> cache, CacheContext context) {
+  public void getAllPresent_present_partial(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> expect = new HashMap<>();
     expect.put(context.firstKey(), -context.firstKey());
     expect.put(context.middleKey(), -context.middleKey());
@@ -154,7 +157,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_present_all(Cache<Integer, Integer> cache, CacheContext context) {
+  public void getAllPresent_present_full(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAllPresent(cache.asMap().keySet());
     assertThat(result, is(equalTo(cache.asMap())));
   }
@@ -218,7 +221,40 @@ public final class CacheTest {
     assertThat(cache, hasRemovalNotifications(context, RemovalCause.REPLACED));
   }
 
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void put_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.put(null, -context.absentKey());
+  }
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void put_nullValue(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.put(context.absentKey(), null);
+  }
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void put_nullKeyAndValue(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.put(null, null);
+  }
+
   /* ---------------- put all -------------- */
+
+  // TODO
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putAll_empty(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.putAll(new HashMap<>());
+    assertThat(cache.size(), is(context.initialSize()));
+  }
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void putAll_null(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.putAll(null);
+  }
 
   /* ---------------- invalidate -------------- */
 
@@ -253,6 +289,37 @@ public final class CacheTest {
     cache.invalidateAll();
     assertThat(cache.size(), is(0L));
     assertThat(cache, hasRemovalNotifications(context));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void invalidateAll_empty(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.invalidateAll(new HashSet<>());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.PARTIAL, Population.FULL })
+  public void invalidateAll_partial(Cache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = cache.asMap().keySet().stream()
+        .filter((Integer i) -> ((i % 2) == 0))
+        .collect(Collectors.toList());
+    cache.invalidateAll(keys);
+    assertThat(cache.size(), is(context.initialSize() - keys.size()));
+    assertThat(cache, hasRemovalNotifications(context));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void invalidateAll_full(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.invalidateAll(cache.asMap().keySet());
+    assertThat(cache.size(), is(0L));
+    assertThat(cache, hasRemovalNotifications(context));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void invalidateAll_null(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.invalidateAll(null);
   }
 
   /* ---------------- cleanup -------------- */

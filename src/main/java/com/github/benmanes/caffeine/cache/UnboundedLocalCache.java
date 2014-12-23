@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Spliterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
@@ -92,8 +93,13 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   public void cleanUp() {}
 
   @Override
-  public Iterator<K> keys() {
+  public Iterator<K> keyIterator() {
     return cache.keySet().iterator();
+  }
+
+  @Override
+  public Spliterator<K> keySpliterator() {
+    return cache.keySet().spliterator();
   }
 
   /* ---------------- JDK8+ Map extensions -------------- */

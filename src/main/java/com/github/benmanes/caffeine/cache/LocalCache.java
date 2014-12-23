@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Spliterator;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 
@@ -41,5 +42,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   void cleanUp();
 
-  Iterator<K> keys();
+  Iterator<K> keyIterator();
+
+  Spliterator<K> keySpliterator();
 }
