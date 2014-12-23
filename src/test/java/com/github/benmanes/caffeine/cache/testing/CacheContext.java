@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.google.common.base.MoreObjects;
@@ -40,7 +41,7 @@ public final class CacheContext {
   Listener removalListenerType;
   Population population;
 
-  Integer initialCapacity;
+  InitialCapacity initialCapacity;
   Executor executor;
 
   @Nullable Integer maximumSize;
@@ -98,6 +99,7 @@ public final class CacheContext {
     CacheContext context = new CacheContext();
     context.removalListenerType = removalListenerType;
     context.removalListener = (removalListenerType == null) ? null : removalListenerType.create();
+    context.initialCapacity = initialCapacity;
     context.maximumSize = maximumSize;
     context.firstKey = firstKey;
     context.midKey = midKey;

@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.testing;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 
@@ -28,9 +27,9 @@ import java.util.Map;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -50,6 +49,7 @@ final class CacheGenerator {
   public Map<CacheContext, Cache<Integer, Integer>> generate() {
     initialize();
     makeInitialCapacities();
+    makeMaximumSizes();
     makeKeyReferences();
     makeValueReferences();
     makeExecutors();
@@ -58,44 +58,43 @@ final class CacheGenerator {
     return scenarios;
   }
 
-  void initialize() {
+  private void initialize() {
     scenarios = new LinkedHashMap<>();
     contexts = ImmutableList.of(new CacheContext());
   }
 
   /** Generates a new set of contexts with the initial capacity combinations. */
-  void makeInitialCapacities() {
+  private void makeInitialCapacities() {
     assertThat(cacheSpec.initialCapacity().length, is(greaterThan(0)));
 
     List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
-      for (int initialCapacity : cacheSpec.initialCapacity()) {
+      for (InitialCapacity initialCapacity : cacheSpec.initialCapacity()) {
         CacheContext copy = context.copy();
-        if (initialCapacity != CacheSpec.DEFAULT_INITIAL_CAPACITY) {
-          copy.initialCapacity = initialCapacity;
-        }
+        copy.initialCapacity = initialCapacity;
         combinations.add(copy);
       }
     }
     contexts = combinations;
   }
 
+  /** Generates a new set of contexts with the maximum size combinations. */
+  private void makeMaximumSizes() {
+    // TODO(ben): Support eviction
+  }
+
   /** Generates a new set of contexts with the key reference combinations. */
-  void makeKeyReferences() {
+  private void makeKeyReferences() {
     // TODO(ben): Support soft keys
-    assertThat(cacheSpec.keys().length, is(greaterThan(0)));
-    assertThat(cacheSpec.keys(), is(arrayContaining(ReferenceType.STRONG)));
   }
 
   /** Generates a new set of contexts with the value reference combinations. */
-  void makeValueReferences() {
+  private void makeValueReferences() {
     // TODO(ben): Support soft and weak values
-    assertThat(cacheSpec.values().length, is(greaterThan(0)));
-    assertThat(cacheSpec.values(), is(arrayContaining(ReferenceType.STRONG)));
   }
 
   /** Generates a new set of contexts with the executor combinations. */
-  void makeExecutors() {
+  private void makeExecutors() {
     List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (CacheExecutor executor : cacheSpec.executor()) {
@@ -107,19 +106,8 @@ final class CacheGenerator {
     contexts = combinations;
   }
 
-  /** Generates a new set of contexts with the maximum size combinations. */
-  static List<CacheContext> makeMaximumSizes(
-      CacheSpec cacheSpec, List<CacheContext> contexts) throws Exception {
-    assertThat(cacheSpec.maximumSize().length, is(greaterThan(0)));
-
-    // TODO(ben): Support eviction
-    assertThat(cacheSpec.maximumSize().length, is(1));
-    assertThat(cacheSpec.maximumSize()[0], is(CacheSpec.UNBOUNDED));
-    return contexts;
-  }
-
   /** Generates a new set of builders with the removal listener combinations. */
-  void makeRemovalListeners() {
+  private void makeRemovalListeners() {
     List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (Listener removalListenerType : cacheSpec.removalListener()) {
@@ -133,7 +121,7 @@ final class CacheGenerator {
   }
 
   /** Constructs caches with the populated combinations. */
-  void makeCachesAndPopulate() {
+  private void makeCachesAndPopulate() {
     assertThat(cacheSpec.population().length, is(greaterThan(0)));
 
     for (CacheContext context : contexts) {
@@ -148,10 +136,10 @@ final class CacheGenerator {
     }
   }
 
-  static Cache<Integer, Integer> newCache(CacheContext context) {
+  private static Cache<Integer, Integer> newCache(CacheContext context) {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
-    if (context.initialCapacity != null) {
-      builder.initialCapacity(context.initialCapacity);
+    if (context.initialCapacity != InitialCapacity.DEFAULT) {
+      builder.initialCapacity(context.initialCapacity.size());
     }
     if (context.maximumSize != null) {
       throw new UnsupportedOperationException();

@@ -22,6 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -40,30 +41,80 @@ public @interface CacheSpec {
 
   /* ---------------- Initial capacity -------------- */
 
-  /** A flag indicating that the initial capacity is not configured. */
-  static final int DEFAULT_INITIAL_CAPACITY = -1;
+  enum InitialCapacity {
+    /** A flag indicating that the initial capacity is not configured. */
+    DEFAULT(16),
+    /** A configuration where the table grows on the first addition. */
+    ZERO(0),
+    /** A configuration where the table grows on the second addition. */
+    ONE(1),
+    /** A configuration where the table grows after the {@link Population#FULL} count. */
+    FULL(100),
+    /** A configuration where the table grows after the 10 x {@link Population#FULL} count. */
+    EXCESSIVE(10 * 100);
+
+    private final int size;
+
+    private InitialCapacity(int size) {
+      this.size = size;
+    }
+
+    public int size() {
+      return size;
+    }
+  }
 
   /** The initial capacities, each resulting in a new combination. */
-  int[] initialCapacity() default { DEFAULT_INITIAL_CAPACITY };
+  InitialCapacity[] initialCapacity() default {
+    InitialCapacity.DEFAULT,
+    InitialCapacity.ZERO,
+    InitialCapacity.ONE,
+    InitialCapacity.FULL,
+    InitialCapacity.EXCESSIVE
+  };
 
   /* ---------------- Maximum size -------------- */
 
-  /** A flag indicating that entries are not evicted due to a maximum size threshold. */
-  static final long UNBOUNDED = -1L;
+  enum MaximumSize {
+    /** A flag indicating that entries are not evicted due to a maximum size threshold. */
+    DISABLED(Long.MAX_VALUE),
+    /** A configuration where entries are evicted immediately. */
+    ZERO(0L),
+    /** A configuration that holds a single entry. */
+    ONE(1L),
+    /** A configuration that holds the {@link Population#FULL} count. */
+    FULL(100L),
+    /** A configuration where the threshold is too high for eviction to occur. */
+    UNREACHABLE(Long.MAX_VALUE);
 
-  /** The default maximum number of size if eviction is enabled. */
-  static final long DEFAULT_MAXIMUM_SIZE = 100L;
+    private final long max;
+
+    private MaximumSize(long max) {
+      this.max = max;
+    }
+
+    public long max() {
+      return max;
+    }
+  }
 
   /** The maximum size, each resulting in a new combination. */
-  long[] maximumSize() default { UNBOUNDED };
+  MaximumSize[] maximumSize() default { MaximumSize.DISABLED, MaximumSize.UNREACHABLE };
 
   /* ---------------- Reference-based -------------- */
 
+  /**
+   * Whether to retain a strong reference copy of the initial cache entries within the context. This
+   * allows soft/weak combinations to be tested in cases where eviction is not desired. The copy
+   * held by the context can be mutated for additional flexibility during testing.
+   */
+  boolean retain() default true;
+
   /** The reference type of that the cache holds a key with (strong or soft only). */
-  ReferenceType[] keys() default { ReferenceType.STRONG };
+  ReferenceType[] keys() default { ReferenceType.STRONG, ReferenceType.SOFT };
 
   /** The reference type of that the cache holds a value with (strong, soft, or weak). */
-  ReferenceType[] values() default { ReferenceType.STRONG };
+  ReferenceType[] values() default { ReferenceType.STRONG, ReferenceType.WEAK, ReferenceType.SOFT };
 
   /** The reference type of cache keys and/or values. */
   enum ReferenceType {
@@ -91,19 +142,19 @@ public @interface CacheSpec {
   /** The removal listeners, each resulting in a new combination. */
   enum Listener {
     /** A flag indicating that no removal listener is configured. */
-    DEFAULT() {
+    DEFAULT {
       @Override public <K, V> RemovalListener<K, V> create() {
         return null;
       }
     },
     /** A removal listener that rejects all notifications. */
-    REJECTING() {
+    REJECTING {
       @Override public <K, V> RemovalListener<K, V> create() {
         return RemovalListeners.rejecting();
       }
     },
     /** A {@link ConsumingRemovalListener} retains all notifications for evaluation by the test. */
-    CONSUMING() {
+    CONSUMING {
       @Override public <K, V> RemovalListener<K, V> create() {
         return RemovalListeners.consuming();
       }
@@ -115,18 +166,23 @@ public @interface CacheSpec {
   /* ---------------- Executor -------------- */
 
   /** The executors retrieved from a supplier, each resulting in a new combination. */
-  CacheExecutor[] executor() default { CacheExecutor.DEFAULT };
+  CacheExecutor[] executor() default {
+    CacheExecutor.DEFAULT, CacheExecutor.DIRECT, CacheExecutor.FORK_JOIN_COMMON_POOL
+  };
 
   /** The executors that the cache can be configured with. */
   enum CacheExecutor implements Supplier<Executor> {
-    DEFAULT() {
+    DEFAULT {
       @Override public Executor get() { return null; }
     },
-    DIRECT() {
+    DIRECT {
       @Override public Executor get() { return MoreExecutors.directExecutor(); }
     },
-    FORK_JOIN_COMMON_POOL() {
+    FORK_JOIN_COMMON_POOL {
       @Override public Executor get() { return ForkJoinPool.commonPool(); }
+    },
+    REJECTING {
+      @Override public Executor get() { throw new RejectedExecutionException(); }
     };
 
     @Override
@@ -136,7 +192,7 @@ public @interface CacheSpec {
   /* ---------------- Populated -------------- */
 
   /** The default maximum number of size if eviction is enabled. */
-  static final long DEFAULT_FULL = DEFAULT_MAXIMUM_SIZE;
+  static final long FULL_SIZE = InitialCapacity.FULL.size();
 
   /**
    * The number of entries to populate the cache with. The keys and values are integers starting
@@ -162,7 +218,7 @@ public @interface CacheSpec {
     PARTIAL() {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
         int maximum = context.isUnbounded()
-            ? (int) (CacheSpec.DEFAULT_MAXIMUM_SIZE / 2)
+            ? (int) (CacheSpec.FULL_SIZE / 2)
             : (int) context.getMaximumSize();
         context.firstKey = 0;
         context.lastKey = maximum - 1;
@@ -175,7 +231,7 @@ public @interface CacheSpec {
     FULL() {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
         int maximum = context.isUnbounded()
-            ? (int) CacheSpec.DEFAULT_MAXIMUM_SIZE
+            ? (int) CacheSpec.FULL_SIZE
             : (int) context.getMaximumSize();
         context.firstKey = 0;
         context.lastKey = maximum - 1;

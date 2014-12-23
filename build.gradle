@@ -81,13 +81,13 @@ test {
   useTestNG()
   options {
     threadCount = 4
-    parallel = 'classes'
+    parallel = 'methods'
   }
 }
 
 checkstyle {
   toolVersion = '6.1.1'
-  showViolations = false
+  showViolations = true
   sourceSets = [sourceSets.main]
 }
 
@@ -101,7 +101,12 @@ pmd {
   ruleSets = [/* 'java-basic', */ 'java-braces']
 }
 
+tasks.withType(Checkstyle) {
+  enabled = false
+}
+
 tasks.withType(FindBugs) {
+  enabled = false
   reports {
     xml.enabled = false
     html.enabled = true
@@ -109,6 +114,7 @@ tasks.withType(FindBugs) {
 }
 
 tasks.withType(Pmd) {
+  enabled = false
   reports {
     xml.enabled = false
     html.enabled = true
