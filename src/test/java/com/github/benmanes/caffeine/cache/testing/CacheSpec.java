@@ -191,9 +191,6 @@ public @interface CacheSpec {
 
   /* ---------------- Populated -------------- */
 
-  /** The default maximum number of size if eviction is enabled. */
-  static final long FULL_SIZE = InitialCapacity.FULL.size();
-
   /**
    * The number of entries to populate the cache with. The keys and values are integers starting
    * from 0, with the value being the negated key. Each configuration results in a new combination.
@@ -204,10 +201,10 @@ public @interface CacheSpec {
 
   /** The population scenarios. */
   enum Population {
-    EMPTY() {
+    EMPTY(0) {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {}
     },
-    SINGLETON() {
+    SINGLETON(1) {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
         context.firstKey = 0;
         context.lastKey = 0;
@@ -215,33 +212,29 @@ public @interface CacheSpec {
         cache.put(0, 0);
       }
     },
-    PARTIAL() {
-      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-        int maximum = context.isUnbounded()
-            ? (int) (CacheSpec.FULL_SIZE / 2)
-            : (int) context.getMaximumSize();
-        context.firstKey = 0;
-        context.lastKey = maximum - 1;
-        context.midKey = (context.lastKey - context.firstKey) / 2;
-        for (int i = 0; i < maximum; i++) {
-          cache.put(i, -i);
-        }
-      }
-    },
-    FULL() {
-      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-        int maximum = context.isUnbounded()
-            ? (int) CacheSpec.FULL_SIZE
-            : (int) context.getMaximumSize();
-        context.firstKey = 0;
-        context.lastKey = maximum - 1;
-        context.midKey = (context.lastKey - context.firstKey) / 2;
-        for (int i = 0; i < maximum; i++) {
-          cache.put(i, -i);
-        }
-      }
-    };
+    PARTIAL(InitialCapacity.FULL.size() / 2),
+    FULL(InitialCapacity.FULL.size());
 
-    abstract void populate(CacheContext context, Cache<Integer, Integer> cache);
+    private final long size;
+
+    private Population(long size) {
+      this.size = size;
+    }
+
+    public long size() {
+      return size;
+    }
+
+    public void populate(CacheContext context, Cache<Integer, Integer> cache) {
+      int maximum = context.isUnbounded()
+          ? (int) size()
+          : (int) context.maximumSize();
+      context.firstKey = 0;
+      context.lastKey = maximum - 1;
+      context.midKey = (context.lastKey - context.firstKey) / 2;
+      for (int i = 0; i < maximum; i++) {
+        cache.put(i, -i);
+      }
+    }
   }
 }

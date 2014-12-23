@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
 import org.testng.annotations.Listeners;
@@ -45,16 +46,16 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches")
   public void getIfPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
-    assertThat(cache.getIfPresent(context.getAbsentKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getIfPresent_present(Cache<Integer, Integer> cache, CacheContext context) {
-    assertThat(cache.getIfPresent(context.getFirstKey()), is(not(nullValue())));
-    assertThat(cache.getIfPresent(context.getMiddleKey()), is(not(nullValue())));
-    assertThat(cache.getIfPresent(context.getLastKey()), is(not(nullValue())));
+    assertThat(cache.getIfPresent(context.firstKey()), is(not(nullValue())));
+    assertThat(cache.getIfPresent(context.middleKey()), is(not(nullValue())));
+    assertThat(cache.getIfPresent(context.lastKey()), is(not(nullValue())));
   }
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -65,30 +66,46 @@ public final class CacheTest {
 
   /* ---------------- get -------------- */
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void get_absent(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
+    Integer key = context.absentKey();
+    Integer value = cache.get(key, () -> -key);
+    assertThat(value, is(-key));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void get_present(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
+    Callable<Integer> loader = () -> { throw new Exception(); };
+    assertThat(cache.get(context.firstKey(), loader), is(-context.firstKey()));
+    assertThat(cache.get(context.middleKey(), loader), is(-context.middleKey()));
+    assertThat(cache.get(context.lastKey(), loader), is(-context.lastKey()));
+  }
+
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_nullKey(Cache<Integer, Integer> cache) throws ExecutionException {
+  public void get_nullKey(Cache<Integer, Integer> cache) throws Exception {
     cache.get(null, () -> 0);
   }
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_nullLoader(Cache<Integer, Integer> cache, CacheContext context)
-      throws ExecutionException {
-    cache.get(context.getAbsentKey(), null);
+  public void get_nullLoader(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
+    cache.get(context.absentKey(), null);
   }
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_nullKeyAndLoader(Cache<Integer, Integer> cache) throws ExecutionException {
+  public void get_nullKeyAndLoader(Cache<Integer, Integer> cache) throws Exception {
     cache.get(null, null);
   }
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec
   @Test(enabled = false, dataProvider = "caches", expectedExceptions = ExecutionException.class)
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context)
-      throws ExecutionException {
-    cache.get(context.getAbsentKey(), () -> { throw new Exception(); });
+      throws Exception {
+    cache.get(context.absentKey(), () -> { throw new Exception(); });
   }
 
   /* ---------------- invalidate -------------- */
@@ -96,16 +113,16 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void invalidate_absent(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.invalidate(context.getAbsentKey());
-    assertThat(cache.size(), is(context.getInitialSize()));
+    cache.invalidate(context.absentKey());
+    assertThat(cache.size(), is(context.initialSize()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void invalidate_present(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.invalidate(context.getFirstKey());
-    cache.invalidate(context.getMiddleKey());
-    cache.invalidate(context.getLastKey());
+    cache.invalidate(context.firstKey());
+    cache.invalidate(context.middleKey());
+    cache.invalidate(context.lastKey());
 
     assertThat(cache, consumedEvicted(context));
   }

@@ -48,23 +48,24 @@ public final class CacheContext {
   @Nullable Integer firstKey;
   @Nullable Integer midKey;
   @Nullable Integer lastKey;
+  @Nullable Integer absentKey;
 
-  public int getFirstKey() {
+  public Integer firstKey() {
     assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
     return firstKey;
   }
 
-  public int getMiddleKey() {
+  public Integer middleKey() {
     assertThat("Invalid usage of context", midKey, is(not(nullValue())));
     return midKey;
   }
 
-  public int getLastKey() {
+  public Integer lastKey() {
     assertThat("Invalid usage of context", lastKey, is(not(nullValue())));
     return lastKey;
   }
 
-  public int getAbsentKey() {
+  public Integer absentKey() {
     int base = initiallyEmpty() ? 0 : (lastKey + 1);
     return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
   }
@@ -73,11 +74,11 @@ public final class CacheContext {
     return (lastKey == null);
   }
 
-  public long getInitialSize() {
+  public long initialSize() {
     return initiallyEmpty() ? 0 : (1 + lastKey - firstKey);
   }
 
-  public long getMaximumSize() {
+  public long maximumSize() {
     assertThat("Invalid usage of context", maximumSize, is(not(nullValue())));
     return maximumSize;
   }
@@ -86,12 +87,12 @@ public final class CacheContext {
     return (maximumSize == null);
   }
 
-  public Listener getRemovalListenerType() {
+  public Listener removalListenerType() {
     return removalListenerType;
   }
 
   @SuppressWarnings("unchecked")
-  public <R extends RemovalListener<K, V>, K, V> R getRemovalListener() {
+  public <R extends RemovalListener<K, V>, K, V> R removalListener() {
     return (R) removalListener;
   }
 

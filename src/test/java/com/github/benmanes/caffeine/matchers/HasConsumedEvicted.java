@@ -51,10 +51,10 @@ public final class HasConsumedEvicted<K, V> extends TypeSafeDiagnosingMatcher<Ca
   protected boolean matchesSafely(Cache<K, V> cache, Description description) {
     DescriptionBuilder builder = new DescriptionBuilder(description);
 
-    if (context.getRemovalListenerType() == Listener.CONSUMING) {
+    if (context.removalListenerType() == Listener.CONSUMING) {
       ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
-      int removed = (int) (context.getInitialSize() - cache.size());
-      ConsumingRemovalListener<Integer, Integer> removalListener = context.getRemovalListener();
+      int removed = (int) (context.initialSize() - cache.size());
+      ConsumingRemovalListener<Integer, Integer> removalListener = context.removalListener();
       builder.expectThat(removalListener.evicted(), hasSize(removed));
     }
 
