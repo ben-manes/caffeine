@@ -20,6 +20,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -68,6 +70,15 @@ public final class CacheContext {
   public Integer absentKey() {
     int base = initiallyEmpty() ? 0 : (lastKey + 1);
     return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
+  }
+
+  public Set<Integer> absentKeys() {
+    // FIXME(ben): do this smarter
+    Set<Integer> absent = new HashSet<>();
+    do {
+      absent.add(absentKey());
+    } while (absent.size() < 10);
+    return absent;
   }
 
   public boolean initiallyEmpty() {

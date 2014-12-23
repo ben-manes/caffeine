@@ -17,10 +17,14 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.matchers.HasConsumedEvicted.consumedEvicted;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
@@ -33,6 +37,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.google.common.collect.ImmutableList;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -106,6 +111,54 @@ public final class CacheTest {
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context)
       throws Exception {
     cache.get(context.absentKey(), () -> { throw new Exception(); });
+  }
+
+  /* ---------------- getAllPresent -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> result = cache.getAllPresent(context.absentKeys());
+    assertThat(result.size(), is(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_present_some(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> expect = new HashMap<>();
+    expect.put(context.firstKey(), -context.firstKey());
+    expect.put(context.middleKey(), -context.middleKey());
+    expect.put(context.lastKey(), -context.lastKey());
+    Map<Integer, Integer> result = cache.getAllPresent(expect.keySet());
+    assertThat(result, is(equalTo(expect)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_present_all(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> result = cache.getAllPresent(cache.asMap().keySet());
+    assertThat(result, is(equalTo(cache.asMap())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_iterable_empty(Cache<Integer, Integer> cache) {
+    Map<Integer, Integer> result = cache.getAllPresent(ImmutableList.of());
+    assertThat(result.size(), is(0));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_iterable_nullKey(Cache<Integer, Integer> cache) {
+    cache.getAllPresent(Collections.singletonList(null));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_iterable_null(Cache<Integer, Integer> cache) {
+    cache.getAllPresent(null);
   }
 
   /* ---------------- invalidate -------------- */

@@ -108,6 +108,7 @@ public @interface CacheSpec {
    * allows soft/weak combinations to be tested in cases where eviction is not desired. The copy
    * held by the context can be mutated for additional flexibility during testing.
    */
+  // FIXME(ben): May not be useful due to Java's integer cache (or needs to exceed cached range?)
   boolean retain() default true;
 
   /** The reference type of that the cache holds a key with (strong or soft only). */

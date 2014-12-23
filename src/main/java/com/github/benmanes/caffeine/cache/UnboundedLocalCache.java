@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,6 +90,11 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public void cleanUp() {}
+
+  @Override
+  public Iterator<K> keys() {
+    return cache.keySet().iterator();
+  }
 
   /* ---------------- JDK8+ Map extensions -------------- */
 

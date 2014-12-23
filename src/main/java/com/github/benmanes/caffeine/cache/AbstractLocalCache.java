@@ -132,7 +132,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
     KeyIterator(LocalCache<K, ?> cache) {
       this.cache = requireNonNull(cache);
-      this.iterator = cache.keySet().iterator();
+      this.iterator = cache.keys();
     }
 
     @Override
