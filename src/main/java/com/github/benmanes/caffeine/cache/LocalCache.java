@@ -43,6 +43,11 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   void cleanUp();
 
   Iterator<K> keyIterator();
-
   Spliterator<K> keySpliterator();
+
+  Iterator<V> valueIterator();
+  Spliterator<V> valueSpliterator();
+
+  Iterator<Entry<K, V>> entryIterator();
+  Spliterator<Entry<K, V>> entrySpliterator();
 }

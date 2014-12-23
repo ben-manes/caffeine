@@ -29,7 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -241,7 +243,42 @@ public final class CacheTest {
 
   /* ---------------- put all -------------- */
 
-  // TODO
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putAll_insert(Cache<Integer, Integer> cache, CacheContext context) {
+    int startKey = (int) context.initialSize();
+    Map<Integer, Integer> entries = IntStream
+        .range(startKey, 100 + startKey).boxed()
+        .collect(Collectors.toMap(Function.identity(), (Integer key) -> -key));
+    cache.putAll(entries);
+    assertThat(cache.size(), is(100 + context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void putAll_replace(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> entries = new HashMap<>(cache.asMap());
+    entries.replaceAll((Integer key, Integer value) -> value + 1);
+    cache.putAll(entries);
+    assertThat(cache.asMap(), is(equalTo(entries)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void putAll_mixed(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> expect = new HashMap<>(cache.asMap());
+    Map<Integer, Integer> map = new HashMap<>();
+    for (int i = 0; i < 2 * context.initialSize(); i++) {
+      int value = ((i % 2) == 0) ? i : (i + 1);
+      map.put(i, value);
+    }
+    expect.putAll(map);
+
+    cache.putAll(map);
+    assertThat(cache.asMap(), is(equalTo(expect)));
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })

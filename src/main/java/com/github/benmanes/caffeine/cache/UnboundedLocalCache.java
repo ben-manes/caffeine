@@ -102,6 +102,27 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     return cache.keySet().spliterator();
   }
 
+  @Override
+  public Iterator<V> valueIterator() {
+    return cache.values().iterator();
+  }
+
+  @Override
+  public Spliterator<V> valueSpliterator() {
+    return cache.values().spliterator();
+  }
+
+  @Override
+  public Iterator<Entry<K, V>> entryIterator() {
+    return cache.entrySet().iterator();
+  }
+
+  @Override
+  public Spliterator<Entry<K, V>> entrySpliterator() {
+    return cache.entrySet().spliterator();
+  }
+
+
   /* ---------------- JDK8+ Map extensions -------------- */
 
   @Override
@@ -112,6 +133,11 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   @Override
   public void forEach(BiConsumer<? super K, ? super V> action) {
     cache.forEach(action);
+  }
+
+  @Override
+  public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+    cache.replaceAll(function);
   }
 
   @Override
@@ -275,5 +301,20 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
       notifyRemoval(RemovalCause.EXPLICIT, key, oldValue);
     }
     return replaced;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return cache.equals(o);
+  }
+
+  @Override
+  public int hashCode() {
+    return cache.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return cache.toString();
   }
 }

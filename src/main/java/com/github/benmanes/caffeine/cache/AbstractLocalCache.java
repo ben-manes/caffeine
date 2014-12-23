@@ -195,7 +195,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Spliterator<V> spliterator() {
-      return cache.values().spliterator();
+      return cache.valueSpliterator();
     }
 
     @Override
@@ -217,7 +217,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
     ValuesIterator(LocalCache<K, V> cache) {
       this.cache = requireNonNull(cache);
-      this.iterator = cache.entrySet().iterator();
+      this.iterator = cache.entryIterator();
     }
 
     @Override
@@ -293,7 +293,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Spliterator<Entry<K, V>> spliterator() {
-      return cache.entrySet().spliterator();
+      return cache.entrySpliterator();
     }
 
     @Override
@@ -315,7 +315,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
     EntryIterator(LocalCache<K, V> cache) {
       this.cache = requireNonNull(cache);
-      this.iterator = cache.entrySet().iterator();
+      this.iterator = cache.entryIterator();
     }
 
     @Override
