@@ -13,19 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.testing;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
-import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.google.common.base.MoreObjects;
 
 /**
@@ -34,9 +36,12 @@ import com.google.common.base.MoreObjects;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheContext {
-  @Nullable RemovalListener<Object, Object> removalListener;
+  @Nullable RemovalListener<Integer, Integer> removalListener;
   Listener removalListenerType;
   Population population;
+
+  Integer initialCapacity;
+  Executor executor;
 
   @Nullable Integer maximumSize;
   @Nullable Integer firstKey;
@@ -91,6 +96,8 @@ public final class CacheContext {
 
   public CacheContext copy() {
     CacheContext context = new CacheContext();
+    context.removalListenerType = removalListenerType;
+    context.removalListener = (removalListenerType == null) ? null : removalListenerType.create();
     context.maximumSize = maximumSize;
     context.firstKey = firstKey;
     context.midKey = midKey;
@@ -101,8 +108,8 @@ public final class CacheContext {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
-        .add("removal listener", removalListenerType)
         .add("maximum size", isUnbounded() ? "UNBOUNDED" : String.format("%,d", maximumSize))
+        .add("removal listener", removalListenerType)
         .add("population", population)
         .toString();
   }

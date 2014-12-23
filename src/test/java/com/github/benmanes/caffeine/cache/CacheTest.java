@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.matchers.HasConsumedEvicted.consumedEvicted;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -25,9 +26,12 @@ import java.util.concurrent.ExecutionException;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.cache.testing.CacheContext;
+import com.github.benmanes.caffeine.cache.testing.CacheProvider;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -99,17 +103,11 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void invalidate_present(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.invalidate(context.firstKey);
-    assertThat(cache.size(), is(Math.max(0, context.getInitialSize() - 1)));
-    cache.invalidate(context.midKey);
-    assertThat(cache.size(), is(Math.max(0, context.getInitialSize() - 2)));
-    cache.invalidate(context.lastKey);
-    assertThat(cache.size(), is(Math.max(0, context.getInitialSize() - 3)));
+    cache.invalidate(context.getFirstKey());
+    cache.invalidate(context.getMiddleKey());
+    cache.invalidate(context.getLastKey());
 
-    if (context.getRemovalListener() == Listener.CONSUMING) {
-      ConsumingRemovalListener<Integer, Integer> removalListener = context.getRemovalListener();
-      assertThat(removalListener.evicted().size(), is(context.getInitialSize() - cache.size()));
-    }
+    assertThat(cache, consumedEvicted(context));
   }
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -125,10 +123,6 @@ public final class CacheTest {
   public void invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
     cache.invalidateAll();
     assertThat(cache.size(), is(0L));
-
-    if (context.getRemovalListener() == Listener.CONSUMING) {
-      ConsumingRemovalListener<Integer, Integer> removalListener = context.getRemovalListener();
-      assertThat(removalListener.evicted().size(), is(context.getInitialSize()));
-    }
+    assertThat(cache, consumedEvicted(context));
   }
 }

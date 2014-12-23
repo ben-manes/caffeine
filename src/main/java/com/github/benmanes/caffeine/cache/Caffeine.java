@@ -46,16 +46,6 @@ public final class Caffeine<K, V> {
     }
   }
 
-  /** Constructs a new {@code Caffeine} instance with the settings specified in this instance. */
-  Caffeine<K, V> copy() {
-    @SuppressWarnings("unchecked")
-    Caffeine<K, V> copy = (Caffeine<K, V>) Caffeine.newBuilder();
-    copy.removalListener = removalListener;
-    copy.initialCapacity = initialCapacity;
-    copy.executor = executor;
-    return copy;
-  }
-
   @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener() {
     return (RemovalListener<K1, V1>)

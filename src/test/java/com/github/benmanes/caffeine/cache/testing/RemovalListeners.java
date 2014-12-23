@@ -13,9 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.testing;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.RemovalNotification;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -31,9 +36,7 @@ public final class RemovalListeners {
   }
 
   public static <K, V> RemovalListener<K, V> consuming() {
-    return new RemovalListener<K, V>() {
-      @Override public void onRemoval(RemovalNotification<K, V> notification) {}
-    };
+    return new ConsumingRemovalListener<K, V>();
   }
 
   public static <K, V> RemovalListener<K, V> rejecting() {
@@ -45,15 +48,19 @@ public final class RemovalListeners {
   }
 
   public static final class ConsumingRemovalListener<K, V> implements RemovalListener<K, V> {
-    private List<RemovalNotification<K, V>> evicted;
+    private final List<RemovalNotification<K, V>> evicted;
+
+    public ConsumingRemovalListener() {
+      this.evicted = new ArrayList<>();
+    }
 
     @Override
-    public void onRemoval(RemovalNotification<K, V> notification) {
+    public synchronized void onRemoval(RemovalNotification<K, V> notification) {
       evicted.add(notification);
     }
 
-    public List<RemovalNotification<K, V>> evicted() {
-      return evicted;
+    public synchronized List<RemovalNotification<K, V>> evicted() {
+      return Collections.unmodifiableList(evicted);
     }
   }
 }

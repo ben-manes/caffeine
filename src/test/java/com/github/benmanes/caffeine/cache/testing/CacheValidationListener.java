@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.testing;
 
 import static com.github.benmanes.caffeine.cache.IsValidCache.validate;
 import static org.hamcrest.MatcherAssert.assertThat;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.testing;
 
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -24,7 +24,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 
-import com.github.benmanes.caffeine.cache.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -90,27 +92,24 @@ public @interface CacheSpec {
   enum Listener {
     /** A flag indicating that no removal listener is configured. */
     DEFAULT() {
-      @Override
-      public <K, V> RemovalListener<K, V> get() {
-        throw new AssertionError("Should never be called");
+      @Override public <K, V> RemovalListener<K, V> create() {
+        return null;
       }
     },
     /** A removal listener that rejects all notifications. */
     REJECTING() {
-      @Override
-      public <K, V> RemovalListener<K, V> get() {
+      @Override public <K, V> RemovalListener<K, V> create() {
         return RemovalListeners.rejecting();
       }
     },
     /** A {@link ConsumingRemovalListener} retains all notifications for evaluation by the test. */
     CONSUMING() {
-      @Override
-      public <K, V> RemovalListener<K, V> get() {
+      @Override public <K, V> RemovalListener<K, V> create() {
         return RemovalListeners.consuming();
       }
     };
 
-    public abstract <K, V> RemovalListener<K, V> get();
+    public abstract <K, V> RemovalListener<K, V> create();
   }
 
   /* ---------------- Executor -------------- */
@@ -121,7 +120,7 @@ public @interface CacheSpec {
   /** The executors that the cache can be configured with. */
   enum CacheExecutor implements Supplier<Executor> {
     DEFAULT() {
-      @Override public Executor get() { throw new AssertionError("Should never be called"); }
+      @Override public Executor get() { return null; }
     },
     DIRECT() {
       @Override public Executor get() { return MoreExecutors.directExecutor(); }
@@ -150,13 +149,10 @@ public @interface CacheSpec {
   /** The population scenarios. */
   enum Population {
     EMPTY() {
-      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-        context.population = this;
-      }
+      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {}
     },
     SINGLETON() {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-        context.population = this;
         context.firstKey = 0;
         context.lastKey = 0;
         context.midKey = 0;
@@ -165,7 +161,6 @@ public @interface CacheSpec {
     },
     PARTIAL() {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-        context.population = this;
         int maximum = context.isUnbounded()
             ? (int) (CacheSpec.DEFAULT_MAXIMUM_SIZE / 2)
             : (int) context.getMaximumSize();
@@ -179,7 +174,6 @@ public @interface CacheSpec {
     },
     FULL() {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-        context.population = this;
         int maximum = context.isUnbounded()
             ? (int) CacheSpec.DEFAULT_MAXIMUM_SIZE
             : (int) context.getMaximumSize();

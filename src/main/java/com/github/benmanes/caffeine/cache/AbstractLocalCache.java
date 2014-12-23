@@ -49,7 +49,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   protected void notifyRemoval(RemovalNotification<K, V> notification) {
-    executor.execute(() -> removalListener.onRemoval(notification));
+    removalListener.onRemoval(notification);
   }
 
   @Override
