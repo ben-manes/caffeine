@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.matchers.HasConsumedEvicted.consumedEvicted;
+import static com.github.benmanes.caffeine.matchers.HasRemovalNotifications.hasRemovalNotifications;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -40,16 +40,27 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.ImmutableList;
 
 /**
+ * The test cases for the {@link Cache} interface that simulate the most generic usages. These
+ * tests do not validate that eviction management and concurrency behavior is correct.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class CacheTest {
 
+  /* ---------------- size -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void size(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.size(), is(context.initialSize()));
+  }
+
   /* ---------------- getIfPresent -------------- */
 
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
@@ -122,6 +133,12 @@ public final class CacheTest {
     assertThat(result.size(), is(0));
   }
 
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  @CacheSpec
+  public void getAllPresent_absent_immutable(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.getAllPresent(context.absentKeys()).clear();
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -140,6 +157,12 @@ public final class CacheTest {
   public void getAllPresent_present_all(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAllPresent(cache.asMap().keySet());
     assertThat(result, is(equalTo(cache.asMap())));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void getAllPresent_present_immutable(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.getAllPresent(cache.asMap().keySet()).clear();
   }
 
   @Test(dataProvider = "caches")
@@ -161,6 +184,42 @@ public final class CacheTest {
     cache.getAllPresent(null);
   }
 
+  /* ---------------- put -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void put_inserted(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.put(context.absentKey(), -context.absentKey());
+    assertThat(cache.size(), is(context.initialSize() + 1));
+    assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void put_replaced_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      cache.put(key, -key);
+      assertThat(cache.size(), is(context.initialSize()));
+      assertThat(cache.getIfPresent(key), is(-key));
+    }
+    assertThat(cache, hasRemovalNotifications(context, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void put_replaced_differentValue(Cache<Integer, Integer> cache, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      cache.put(key, -context.absentKey());
+      assertThat(cache.size(), is(context.initialSize()));
+      assertThat(cache.getIfPresent(key), is(-context.absentKey()));
+    }
+    assertThat(cache, hasRemovalNotifications(context, RemovalCause.REPLACED));
+  }
+
+  /* ---------------- put all -------------- */
+
   /* ---------------- invalidate -------------- */
 
   @Test(dataProvider = "caches")
@@ -177,7 +236,7 @@ public final class CacheTest {
     cache.invalidate(context.middleKey());
     cache.invalidate(context.lastKey());
 
-    assertThat(cache, consumedEvicted(context));
+    assertThat(cache, hasRemovalNotifications(context));
   }
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -193,6 +252,20 @@ public final class CacheTest {
   public void invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
     cache.invalidateAll();
     assertThat(cache.size(), is(0L));
-    assertThat(cache, consumedEvicted(context));
+    assertThat(cache, hasRemovalNotifications(context));
   }
+
+  /* ---------------- cleanup -------------- */
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void cleanup(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.cleanUp();
+  }
+
+  /* ---------------- stats -------------- */
+
+
+  /* ---------------- asMap -------------- */
+
 }

@@ -30,6 +30,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -49,9 +50,11 @@ final class CacheGenerator {
   public Map<CacheContext, Cache<Integer, Integer>> generate() {
     initialize();
     makeInitialCapacities();
-    makeMaximumSizes();
-    makeKeyReferences();
-    makeValueReferences();
+    // Disabled until supported to avoid duplicated tests
+    // makeCacheStats();
+    // makeMaximumSizes();
+    // makeKeyReferences();
+    // makeValueReferences();
     makeExecutors();
     makeRemovalListeners();
     makeCachesAndPopulate();
@@ -72,6 +75,19 @@ final class CacheGenerator {
       for (InitialCapacity initialCapacity : cacheSpec.initialCapacity()) {
         CacheContext copy = context.copy();
         copy.initialCapacity = initialCapacity;
+        combinations.add(copy);
+      }
+    }
+    contexts = combinations;
+  }
+
+  /** Generates a new set of contexts with the cache statistic combinations. */
+  private void makeCacheStats() {
+    List<CacheContext> combinations = new ArrayList<>();
+    for (CacheContext context : contexts) {
+      for (Stats stats : cacheSpec.stats()) {
+        CacheContext copy = context.copy();
+        copy.stats = stats;
         combinations.add(copy);
       }
     }

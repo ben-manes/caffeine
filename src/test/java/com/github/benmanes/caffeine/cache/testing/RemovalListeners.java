@@ -59,7 +59,7 @@ public final class RemovalListeners {
       evicted.add(notification);
     }
 
-    public synchronized List<RemovalNotification<K, V>> evicted() {
+    public List<RemovalNotification<K, V>> evicted() {
       return Collections.unmodifiableList(evicted);
     }
   }

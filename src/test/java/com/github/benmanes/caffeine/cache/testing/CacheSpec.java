@@ -73,6 +73,12 @@ public @interface CacheSpec {
     InitialCapacity.EXCESSIVE
   };
 
+  /* ---------------- Statistics -------------- */
+
+  enum Stats { ENABLED, DISABLED }
+
+  Stats[] stats() default { Stats.ENABLED, Stats.DISABLED };
+
   /* ---------------- Maximum size -------------- */
 
   enum MaximumSize {
@@ -209,7 +215,7 @@ public @interface CacheSpec {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
         context.firstKey = 0;
         context.lastKey = 0;
-        context.midKey = 0;
+        context.middleKey = 0;
         cache.put(0, 0);
       }
     },
@@ -232,7 +238,7 @@ public @interface CacheSpec {
           : (int) context.maximumSize();
       context.firstKey = 0;
       context.lastKey = maximum - 1;
-      context.midKey = (context.lastKey - context.firstKey) / 2;
+      context.middleKey = (context.lastKey - context.firstKey) / 2;
       for (int i = 0; i < maximum; i++) {
         cache.put(i, -i);
       }

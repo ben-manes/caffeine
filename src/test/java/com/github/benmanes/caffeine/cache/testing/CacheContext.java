@@ -27,11 +27,16 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.google.common.base.MoreObjects;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * The cache configuration context for a test case.
@@ -42,15 +47,19 @@ public final class CacheContext {
   @Nullable RemovalListener<Integer, Integer> removalListener;
   Listener removalListenerType;
   Population population;
+  Stats stats;
 
   InitialCapacity initialCapacity;
   Executor executor;
 
   @Nullable Integer maximumSize;
   @Nullable Integer firstKey;
-  @Nullable Integer midKey;
+  @Nullable Integer middleKey;
   @Nullable Integer lastKey;
-  @Nullable Integer absentKey;
+
+  // Generated on-demand
+  Integer absentKey;
+  Set<Integer> absentKeys;
 
   public Integer firstKey() {
     assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
@@ -58,8 +67,8 @@ public final class CacheContext {
   }
 
   public Integer middleKey() {
-    assertThat("Invalid usage of context", midKey, is(not(nullValue())));
-    return midKey;
+    assertThat("Invalid usage of context", middleKey, is(not(nullValue())));
+    return middleKey;
   }
 
   public Integer lastKey() {
@@ -67,18 +76,30 @@ public final class CacheContext {
     return lastKey;
   }
 
+  public Set<Integer> firstMiddleLastKeys() {
+    return ImmutableSet.of(firstKey, middleKey, lastKey);
+  }
+
   public Integer absentKey() {
-    int base = initiallyEmpty() ? 0 : (lastKey + 1);
-    return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
+    return (absentKey == null) ? (absentKey = nextAbsentKey()) : absentKey;
   }
 
   public Set<Integer> absentKeys() {
+    if (absentKeys != null) {
+      return absentKeys;
+    }
+
     // FIXME(ben): do this smarter
     Set<Integer> absent = new HashSet<>();
     do {
-      absent.add(absentKey());
+      absent.add(nextAbsentKey());
     } while (absent.size() < 10);
     return absent;
+  }
+
+  private Integer nextAbsentKey() {
+    int base = initiallyEmpty() ? 0 : (lastKey + 1);
+    return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
   }
 
   public boolean initiallyEmpty() {
@@ -113,18 +134,26 @@ public final class CacheContext {
     context.removalListener = (removalListenerType == null) ? null : removalListenerType.create();
     context.initialCapacity = initialCapacity;
     context.maximumSize = maximumSize;
+    context.executor = executor;
     context.firstKey = firstKey;
-    context.midKey = midKey;
+    context.middleKey = middleKey;
     context.lastKey = lastKey;
+    context.stats = stats;
     return context;
   }
 
   @Override
+  public boolean equals(Object o) {
+    return EqualsBuilder.reflectionEquals(this, o);
+  }
+
+  @Override
+  public int hashCode() {
+    return HashCodeBuilder.reflectionHashCode(this);
+  }
+
+  @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("maximum size", isUnbounded() ? "UNBOUNDED" : String.format("%,d", maximumSize))
-        .add("removal listener", removalListenerType)
-        .add("population", population)
-        .toString();
+    return ToStringBuilder.reflectionToString(this);
   }
 }
