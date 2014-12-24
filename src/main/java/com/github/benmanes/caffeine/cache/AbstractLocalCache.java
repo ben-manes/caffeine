@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
+  @Nullable
   protected final RemovalListener<K, V> removalListener;
   protected final Executor executor;
 
@@ -49,7 +50,12 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   protected void notifyRemoval(RemovalNotification<K, V> notification) {
+    requireNonNull(removalListener, "Notification should be guarded with a check");
     removalListener.onRemoval(notification);
+  }
+
+  protected boolean hasRemovalListener() {
+    return (removalListener != null);
   }
 
   @Override

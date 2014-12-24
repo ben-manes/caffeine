@@ -249,7 +249,7 @@ public final class CacheTest {
     int startKey = (int) context.initialSize();
     Map<Integer, Integer> entries = IntStream
         .range(startKey, 100 + startKey).boxed()
-        .collect(Collectors.toMap(Function.identity(), (Integer key) -> -key));
+        .collect(Collectors.toMap(Function.identity(), key -> -key));
     cache.putAll(entries);
     assertThat(cache.size(), is(100 + context.initialSize()));
   }
@@ -259,7 +259,7 @@ public final class CacheTest {
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_replace(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> entries = new HashMap<>(cache.asMap());
-    entries.replaceAll((Integer key, Integer value) -> value + 1);
+    entries.replaceAll((key, value) -> value + 1);
     cache.putAll(entries);
     assertThat(cache.asMap(), is(equalTo(entries)));
   }
@@ -338,7 +338,7 @@ public final class CacheTest {
   @CacheSpec(population = { Population.PARTIAL, Population.FULL })
   public void invalidateAll_partial(Cache<Integer, Integer> cache, CacheContext context) {
     List<Integer> keys = cache.asMap().keySet().stream()
-        .filter((Integer i) -> ((i % 2) == 0))
+        .filter(i -> ((i % 2) == 0))
         .collect(Collectors.toList());
     cache.invalidateAll(keys);
     assertThat(cache.size(), is(context.initialSize() - keys.size()));

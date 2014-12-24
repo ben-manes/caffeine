@@ -52,7 +52,7 @@ final class LocalManualCache<K, V> implements Cache<K, V> {
   @Override
   public V get(K key, Callable<? extends V> valueLoader) throws ExecutionException {
     requireNonNull(valueLoader);
-    return localCache.get(key, (Object k) -> valueLoader.call());
+    return localCache.get(key, k -> valueLoader.call());
   }
 
   @Override

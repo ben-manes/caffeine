@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
+import javax.annotation.Nullable;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -47,9 +49,8 @@ public final class Caffeine<K, V> {
   }
 
   @SuppressWarnings("unchecked")
-  <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener() {
-    return (RemovalListener<K1, V1>)
-        ((removalListener == null) ? NullRemovalListener.INSTANCE : removalListener);
+  @Nullable <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener() {
+    return (RemovalListener<K1, V1>) removalListener;
   }
 
   public static Caffeine<Object, Object> newBuilder() {

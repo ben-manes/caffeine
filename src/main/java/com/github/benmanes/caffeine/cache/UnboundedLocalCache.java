@@ -53,7 +53,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException {
-    return computeIfAbsent(key, (K k) -> {
+    return computeIfAbsent(key, k -> {
       try {
         return loader.load(key);
       } catch (Exception e) {
@@ -155,7 +155,10 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     // optimistic fast path due to computeIfAbsent always locking
     if (!cache.containsKey(key)) {
       return null;
+    } else if (!hasRemovalListener()) {
+      return cache.computeIfPresent(key, remappingFunction);
     }
+
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
@@ -175,6 +178,10 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   @Override
   public V compute(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    if (!hasRemovalListener()) {
+      return cache.compute(key, remappingFunction);
+    }
+
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
@@ -195,6 +202,10 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+    if (!hasRemovalListener()) {
+      return cache.merge(key, value, remappingFunction);
+    }
+
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
@@ -220,6 +231,10 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public void clear() {
+    if (!hasRemovalListener()) {
+      cache.clear();
+      return;
+    }
     for (K key : cache.keySet()) {
       V value = cache.remove(key);
       notifyRemoval(RemovalCause.EXPLICIT, key, value);
@@ -264,7 +279,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   @Override
   public V remove(Object key) {
     V value = cache.remove(key);
-    if (value != null) {
+    if (hasRemovalListener() && (value != null)) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
       notifyRemoval(RemovalCause.EXPLICIT, castKey, value);
@@ -275,7 +290,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   @Override
   public boolean remove(Object key, Object value) {
     boolean removed = cache.remove(key, value);
-    if (removed) {
+    if (hasRemovalListener() && removed) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
       @SuppressWarnings("unchecked")
@@ -288,7 +303,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   @Override
   public V replace(K key, V value) {
     V prev = cache.replace(key, value);
-    if (prev != null) {
+    if ((hasRemovalListener()) && prev != null) {
       notifyRemoval(RemovalCause.REPLACED, key, value);
     }
     return prev;
@@ -297,7 +312,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
     boolean replaced = cache.replace(key, oldValue, newValue);
-    if (replaced) {
+    if (hasRemovalListener() && replaced) {
       notifyRemoval(RemovalCause.EXPLICIT, key, oldValue);
     }
     return replaced;
