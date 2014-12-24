@@ -291,6 +291,7 @@ public final class AsMapTest {
     entries.replaceAll((key, value) -> value + 1);
     map.putAll(entries);
     assertThat(map, is(equalTo(entries)));
+    assertThat(map, hasRemovalNotifications(context, entries.size(), RemovalCause.REPLACED));
   }
 
   @Test(dataProvider = "caches")
@@ -298,17 +299,63 @@ public final class AsMapTest {
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_mixed(Map<Integer, Integer> map, CacheContext context) {
     Map<Integer, Integer> expect = new HashMap<>(context.original());
-    Map<Integer, Integer> data = new HashMap<>();
+    Map<Integer, Integer> entries = new HashMap<>();
     for (int i = 0; i < 2 * context.initialSize(); i++) {
       int value = ((i % 2) == 0) ? i : (i + 1);
-      data.put(i, value);
+      entries.put(i, value);
     }
-    expect.putAll(data);
+    expect.putAll(entries);
 
-    map.putAll(data);
+    map.putAll(entries);
     assertThat(map, is(equalTo(expect)));
+    assertThat(map, hasRemovalNotifications(context, entries.size() / 2, RemovalCause.REPLACED));
   }
 
   /* ---------------- putIfAbsent -------------- */
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putIfAbsent_nullKey(Map<Integer, Integer> map) {
+    map.putIfAbsent(null, 2);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putIfAbsent_nullValue(Map<Integer, Integer> map) {
+    map.putIfAbsent(1, null);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putIfAbsent_nullKeyAndValue(Map<Integer, Integer> map) {
+    map.putIfAbsent(null, null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+  removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putIfAbsent_present(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.putIfAbsent(key, key), is(-key));
+      assertThat(map.get(key), is(-key));
+    }
+    assertThat(map.size(), is((int) context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putIfAbsent_insert(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.putIfAbsent(context.absentKey(), -context.absentKey()), is(nullValue()));
+    assertThat(map.get(context.absentKey()), is(-context.absentKey()));
+    assertThat(map.size(), is((int) context.initialSize() + 1));
+  }
+
+  /* ---------------- remove -------------- */
+
+  /* ---------------- putIfAbsent -------------- */
+
+  /* ---------------- putIfAbsent -------------- */
+
+  /* ---------------- V8 default methods -------------- */
 
 }

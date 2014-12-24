@@ -266,6 +266,7 @@ public final class CacheTest {
     entries.replaceAll((key, value) -> value + 1);
     cache.putAll(entries);
     assertThat(cache.asMap(), is(equalTo(entries)));
+    assertThat(cache, hasRemovalNotifications(context, entries.size(), RemovalCause.REPLACED));
   }
 
   @Test(dataProvider = "caches")
@@ -273,15 +274,16 @@ public final class CacheTest {
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_mixed(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> expect = new HashMap<>(context.original());
-    Map<Integer, Integer> map = new HashMap<>();
+    Map<Integer, Integer> entries = new HashMap<>();
     for (int i = 0; i < 2 * context.initialSize(); i++) {
       int value = ((i % 2) == 0) ? i : (i + 1);
-      map.put(i, value);
+      entries.put(i, value);
     }
-    expect.putAll(map);
+    expect.putAll(entries);
 
-    cache.putAll(map);
+    cache.putAll(entries);
     assertThat(cache.asMap(), is(equalTo(expect)));
+    assertThat(cache, hasRemovalNotifications(context, entries.size() / 2, RemovalCause.REPLACED));
   }
 
   @Test(dataProvider = "caches")
