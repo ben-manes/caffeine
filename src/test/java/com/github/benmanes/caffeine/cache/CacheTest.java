@@ -248,7 +248,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_insert(Cache<Integer, Integer> cache, CacheContext context) {
-    int startKey = (int) context.initialSize();
+    int startKey = (int) context.initialSize() + 1;
     Map<Integer, Integer> entries = IntStream
         .range(startKey, 100 + startKey).boxed()
         .collect(Collectors.toMap(Function.identity(), key -> -key));

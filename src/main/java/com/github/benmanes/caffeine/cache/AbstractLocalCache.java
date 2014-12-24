@@ -118,16 +118,6 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     public Spliterator<K> spliterator() {
       return cache.keySpliterator();
     }
-
-    @Override
-    public Object[] toArray() {
-      return cache.keySet().toArray();
-    }
-
-    @Override
-    public <T> T[] toArray(T[] array) {
-      return cache.keySet().toArray(array);
-    }
   }
 
   /** An adapter to safely externalize the key iterator. */
@@ -202,16 +192,6 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public Spliterator<V> spliterator() {
       return cache.valueSpliterator();
-    }
-
-    @Override
-    public Object[] toArray() {
-      return cache.values().toArray();
-    }
-
-    @Override
-    public <T> T[] toArray(T[] a) {
-      return cache.values().toArray(a);
     }
   }
 
@@ -300,16 +280,6 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public Spliterator<Entry<K, V>> spliterator() {
       return cache.entrySpliterator();
-    }
-
-    @Override
-    public Object[] toArray() {
-      return cache.entrySet().toArray();
-    }
-
-    @Override
-    public <T> T[] toArray(T[] a) {
-      return cache.entrySet().toArray(a);
     }
   }
 

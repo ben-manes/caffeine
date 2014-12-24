@@ -31,7 +31,6 @@ import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
@@ -45,7 +44,7 @@ import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatcher<Cache<K, V>> {
+public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatcher<Object> {
   private final int count;
   private final RemovalCause cause;
   private final CacheContext context;
@@ -62,7 +61,7 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
   }
 
   @Override
-  protected boolean matchesSafely(Cache<K, V> cache, Description description) {
+  protected boolean matchesSafely(Object ignored, Description description) {
     DescriptionBuilder builder = new DescriptionBuilder(description);
 
     if (context.removalListenerType() == Listener.CONSUMING) {

@@ -213,10 +213,11 @@ public @interface CacheSpec {
     },
     SINGLETON(1) {
       @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-        context.firstKey = 0;
-        context.lastKey = 0;
-        context.middleKey = 0;
-        cache.put(0, 0);
+        context.firstKey = 1;
+        context.lastKey = 1;
+        context.middleKey = 1;
+        context.original.put(1, -1);
+        cache.put(1, -1);
       }
     },
     PARTIAL(InitialCapacity.FULL.size() / 2),
@@ -240,6 +241,7 @@ public @interface CacheSpec {
       context.lastKey = maximum - 1;
       context.middleKey = (context.lastKey - context.firstKey) / 2;
       for (int i = 0; i < maximum; i++) {
+        context.original.put(i, -i);
         cache.put(i, -i);
       }
     }

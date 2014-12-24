@@ -96,7 +96,7 @@ public class ComputeBenchmark {
     Cache<Integer, Boolean> cache = Caffeine.newBuilder().build();
     benchmarkFunction = (Integer key) -> {
       try {
-        return cache.get(key, () -> Boolean.TRUE);
+        return cache.get(key, any -> Boolean.TRUE);
       } catch (Exception e) {
         throw Throwables.propagate(e);
       }

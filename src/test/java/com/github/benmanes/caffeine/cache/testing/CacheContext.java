@@ -20,7 +20,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
@@ -58,9 +60,15 @@ public final class CacheContext {
   @Nullable Integer middleKey;
   @Nullable Integer lastKey;
 
+  Map<Integer, Integer> original;
+
   // Generated on-demand
   Integer absentKey;
   Set<Integer> absentKeys;
+
+  public CacheContext() {
+    original = new HashMap<>();
+  }
 
   public Integer firstKey() {
     assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
@@ -118,6 +126,10 @@ public final class CacheContext {
 
   public boolean isUnbounded() {
     return (maximumSize == null);
+  }
+
+  public Map<Integer, Integer> original() {
+    return original;
   }
 
   public ReferenceType keyReferenceType() {
