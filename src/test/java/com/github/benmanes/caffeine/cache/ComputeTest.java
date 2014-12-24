@@ -49,7 +49,7 @@ public class ComputeTest {
   @Test(enabled = false, expectedExceptions = IllegalStateException.class)
   public void recursive_caffeine() throws ExecutionException {
     Cache<Integer, Boolean> cache = Caffeine.newBuilder().build();
-    cache.get(1, new CaffeineRecursiveCallable(cache));
+    cache.get(1, new RecursiveFunction(cache.asMap()));
   }
 
   @Test(expectedExceptions = UncheckedExecutionException.class)
@@ -75,19 +75,6 @@ public class ComputeTest {
     com.google.common.cache.Cache<Integer, Boolean> cache;
 
     GuavaRecursiveCallable(com.google.common.cache.Cache<Integer, Boolean> cache) {
-      this.cache = cache;
-    }
-
-    @Override
-    public Boolean call() throws ExecutionException {
-      return cache.get(1, this);
-    }
-  }
-
-  static class CaffeineRecursiveCallable implements Callable<Boolean> {
-    Cache<Integer, Boolean> cache;
-
-    CaffeineRecursiveCallable(Cache<Integer, Boolean> cache) {
       this.cache = cache;
     }
 

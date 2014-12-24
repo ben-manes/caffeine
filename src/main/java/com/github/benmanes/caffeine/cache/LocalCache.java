@@ -19,7 +19,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -32,7 +32,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   @Nullable V getIfPresent(Object key);
 
-  V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException;
+  V get(K key, Function<? super K, ? extends V> mappingFunction);
 
   Map<K, V> getAllPresent(Iterable<?> keys);
 

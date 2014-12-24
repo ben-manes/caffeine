@@ -15,41 +15,20 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Function;
+import org.testng.annotations.Listeners;
+import org.testng.annotations.Test;
 
-import javax.annotation.Nullable;
-
-import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.github.benmanes.caffeine.cache.testing.CacheProvider;
+import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 
 /**
+ * The test cases for the {@link Cache#asMap()} view and its serializability. These tests do not
+ * validate eviction management or concurrency behavior.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface Cache<K, V> {
+@Listeners(CacheValidationListener.class)
+@Test(dataProviderClass = CacheProvider.class)
+public final class AsMapTest {
 
-  @Nullable
-  V getIfPresent(Object key);
-
-  V get(K key, Function<? super K, ? extends V> mappingFunction);
-
-  Map<K, V> getAllPresent(Iterable<?> keys);
-
-  void put(K key, V value);
-
-  void putAll(Map<? extends K,? extends V> map);
-
-  void invalidate(Object key);
-
-  void invalidateAll(Iterable<?> keys);
-
-  void invalidateAll();
-
-  long size();
-
-  CacheStats stats();
-
-  ConcurrentMap<K, V> asMap();
-
-  void cleanUp();
 }

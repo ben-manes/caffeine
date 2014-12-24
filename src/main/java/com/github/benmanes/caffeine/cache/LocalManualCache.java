@@ -18,11 +18,12 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
+
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -50,9 +51,8 @@ final class LocalManualCache<K, V> implements Cache<K, V> {
   }
 
   @Override
-  public V get(K key, Callable<? extends V> valueLoader) throws ExecutionException {
-    requireNonNull(valueLoader);
-    return localCache.get(key, k -> valueLoader.call());
+  public V get(K key, Function<? super K, ? extends V> mappingFunction) {
+    return localCache.get(key, mappingFunction);
   }
 
   @Override
@@ -84,6 +84,11 @@ final class LocalManualCache<K, V> implements Cache<K, V> {
   @Override
   public void invalidateAll(Iterable<?> keys) {
     localCache.invalidateAll(keys);
+  }
+
+  @Override
+  public CacheStats stats() {
+    return new CacheStats();
   }
 
   @Override

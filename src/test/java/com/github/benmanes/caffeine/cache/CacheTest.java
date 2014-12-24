@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -46,7 +45,8 @@ import com.google.common.collect.ImmutableList;
 
 /**
  * The test cases for the {@link Cache} interface that simulate the most generic usages. These
- * tests do not validate that eviction management and concurrency behavior is correct.
+ * tests do not validate eviction management, concurrency behavior, or the {@link Cache#asMap()}
+ * view.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -91,14 +91,14 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void get_absent(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
     Integer key = context.absentKey();
-    Integer value = cache.get(key, () -> -key);
+    Integer value = cache.get(key, k -> -key);
     assertThat(value, is(-key));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
-    Callable<Integer> loader = () -> { throw new Exception(); };
+    Function<Integer, Integer> loader = key -> { throw new RuntimeException(); };
     assertThat(cache.get(context.firstKey(), loader), is(-context.firstKey()));
     assertThat(cache.get(context.middleKey(), loader), is(-context.middleKey()));
     assertThat(cache.get(context.lastKey(), loader), is(-context.lastKey()));
@@ -107,7 +107,7 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_nullKey(Cache<Integer, Integer> cache) throws Exception {
-    cache.get(null, () -> 0);
+    cache.get(null, Function.identity());
   }
 
   @CacheSpec
@@ -126,7 +126,7 @@ public final class CacheTest {
   @Test(enabled = false, dataProvider = "caches", expectedExceptions = ExecutionException.class)
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context)
       throws Exception {
-    cache.get(context.absentKey(), () -> { throw new Exception(); });
+    cache.get(context.absentKey(), key -> { throw new RuntimeException(); });
   }
 
   /* ---------------- getAllPresent -------------- */
@@ -374,7 +374,8 @@ public final class CacheTest {
 
   /* ---------------- stats -------------- */
 
-
   /* ---------------- asMap -------------- */
+
+  /* ---------------- serialize -------------- */
 
 }

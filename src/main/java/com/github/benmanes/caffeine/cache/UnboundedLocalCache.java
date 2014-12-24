@@ -21,12 +21,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
-import com.github.benmanes.caffeine.UnsafeAccess;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -52,15 +49,8 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   }
 
   @Override
-  public V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException {
-    return computeIfAbsent(key, k -> {
-      try {
-        return loader.load(key);
-      } catch (Exception e) {
-        UnsafeAccess.UNSAFE.throwException(e);
-        return null; // unreachable
-      }
-    });
+  public V get(K key, Function<? super K, ? extends V> mappingFunction) {
+    return computeIfAbsent(key, mappingFunction);
   }
 
   @Override
