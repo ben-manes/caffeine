@@ -352,9 +352,82 @@ public final class AsMapTest {
 
   /* ---------------- remove -------------- */
 
-  /* ---------------- putIfAbsent -------------- */
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void remove_nullKey(Map<Integer, Integer> map) {
+    map.remove(null);
+  }
 
-  /* ---------------- putIfAbsent -------------- */
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void remove_absent(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.remove(context.absentKey()), is(nullValue()));
+    assertThat(map.size(), is((int) context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void invalidate_present(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      map.remove(key);
+    }
+    assertThat(map.size(), is((int) context.initialSize() - context.firstMiddleLastKeys().size()));
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  /* ---------------- remove conditionally -------------- */
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void removeConditionally_nullKey(Map<Integer, Integer> map) {
+    map.remove(null, 1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void removeConditionally_nullValue(Map<Integer, Integer> map) {
+    assertThat(map.remove(1, null), is(false)); // see ConcurrentHashMap
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void removeConditionally_nullKeyAndValue(Map<Integer, Integer> map) {
+    map.remove(null, null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void removeConditionally_absent(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.remove(context.absentKey(), -context.absentKey()), is(false));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void removeConditionally_presentKey(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.remove(key, key), is(false));
+    }
+    assertThat(map.size(), is((int) context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void removeConditionally_presentKeyAndValue(Map<Integer, Integer> map,
+      CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.remove(key, -key), is(true));
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is((int) context.initialSize() - count));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  /* ---------------- replace -------------- */
+
+  /* ---------------- replace conditionally -------------- */
 
   /* ---------------- V8 default methods -------------- */
 

@@ -237,10 +237,10 @@ public @interface CacheSpec {
       int maximum = context.isUnbounded()
           ? (int) size()
           : (int) context.maximumSize();
-      context.firstKey = 0;
-      context.lastKey = maximum - 1;
+      context.firstKey = 1;
+      context.lastKey = maximum;
       context.middleKey = (context.lastKey - context.firstKey) / 2;
-      for (int i = 0; i < maximum; i++) {
+      for (int i = 1; i <= maximum; i++) {
         context.original.put(i, -i);
         cache.put(i, -i);
       }

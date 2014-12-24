@@ -311,9 +311,10 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void invalidate_present(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.invalidate(context.firstKey());
-    cache.invalidate(context.middleKey());
-    cache.invalidate(context.lastKey());
+    for (Integer key : context.firstMiddleLastKeys()) {
+      cache.invalidate(key);
+    }
+    assertThat(cache.size(), is(context.initialSize() - context.firstMiddleLastKeys().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
