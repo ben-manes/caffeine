@@ -51,7 +51,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
   protected void notifyRemoval(RemovalNotification<K, V> notification) {
     requireNonNull(removalListener, "Notification should be guarded with a check");
-    removalListener.onRemoval(notification);
+    executor.execute(() -> removalListener.onRemoval(notification));
   }
 
   protected boolean hasRemovalListener() {
