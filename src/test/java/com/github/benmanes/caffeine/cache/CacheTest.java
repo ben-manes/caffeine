@@ -193,7 +193,7 @@ public final class CacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void put_inserted(Cache<Integer, Integer> cache, CacheContext context) {
+  public void put_insert(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), -context.absentKey());
     assertThat(cache.size(), is(context.initialSize() + 1));
     assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
@@ -202,7 +202,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-  public void put_replaced_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
+  public void put_replac_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, -key);
       assertThat(cache.getIfPresent(key), is(-key));
@@ -216,7 +216,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-  public void put_replaced_differentValue(Cache<Integer, Integer> cache, CacheContext context) {
+  public void put_replac_differentValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, -context.absentKey());
       assertThat(cache.getIfPresent(key), is(-context.absentKey()));
@@ -262,7 +262,7 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_replace(Cache<Integer, Integer> cache, CacheContext context) {
-    Map<Integer, Integer> entries = new HashMap<>(cache.asMap());
+    Map<Integer, Integer> entries = new HashMap<>(context.original());
     entries.replaceAll((key, value) -> value + 1);
     cache.putAll(entries);
     assertThat(cache.asMap(), is(equalTo(entries)));
@@ -272,7 +272,7 @@ public final class CacheTest {
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_mixed(Cache<Integer, Integer> cache, CacheContext context) {
-    Map<Integer, Integer> expect = new HashMap<>(cache.asMap());
+    Map<Integer, Integer> expect = new HashMap<>(context.original());
     Map<Integer, Integer> map = new HashMap<>();
     for (int i = 0; i < 2 * context.initialSize(); i++) {
       int value = ((i % 2) == 0) ? i : (i + 1);

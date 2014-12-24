@@ -23,7 +23,11 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -48,7 +52,7 @@ public final class AsMapTest {
 
   /* ---------------- is empty / size / clear -------------- */
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void isEmpty(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.isEmpty(), is(context.initiallyEmpty()));
@@ -57,14 +61,14 @@ public final class AsMapTest {
     }
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void size(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.size(), is((int) context.initialSize()));
   }
 
   @CacheSpec
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   public void clear(Map<Integer, Integer> map, CacheContext context) {
     map.clear();
     assertThat(map, is(emptyMap()));
@@ -74,38 +78,38 @@ public final class AsMapTest {
 
   /* ---------------- equals / hashCode -------------- */
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void equals_null(Map<Integer, Integer> map) {
     assertThat(map.equals(null), is(false));
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void equals_self(Map<Integer, Integer> map) {
     assertThat(map.equals(map), is(true));
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void equals(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.equals(context.original()), is(true));
     assertThat(context.original().equals(map), is(true));
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void hashCode(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.hashCode(), is(equalTo(context.original().hashCode())));
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void hashCode_self(Map<Integer, Integer> map) {
     assertThat(map.hashCode(), is(equalTo(map.hashCode())));
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void equalsAndHashCodeFail_empty(Map<Integer, Integer> map) {
@@ -115,7 +119,7 @@ public final class AsMapTest {
     assertThat(map.hashCode(), is(not(equalTo(other.hashCode()))));
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void equalsAndHashCodeFail_present(Map<Integer, Integer> map) {
@@ -133,12 +137,12 @@ public final class AsMapTest {
   /* ---------------- contains -------------- */
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void containsKey_null(Map<Integer, Integer> map) {
     map.containsKey(null);
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void containsKey_present(Map<Integer, Integer> map, CacheContext context) {
@@ -147,19 +151,19 @@ public final class AsMapTest {
     }
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void containsKey_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.containsKey(context.absentKey()), is(false));
   }
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void containsValue_null(Map<Integer, Integer> map) {
     map.containsValue(null);
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void containsValue_present(Map<Integer, Integer> map, CacheContext context) {
@@ -168,7 +172,7 @@ public final class AsMapTest {
     }
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void containsValue_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.containsValue(-context.absentKey()), is(false));
@@ -177,12 +181,12 @@ public final class AsMapTest {
   /* ---------------- get -------------- */
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_null(Map<Integer, Integer> map) {
     map.get(null);
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void get_present(Map<Integer, Integer> map, CacheContext context) {
@@ -191,7 +195,7 @@ public final class AsMapTest {
     }
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void get_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.get(context.absentKey()), is(nullValue()));
@@ -199,36 +203,36 @@ public final class AsMapTest {
 
   /* ---------------- put -------------- */
 
-  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_nullKey(Map<Integer, Integer> map) {
     map.put(null, 1);
   }
 
-  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_nullValue(Map<Integer, Integer> map) {
     map.put(1, null);
   }
 
-  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_nullKeyAndValue(Map<Integer, Integer> map) {
     map.put(null, null);
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void put_inserted(Map<Integer, Integer> map, CacheContext context) {
+  public void put_insert(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.put(context.absentKey(), -context.absentKey()), is(nullValue()));
     assertThat(map.get(context.absentKey()), is(-context.absentKey()));
     assertThat(map.size(), is((int) context.initialSize() + 1));
   }
 
-  @Test(dataProvider = "maps")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-  public void put_replaced_sameValue(Map<Integer, Integer> map, CacheContext context) {
+  public void put_replace_sameValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.put(key, -key), is(-key));
       assertThat(map.get(key), is(-key));
@@ -242,17 +246,69 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-  public void put_replaced_differentValue(Map<Integer, Integer> map, CacheContext context) {
+  public void put_replace_differentValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.put(key, -context.absentKey()), is(-key));
       assertThat(map.get(key), is(-context.absentKey()));
     }
-    assertThat(map.size(), is(context.initialSize()));
+    assertThat(map.size(), is((int) context.initialSize()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
   /* ---------------- putAll -------------- */
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putAll_null(Map<Integer, Integer> map) {
+    map.putAll(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putAll_empty(Map<Integer, Integer> map, CacheContext context) {
+    map.putAll(new HashMap<>());
+    assertThat(map.size(), is((int) context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void putAll_insert(Map<Integer, Integer> map, CacheContext context) {
+    int startKey = (int) context.initialSize() + 1;
+    Map<Integer, Integer> entries = IntStream
+        .range(startKey, 100 + startKey).boxed()
+        .collect(Collectors.toMap(Function.identity(), key -> -key));
+    map.putAll(entries);
+    assertThat(map.size(), is(100 + (int) context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void putAll_replace(Map<Integer, Integer> map, CacheContext context) {
+    Map<Integer, Integer> entries = context.original();
+    entries.replaceAll((key, value) -> value + 1);
+    map.putAll(entries);
+    assertThat(map, is(equalTo(entries)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void putAll_mixed(Map<Integer, Integer> map, CacheContext context) {
+    Map<Integer, Integer> expect = new HashMap<>(context.original());
+    Map<Integer, Integer> data = new HashMap<>();
+    for (int i = 0; i < 2 * context.initialSize(); i++) {
+      int value = ((i % 2) == 0) ? i : (i + 1);
+      data.put(i, value);
+    }
+    expect.putAll(data);
+
+    map.putAll(data);
+    assertThat(map, is(equalTo(expect)));
+  }
+
+  /* ---------------- putIfAbsent -------------- */
 
 }

@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentMap;
 
 import org.testng.annotations.DataProvider;
 
@@ -37,17 +38,13 @@ public final class CacheProvider {
 
   private CacheProvider() {}
 
+  /**
+   * The provided test parameters are optional and may be specified in any order. Supports injecting
+   * {@link LoadingCache}, {@link Cache}, {@link CacheContext}, and the {@link ConcurrentMap}
+   * {@link Cache#asMap()} view.
+   */
   @DataProvider(name = "caches")
   public static Iterator<Object[]> providesCaches(Method testMethod) throws Exception {
-    return generate(testMethod, false);
-  }
-
-  @DataProvider(name = "maps")
-  public static Iterator<Object[]> providesMaps(Method testMethod) throws Exception {
-    return generate(testMethod, true);
-  }
-
-  private static Iterator<Object[]> generate(Method testMethod, boolean asMap) throws Exception {
     CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
     requireNonNull(cacheSpec, "@CacheSpec not found");
 
@@ -63,7 +60,7 @@ public final class CacheProvider {
           params[i] = entry.getKey();
         } else if (parameterClasses[i].isAssignableFrom(entry.getValue().getClass())) {
           params[i] = entry.getValue();
-        } else if (asMap && parameterClasses[i].isAssignableFrom(Map.class)) {
+        } else if (parameterClasses[i].isAssignableFrom(Map.class)) {
           params[i] = entry.getValue().asMap();
         } else {
           throw new AssertionError("Unknown parameter type: " + parameterClasses[i]);
