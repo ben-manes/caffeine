@@ -45,8 +45,8 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     this.executor = builder.executor;
   }
 
-  protected void notifyRemoval(RemovalCause cause, K key, @Nullable V value) {
-    notifyRemoval(new RemovalNotification<K, V>(cause, key, value));
+  protected void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
+    notifyRemoval(new RemovalNotification<K, V>(key, value, cause));
   }
 
   protected void notifyRemoval(RemovalNotification<K, V> notification) {

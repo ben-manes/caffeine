@@ -77,6 +77,34 @@ public final class Caffeine<K, V> {
     return self;
   }
 
+  public Caffeine<K, V> weakKeys() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Caffeine<K, V> weakValues() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Caffeine<K, V> softValues() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Caffeine<K, V> expireAfterWrite() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Caffeine<K, V> expireAfterAccess() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Caffeine<K, V> maximumSize() {
+    throw new UnsupportedOperationException();
+  }
+
+  public Caffeine<K, V> maximumWeight() {
+    throw new UnsupportedOperationException();
+  }
+
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
     LocalCache<K1, V1> localCache = new UnboundedLocalCache<>(this);
     return new LocalManualCache<K1, V1>(localCache);

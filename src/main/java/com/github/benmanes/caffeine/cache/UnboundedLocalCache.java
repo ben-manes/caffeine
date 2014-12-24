@@ -165,8 +165,8 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     V nv = cache.computeIfPresent(key, (K k, V oldValue) -> {
       V newValue = remappingFunction.apply(k, oldValue);
       notification[0] = (newValue == null)
-          ? new RemovalNotification<K, V>(RemovalCause.EXPLICIT, key, oldValue)
-          : new RemovalNotification<K, V>(RemovalCause.REPLACED, key, oldValue);
+          ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
+          : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
       return newValue;
     });
     if (notification[0] != null) {
@@ -189,8 +189,8 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
       V newValue = remappingFunction.apply(k, oldValue);
       if (oldValue != null) {
         notification[0] = (newValue == null)
-            ? new RemovalNotification<K, V>(RemovalCause.EXPLICIT, key, oldValue)
-            : new RemovalNotification<K, V>(RemovalCause.REPLACED, key, oldValue);
+            ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
+            : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
       }
       return newValue;
     });
@@ -212,8 +212,8 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     V nv = cache.merge(key, value, (V oldValue, V val) -> {
       V newValue = remappingFunction.apply(oldValue, val);
       notification[0] = (newValue == null)
-          ? new RemovalNotification<K, V>(RemovalCause.EXPLICIT, key, oldValue)
-          : new RemovalNotification<K, V>(RemovalCause.REPLACED, key, oldValue);
+          ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
+          : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
       return newValue;
     });
     if (notification[0] != null) {
@@ -237,7 +237,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     }
     for (K key : cache.keySet()) {
       V value = cache.remove(key);
-      notifyRemoval(RemovalCause.EXPLICIT, key, value);
+      notifyRemoval(key, value, RemovalCause.EXPLICIT);
     }
   }
 
@@ -263,7 +263,11 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public V put(K key, V value) {
-    return cache.put(key, value);
+    V oldValue = cache.put(key, value);
+    if (hasRemovalListener() && (oldValue != null)) {
+      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+    }
+    return oldValue;
   }
 
   @Override
@@ -272,8 +276,17 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   }
 
   @Override
-  public void putAll(Map<? extends K, ? extends V> m) {
-    cache.putAll(m);
+  public void putAll(Map<? extends K, ? extends V> map) {
+    if (!hasRemovalListener()) {
+      cache.putAll(map);
+      return;
+    }
+    for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
+      V oldValue = cache.put(entry.getKey(), entry.getValue());
+      if (oldValue != null) {
+        notifyRemoval(entry.getKey(), oldValue, RemovalCause.REPLACED);
+      }
+    }
   }
 
   @Override
@@ -282,7 +295,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     if (hasRemovalListener() && (value != null)) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
-      notifyRemoval(RemovalCause.EXPLICIT, castKey, value);
+      notifyRemoval(castKey, value, RemovalCause.EXPLICIT);
     }
     return value;
   }
@@ -295,7 +308,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
       K castKey = (K) key;
       @SuppressWarnings("unchecked")
       V castValue = (V) value;
-      notifyRemoval(RemovalCause.EXPLICIT, castKey, castValue);
+      notifyRemoval(castKey, castValue, RemovalCause.EXPLICIT);
     }
     return removed;
   }
@@ -304,7 +317,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   public V replace(K key, V value) {
     V prev = cache.replace(key, value);
     if ((hasRemovalListener()) && prev != null) {
-      notifyRemoval(RemovalCause.REPLACED, key, value);
+      notifyRemoval(key, value, RemovalCause.REPLACED);
     }
     return prev;
   }
@@ -313,7 +326,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   public boolean replace(K key, V oldValue, V newValue) {
     boolean replaced = cache.replace(key, oldValue, newValue);
     if (hasRemovalListener() && replaced) {
-      notifyRemoval(RemovalCause.EXPLICIT, key, oldValue);
+      notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
     }
     return replaced;
   }

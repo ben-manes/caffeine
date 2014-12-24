@@ -15,9 +15,28 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
+
 /**
+ * An object that can receive a notification when an entry is removed from a cache. The removal
+ * resulting in notification could have occurred to an entry being manually removed or replaced,
+ * or due to eviction resulting from timed expiration, exceeding a maximum size, or garbage
+ * collection.
+ * <p>
+ * An instance may be called concurrently by multiple threads to process different entries.
+ * Implementations of this interface should avoid performing blocking calls or synchronizing on
+ * shared resources.
+ *
+ * @param <K> the most general type of keys this listener can listen for; for
+ *     example {@code Object} if any key is acceptable
+ * @param <V> the most general type of values this listener can listen for; for
+ *     example {@code Object} if any key is acceptable
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@ThreadSafe
 public interface RemovalListener<K, V> {
-  void onRemoval(RemovalNotification<K, V> notification);
+
+  /** Notifies the listener that a removal occurred at some point in the past. */
+  void onRemoval(@Nonnull RemovalNotification<K, V> notification);
 }

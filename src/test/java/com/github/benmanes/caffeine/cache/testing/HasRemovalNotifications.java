@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.matchers;
+package com.github.benmanes.caffeine.cache.testing;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
@@ -31,9 +33,9 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
-import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 
 /**
  * A matcher that evaluates the {@link ConsumingRemovalListener} recorded all of the removal
@@ -42,12 +44,14 @@ import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemo
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatcher<Cache<K, V>> {
+  private final int count;
   private final RemovalCause cause;
   private final CacheContext context;
 
-  public HasRemovalNotifications(CacheContext context, @Nullable RemovalCause cause) {
+  public HasRemovalNotifications(CacheContext context, int count, @Nullable RemovalCause cause) {
     this.context = checkNotNull(context);
     this.cause = cause;
+    this.count = count;
   }
 
   @Override
@@ -61,33 +65,27 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
 
     if (context.removalListenerType() == Listener.CONSUMING) {
       ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
-      int removed = (int) (context.initialSize() - cache.size());
       ConsumingRemovalListener<Integer, Integer> removalListener = context.removalListener();
-      builder.expectThat(removalListener.evicted(), hasSize(removed));
-
-      // TODO(ben): Inspect the notifications to assert removals
+      builder.expectThat(removalListener.evicted(), hasSize(count));
       checkRemovalCause(removalListener.evicted(), builder);
     }
 
     return builder.matches();
   }
 
-  private void checkRemovalCause(List<RemovalNotification<Integer, Integer>> list,
+  private void checkRemovalCause(List<RemovalNotification<Integer, Integer>> notifications,
       DescriptionBuilder builder) {
     if (cause == null) {
       return;
     }
-    // TODO(ben): Inspect notifications to assert the cause
-  }
-
-  @Factory
-  public static <K, V> HasRemovalNotifications<K, V> hasRemovalNotifications(CacheContext context) {
-    return new HasRemovalNotifications<K, V>(context, null);
+    for (RemovalNotification<?, ?> notification : notifications) {
+      assertThat("Wrong removal cause for " + notification, notification.getCause(), is(cause));
+    }
   }
 
   @Factory
   public static <K, V> HasRemovalNotifications<K, V> hasRemovalNotifications(
-      CacheContext context, RemovalCause cause) {
-    return new HasRemovalNotifications<K, V>(context, cause);
+      CacheContext context, int count, RemovalCause cause) {
+    return new HasRemovalNotifications<K, V>(context, count, cause);
   }
 }

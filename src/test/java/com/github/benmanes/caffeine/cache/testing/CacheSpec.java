@@ -117,8 +117,8 @@ public @interface CacheSpec {
   // FIXME(ben): May not be useful due to Java's integer cache (or needs to exceed cached range?)
   boolean retain() default true;
 
-  /** The reference type of that the cache holds a key with (strong or soft only). */
-  ReferenceType[] keys() default { ReferenceType.STRONG, ReferenceType.SOFT };
+  /** The reference type of that the cache holds a key with (strong or weak only). */
+  ReferenceType[] keys() default { ReferenceType.STRONG, ReferenceType.WEAK };
 
   /** The reference type of that the cache holds a value with (strong, soft, or weak). */
   ReferenceType[] values() default { ReferenceType.STRONG, ReferenceType.WEAK, ReferenceType.SOFT };
