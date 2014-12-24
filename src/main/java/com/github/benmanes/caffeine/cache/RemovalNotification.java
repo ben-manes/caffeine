@@ -62,11 +62,19 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
     return cause.wasEvicted();
   }
 
+  /**
+   * Returns the key of the removed entry or null if it was garbage collected due to
+   * {@link Caffeine#weakKeys()} eviction.
+   */
   @Override
   @Nullable public K getKey() {
     return key;
   }
 
+  /**
+   * Returns the key of the removed entry or null if it was garbage collected due to
+   * {@link Caffeine#weakValues()} or {@link Caffeine#softValues()} eviction.
+   */
   @Override
   @Nullable public V getValue() {
     return value;
@@ -89,12 +97,14 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
         && Objects.equals(value, entry.getValue());
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return ((key == null) ? 0 : key.hashCode()) ^ ((value == null) ? 0 : value.hashCode());
   }
 
   /** Returns a string representation of the form <code>{key}={value}</code>. */
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return key + "=" + value;
   }
 }

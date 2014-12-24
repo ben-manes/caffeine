@@ -35,6 +35,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.google.common.collect.ImmutableSet;
 
@@ -117,6 +118,14 @@ public final class CacheContext {
 
   public boolean isUnbounded() {
     return (maximumSize == null);
+  }
+
+  public ReferenceType keyReferenceType() {
+    return ReferenceType.STRONG;
+  }
+
+  public ReferenceType valueReferenceType() {
+    return ReferenceType.STRONG;
   }
 
   public Listener removalListenerType() {

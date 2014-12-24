@@ -19,8 +19,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 
-import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
@@ -34,6 +35,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 
@@ -67,18 +69,37 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
       ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
       ConsumingRemovalListener<Integer, Integer> removalListener = context.removalListener();
       builder.expectThat(removalListener.evicted(), hasSize(count));
-      checkRemovalCause(removalListener.evicted(), builder);
+
+      for (RemovalNotification<?, ?> notification : removalListener.evicted()) {
+        checkNotification(notification);
+      }
     }
 
     return builder.matches();
   }
 
-  private void checkRemovalCause(List<RemovalNotification<Integer, Integer>> notifications,
-      DescriptionBuilder builder) {
-    if (cause == null) {
-      return;
+  private void checkNotification(RemovalNotification<?, ?> notification) {
+    switch (notification.getCause()) {
+      case EXPLICIT: case REPLACED:
+        assertThat(notification.wasEvicted(), is(false));
+        assertThat(notification.getKey(), is(not(nullValue())));
+        assertThat(notification.getValue(), is(not(nullValue())));
+        break;
+      case EXPIRED: case SIZE:
+        assertThat(notification.wasEvicted(), is(true));
+        assertThat(notification.getKey(), is(not(nullValue())));
+        assertThat(notification.getValue(), is(not(nullValue())));
+        break;
+      case COLLECTED:
+        assertThat(notification.wasEvicted(), is(true));
+        if (context.keyReferenceType() == ReferenceType.STRONG) {
+          assertThat(notification.getKey(), is(not(nullValue())));
+        }
+        if (context.valueReferenceType() == ReferenceType.STRONG) {
+          assertThat(notification.getKey(), is(not(nullValue())));
+        }
     }
-    for (RemovalNotification<?, ?> notification : notifications) {
+    if (cause != null) {
       assertThat("Wrong removal cause for " + notification, notification.getCause(), is(cause));
     }
   }
