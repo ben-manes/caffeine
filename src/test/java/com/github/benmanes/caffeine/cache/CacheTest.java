@@ -205,9 +205,10 @@ public final class CacheTest {
   public void put_replaced_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, -key);
-      assertThat(cache.size(), is(context.initialSize()));
       assertThat(cache.getIfPresent(key), is(-key));
     }
+    assertThat(cache.size(), is(context.initialSize()));
+
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
@@ -218,9 +219,10 @@ public final class CacheTest {
   public void put_replaced_differentValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, -context.absentKey());
-      assertThat(cache.size(), is(context.initialSize()));
       assertThat(cache.getIfPresent(key), is(-context.absentKey()));
     }
+    assertThat(cache.size(), is(context.initialSize()));
+
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }

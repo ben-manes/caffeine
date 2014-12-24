@@ -199,4 +199,60 @@ public final class AsMapTest {
 
   /* ---------------- put -------------- */
 
+  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void put_nullKey(Map<Integer, Integer> map) {
+    map.put(null, 1);
+  }
+
+  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void put_nullValue(Map<Integer, Integer> map) {
+    map.put(1, null);
+  }
+
+  @Test(dataProvider = "maps", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void put_nullKeyAndValue(Map<Integer, Integer> map) {
+    map.put(null, null);
+  }
+
+  @Test(dataProvider = "maps")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void put_inserted(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.put(context.absentKey(), -context.absentKey()), is(nullValue()));
+    assertThat(map.get(context.absentKey()), is(-context.absentKey()));
+    assertThat(map.size(), is((int) context.initialSize() + 1));
+  }
+
+  @Test(dataProvider = "maps")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void put_replaced_sameValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.put(key, -key), is(-key));
+      assertThat(map.get(key), is(-key));
+    }
+    assertThat(map.size(), is((int) context.initialSize()));
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void put_replaced_differentValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.put(key, -context.absentKey()), is(-key));
+      assertThat(map.get(key), is(-context.absentKey()));
+    }
+    assertThat(map.size(), is(context.initialSize()));
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  /* ---------------- putAll -------------- */
+
 }
