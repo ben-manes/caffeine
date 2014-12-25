@@ -779,7 +779,7 @@ public final class AsMapTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void compute_nullValue(Map<Integer, Integer> map, CacheContext context) {
+  public void compute_remove(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.compute(key, (k, v) -> null), is(nullValue()));
     }
@@ -859,11 +859,113 @@ public final class AsMapTest {
 
   /* ---------------- merge -------------- */
 
-  public void merge() {}
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void merge_nullKey(Map<Integer, Integer> map) {
+    map.merge(null, 1, (key, value) -> -key);
+  }
 
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void merge_nullValue(Map<Integer, Integer> map) {
+    map.merge(1, null, (key, value) -> -key);
+  }
 
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void merge_nullMappingFunction(Map<Integer, Integer> map) {
+    map.merge(1, 1, null);
+  }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void merge_remove(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.merge(key, -key, (k, v) -> null), is(nullValue()));
+    }
 
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size() - count));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches")
+  public void merge_recursive(Map<Integer, Integer> map, CacheContext context) {
+    BiFunction<Integer, Integer, Integer> mappingFunction =
+        new BiFunction<Integer, Integer, Integer>() {
+          @Override public Integer apply(Integer key, Integer value) {
+            return map.merge(key, -key, this);
+          }
+        };
+    Integer value = map.merge(context.absentKey(), -context.firstKey(), mappingFunction);
+    assertThat(value, is(-context.firstKey()));
+  }
+
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = StackOverflowError.class)
+  public void merge_pingpong(Map<Integer, Integer> map, CacheContext context) {
+    // As we cannot provide immediate checking without an expensive solution, e.g. ThreadLocal,
+    // instead we assert that a stack overflow error will occur to inform the developer (vs
+    // a live-lock or deadlock alternative).
+    BiFunction<Integer, Integer, Integer> mappingFunction =
+        new BiFunction<Integer, Integer, Integer>() {
+          int recursed;
+
+          @Override public Integer apply(Integer key, Integer value) {
+            if (++recursed == 2) {
+              throw new StackOverflowError();
+            }
+            return map.merge(context.lastKey(), -context.lastKey(), this);
+          }
+        };
+    map.merge(context.firstKey(), -context.firstKey(), mappingFunction);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void merge_error(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.merge(context.firstKey(), -context.firstKey(), (key, value) -> { throw new Error(); });
+    } catch (Error e) {}
+    assertThat(map, is(equalTo(context.original())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void merge_absent(Map<Integer, Integer> map, CacheContext context) {
+    Integer result = map.merge(context.absentKey(), -context.absentKey(), (key, value) -> -key);
+    assertThat(result, is(-context.absentKey()));
+    assertThat(map.get(context.absentKey()), is(-context.absentKey()));
+    assertThat(map.size(), is(1 + context.original().size()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void merge_sameValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.merge(key, -key, (k, v) -> k), is(-key));
+      assertThat(map.get(key), is(-key));
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size()));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void merge_differentValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.merge(key, key, (k, v) -> k + v), is(0));
+      assertThat(map.get(key), is(0));
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size()));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
 
   /* ---------------- equals / hashCode -------------- */
 

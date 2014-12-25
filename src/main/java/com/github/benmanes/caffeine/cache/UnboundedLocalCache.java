@@ -221,6 +221,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     }
 
     // ensures that the removal notification is processed after the removal has completed
+    requireNonNull(remappingFunction);
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = cache.merge(key, value, (V oldValue, V val) -> {
