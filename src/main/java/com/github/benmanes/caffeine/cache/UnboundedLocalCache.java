@@ -316,7 +316,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   public boolean replace(K key, V oldValue, V newValue) {
     boolean replaced = cache.replace(key, oldValue, newValue);
     if (hasRemovalListener() && replaced) {
-      notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
+      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
     }
     return replaced;
   }

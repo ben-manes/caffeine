@@ -200,9 +200,8 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-  public void put_replac_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void put_replace_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, -key);
       assertThat(cache.getIfPresent(key), is(-key));
@@ -214,9 +213,8 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-  public void put_replac_differentValue(Cache<Integer, Integer> cache, CacheContext context) {
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void put_replace_differentValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, -context.absentKey());
       assertThat(cache.getIfPresent(key), is(-context.absentKey()));

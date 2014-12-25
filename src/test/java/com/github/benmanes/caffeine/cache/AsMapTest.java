@@ -427,8 +427,151 @@ public final class AsMapTest {
 
   /* ---------------- replace -------------- */
 
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replace_null(Map<Integer, Integer> map) {
+    map.replace(null, 1);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replace_nullValue(Map<Integer, Integer> map) {
+    map.replace(1, null);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replace_nullKeyAndValue(Map<Integer, Integer> map) {
+    map.replace(null, null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replace_absent(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.replace(context.absentKey(), -context.absentKey()), is(nullValue()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void replace_sameValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.replace(key, -key), is(-key));
+      assertThat(map.get(key), is(-key));
+    }
+    assertThat(map.size(), is((int) context.initialSize()));
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void replace_differentValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.replace(key, -context.absentKey()), is(-key));
+      assertThat(map.get(key), is(-context.absentKey()));
+    }
+    assertThat(map.size(), is((int) context.initialSize()));
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
   /* ---------------- replace conditionally -------------- */
 
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_nullKey(Map<Integer, Integer> map) {
+    map.replace(null, 1, 1);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_nullOldValue(Map<Integer, Integer> map) {
+    map.replace(1, null, 1);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_nullNewValue(Map<Integer, Integer> map) {
+    map.replace(1, 1, null);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_nullKeyAndOldValue(Map<Integer, Integer> map) {
+    map.replace(null, null, 1);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_nullKeyAndNewValue(Map<Integer, Integer> map) {
+    map.replace(null, 1, null);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_nullOldAndNewValue(Map<Integer, Integer> map) {
+    map.replace(1, null, null);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_nullKeyAndValues(Map<Integer, Integer> map) {
+    map.replace(null, null, null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_absent(Map<Integer, Integer> map, CacheContext context) {
+    Integer key = context.absentKey();
+    assertThat(map.replace(key, key, key), is(false));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void replaceConditionally_wrongOldValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.replace(key, key, context.absentKey()), is(false));
+      assertThat(map.get(key), is(-key));
+    }
+    assertThat(map.size(), is((int) context.initialSize()));
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void replaceConditionally_sameValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.replace(key, -key, -key), is(true));
+      assertThat(map.get(key), is(-key));
+    }
+    assertThat(map.size(), is((int) context.initialSize()));
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void replaceConditionally_differentValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.replace(key, -key, -context.absentKey()), is(true));
+      assertThat(map.get(key), is(-context.absentKey()));
+    }
+    assertThat(map.size(), is((int) context.initialSize()));
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  /* ---------------- V8 default methods -------------- */
+  /* ---------------- V8 default methods -------------- */
+  /* ---------------- V8 default methods -------------- */
+  /* ---------------- V8 default methods -------------- */
   /* ---------------- V8 default methods -------------- */
 
 }
