@@ -116,7 +116,7 @@ public final class IsEmptyIterable<E> extends TypeSafeDiagnosingMatcher<Iterable
   }
 
   @Factory
-  public static <E> IsEmptyIterable<E> emptyIterable() {
+  public static <E> IsEmptyIterable<E> deeplyEmpty() {
     return new IsEmptyIterable<E>();
   }
 }

@@ -16,16 +16,23 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -1043,7 +1050,184 @@ public final class AsMapTest {
   }
 
   /* ---------------- Key Set -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void keySetToArray_null(Map<Integer, Integer> map) {
+    map.keySet().toArray(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void keySetToArray(Map<Integer, Integer> map, CacheContext context) {
+    int length = context.original().size();
+
+    Integer[] ints = map.keySet().toArray(new Integer[length]);
+    assertThat(ints.length, is(length));
+    assertThat(Arrays.asList(ints).containsAll(context.original().keySet()), is(true));
+
+    Object[] array = map.keySet().toArray();
+    assertThat(array.length, is(length));
+    assertThat(Arrays.asList(array).containsAll(context.original().keySet()), is(true));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void keySet_whenEmpty(Map<Integer, Integer> map) {
+    assertThat(map.keySet(), is(deeplyEmpty()));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void keySet_addNotSupported(Map<Integer, Integer> map) {
+    map.keySet().add(1);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void keySet_clear(Map<Integer, Integer> map, CacheContext context) {
+    map.keySet().clear();
+    assertThat(map, is(emptyMap()));
+    int count = context.original().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void keySet(Map<Integer, Integer> map, CacheContext context) {
+    Set<Integer> keys = map.keySet();
+    assertThat(keys.contains(new Object()), is(false));
+    assertThat(keys.remove(new Object()), is(false));
+    assertThat(keys, hasSize(context.original().size()));
+    for (Integer key : keys) {
+      assertThat(keys.contains(key), is(true));
+      assertThat(keys.remove(key), is(true));
+      assertThat(keys.remove(key), is(false));
+      assertThat(keys.contains(key), is(false));
+    }
+    assertThat(map, is(emptyMap()));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void keySet_iterator(Map<Integer, Integer> map, CacheContext context) {
+    int iterations = 0;
+    for (Iterator<Integer> i = map.keySet().iterator(); i.hasNext();) {
+      assertThat(map.containsKey(i.next()), is(true));
+      iterations++;
+      i.remove();
+    }
+    assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
+    assertThat(iterations, is(context.original().size()));
+    assertThat(map, is(emptyMap()));
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void keyIterator_noElement(Map<Integer, Integer> map) {
+    map.keySet().iterator().remove();
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NoSuchElementException.class)
+  public void keyIterator_noMoreElements(Map<Integer, Integer> map) {
+    map.keySet().iterator().next();
+  }
+
   /* ---------------- Values -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void valuesToArray_null(Map<Integer, Integer> map) {
+    map.values().toArray(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void valuesToArray(Map<Integer, Integer> map, CacheContext context) {
+    int length = context.original().size();
+
+    Integer[] ints = map.values().toArray(new Integer[length]);
+    assertThat(ints.length, is(length));
+    assertThat(Arrays.asList(ints).containsAll(context.original().values()), is(true));
+
+    Object[] array = map.values().toArray();
+    assertThat(array.length, is(length));
+    assertThat(Arrays.asList(array).containsAll(context.original().values()), is(true));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void values_empty(Map<Integer, Integer> map) {
+    assertThat(map.values(), is(deeplyEmpty()));
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void values_addNotSupported(Map<Integer, Integer> map) {
+    map.values().add(1);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void values_clear(Map<Integer, Integer> map, CacheContext context) {
+    map.values().clear();
+    assertThat(map, is(emptyMap()));
+    int count = context.original().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void values(Map<Integer, Integer> map, CacheContext context) {
+    Collection<Integer> values = map.values();
+    assertThat(values.contains(new Object()), is(false));
+    assertThat(values.remove(new Object()), is(false));
+    assertThat(values, hasSize(context.original().size()));
+    for (Integer key : values) {
+      assertThat(values.contains(key), is(true));
+      assertThat(values.remove(key), is(true));
+      assertThat(values.remove(key), is(false));
+      assertThat(values.contains(key), is(false));
+    }
+    assertThat(map, is(emptyMap()));
+    int count = context.original().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void valueIterator(Map<Integer, Integer> map, CacheContext context) {
+    int iterations = 0;
+    for (Iterator<Integer> i = map.values().iterator(); i.hasNext();) {
+      assertThat(map.containsValue(i.next()), is(true));
+      iterations++;
+      i.remove();
+    }
+    assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
+    assertThat(iterations, is(context.original().size()));
+    assertThat(map, is(emptyMap()));
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void valueIterator_noElement(Map<Integer, Integer> map) {
+    map.values().iterator().remove();
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NoSuchElementException.class)
+  public void valueIterator_noMoreElements(Map<Integer, Integer> map) {
+    map.values().iterator().next();
+  }
+
   /* ---------------- Entry Set -------------- */
 
 }

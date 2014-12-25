@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine;
 
 import static com.github.benmanes.caffeine.IsValidSingleConsumerQueue.validate;
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.emptyIterable;
+import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -60,13 +60,13 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(Queue<?> queue) {
     queue.clear();
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   @Test(dataProvider = "populated")
   public void clear_whenPopulated(Queue<?> queue) {
     queue.clear();
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   @Test(dataProvider = "empty")
@@ -236,7 +236,7 @@ public class SingleConsumerQueueTest {
     while ((value = queue.poll()) != null) {
       assertThat(queue.contains(value), is(false));
     }
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   /* ---------------- Remove -------------- */
@@ -260,7 +260,7 @@ public class SingleConsumerQueueTest {
       Integer value = queue.remove();
       assertThat(queue.contains(value), is(false));
     }
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   @Test(dataProvider = "empty,singleton,populated")
@@ -283,13 +283,13 @@ public class SingleConsumerQueueTest {
       assertThat(queue.remove(value), is(true));
       assertThat(queue.contains(value), is(false));
     }
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   @Test(dataProvider = "empty")
   public void removeAll_withEmpty(Queue<Integer> queue) {
     assertThat(queue.removeAll(ImmutableList.of()), is(false));
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   @Test(dataProvider = "populated")
@@ -303,7 +303,7 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "populated")
   public void removeAll_toEmpty(Queue<Integer> queue) {
     assertThat(queue.removeAll(ImmutableList.copyOf(queue)), is(true));
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   /* ---------------- Retain -------------- */
@@ -311,7 +311,7 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "empty")
   public void retainAll_withEmpty(Queue<Integer> queue) {
     assertThat(queue.retainAll(ImmutableList.of()), is(false));
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   @Test(dataProvider = "populated")
@@ -325,7 +325,7 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "populated")
   public void retainAll_toEmpty(Queue<Integer> queue) {
     assertThat(queue.retainAll(ImmutableList.of()), is(true));
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   /* ---------------- Iterators -------------- */
@@ -374,7 +374,7 @@ public class SingleConsumerQueueTest {
       it.next();
       it.remove();
     }
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   /* ---------------- toArray -------------- */
@@ -438,7 +438,7 @@ public class SingleConsumerQueueTest {
     producer.start();
     consumer.start();
     await().untilAtomic(finished, is(2));
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   @Test(dataProvider = "empty")
@@ -477,7 +477,7 @@ public class SingleConsumerQueueTest {
     });
 
     await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
-    assertThat(queue, is(emptyIterable()));
+    assertThat(queue, is(deeplyEmpty()));
   }
 
   /* ---------------- Queue providers -------------- */

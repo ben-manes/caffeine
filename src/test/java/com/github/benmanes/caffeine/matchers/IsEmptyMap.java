@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.matchers;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.emptyIterable;
+import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
 
@@ -45,9 +45,9 @@ public final class IsEmptyMap<K, V>
   protected boolean matchesSafely(Map<? extends K, ? extends V> map, Description description) {
     DescriptionBuilder builder = new DescriptionBuilder(description);
 
-    builder.expectThat(map.keySet(), is(emptyIterable()));
-    builder.expectThat(map.values(), is(emptyIterable()));
-    builder.expectThat(map.entrySet(), is(emptyIterable()));
+    builder.expectThat(map.keySet(), is(deeplyEmpty()));
+    builder.expectThat(map.values(), is(deeplyEmpty()));
+    builder.expectThat(map.entrySet(), is(deeplyEmpty()));
     builder.expectThat(map, is(Collections.EMPTY_MAP));
     builder.expectThat("Size != 0", map.size(), is(0));
     builder.expectThat("Not empty", map.isEmpty(), is(true));

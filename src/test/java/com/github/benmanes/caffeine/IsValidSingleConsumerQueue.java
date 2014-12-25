@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.emptyIterable;
+import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -48,7 +48,7 @@ public final class IsValidSingleConsumerQueue<E>
     DescriptionBuilder builder = new DescriptionBuilder(description);
 
     if (queue.isEmpty()) {
-      builder.expectThat(queue, is(emptyIterable()));
+      builder.expectThat(queue, is(deeplyEmpty()));
       builder.expectThat(queue.tail, is(queue.head));
       builder.expectThat(queue.tail.next, is(nullValue()));
     }
