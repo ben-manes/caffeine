@@ -169,6 +169,30 @@ public final class AsMapTest {
     }
   }
 
+  /* ---------------- forEach -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void forEach_null(Map<Integer, Integer> map) {
+    map.forEach(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void forEach_scan(Map<Integer, Integer> map, CacheContext context) {
+    Map<Integer, Integer> remaining = new HashMap<>(context.original());
+    map.forEach((key, value) -> remaining.remove(key, value));
+    assertThat(remaining, is(emptyMap()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void forEach_modify(Map<Integer, Integer> map, CacheContext context) {
+    // non-deterministic traversal behavior with modifications, but shouldn't become corrupted
+    map.forEach((key, value) -> map.put(context.lastKey() + key, key));
+  }
+
   /* ---------------- put -------------- */
 
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -612,7 +636,6 @@ public final class AsMapTest {
   }
 
   /* ---------------- V8 default methods -------------- */
-  public void forEach() {}
   public void replaceAll() {}
   public void computeIfAbsent() {}
   public void computeIfPresent() {}

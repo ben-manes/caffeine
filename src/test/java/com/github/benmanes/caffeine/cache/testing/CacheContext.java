@@ -112,11 +112,11 @@ public final class CacheContext {
   }
 
   public boolean initiallyEmpty() {
-    return (lastKey == null);
+    return original.isEmpty();
   }
 
   public long initialSize() {
-    return initiallyEmpty() ? 0 : (1 + lastKey - firstKey);
+    return original.size();
   }
 
   public long maximumSize() {
