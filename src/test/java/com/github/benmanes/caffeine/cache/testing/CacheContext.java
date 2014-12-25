@@ -145,6 +145,10 @@ public final class CacheContext {
     return (R) removalListener;
   }
 
+  public boolean isRecordingStats() {
+    return (stats == Stats.ENABLED);
+  }
+
   public CacheContext copy() {
     CacheContext context = new CacheContext();
     context.removalListenerType = removalListenerType;

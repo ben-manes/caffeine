@@ -96,8 +96,8 @@ public class CacheStats {
 
   /**
    * Returns the ratio of cache requests which were hits. This is defined as
-   * {@code hitCount / requestCount}, or {@code 1.0} when {@code requestCount == 0}.
-   * Note that {@code hitRate + missRate =~ 1.0}.
+   * {@code hitCount / requestCount}, or {@code 1.0} when {@code requestCount == 0}. Note that
+   * {@code hitRate + missRate =~ 1.0}.
    */
   public double hitRate() {
     long requestCount = requestCount();
@@ -130,8 +130,8 @@ public class CacheStats {
 
   /**
    * Returns the total number of times that {@link Cache} lookup methods attempted to load new
-   * values. This includes both successful load operations, as well as those that threw
-   * exceptions. This is defined as {@code loadSuccessCount + loadExceptionCount}.
+   * values. This includes both successful load operations, as well as those that threw exceptions.
+   * This is defined as {@code loadSuccessCount + loadExceptionCount}.
    */
   public long loadCount() {
     return loadSuccessCount + loadExceptionCount;
@@ -161,8 +161,8 @@ public class CacheStats {
 
   /**
    * Returns the ratio of cache loading attempts which threw exceptions. This is defined as
-   * {@code loadExceptionCount / (loadSuccessCount + loadExceptionCount)}, or
-   * {@code 0.0} when {@code loadSuccessCount + loadExceptionCount == 0}.
+   * {@code loadExceptionCount / (loadSuccessCount + loadExceptionCount)}, or {@code 0.0} when
+   * {@code loadSuccessCount + loadExceptionCount == 0}.
    */
   public double loadExceptionRate() {
     long totalLoadCount = loadSuccessCount + loadExceptionCount;
@@ -173,8 +173,8 @@ public class CacheStats {
 
   /**
    * Returns the total number of nanoseconds the cache has spent loading new values. This can be
-   * used to calculate the miss penalty. This value is increased every time
-   * {@code loadSuccessCount} or {@code loadExceptionCount} is incremented.
+   * used to calculate the miss penalty. This value is increased every time {@code loadSuccessCount}
+   * or {@code loadExceptionCount} is incremented.
    */
   public long totalLoadTime() {
     return totalLoadTime;
@@ -215,8 +215,8 @@ public class CacheStats {
   }
 
   /**
-   * Returns a new {@code CacheStats} representing the sum of this {@code CacheStats}
-   * and {@code other}.
+   * Returns a new {@code CacheStats} representing the sum of this {@code CacheStats} and
+   * {@code other}.
    */
   public CacheStats plus(CacheStats other) {
     return new CacheStats(

@@ -44,6 +44,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   void cleanUp();
 
+  boolean isReordingStats();
   StatsCounter statsCounter();
 
   Iterator<K> keyIterator();

@@ -50,8 +50,8 @@ final class CacheGenerator {
   public Map<CacheContext, Cache<Integer, Integer>> generate() {
     initialize();
     makeInitialCapacities();
+    makeCacheStats();
     // Disabled until supported to avoid duplicated tests
-    // makeCacheStats();
     // makeMaximumSizes();
     // makeKeyReferences();
     // makeValueReferences();
@@ -156,6 +156,9 @@ final class CacheGenerator {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());
+    }
+    if (context.isRecordingStats()) {
+      builder.recordStats();
     }
     if (context.maximumSize != null) {
       throw new UnsupportedOperationException();

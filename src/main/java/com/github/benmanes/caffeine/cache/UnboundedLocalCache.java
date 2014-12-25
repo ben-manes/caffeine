@@ -42,7 +42,14 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public V getIfPresent(Object key) {
-    return cache.get(key);
+    V value = cache.get(key);
+
+    if (value == null) {
+      statsCounter().recordMisses(1);
+    } else {
+      statsCounter().recordHits(1);
+    }
+    return value;
   }
 
   @Override
@@ -57,15 +64,20 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
+    int misses = 0;
     Map<K, V> result = new LinkedHashMap<>();
     for (Object key : keys) {
       V value = cache.get(key);
-      if (value != null) {
+      if (value == null) {
+        misses++;
+      } else {
         @SuppressWarnings("unchecked")
         K castKey = (K) key;
         result.put(castKey, value);
       }
     }
+    statsCounter().recordMisses(misses);
+    statsCounter().recordHits(result.size());
     return Collections.unmodifiableMap(result);
   }
 
@@ -119,7 +131,8 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public V getOrDefault(Object key, V defaultValue) {
-    return cache.getOrDefault(key, defaultValue);
+    V value = getIfPresent(key);
+    return (value == null) ? defaultValue : value;
   }
 
   @Override
@@ -156,9 +169,25 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
     // optimistic fast path due to computeIfAbsent always locking
     V value = cache.get(key);
-    return (value == null)
-        ? cache.computeIfAbsent(key, mappingFunction)
-        : value;
+    if (value != null) {
+      statsCounter().recordHits(1);
+      return value;
+    }
+
+    if (!isReordingStats()) {
+      return cache.computeIfAbsent(key, mappingFunction);
+    }
+    boolean[] missed = new boolean[1];
+    value = cache.computeIfAbsent(key, k -> {
+      missed[0] = true;
+      return mappingFunction.apply(key);
+    });
+    if (missed[0]) {
+      statsCounter().recordMisses(1);
+    } else {
+      statsCounter().recordHits(1);
+    }
+    return value;
   }
 
   @Override

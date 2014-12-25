@@ -19,9 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
@@ -29,13 +31,19 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Caffeine<K, V> {
-  StatsCounter statsCounter = DisabledStatsCounter.INSTANCE;
+  private static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER =
+      () -> DisabledStatsCounter.INSTANCE;
+  private static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
+      () -> new ConcurrentStatsCounter();
+
   RemovalListener<? super K, ? super V> removalListener;
+  Supplier<StatsCounter> statsCounterSupplier;
   int initialCapacity;
   Executor executor;
 
   public Caffeine() {
     executor = ForkJoinPool.commonPool();
+    statsCounterSupplier = DISABLED_STATS_COUNTER_SUPPLIER;
   }
 
   /** Ensures that the argument expression is true. */
@@ -107,6 +115,15 @@ public final class Caffeine<K, V> {
 
   public Caffeine<K, V> maximumWeight() {
     throw new UnsupportedOperationException();
+  }
+
+  public Caffeine<K, V> recordStats() {
+    statsCounterSupplier = ENABLED_STATS_COUNTER_SUPPLIER;
+    return this;
+  }
+
+  boolean isRecordingStats() {
+    return statsCounterSupplier == ENABLED_STATS_COUNTER_SUPPLIER;
   }
 
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {

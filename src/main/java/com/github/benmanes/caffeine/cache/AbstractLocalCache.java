@@ -36,16 +36,19 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   @Nullable
   protected final RemovalListener<K, V> removalListener;
-  protected StatsCounter statsCounter;
   protected final Executor executor;
 
   protected transient Set<K> keySet;
   protected transient Collection<V> values;
   protected transient Set<Entry<K, V>> entrySet;
 
+  private boolean isRecordingStats;
+  private StatsCounter statsCounter;
+
   protected AbstractLocalCache(Caffeine<? super K, ? super V> builder) {
+    this.statsCounter = builder.statsCounterSupplier.get();
     this.removalListener = builder.getRemovalListener();
-    this.statsCounter = builder.statsCounter;
+    this.isRecordingStats = builder.isRecordingStats();
     this.executor = builder.executor;
   }
 
@@ -61,6 +64,11 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public StatsCounter statsCounter() {
     return statsCounter;
+  }
+
+  @Override
+  public boolean isReordingStats() {
+    return isRecordingStats;
   }
 
   protected boolean hasRemovalListener() {
