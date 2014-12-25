@@ -164,6 +164,8 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   @Override
   public V computeIfPresent(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    requireNonNull(remappingFunction);
+
     // optimistic fast path due to computeIfAbsent always locking
     if (!cache.containsKey(key)) {
       return null;

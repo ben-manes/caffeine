@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -591,7 +592,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, map.size(), RemovalCause.REPLACED));
   }
 
-  /* ---------------- V8 default methods -------------- */
+  /* ---------------- computeIfAbsent -------------- */
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -608,7 +609,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfAbsent_nullValue(Map<Integer, Integer> map, CacheContext context) {
-    map.computeIfAbsent(context.absentKey(), key -> null);
+    assertThat(map.computeIfAbsent(context.absentKey(), key -> null), is(nullValue()));
     assertThat(map.size(), is(context.original().size()));
   }
 
@@ -627,7 +628,7 @@ public final class AsMapTest {
   // FIXME: Requires JDK8 release with JDK-8062841 fix
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(enabled = false, dataProvider = "caches", expectedExceptions = IllegalStateException.class)
-  public void computeIfAbsent_deadlock(Map<Integer, Integer> map, CacheContext context) {
+  public void computeIfAbsent_pingpong(Map<Integer, Integer> map, CacheContext context) {
     Function<Integer, Integer> mappingFunction = new Function<Integer, Integer>() {
       @Override public Integer apply(Integer key) {
         return map.computeIfAbsent(-key, this);
@@ -650,7 +651,7 @@ public final class AsMapTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfAbsent_present(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      map.computeIfAbsent(key, k -> { throw new AssertionError(); });
+      assertThat(map.computeIfAbsent(key, k -> { throw new AssertionError(); }), is(-key));
     }
     assertThat(map.size(), is(context.original().size()));
   }
@@ -658,9 +659,108 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfAbsent_absent(Map<Integer, Integer> map, CacheContext context) {
-    map.computeIfAbsent(context.absentKey(), key -> -key);
+    assertThat(map.computeIfAbsent(context.absentKey(), key -> -key), is(-context.absentKey()));
     assertThat(map.get(context.absentKey()), is(-context.absentKey()));
     assertThat(map.size(), is(1 + context.original().size()));
+  }
+
+  /* ---------------- computeIfPresent -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void computeIfPresent_nullKey(Map<Integer, Integer> map) {
+    map.computeIfPresent(null, (key, value) -> -key);
+  }
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void computeIfPresent_nullMappingFunction(Map<Integer, Integer> map) {
+    map.computeIfPresent(1, null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void computeIfPresent_nullValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      map.computeIfPresent(key, (k, v) -> null);
+    }
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size() - count));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = StackOverflowError.class)
+  public void computeIfPresent_recursive(Map<Integer, Integer> map, CacheContext context) {
+    // As we cannot provide immediate checking without an expensive solution, e.g. ThreadLocal,
+    // instead we assert that a stack overflow error will occur to inform the developer (vs
+    // a live-lock or deadlock alternative).
+    BiFunction<Integer, Integer, Integer> mappingFunction =
+        new BiFunction<Integer, Integer, Integer>() {
+          boolean recursed;
+
+          @Override public Integer apply(Integer key, Integer value) {
+            if (recursed) {
+              throw new StackOverflowError();
+            }
+            recursed = true;
+            return map.computeIfPresent(key, this);
+          }
+        };
+    map.computeIfPresent(context.firstKey(), mappingFunction);
+  }
+
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = StackOverflowError.class)
+  public void computeIfPresent_pingpong(Map<Integer, Integer> map, CacheContext context) {
+    // As we cannot provide immediate checking without an expensive solution, e.g. ThreadLocal,
+    // instead we assert that a stack overflow error will occur to inform the developer (vs
+    // a live-lock or deadlock alternative).
+    BiFunction<Integer, Integer, Integer> mappingFunction =
+        new BiFunction<Integer, Integer, Integer>() {
+          int recursed;
+
+          @Override public Integer apply(Integer key, Integer value) {
+            if (++recursed == 2) {
+              throw new StackOverflowError();
+            }
+            return map.computeIfPresent(context.lastKey(), this);
+          }
+        };
+    map.computeIfPresent(context.firstKey(), mappingFunction);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void computeIfPresent_error(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.computeIfPresent(context.firstKey(), (key, value) -> { throw new Error(); });
+    } catch (Error e) {}
+    assertThat(map, is(equalTo(context.original())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void computeIfPresent_absent(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.computeIfPresent(context.absentKey(), (key, value) -> -key), is(nullValue()));
+    assertThat(map.get(context.absentKey()), is(nullValue()));
+    assertThat(map.size(), is(context.original().size()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void computeIfPresent_present(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.computeIfPresent(key, (k, v) -> k), is(key));
+      assertThat(map.get(key), is(key));
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size()));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
   /* ---------------- equals / hashCode -------------- */
@@ -739,7 +839,6 @@ public final class AsMapTest {
   }
 
   /* ---------------- V8 default methods -------------- */
-  public void computeIfPresent() {}
   public void compute() {}
   public void merge() {}
 
