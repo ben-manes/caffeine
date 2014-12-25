@@ -131,6 +131,12 @@ public final class AsMapTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void get_absent(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.get(context.absentKey()), is(nullValue()));
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void get_present(Map<Integer, Integer> map, CacheContext context) {
@@ -139,10 +145,28 @@ public final class AsMapTest {
     }
   }
 
+  /* ---------------- get -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getOrDefault_nullKey(Map<Integer, Integer> map) {
+    map.getOrDefault(null, 1);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void get_absent(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.get(context.absentKey()), is(nullValue()));
+  public void getOrDefault_default(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.getOrDefault(context.absentKey(), null), is(nullValue()));
+    assertThat(map.getOrDefault(context.absentKey(), context.absentKey()), is(context.absentKey()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getOrDefault_present(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.getOrDefault(key, context.absentKey()), is(-key));
+    }
   }
 
   /* ---------------- put -------------- */
@@ -588,7 +612,6 @@ public final class AsMapTest {
   }
 
   /* ---------------- V8 default methods -------------- */
-  public void getOrDefault() {}
   public void forEach() {}
   public void replaceAll() {}
   public void computeIfAbsent() {}
