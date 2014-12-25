@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -39,6 +40,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.testing.SerializableTester;
 
 /**
  * The test cases for the {@link Cache#asMap()} view and its serializability. These tests do not
@@ -74,64 +76,6 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     assertThat(map, hasRemovalNotifications(context,
         (int) context.initialSize(), RemovalCause.EXPLICIT));
-  }
-
-  /* ---------------- equals / hashCode -------------- */
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void equals_null(Map<Integer, Integer> map) {
-    assertThat(map.equals(null), is(false));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void equals_self(Map<Integer, Integer> map) {
-    assertThat(map.equals(map), is(true));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void equals(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.equals(context.original()), is(true));
-    assertThat(context.original().equals(map), is(true));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void hashCode(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.hashCode(), is(equalTo(context.original().hashCode())));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void hashCode_self(Map<Integer, Integer> map) {
-    assertThat(map.hashCode(), is(equalTo(map.hashCode())));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void equalsAndHashCodeFail_empty(Map<Integer, Integer> map) {
-    Map<Integer, Integer> other = ImmutableMap.of(1, -1, 2, -2, 3, -3);
-    assertThat(map.equals(other), is(false));
-    assertThat(other.equals(map), is(false));
-    assertThat(map.hashCode(), is(not(equalTo(other.hashCode()))));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void equalsAndHashCodeFail_present(Map<Integer, Integer> map) {
-    Map<Integer, Integer> other = ImmutableMap.of(1, -1, 2, -2, 3, -3);
-    assertThat(map.equals(other), is(false));
-    assertThat(other.equals(map), is(false));
-    assertThat(map.hashCode(), is(not(equalTo(other.hashCode()))));
-
-    Map<Integer, Integer> empty = ImmutableMap.of();
-    assertThat(map.equals(empty), is(false));
-    assertThat(empty.equals(map), is(false));
-    assertThat(map.hashCode(), is(not(equalTo(empty.hashCode()))));
   }
 
   /* ---------------- contains -------------- */
@@ -568,10 +512,92 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  /* ---------------- equals / hashCode -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void equals_null(Map<Integer, Integer> map) {
+    assertThat(map.equals(null), is(false));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void equals_self(Map<Integer, Integer> map) {
+    assertThat(map.equals(map), is(true));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void equals(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.equals(context.original()), is(true));
+    assertThat(context.original().equals(map), is(true));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void hashCode(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.hashCode(), is(equalTo(context.original().hashCode())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void hashCode_self(Map<Integer, Integer> map) {
+    assertThat(map.hashCode(), is(equalTo(map.hashCode())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void equalsAndHashCodeFail_empty(Map<Integer, Integer> map) {
+    Map<Integer, Integer> other = ImmutableMap.of(1, -1, 2, -2, 3, -3);
+    assertThat(map.equals(other), is(false));
+    assertThat(other.equals(map), is(false));
+    assertThat(map.hashCode(), is(not(equalTo(other.hashCode()))));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void equalsAndHashCodeFail_present(Map<Integer, Integer> map) {
+    Map<Integer, Integer> other = ImmutableMap.of(1, -1, 2, -2, 3, -3);
+    assertThat(map.equals(other), is(false));
+    assertThat(other.equals(map), is(false));
+    assertThat(map.hashCode(), is(not(equalTo(other.hashCode()))));
+
+    Map<Integer, Integer> empty = ImmutableMap.of();
+    assertThat(map.equals(empty), is(false));
+    assertThat(empty.equals(map), is(false));
+    assertThat(map.hashCode(), is(not(equalTo(empty.hashCode()))));
+  }
+
+  /* ---------------- toString -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void toString_empty(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map, hasToString(context.original().toString()));
+  }
+
+  /* ---------------- serialize -------------- */
+
+  // FIXME(ben)
+  @Test(enabled = false, dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void serialize(Map<Integer, Integer> map) {
+    SerializableTester.reserializeAndAssert(map);
+  }
+
   /* ---------------- V8 default methods -------------- */
-  /* ---------------- V8 default methods -------------- */
-  /* ---------------- V8 default methods -------------- */
-  /* ---------------- V8 default methods -------------- */
-  /* ---------------- V8 default methods -------------- */
+  public void getOrDefault() {}
+  public void forEach() {}
+  public void replaceAll() {}
+  public void computeIfAbsent() {}
+  public void computeIfPresent() {}
+  public void compute() {}
+  public void merge() {}
+
+  /* ---------------- Key Set -------------- */
+  /* ---------------- Values -------------- */
+  /* ---------------- Entry Set -------------- */
 
 }
