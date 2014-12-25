@@ -28,12 +28,15 @@ import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   @Nullable
   protected final RemovalListener<K, V> removalListener;
+  protected StatsCounter statsCounter;
   protected final Executor executor;
 
   protected transient Set<K> keySet;
@@ -42,6 +45,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
 
   protected AbstractLocalCache(Caffeine<? super K, ? super V> builder) {
     this.removalListener = builder.getRemovalListener();
+    this.statsCounter = builder.statsCounter;
     this.executor = builder.executor;
   }
 
@@ -52,6 +56,11 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   protected void notifyRemoval(RemovalNotification<K, V> notification) {
     requireNonNull(removalListener, "Notification should be guarded with a check");
     executor.execute(() -> removalListener.onRemoval(notification));
+  }
+
+  @Override
+  public StatsCounter statsCounter() {
+    return statsCounter;
   }
 
   protected boolean hasRemovalListener() {

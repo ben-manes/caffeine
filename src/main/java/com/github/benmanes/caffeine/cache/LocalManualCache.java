@@ -88,7 +88,7 @@ final class LocalManualCache<K, V> implements Cache<K, V> {
 
   @Override
   public CacheStats stats() {
-    return new CacheStats();
+    return localCache.statsCounter().snapshot();
   }
 
   @Override

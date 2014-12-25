@@ -23,6 +23,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -41,6 +43,8 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   void invalidateAll(Iterable<?> keys);
 
   void cleanUp();
+
+  StatsCounter statsCounter();
 
   Iterator<K> keyIterator();
   Spliterator<K> keySpliterator();

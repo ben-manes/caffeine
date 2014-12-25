@@ -22,10 +22,14 @@ import java.util.concurrent.ForkJoinPool;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
+import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Caffeine<K, V> {
+  StatsCounter statsCounter = DisabledStatsCounter.INSTANCE;
   RemovalListener<? super K, ? super V> removalListener;
   int initialCapacity;
   Executor executor;
