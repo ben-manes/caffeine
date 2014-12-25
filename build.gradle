@@ -88,6 +88,9 @@ test {
     threadCount = 4
     parallel = 'methods'
   }
+  testLogging {
+    events 'skipped'
+  }
 }
 
 checkstyle {

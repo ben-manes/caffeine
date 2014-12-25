@@ -31,7 +31,7 @@ public enum RemovalCause {
    * The entry was manually removed by the user. This can result from the user invoking
    * {@link Cache#invalidate}, {@link Cache#invalidateAll(Iterable)}, {@link Cache#invalidateAll()},
    * {@link Map#remove}, {@link Map#computeIfPresent}, {@link Map#compute}, {@link Map#merge}, or
-   * {@link ConcurrentMap#remove} on the cache or map view. A manual removal my also be performed
+   * {@link ConcurrentMap#remove} on the cache or map view. A manual removal may also be performed
    * through the key/value/entry collections views by the user invoking {@link Collection#remove},
    * {@link Collection#removeAll}, {@link Collection#removeIf}, {@link Collection#retainAll}, or
    * {@link Iterator#remove}.

@@ -255,7 +255,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
       }
       Entry<?, ?> entry = (Entry<?, ?>) o;
       V value = cache.get(entry.getKey());
-      return value.equals(entry.getValue());
+      return (value != null) && value.equals(entry.getValue());
     }
 
     @Override

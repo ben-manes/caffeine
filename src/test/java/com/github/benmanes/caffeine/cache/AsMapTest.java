@@ -18,8 +18,10 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
+import static com.google.common.collect.Maps.immutableEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
@@ -31,6 +33,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -1230,4 +1233,121 @@ public final class AsMapTest {
 
   /* ---------------- Entry Set -------------- */
 
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void entrySetToArray_null(Map<Integer, Integer> map) {
+    map.entrySet().toArray(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entriesToArray(Map<Integer, Integer> map, CacheContext context) {
+    int length = context.original().size();
+
+    Object[] ints = map.entrySet().toArray(new Object[length]);
+    assertThat(ints.length, is(length));
+    assertThat(Arrays.asList(ints).containsAll(context.original().entrySet()), is(true));
+
+    Object[] array = map.entrySet().toArray();
+    assertThat(array.length, is(length));
+    assertThat(Arrays.asList(array).containsAll(context.original().entrySet()), is(true));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_empty(Map<Integer, Integer> map) {
+    assertThat(map.entrySet(), is(deeplyEmpty()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void entrySet_addIsSupported(Map<Integer, Integer> map) {
+    assertThat(map.entrySet().add(immutableEntry(1, 2)), is(true));
+    assertThat(map.entrySet().add(immutableEntry(1, 2)), is(false));
+    assertThat(map.entrySet().size(), is(1));
+    assertThat(map.size(), is(1));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void entrySet_clear(Map<Integer, Integer> map, CacheContext context) {
+    map.entrySet().clear();
+    assertThat(map, is(emptyMap()));
+    int count = context.original().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void entrySet(Map<Integer, Integer> map, CacheContext context) {
+    Set<Entry<Integer, Integer>> entries = map.entrySet();
+    assertThat(entries.contains(new Object()), is(false));
+    assertThat(entries.remove(new Object()), is(false));
+    assertThat(entries, hasSize(context.original().size()));
+    for (Entry<Integer, Integer> entry : entries) {
+      assertThat(entries.contains(entry), is(true));
+      assertThat(entries.remove(entry), is(true));
+      assertThat(entries.remove(entry), is(false));
+      assertThat(entries.contains(entry), is(false));
+    }
+    assertThat(map, is(emptyMap()));
+    int count = context.original().size();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void entryIterator(Map<Integer, Integer> map, CacheContext context) {
+    int iterations = 0;
+    for (Iterator<Entry<Integer, Integer>> i = map.entrySet().iterator(); i.hasNext();) {
+      Entry<Integer, Integer> entry = i.next();
+      assertThat(map, hasEntry(entry.getKey(), entry.getValue()));
+      iterations++;
+      i.remove();
+    }
+    assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
+    assertThat(iterations, is(context.original().size()));
+    assertThat(map, is(emptyMap()));
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void entryIterator_noElement(Map<Integer, Integer> map) {
+    map.entrySet().iterator().remove();
+  }
+
+  @CacheSpec(population = Population.EMPTY,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NoSuchElementException.class)
+  public void entryIterator_noMoreElements(Map<Integer, Integer> map) {
+    map.entrySet().iterator().next();
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void writeThroughEntry(Map<Integer, Integer> map, CacheContext context) {
+    Entry<Integer, Integer> entry = map.entrySet().iterator().next();
+
+    entry.setValue(3);
+    assertThat(map.get(context.firstKey()), is(3));
+    assertThat(map.size(), is(context.original().size()));
+    assertThat(map, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void writeThroughEntry_null(Map<Integer, Integer> map) {
+    map.entrySet().iterator().next().setValue(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void writeThroughEntry_serialize(Map<Integer, Integer> map) {
+    Entry<Integer, Integer> entry = map.entrySet().iterator().next();
+    Object copy = SerializableTester.reserialize(entry);
+    assertThat(entry, is(equalTo(copy)));
+  }
 }
