@@ -763,6 +763,108 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  /* ---------------- compute -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void compute_nullKey(Map<Integer, Integer> map) {
+    map.compute(null, (key, value) -> -key);
+  }
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void compute_nullMappingFunction(Map<Integer, Integer> map) {
+    map.computeIfPresent(1, null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_nullValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.compute(key, (k, v) -> null), is(nullValue()));
+    }
+
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size() - count));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+  }
+
+  // FIXME: Requires JDK8 release with JDK-8062841 fix
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(enabled = false, dataProvider = "caches", expectedExceptions = StackOverflowError.class)
+  public void compute_recursive(Map<Integer, Integer> map, CacheContext context) {
+    BiFunction<Integer, Integer, Integer> mappingFunction =
+        new BiFunction<Integer, Integer, Integer>() {
+          @Override public Integer apply(Integer key, Integer value) {
+            return map.compute(key, this);
+          }
+        };
+    map.compute(context.absentKey(), mappingFunction);
+  }
+
+  // FIXME: Requires JDK8 release with JDK-8062841 fix
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(enabled = false, dataProvider = "caches", expectedExceptions = StackOverflowError.class)
+  public void compute_pingpong(Map<Integer, Integer> map, CacheContext context) {
+    BiFunction<Integer, Integer, Integer> mappingFunction =
+        new BiFunction<Integer, Integer, Integer>() {
+          @Override public Integer apply(Integer key, Integer value) {
+            return map.computeIfPresent(context.lastKey(), this);
+          }
+        };
+    map.computeIfPresent(context.firstKey(), mappingFunction);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void compute_error(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.compute(context.absentKey(), (key, value) -> { throw new Error(); });
+    } catch (Error e) {}
+    assertThat(map, is(equalTo(context.original())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void compute_absent(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.compute(context.absentKey(), (key, value) -> -key), is(-context.absentKey()));
+    assertThat(map.get(context.absentKey()), is(-context.absentKey()));
+    assertThat(map.size(), is(1 + context.original().size()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_sameValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.compute(key, (k, v) -> -k), is(-key));
+      assertThat(map.get(key), is(-key));
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size()));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_differentValue(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.compute(key, (k, v) -> k), is(key));
+      assertThat(map.get(key), is(key));
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size()));
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  /* ---------------- merge -------------- */
+
+  public void merge() {}
+
+
+
+
+
   /* ---------------- equals / hashCode -------------- */
 
   @Test(dataProvider = "caches")
@@ -837,10 +939,6 @@ public final class AsMapTest {
   public void serialize(Map<Integer, Integer> map) {
     SerializableTester.reserializeAndAssert(map);
   }
-
-  /* ---------------- V8 default methods -------------- */
-  public void compute() {}
-  public void merge() {}
 
   /* ---------------- Key Set -------------- */
   /* ---------------- Values -------------- */
