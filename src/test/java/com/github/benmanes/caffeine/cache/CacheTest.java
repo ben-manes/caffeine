@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -123,10 +122,10 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  @Test(enabled = false, dataProvider = "caches", expectedExceptions = ExecutionException.class)
+  @Test(expectedExceptions = IllegalStateException.class)
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context)
       throws Exception {
-    cache.get(context.absentKey(), key -> { throw new RuntimeException(); });
+    cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
   }
 
   /* ---------------- getAllPresent -------------- */
@@ -248,7 +247,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_insert(Cache<Integer, Integer> cache, CacheContext context) {
-    int startKey = (int) context.initialSize() + 1;
+    int startKey = context.original().size() + 1;
     Map<Integer, Integer> entries = IntStream
         .range(startKey, 100 + startKey).boxed()
         .collect(Collectors.toMap(Function.identity(), key -> -key));
@@ -332,7 +331,7 @@ public final class CacheTest {
     cache.invalidateAll();
     assertThat(cache.size(), is(0L));
     assertThat(cache, hasRemovalNotifications(context,
-        (int) context.initialSize(), RemovalCause.EXPLICIT));
+        context.original().size(), RemovalCause.EXPLICIT));
   }
 
   @Test(dataProvider = "caches")
@@ -358,7 +357,7 @@ public final class CacheTest {
     cache.invalidateAll(cache.asMap().keySet());
     assertThat(cache.size(), is(0L));
     assertThat(cache, hasRemovalNotifications(context,
-        (int) context.initialSize(), RemovalCause.EXPLICIT));
+        context.original().size(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec

@@ -107,12 +107,8 @@ public final class CacheContext {
   }
 
   private Integer nextAbsentKey() {
-    int base = initiallyEmpty() ? 0 : (lastKey + 1);
+    int base = original.isEmpty() ? 0 : (lastKey + 1);
     return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
-  }
-
-  public boolean initiallyEmpty() {
-    return original.isEmpty();
   }
 
   public long initialSize() {

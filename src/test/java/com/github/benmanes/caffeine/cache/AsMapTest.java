@@ -68,7 +68,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void isEmpty(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.isEmpty(), is(context.initiallyEmpty()));
+    assertThat(map.isEmpty(), is(context.original().isEmpty()));
     if (map.isEmpty()) {
       assertThat(map, is(emptyMap()));
     }
@@ -77,7 +77,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void size(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
   }
 
   @CacheSpec
@@ -86,7 +86,7 @@ public final class AsMapTest {
     map.clear();
     assertThat(map, is(emptyMap()));
     assertThat(map, hasRemovalNotifications(context,
-        (int) context.initialSize(), RemovalCause.EXPLICIT));
+        context.original().size(), RemovalCause.EXPLICIT));
   }
 
   /* ---------------- contains -------------- */
@@ -229,7 +229,7 @@ public final class AsMapTest {
   public void put_insert(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.put(context.absentKey(), -context.absentKey()), is(nullValue()));
     assertThat(map.get(context.absentKey()), is(-context.absentKey()));
-    assertThat(map.size(), is((int) context.initialSize() + 1));
+    assertThat(map.size(), is(context.original().size() + 1));
   }
 
   @Test(dataProvider = "caches")
@@ -240,7 +240,7 @@ public final class AsMapTest {
       assertThat(map.put(key, -key), is(-key));
       assertThat(map.get(key), is(-key));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
@@ -254,7 +254,7 @@ public final class AsMapTest {
       assertThat(map.put(key, -context.absentKey()), is(-key));
       assertThat(map.get(key), is(-context.absentKey()));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
@@ -272,18 +272,18 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_empty(Map<Integer, Integer> map, CacheContext context) {
     map.putAll(new HashMap<>());
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_insert(Map<Integer, Integer> map, CacheContext context) {
-    int startKey = (int) context.initialSize() + 1;
+    int startKey = context.original().size() + 1;
     Map<Integer, Integer> entries = IntStream
         .range(startKey, 100 + startKey).boxed()
         .collect(Collectors.toMap(Function.identity(), key -> -key));
     map.putAll(entries);
-    assertThat(map.size(), is(100 + (int) context.initialSize()));
+    assertThat(map.size(), is(100 + context.original().size()));
   }
 
   @Test(dataProvider = "caches")
@@ -303,7 +303,7 @@ public final class AsMapTest {
   public void putAll_mixed(Map<Integer, Integer> map, CacheContext context) {
     Map<Integer, Integer> expect = new HashMap<>(context.original());
     Map<Integer, Integer> entries = new HashMap<>();
-    for (int i = 0; i < 2 * context.initialSize(); i++) {
+    for (int i = 0; i < 2 * context.original().size(); i++) {
       int value = ((i % 2) == 0) ? i : (i + 1);
       entries.put(i, value);
     }
@@ -342,7 +342,7 @@ public final class AsMapTest {
       assertThat(map.putIfAbsent(key, key), is(-key));
       assertThat(map.get(key), is(-key));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
   }
 
   @Test(dataProvider = "caches")
@@ -350,7 +350,7 @@ public final class AsMapTest {
   public void putIfAbsent_insert(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.putIfAbsent(context.absentKey(), -context.absentKey()), is(nullValue()));
     assertThat(map.get(context.absentKey()), is(-context.absentKey()));
-    assertThat(map.size(), is((int) context.initialSize() + 1));
+    assertThat(map.size(), is(context.original().size() + 1));
   }
 
   /* ---------------- remove -------------- */
@@ -365,7 +365,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void remove_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.remove(context.absentKey()), is(nullValue()));
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
   }
 
   @Test(dataProvider = "caches")
@@ -374,7 +374,7 @@ public final class AsMapTest {
     for (Integer key : context.firstMiddleLastKeys()) {
       map.remove(key);
     }
-    assertThat(map.size(), is((int) context.initialSize() - context.firstMiddleLastKeys().size()));
+    assertThat(map.size(), is(context.original().size() - context.firstMiddleLastKeys().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
@@ -413,7 +413,7 @@ public final class AsMapTest {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.remove(key, key), is(false));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
   }
 
   @Test(dataProvider = "caches")
@@ -424,7 +424,7 @@ public final class AsMapTest {
       assertThat(map.remove(key, -key), is(true));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(map.size(), is((int) context.initialSize() - count));
+    assertThat(map.size(), is(context.original().size() - count));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
 
@@ -461,7 +461,7 @@ public final class AsMapTest {
       assertThat(map.replace(key, -key), is(-key));
       assertThat(map.get(key), is(-key));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
@@ -474,7 +474,7 @@ public final class AsMapTest {
       assertThat(map.replace(key, -context.absentKey()), is(-key));
       assertThat(map.get(key), is(-context.absentKey()));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
@@ -539,7 +539,7 @@ public final class AsMapTest {
       assertThat(map.replace(key, key, context.absentKey()), is(false));
       assertThat(map.get(key), is(-key));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
@@ -552,7 +552,7 @@ public final class AsMapTest {
       assertThat(map.replace(key, -key, -key), is(true));
       assertThat(map.get(key), is(-key));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
@@ -565,7 +565,7 @@ public final class AsMapTest {
       assertThat(map.replace(key, -key, -context.absentKey()), is(true));
       assertThat(map.get(key), is(-context.absentKey()));
     }
-    assertThat(map.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
