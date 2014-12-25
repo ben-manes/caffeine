@@ -591,6 +591,78 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, map.size(), RemovalCause.REPLACED));
   }
 
+  /* ---------------- V8 default methods -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void computeIfAbsent_nullKey(Map<Integer, Integer> map) {
+    map.computeIfAbsent(null, key -> -key);
+  }
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void computeIfAbsent_nullMappingFunction(Map<Integer, Integer> map, CacheContext context) {
+    map.computeIfAbsent(context.absentKey(), null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void computeIfAbsent_nullValue(Map<Integer, Integer> map, CacheContext context) {
+    map.computeIfAbsent(context.absentKey(), key -> null);
+    assertThat(map.size(), is(context.original().size()));
+  }
+
+  // FIXME: Requires JDK8 release with JDK-8062841 fix
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(enabled = false, dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void computeIfAbsent_recursive(Map<Integer, Integer> map, CacheContext context) {
+    Function<Integer, Integer> mappingFunction = new Function<Integer, Integer>() {
+      @Override public Integer apply(Integer key) {
+        return map.computeIfAbsent(key, this);
+      }
+    };
+    map.computeIfAbsent(context.absentKey(), mappingFunction);
+  }
+
+  // FIXME: Requires JDK8 release with JDK-8062841 fix
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(enabled = false, dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void computeIfAbsent_deadlock(Map<Integer, Integer> map, CacheContext context) {
+    Function<Integer, Integer> mappingFunction = new Function<Integer, Integer>() {
+      @Override public Integer apply(Integer key) {
+        return map.computeIfAbsent(-key, this);
+      }
+    };
+    map.computeIfAbsent(context.absentKey(), mappingFunction);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void computeIfAbsent_error(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.computeIfAbsent(context.absentKey(), key -> { throw new Error(); });
+    } catch (Error e) {}
+    assertThat(map, is(equalTo(context.original())));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void computeIfAbsent_present(Map<Integer, Integer> map, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      map.computeIfAbsent(key, k -> { throw new AssertionError(); });
+    }
+    assertThat(map.size(), is(context.original().size()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void computeIfAbsent_absent(Map<Integer, Integer> map, CacheContext context) {
+    map.computeIfAbsent(context.absentKey(), key -> -key);
+    assertThat(map.get(context.absentKey()), is(-context.absentKey()));
+    assertThat(map.size(), is(1 + context.original().size()));
+  }
+
   /* ---------------- equals / hashCode -------------- */
 
   @Test(dataProvider = "caches")
@@ -667,7 +739,6 @@ public final class AsMapTest {
   }
 
   /* ---------------- V8 default methods -------------- */
-  public void computeIfAbsent() {}
   public void computeIfPresent() {}
   public void compute() {}
   public void merge() {}
