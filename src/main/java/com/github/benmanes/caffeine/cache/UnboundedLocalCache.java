@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -127,7 +129,27 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
-    cache.replaceAll(function);
+    if (!hasRemovalListener()) {
+      cache.replaceAll(function);
+      return;
+    }
+
+    // ensures that the removal notification is processed after the removal has completed
+    requireNonNull(function);
+    @SuppressWarnings("unchecked")
+    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+    cache.replaceAll((key, value) -> {
+      if (notification[0] != null) {
+        notifyRemoval(notification[0]);
+        notification[0] = null;
+      }
+      V newValue = requireNonNull(function.apply(key, value));
+      notification[0] = new RemovalNotification<K, V>(key, value, RemovalCause.REPLACED);
+      return newValue;
+    });
+    if (notification[0] != null) {
+      notifyRemoval(notification[0]);
+    }
   }
 
   @Override

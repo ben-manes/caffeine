@@ -560,6 +560,37 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  /* ---------------- replaceAll -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void replaceAll_null(Map<Integer, Integer> map) {
+    map.replaceAll(null);
+  }
+
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void replaceAll_nullValue(Map<Integer, Integer> map) {
+    map.replaceAll((key, value) -> null);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void replaceAll_sameValue(Map<Integer, Integer> map, CacheContext context) {
+    map.replaceAll((key, value) -> value);
+    assertThat(map, is(equalTo(context.original())));
+    assertThat(map, hasRemovalNotifications(context, map.size(), RemovalCause.REPLACED));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void replaceAll_differentValue(Map<Integer, Integer> map, CacheContext context) {
+    map.replaceAll((key, value) -> -value);
+    map.forEach((key, value) -> assertThat(value, is(equalTo(key))));
+    assertThat(map, hasRemovalNotifications(context, map.size(), RemovalCause.REPLACED));
+  }
+
   /* ---------------- equals / hashCode -------------- */
 
   @Test(dataProvider = "caches")
@@ -636,7 +667,6 @@ public final class AsMapTest {
   }
 
   /* ---------------- V8 default methods -------------- */
-  public void replaceAll() {}
   public void computeIfAbsent() {}
   public void computeIfPresent() {}
   public void compute() {}
