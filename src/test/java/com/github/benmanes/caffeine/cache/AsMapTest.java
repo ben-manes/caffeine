@@ -62,6 +62,7 @@ import com.google.common.testing.SerializableTester;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsMapTest {
+  // TODO(ben): Add stats assertions
 
   /* ---------------- is empty / size / clear -------------- */
 
@@ -1140,6 +1141,14 @@ public final class AsMapTest {
     map.keySet().iterator().next();
   }
 
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void keySpliterator(Map<Integer, Integer> map) {
+    int[] count = new int[1];
+    map.keySet().spliterator().forEachRemaining(key -> count[0]++);
+    assertThat(count[0], is(map.size()));
+  }
+
   /* ---------------- Values -------------- */
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1229,6 +1238,14 @@ public final class AsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = NoSuchElementException.class)
   public void valueIterator_noMoreElements(Map<Integer, Integer> map) {
     map.values().iterator().next();
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void valueSpliterator(Map<Integer, Integer> map) {
+    int[] count = new int[1];
+    map.values().spliterator().forEachRemaining(key -> count[0]++);
+    assertThat(count[0], is(map.size()));
   }
 
   /* ---------------- Entry Set -------------- */
@@ -1325,6 +1342,16 @@ public final class AsMapTest {
   public void entryIterator_noMoreElements(Map<Integer, Integer> map) {
     map.entrySet().iterator().next();
   }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void entrySetSpliterator(Map<Integer, Integer> map) {
+    int[] count = new int[1];
+    map.entrySet().spliterator().forEachRemaining(key -> count[0]++);
+    assertThat(count[0], is(map.size()));
+  }
+
+  /* ---------------- WriteThroughEntry -------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
