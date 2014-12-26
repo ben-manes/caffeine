@@ -16,6 +16,8 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -67,6 +69,7 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(context, hasMissCount(1));
   }
 
   @Test(dataProvider = "caches")
@@ -76,6 +79,7 @@ public final class CacheTest {
     assertThat(cache.getIfPresent(context.firstKey()), is(not(nullValue())));
     assertThat(cache.getIfPresent(context.middleKey()), is(not(nullValue())));
     assertThat(cache.getIfPresent(context.lastKey()), is(not(nullValue())));
+    assertThat(context, hasHitCount(3));
   }
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -92,6 +96,7 @@ public final class CacheTest {
     Integer key = context.absentKey();
     Integer value = cache.get(key, k -> -key);
     assertThat(value, is(-key));
+    assertThat(context, hasMissCount(1));
   }
 
   @Test(dataProvider = "caches")
@@ -101,6 +106,7 @@ public final class CacheTest {
     assertThat(cache.get(context.firstKey(), loader), is(-context.firstKey()));
     assertThat(cache.get(context.middleKey(), loader), is(-context.middleKey()));
     assertThat(cache.get(context.lastKey(), loader), is(-context.lastKey()));
+    assertThat(context, hasHitCount(3));
   }
 
   @CacheSpec
@@ -122,7 +128,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  @Test(expectedExceptions = IllegalStateException.class)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context)
       throws Exception {
     cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
@@ -135,10 +141,11 @@ public final class CacheTest {
   public void getAllPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAllPresent(context.absentKeys());
     assertThat(result.size(), is(0));
+    assertThat(context, hasMissCount(context.absentKeys().size()));
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllPresent_absent_immutable(Cache<Integer, Integer> cache, CacheContext context) {
     cache.getAllPresent(context.absentKeys()).clear();
   }
@@ -153,6 +160,7 @@ public final class CacheTest {
     expect.put(context.lastKey(), -context.lastKey());
     Map<Integer, Integer> result = cache.getAllPresent(expect.keySet());
     assertThat(result, is(equalTo(expect)));
+    assertThat(context, hasHitCount(expect.size()));
   }
 
   @Test(dataProvider = "caches")
@@ -161,6 +169,8 @@ public final class CacheTest {
   public void getAllPresent_present_full(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAllPresent(cache.asMap().keySet());
     assertThat(result, is(equalTo(cache.asMap())));
+    assertThat(context, hasHitCount(result.size()));
+    assertThat(context, hasMissCount(0));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)

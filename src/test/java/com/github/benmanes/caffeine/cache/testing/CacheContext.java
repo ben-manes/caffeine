@@ -33,7 +33,9 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
@@ -50,7 +52,9 @@ public final class CacheContext {
   @Nullable RemovalListener<Integer, Integer> removalListener;
   Listener removalListenerType;
   Population population;
+
   Stats stats;
+  Cache<Integer, Integer> cache;
 
   InitialCapacity initialCapacity;
   Executor executor;
@@ -147,6 +151,10 @@ public final class CacheContext {
 
   public boolean isRecordingStats() {
     return (stats == Stats.ENABLED);
+  }
+
+  public CacheStats stats() {
+    return cache.stats();
   }
 
   public CacheContext copy() {

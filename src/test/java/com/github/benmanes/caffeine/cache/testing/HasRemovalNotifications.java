@@ -62,19 +62,19 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
 
   @Override
   protected boolean matchesSafely(Object ignored, Description description) {
-    DescriptionBuilder builder = new DescriptionBuilder(description);
+    DescriptionBuilder desc = new DescriptionBuilder(description);
 
     if (context.removalListenerType() == Listener.CONSUMING) {
       ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
       ConsumingRemovalListener<Integer, Integer> removalListener = context.removalListener();
-      builder.expectThat(removalListener.evicted(), hasSize(count));
+      desc.expectThat(removalListener.evicted(), hasSize(count));
 
       for (RemovalNotification<?, ?> notification : removalListener.evicted()) {
         checkNotification(notification);
       }
     }
 
-    return builder.matches();
+    return desc.matches();
   }
 
   private void checkNotification(RemovalNotification<?, ?> notification) {

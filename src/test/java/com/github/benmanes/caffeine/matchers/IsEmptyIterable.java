@@ -49,25 +49,25 @@ public final class IsEmptyIterable<E> extends TypeSafeDiagnosingMatcher<Iterable
 
   @Override
   protected boolean matchesSafely(Iterable<? extends E> iterable, Description description) {
-    DescriptionBuilder builder = new DescriptionBuilder(description);
+    DescriptionBuilder desc = new DescriptionBuilder(description);
 
-    checkIterable(iterable, builder);
+    checkIterable(iterable, desc);
     if (iterable instanceof Collection<?>) {
-      checkCollection((Collection<? extends E>) iterable, builder);
+      checkCollection((Collection<? extends E>) iterable, desc);
     }
     if (iterable instanceof Set<?>) {
-      checkSet((Set<? extends E>) iterable, builder);
+      checkSet((Set<? extends E>) iterable, desc);
     }
     if (iterable instanceof List<?>) {
-      checkList((List<? extends E>) iterable, builder);
+      checkList((List<? extends E>) iterable, desc);
     }
     if (iterable instanceof Queue<?>) {
-      checkQueue((Queue<? extends E>) iterable, builder);
+      checkQueue((Queue<? extends E>) iterable, desc);
     }
     if (iterable instanceof Deque<?>) {
-      checkDeque((Deque<? extends E>) iterable, builder);
+      checkDeque((Deque<? extends E>) iterable, desc);
     }
-    return builder.matches();
+    return desc.matches();
   }
 
   private void checkIterable(Iterable<? extends E> i, DescriptionBuilder builder) {

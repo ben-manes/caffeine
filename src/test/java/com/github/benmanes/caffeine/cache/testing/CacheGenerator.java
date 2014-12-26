@@ -169,6 +169,7 @@ final class CacheGenerator {
     if (context.removalListener != null) {
       builder.removalListener(context.removalListener);
     }
-    return builder.build();
+    context.cache = builder.build();
+    return context.cache;
   }
 }

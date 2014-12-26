@@ -34,11 +34,11 @@ public final class DescriptionBuilder {
     this.matches = true;
   }
 
-  public <T> void expectThat(T actual, Matcher<? super T> matcher) {
-    expectThat("", actual, matcher);
+  public <T> DescriptionBuilder expectThat(T actual, Matcher<? super T> matcher) {
+    return expectThat("", actual, matcher);
   }
 
-  public <T> void expectThat(String reason, T actual, Matcher<? super T> matcher) {
+  public <T> DescriptionBuilder expectThat(String reason, T actual, Matcher<? super T> matcher) {
     if (!matcher.matches(actual)) {
       description.appendText(reason)
         .appendText("\nExpected: ")
@@ -50,13 +50,15 @@ public final class DescriptionBuilder {
 
       matches = false;
     }
+    return this;
   }
 
-  public <T> void expected(String reason) {
+  public <T> DescriptionBuilder expected(String reason) {
     description.appendText(reason).appendText("\nExpected to not be reachable");
     description.appendText("\nLocation: ").appendText(
         Throwables.getStackTraceAsString(new Exception()));
     matches = false;
+    return this;
   }
 
   public Description getDescription() {

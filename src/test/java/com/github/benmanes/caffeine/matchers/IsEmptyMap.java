@@ -43,17 +43,17 @@ public final class IsEmptyMap<K, V>
 
   @Override
   protected boolean matchesSafely(Map<? extends K, ? extends V> map, Description description) {
-    DescriptionBuilder builder = new DescriptionBuilder(description);
+    DescriptionBuilder desc = new DescriptionBuilder(description);
 
-    builder.expectThat(map.keySet(), is(deeplyEmpty()));
-    builder.expectThat(map.values(), is(deeplyEmpty()));
-    builder.expectThat(map.entrySet(), is(deeplyEmpty()));
-    builder.expectThat(map, is(Collections.EMPTY_MAP));
-    builder.expectThat("Size != 0", map.size(), is(0));
-    builder.expectThat("Not empty", map.isEmpty(), is(true));
-    builder.expectThat("hashcode", map.hashCode(), is(ImmutableMap.of().hashCode()));
-    builder.expectThat("toString", map, hasToString(ImmutableMap.of().toString()));
-    return builder.matches();
+    desc.expectThat(map.keySet(), is(deeplyEmpty()));
+    desc.expectThat(map.values(), is(deeplyEmpty()));
+    desc.expectThat(map.entrySet(), is(deeplyEmpty()));
+    desc.expectThat(map, is(Collections.EMPTY_MAP));
+    desc.expectThat("Size != 0", map.size(), is(0));
+    desc.expectThat("Not empty", map.isEmpty(), is(true));
+    desc.expectThat("hashcode", map.hashCode(), is(ImmutableMap.of().hashCode()));
+    desc.expectThat("toString", map, hasToString(ImmutableMap.of().toString()));
+    return desc.matches();
   }
 
   @Factory
