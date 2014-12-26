@@ -51,7 +51,7 @@ final class LocalLoadingCache<K, V> extends LocalManualCache<K, V> implements Lo
         result.put(key, value);
       }
     }
-    return result;
+    return Collections.unmodifiableMap(result);
   }
 
   @Override

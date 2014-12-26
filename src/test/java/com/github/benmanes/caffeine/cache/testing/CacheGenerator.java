@@ -142,9 +142,7 @@ final class CacheGenerator {
 
     for (CacheContext context : contexts) {
       for (Population population : cacheSpec.population()) {
-        CacheContext copy = context.copy();
         context.population = population;
-
         if (!requiresLoadingCache) {
           makeCache(context, false);
         }

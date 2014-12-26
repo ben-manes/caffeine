@@ -92,7 +92,7 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
-  public void get_absent(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
+  public void get_absent(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
     Integer value = cache.get(key, k -> -key);
     assertThat(value, is(-key));
@@ -101,7 +101,7 @@ public final class CacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void get_present(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
+  public void get_present(Cache<Integer, Integer> cache, CacheContext context) {
     Function<Integer, Integer> loader = key -> { throw new RuntimeException(); };
     assertThat(cache.get(context.firstKey(), loader), is(-context.firstKey()));
     assertThat(cache.get(context.middleKey(), loader), is(-context.middleKey()));
@@ -111,26 +111,25 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_nullKey(Cache<Integer, Integer> cache) throws Exception {
+  public void get_nullKey(Cache<Integer, Integer> cache) {
     cache.get(null, Function.identity());
   }
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_nullLoader(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
+  public void get_nullLoader(Cache<Integer, Integer> cache, CacheContext context) {
     cache.get(context.absentKey(), null);
   }
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_nullKeyAndLoader(Cache<Integer, Integer> cache) throws Exception {
+  public void get_nullKeyAndLoader(Cache<Integer, Integer> cache) {
     cache.get(null, null);
   }
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
-  public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context)
-      throws Exception {
+  public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context) {
     cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
   }
 
@@ -146,7 +145,7 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void getAllPresent_absent_immutable(Cache<Integer, Integer> cache, CacheContext context) {
+  public void getAllPresent_immutable(Cache<Integer, Integer> cache, CacheContext context) {
     cache.getAllPresent(context.absentKeys()).clear();
   }
 
@@ -171,12 +170,6 @@ public final class CacheTest {
     assertThat(result, is(equalTo(cache.asMap())));
     assertThat(context, hasHitCount(result.size()));
     assertThat(context, hasMissCount(0));
-  }
-
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void getAllPresent_present_immutable(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.getAllPresent(cache.asMap().keySet()).clear();
   }
 
   @Test(dataProvider = "caches")
