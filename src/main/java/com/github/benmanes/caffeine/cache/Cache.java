@@ -61,9 +61,9 @@ public interface Cache<K, V> {
    * If the specified key is not already associated with a value, attempts to compute its value
    * using the given mapping function and enters it into this cache unless {@code null}. The entire
    * method invocation is performed atomically, so the function is applied at most once per key.
-   * Some attempted update operations on this map by other threads may be blocked while computation
-   * is in progress, so the computation should be short and simple, and must not attempt to update
-   * any other mappings of this cache.
+   * Some attempted update operations on this cache by other threads may be blocked while
+   * computation is in progress, so the computation should be short and simple, and must not attempt
+   * to update any other mappings of this cache.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to compute a value
@@ -71,7 +71,7 @@ public interface Cache<K, V> {
    *         the computed value is null
    * @throws NullPointerException if the specified key or mappingFunction is null
    * @throws IllegalStateException if the computation detectably attempts a recursive update to this
-   *         map that would otherwise never complete
+   *         cache that would otherwise never complete
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
    *         left unestablished
    */

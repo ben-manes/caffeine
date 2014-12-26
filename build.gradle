@@ -54,13 +54,11 @@ def versions = [
 ]
 
 dependencies {
-  // compile time (annotations only)
+  compile 'org.latencyutils:LatencyUtils:2.0.2'
   compile 'com.google.code.findbugs:jsr305:3.0.0'
 
-  // transition to test scope
-  compile "com.google.guava:guava:${versions.guava}"
-
   // unit testing
+  testCompile "com.google.guava:guava:${versions.guava}"
   testCompile 'org.apache.commons:commons-lang3:3.3.2'
   testCompile 'com.jayway.awaitility:awaitility:1.6.3'
   testCompile 'org.mockito:mockito-core:1.10.17'

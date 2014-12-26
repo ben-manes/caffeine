@@ -15,48 +15,94 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ExecutionError;
-import com.google.common.util.concurrent.UncheckedExecutionException;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
+ * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache,
+ * and are stored in the cache until either evicted or manually invalidated.
+ * <p>
+ * Implementations of this interface are expected to be thread-safe, and can be safely accessed
+ * by multiple concurrent threads.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
+ * @param <K> the type of keys maintained by this cache
+ * @param <V> the type of mapped values
  */
+@ThreadSafe
 public interface LoadingCache<K, V> extends Cache<K, V> {
 
   /**
-   * @throws ExecutionException if a checked exception was thrown while loading the value. ({@code
-   *     ExecutionException} is thrown <a
-   *     href="http://code.google.com/p/guava-libraries/wiki/CachesExplained#Interruption">even if
-   *     computation was interrupted by an {@code InterruptedException}</a>.)
-   * @throws UncheckedExecutionException if an unchecked exception was thrown while loading the
-   *     value
-   * @throws ExecutionError if an error was thrown while loading the value
+   * Returns the value associated with {@code key} in this cache, obtaining that value from
+   * {@link CacheLoader#load(Object)} if necessary.
+   * <p>
+   * If another call to {@link #get} is currently loading the value for {@code key}, this thread
+   * simply waits for that thread to finish and returns its loaded value. Note that multiple threads
+   * can concurrently load values for distinct keys.
+   * <p>
+   * If the specified key is not already associated with a value, attempts to compute its value and
+   * enters it into this cache unless {@code null}. The entire method invocation is performed
+   * atomically, so the function is applied at most once per key. Some attempted update operations
+   * on this cache by other threads may be blocked while computation is in progress, so the
+   * computation should be short and simple, and must not attempt to update any other mappings of
+   * this cache.
+   *
+   * @param key key with which the specified value is to be associated
+   * @return the current (existing or computed) value associated with the specified key, or null if
+   *         the computed value is null
+   * @throws NullPointerException if the specified key or mappingFunction is null
+   * @throws IllegalStateException if the computation detectably attempts a recursive update to this
+   *         cache that would otherwise never complete
+   * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping
+   *         is left unestablished
    */
-  V get(K key) throws ExecutionException;
+  @CheckForNull
+  V get(@Nonnull K key);
 
   /**
-   * @throws UncheckedExecutionException if an exception was thrown while loading the value. (As
-   *     explained in the last paragraph above, this should be an unchecked exception only.)
-   * @throws ExecutionError if an error was thrown while loading the value
+   * Returns a map of the values associated with {@code keys}, creating or retrieving those values
+   * if necessary. The returned map contains entries that were already cached, combined with newly
+   * loaded entries; it will never contain null keys or values.
+   * <p>
+   * Caches loaded by a {@link CacheLoader} will issue a single request to
+   * {@link CacheLoader#loadAll} for all keys which are not already present in the cache. If another
+   * call to {@link #get} is tries to load the value for a key in {@code keys}, that thread simply
+   * waits for this thread to finish and returns the loaded value. Note that multiple threads can
+   * concurrently load values for distinct keys.
+   * <p>
+   * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
+   * ignored.
+   *
+   * @param keys the keys whose associated values are to be returned
+   * @return the unmodifiable mapping of keys to values for the specified keys in this cache
+   * @throws NullPointerException if the specified collection is null or contains a null element
+   * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
+   *         {@link CacheLoader#loadAll} returns {@code null}, returns a map containing null keys or
+   *         values, or fails to return an entry for each requested key. In all cases, the mapping
+   *         is left unestablished
    */
-  V getUnchecked(K key);
+  @Nonnull
+  Map<K, V> getAll(@Nonnull Iterable<? extends K> keys) throws ExecutionException;
 
   /**
-   * @throws ExecutionException if a checked exception was thrown while loading the value. ({@code
-   *     ExecutionException} is thrown <a
-   *     href="http://code.google.com/p/guava-libraries/wiki/CachesExplained#Interruption">even if
-   *     computation was interrupted by an {@code InterruptedException}</a>.)
-   * @throws UncheckedExecutionException if an unchecked exception was thrown while loading the
-   *     values
-   * @throws ExecutionError if an error was thrown while loading the values
-   * @since 11.0
+   * Loads a new value for key {@code key}, possibly asynchronously. While the new value is loading
+   * the previous value (if any) will continue to be returned by {@code get(key)} unless it is
+   * evicted. If the new value is loaded successfully it will replace the previous value in the
+   * cache; if an exception is thrown while refreshing the previous value will remain, <i>and the
+   * exception will be logged (using {@link java.util.logging.Logger}) and swallowed</i>.
+   * <p>
+   * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
+   * currently contains a value for {@code key}, and {@link CacheLoader#load} otherwise. Loading is
+   * asynchronous only if {@link CacheLoader#reload} was overridden with an asynchronous
+   * implementation.
+   * <p>
+   * Returns without doing anything if another thread is currently loading the value for
+   * {@code key}. If the cache loader associated with this cache performs refresh asynchronously
+   * then this method may return before refresh completes.
    */
-  ImmutableMap<K, V> getAll(Iterable<? extends K> keys) throws ExecutionException;
-
-  /* @Deprecated V apply(K key); */
-
-  void refresh(K key);
+  void refresh(@Nonnull K key);
 }
