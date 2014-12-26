@@ -33,6 +33,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+//TODO(ben): Remove as likely not a shared abstraction
 abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   @Nullable
   protected final RemovalListener<K, V> removalListener;

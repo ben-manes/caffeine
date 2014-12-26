@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+// TODO(ben): Remove as likely not a shared abstraction
 interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   long mappingCount();

@@ -18,14 +18,23 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.annotation.Nullable;
+
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -416,5 +425,198 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   @Override
   public String toString() {
     return cache.toString();
+  }
+
+  /* ---------------- Manual Cache -------------- */
+
+  static class LocalManualCache<K, V> implements Cache<K, V> {
+    final UnboundedLocalCache<K, V> localCache;
+
+    LocalManualCache(Caffeine<K, V> builder) {
+      this.localCache = new UnboundedLocalCache<>(builder);
+    }
+
+    @Override
+    public long size() {
+      return localCache.mappingCount();
+    }
+
+    @Override
+    public void cleanUp() {
+      localCache.cleanUp();
+    }
+
+    @Override
+    public @Nullable V getIfPresent(Object key) {
+      return localCache.getIfPresent(key);
+    }
+
+    @Override
+    public V get(K key, Function<? super K, ? extends V> mappingFunction) {
+      return localCache.get(key, mappingFunction);
+    }
+
+    @Override
+    public Map<K, V> getAllPresent(Iterable<?> keys) {
+      return localCache.getAllPresent(keys);
+    }
+
+    @Override
+    public void put(K key, V value) {
+      localCache.put(key, value);
+    }
+
+    @Override
+    public void putAll(Map<? extends K, ? extends V> map) {
+      localCache.putAll(map);
+    }
+
+    @Override
+    public void invalidate(Object key) {
+      requireNonNull(key);
+      localCache.remove(key);
+    }
+
+    @Override
+    public void invalidateAll() {
+      localCache.invalidateAll();
+    }
+
+    @Override
+    public void invalidateAll(Iterable<?> keys) {
+      localCache.invalidateAll(keys);
+    }
+
+    @Override
+    public CacheStats stats() {
+      return localCache.statsCounter().snapshot();
+    }
+
+    @Override
+    public ConcurrentMap<K, V> asMap() {
+      return localCache;
+    }
+  }
+
+  /* ---------------- Loading Cache -------------- */
+
+  static final class LocalLoadingCache<K, V> extends LocalManualCache<K, V>
+      implements LoadingCache<K, V> {
+    static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
+
+    final CacheLoader<? super K, V> loader;
+    final Executor executor;
+
+    LocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+      super(builder);
+      this.loader = loader;
+      this.executor = builder.executor;
+    }
+
+    @Override
+    public V get(K key) {
+      return localCache.computeIfAbsent(key, loader::load);
+    }
+
+    @Override
+    public Map<K, V> getAll(Iterable<? extends K> keys) {
+      Map<K, V> result = new HashMap<K, V>();
+      for (K key : keys) {
+        requireNonNull(key);
+        V value = localCache.computeIfAbsent(key, loader::load);
+        if (value != null) {
+          result.put(key, value);
+        }
+      }
+      return Collections.unmodifiableMap(result);
+    }
+
+    @Override
+    public void refresh(K key) {
+      requireNonNull(key);
+      executor.execute(() -> {
+        try {
+          localCache.compute(key, loader::refresh);
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown during refresh", t);
+        }
+      });
+    }
+
+    /* ---------------- Experiments -------------- */
+
+//    private static boolean canBulkLoad(CacheLoader<?, ?> loader) {
+//      try {
+//        return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
+//      } catch (NoSuchMethodException | SecurityException e) {
+//        return false;
+//      }
+//    }
+//
+//    static final class BulkLoadingCache<K, V> {
+//      LocalCache<K, Promise<V>> localCache;
+//      CacheLoader<K, V> loader;
+//
+//      public Map<K, V> getAll(Iterable<? extends K> keys) {
+//        Map<K, Promise<V>> missing = new HashMap<>();
+//        Map<K, Promise<V>> promises = new HashMap<>();
+//
+//        try {
+//          for (K key : keys) {
+//            requireNonNull(keys);
+//            Promise<V> promise = new Promise<V>();
+//            UnsafeAccess.UNSAFE.monitorEnter(promise);
+//            Promise<V> value = localCache.computeIfAbsent(key, k -> promise);
+//            if (value == promise) {
+//              missing.put(key, promise);
+//              promises.put(key, promise);
+//            } else {
+//              promises.put(key, value);
+//            }
+//          }
+//
+//          Map<K, V> loaded = missing.isEmpty()
+//              ? Collections.emptyMap()
+//              : loader.loadAll(Collections.unmodifiableCollection(missing.keySet()));
+//          for (Iterator<Entry<K, Promise<V>>> iter = missing.entrySet().iterator(); iter.hasNext();) {
+//            Entry<K, Promise<V>> entry = iter.next();
+//            K key = entry.getKey();
+//            V value = loaded.get(key);
+//            Promise<V> promise = entry.getValue();
+//            if (value == null) {
+//              localCache.remove(key, promise);
+//            } else {
+//              // TODO(ben): lazily set to piggyback visibility on monitorExit
+//              promise.value = value;
+//            }
+//            UnsafeAccess.UNSAFE.monitorExit(promise);
+//            iter.remove();
+//          }
+//        } catch (RuntimeException | Error e) {
+//          for (Promise<V> promise : missing.values()) {
+//            UnsafeAccess.UNSAFE.monitorExit(promise);
+//          }
+//        }
+//
+//        Map<K, V> result = new HashMap<>(promises.size());
+//        for (Entry<K, Promise<V>> entry : promises.entrySet()) {
+//          Promise<V> promise = entry.getValue();
+//          if (promise.value != null) {
+//            result.put(entry.getKey(), promise.value);
+//            continue;
+//          }
+//          synchronized(promise) {
+//            if (promise.value != null) {
+//              result.put(entry.getKey(), promise.value);
+//            }
+//          }
+//        }
+//        return Collections.unmodifiableMap(result);
+//      }
+//
+//      static final class Promise<V> {
+//        volatile V value;
+//      }
+//    }
   }
 }
