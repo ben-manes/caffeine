@@ -28,7 +28,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class LocalManualCache<K, V> implements Cache<K, V> {
+class LocalManualCache<K, V> implements Cache<K, V> {
   final LocalCache<K, V> localCache;
 
   LocalManualCache(LocalCache<K, V> localCache) {
@@ -56,7 +56,7 @@ final class LocalManualCache<K, V> implements Cache<K, V> {
   }
 
   @Override
-  public /* Immutable */ Map<K, V> getAllPresent(Iterable<?> keys) {
+  public Map<K, V> getAllPresent(Iterable<?> keys) {
     return localCache.getAllPresent(keys);
   }
 

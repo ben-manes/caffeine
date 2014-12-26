@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -86,7 +85,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    *         is left unestablished
    */
   @Nonnull
-  Map<K, V> getAll(@Nonnull Iterable<? extends K> keys) throws ExecutionException;
+  Map<K, V> getAll(@Nonnull Iterable<? extends K> keys);
 
   /**
    * Loads a new value for key {@code key}, possibly asynchronously. While the new value is loading
