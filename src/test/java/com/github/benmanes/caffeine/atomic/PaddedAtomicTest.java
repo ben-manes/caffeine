@@ -36,8 +36,8 @@ public class PaddedAtomicTest {
 
   @Test
   public void create_long() {
-    new PaddedAtomicInteger();
-    new PaddedAtomicInteger(1);
+    new PaddedAtomicLong();
+    new PaddedAtomicLong(1);
   }
 
   @Test

@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class PaddedAtomicLong<T> extends AtomicLong {
+public class PaddedAtomicLong extends AtomicLong {
   private static final long serialVersionUID = 1L;
 
   // Improve likelihood of isolation on <= 64 byte cache lines
