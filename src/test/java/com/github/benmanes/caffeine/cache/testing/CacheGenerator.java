@@ -158,7 +158,7 @@ final class CacheGenerator {
     scenarios.put(copy, cache);
   }
 
-  private static Cache<Integer, Integer> newCache(CacheContext context, boolean loading) {
+  private Cache<Integer, Integer> newCache(CacheContext context, boolean loading) {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());
@@ -176,7 +176,7 @@ final class CacheGenerator {
       builder.removalListener(context.removalListener);
     }
     if (loading) {
-      context.cache = builder.build(key -> -key);
+      context.cache = builder.build(cacheSpec.loader());
     } else {
       context.cache = builder.build();
     }

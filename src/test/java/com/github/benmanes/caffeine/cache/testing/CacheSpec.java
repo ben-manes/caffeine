@@ -26,6 +26,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -168,6 +170,38 @@ public @interface CacheSpec {
     };
 
     public abstract <K, V> RemovalListener<K, V> create();
+  }
+
+  /* ---------------- Executor -------------- */
+
+  Loader loader() default Loader.NEGATIVE;
+
+  /** The {@link CacheLoader} for constructing the {@link LoadingCache}. */
+  enum Loader implements CacheLoader<Integer, Integer> {
+    /** A loader that always returns null (no mapping). */
+    NULL {
+      @Override public Integer load(Integer key) {
+        return null;
+      }
+    },
+    /** A loader that returns the key. */
+    IDENTITY {
+      @Override public Integer load(Integer key) {
+        return key;
+      }
+    },
+    /** A loader that returns the key's negation. */
+    NEGATIVE {
+      @Override public Integer load(Integer key) {
+        return -key;
+      }
+    },
+    /** A loader that always throws an exception. */
+    EXCEPTIONAL {
+      @Override public Integer load(Integer key) {
+        throw new IllegalStateException();
+      }
+    };
   }
 
   /* ---------------- Executor -------------- */

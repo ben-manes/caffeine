@@ -134,7 +134,7 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       CacheLoader<? super K1, V1> loader) {
     LocalCache<K1, V1> localCache = new UnboundedLocalCache<>(this);
-    return new LocalLoadingCache<K1, V1>(localCache, loader);
+    return new LocalLoadingCache<K1, V1>(localCache, loader, executor);
   }
 
   enum NullRemovalListener implements RemovalListener<Object, Object> {

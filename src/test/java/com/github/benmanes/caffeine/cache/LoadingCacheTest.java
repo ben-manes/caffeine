@@ -15,11 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +33,9 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.ImmutableList;
@@ -135,4 +139,63 @@ public final class LoadingCacheTest {
 
   /* ---------------- refresh -------------- */
 
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void refresh_null(LoadingCache<Integer, Integer> cache) {
+    cache.refresh(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.NULL,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void refresh_remove(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    cache.refresh(context.firstKey());
+    assertThat(cache.size(), is(context.initialSize() - 1));
+    assertThat(cache.get(context.firstKey()), is(nullValue()));
+    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.EXCEPTIONAL,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void refresh_error(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    // Shouldn't leak exception to caller
+    cache.refresh(context.absentKey());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(executor = CacheExecutor.DIRECT,
+  removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void refresh_absent(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    cache.refresh(context.absentKey());
+    assertThat(cache.size(), is(1 + context.initialSize()));
+    assertThat(cache.get(context.absentKey()), is(-context.absentKey()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(executor = CacheExecutor.DIRECT,
+  population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void refresh_present_sameValue(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      cache.refresh(key);
+      assertThat(cache.get(key), is(-key));
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.IDENTITY,
+  population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void compute_present_differentValue(
+      LoadingCache<Integer, Integer> cache, CacheContext context) {
+    for (Integer key : context.firstMiddleLastKeys()) {
+      cache.refresh(key);
+      assertThat(cache.get(key), is(key));
+    }
+    int count = context.firstMiddleLastKeys().size();
+    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
 }

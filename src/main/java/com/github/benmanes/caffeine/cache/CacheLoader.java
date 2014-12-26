@@ -67,4 +67,20 @@ public interface CacheLoader<K, V> {
   default Map<K, V> loadAll(Iterable<? extends K> keys) {
     throw new UnsupportedOperationException();
   }
+
+  /**
+   * Computes or retrieves a replacement value corresponding to an already-cached {@code key}. This
+   * method is called when an existing cache entry is refreshed by
+   * {@link Caffeine#refreshAfterWrite}, or through a call to {@link LoadingCache#refresh}.
+   * <p>
+   * <b>Note:</b> <i>all exceptions thrown by this method will be logged and then swallowed</i>.
+   *
+   * @param key the non-null key whose value should be loaded
+   * @param oldValue the non-null old value corresponding to {@code key}
+   * @return the new value associated with {@code key}, or null if none
+   * @throws RuntimeException or Error, in which case the mapping is unchanged
+   */
+  default V refresh(K key, V oldValue) {
+    return load(key);
+  }
 }

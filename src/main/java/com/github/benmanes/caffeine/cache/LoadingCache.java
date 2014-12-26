@@ -88,20 +88,19 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
   Map<K, V> getAll(@Nonnull Iterable<? extends K> keys);
 
   /**
-   * Loads a new value for key {@code key}, possibly asynchronously. While the new value is loading
-   * the previous value (if any) will continue to be returned by {@code get(key)} unless it is
-   * evicted. If the new value is loaded successfully it will replace the previous value in the
-   * cache; if an exception is thrown while refreshing the previous value will remain, <i>and the
-   * exception will be logged (using {@link java.util.logging.Logger}) and swallowed</i>.
+   * Loads a new value for key {@code key}, asynchronously. While the new value is loading the
+   * previous value (if any) will continue to be returned by {@code get(key)} unless it is evicted.
+   * If the new value is loaded successfully it will replace the previous value in the cache; if an
+   * exception is thrown while refreshing the previous value will remain, <i>and the exception will
+   * be logged (using {@link java.util.logging.Logger}) and swallowed</i>.
    * <p>
    * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
    * currently contains a value for {@code key}, and {@link CacheLoader#load} otherwise. Loading is
    * asynchronous only if {@link CacheLoader#reload} was overridden with an asynchronous
    * implementation.
-   * <p>
-   * Returns without doing anything if another thread is currently loading the value for
-   * {@code key}. If the cache loader associated with this cache performs refresh asynchronously
-   * then this method may return before refresh completes.
+   *
+   * @param key key with which a value may be associated
+   * @throws NullPointerException if the specified key is null
    */
   void refresh(@Nonnull K key);
 }

@@ -22,6 +22,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Executor;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.github.benmanes.caffeine.UnsafeAccess;
 
@@ -29,11 +32,16 @@ import com.github.benmanes.caffeine.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class LocalLoadingCache<K, V> extends LocalManualCache<K, V> implements LoadingCache<K, V> {
-  private final CacheLoader<? super K, V> loader;
+  static final Logger logger = Logger.getLogger(LocalCache.class.getName());
 
-  LocalLoadingCache(LocalCache<K, V> localCache, CacheLoader<? super K, V> loader) {
+  final CacheLoader<? super K, V> loader;
+  final Executor executor;
+
+  LocalLoadingCache(LocalCache<K, V> localCache,
+      CacheLoader<? super K, V> loader, Executor executor) {
     super(localCache);
     this.loader = loader;
+    this.executor = executor;
   }
 
   @Override
@@ -56,7 +64,14 @@ final class LocalLoadingCache<K, V> extends LocalManualCache<K, V> implements Lo
 
   @Override
   public void refresh(K key) {
-    localCache.computeIfPresent(key, (k, v) -> loader.load(key));
+    requireNonNull(key);
+    executor.execute(() -> {
+      try {
+        localCache.compute(key, loader::refresh);
+      } catch (Throwable t) {
+        logger.log(Level.WARNING, "Exception thrown during refresh", t);
+      }
+    });
   }
 
   /* ---------------- Experiments -------------- */
