@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class PaddedAtomicInteger<T> extends AtomicInteger {
+public class PaddedAtomicInteger extends AtomicInteger {
   private static final long serialVersionUID = 1L;
 
   // Improve likelihood of isolation on <= 64 byte cache lines

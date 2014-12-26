@@ -15,24 +15,34 @@
  */
 package com.github.benmanes.caffeine.atomic;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.testng.annotations.Test;
 
 /**
- * An {@link AtomicBoolean} with heuristic padding to lessen cache effects of this heavily CAS'ed
- * location. While the padding adds noticeable space, the improved throughput outweighs using
- * extra space.
- *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class PaddedAtomicBoolean extends AtomicBoolean {
-  private static final long serialVersionUID = 1L;
+public class PaddedAtomicTest {
 
-  // Improve likelihood of isolation on <= 64 byte cache lines
-  long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
+  @Test
+  public void create_boolean() {
+    new PaddedAtomicBoolean();
+    new PaddedAtomicBoolean(true);
+  }
 
-  public PaddedAtomicBoolean() {}
+  @Test
+  public void create_int() {
+    new PaddedAtomicInteger();
+    new PaddedAtomicInteger(1);
+  }
 
-  public PaddedAtomicBoolean(boolean value) {
-    super(value);
+  @Test
+  public void create_long() {
+    new PaddedAtomicInteger();
+    new PaddedAtomicInteger(1);
+  }
+
+  @Test
+  public void create_reference() {
+    new PaddedAtomicReference<Void>();
+    new PaddedAtomicReference<Void>(null);
   }
 }
