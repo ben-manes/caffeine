@@ -29,20 +29,11 @@ import com.github.benmanes.caffeine.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class LocalLoadingCache<K, V> extends LocalManualCache<K, V> implements LoadingCache<K, V> {
-  private final CacheLoader<K, V> loader;
+  private final CacheLoader<? super K, V> loader;
 
-  LocalLoadingCache(LocalCache<K, V> localCache, CacheLoader<K, V> loader) {
+  LocalLoadingCache(LocalCache<K, V> localCache, CacheLoader<? super K, V> loader) {
     super(localCache);
     this.loader = loader;
-
-  }
-
-  private static boolean canBulkLoad(CacheLoader<?, ?> loader) {
-    try {
-      return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
-    } catch (NoSuchMethodException | SecurityException e) {
-      return false;
-    }
   }
 
   @Override
@@ -52,29 +43,29 @@ final class LocalLoadingCache<K, V> extends LocalManualCache<K, V> implements Lo
 
   @Override
   public Map<K, V> getAll(Iterable<? extends K> keys) {
-
-    return null;
+    Map<K, V> result = new HashMap<K, V>();
+    for (K key : keys) {
+      requireNonNull(key);
+      V value = localCache.computeIfAbsent(key, loader::load);
+      if (value != null) {
+        result.put(key, value);
+      }
+    }
+    return result;
   }
 
   @Override
-  public void refresh(K key) {}
+  public void refresh(K key) {
+    localCache.computeIfPresent(key, (k, v) -> loader.load(key));
+  }
 
   /* ---------------- Experiments -------------- */
 
-  static final class SingleLoadingCache<K, V> {
-    LocalCache<K, V> localCache;
-    CacheLoader<K, V> loader;
-
-    public Map<K, V> getAll(Iterable<? extends K> keys) {
-      Map<K, V> result = new HashMap<K, V>();
-      for (K key : keys) {
-        requireNonNull(key);
-        V value = localCache.computeIfAbsent(key, loader::load);
-        if (value != null) {
-          result.put(key, value);
-        }
-      }
-      return result;
+  private static boolean canBulkLoad(CacheLoader<?, ?> loader) {
+    try {
+      return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
+    } catch (NoSuchMethodException | SecurityException e) {
+      return false;
     }
   }
 

@@ -47,7 +47,7 @@ final class CacheGenerator {
     this.cacheSpec = cacheSpec;
   }
 
-  public Map<CacheContext, Cache<Integer, Integer>> generate() {
+  public Map<CacheContext, Cache<Integer, Integer>> generate(boolean requiresLoadingCache) {
     initialize();
     makeInitialCapacities();
     makeCacheStats();
@@ -57,7 +57,7 @@ final class CacheGenerator {
     // makeValueReferences();
     makeExecutors();
     makeRemovalListeners();
-    makeCachesAndPopulate();
+    makeCachesAndPopulate(requiresLoadingCache);
     return scenarios;
   }
 
@@ -137,22 +137,30 @@ final class CacheGenerator {
   }
 
   /** Constructs caches with the populated combinations. */
-  private void makeCachesAndPopulate() {
+  private void makeCachesAndPopulate(boolean requiresLoadingCache) {
     assertThat(cacheSpec.population().length, is(greaterThan(0)));
 
     for (CacheContext context : contexts) {
       for (Population population : cacheSpec.population()) {
         CacheContext copy = context.copy();
-        copy.population = population;
+        context.population = population;
 
-        Cache<Integer, Integer> cache = newCache(copy);
-        population.populate(copy, cache);
-        scenarios.put(copy, cache);
+        if (!requiresLoadingCache) {
+          makeCache(context, false);
+        }
+        makeCache(context, true);
       }
     }
   }
 
-  private static Cache<Integer, Integer> newCache(CacheContext context) {
+  private void makeCache(CacheContext context, boolean loading) {
+    CacheContext copy = context.copy();
+    Cache<Integer, Integer> cache = newCache(copy, loading);
+    context.population.populate(copy, cache);
+    scenarios.put(copy, cache);
+  }
+
+  private static Cache<Integer, Integer> newCache(CacheContext context, boolean loading) {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());
@@ -169,7 +177,11 @@ final class CacheGenerator {
     if (context.removalListener != null) {
       builder.removalListener(context.removalListener);
     }
-    context.cache = builder.build();
+    if (loading) {
+      context.cache = builder.build(key -> -key);
+    } else {
+      context.cache = builder.build();
+    }
     return context.cache;
   }
 }

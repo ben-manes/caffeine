@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.testng.annotations.DataProvider;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
@@ -49,7 +50,8 @@ public final class CacheProvider {
     requireNonNull(cacheSpec, "@CacheSpec not found");
 
     CacheGenerator generator = new CacheGenerator(cacheSpec);
-    Map<CacheContext, Cache<Integer, Integer>> scenarios = generator.generate();
+    boolean requiresLoadingCache = hasLoadingCache(testMethod);
+    Map<CacheContext, Cache<Integer, Integer>> scenarios = generator.generate(requiresLoadingCache);
 
     Class<?>[] parameterClasses = testMethod.getParameterTypes();
     List<Object[]> result = new ArrayList<>(scenarios.size());
@@ -69,5 +71,14 @@ public final class CacheProvider {
       result.add(params);
     }
     return result.iterator();
+  }
+
+  private static boolean hasLoadingCache(Method testMethod) throws Exception {
+    for (Class<?> param : testMethod.getParameterTypes()) {
+      if (LoadingCache.class.isAssignableFrom(param)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
