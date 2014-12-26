@@ -180,7 +180,16 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     boolean[] missed = new boolean[1];
     value = cache.computeIfAbsent(key, k -> {
       missed[0] = true;
-      return mappingFunction.apply(key);
+      long startTime = ticker.read();
+      try {
+        V result = mappingFunction.apply(key);
+        statsCounter().recordLoadSuccess(ticker.read() - startTime);
+        return result;
+      } catch (RuntimeException | Error e) {
+        statsCounter().recordLoadException(ticker.read() - startTime);
+        statsCounter().recordMisses(1);
+        throw e;
+      }
     });
     if (missed[0]) {
       statsCounter().recordMisses(1);
@@ -198,19 +207,19 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
     // optimistic fast path due to computeIfAbsent always locking
     if (!cache.containsKey(key)) {
       return null;
-    } else if (!hasRemovalListener()) {
-      return cache.computeIfPresent(key, remappingFunction);
     }
-
+    if (!hasRemovalListener()) {
+      return cache.computeIfPresent(key, makeStatsAware(remappingFunction));
+    }
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = cache.computeIfPresent(key, (K k, V oldValue) -> {
-      V newValue = remappingFunction.apply(k, oldValue);
+      V newValue = makeStatsAware(remappingFunction).apply(k, oldValue);
       notification[0] = (newValue == null)
           ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
           : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
-      return newValue;
+          return newValue;
     });
     if (notification[0] != null) {
       notifyRemoval(notification[0]);
@@ -222,14 +231,14 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   public V compute(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     if (!hasRemovalListener()) {
-      return cache.compute(key, remappingFunction);
+      return cache.compute(key, makeStatsAware(remappingFunction));
     }
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = cache.compute(key, (K k, V oldValue) -> {
-      V newValue = remappingFunction.apply(k, oldValue);
+      V newValue = makeStatsAware(remappingFunction).apply(k, oldValue);
       if (oldValue != null) {
         notification[0] = (newValue == null)
             ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
@@ -245,16 +254,16 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+    requireNonNull(remappingFunction);
     if (!hasRemovalListener()) {
-      return cache.merge(key, value, remappingFunction);
+      return cache.merge(key, value, makeStatsAware(remappingFunction));
     }
 
     // ensures that the removal notification is processed after the removal has completed
-    requireNonNull(remappingFunction);
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = cache.merge(key, value, (V oldValue, V val) -> {
-      V newValue = remappingFunction.apply(oldValue, val);
+      V newValue = makeStatsAware(remappingFunction).apply(oldValue, val);
       notification[0] = (newValue == null)
           ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
           : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
@@ -264,6 +273,25 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
       notifyRemoval(notification[0]);
     }
     return nv;
+  }
+
+  /** Decorates the remapping function to record statistics if enabled. */
+  <A, B, C> BiFunction<? super A, ? super B, ? extends C> makeStatsAware(
+      BiFunction<? super A, ? super B, ? extends C> remappingFunction) {
+    if (!isReordingStats()) {
+      return remappingFunction;
+    }
+    return (k, oldValue) -> {
+      long startTime = ticker.read();
+      try {
+        C newValue = remappingFunction.apply(k, oldValue);
+        statsCounter().recordLoadSuccess(ticker.read() - startTime);
+        return newValue;
+      } catch (RuntimeException | Error e) {
+        statsCounter().recordLoadException(ticker.read() - startTime);
+        throw e;
+      }
+    };
   }
 
   /* ---------------- Concurrent Map -------------- */

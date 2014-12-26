@@ -37,6 +37,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   @Nullable
   protected final RemovalListener<K, V> removalListener;
   protected final Executor executor;
+  protected final Ticker ticker;
 
   protected transient Set<K> keySet;
   protected transient Collection<V> values;
@@ -50,6 +51,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
     this.removalListener = builder.getRemovalListener();
     this.isRecordingStats = builder.isRecordingStats();
     this.executor = builder.executor;
+    this.ticker = builder.ticker();
   }
 
   protected void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {

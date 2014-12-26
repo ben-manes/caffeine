@@ -17,8 +17,11 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -65,11 +68,18 @@ public final class CacheTest {
 
   /* ---------------- getIfPresent -------------- */
 
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getIfPresent_nullKey(Cache<Integer, Integer> cache) {
+    cache.getIfPresent(null);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
-    assertThat(context, hasMissCount(1));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
   @Test(dataProvider = "caches")
@@ -79,35 +89,11 @@ public final class CacheTest {
     assertThat(cache.getIfPresent(context.firstKey()), is(not(nullValue())));
     assertThat(cache.getIfPresent(context.middleKey()), is(not(nullValue())));
     assertThat(cache.getIfPresent(context.lastKey()), is(not(nullValue())));
-    assertThat(context, hasHitCount(3));
-  }
-
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getIfPresent_nullKey(Cache<Integer, Integer> cache) {
-    cache.getIfPresent(null);
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
   /* ---------------- get -------------- */
-
-  @CacheSpec
-  @Test(dataProvider = "caches")
-  public void get_absent(Cache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.absentKey();
-    Integer value = cache.get(key, k -> -key);
-    assertThat(value, is(-key));
-    assertThat(context, hasMissCount(1));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void get_present(Cache<Integer, Integer> cache, CacheContext context) {
-    Function<Integer, Integer> loader = key -> { throw new RuntimeException(); };
-    assertThat(cache.get(context.firstKey(), loader), is(-context.firstKey()));
-    assertThat(cache.get(context.middleKey(), loader), is(-context.middleKey()));
-    assertThat(cache.get(context.lastKey(), loader), is(-context.lastKey()));
-    assertThat(context, hasHitCount(3));
-  }
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -131,16 +117,63 @@ public final class CacheTest {
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context) {
     cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
+
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void get_absent(Cache<Integer, Integer> cache, CacheContext context) {
+    Integer key = context.absentKey();
+    Integer value = cache.get(key, k -> -key);
+    assertThat(value, is(-key));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void get_present(Cache<Integer, Integer> cache, CacheContext context) {
+    Function<Integer, Integer> loader = key -> { throw new RuntimeException(); };
+    assertThat(cache.get(context.firstKey(), loader), is(-context.firstKey()));
+    assertThat(cache.get(context.middleKey(), loader), is(-context.middleKey()));
+    assertThat(cache.get(context.lastKey(), loader), is(-context.lastKey()));
+
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
   /* ---------------- getAllPresent -------------- */
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_iterable_null(Cache<Integer, Integer> cache) {
+    cache.getAllPresent(null);
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_iterable_nullKey(Cache<Integer, Integer> cache) {
+    cache.getAllPresent(Collections.singletonList(null));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_iterable_empty(Cache<Integer, Integer> cache) {
+    Map<Integer, Integer> result = cache.getAllPresent(ImmutableList.of());
+    assertThat(result.size(), is(0));
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAllPresent(context.absentKeys());
     assertThat(result.size(), is(0));
-    assertThat(context, hasMissCount(context.absentKeys().size()));
+
+    int count = context.absentKeys().size();
+    assertThat(context, both(hasMissCount(count)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
   @CacheSpec
@@ -159,7 +192,8 @@ public final class CacheTest {
     expect.put(context.lastKey(), -context.lastKey());
     Map<Integer, Integer> result = cache.getAllPresent(expect.keySet());
     assertThat(result, is(equalTo(expect)));
-    assertThat(context, hasHitCount(expect.size()));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(expect.size())));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
   @Test(dataProvider = "caches")
@@ -168,27 +202,8 @@ public final class CacheTest {
   public void getAllPresent_present_full(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAllPresent(cache.asMap().keySet());
     assertThat(result, is(equalTo(cache.asMap())));
-    assertThat(context, hasHitCount(result.size()));
-    assertThat(context, hasMissCount(0));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_iterable_empty(Cache<Integer, Integer> cache) {
-    Map<Integer, Integer> result = cache.getAllPresent(ImmutableList.of());
-    assertThat(result.size(), is(0));
-  }
-
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_iterable_nullKey(Cache<Integer, Integer> cache) {
-    cache.getAllPresent(Collections.singletonList(null));
-  }
-
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_iterable_null(Cache<Integer, Integer> cache) {
-    cache.getAllPresent(null);
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
   /* ---------------- put -------------- */

@@ -126,6 +126,10 @@ public final class Caffeine<K, V> {
     return statsCounterSupplier == ENABLED_STATS_COUNTER_SUPPLIER;
   }
 
+  Ticker ticker() {
+    return Ticker.disabledTicker();
+  }
+
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
     LocalCache<K1, V1> localCache = new UnboundedLocalCache<>(this);
     return new LocalManualCache<K1, V1>(localCache);
