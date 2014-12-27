@@ -37,10 +37,8 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -49,6 +47,7 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.github.benmanes.caffeine.SingleConsumerQueue;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 
@@ -179,8 +178,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   // The backing data store holding the key-value associations
-  final ConcurrentMap<K, Node<K, V>> data;
-  final int concurrencyLevel;
+  final ConcurrentHashMap<K, Node<K, V>> data;
 
   // These fields provide support to bound the map by a maximum capacity
   @GuardedBy("evictionLock")
@@ -214,18 +212,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * Creates an instance based on the builder's configuration.
    */
   @SuppressWarnings({"unchecked", "cast"})
-  private BoundedLocalCache(Builder<K, V> builder) {
+  private BoundedLocalCache(Caffeine<K, V> builder) {
     // The data store and its maximum capacity
-    concurrencyLevel = builder.concurrencyLevel;
-    capacity = new PaddedAtomicLong(Math.min(builder.capacity, MAXIMUM_CAPACITY));
-    data = new ConcurrentHashMap<K, Node<K, V>>(builder.initialCapacity, 0.75f, concurrencyLevel);
+    data = new ConcurrentHashMap<K, Node<K, V>>(builder.initialCapacity);
+
+    if (builder.maximumSize != Caffeine.UNSET_INT) {
+      capacity = new PaddedAtomicLong(Math.min(builder.maximumSize, MAXIMUM_CAPACITY));
+    } else if (builder.maximumWeight == Caffeine.UNSET_INT) {
+      capacity = new PaddedAtomicLong(Math.min(builder.maximumWeight, MAXIMUM_CAPACITY));
+    } else {
+      throw new AssertionError("Requires a maximum size, for now");
+    }
 
     // The eviction support
     weigher = builder.weigher;
     evictionLock = new ReentrantLock();
     weightedSize = new PaddedAtomicLong();
     evictionDeque = new LinkedDeque<Node<K, V>>();
-    writeBuffer = new ConcurrentLinkedQueue<Runnable>();
+    writeBuffer = new SingleConsumerQueue<Runnable>();
     drainStatus = new PaddedAtomicReference<DrainStatus>(IDLE);
 
     readBufferReadCount = new long[NUMBER_OF_READ_BUFFERS];
@@ -242,22 +246,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     // The notification queue and listener
-    removalListener = builder.removalListener;
+    removalListener = (RemovalListener<K, V>) builder.removalListener;
     executor = builder.executor;
-  }
-
-  /** Ensures that the argument expression is true. */
-  static void checkArgument(boolean expression) {
-    if (!expression) {
-      throw new IllegalArgumentException();
-    }
-  }
-
-  /** Ensures that the state expression is true. */
-  static void checkState(boolean expression) {
-    if (!expression) {
-      throw new IllegalStateException();
-    }
   }
 
   /* ---------------- Eviction Support -------------- */
@@ -279,7 +269,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * @throws IllegalArgumentException if the capacity is negative
    */
   public void setCapacity(long capacity) {
-    checkArgument(capacity >= 0);
+    Caffeine.checkArgument(capacity >= 0);
     evictionLock.lock();
     try {
       this.capacity.lazySet(Math.min(capacity, MAXIMUM_CAPACITY));
@@ -598,6 +588,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
+   * Returns the number of mappings. The value returned is an estimate; the actual count may differ
+   * if there are concurrent insertions or removals.
+   *
+   * @return the number of mappings
+   */
+  public long mappingCount() {
+    return data.mappingCount();
+  }
+
+  /**
    * Returns the weighted size of this map.
    *
    * @return the combined weight of the values in this map
@@ -911,12 +911,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   Set<K> orderedKeySet(boolean ascending, int limit) {
-    checkArgument(limit >= 0);
+    Caffeine.checkArgument(limit >= 0);
     evictionLock.lock();
     try {
       drainBuffers();
 
-      final int initialCapacity = (weigher == SingletonWeigher.INSTANCE)
+      final int initialCapacity = (weigher == Caffeine.SingletonWeigher.INSTANCE)
           ? Math.min(limit, (int) weightedSize())
           : 16;
       final Set<K> keys = new LinkedHashSet<K>(initialCapacity);
@@ -1021,12 +1021,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   Map<K, V> orderedMap(boolean ascending, int limit) {
-    checkArgument(limit >= 0);
+    Caffeine.checkArgument(limit >= 0);
     evictionLock.lock();
     try {
       drainBuffers();
 
-      final int initialCapacity = (weigher == SingletonWeigher.INSTANCE)
+      final int initialCapacity = (weigher == Caffeine.SingletonWeigher.INSTANCE)
           ? Math.min(limit, (int) weightedSize())
           : 16;
       final Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
@@ -1222,7 +1222,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public void remove() {
-      checkState(current != null);
+      Caffeine.checkState(current != null);
       BoundedLocalCache.this.remove(current);
       current = null;
     }
@@ -1270,7 +1270,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public void remove() {
-      checkState(current != null);
+      Caffeine.checkState(current != null);
       BoundedLocalCache.this.remove(current.key);
       current = null;
     }
@@ -1338,7 +1338,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public void remove() {
-      checkState(current != null);
+      Caffeine.checkState(current != null);
       BoundedLocalCache.this.remove(current.key);
       current = null;
     }
@@ -1376,7 +1376,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @Override
     public int weigh(K key, V value) {
       int weight = weigher.weigh(key, value);
-      checkArgument(weight >= 1);
+      Caffeine.checkArgument(weight >= 1);
       return weight;
     }
 
@@ -1407,12 +1407,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   static final class SerializationProxy<K, V> implements Serializable {
     final Weigher<? super K, ? super V> weigher;
     final RemovalListener<K, V> removalListener;
-    final int concurrencyLevel;
     final Map<K, V> data;
     final long capacity;
 
     SerializationProxy(BoundedLocalCache<K, V> map) {
-      concurrencyLevel = map.concurrencyLevel;
       removalListener = map.removalListener;
       data = new HashMap<K, V>(map);
       capacity = map.capacity.get();
@@ -1420,146 +1418,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     Object readResolve() {
-      BoundedLocalCache<K, V> map = new Builder<K, V>()
-          .concurrencyLevel(concurrencyLevel)
-          .maximumWeightedCapacity(capacity)
+      Caffeine<K, V> builder = new Caffeine<>()
           .removalListener(removalListener)
-          .weigher(weigher)
-          .build();
+          .maximumWeight(capacity)
+          .weigher(weigher);
+      BoundedLocalCache<K, V> map = new BoundedLocalCache<>(builder);
       map.putAll(data);
       return map;
     }
 
     static final long serialVersionUID = 1;
-  }
-
-  enum SingletonWeigher implements Weigher<Object, Object> {
-    INSTANCE;
-
-    @Override
-    public int weigh(Object key, Object value) {
-      return 1;
-    }
-  }
-
-  /* ---------------- Builder -------------- */
-
-  /**
-   * A builder that creates {@link BoundedLocalCache} instances. It
-   * provides a flexible approach for constructing customized instances with
-   * a named parameter syntax. It can be used in the following manner:
-   * <pre>{@code
-   * ConcurrentMap<Vertex, Set<Edge>> graph = new Builder<Vertex, Set<Edge>>()
-   *     .maximumWeightedCapacity(5000)
-   *     .weigher(Weighers.<Edge>set())
-   *     .build();
-   * }</pre>
-   */
-  public static final class Builder<K, V> {
-    static final int DEFAULT_CONCURRENCY_LEVEL = 16;
-    static final int DEFAULT_INITIAL_CAPACITY = 16;
-
-    RemovalListener<K, V> removalListener;
-    Weigher<? super K, ? super V> weigher;
-    Executor executor;
-
-    int concurrencyLevel;
-    int initialCapacity;
-    long capacity;
-
-    public Builder() {
-      capacity = -1;
-      initialCapacity = DEFAULT_INITIAL_CAPACITY;
-      concurrencyLevel = DEFAULT_CONCURRENCY_LEVEL;
-      executor = ForkJoinPool.commonPool();
-      weigher = SingletonWeigher.INSTANCE;
-    }
-
-    /**
-     * Specifies the initial capacity of the hash table (default <tt>16</tt>).
-     * This is the number of key-value pairs that the hash table can hold
-     * before a resize operation is required.
-     *
-     * @param initialCapacity the initial capacity used to size the hash table
-     *     to accommodate this many entries.
-     * @throws IllegalArgumentException if the initialCapacity is negative
-     */
-    public Builder<K, V> initialCapacity(int initialCapacity) {
-      checkArgument(initialCapacity >= 0);
-      this.initialCapacity = initialCapacity;
-      return this;
-    }
-
-    /**
-     * Specifies the maximum weighted capacity to coerce the map to and may
-     * exceed it temporarily.
-     *
-     * @param capacity the weighted threshold to bound the map by
-     * @throws IllegalArgumentException if the maximumWeightedCapacity is
-     *     negative
-     */
-    public Builder<K, V> maximumWeightedCapacity(long capacity) {
-      checkArgument(capacity >= 0);
-      this.capacity = capacity;
-      return this;
-    }
-
-    /**
-     * Specifies the estimated number of concurrently updating threads. The
-     * implementation performs internal sizing to try to accommodate this many
-     * threads (default <tt>16</tt>).
-     *
-     * @param concurrencyLevel the estimated number of concurrently updating
-     *     threads
-     * @throws IllegalArgumentException if the concurrencyLevel is less than or
-     *     equal to zero
-     */
-    public Builder<K, V> concurrencyLevel(int concurrencyLevel) {
-      checkArgument(concurrencyLevel > 0);
-      this.concurrencyLevel = concurrencyLevel;
-      return this;
-    }
-
-    public Builder<K, V> executor(Executor executor) {
-      this.executor = requireNonNull(executor);
-      return this;
-    }
-
-    /**
-     * Specifies an optional listener that is registered for notification when
-     * an entry is evicted.
-     *
-     * @param removalListener the object to forward evicted entries to
-     * @throws NullPointerException if the listener is null
-     */
-    public Builder<K, V> removalListener(RemovalListener<K, V> removalListener) {
-      requireNonNull(removalListener);
-      this.removalListener = removalListener;
-      return this;
-    }
-
-    /**
-     * Specifies an algorithm to determine how many the units of capacity an
-     * entry consumes. The default algorithm bounds the map by the number of
-     * key-value pairs by giving each entry a weight of <tt>1</tt>.
-     *
-     * @param weigher the algorithm to determine a entry's weight
-     * @throws NullPointerException if the weigher is null
-     */
-    public Builder<K, V> weigher(Weigher<? super K, ? super V> weigher) {
-      this.weigher = new BoundedEntryWeigher<K, V>(weigher);
-      return this;
-    }
-
-    /**
-     * Creates a new {@link BoundedLocalCache} instance.
-     *
-     * @throws IllegalStateException if the maximum weighted capacity was
-     *     not set
-     */
-    public BoundedLocalCache<K, V> build() {
-      checkState(capacity >= 0);
-      return new BoundedLocalCache<K, V>(this);
-    }
   }
 }

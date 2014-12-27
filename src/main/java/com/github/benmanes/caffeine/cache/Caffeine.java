@@ -32,10 +32,17 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Caffeine<K, V> {
-  private static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER =
+  static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER =
       () -> DisabledStatsCounter.INSTANCE;
-  private static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
+  static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
       () -> new ConcurrentStatsCounter();
+  static final int DEFAULT_CONCURRENCY_LEVEL = 16;
+  static final int DEFAULT_INITIAL_CAPACITY = 16;
+  static final int UNSET_INT = -1;
+
+  long maximumSize = UNSET_INT;
+  long maximumWeight = UNSET_INT;
+  Weigher<? super K, ? super V> weigher;
 
   RemovalListener<? super K, ? super V> removalListener;
   Supplier<StatsCounter> statsCounterSupplier;
@@ -131,6 +138,24 @@ public final class Caffeine<K, V> {
     return Ticker.disabledTicker();
   }
 
+  public Caffeine<K, V> maximumSize(long size) {
+    this.maximumSize = size;
+    return this;
+  }
+
+  public <K1 extends K, V1 extends V> Caffeine<K1, V1> weigher(
+      Weigher<? super K1, ? super V1> weigher) {
+    @SuppressWarnings("unchecked")
+    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    self.weigher = weigher;
+    return self;
+  }
+
+  public Caffeine<K, V> maximumWeight(long weight) {
+    this.maximumWeight = weight;
+    return this;
+  }
+
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
@@ -150,4 +175,14 @@ public final class Caffeine<K, V> {
     @Override
     public void onRemoval(RemovalNotification<Object, Object> notification) {}
   }
+
+  enum SingletonWeigher implements Weigher<Object, Object> {
+    INSTANCE;
+
+    @Override
+    public int weigh(Object key, Object value) {
+      return 1;
+    }
+  }
+
 }
