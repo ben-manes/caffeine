@@ -237,8 +237,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   }
 
   @Override
-  public V compute(K key,
-      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     if (!hasRemovalListener()) {
       return cache.compute(key, makeStatsAware(remappingFunction));
     }

@@ -42,6 +42,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -251,6 +253,18 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     executor = builder.executor;
   }
 
+  /** Returns whether this cache notifies when an entry is removed. */
+  boolean hasRemovalListener() {
+    return (removalListener != null);
+  }
+
+  /** Asynchronously sends a removal notification to the listener. */
+  protected void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
+    requireNonNull(removalListener, "Notification should be guarded with a check");
+    executor.execute(() -> removalListener.onRemoval(
+        new RemovalNotification<K, V>(key, value, cause)));
+  }
+
   /* ---------------- Eviction Support -------------- */
 
   /**
@@ -309,12 +323,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       }
 
       // Notify the listener only if the entry was evicted
-      if (data.remove(node.key, node) && (removalListener != null)) {
-        executor.execute(() -> {
-          RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
-              node.key, node.getValue(), RemovalCause.SIZE);
-          removalListener.onRemoval(notification);
-        });
+      if (data.remove(node.key, node) && hasRemovalListener()) {
+        notifyRemoval(node.key, node.getValue(), RemovalCause.SIZE);
       }
 
       makeDead(node);
@@ -729,10 +739,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           } else {
             afterWrite(new UpdateTask(prior, weightedDifference));
           }
-          if (removalListener != null) {
-            RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
-                key, oldWeightedValue.value, RemovalCause.REPLACED);
-            executor.execute(() -> removalListener.onRemoval(notification));
+          if (hasRemovalListener()) {
+            notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
           }
           return oldWeightedValue.value;
         }
@@ -750,11 +758,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     WeightedValue<V> retired = makeRetired(node);
     afterWrite(new RemovalTask(node));
 
-    if ((removalListener != null) && (retired != null)) {
+    if (hasRemovalListener() && (retired != null)) {
       @SuppressWarnings("unchecked")
-      RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
-          (K) key, retired.value, RemovalCause.EXPLICIT);
-      executor.execute(() -> removalListener.onRemoval(notification));
+      K castKey = (K) key;
+      notifyRemoval(castKey, retired.value, RemovalCause.EXPLICIT);
     }
     return node.getValue();
   }
@@ -773,10 +780,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           if (data.remove(key, node)) {
             afterWrite(new RemovalTask(node));
 
-            @SuppressWarnings("unchecked")
-            RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
-                (K) key, node.getValue(), RemovalCause.EXPLICIT);
-            executor.execute(() -> removalListener.onRemoval(notification));
+            if (hasRemovalListener()) {
+              @SuppressWarnings("unchecked")
+              K castKey = (K) key;
+              notifyRemoval(castKey, node.getValue(), RemovalCause.EXPLICIT);
+            }
             return true;
           }
         } else {
@@ -816,10 +824,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         } else {
           afterWrite(new UpdateTask(node, weightedDifference));
         }
-        if (removalListener != null) {
-          RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
-              key, oldWeightedValue.value, RemovalCause.REPLACED);
-          executor.execute(() -> removalListener.onRemoval(notification));
+        if (hasRemovalListener()) {
+          notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
         }
         return oldWeightedValue.value;
       }
@@ -851,15 +857,87 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         } else {
           afterWrite(new UpdateTask(node, weightedDifference));
         }
-        if (removalListener != null) {
-          RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
-              key, oldWeightedValue.value, RemovalCause.REPLACED);
-          executor.execute(() -> removalListener.onRemoval(notification));
+        if (hasRemovalListener()) {
+          notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
         }
         return true;
       }
     }
   }
+
+  @Override
+  public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+    // optimistic fast path due to computeIfAbsent always locking
+    Node<K, V> node = data.get(key);
+    if (node != null) {
+      afterRead(node);
+      return node.getValue();
+    }
+
+    @SuppressWarnings("unchecked")
+    WeightedValue<V>[] weightedValue = new WeightedValue[1];
+    node = data.computeIfAbsent(key, k -> {
+      V value = mappingFunction.apply(k);
+      int weight = weigher.weigh(key, value);
+      weightedValue[0] = new WeightedValue<V>(value, weight);
+      return new Node<K, V>(key, weightedValue[0]);
+    });
+    if (weightedValue[0] == null) {
+      afterRead(node);
+      return node.getValue();
+    } else {
+      afterWrite(new AddTask(node, weightedValue[0].weight));
+      return weightedValue[0].value;
+    }
+  }
+
+  @Override
+  public V computeIfPresent(K key,
+      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    // optimistic fast path due to computeIfAbsent always locking
+    if (!data.containsKey(key)) {
+      return null;
+    }
+
+    // FIXME(ben): Update all CAS-based updates to synchronize instead...
+    // A race condition may occur on updates (#put and #replace) because the node is mutated instead
+    // of the map. This is solved by synchronize on the node to ensure exclusive access
+    @SuppressWarnings("unchecked")
+    WeightedValue<V>[] weightedValue = new WeightedValue[1];
+    Runnable[] task = new Runnable[1];
+    Node<K, V> node = data.computeIfPresent(key, (k, prior) -> {
+      synchronized (prior) {
+        WeightedValue<V> oldWeightedValue = prior.get();
+        V newValue = remappingFunction.apply(k, oldWeightedValue.value);
+        if (newValue == null) {
+          makeRetired(prior);
+          task[0] = new RemovalTask(prior);
+          return null;
+        } else {
+          int weight = weigher.weigh(key, newValue);
+          WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValue, weight);
+          prior.set(newWeightedValue);
+          weightedValue[0] = newWeightedValue;
+          final int weightedDifference = weight - oldWeightedValue.weight;
+          if (weightedDifference != 0) {
+            task[0] = new UpdateTask(prior, weightedDifference);
+          }
+          return prior;
+        }
+      }
+    });
+    if (task[0] == null) {
+      afterRead(node);
+    } else {
+      afterWrite(task[0]);
+    }
+    return (weightedValue[0] == null) ? null : weightedValue[0].value;
+  }
+
+  /*
+  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {}
+  public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+  */
 
   @Override
   public Set<K> keySet() {
