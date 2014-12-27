@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -484,16 +485,17 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * <tt>retired</tt> state, if a valid transition.
    *
    * @param node the entry in the page replacement policy
+   * @return the retired weighted value if the transition was successful or null otherwise
    */
-  void makeRetired(Node<K, V> node) {
+  @Nullable WeightedValue<V> makeRetired(Node<K, V> node) {
     for (;;) {
       final WeightedValue<V> current = node.get();
       if (!current.isAlive()) {
-        return;
+        return null;
       }
       final WeightedValue<V> retired = new WeightedValue<V>(current.value, -current.weight);
       if (node.compareAndSet(current, retired)) {
-        return;
+        return retired;
       }
     }
   }
@@ -727,6 +729,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           } else {
             afterWrite(new UpdateTask(prior, weightedDifference));
           }
+          if (removalListener != null) {
+            RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
+                key, oldWeightedValue.value, RemovalCause.REPLACED);
+            executor.execute(() -> removalListener.onRemoval(notification));
+          }
           return oldWeightedValue.value;
         }
       }
@@ -740,8 +747,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return null;
     }
 
-    makeRetired(node);
+    WeightedValue<V> retired = makeRetired(node);
     afterWrite(new RemovalTask(node));
+
+    if ((removalListener != null) && (retired != null)) {
+      @SuppressWarnings("unchecked")
+      RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
+          (K) key, retired.value, RemovalCause.EXPLICIT);
+      executor.execute(() -> removalListener.onRemoval(notification));
+    }
     return node.getValue();
   }
 
@@ -758,6 +772,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         if (tryToRetire(node, weightedValue)) {
           if (data.remove(key, node)) {
             afterWrite(new RemovalTask(node));
+
+            @SuppressWarnings("unchecked")
+            RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
+                (K) key, node.getValue(), RemovalCause.EXPLICIT);
+            executor.execute(() -> removalListener.onRemoval(notification));
             return true;
           }
         } else {
@@ -797,6 +816,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         } else {
           afterWrite(new UpdateTask(node, weightedDifference));
         }
+        if (removalListener != null) {
+          RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
+              key, oldWeightedValue.value, RemovalCause.REPLACED);
+          executor.execute(() -> removalListener.onRemoval(notification));
+        }
         return oldWeightedValue.value;
       }
     }
@@ -816,16 +840,21 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return false;
     }
     for (;;) {
-      final WeightedValue<V> weightedValue = node.get();
-      if (!weightedValue.isAlive() || !weightedValue.contains(oldValue)) {
+      final WeightedValue<V> oldWeightedValue = node.get();
+      if (!oldWeightedValue.isAlive() || !oldWeightedValue.contains(oldValue)) {
         return false;
       }
-      if (node.compareAndSet(weightedValue, newWeightedValue)) {
-        final int weightedDifference = weight - weightedValue.weight;
+      if (node.compareAndSet(oldWeightedValue, newWeightedValue)) {
+        final int weightedDifference = weight - oldWeightedValue.weight;
         if (weightedDifference == 0) {
           afterRead(node);
         } else {
           afterWrite(new UpdateTask(node, weightedDifference));
+        }
+        if (removalListener != null) {
+          RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
+              key, oldWeightedValue.value, RemovalCause.REPLACED);
+          executor.execute(() -> removalListener.onRemoval(notification));
         }
         return true;
       }
