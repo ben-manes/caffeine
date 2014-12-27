@@ -29,6 +29,7 @@ import org.testng.annotations.DataProvider;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.common.collect.Iterators;
 
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
@@ -70,7 +71,7 @@ public final class CacheProvider {
       }
       result.add(params);
     }
-    return result.iterator();
+    return Iterators.consumingIterator(result.iterator());
   }
 
   private static boolean hasLoadingCache(Method testMethod) throws Exception {
