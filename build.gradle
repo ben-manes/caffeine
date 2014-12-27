@@ -69,7 +69,7 @@ dependencies {
   }
   
   // benchmarking
-  jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.4', 'org.openjdk.jmh:jmh-core:1.4'
+  jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.4.1', 'org.openjdk.jmh:jmh-core:1.4.1'
   jmh 'net.openhft:koloboke-api-jdk8:0.6.5', 'net.openhft:koloboke-impl-jdk8:0.6.5'
   jmh 'com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:1.4.1'
   jmh 'com.github.stephenc.high-scale-lib:high-scale-lib:1.1.4'
@@ -82,7 +82,7 @@ dependencies {
 test {
   useTestNG()
   options {
-    threadCount = 4
+    threadCount = System.env.'CI' ? 1 : 4
     parallel = 'methods'
   }
   testLogging {
