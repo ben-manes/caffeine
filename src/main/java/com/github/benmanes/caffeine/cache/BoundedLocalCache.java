@@ -29,6 +29,7 @@ import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -53,6 +54,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.SingleConsumerQueue;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
  * A hash table supporting full concurrency of retrievals, adjustable expected
@@ -61,7 +64,7 @@ import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
  * page replacement algorithm that is used to evict an entry when the map has
  * exceeded its capacity. Unlike the <tt>Java Collections Framework</tt>, this
  * map does not have a publicly visible constructor and instances are created
- * through a {@link Builder}.
+ * through a {@link Caffeine}.
  * <p>
  * An entry is evicted from the map when the <tt>weighted capacity</tt> exceeds
  * its <tt>maximum weighted capacity</tt> threshold. A {@link Weigher}
@@ -207,6 +210,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   final RemovalListener<K, V> removalListener;
   final Executor executor;
 
+  final StatsCounter statsCounter;
+
   transient Set<K> keySet;
   transient Collection<V> values;
   transient Set<Entry<K, V>> entrySet;
@@ -251,6 +256,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     // The notification queue and listener
     removalListener = (RemovalListener<K, V>) builder.removalListener;
     executor = builder.executor;
+
+    statsCounter = builder.statsCounterSupplier.get();
   }
 
   /** Returns whether this cache notifies when an entry is removed. */
@@ -673,6 +680,32 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return node.getValue();
   }
 
+  // TODO(ben): JavaDoc
+  public Map<K, V> getAllPresent(Iterable<?> keys) {
+    int misses = 0;
+    Map<K, V> result = new LinkedHashMap<>();
+    for (Object key : keys) {
+      final Node<K, V> node = data.get(key);
+      if (node == null) {
+        return null;
+      }
+      V value = node.getValue();
+      if (value == null) {
+        misses++;
+      } else {
+        @SuppressWarnings("unchecked")
+        K castKey = (K) key;
+        result.put(castKey, value);
+
+        // TODO(ben): batch reads to call tryLock once
+        afterRead(node);
+      }
+    }
+    statsCounter.recordMisses(misses);
+    statsCounter.recordHits(result.size());
+    return Collections.unmodifiableMap(result);
+  }
+
   /**
    * Returns the value to which the specified key is mapped, or {@code null}
    * if this map contains no mapping for the key. This method differs from
@@ -900,8 +933,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     // FIXME(ben): Update all CAS-based updates to synchronize instead...
-    // A race condition may occur on updates (#put and #replace) because the node is mutated instead
-    // of the map. This is solved by synchronize on the node to ensure exclusive access
+    // A race condition may occur on updates (#put, #replace, conditional remove) because the
+    // node is mutated instead of the map. This is solved by synchronize on the node to ensure
+    // exclusive access
     @SuppressWarnings("unchecked")
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     Runnable[] task = new Runnable[1];
@@ -916,7 +950,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         } else {
           int weight = weigher.weigh(key, newValue);
           WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValue, weight);
-          prior.set(newWeightedValue);
+          prior.lazySet(newWeightedValue);
           weightedValue[0] = newWeightedValue;
           final int weightedDifference = weight - oldWeightedValue.weight;
           if (weightedDifference != 0) {
@@ -934,10 +968,65 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return (weightedValue[0] == null) ? null : weightedValue[0].value;
   }
 
-  /*
-  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {}
+  /**
+     * V oldValue = map.get(key);
+     * V newValue = remappingFunction.apply(key, oldValue);
+     * if (oldValue != null ) {
+     *    if (newValue != null)
+     *       map.put(key, newValue);
+     *    else
+     *       map.remove(key);
+     * } else {
+     *    if (newValue != null)
+     *       map.put(key, newValue);
+     *    else
+     *       return null;
+     * }
+     * }
+   */
+  @Override
+  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    Runnable[] task = new Runnable[0];
+
+    Node<K, V> node = data.compute(key, (k, prior) -> {
+      if (prior == null) {
+        V newValue = remappingFunction.apply(k, null);
+        if (newValue == null) {
+          return null;
+        }
+        final int weight = weigher.weigh(key, newValue);
+        final WeightedValue<V> weightedValue = new WeightedValue<V>(newValue, weight);
+        final Node<K, V> newNode = new Node<K, V>(key, weightedValue);
+        task[0] = new AddTask(newNode, weight);
+        return newNode;
+      }
+      synchronized (prior) {
+        WeightedValue<V> oldWeightedValue = prior.get();
+        if (!oldWeightedValue.isAlive()) {
+          // conditionally removed..
+        }
+      }
+      V newValue = remappingFunction.apply(k, null);
+
+      // update
+      return null;
+    });
+    return null;
+  }
+
+  /**
+   * V oldValue = map.get(key);
+   * V newValue = (oldValue == null) ? value :
+   *              remappingFunction.apply(oldValue, value);
+   * if (newValue == null)
+   *     map.remove(key);
+   * else
+   *     map.put(key, newValue);
+   */
+  @Override
   public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-  */
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public Set<K> keySet() {
@@ -1535,5 +1624,81 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     static final long serialVersionUID = 1;
+  }
+
+  static class LocalManualCache<K, V> implements Cache<K, V> {
+    BoundedLocalCache<K, V> cache;
+
+    LocalManualCache(Caffeine<K, V> builder) {
+      this.cache = new BoundedLocalCache<>(builder);
+    }
+
+    @Override
+    public V getIfPresent(Object key) {
+      return cache.get(key);
+    }
+
+    @Override
+    public V get(K key, Function<? super K, ? extends V> mappingFunction) {
+      return cache.computeIfAbsent(key, mappingFunction);
+    }
+
+    @Override
+    public Map<K, V> getAllPresent(Iterable<?> keys) {
+      return cache.getAllPresent(keys);
+    }
+
+    @Override
+    public void put(K key, V value) {
+      cache.put(key, value);
+    }
+
+    @Override
+    public void putAll(Map<? extends K, ? extends V> map) {
+      cache.putAll(map);
+    }
+
+    @Override
+    public void invalidate(Object key) {
+      cache.remove(key);
+    }
+
+    @Override
+    public void invalidateAll(Iterable<?> keys) {
+      for (Object key : keys) {
+        cache.remove(key);
+      }
+    }
+
+    @Override
+    public void invalidateAll() {
+      cache.clear();
+    }
+
+    @Override
+    public long size() {
+      return cache.mappingCount();
+    }
+
+    @Override
+    public CacheStats stats() {
+      return cache.statsCounter.snapshot();
+    }
+
+    @Override
+    public ConcurrentMap<K, V> asMap() {
+      return cache;
+    }
+
+    @Override
+    public void cleanUp() {
+      final Lock evictionLock = cache.evictionLock;
+      evictionLock.lock();
+      try {
+        cache.drainBuffers();
+      } finally {
+        evictionLock.unlock();
+      }
+    }
   }
 }

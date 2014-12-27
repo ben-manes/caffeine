@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
@@ -51,6 +52,7 @@ import com.google.common.collect.ImmutableSet;
 public final class CacheContext {
   @Nullable RemovalListener<Integer, Integer> removalListener;
   Listener removalListenerType;
+  MaximumSize maximumSize;
   Population population;
 
   Stats stats;
@@ -59,7 +61,6 @@ public final class CacheContext {
   InitialCapacity initialCapacity;
   Executor executor;
 
-  @Nullable Integer maximumSize;
   @Nullable Integer firstKey;
   @Nullable Integer middleKey;
   @Nullable Integer lastKey;
@@ -121,11 +122,11 @@ public final class CacheContext {
 
   public long maximumSize() {
     assertThat("Invalid usage of context", maximumSize, is(not(nullValue())));
-    return maximumSize;
+    return maximumSize.max();
   }
 
   public boolean isUnbounded() {
-    return (maximumSize == null);
+    return (maximumSize == MaximumSize.DISABLED) || (maximumSize == MaximumSize.UNREACHABLE);
   }
 
   public Map<Integer, Integer> original() {

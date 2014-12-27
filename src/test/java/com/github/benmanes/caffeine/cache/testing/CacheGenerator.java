@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.google.common.collect.ImmutableList;
@@ -51,8 +52,8 @@ final class CacheGenerator {
     initialize();
     makeInitialCapacities();
     makeCacheStats();
+    makeMaximumSizes();
     // Disabled until supported to avoid duplicated tests
-    // makeMaximumSizes();
     // makeKeyReferences();
     // makeValueReferences();
     makeExecutors();
@@ -96,7 +97,15 @@ final class CacheGenerator {
 
   /** Generates a new set of contexts with the maximum size combinations. */
   private void makeMaximumSizes() {
-    // TODO(ben): Support eviction
+    List<CacheContext> combinations = new ArrayList<>();
+    for (CacheContext context : contexts) {
+      for (MaximumSize maximumSize : cacheSpec.maximumSize()) {
+        CacheContext copy = context.copy();
+        copy.maximumSize = maximumSize;
+        combinations.add(copy);
+      }
+    }
+    contexts = combinations;
   }
 
   /** Generates a new set of contexts with the key reference combinations. */
@@ -166,8 +175,8 @@ final class CacheGenerator {
     if (context.isRecordingStats()) {
       builder.recordStats();
     }
-    if (context.maximumSize != null) {
-      throw new UnsupportedOperationException();
+    if (context.maximumSize != MaximumSize.DISABLED) {
+      builder.maximumSize(context.maximumSize.max());
     }
     if (context.executor != null) {
       builder.executor(context.executor);

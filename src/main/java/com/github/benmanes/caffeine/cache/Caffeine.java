@@ -50,6 +50,7 @@ public final class Caffeine<K, V> {
   Executor executor;
 
   public Caffeine() {
+    weigher = SingletonWeigher.INSTANCE;
     executor = ForkJoinPool.commonPool();
     statsCounterSupplier = DISABLED_STATS_COUNTER_SUPPLIER;
   }
@@ -117,14 +118,6 @@ public final class Caffeine<K, V> {
     throw new UnsupportedOperationException();
   }
 
-  public Caffeine<K, V> maximumSize() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Caffeine<K, V> maximumWeight() {
-    throw new UnsupportedOperationException();
-  }
-
   public Caffeine<K, V> recordStats() {
     statsCounterSupplier = ENABLED_STATS_COUNTER_SUPPLIER;
     return this;
@@ -159,7 +152,10 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return new UnboundedLocalCache.LocalManualCache<K1, V1>(self);
+
+    return (maximumSize == UNSET_INT)
+        ? new UnboundedLocalCache.LocalManualCache<K1, V1>(self)
+        : new BoundedLocalCache.LocalManualCache<K1, V1>(self);
   }
 
   public <K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
