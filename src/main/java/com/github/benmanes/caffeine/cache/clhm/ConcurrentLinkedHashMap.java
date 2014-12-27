@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.clhm;
 import static com.github.benmanes.caffeine.cache.clhm.ConcurrentLinkedHashMap.DrainStatus.IDLE;
 import static com.github.benmanes.caffeine.cache.clhm.ConcurrentLinkedHashMap.DrainStatus.PROCESSING;
 import static com.github.benmanes.caffeine.cache.clhm.ConcurrentLinkedHashMap.DrainStatus.REQUIRED;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
@@ -28,7 +27,6 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
-import java.util.AbstractQueue;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.HashMap;
@@ -43,7 +41,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -52,6 +49,8 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
+import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
@@ -177,9 +176,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
 
   /** The maximum number of write operations to perform per amortized drain. */
   static final int WRITE_BUFFER_DRAIN_THRESHOLD = 16;
-
-  /** A queue that discards all entries. */
-  static final Queue<?> DISCARDING_QUEUE = new DiscardingQueue();
 
   static int ceilingNextPowerOfTwo(int x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
@@ -1390,52 +1386,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
 
     Object writeReplace() {
       return weigher;
-    }
-  }
-
-  /** A queue that discards all additions and is always empty. */
-  static final class DiscardingQueue extends AbstractQueue<Object> {
-    @Override public boolean add(Object e) { return true; }
-    @Override public boolean offer(Object e) { return true; }
-    @Override public Object poll() { return null; }
-    @Override public Object peek() { return null; }
-    @Override public int size() { return 0; }
-    @Override public Iterator<Object> iterator() { return emptyList().iterator(); }
-  }
-
-  /**
-   * An AtomicReference with heuristic padding to lessen cache effects of this
-   * heavily CAS'ed location. While the padding adds noticeable space, the
-   * improved throughput outweighs using extra space.
-   */
-  static class PaddedAtomicReference<T> extends AtomicReference<T> {
-    private static final long serialVersionUID = 1L;
-
-    // Improve likelihood of isolation on <= 64 byte cache lines
-    long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
-
-    PaddedAtomicReference() {}
-
-    PaddedAtomicReference(T value) {
-      super(value);
-    }
-  }
-
-  /**
-   * An AtomicLong with heuristic padding to lessen cache effects of this
-   * heavily CAS'ed location. While the padding adds noticeable space, the
-   * improved throughput outweighs using extra space.
-   */
-  static class PaddedAtomicLong extends AtomicLong {
-    private static final long serialVersionUID = 1L;
-
-    // Improve likelihood of isolation on <= 64 byte cache lines
-    long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
-
-    PaddedAtomicLong() {}
-
-    PaddedAtomicLong(long value) {
-      super(value);
     }
   }
 
