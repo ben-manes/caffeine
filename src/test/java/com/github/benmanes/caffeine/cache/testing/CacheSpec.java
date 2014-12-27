@@ -21,7 +21,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 
@@ -217,19 +216,15 @@ public @interface CacheSpec {
   CacheExecutor[] executor() default {
 //    CacheExecutor.DEFAULT,
     CacheExecutor.DIRECT,
-//    CacheExecutor.FORK_JOIN_COMMON_POOL
   };
 
   /** The executors that the cache can be configured with. */
   enum CacheExecutor implements Supplier<Executor> {
-    DEFAULT {
+    DEFAULT { // fork-join common pool
       @Override public Executor get() { return null; }
     },
     DIRECT {
       @Override public Executor get() { return MoreExecutors.directExecutor(); }
-    },
-    FORK_JOIN_COMMON_POOL {
-      @Override public Executor get() { return ForkJoinPool.commonPool(); }
     },
     REJECTING {
       @Override public Executor get() { throw new RejectedExecutionException(); }
