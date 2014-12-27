@@ -13,27 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.clhm;
+package com.github.benmanes.caffeine.cache;
 
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * A class that can determine the weight of a value. The total weight threshold
- * is used to determine when an eviction is required.
+ * Calculates the weights of cache entries. The total weight threshold is used to determine when an
+ * eviction is required.
  *
  * @author ben.manes@gmail.com (Ben Manes)
- * @see <a href="http://code.google.com/p/concurrentlinkedhashmap/">
- *      http://code.google.com/p/concurrentlinkedhashmap/</a>
  */
 @ThreadSafe
-public interface Weigher<V> {
+public interface Weigher<K, V> {
 
   /**
-   * Measures an object's weight to determine how many units of capacity that
-   * the value consumes. A value must consume a minimum of one unit.
+   * Returns the weight of a cache entry. There is no unit for entry weights; rather they are simply
+   * relative to each other.
    *
-   * @param value the object to weigh
-   * @return the object's weight
+   * @param key the key to weigh
+   * @param value the value to weigh
+   * @return the weight of the entry; must be non-negative
    */
-  int weightOf(V value);
+  int weigh(@Nonnull K key, @Nonnull V value);
 }

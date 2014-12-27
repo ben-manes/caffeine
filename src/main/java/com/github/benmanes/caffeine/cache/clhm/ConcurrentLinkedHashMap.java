@@ -50,6 +50,8 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.github.benmanes.caffeine.cache.Weigher;
+
 /**
  * A hash table supporting full concurrency of retrievals, adjustable expected
  * concurrency for updates, and a maximum capacity to bound the map by. This
@@ -60,7 +62,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * through a {@link Builder}.
  * <p>
  * An entry is evicted from the map when the <tt>weighted capacity</tt> exceeds
- * its <tt>maximum weighted capacity</tt> threshold. A {@link EntryWeigher}
+ * its <tt>maximum weighted capacity</tt> threshold. A {@link Weigher}
  * determines how many units of capacity that an entry consumes. The default
  * weigher assigns each value a weight of <tt>1</tt> to bound the map by the
  * total number of key-value pairs. A map that holds collections may choose to
@@ -201,7 +203,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
   final PaddedAtomicReference<Node<K, V>>[][] readBuffers;
 
   final PaddedAtomicReference<DrainStatus> drainStatus;
-  final EntryWeigher<? super K, ? super V> weigher;
+  final Weigher<? super K, ? super V> weigher;
 
   // These fields provide support for notifying a listener.
   final Queue<Node<K, V>> pendingNotifications;
@@ -711,7 +713,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     requireNonNull(key);
     requireNonNull(value);
 
-    final int weight = weigher.weightOf(key, value);
+    final int weight = weigher.weigh(key, value);
     final WeightedValue<V> weightedValue = new WeightedValue<V>(value, weight);
     final Node<K, V> node = new Node<K, V>(key, weightedValue);
 
@@ -788,7 +790,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     requireNonNull(key);
     requireNonNull(value);
 
-    final int weight = weigher.weightOf(key, value);
+    final int weight = weigher.weigh(key, value);
     final WeightedValue<V> weightedValue = new WeightedValue<V>(value, weight);
 
     final Node<K, V> node = data.get(key);
@@ -818,7 +820,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     requireNonNull(oldValue);
     requireNonNull(newValue);
 
-    final int weight = weigher.weightOf(key, newValue);
+    final int weight = weigher.weigh(key, newValue);
     final WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValue, weight);
 
     final Node<K, V> node = data.get(key);
@@ -926,7 +928,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     try {
       drainBuffers();
 
-      final int initialCapacity = (weigher == Weighers.entrySingleton())
+      final int initialCapacity = (weigher == SingletonWeigher.INSTANCE)
           ? Math.min(limit, (int) weightedSize())
           : 16;
       final Set<K> keys = new LinkedHashSet<K>(initialCapacity);
@@ -1036,7 +1038,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     try {
       drainBuffers();
 
-      final int initialCapacity = (weigher == Weighers.entrySingleton())
+      final int initialCapacity = (weigher == SingletonWeigher.INSTANCE)
           ? Math.min(limit, (int) weightedSize())
           : 16;
       final Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
@@ -1374,18 +1376,18 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
   }
 
   /** A weigher that enforces that the weight falls within a valid range. */
-  static final class BoundedEntryWeigher<K, V> implements EntryWeigher<K, V>, Serializable {
+  static final class BoundedEntryWeigher<K, V> implements Weigher<K, V>, Serializable {
     static final long serialVersionUID = 1;
-    final EntryWeigher<? super K, ? super V> weigher;
+    final Weigher<? super K, ? super V> weigher;
 
-    BoundedEntryWeigher(EntryWeigher<? super K, ? super V> weigher) {
+    BoundedEntryWeigher(Weigher<? super K, ? super V> weigher) {
       requireNonNull(weigher);
       this.weigher = weigher;
     }
 
     @Override
-    public int weightOf(K key, V value) {
-      int weight = weigher.weightOf(key, value);
+    public int weigh(K key, V value) {
+      int weight = weigher.weigh(key, value);
       checkArgument(weight >= 1);
       return weight;
     }
@@ -1468,7 +1470,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
    * used as a fast warm-up process.
    */
   static final class SerializationProxy<K, V> implements Serializable {
-    final EntryWeigher<? super K, ? super V> weigher;
+    final Weigher<? super K, ? super V> weigher;
     final EvictionListener<K, V> listener;
     final int concurrencyLevel;
     final Map<K, V> data;
@@ -1496,6 +1498,15 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     static final long serialVersionUID = 1;
   }
 
+  enum SingletonWeigher implements Weigher<Object, Object> {
+    INSTANCE;
+
+    @Override
+    public int weigh(Object key, Object value) {
+      return 1;
+    }
+  }
+
   /* ---------------- Builder -------------- */
 
   /**
@@ -1514,7 +1525,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     static final int DEFAULT_INITIAL_CAPACITY = 16;
 
     EvictionListener<K, V> listener;
-    EntryWeigher<? super K, ? super V> weigher;
+    Weigher<? super K, ? super V> weigher;
 
     int concurrencyLevel;
     int initialCapacity;
@@ -1523,10 +1534,10 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     @SuppressWarnings("unchecked")
     public Builder() {
       capacity = -1;
-      weigher = Weighers.entrySingleton();
       initialCapacity = DEFAULT_INITIAL_CAPACITY;
       concurrencyLevel = DEFAULT_CONCURRENCY_LEVEL;
       listener = (EvictionListener<K, V>) DiscardingListener.INSTANCE;
+      weigher = SingletonWeigher.INSTANCE;
     }
 
     /**
@@ -1588,21 +1599,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     }
 
     /**
-     * Specifies an algorithm to determine how many the units of capacity a
-     * value consumes. The default algorithm bounds the map by the number of
-     * key-value pairs by giving each entry a weight of <tt>1</tt>.
-     *
-     * @param weigher the algorithm to determine a value's weight
-     * @throws NullPointerException if the weigher is null
-     */
-    public Builder<K, V> weigher(Weigher<? super V> weigher) {
-      this.weigher = (weigher == Weighers.singleton())
-          ? Weighers.<K, V>entrySingleton()
-          : new BoundedEntryWeigher<K, V>(Weighers.asEntryWeigher(weigher));
-      return this;
-    }
-
-    /**
      * Specifies an algorithm to determine how many the units of capacity an
      * entry consumes. The default algorithm bounds the map by the number of
      * key-value pairs by giving each entry a weight of <tt>1</tt>.
@@ -1610,10 +1606,9 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
      * @param weigher the algorithm to determine a entry's weight
      * @throws NullPointerException if the weigher is null
      */
-    public Builder<K, V> weigher(EntryWeigher<? super K, ? super V> weigher) {
-      this.weigher = (weigher == Weighers.entrySingleton())
-          ? Weighers.<K, V>entrySingleton()
-          : new BoundedEntryWeigher<K, V>(weigher);
+    @SuppressWarnings("unchecked")
+    public Builder<K, V> weigher(Weigher<? super K, ? super V> weigher) {
+      this.weigher = new BoundedEntryWeigher<K, V>(weigher);
       return this;
     }
 
