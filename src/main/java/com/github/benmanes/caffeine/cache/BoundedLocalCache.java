@@ -493,7 +493,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   boolean tryToRetire(Node<K, V> node, WeightedValue<V> expect) {
     if (expect.isAlive()) {
       final WeightedValue<V> retired = new WeightedValue<V>(expect.value, -expect.weight);
-      return node.compareAndSet(expect, retired);
+      synchronized (node) {
+        if (node.get() == expect) {
+          node.lazySet(retired);
+          return true;
+        }
+      }
     }
     return false;
   }
@@ -506,15 +511,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * @return the retired weighted value if the transition was successful or null otherwise
    */
   @Nullable WeightedValue<V> makeRetired(Node<K, V> node) {
-    for (;;) {
+    synchronized (node) {
       final WeightedValue<V> current = node.get();
       if (!current.isAlive()) {
         return null;
       }
       final WeightedValue<V> retired = new WeightedValue<V>(current.value, -current.weight);
-      if (node.compareAndSet(current, retired)) {
-        return retired;
-      }
+      node.lazySet(retired);
+      return retired;
     }
   }
 
@@ -526,7 +530,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    */
   @GuardedBy("evictionLock")
   void makeDead(Node<K, V> node) {
-    for (;;) {
+    synchronized (node) {
       WeightedValue<V> current = node.get();
       WeightedValue<V> dead = new WeightedValue<V>(current.value, 0);
       if (node.compareAndSet(current, dead)) {
@@ -764,25 +768,25 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         afterRead(prior);
         return prior.getValue();
       }
-      for (;;) {
-        final WeightedValue<V> oldWeightedValue = prior.get();
+      WeightedValue<V> oldWeightedValue;
+      synchronized (prior) {
+        oldWeightedValue = prior.get();
         if (!oldWeightedValue.isAlive()) {
-          break;
+          continue;
         }
-
-        if (prior.compareAndSet(oldWeightedValue, weightedValue)) {
-          final int weightedDifference = weight - oldWeightedValue.weight;
-          if (weightedDifference == 0) {
-            afterRead(prior);
-          } else {
-            afterWrite(new UpdateTask(prior, weightedDifference));
-          }
-          if (hasRemovalListener()) {
-            notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
-          }
-          return oldWeightedValue.value;
-        }
+        prior.lazySet(weightedValue);
       }
+
+      final int weightedDifference = weight - oldWeightedValue.weight;
+      if (weightedDifference == 0) {
+        afterRead(prior);
+      } else {
+        afterWrite(new UpdateTask(prior, weightedDifference));
+      }
+      if (hasRemovalListener()) {
+        notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
+      }
+      return oldWeightedValue.value;
     }
   }
 
@@ -850,24 +854,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     if (node == null) {
       return null;
     }
-    for (;;) {
-      final WeightedValue<V> oldWeightedValue = node.get();
+    WeightedValue<V> oldWeightedValue;
+    synchronized (node) {
+      oldWeightedValue = node.get();
       if (!oldWeightedValue.isAlive()) {
         return null;
       }
-      if (node.compareAndSet(oldWeightedValue, weightedValue)) {
-        final int weightedDifference = weight - oldWeightedValue.weight;
-        if (weightedDifference == 0) {
-          afterRead(node);
-        } else {
-          afterWrite(new UpdateTask(node, weightedDifference));
-        }
-        if (hasRemovalListener()) {
-          notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
-        }
-        return oldWeightedValue.value;
-      }
+      node.lazySet(weightedValue);
     }
+    final int weightedDifference = weight - oldWeightedValue.weight;
+    if (weightedDifference == 0) {
+      afterRead(node);
+    } else {
+      afterWrite(new UpdateTask(node, weightedDifference));
+    }
+    if (hasRemovalListener()) {
+      notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
+    }
+    return oldWeightedValue.value;
   }
 
   @Override
@@ -883,24 +887,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     if (node == null) {
       return false;
     }
-    for (;;) {
-      final WeightedValue<V> oldWeightedValue = node.get();
+    WeightedValue<V> oldWeightedValue;
+    synchronized (node) {
+      oldWeightedValue = node.get();
       if (!oldWeightedValue.isAlive() || !oldWeightedValue.contains(oldValue)) {
         return false;
       }
-      if (node.compareAndSet(oldWeightedValue, newWeightedValue)) {
-        final int weightedDifference = weight - oldWeightedValue.weight;
-        if (weightedDifference == 0) {
-          afterRead(node);
-        } else {
-          afterWrite(new UpdateTask(node, weightedDifference));
-        }
-        if (hasRemovalListener()) {
-          notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
-        }
-        return true;
-      }
+      node.lazySet(newWeightedValue);
     }
+    final int weightedDifference = weight - oldWeightedValue.weight;
+    if (weightedDifference == 0) {
+      afterRead(node);
+    } else {
+      afterWrite(new UpdateTask(node, weightedDifference));
+    }
+    if (hasRemovalListener()) {
+      notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
+    }
+    return true;
   }
 
   @Override
