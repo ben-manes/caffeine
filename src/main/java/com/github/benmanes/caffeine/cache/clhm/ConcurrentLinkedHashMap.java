@@ -41,6 +41,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -50,6 +52,9 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.Weigher;
 
 /**
@@ -71,7 +76,7 @@ import com.github.benmanes.caffeine.cache.Weigher;
  * modifies its weight requires that an update operation is performed on the
  * map.
  * <p>
- * An {@link EvictionListener} may be supplied for notification when an entry
+ * An {@link RemovalListener} may be supplied for notification when an entry
  * is evicted from the map. This listener is invoked on a caller's thread and
  * will not block other threads from operating on the map. An implementation
  * should be aware that the caller's thread will not expect long execution
@@ -206,8 +211,8 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
   final Weigher<? super K, ? super V> weigher;
 
   // These fields provide support for notifying a listener.
-  final Queue<Node<K, V>> pendingNotifications;
-  final EvictionListener<K, V> listener;
+  final RemovalListener<K, V> removalListener;
+  final Executor executor;
 
   transient Set<K> keySet;
   transient Collection<V> values;
@@ -245,10 +250,8 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     }
 
     // The notification queue and listener
-    listener = builder.listener;
-    pendingNotifications = (listener == DiscardingListener.INSTANCE)
-        ? (Queue<Node<K, V>>) DISCARDING_QUEUE
-        : new ConcurrentLinkedQueue<Node<K, V>>();
+    removalListener = builder.removalListener;
+    executor = builder.executor;
   }
 
   /** Ensures that the argument expression is true. */
@@ -293,7 +296,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     } finally {
       evictionLock.unlock();
     }
-    notifyListener();
   }
 
   /** Determines whether the map has exceeded its capacity. */
@@ -324,8 +326,12 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
       }
 
       // Notify the listener only if the entry was evicted
-      if (data.remove(node.key, node)) {
-        pendingNotifications.add(node);
+      if (data.remove(node.key, node) && (removalListener != null)) {
+        executor.execute(() -> {
+          RemovalNotification<K, V> notification = new RemovalNotification<K, V>(
+              node.key, node.getValue(), RemovalCause.SIZE);
+          removalListener.onRemoval(notification);
+        });
       }
 
       makeDead(node);
@@ -341,7 +347,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     final int bufferIndex = readBufferIndex();
     final long writeCount = recordRead(bufferIndex, node);
     drainOnReadIfNeeded(bufferIndex, writeCount);
-    notifyListener();
   }
 
   /** Returns the index to the read buffer to record into. */
@@ -398,7 +403,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     writeBuffer.add(task);
     drainStatus.lazySet(REQUIRED);
     tryToDrainBuffers();
-    notifyListener();
   }
 
   /**
@@ -527,14 +531,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
         weightedSize.lazySet(weightedSize.get() - Math.abs(current.weight));
         return;
       }
-    }
-  }
-
-  /** Notifies the listener of entries that were evicted. */
-  void notifyListener() {
-    Node<K, V> node;
-    while ((node = pendingNotifications.poll()) != null) {
-      listener.onEviction(node.key, node.getValue());
     }
   }
 
@@ -1407,13 +1403,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     @Override public Iterator<Object> iterator() { return emptyList().iterator(); }
   }
 
-  /** A listener that ignores all notifications. */
-  enum DiscardingListener implements EvictionListener<Object, Object> {
-    INSTANCE;
-
-    @Override public void onEviction(Object key, Object value) {}
-  }
-
   /**
    * An AtomicReference with heuristic padding to lessen cache effects of this
    * heavily CAS'ed location. While the padding adds noticeable space, the
@@ -1471,16 +1460,16 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
    */
   static final class SerializationProxy<K, V> implements Serializable {
     final Weigher<? super K, ? super V> weigher;
-    final EvictionListener<K, V> listener;
+    final RemovalListener<K, V> removalListener;
     final int concurrencyLevel;
     final Map<K, V> data;
     final long capacity;
 
     SerializationProxy(ConcurrentLinkedHashMap<K, V> map) {
       concurrencyLevel = map.concurrencyLevel;
+      removalListener = map.removalListener;
       data = new HashMap<K, V>(map);
       capacity = map.capacity.get();
-      listener = map.listener;
       weigher = map.weigher;
     }
 
@@ -1488,7 +1477,7 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
       ConcurrentLinkedHashMap<K, V> map = new Builder<K, V>()
           .concurrencyLevel(concurrencyLevel)
           .maximumWeightedCapacity(capacity)
-          .listener(listener)
+          .removalListener(removalListener)
           .weigher(weigher)
           .build();
       map.putAll(data);
@@ -1524,19 +1513,19 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
     static final int DEFAULT_CONCURRENCY_LEVEL = 16;
     static final int DEFAULT_INITIAL_CAPACITY = 16;
 
-    EvictionListener<K, V> listener;
+    RemovalListener<K, V> removalListener;
     Weigher<? super K, ? super V> weigher;
+    Executor executor;
 
     int concurrencyLevel;
     int initialCapacity;
     long capacity;
 
-    @SuppressWarnings("unchecked")
     public Builder() {
       capacity = -1;
       initialCapacity = DEFAULT_INITIAL_CAPACITY;
       concurrencyLevel = DEFAULT_CONCURRENCY_LEVEL;
-      listener = (EvictionListener<K, V>) DiscardingListener.INSTANCE;
+      executor = ForkJoinPool.commonPool();
       weigher = SingletonWeigher.INSTANCE;
     }
 
@@ -1585,16 +1574,21 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
       return this;
     }
 
+    public Builder<K, V> executor(Executor executor) {
+      this.executor = requireNonNull(executor);
+      return this;
+    }
+
     /**
      * Specifies an optional listener that is registered for notification when
      * an entry is evicted.
      *
-     * @param listener the object to forward evicted entries to
+     * @param removalListener the object to forward evicted entries to
      * @throws NullPointerException if the listener is null
      */
-    public Builder<K, V> listener(EvictionListener<K, V> listener) {
-      requireNonNull(listener);
-      this.listener = listener;
+    public Builder<K, V> removalListener(RemovalListener<K, V> removalListener) {
+      requireNonNull(removalListener);
+      this.removalListener = removalListener;
       return this;
     }
 
@@ -1606,7 +1600,6 @@ public final class ConcurrentLinkedHashMap<K, V> extends AbstractMap<K, V>
      * @param weigher the algorithm to determine a entry's weight
      * @throws NullPointerException if the weigher is null
      */
-    @SuppressWarnings("unchecked")
     public Builder<K, V> weigher(Weigher<? super K, ? super V> weigher) {
       this.weigher = new BoundedEntryWeigher<K, V>(weigher);
       return this;
