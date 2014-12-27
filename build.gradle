@@ -54,7 +54,6 @@ def versions = [
 ]
 
 dependencies {
-  compile 'org.latencyutils:LatencyUtils:2.0.2'
   compile 'com.google.code.findbugs:jsr305:3.0.0'
 
   // unit testing

@@ -687,7 +687,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     for (Object key : keys) {
       final Node<K, V> node = data.get(key);
       if (node == null) {
-        return null;
+        continue;
       }
       V value = node.getValue();
       if (value == null) {
@@ -911,10 +911,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     node = data.computeIfAbsent(key, k -> {
       V value = mappingFunction.apply(k);
+      if (value == null) {
+        return null;
+      }
       int weight = weigher.weigh(key, value);
       weightedValue[0] = new WeightedValue<V>(value, weight);
       return new Node<K, V>(key, weightedValue[0]);
     });
+    if (node == null) {
+      return null;
+    }
     if (weightedValue[0] == null) {
       afterRead(node);
       return node.getValue();
@@ -927,6 +933,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @Override
   public V computeIfPresent(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    requireNonNull(remappingFunction);
+
     // optimistic fast path due to computeIfAbsent always locking
     if (!data.containsKey(key)) {
       return null;
@@ -986,6 +994,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    */
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    requireNonNull(remappingFunction);
+
+    if (true) {
+      return super.compute(key, remappingFunction);
+    }
+
+
     Runnable[] task = new Runnable[0];
 
     Node<K, V> node = data.compute(key, (k, prior) -> {
@@ -1023,8 +1038,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * else
    *     map.put(key, newValue);
    */
-  @Override
-  public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+  public V _merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
     throw new UnsupportedOperationException();
   }
 

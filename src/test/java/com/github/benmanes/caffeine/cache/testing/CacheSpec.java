@@ -79,7 +79,10 @@ public @interface CacheSpec {
 
   enum Stats { ENABLED, DISABLED }
 
-  Stats[] stats() default { Stats.ENABLED, Stats.DISABLED };
+  Stats[] stats() default {
+    //Stats.ENABLED,
+    Stats.DISABLED
+  };
 
   /* ---------------- Maximum size -------------- */
 
@@ -110,7 +113,7 @@ public @interface CacheSpec {
   MaximumSize[] maximumSize() default {
     MaximumSize.DISABLED,
     // Disabled while BoundedLocalCache is unstable
-    //MaximumSize.UNREACHABLE
+    MaximumSize.UNREACHABLE
   };
 
   /* ---------------- Reference-based -------------- */
@@ -149,7 +152,7 @@ public @interface CacheSpec {
   /** The removal listeners, each resulting in a new combination. */
   Listener[] removalListener() default {
     Listener.DEFAULT,
-    Listener.CONSUMING,
+    //Listener.CONSUMING,
   };
 
   /** The removal listeners, each resulting in a new combination. */
