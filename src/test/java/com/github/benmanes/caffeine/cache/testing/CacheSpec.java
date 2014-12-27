@@ -152,7 +152,7 @@ public @interface CacheSpec {
   /** The removal listeners, each resulting in a new combination. */
   Listener[] removalListener() default {
     Listener.DEFAULT,
-    //Listener.CONSUMING,
+    Listener.CONSUMING,
   };
 
   /** The removal listeners, each resulting in a new combination. */

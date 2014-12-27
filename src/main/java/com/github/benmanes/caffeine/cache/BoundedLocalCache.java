@@ -344,6 +344,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * @param node the entry in the page replacement policy
    */
   void afterRead(Node<K, V> node) {
+    statsCounter.recordHits(1);
     final int bufferIndex = readBufferIndex();
     final long writeCount = recordRead(bufferIndex, node);
     drainOnReadIfNeeded(bufferIndex, writeCount);
@@ -633,6 +634,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       Node<K, V> node;
       while ((node = evictionDeque.poll()) != null) {
         data.remove(node.key, node);
+        if (hasRemovalListener()) {
+          notifyRemoval(node.key, node.getValue(), RemovalCause.EXPLICIT);
+        }
         makeDead(node);
       }
 
@@ -674,6 +678,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   public V get(Object key) {
     final Node<K, V> node = data.get(key);
     if (node == null) {
+      statsCounter.recordMisses(1);
       return null;
     }
     afterRead(node);
@@ -954,18 +959,23 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         if (newValue == null) {
           makeRetired(prior);
           task[0] = new RemovalTask(prior);
-          return null;
-        } else {
-          int weight = weigher.weigh(key, newValue);
-          WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValue, weight);
-          prior.lazySet(newWeightedValue);
-          weightedValue[0] = newWeightedValue;
-          final int weightedDifference = weight - oldWeightedValue.weight;
-          if (weightedDifference != 0) {
-            task[0] = new UpdateTask(prior, weightedDifference);
+          if (hasRemovalListener()) {
+            notifyRemoval(prior.key, prior.getValue(), RemovalCause.EXPLICIT);
           }
-          return prior;
+          return null;
         }
+        int weight = weigher.weigh(key, newValue);
+        WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValue, weight);
+        prior.lazySet(newWeightedValue);
+        weightedValue[0] = newWeightedValue;
+        final int weightedDifference = weight - oldWeightedValue.weight;
+        if (weightedDifference != 0) {
+          task[0] = new UpdateTask(prior, weightedDifference);
+        }
+        if (hasRemovalListener()) {
+          notifyRemoval(prior.key, prior.getValue(), RemovalCause.REPLACED);
+        }
+        return prior;
       }
     });
     if (task[0] == null) {
