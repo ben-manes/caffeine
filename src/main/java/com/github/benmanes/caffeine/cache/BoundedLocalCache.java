@@ -483,27 +483,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Attempts to transition the node from the <tt>alive</tt> state to the
-   * <tt>retired</tt> state.
-   *
-   * @param node the entry in the page replacement policy
-   * @param expect the expected weighted value
-   * @return if successful
-   */
-  boolean tryToRetire(Node<K, V> node, WeightedValue<V> expect) {
-    if (expect.isAlive()) {
-      final WeightedValue<V> retired = new WeightedValue<V>(expect.value, -expect.weight);
-      synchronized (node) {
-        if (node.get() == expect) {
-          node.lazySet(retired);
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
    * Atomically transitions the node from the <tt>alive</tt> state to the
    * <tt>retired</tt> state, if a valid transition.
    *
@@ -816,30 +795,28 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     WeightedValue<V> weightedValue = node.get();
-    for (;;) {
-      if (weightedValue.contains(value)) {
-        if (tryToRetire(node, weightedValue)) {
-          if (data.remove(key, node)) {
-            afterWrite(new RemovalTask(node));
-
-            if (hasRemovalListener()) {
-              @SuppressWarnings("unchecked")
-              K castKey = (K) key;
-              notifyRemoval(castKey, node.getValue(), RemovalCause.EXPLICIT);
-            }
-            return true;
-          }
-        } else {
-          weightedValue = node.get();
-          if (weightedValue.isAlive()) {
-            // retry as an intermediate update may have replaced the value with
-            // an equal instance that has a different reference identity
-            continue;
-          }
-        }
-      }
+    if (!weightedValue.contains(value) || !weightedValue.isAlive()) {
       return false;
     }
+    synchronized (node) {
+      weightedValue = node.get();
+      if (!weightedValue.contains(value) || !weightedValue.isAlive()) {
+        return false;
+      }
+      if (!data.remove(key, node)) {
+        return false;
+      }
+      final WeightedValue<V> retired = new WeightedValue<V>(
+          weightedValue.value, -weightedValue.weight);
+      node.lazySet(retired);
+    }
+    if (hasRemovalListener()) {
+      @SuppressWarnings("unchecked")
+      K castKey = (K) key;
+      notifyRemoval(castKey, node.getValue(), RemovalCause.EXPLICIT);
+    }
+    afterWrite(new RemovalTask(node));
+    return true;
   }
 
   @Override
@@ -949,10 +926,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return null;
     }
 
-    // FIXME(ben): Update all CAS-based updates to synchronize instead...
-    // A race condition may occur on updates (#put, #replace, conditional remove) because the
-    // node is mutated instead of the map. This is solved by synchronize on the node to ensure
-    // exclusive access
     @SuppressWarnings("unchecked")
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     Runnable[] task = new Runnable[1];
@@ -1014,7 +987,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return super.compute(key, remappingFunction);
     }
 
-
     Runnable[] task = new Runnable[0];
 
     Node<K, V> node = data.compute(key, (k, prior) -> {
@@ -1032,7 +1004,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
         if (!oldWeightedValue.isAlive()) {
-          // conditionally removed..
+          // conditionally removed
+          return null;
         }
       }
       V newValue = remappingFunction.apply(k, null);

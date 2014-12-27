@@ -22,6 +22,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Group;
+import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
@@ -35,6 +37,23 @@ public class SynchronizedBenchmark {
   Lock rlock = new ReentrantLock();
   Object olock = new Object();
   int counter;
+
+  @Benchmark  @Group("mixed") @GroupThreads(1)
+  public void mixed_monitor() {
+    UnsafeAccess.UNSAFE.monitorEnter(olock);
+    try {
+      counter++;
+    } finally {
+      UnsafeAccess.UNSAFE.monitorExit(olock);
+    }
+  }
+
+  @Benchmark  @Group("mixed") @GroupThreads(3)
+  public void mixed_sync() {
+    synchronized (olock) {
+      counter++;
+    }
+  }
 
   @Benchmark @Threads(1)
   public void synchronized_noContention() {
