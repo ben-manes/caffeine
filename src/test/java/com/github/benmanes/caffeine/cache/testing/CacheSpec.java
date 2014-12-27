@@ -215,7 +215,9 @@ public @interface CacheSpec {
 
   /** The executors retrieved from a supplier, each resulting in a new combination. */
   CacheExecutor[] executor() default {
-    CacheExecutor.DEFAULT, CacheExecutor.DIRECT, CacheExecutor.FORK_JOIN_COMMON_POOL
+//    CacheExecutor.DEFAULT,
+    CacheExecutor.DIRECT,
+//    CacheExecutor.FORK_JOIN_COMMON_POOL
   };
 
   /** The executors that the cache can be configured with. */

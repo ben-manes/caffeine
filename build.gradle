@@ -82,7 +82,7 @@ dependencies {
 test {
   useTestNG()
   options {
-    threadCount = System.env.'CI' ? 1 : 4
+    threadCount = 4
     parallel = 'methods'
   }
   testLogging {
