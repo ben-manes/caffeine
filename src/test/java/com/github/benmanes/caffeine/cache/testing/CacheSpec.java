@@ -214,6 +214,7 @@ public @interface CacheSpec {
 
   /** The executors retrieved from a supplier, each resulting in a new combination. */
   CacheExecutor[] executor() default {
+    //CacheExecutor.DEFAULT,
     CacheExecutor.DIRECT,
   };
 

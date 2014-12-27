@@ -18,9 +18,7 @@ package com.github.benmanes.caffeine.cache.testing;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
@@ -50,13 +48,16 @@ public final class CacheProvider {
     CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
     requireNonNull(cacheSpec, "@CacheSpec not found");
 
-    CacheGenerator generator = new CacheGenerator(cacheSpec);
-    boolean requiresLoadingCache = hasLoadingCache(testMethod);
-    Map<CacheContext, Cache<Integer, Integer>> scenarios = generator.generate(requiresLoadingCache);
+    boolean isLoadingOnly = hasLoadingCache(testMethod);
+    CacheGenerator generator = new CacheGenerator(cacheSpec, isLoadingOnly);
+    return asTestCases(testMethod, generator.generate());
+  }
 
+  /** Converts each scenario into test case parameters. */
+  private static Iterator<Object[]> asTestCases(Method testMethod,
+      Iterator<Entry<CacheContext, Cache<Integer, Integer>>> scenarios) {
     Class<?>[] parameterClasses = testMethod.getParameterTypes();
-    List<Object[]> result = new ArrayList<>(scenarios.size());
-    for (Entry<CacheContext, Cache<Integer, Integer>> entry : scenarios.entrySet()) {
+    return Iterators.transform(scenarios, entry -> {
       Object[] params = new Object[parameterClasses.length];
       for (int i = 0; i < params.length; i++) {
         if (parameterClasses[i].isAssignableFrom(entry.getKey().getClass())) {
@@ -69,9 +70,8 @@ public final class CacheProvider {
           throw new AssertionError("Unknown parameter type: " + parameterClasses[i]);
         }
       }
-      result.add(params);
-    }
-    return Iterators.consumingIterator(result.iterator());
+      return params;
+    });
   }
 
   private static boolean hasLoadingCache(Method testMethod) throws Exception {

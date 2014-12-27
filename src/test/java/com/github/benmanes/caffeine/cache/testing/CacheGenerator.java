@@ -20,9 +20,9 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -33,6 +33,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Maps;
 
 /**
  * Generates test case scenarios based on the {@link CacheSpec}.
@@ -41,14 +43,16 @@ import com.google.common.collect.ImmutableList;
  */
 final class CacheGenerator {
   private final CacheSpec cacheSpec;
+  private final boolean isLoadingOnly;
   private List<CacheContext> contexts;
-  private Map<CacheContext, Cache<Integer, Integer>> scenarios;
 
-  public CacheGenerator(CacheSpec cacheSpec) {
+  public CacheGenerator(CacheSpec cacheSpec, boolean isLoadingOnly) {
+    this.isLoadingOnly = isLoadingOnly;
     this.cacheSpec = cacheSpec;
   }
 
-  public Map<CacheContext, Cache<Integer, Integer>> generate(boolean requiresLoadingCache) {
+  /** Returns an iterator so that creating a test case is lazy and GC-able after use. */
+  public Iterator<Entry<CacheContext, Cache<Integer, Integer>>> generate() {
     initialize();
     makeInitialCapacities();
     makeCacheStats();
@@ -58,12 +62,14 @@ final class CacheGenerator {
     // makeValueReferences();
     makeExecutors();
     makeRemovalListeners();
-    makeCachesAndPopulate(requiresLoadingCache);
-    return scenarios;
+    makePopulations();
+    makeManualAndLoading();
+
+    return Iterators.transform(Iterators.consumingIterator(contexts.iterator()),
+        context -> makeCache(context));
   }
 
   private void initialize() {
-    scenarios = new LinkedHashMap<>();
     contexts = ImmutableList.of(new CacheContext());
   }
 
@@ -145,29 +151,43 @@ final class CacheGenerator {
     contexts = combinations;
   }
 
-  /** Constructs caches with the populated combinations. */
-  private void makeCachesAndPopulate(boolean requiresLoadingCache) {
-    assertThat(cacheSpec.population().length, is(greaterThan(0)));
-
+  /** Generates a new set of builders with the population combinations. */
+  private void makePopulations() {
+    List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (Population population : cacheSpec.population()) {
-        context.population = population;
-        if (!requiresLoadingCache) {
-          makeCache(context, false);
-        }
-        makeCache(context, true);
+        CacheContext copy = context.copy();
+        copy.population = population;
+        combinations.add(copy);
       }
     }
+    contexts = combinations;
   }
 
-  private void makeCache(CacheContext context, boolean loading) {
+  /** Generates a new set of builders with the population combinations. */
+  private void makeManualAndLoading() {
+    List<CacheContext> combinations = new ArrayList<>();
+    for (CacheContext context : contexts) {
+      if (!isLoadingOnly) {
+        combinations.add(context.copy());
+      }
+      CacheContext copy = context.copy();
+      copy.isLoading = true;
+      combinations.add(copy);
+    }
+    contexts = combinations;
+  }
+
+  /** Constructs cache and populates. */
+  private Entry<CacheContext, Cache<Integer, Integer>> makeCache(
+      CacheContext context) {
     CacheContext copy = context.copy();
-    Cache<Integer, Integer> cache = newCache(copy, loading);
+    Cache<Integer, Integer> cache = newCache(copy);
     context.population.populate(copy, cache);
-    scenarios.put(copy, cache);
+    return Maps.immutableEntry(copy, cache);
   }
 
-  private Cache<Integer, Integer> newCache(CacheContext context, boolean loading) {
+  private Cache<Integer, Integer> newCache(CacheContext context) {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());
@@ -184,7 +204,7 @@ final class CacheGenerator {
     if (context.removalListener != null) {
       builder.removalListener(context.removalListener);
     }
-    if (loading) {
+    if (context.isLoading) {
       context.cache = builder.build(cacheSpec.loader());
     } else {
       context.cache = builder.build();

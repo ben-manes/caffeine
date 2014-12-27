@@ -71,6 +71,8 @@ public final class CacheContext {
   Integer absentKey;
   Set<Integer> absentKeys;
 
+  boolean isLoading;
+
   public CacheContext() {
     original = new HashMap<>();
   }
@@ -164,11 +166,14 @@ public final class CacheContext {
     context.removalListener = (removalListenerType == null) ? null : removalListenerType.create();
     context.initialCapacity = initialCapacity;
     context.maximumSize = maximumSize;
+    context.population = population;
     context.executor = executor;
     context.firstKey = firstKey;
     context.middleKey = middleKey;
     context.lastKey = lastKey;
     context.stats = stats;
+    context.cache = cache;
+    context.isLoading = isLoading;
     return context;
   }
 
