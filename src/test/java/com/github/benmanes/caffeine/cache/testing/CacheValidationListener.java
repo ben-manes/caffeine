@@ -24,6 +24,8 @@ import org.testng.IInvokedMethodListener;
 import org.testng.ITestResult;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -48,6 +50,25 @@ public final class CacheValidationListener implements IInvokedMethodListener {
     } catch (AssertionError caught) {
       testResult.setStatus(ITestResult.FAILURE);
       testResult.setThrowable(caught);
+    } finally {
+      cleanUp(testResult);
+    }
+  }
+
+  /** Free memory by clearing unused resources after test execution. */
+  private void cleanUp(ITestResult testResult) {
+    for (Object param : testResult.getParameters()) {
+      if (param instanceof CacheContext) {
+        CacheContext context = (CacheContext) param;
+        if (context.removalListener instanceof RejectingRemovalListener<?, ?>) {
+          ((RejectingRemovalListener<?, ?>) context.removalListener).reject = false;
+        }
+        context.cache.invalidateAll();
+        context.original().clear();
+        if (context.removalListener instanceof ConsumingRemovalListener<?, ?>) {
+          ((ConsumingRemovalListener<?, ?>) context.removalListener).evicted().clear();
+        }
+      }
     }
   }
 }

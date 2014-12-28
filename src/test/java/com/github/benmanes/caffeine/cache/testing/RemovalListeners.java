@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.testing;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -40,11 +39,17 @@ public final class RemovalListeners {
   }
 
   public static <K, V> RemovalListener<K, V> rejecting() {
-    return new RemovalListener<K, V>() {
-      @Override public void onRemoval(RemovalNotification<K, V> notification) {
+    return new RejectingRemovalListener<K, V>();
+  }
+
+  public static final class RejectingRemovalListener<K, V> implements RemovalListener<K, V> {
+    public boolean reject = true;
+
+    @Override public void onRemoval(RemovalNotification<K, V> notification) {
+      if (reject) {
         throw new AssertionError("Rejected eviction of " + notification);
       }
-    };
+    }
   }
 
   public static final class ConsumingRemovalListener<K, V> implements RemovalListener<K, V> {
@@ -60,7 +65,7 @@ public final class RemovalListeners {
     }
 
     public List<RemovalNotification<K, V>> evicted() {
-      return Collections.unmodifiableList(evicted);
+      return evicted;
     }
   }
 }

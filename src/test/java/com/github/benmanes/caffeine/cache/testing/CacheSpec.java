@@ -50,9 +50,9 @@ public @interface CacheSpec {
     /** A configuration where the table grows on the second addition. */
     ONE(1),
     /** A configuration where the table grows after the {@link Population#FULL} count. */
-    FULL(100),
+    FULL(50),
     /** A configuration where the table grows after the 10 x {@link Population#FULL} count. */
-    EXCESSIVE(10 * 100);
+    EXCESSIVE(100);
 
     private final int size;
 
