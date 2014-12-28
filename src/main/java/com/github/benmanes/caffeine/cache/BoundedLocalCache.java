@@ -215,6 +215,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   final Executor executor;
 
   final StatsCounter statsCounter;
+  final boolean isRecordingStats;
+  final Ticker ticker;
 
   transient Set<K> keySet;
   transient Collection<V> values;
@@ -262,6 +264,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     executor = builder.executor;
 
     statsCounter = builder.statsCounterSupplier.get();
+    isRecordingStats = builder.isRecordingStats();
+    ticker = builder.ticker();
   }
 
   /** Returns whether this cache notifies when an entry is removed. */
@@ -700,22 +704,18 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     for (Object key : keys) {
       final Node<K, V> node = data.get(key);
       if (node == null) {
+        misses++;
         continue;
       }
+      @SuppressWarnings("unchecked")
+      K castKey = (K) key;
       V value = node.getValue();
-      if (value == null) {
-        misses++;
-      } else {
-        @SuppressWarnings("unchecked")
-        K castKey = (K) key;
-        result.put(castKey, value);
+      result.put(castKey, value);
 
-        // TODO(ben): batch reads to call tryLock once
-        afterRead(node);
-      }
+      // TODO(ben): batch reads to call tryLock once
+      afterRead(node);
     }
     statsCounter.recordMisses(misses);
-    statsCounter.recordHits(result.size());
     return Collections.unmodifiableMap(result);
   }
 
@@ -922,7 +922,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @SuppressWarnings("unchecked")
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     node = data.computeIfAbsent(key, k -> {
-      V value = mappingFunction.apply(k);
+      V value;
+      try {
+        value = mappingFunction.apply(k);
+      } catch (RuntimeException | Error e) {
+        statsCounter.recordMisses(1);
+        statsCounter.recordLoadException(1);
+        throw e;
+      }
       if (value == null) {
         return null;
       }
@@ -931,12 +938,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return new Node<K, V>(key, weightedValue[0]);
     });
     if (node == null) {
+      statsCounter.recordMisses(1);
+      statsCounter.recordLoadException(1);
       return null;
     }
     if (weightedValue[0] == null) {
       afterRead(node);
       return node.getValue();
     } else {
+      statsCounter.recordMisses(1);
+      statsCounter.recordLoadSuccess(1);
       afterWrite(new AddTask(node, weightedValue[0].weight));
       return weightedValue[0].value;
     }
@@ -958,7 +969,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     Node<K, V> node = data.computeIfPresent(key, (k, prior) -> {
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
-        V newValue = remappingFunction.apply(k, oldWeightedValue.value);
+        V newValue = makeStatsAware(remappingFunction).apply(k, oldWeightedValue.value);
         if (newValue == null) {
           makeRetired(prior);
           task[0] = new RemovalTask(prior);
@@ -998,7 +1009,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     Runnable[] task = new Runnable[2];
     data.compute(key, (k, prior) -> {
       if (prior == null) {
-        newValue[0] = remappingFunction.apply(k, null);
+        newValue[0] = makeStatsAware(remappingFunction).apply(k, null);
         if (newValue[0] == null) {
           return null;
         }
@@ -1022,7 +1033,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           }
           oldValue = null;
         }
-        newValue[0] = remappingFunction.apply(k, oldValue);
+        newValue[0] = makeStatsAware(remappingFunction).apply(k, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
@@ -1068,14 +1079,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * else
    *     map.put(key, newValue);
    */
-  public V _merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-    if (true) {
-      throw new UnsupportedOperationException();
-    }
-
+  @Override
+  public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
     requireNonNull(key);
     requireNonNull(value);
     requireNonNull(remappingFunction);
+
+    if (true) {
+      return super.merge(key, value, makeStatsAware(remappingFunction));
+    }
+
     final int weight = weigher.weigh(key, value);
     final WeightedValue<V> weightedValue = new WeightedValue<V>(value, weight);
     final Node<K, V> node = new Node<K, V>(key, weightedValue);
@@ -1093,6 +1106,25 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     });
 
     return null;
+  }
+
+  /** Decorates the remapping function to record statistics if enabled. */
+  <A, B, C> BiFunction<? super A, ? super B, ? extends C> makeStatsAware(
+      BiFunction<? super A, ? super B, ? extends C> remappingFunction) {
+    if (!isRecordingStats) {
+      return remappingFunction;
+    }
+    return (k, oldValue) -> {
+      long startTime = ticker.read();
+      try {
+        C newValue = remappingFunction.apply(k, oldValue);
+        statsCounter.recordLoadSuccess(ticker.read() - startTime);
+        return newValue;
+      } catch (RuntimeException | Error e) {
+        statsCounter.recordLoadException(ticker.read() - startTime);
+        throw e;
+      }
+    };
   }
 
   @Override

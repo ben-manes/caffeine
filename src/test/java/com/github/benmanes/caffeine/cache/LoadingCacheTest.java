@@ -164,8 +164,8 @@ public final class LoadingCacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_present_full(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    Map<Integer, Integer> result = cache.getAll(cache.asMap().keySet());
-    assertThat(result, is(equalTo(cache.asMap())));
+    Map<Integer, Integer> result = cache.getAll(context.original().keySet());
+    assertThat(result, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }

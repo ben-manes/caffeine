@@ -73,6 +73,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
+    int hits = 0;
     int misses = 0;
     Map<K, V> result = new LinkedHashMap<>();
     for (Object key : keys) {
@@ -80,13 +81,14 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
       if (value == null) {
         misses++;
       } else {
+        hits++;
         @SuppressWarnings("unchecked")
         K castKey = (K) key;
         result.put(castKey, value);
       }
     }
+    statsCounter().recordHits(hits);
     statsCounter().recordMisses(misses);
-    statsCounter().recordHits(result.size());
     return Collections.unmodifiableMap(result);
   }
 
@@ -183,7 +185,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
       return value;
     }
 
-    if (!isReordingStats()) {
+    if (!isRecordingStats()) {
       return cache.computeIfAbsent(key, mappingFunction);
     }
     boolean[] missed = new boolean[1];
@@ -286,7 +288,7 @@ final class UnboundedLocalCache<K, V> extends AbstractLocalCache<K, V> {
   /** Decorates the remapping function to record statistics if enabled. */
   <A, B, C> BiFunction<? super A, ? super B, ? extends C> makeStatsAware(
       BiFunction<? super A, ? super B, ? extends C> remappingFunction) {
-    if (!isReordingStats()) {
+    if (!isRecordingStats()) {
       return remappingFunction;
     }
     return (k, oldValue) -> {

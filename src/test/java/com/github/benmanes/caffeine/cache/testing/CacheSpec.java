@@ -76,8 +76,8 @@ public @interface CacheSpec {
   enum Stats { ENABLED, DISABLED }
 
   Stats[] stats() default {
-    //Stats.ENABLED,
-    Stats.DISABLED
+    Stats.ENABLED,
+    //Stats.DISABLED
   };
 
   /* ---------------- Maximum size -------------- */

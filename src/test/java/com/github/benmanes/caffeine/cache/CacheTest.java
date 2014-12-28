@@ -183,7 +183,7 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+  @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_present_partial(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> expect = new HashMap<>();
@@ -200,8 +200,8 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_present_full(Cache<Integer, Integer> cache, CacheContext context) {
-    Map<Integer, Integer> result = cache.getAllPresent(cache.asMap().keySet());
-    assertThat(result, is(equalTo(cache.asMap())));
+    Map<Integer, Integer> result = cache.getAllPresent(context.original().keySet());
+    assertThat(result, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }

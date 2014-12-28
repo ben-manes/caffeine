@@ -70,7 +70,7 @@ abstract class AbstractLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public boolean isReordingStats() {
+  public boolean isRecordingStats() {
     return isRecordingStats;
   }
 
