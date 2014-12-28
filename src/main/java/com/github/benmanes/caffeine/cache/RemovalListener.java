@@ -35,6 +35,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
+@FunctionalInterface
 public interface RemovalListener<K, V> {
 
   /** Notifies the listener that a removal occurred at some point in the past. */

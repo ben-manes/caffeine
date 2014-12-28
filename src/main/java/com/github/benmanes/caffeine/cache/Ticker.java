@@ -24,19 +24,17 @@ import javax.annotation.concurrent.ThreadSafe;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
-public abstract class Ticker {
+public interface Ticker {
 
   /** Returns the number of nanoseconds elapsed since this ticker's fixed point of reference. */
-  public abstract long read();
+  long read();
 
   /** A ticker that reads the current time using {@link System#nanoTime}. */
   public static Ticker systemTicker() {
-    return SYSTEM_TICKER;
+    return SystemTicker.INSTANCE;
   }
+}
 
-  private static final Ticker SYSTEM_TICKER = new Ticker() {
-    @Override public long read() {
-      return System.nanoTime();
-    }
-  };
+final class SystemTicker {
+  static final Ticker INSTANCE = () -> System.nanoTime();
 }
