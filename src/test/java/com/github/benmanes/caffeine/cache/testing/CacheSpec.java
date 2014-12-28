@@ -67,8 +67,7 @@ public @interface CacheSpec {
 
   /** The initial capacities, each resulting in a new combination. */
   InitialCapacity[] initialCapacity() default {
-    InitialCapacity.DEFAULT,
-    InitialCapacity.FULL,
+    InitialCapacity.DEFAULT
   };
 
   /* ---------------- Statistics -------------- */
@@ -77,7 +76,7 @@ public @interface CacheSpec {
 
   Stats[] stats() default {
     Stats.ENABLED,
-    //Stats.DISABLED
+    Stats.DISABLED
   };
 
   /* ---------------- Maximum size -------------- */
@@ -146,7 +145,6 @@ public @interface CacheSpec {
 
   /** The removal listeners, each resulting in a new combination. */
   Listener[] removalListener() default {
-    Listener.DEFAULT,
     Listener.CONSUMING,
   };
 
@@ -210,7 +208,6 @@ public @interface CacheSpec {
 
   /** The executors retrieved from a supplier, each resulting in a new combination. */
   CacheExecutor[] executor() default {
-    //CacheExecutor.DEFAULT,
     CacheExecutor.DIRECT,
   };
 
@@ -237,7 +234,10 @@ public @interface CacheSpec {
    * from 0, with the value being the negated key. Each configuration results in a new combination.
    */
   Population[] population() default {
-    Population.EMPTY, Population.SINGLETON, Population.PARTIAL, Population.FULL
+    Population.EMPTY,
+    Population.SINGLETON,
+    Population.PARTIAL,
+    Population.FULL
   };
 
   /** The population scenarios. */

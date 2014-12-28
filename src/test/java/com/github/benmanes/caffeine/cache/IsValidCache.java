@@ -15,12 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.IsValidBoundedLocalCache.valid;
+
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
-
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 
 /**
  * A matcher that evaluates a {@link Cache} to determine if it is in a valid state.
@@ -37,11 +36,12 @@ public final class IsValidCache<K, V>
 
   @Override
   protected boolean matchesSafely(Cache<? extends K, ? extends V> cache, Description description) {
-    DescriptionBuilder builder = new DescriptionBuilder(description);
-
-    // TODO(ben): Add internal state validation logic
-
-    return builder.matches();
+    if (cache instanceof BoundedLocalCache.LocalManualCache<?, ?>) {
+      BoundedLocalCache.LocalManualCache<?, ?> local =
+          (BoundedLocalCache.LocalManualCache<?, ?>) cache;
+      return valid().matchesSafely(local.cache, description);
+    }
+    return true;
   }
 
   @Factory
