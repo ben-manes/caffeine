@@ -23,7 +23,6 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.github.benmanes.caffeine.cache.UnboundedLocalCache.LocalLoadingCache;
 import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -162,7 +161,9 @@ public final class Caffeine<K, V> {
       CacheLoader<? super K1, V1> loader) {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return new LocalLoadingCache<K1, V1>(self, loader);
+    return (maximumSize == UNSET_INT)
+        ? new UnboundedLocalCache.LocalLoadingCache<K1, V1>(self, loader)
+        : new BoundedLocalCache.LocalLoadingCache<K1, V1>(self, loader);
   }
 
   enum NullRemovalListener implements RemovalListener<Object, Object> {

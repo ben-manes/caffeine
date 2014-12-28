@@ -45,6 +45,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -1065,7 +1067,30 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    *     map.put(key, newValue);
    */
   public V _merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-    throw new UnsupportedOperationException();
+    if (true) {
+      throw new UnsupportedOperationException();
+    }
+
+    requireNonNull(key);
+    requireNonNull(value);
+    requireNonNull(remappingFunction);
+    final int weight = weigher.weigh(key, value);
+    final WeightedValue<V> weightedValue = new WeightedValue<V>(value, weight);
+    final Node<K, V> node = new Node<K, V>(key, weightedValue);
+    data.merge(key, node, (k, prior) -> {
+      synchronized (prior) {
+        WeightedValue<V> oldWeightedValue = prior.get();
+        if (!oldWeightedValue.isAlive()) {
+          // conditionally removed won, but we got the entry lock first
+          // so help out and pretend like we are inserting a fresh entry
+          // ...
+        }
+        remappingFunction.apply(oldWeightedValue.value, value);
+      }
+      return null;
+    });
+
+    return null;
   }
 
   @Override
@@ -1666,6 +1691,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     static final long serialVersionUID = 1;
   }
 
+  /* ---------------- Manual Cache -------------- */
+
   static class LocalManualCache<K, V> implements Cache<K, V> {
     BoundedLocalCache<K, V> cache;
 
@@ -1739,6 +1766,52 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       } finally {
         evictionLock.unlock();
       }
+    }
+  }
+
+  /* ---------------- Loading Cache -------------- */
+
+  static final class LocalLoadingCache<K, V> extends LocalManualCache<K, V>
+      implements LoadingCache<K, V> {
+    static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
+
+    final CacheLoader<? super K, V> loader;
+    final Executor executor;
+
+    LocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+      super(builder);
+      this.loader = loader;
+      this.executor = builder.executor;
+    }
+
+    @Override
+    public V get(K key) {
+      return cache.computeIfAbsent(key, loader::load);
+    }
+
+    @Override
+    public Map<K, V> getAll(Iterable<? extends K> keys) {
+      Map<K, V> result = new HashMap<K, V>();
+      for (K key : keys) {
+        requireNonNull(key);
+        V value = cache.computeIfAbsent(key, loader::load);
+        if (value != null) {
+          result.put(key, value);
+        }
+      }
+      return Collections.unmodifiableMap(result);
+    }
+
+    @Override
+    public void refresh(K key) {
+      requireNonNull(key);
+      executor.execute(() -> {
+        try {
+          cache.compute(key, loader::refresh);
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown during refresh", t);
+        }
+      });
     }
   }
 }
