@@ -68,10 +68,7 @@ public @interface CacheSpec {
   /** The initial capacities, each resulting in a new combination. */
   InitialCapacity[] initialCapacity() default {
     InitialCapacity.DEFAULT,
-    InitialCapacity.ZERO,
-    InitialCapacity.ONE,
     InitialCapacity.FULL,
-    InitialCapacity.EXCESSIVE
   };
 
   /* ---------------- Statistics -------------- */
@@ -84,6 +81,12 @@ public @interface CacheSpec {
   };
 
   /* ---------------- Maximum size -------------- */
+
+  /** The maximum size, each resulting in a new combination. */
+  MaximumSize[] maximumSize() default {
+    MaximumSize.DISABLED,
+    MaximumSize.UNREACHABLE
+  };
 
   enum MaximumSize {
     /** A flag indicating that entries are not evicted due to a maximum size threshold. */
@@ -107,13 +110,6 @@ public @interface CacheSpec {
       return max;
     }
   }
-
-  /** The maximum size, each resulting in a new combination. */
-  MaximumSize[] maximumSize() default {
-    MaximumSize.DISABLED,
-    // Disabled while BoundedLocalCache is unstable
-    MaximumSize.UNREACHABLE
-  };
 
   /* ---------------- Reference-based -------------- */
 
