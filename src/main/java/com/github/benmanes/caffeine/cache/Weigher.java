@@ -37,4 +37,19 @@ public interface Weigher<K, V> {
    * @return the weight of the entry; must be non-negative
    */
   int weigh(@Nonnull K key, @Nonnull V value);
+
+  /** Returns a weigher where an entry has a weight of <tt>1</tt>. */
+  public static <K, V> Weigher<K, V> singleton() {
+    @SuppressWarnings("unchecked")
+    Weigher<K, V> self = (Weigher<K, V>) SingletonWeigher.INSTANCE;
+    return self;
+  }
+}
+
+enum SingletonWeigher implements Weigher<Object, Object> {
+  INSTANCE;
+
+  @Override public int weigh(Object key, Object value) {
+    return 1;
+  }
 }

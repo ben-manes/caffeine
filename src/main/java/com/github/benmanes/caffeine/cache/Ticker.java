@@ -35,6 +35,10 @@ public interface Ticker {
   }
 }
 
-final class SystemTicker {
-  static final Ticker INSTANCE = () -> System.nanoTime();
+enum SystemTicker implements Ticker {
+  INSTANCE;
+
+  @Override public long read() {
+    return System.nanoTime();
+  }
 }

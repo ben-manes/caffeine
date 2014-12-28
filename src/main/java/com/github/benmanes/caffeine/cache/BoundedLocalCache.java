@@ -228,7 +228,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @SuppressWarnings({"unchecked", "cast"})
   private BoundedLocalCache(Caffeine<K, V> builder) {
     // The data store and its maximum capacity
-    data = new ConcurrentHashMap<K, Node<K, V>>(builder.initialCapacity);
+    data = new ConcurrentHashMap<K, Node<K, V>>(builder.initialCapacity());
 
     if (builder.maximumSize != Caffeine.UNSET_INT) {
       capacity = new PaddedAtomicLong(Math.min(builder.maximumSize, MAXIMUM_CAPACITY));
@@ -299,7 +299,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * @throws IllegalArgumentException if the capacity is negative
    */
   public void setCapacity(long capacity) {
-    Caffeine.checkArgument(capacity >= 0);
+    Caffeine.requireArgument(capacity >= 0);
     evictionLock.lock();
     try {
       this.capacity.lazySet(Math.min(capacity, MAXIMUM_CAPACITY));
@@ -1230,12 +1230,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   Set<K> orderedKeySet(boolean ascending, int limit) {
-    Caffeine.checkArgument(limit >= 0);
+    Caffeine.requireArgument(limit >= 0);
     evictionLock.lock();
     try {
       drainBuffers();
 
-      final int initialCapacity = (weigher == Caffeine.SingletonWeigher.INSTANCE)
+      final int initialCapacity = (weigher == Weigher.singleton())
           ? Math.min(limit, (int) weightedSize())
           : 16;
       final Set<K> keys = new LinkedHashSet<K>(initialCapacity);
@@ -1340,12 +1340,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   Map<K, V> orderedMap(boolean ascending, int limit) {
-    Caffeine.checkArgument(limit >= 0);
+    Caffeine.requireArgument(limit >= 0);
     evictionLock.lock();
     try {
       drainBuffers();
 
-      final int initialCapacity = (weigher == Caffeine.SingletonWeigher.INSTANCE)
+      final int initialCapacity = (weigher == Weigher.singleton())
           ? Math.min(limit, (int) weightedSize())
           : 16;
       final Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
@@ -1541,7 +1541,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public void remove() {
-      Caffeine.checkState(current != null);
+      Caffeine.requireState(current != null);
       BoundedLocalCache.this.remove(current);
       current = null;
     }
@@ -1589,7 +1589,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public void remove() {
-      Caffeine.checkState(current != null);
+      Caffeine.requireState(current != null);
       BoundedLocalCache.this.remove(current.key);
       current = null;
     }
@@ -1657,7 +1657,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public void remove() {
-      Caffeine.checkState(current != null);
+      Caffeine.requireState(current != null);
       BoundedLocalCache.this.remove(current.key);
       current = null;
     }
@@ -1695,7 +1695,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @Override
     public int weigh(K key, V value) {
       int weight = weigher.weigh(key, value);
-      Caffeine.checkArgument(weight >= 1);
+      Caffeine.requireArgument(weight >= 1);
       return weight;
     }
 
@@ -1804,7 +1804,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     Object readResolve() {
-      Caffeine<K, V> builder = new Caffeine<>()
+      Caffeine<K, V> builder = Caffeine.newBuilder()
           .removalListener(removalListener)
           .maximumWeight(capacity)
           .weigher(weigher);

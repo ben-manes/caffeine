@@ -63,7 +63,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
   final ConcurrentHashMap<K, V> cache;
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder) {
-    this.cache = new ConcurrentHashMap<K, V>(builder.initialCapacity);
+    this.cache = new ConcurrentHashMap<K, V>(builder.initialCapacity());
     this.statsCounter = builder.statsCounterSupplier.get();
     this.removalListener = builder.getRemovalListener();
     this.isRecordingStats = builder.isRecordingStats();
@@ -542,7 +542,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
     @Override
     public void remove() {
-      Caffeine.checkState(key != null);
+      Caffeine.requireState(key != null);
       local.remove(key);
       key = null;
     }
@@ -617,7 +617,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
     @Override
     public void remove() {
-      Caffeine.checkState(entry != null);
+      Caffeine.requireState(entry != null);
       local.remove(entry.getKey());
       entry = null;
     }
@@ -705,7 +705,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
     @Override
     public void remove() {
-      Caffeine.checkState(entry != null);
+      Caffeine.requireState(entry != null);
       local.remove(entry.getKey());
       entry = null;
     }
