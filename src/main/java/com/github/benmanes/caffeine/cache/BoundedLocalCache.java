@@ -40,9 +40,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -236,7 +238,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     // The eviction support
     weigher = builder.weigher;
-    evictionLock = new ReentrantLock();
+    evictionLock = new Sync();
     weightedSize = new PaddedAtomicLong();
     evictionDeque = new LinkedDeque<Node<K, V>>();
     writeBuffer = new SingleConsumerQueue<Runnable>();
@@ -1643,6 +1645,73 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     Object writeReplace() {
       return weigher;
+    }
+  }
+
+  /** A non-fair lock using AQS state to represent if the lock is held. */
+  static final class Sync extends AbstractQueuedSynchronizer implements Lock, Serializable {
+    static final long serialVersionUID = 1L;
+    static final int UNLOCKED = 0;
+    static final int LOCKED = 1;
+
+    @Override
+    public void lock() {
+      acquire(LOCKED);
+    }
+
+    @Override
+    public void lockInterruptibly() throws InterruptedException {
+      acquireInterruptibly(LOCKED);
+    }
+
+    @Override
+    public boolean tryLock() {
+      return tryAcquire(LOCKED);
+    }
+
+    @Override
+    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
+      return tryAcquireNanos(1, unit.toNanos(time));
+    }
+
+    @Override
+    public void unlock() {
+      release(1);
+    }
+
+    @Override
+    public Condition newCondition() {
+      return new ConditionObject();
+    }
+
+    @Override
+    protected boolean tryAcquire(int acquires) {
+      if (compareAndSetState(UNLOCKED, LOCKED)) {
+        setExclusiveOwnerThread(Thread.currentThread());
+        return true;
+      } else if (Thread.currentThread() == getExclusiveOwnerThread()) {
+        throw new IllegalMonitorStateException();
+      }
+      return false;
+    }
+
+    @Override
+    protected boolean tryRelease(int releases) {
+      if (Thread.currentThread() != getExclusiveOwnerThread()) {
+        throw new IllegalMonitorStateException();
+      }
+      setExclusiveOwnerThread(null);
+      setState(UNLOCKED);
+      return true;
+    }
+
+    @Override
+    protected boolean isHeldExclusively() {
+      return isLocked() && (getExclusiveOwnerThread() == Thread.currentThread());
+    }
+
+    public final boolean isLocked() {
+      return getState() == LOCKED;
     }
   }
 
