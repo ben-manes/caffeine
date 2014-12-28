@@ -35,7 +35,7 @@ public enum DisabledStatsCounter implements StatsCounter {
   public void recordLoadSuccess(long loadTime) {}
 
   @Override
-  public void recordLoadException(long loadTime) {}
+  public void recordLoadFailure(long loadTime) {}
 
   @Override
   public void recordEviction() {}

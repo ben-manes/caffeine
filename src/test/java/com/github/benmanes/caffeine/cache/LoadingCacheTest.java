@@ -199,11 +199,11 @@ public final class LoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT,
-  removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void refresh_absent(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.refresh(context.absentKey());
     assertThat(cache.size(), is(1 + context.initialSize()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
 
     // records a hit

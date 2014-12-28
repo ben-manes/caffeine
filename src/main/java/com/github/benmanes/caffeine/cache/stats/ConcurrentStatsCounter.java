@@ -61,7 +61,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   }
 
   @Override
-  public void recordLoadException(long loadTime) {
+  public void recordLoadFailure(long loadTime) {
     loadExceptionCount.increment();
     totalLoadTime.add(loadTime);
   }

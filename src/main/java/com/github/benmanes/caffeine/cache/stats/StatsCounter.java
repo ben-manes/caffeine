@@ -40,7 +40,7 @@ public interface StatsCounter {
    * found in the cache. This method should be called by the loading thread, as well as by threads
    * blocking on the load. Multiple concurrent calls to {@link Cache} lookup methods with the same
    * key on an absent value should result in a single call to either {@code recordLoadSuccess} or
-   * {@code recordLoadException} and multiple calls to this method, despite all being served by the
+   * {@code recordLoadFailure} and multiple calls to this method, despite all being served by the
    * results of a single load operation.
    *
    * @param count the number of misses to record
@@ -58,13 +58,14 @@ public interface StatsCounter {
 
   /**
    * Records the failed load of a new entry. This should be called when a cache request causes an
-   * entry to be loaded, but an exception is thrown while loading the entry. In contrast to
-   * {@link #recordMisses}, this method should only be called by the loading thread.
+   * entry to be loaded, but either no value is found or an exception is thrown while loading the
+   * entry. In contrast to {@link #recordMisses}, this method should only be called by the loading
+   * thread.
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
-   *        prior to an exception being thrown
+   *        prior to discovering the value doesn't exist or an exception being thrown
    */
-  void recordLoadException(long loadTime);
+  void recordLoadFailure(long loadTime);
 
   /**
    * Records the eviction of an entry from the cache. This should only been called when an entry is

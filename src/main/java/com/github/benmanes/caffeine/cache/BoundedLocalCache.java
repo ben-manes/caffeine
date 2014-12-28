@@ -923,13 +923,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     node = data.computeIfAbsent(key, k -> {
       V value;
-      try {
-        value = mappingFunction.apply(k);
-      } catch (RuntimeException | Error e) {
-        statsCounter.recordMisses(1);
-        statsCounter.recordLoadException(1);
-        throw e;
-      }
+      value = statsAware(mappingFunction).apply(k);
       if (value == null) {
         return null;
       }
@@ -938,16 +932,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return new Node<K, V>(key, weightedValue[0]);
     });
     if (node == null) {
-      statsCounter.recordMisses(1);
-      statsCounter.recordLoadException(1);
       return null;
     }
     if (weightedValue[0] == null) {
       afterRead(node);
       return node.getValue();
     } else {
-      statsCounter.recordMisses(1);
-      statsCounter.recordLoadSuccess(1);
       afterWrite(new AddTask(node, weightedValue[0].weight));
       return weightedValue[0].value;
     }
@@ -969,7 +959,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     Node<K, V> node = data.computeIfPresent(key, (k, prior) -> {
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
-        V newValue = makeStatsAware(remappingFunction).apply(k, oldWeightedValue.value);
+        V newValue = statsAware(remappingFunction).apply(k, oldWeightedValue.value);
         if (newValue == null) {
           makeRetired(prior);
           task[0] = new RemovalTask(prior);
@@ -1009,7 +999,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     Runnable[] task = new Runnable[2];
     data.compute(key, (k, prior) -> {
       if (prior == null) {
-        newValue[0] = makeStatsAware(remappingFunction).apply(k, null);
+        newValue[0] = statsAware(remappingFunction).apply(k, null);
         if (newValue[0] == null) {
           return null;
         }
@@ -1033,7 +1023,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           }
           oldValue = null;
         }
-        newValue[0] = makeStatsAware(remappingFunction).apply(k, oldValue);
+        newValue[0] = statsAware(remappingFunction).apply(k, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
@@ -1086,7 +1076,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     requireNonNull(remappingFunction);
 
     if (true) {
-      return super.merge(key, value, makeStatsAware(remappingFunction));
+      return super.merge(key, value, statsAware(remappingFunction));
     }
 
     final int weight = weigher.weigh(key, value);
@@ -1109,21 +1099,55 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
-  <A, B, C> BiFunction<? super A, ? super B, ? extends C> makeStatsAware(
-      BiFunction<? super A, ? super B, ? extends C> remappingFunction) {
+  Function<? super K, ? extends V> statsAware(Function<? super K, ? extends V> mappingFunction) {
+    if (!isRecordingStats) {
+      return mappingFunction;
+    }
+    return key -> {
+      V value;
+      statsCounter.recordMisses(1);
+      long startTime = ticker.read();
+      try {
+        value = mappingFunction.apply(key);
+      } catch (RuntimeException | Error e) {
+        statsCounter.recordLoadFailure(ticker.read() - startTime);
+        throw e;
+      }
+      long loadTime = ticker.read() - startTime;
+      if (value == null) {
+        statsCounter.recordLoadFailure(loadTime);
+      } else {
+        statsCounter.recordLoadSuccess(loadTime);
+      }
+      return value;
+    };
+  }
+
+  /** Decorates the remapping function to record statistics if enabled. */
+  <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
+      BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
     if (!isRecordingStats) {
       return remappingFunction;
     }
-    return (k, oldValue) -> {
+    return (t, u) -> {
+      R result;
+      if (u == null) {
+        statsCounter.recordMisses(1);
+      }
       long startTime = ticker.read();
       try {
-        C newValue = remappingFunction.apply(k, oldValue);
-        statsCounter.recordLoadSuccess(ticker.read() - startTime);
-        return newValue;
+        result = remappingFunction.apply(t, u);
       } catch (RuntimeException | Error e) {
-        statsCounter.recordLoadException(ticker.read() - startTime);
+        statsCounter.recordLoadFailure(ticker.read() - startTime);
         throw e;
       }
+      long loadTime = ticker.read() - startTime;
+      if (result == null) {
+        statsCounter.recordLoadFailure(loadTime);
+      } else {
+        statsCounter.recordLoadSuccess(loadTime);
+      }
+      return result;
     };
   }
 
