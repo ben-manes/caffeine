@@ -483,6 +483,27 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
+   * Attempts to transition the node from the <tt>alive</tt> state to the
+   * <tt>retired</tt> state.
+   *
+   * @param node the entry in the page replacement policy
+   * @param expect the expected weighted value
+   * @return if successful
+   */
+  boolean tryToRetire(Node<K, V> node, WeightedValue<V> expect) {
+    if (expect.isAlive()) {
+      final WeightedValue<V> retired = new WeightedValue<V>(expect.value, -expect.weight);
+      synchronized (node) {
+        if (node.get() == expect) {
+          node.lazySet(retired);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
    * Atomically transitions the node from the <tt>alive</tt> state to the
    * <tt>retired</tt> state, if a valid transition.
    *
@@ -795,28 +816,29 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     WeightedValue<V> weightedValue = node.get();
-    if (!weightedValue.contains(value) || !weightedValue.isAlive()) {
+    for (;;) {
+      if (weightedValue.contains(value)) {
+        if (tryToRetire(node, weightedValue)) {
+          if (data.remove(key, node)) {
+            if (hasRemovalListener()) {
+              @SuppressWarnings("unchecked")
+              K castKey = (K) key;
+              notifyRemoval(castKey, node.getValue(), RemovalCause.EXPLICIT);
+            }
+            afterWrite(new RemovalTask(node));
+            return true;
+          }
+        } else {
+          weightedValue = node.get();
+          if (weightedValue.isAlive()) {
+            // retry as an intermediate update may have replaced the value with
+            // an equal instance that has a different reference identity
+            continue;
+          }
+        }
+      }
       return false;
     }
-    synchronized (node) {
-      weightedValue = node.get();
-      if (!weightedValue.contains(value) || !weightedValue.isAlive()) {
-        return false;
-      }
-      if (!data.remove(key, node)) {
-        return false;
-      }
-      final WeightedValue<V> retired = new WeightedValue<V>(
-          weightedValue.value, -weightedValue.weight);
-      node.lazySet(retired);
-    }
-    if (hasRemovalListener()) {
-      @SuppressWarnings("unchecked")
-      K castKey = (K) key;
-      notifyRemoval(castKey, node.getValue(), RemovalCause.EXPLICIT);
-    }
-    afterWrite(new RemovalTask(node));
-    return true;
   }
 
   @Override
@@ -963,57 +985,74 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return (weightedValue[0] == null) ? null : weightedValue[0].value;
   }
 
-  /**
-     * V oldValue = map.get(key);
-     * V newValue = remappingFunction.apply(key, oldValue);
-     * if (oldValue != null ) {
-     *    if (newValue != null)
-     *       map.put(key, newValue);
-     *    else
-     *       map.remove(key);
-     * } else {
-     *    if (newValue != null)
-     *       map.put(key, newValue);
-     *    else
-     *       return null;
-     * }
-     * }
-   */
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     requireNonNull(remappingFunction);
 
-    if (true) {
-      return super.compute(key, remappingFunction);
-    }
-
-    Runnable[] task = new Runnable[0];
-
-    Node<K, V> node = data.compute(key, (k, prior) -> {
+    @SuppressWarnings("unchecked")
+    V[] newValue = (V[]) new Object[1];
+    Runnable[] task = new Runnable[2];
+    data.compute(key, (k, prior) -> {
       if (prior == null) {
-        V newValue = remappingFunction.apply(k, null);
-        if (newValue == null) {
+        newValue[0] = remappingFunction.apply(k, null);
+        if (newValue[0] == null) {
           return null;
         }
-        final int weight = weigher.weigh(key, newValue);
-        final WeightedValue<V> weightedValue = new WeightedValue<V>(newValue, weight);
+        final int weight = weigher.weigh(key, newValue[0]);
+        final WeightedValue<V> weightedValue = new WeightedValue<V>(newValue[0], weight);
         final Node<K, V> newNode = new Node<K, V>(key, weightedValue);
         task[0] = new AddTask(newNode, weight);
         return newNode;
       }
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
-        if (!oldWeightedValue.isAlive()) {
-          // conditionally removed
+        V oldValue;
+        if (oldWeightedValue.isAlive()) {
+          oldValue = oldWeightedValue.value;
+        } else {
+          // conditionally removed won, but we got the entry lock first
+          // so help out and pretend like we are inserting a fresh entry
+          task[1] = new RemovalTask(prior);
+          if (hasRemovalListener()) {
+            notifyRemoval(key, oldWeightedValue.value, RemovalCause.EXPLICIT);
+          }
+          oldValue = null;
+        }
+        newValue[0] = remappingFunction.apply(k, oldValue);
+        if ((newValue[0] == null) && (oldValue != null)) {
+          task[0] = new RemovalTask(prior);
+          if (hasRemovalListener()) {
+            notifyRemoval(key, oldWeightedValue.value, RemovalCause.EXPLICIT);
+          }
           return null;
         }
+        final int weight = weigher.weigh(key, newValue[0]);
+        final WeightedValue<V> weightedValue = new WeightedValue<V>(newValue[0], weight);
+        Node<K, V> newNode;
+        if (task[1] == null) {
+          newNode = prior;
+          prior.lazySet(weightedValue);
+          final int weightedDifference = weight - oldWeightedValue.weight;
+          if (weightedDifference != 0) {
+            task[0] = new UpdateTask(prior, weightedDifference);
+          }
+          if (hasRemovalListener()) {
+            notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
+          }
+        } else {
+          newNode = new Node<>(key, weightedValue);
+          task[0] = new AddTask(newNode, weight);
+        }
+        return prior;
       }
-      V newValue = remappingFunction.apply(k, null);
-
-      // update
-      return null;
     });
-    return null;
+    if (task[0] != null) {
+      afterWrite(task[0]);
+    }
+    if (task[1] != null) {
+      afterWrite(task[1]);
+    }
+    return newValue[0];
   }
 
   /**
