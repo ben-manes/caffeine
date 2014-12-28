@@ -127,7 +127,7 @@ public final class Caffeine<K, V> {
   }
 
   Ticker ticker() {
-    return Ticker.disabledTicker();
+    return Ticker.systemTicker();
   }
 
   public Caffeine<K, V> maximumSize(long size) {

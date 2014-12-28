@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractSet;
@@ -45,7 +46,9 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
+final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializable {
+  private static final long serialVersionUID = 1L;
+
   @Nullable final RemovalListener<K, V> removalListener;
   final Executor executor;
   final Ticker ticker;
@@ -684,7 +687,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
   static final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
     static final long serialVersionUID = 1;
 
-    final UnboundedLocalCache<K, V> local;
+    transient final UnboundedLocalCache<K, V> local;
 
     WriteThroughEntry(UnboundedLocalCache<K, V> local, Entry<K, V> entry) {
       super(entry.getKey(), entry.getValue());

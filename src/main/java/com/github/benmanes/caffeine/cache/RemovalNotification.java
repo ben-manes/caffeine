@@ -86,7 +86,7 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
   }
 
   @Override
-  public boolean equals(@Nullable Object o) {
+  public boolean equals(Object o) {
     if (o == null) {
       return false;
     } else if (!(o instanceof Entry<?, ?>)) {

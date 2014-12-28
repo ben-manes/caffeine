@@ -29,14 +29,14 @@ public abstract class Ticker {
   /** Returns the number of nanoseconds elapsed since this ticker's fixed point of reference. */
   public abstract long read();
 
-  /** A ticker that always return the time {@code 0L}. */
-  public static Ticker disabledTicker() {
-    return DISABLED_TICKER;
+  /** A ticker that reads the current time using {@link System#nanoTime}. */
+  public static Ticker systemTicker() {
+    return SYSTEM_TICKER;
   }
 
-  private static final Ticker DISABLED_TICKER = new Ticker() {
+  private static final Ticker SYSTEM_TICKER = new Ticker() {
     @Override public long read() {
-      return 0L;
+      return System.nanoTime();
     }
   };
 }
