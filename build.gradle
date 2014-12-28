@@ -82,8 +82,12 @@ dependencies {
 test {
   useTestNG()
   options {
-    threadCount = 4
-    parallel = 'methods'
+    if (System.env.'CI') {
+      forkEvery = 1
+    } else {
+      threadCount = 4
+      parallel = 'methods'
+    }
   }
   testLogging {
     events 'skipped'
