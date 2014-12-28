@@ -53,7 +53,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @param key key with which the specified value is to be associated
    * @return the current (existing or computed) value associated with the specified key, or null if
    *         the computed value is null
-   * @throws NullPointerException if the specified key or mappingFunction is null
+   * @throws NullPointerException if the specified key is null
    * @throws IllegalStateException if the computation detectably attempts a recursive update to this
    *         cache that would otherwise never complete
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping

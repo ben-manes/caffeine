@@ -16,6 +16,8 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 /**
  * Computes or retrieves values, based on a key, for use in populating a {@link LoadingCache}.
@@ -65,6 +67,38 @@ public interface CacheLoader<K, V> {
    * @throws UnsupportedOperationException if bulk loading is not implemented
    */
   default Map<K, V> loadAll(Iterable<? extends K> keys) {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Asynchronously computes or retrieves the value corresponding to {@code key}.
+   *
+   * @param key the non-null key whose value should be loaded
+   * @return the future value associated with {@code key}
+   */
+  default CompletableFuture<V> asyncLoad(K key, Executor executor) {
+    return CompletableFuture.supplyAsync(() -> load(key), executor);
+  }
+
+  /**
+   * Asynchronously computes or retrieves the values corresponding to {@code keys}. This method is
+   * called by {@link AsyncLoadingCache#getAll}.
+   * <p>
+   * If the returned map doesn't contain all requested {@code keys} then the entries it does contain
+   * will be cached, but {@code getAll} will throw an exception. If the returned map contains extra
+   * keys not present in {@code keys} then all returned entries will be cached, but only the entries
+   * for {@code keys} will be returned from {@code getAll}.
+   * <p>
+   * This method should be overriden when bulk retrieval is significantly more efficient than many
+   * individual lookups. Note that {@link AsyncLoadingCache#getAll} will defer to individual calls
+   * to {@link AsyncLoadingCache#get} if this method is not overriden.
+   *
+   * @param keys the unique, non-null keys whose values should be loaded
+   * @return a future containing the map from each key in {@code keys} to the value associated with
+   *         that key; <b>may not contain null values</b>
+   * @throws UnsupportedOperationException if bulk loading is not implemented
+   */
+  default CompletableFuture<Map<K, V>> asyncLoadAll(K key, Executor executor) {
     throw new UnsupportedOperationException();
   }
 
