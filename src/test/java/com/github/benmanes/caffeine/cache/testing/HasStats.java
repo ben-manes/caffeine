@@ -64,7 +64,7 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
       case LOAD_SUCCESS:
         return desc.expectThat(context.stats().loadSuccessCount(), is(count)).matches();
       case LOAD_FAILURE:
-        return desc.expectThat(context.stats().loadExceptionCount(), is(count)).matches();
+        return desc.expectThat(context.stats().loadFailureCount(), is(count)).matches();
       default:
         throw new AssertionError("Unknown stats type");
     }

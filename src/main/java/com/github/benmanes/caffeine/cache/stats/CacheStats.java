@@ -35,7 +35,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  *         incremented, and the total loading time, in nanoseconds, is added to
  *         {@code totalLoadTime}.
  *     <li>When an exception is thrown while loading an entry, {@code missCount} and {@code
- *         loadExceptionCount} are incremented, and the total loading time, in nanoseconds, is
+ *         loadFailureCount} are incremented, and the total loading time, in nanoseconds, is
  *         added to {@code totalLoadTime}.
  *     <li>Cache lookups that encounter a missing cache entry that is still loading will wait
  *         for loading to complete (whether successful or not) and then increment {@code missCount}.
@@ -58,7 +58,7 @@ public class CacheStats {
   private final long hitCount;
   private final long missCount;
   private final long loadSuccessCount;
-  private final long loadExceptionCount;
+  private final long loadFailureCount;
   private final long totalLoadTime;
   private final long evictionCount;
 
@@ -66,15 +66,15 @@ public class CacheStats {
    * Constructs a new {@code CacheStats} instance.
    */
   public CacheStats(long hitCount, long missCount, long loadSuccessCount,
-      long loadExceptionCount, long totalLoadTime, long evictionCount) {
-    if ((hitCount < 0) || (missCount < 0) || (loadSuccessCount < 0) || (loadExceptionCount < 0)
+      long loadFailureCount, long totalLoadTime, long evictionCount) {
+    if ((hitCount < 0) || (missCount < 0) || (loadSuccessCount < 0) || (loadFailureCount < 0)
         || (totalLoadTime < 0) || (evictionCount < 0)) {
       throw new IllegalArgumentException();
     }
     this.hitCount = hitCount;
     this.missCount = missCount;
     this.loadSuccessCount = loadSuccessCount;
-    this.loadExceptionCount = loadExceptionCount;
+    this.loadFailureCount = loadFailureCount;
     this.totalLoadTime = totalLoadTime;
     this.evictionCount = evictionCount;
   }
@@ -120,7 +120,7 @@ public class CacheStats {
    * Note that {@code hitRate + missRate =~ 1.0}. Cache misses include all requests which
    * weren't cache hits, including requests which resulted in either successful or failed loading
    * attempts, and requests which waited for other threads to finish loading. It is thus the case
-   * that {@code missCount &gt;= loadSuccessCount + loadExceptionCount}. Multiple
+   * that {@code missCount &gt;= loadSuccessCount + loadFailureCount}. Multiple
    * concurrent misses for the same key will result in a single load operation.
    */
   public double missRate() {
@@ -131,17 +131,17 @@ public class CacheStats {
   /**
    * Returns the total number of times that {@link Cache} lookup methods attempted to load new
    * values. This includes both successful load operations, as well as those that threw exceptions.
-   * This is defined as {@code loadSuccessCount + loadExceptionCount}.
+   * This is defined as {@code loadSuccessCount + loadFailureCount}.
    */
   public long loadCount() {
-    return loadSuccessCount + loadExceptionCount;
+    return loadSuccessCount + loadFailureCount;
   }
 
   /**
    * Returns the number of times {@link Cache} lookup methods have successfully loaded a new value.
    * This is always incremented in conjunction with {@link #missCount}, though {@code missCount}
    * is also incremented when an exception is encountered during cache loading (see
-   * {@link #loadExceptionCount}). Multiple concurrent misses for the same key will result in a
+   * {@link #loadFailureCount}). Multiple concurrent misses for the same key will result in a
    * single load operation.
    */
   public long loadSuccessCount() {
@@ -149,32 +149,32 @@ public class CacheStats {
   }
 
   /**
-   * Returns the number of times {@link Cache} lookup methods threw an exception while loading a
-   * new value. This is always incremented in conjunction with {@code missCount}, though
-   * {@code missCount} is also incremented when cache loading completes successfully (see
-   * {@link #loadSuccessCount}). Multiple concurrent misses for the same key will result in a
-   * single load operation.
+   * Returns the number of times {@link Cache} lookup methods failed to load a new value, either
+   * because no value was found or an exception was thrown while loading. This is always incremented
+   * in conjunction with {@code missCount}, though {@code missCount} is also incremented when cache
+   * loading completes successfully (see {@link #loadSuccessCount}). Multiple concurrent misses for
+   * the same key will result in a single load operation.
    */
-  public long loadExceptionCount() {
-    return loadExceptionCount;
+  public long loadFailureCount() {
+    return loadFailureCount;
   }
 
   /**
    * Returns the ratio of cache loading attempts which threw exceptions. This is defined as
-   * {@code loadExceptionCount / (loadSuccessCount + loadExceptionCount)}, or {@code 0.0} when
-   * {@code loadSuccessCount + loadExceptionCount == 0}.
+   * {@code loadFailureCount / (loadSuccessCount + loadFailureCount)}, or {@code 0.0} when
+   * {@code loadSuccessCount + loadFailureCount == 0}.
    */
   public double loadExceptionRate() {
-    long totalLoadCount = loadSuccessCount + loadExceptionCount;
+    long totalLoadCount = loadSuccessCount + loadFailureCount;
     return (totalLoadCount == 0)
         ? 0.0
-        : (double) loadExceptionCount / totalLoadCount;
+        : (double) loadFailureCount / totalLoadCount;
   }
 
   /**
    * Returns the total number of nanoseconds the cache has spent loading new values. This can be
    * used to calculate the miss penalty. This value is increased every time {@code loadSuccessCount}
-   * or {@code loadExceptionCount} is incremented.
+   * or {@code loadFailureCount} is incremented.
    */
   public long totalLoadTime() {
     return totalLoadTime;
@@ -182,10 +182,10 @@ public class CacheStats {
 
   /**
    * Returns the average time spent loading new values. This is defined as
-   * {@code totalLoadTime / (loadSuccessCount + loadExceptionCount)}.
+   * {@code totalLoadTime / (loadSuccessCount + loadFailureCount)}.
    */
   public double averageLoadPenalty() {
-    long totalLoadCount = loadSuccessCount + loadExceptionCount;
+    long totalLoadCount = loadSuccessCount + loadFailureCount;
     return (totalLoadCount == 0)
         ? 0.0
         : (double) totalLoadTime / totalLoadCount;
@@ -209,7 +209,7 @@ public class CacheStats {
         Math.max(0, hitCount - other.hitCount),
         Math.max(0, missCount - other.missCount),
         Math.max(0, loadSuccessCount - other.loadSuccessCount),
-        Math.max(0, loadExceptionCount - other.loadExceptionCount),
+        Math.max(0, loadFailureCount - other.loadFailureCount),
         Math.max(0, totalLoadTime - other.totalLoadTime),
         Math.max(0, evictionCount - other.evictionCount));
   }
@@ -223,7 +223,7 @@ public class CacheStats {
         hitCount + other.hitCount,
         missCount + other.missCount,
         loadSuccessCount + other.loadSuccessCount,
-        loadExceptionCount + other.loadExceptionCount,
+        loadFailureCount + other.loadFailureCount,
         totalLoadTime + other.totalLoadTime,
         evictionCount + other.evictionCount);
   }
@@ -231,7 +231,7 @@ public class CacheStats {
   @Override
   public int hashCode() {
     return Objects.hash(hitCount, missCount, loadSuccessCount,
-        loadExceptionCount, totalLoadTime, evictionCount);
+        loadFailureCount, totalLoadTime, evictionCount);
   }
 
   @Override
@@ -245,7 +245,7 @@ public class CacheStats {
     return hitCount == other.hitCount
         && missCount == other.missCount
         && loadSuccessCount == other.loadSuccessCount
-        && loadExceptionCount == other.loadExceptionCount
+        && loadFailureCount == other.loadFailureCount
         && totalLoadTime == other.totalLoadTime
         && evictionCount == other.evictionCount;
   }
@@ -256,7 +256,7 @@ public class CacheStats {
         + "hitCount=" + hitCount + ','
         + "missCount=" + missCount + ','
         + "loadSuccessCount" + loadSuccessCount + ','
-        + "loadExceptionCount" + loadExceptionCount + ','
+        + "loadFailureCount" + loadFailureCount + ','
         + "totalLoadTime" + totalLoadTime + ','
         + "evictionCount" + evictionCount + ',';
   }

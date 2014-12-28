@@ -28,7 +28,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   private final LongAdder hitCount;
   private final LongAdder missCount;
   private final LongAdder loadSuccessCount;
-  private final LongAdder loadExceptionCount;
+  private final LongAdder loadFailureCount;
   private final LongAdder totalLoadTime;
   private final LongAdder evictionCount;
 
@@ -39,7 +39,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
     hitCount = new LongAdder();
     missCount = new LongAdder();
     loadSuccessCount = new LongAdder();
-    loadExceptionCount = new LongAdder();
+    loadFailureCount = new LongAdder();
     totalLoadTime = new LongAdder();
     evictionCount = new LongAdder();
   }
@@ -62,7 +62,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
 
   @Override
   public void recordLoadFailure(long loadTime) {
-    loadExceptionCount.increment();
+    loadFailureCount.increment();
     totalLoadTime.add(loadTime);
   }
 
@@ -77,7 +77,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
         hitCount.sum(),
         missCount.sum(),
         loadSuccessCount.sum(),
-        loadExceptionCount.sum(),
+        loadFailureCount.sum(),
         totalLoadTime.sum(),
         evictionCount.sum());
   }
@@ -88,7 +88,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
     hitCount.add(otherStats.hitCount());
     missCount.add(otherStats.missCount());
     loadSuccessCount.add(otherStats.loadSuccessCount());
-    loadExceptionCount.add(otherStats.loadExceptionCount());
+    loadFailureCount.add(otherStats.loadFailureCount());
     totalLoadTime.add(otherStats.totalLoadTime());
     evictionCount.add(otherStats.evictionCount());
   }
