@@ -678,31 +678,36 @@ public final class Caffeine<K, V> {
    */
   @Override
   public String toString() {
-    StringBuilder s = new StringBuilder();
+    StringBuilder s = new StringBuilder(64);
+    s.append(getClass().getSimpleName()).append('{');
+    int baseLength = s.length();
     if (initialCapacity != UNSET_INT) {
-      s.append("initialCapacity=").append(initialCapacity);
+      s.append("initialCapacity=").append(initialCapacity).append(',');
     }
     if (maximumSize != UNSET_INT) {
-      s.append("maximumSize").append(maximumSize);
+      s.append("maximumSize").append(maximumSize).append(',');
     }
     if (maximumWeight != UNSET_INT) {
-      s.append("maximumWeight").append(maximumWeight);
+      s.append("maximumWeight").append(maximumWeight).append(',');
     }
     if (expireAfterWriteNanos != UNSET_INT) {
-      s.append("expireAfterWrite").append(expireAfterWriteNanos).append("ns");
+      s.append("expireAfterWrite").append(expireAfterWriteNanos).append("ns,");
     }
     if (expireAfterAccessNanos != UNSET_INT) {
-      s.append("expireAfterAccess").append(expireAfterAccessNanos).append("ns");
+      s.append("expireAfterAccess").append(expireAfterAccessNanos).append("ns,");
     }
     if (keyStrength != null) {
-      s.append("keyStrength").append(keyStrength.toString().toLowerCase());
+      s.append("keyStrength").append(keyStrength.toString().toLowerCase()).append(',');
     }
     if (valueStrength != null) {
-      s.append("valueStrength").append(valueStrength.toString().toLowerCase());
+      s.append("valueStrength").append(valueStrength.toString().toLowerCase()).append(',');
     }
     if (removalListener != null) {
-      s.append("removalListener");
+      s.append("removalListener").append(',');
     }
-    return s.toString();
+    if (s.length() > baseLength) {
+      s.deleteCharAt(s.length() - 1);
+    }
+    return s.append('}').toString();
   }
 }
