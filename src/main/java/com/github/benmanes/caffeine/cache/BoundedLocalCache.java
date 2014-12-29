@@ -253,12 +253,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     // The notification queue and listener
-    removalListener = (RemovalListener<K, V>) builder.removalListener;
+    removalListener = builder.getRemovalListener();
     executor = builder.getExecutor();
 
-    statsCounter = builder.statsCounterSupplier.get();
+    statsCounter = builder.getStatsCounterSupplier().get();
     isRecordingStats = builder.isRecordingStats();
-    ticker = builder.ticker();
+    ticker = builder.getTicker();
   }
 
   /** Returns whether this cache notifies when an entry is removed. */

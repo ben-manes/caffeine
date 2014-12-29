@@ -64,11 +64,11 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder) {
     this.data = new ConcurrentHashMap<K, V>(builder.getInitialCapacity());
-    this.statsCounter = builder.statsCounterSupplier.get();
+    this.statsCounter = builder.getStatsCounterSupplier().get();
     this.removalListener = builder.getRemovalListener();
     this.isRecordingStats = builder.isRecordingStats();
     this.executor = builder.getExecutor();
-    this.ticker = builder.ticker();
+    this.ticker = builder.getTicker();
   }
 
   /* ---------------- Cache -------------- */

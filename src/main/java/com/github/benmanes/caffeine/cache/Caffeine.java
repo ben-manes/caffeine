@@ -22,7 +22,9 @@ import java.lang.ref.WeakReference;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
 
@@ -34,26 +36,37 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Caffeine<K, V> {
+  private static final Logger logger = Logger.getLogger(Caffeine.class.getName());
+
   private static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER =
       () -> DisabledStatsCounter.INSTANCE;
   private static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
       () -> new ConcurrentStatsCounter();
   private static final Ticker DISABLED_TICKER = () -> 0;
+  private enum Strength { STRONG, WEAK, SOFT }
+
+  private static final int UNSET_INT = -1;
 
   private static final int DEFAULT_INITIAL_CAPACITY = 16;
-  static final int UNSET_INT = -1;
+  private static final int DEFAULT_EXPIRATION_NANOS = 0;
+  private static final int DEFAULT_REFRESH_NANOS = 0;
 
   private long maximumSize = UNSET_INT;
   private long maximumWeight = UNSET_INT;
-  private long expireAfterWriteNanos = UNSET_INT;
-  private long expireAfterAccessNanos = UNSET_INT;
   private int initialCapacity = UNSET_INT;
 
-  Supplier<StatsCounter> statsCounterSupplier = DISABLED_STATS_COUNTER_SUPPLIER;
-  RemovalListener<? super K, ? super V> removalListener;
+  private long refreshNanos = UNSET_INT;
+  private long expireAfterWriteNanos = UNSET_INT;
+  private long expireAfterAccessNanos = UNSET_INT;
 
+  private RemovalListener<? super K, ? super V> removalListener;
   private Weigher<? super K, ? super V> weigher;
+  private Supplier<StatsCounter> statsCounterSupplier;
   private Executor executor;
+  private Ticker ticker;
+
+  private Strength keyStrength;
+  private Strength valueStrength;
 
   private Caffeine() {}
 
@@ -84,29 +97,6 @@ public final class Caffeine<K, V> {
       throw new IllegalStateException(String.format(template, args));
     }
   }
-
-  /* ---------------- Internal accessors -------------- */
-
-  Ticker ticker() {
-    return isRecordingStats() || isExpirable()
-        ? Ticker.systemTicker()
-        : DISABLED_TICKER;
-  }
-
-  boolean isRecordingStats() {
-    return (statsCounterSupplier == ENABLED_STATS_COUNTER_SUPPLIER);
-  }
-
-  boolean isExpirable() {
-    return false;
-  }
-
-  @SuppressWarnings("unchecked")
-  @Nullable <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener() {
-    return (RemovalListener<K1, V1>) removalListener;
-  }
-
-  /* ---------------- Public API -------------- */
 
   /**
    * Constructs a new {@code Caffeine} instance with default settings, including strong keys, strong
@@ -334,9 +324,155 @@ public final class Caffeine<K, V> {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Specifies that each entry should be automatically removed from the cache once a fixed duration
+   * has elapsed after the entry's creation, or the most recent replacement of its value.
+   * <p>
+   * When {@code duration} is zero, this method hands off to {@link #maximumSize(long) maximumSize}
+   * {@code (0)}, ignoring any otherwise-specified maximum size or weight. This can be useful in
+   * testing, or to disable caching temporarily without a code change.
+   * <p>
+   * Expired entries may be counted in {@link Cache#size}, but will never be visible to read or
+   * write operations. Expired entries are cleaned up as part of the routine maintenance described
+   * in the class javadoc.
+   *
+   * @param duration the length of time after an entry is created that it should be automatically
+   *        removed
+   * @param unit the unit that {@code duration} is expressed in
+   * @throws IllegalArgumentException if {@code duration} is negative
+   * @throws IllegalStateException if the time to live or time to idle was already set
+   */
+  public Caffeine<K, V> expireAfterWrite(long duration, TimeUnit unit) {
+    requireState(expireAfterWriteNanos == UNSET_INT,
+        "expireAfterWrite was already set to %s ns", expireAfterWriteNanos);
+    requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
+    this.expireAfterWriteNanos = unit.toNanos(duration);
+    return this;
+  }
+
+  long getExpireAfterWriteNanos() {
+    return (expireAfterWriteNanos == UNSET_INT) ? DEFAULT_EXPIRATION_NANOS : expireAfterWriteNanos;
+  }
 
 
+  /**
+   * Specifies that each entry should be automatically removed from the cache once a fixed duration
+   * has elapsed after the entry's creation, the most recent replacement of its value, or its last
+   * access. Access time is reset by all cache read and write operations (including
+   * {@code Cache.asMap().get(Object)} and {@code Cache.asMap().put(K, V)}), but not by operations
+   * on the collection-views of {@link Cache#asMap}.
+   * <p>
+   * When {@code duration} is zero, this method hands off to {@link #maximumSize(long) maximumSize}
+   * {@code (0)}, ignoring any otherwise-specified maximum size or weight. This can be useful in
+   * testing, or to disable caching temporarily without a code change.
+   * <p>
+   * Expired entries may be counted in {@link Cache#size}, but will never be visible to read or
+   * write operations. Expired entries are cleaned up as part of the routine maintenance described
+   * in the class javadoc.
+   *
+   * @param duration the length of time after an entry is last accessed that it should be
+   *        automatically removed
+   * @param unit the unit that {@code duration} is expressed in
+   * @throws IllegalArgumentException if {@code duration} is negative
+   * @throws IllegalStateException if the time to idle or time to live was already set
+   */
+  public Caffeine<K, V> expireAfterAccess(long duration, TimeUnit unit) {
+    requireState(expireAfterAccessNanos == UNSET_INT,
+        "expireAfterAccess was already set to %s ns", expireAfterAccessNanos);
+    requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
+    this.expireAfterAccessNanos = unit.toNanos(duration);
+    return this;
+  }
 
+  long getExpireAfterAccessNanos() {
+    return (expireAfterAccessNanos == UNSET_INT)
+        ? DEFAULT_EXPIRATION_NANOS
+        : expireAfterAccessNanos;
+  }
+
+  boolean isExpirable() {
+    return (expireAfterAccessNanos != UNSET_INT) && (expireAfterWriteNanos != UNSET_INT);
+  }
+
+  /**
+   * Specifies that active entries are eligible for automatic refresh once a fixed duration has
+   * elapsed after the entry's creation, or the most recent replacement of its value. The semantics
+   * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
+   * {@link CacheLoader#reload}.
+   * <p>
+   * As the default implementation of {@link CacheLoader#reload} is synchronous, it is recommended
+   * that users of this method override {@link CacheLoader#reload} with an asynchronous
+   * implementation; otherwise refreshes will be performed during unrelated cache read and write
+   * operations.
+   * <p>
+   * Currently automatic refreshes are performed when the first stale request for an entry occurs.
+   * The request triggering refresh will make a blocking call to {@link CacheLoader#reload} and
+   * immediately return the new value if the returned future is complete, and the old value
+   * otherwise.
+   * <p>
+   * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
+   *
+   * @param duration the length of time after an entry is created that it should be considered
+   *        stale, and thus eligible for refresh
+   * @param unit the unit that {@code duration} is expressed in
+   * @throws IllegalArgumentException if {@code duration} is negative
+   * @throws IllegalStateException if the refresh interval was already set
+   */
+  public Caffeine<K, V> refreshAfterWrite(long duration, TimeUnit unit) {
+    requireNonNull(unit);
+    requireState(refreshNanos == UNSET_INT, "refresh was already set to %s ns", refreshNanos);
+    requireArgument(duration > 0, "duration must be positive: %s %s", duration, unit);
+    this.refreshNanos = unit.toNanos(duration);
+    return this;
+  }
+
+  long getRefreshNanos() {
+    return (refreshNanos == UNSET_INT) ? DEFAULT_REFRESH_NANOS : refreshNanos;
+  }
+
+  /**
+   * Specifies a nanosecond-precision time source for use in determining when entries should be
+   * expired. By default, {@link System#nanoTime} is used.
+   * <p>
+   * The primary intent of this method is to facilitate testing of caches which have been configured
+   * with {@link #expireAfterWrite} or {@link #expireAfterAccess}.
+   *
+   * @throws IllegalStateException if a ticker was already set
+   * @throws NullPointerException if the specified ticker is null
+   */
+  public Caffeine<K, V> ticker(Ticker ticker) {
+    requireState(this.ticker == null);
+    this.ticker = requireNonNull(ticker);
+    return this;
+  }
+
+  Ticker getTicker() {
+    return (ticker == null)
+        ? (isExpirable() || isRecordingStats() ? Ticker.systemTicker() : DISABLED_TICKER)
+        : ticker;
+  }
+
+  /**
+   * Specifies a listener instance that caches should notify each time an entry is removed for any
+   * {@linkplain RemovalCause reason}. Each cache created by this builder will invoke this listener
+   * as part of the routine maintenance described in the class documentation above.
+   * <p>
+   * <b>Warning:</b> after invoking this method, do not continue to use <i>this</i> cache builder
+   * reference; instead use the reference this method <i>returns</i>. At runtime, these point to the
+   * same instance, but only the returned reference has the correct generic type information so as
+   * to ensure type safety. For best results, use the standard method-chaining idiom illustrated in
+   * the class documentation above, configuring a builder and building your cache in a single
+   * statement. Failure to heed this advice can result in a {@link ClassCastException} being thrown
+   * by a cache operation at some <i>undefined</i> point in the future.
+   * <p>
+   * <b>Warning:</b> any exception thrown by {@code listener} will <i>not</i> be propagated to the
+   * {@code Cache} user, only logged via a {@link Logger}.
+   *
+   * @return the cache builder reference that should be used instead of {@code this} for any
+   *         remaining configuration and cache building
+   * @throws IllegalStateException if a removal listener was already set
+   * @throws NullPointerException if the specified removal listener is null
+   */
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> removalListener(
       RemovalListener<? super K1, ? super V1> removalListener) {
     requireState(this.removalListener == null);
@@ -347,22 +483,71 @@ public final class Caffeine<K, V> {
     return self;
   }
 
+  @SuppressWarnings("unchecked")
+  @Nullable <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener() {
+    return (RemovalListener<K1, V1>) removalListener;
+  }
+
+  /**
+   * Enable the accumulation of {@link CacheStats} during the operation of the cache. Without this
+   * {@link Cache#stats} will return zero for all statistics. Note that recording stats requires
+   * bookkeeping to be performed with each operation, and thus imposes a performance penalty on
+   * cache operation.
+   */
   public Caffeine<K, V> recordStats() {
     statsCounterSupplier = ENABLED_STATS_COUNTER_SUPPLIER;
     return this;
   }
 
+  boolean isRecordingStats() {
+    return (statsCounterSupplier == ENABLED_STATS_COUNTER_SUPPLIER);
+  }
+
+  Supplier<? extends StatsCounter> getStatsCounterSupplier() {
+    return (statsCounterSupplier == null)
+        ? DISABLED_STATS_COUNTER_SUPPLIER
+        : ENABLED_STATS_COUNTER_SUPPLIER;
+  }
+
+  /**
+   * Builds a cache which does not automatically load values when keys are requested.
+   * <p>
+   * Consider {@link #build(CacheLoader)} instead, if it is feasible to implement a
+   * {@code CacheLoader}.
+   * <p>
+   * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
+   * again to create multiple independent caches.
+   *
+   * @return a cache having the requested features
+   */
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
+    checkWeightWithWeigher();
+    checkNonLoadingCache();
+
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-
     return (maximumSize == UNSET_INT)
         ? new UnboundedLocalCache.LocalManualCache<K1, V1>(self)
         : new BoundedLocalCache.LocalManualCache<K1, V1>(self);
   }
 
+  /**
+   * Builds a cache, which either returns an already-loaded value for a given key or atomically
+   * computes or retrieves it using the supplied {@code CacheLoader}. If another thread is currently
+   * loading the value for this key, simply waits for that thread to finish and returns its loaded
+   * value. Note that multiple threads can concurrently load values for distinct keys.
+   * <p>
+   * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
+   * again to create multiple independent caches.
+   *
+   * @param loader the cache loader used to obtain new values
+   * @return a cache having the requested features
+   * @throws NullPointerException if the specified cache loader is null
+   */
   public <K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       CacheLoader<? super K1, V1> loader) {
+    checkWeightWithWeigher();
+
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
     return (maximumSize == UNSET_INT)
@@ -370,8 +555,69 @@ public final class Caffeine<K, V> {
         : new BoundedLocalCache.LocalLoadingCache<K1, V1>(self, loader);
   }
 
+  /**
+   * Builds a cache, which either returns an already-loaded value for a given key or atomically
+   * computes or retrieves it using the supplied {@code CacheLoader}. If another thread is currently
+   * loading the value for this key, simply waits for that thread to finish and returns its loaded
+   * value. Note that multiple threads can concurrently load values for distinct keys.
+   * <p>
+   * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
+   * again to create multiple independent caches.
+   *
+   * @param loader the cache loader used to obtain new values
+   * @return a cache having the requested features
+   * @throws IllegalStateException if the value strength is weak or soft
+   * @throws NullPointerException if the specified cache loader is null
+   */
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       CacheLoader<? super K1, V1> loader) {
+    requireState(valueStrength == Strength.STRONG);
     throw new UnsupportedOperationException();
+  }
+
+  private void checkNonLoadingCache() {
+    requireState(refreshNanos == UNSET_INT, "refreshAfterWrite requires a LoadingCache");
+  }
+
+  private void checkWeightWithWeigher() {
+    if (weigher == null) {
+      requireState(maximumWeight == UNSET_INT, "maximumWeight requires weigher");
+    } else {
+      requireState(maximumWeight != UNSET_INT, "weigher requires maximumWeight");
+    }
+  }
+
+  /**
+   * Returns a string representation for this Caffeine instance. The exact form of the returned
+   * string is not specified.
+   */
+  @Override
+  public String toString() {
+    StringBuilder s = new StringBuilder();
+    if (initialCapacity != UNSET_INT) {
+      s.append("initialCapacity=").append(initialCapacity);
+    }
+    if (maximumSize != UNSET_INT) {
+      s.append("maximumSize").append(maximumSize);
+    }
+    if (maximumWeight != UNSET_INT) {
+      s.append("maximumWeight").append(maximumWeight);
+    }
+    if (expireAfterWriteNanos != UNSET_INT) {
+      s.append("expireAfterWrite").append(expireAfterWriteNanos).append("ns");
+    }
+    if (expireAfterAccessNanos != UNSET_INT) {
+      s.append("expireAfterAccess").append(expireAfterAccessNanos).append("ns");
+    }
+    if (keyStrength != null) {
+      s.append("keyStrength").append(keyStrength.toString().toLowerCase());
+    }
+    if (valueStrength != null) {
+      s.append("valueStrength").append(valueStrength.toString().toLowerCase());
+    }
+    if (removalListener != null) {
+      s.append("removalListener");
+    }
+    return s.toString();
   }
 }
