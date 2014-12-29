@@ -109,8 +109,6 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
- * @see <a href="http://code.google.com/p/concurrentlinkedhashmap/">
- *      http://code.google.com/p/concurrentlinkedhashmap/</a>
  */
 @ThreadSafe
 final class BoundedLocalCache<K, V> extends AbstractMap<K, V>

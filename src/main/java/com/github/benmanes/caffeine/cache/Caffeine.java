@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
+import java.util.ConcurrentModificationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
@@ -28,16 +30,102 @@ import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
+ * A builder of {@link AsyncLoadingCache}, {@link LoadingCache}, and {@link Cache} instances
+ * having any combination of the following features:
+ *
+ * <ul>
+ *   <li>automatic loading of entries into the cache
+ *   <li>least-recently-used eviction when a maximum size is exceeded
+ *   <li>time-based expiration of entries, measured since last access or last write
+ *   <li>keys automatically wrapped in {@linkplain WeakReference weak} references
+ *   <li>values automatically wrapped in {@linkplain WeakReference weak} or
+ *       {@linkplain SoftReference soft} references
+ *   <li>notification of evicted (or otherwise removed) entries
+ *   <li>accumulation of cache access statistics
+ * </ul>
+ * <p>
+ * These features are all optional; caches can be created using all or none of them. By default
+ * cache instances created by {@code Caffeine} will not perform any type of eviction.
+ * <p>
+ * Usage example:
+ * <pre>{@code
+ *   LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
+ *       .maximumSize(10000)
+ *       .expireAfterWrite(10, TimeUnit.MINUTES)
+ *       .removalListener(MY_LISTENER)
+ *       .build(key -> createExpensiveGraph(key));
+ * }</pre>
+ * <p>
+ * Or equivalently,
+ * <pre>{@code
+ *   // In real life this would come from a command-line flag or config file
+ *   String spec = "maximumSize=10000,expireAfterWrite=10m";
+ *
+ *   LoadingCache<Key, Graph> graphs = Caffeine.from(spec)
+ *       .removalListener(MY_LISTENER)
+ *       .build(key -> createExpensiveGraph(key));
+ * }</pre>
+ * <p>
+ * The returned cache is implemented as a hash table with similar performance characteristics to
+ * {@link ConcurrentHashMap}. The {@code asMap} view (and its collection views) have <i>weakly
+ * consistent iterators</i>. This means that they are safe for concurrent use, but if other threads
+ * modify the cache after the iterator is created, it is undefined which of these changes, if any,
+ * are reflected in that iterator. These iterators never throw {@link
+ * ConcurrentModificationException}.
+ * <p>
+ * <b>Note:</b> by default, the returned cache uses equality comparisons (the
+ * {@link Object#equals equals} method) to determine equality for keys or values. However, if
+ * {@link #weakKeys} was specified, the cache uses identity ({@code ==}) comparisons instead for
+ * keys. Likewise, if {@link #weakValues} or {@link #softValues} was specified, the cache uses
+ * identity comparisons for values.
+ * <p>
+ * Entries are automatically evicted from the cache when any of
+ * {@linkplain #maximumSize(long) maximumSize}, {@linkplain #maximumWeight(long) maximumWeight},
+ * {@linkplain #expireAfterWrite expireAfterWrite},
+ * {@linkplain #expireAfterAccess expireAfterAccess}, {@linkplain #weakKeys weakKeys},
+ * {@linkplain #weakValues weakValues}, or {@linkplain #softValues softValues} are requested.
+ * <p>
+ * If {@linkplain #maximumSize(long) maximumSize} or {@linkplain #maximumWeight(long) maximumWeight}
+ * is requested entries may be evicted on each cache modification.
+ * <p>
+ * If {@linkplain #expireAfterWrite expireAfterWrite} or
+ * {@linkplain #expireAfterAccess expireAfterAccess} is requested entries may be evicted on each
+ * cache modification, on occasional cache accesses, or on calls to {@link Cache#cleanUp}. Expired
+ * entries may be counted by {@link Cache#size}, but will never be visible to read or write
+ * operations.
+ * <p>
+ * If {@linkplain #weakKeys weakKeys}, {@linkplain #weakValues weakValues}, or
+ * {@linkplain #softValues softValues} are requested, it is possible for a key or value present in
+ * the cache to be reclaimed by the garbage collector. Entries with reclaimed keys or values may be
+ * removed from the cache on each cache modification, on occasional cache accesses, or on calls to
+ * {@link Cache#cleanUp}; such entries may be counted in {@link Cache#size}, but will never be
+ * visible to read or write operations.
+ * <p>
+ * Certain cache configurations will result in the accrual of periodic maintenance tasks which
+ * will be performed during write operations, or during occasional read operations in the absence of
+ * writes. The {@link Cache#cleanUp} method of the returned cache will also perform maintenance, but
+ * calling it should not be necessary with a high throughput cache. Only caches built with
+ * {@linkplain #maximumSize}, {@linkplain #maximumWeight},
+ * {@linkplain #expireAfterWrite expireAfterWrite},
+ * {@linkplain #expireAfterAccess expireAfterAccess}, {@linkplain #weakKeys weakKeys},
+ * {@linkplain #weakValues weakValues}, or {@linkplain #softValues softValues} perform periodic
+ * maintenance.
+ * <p>
+ * The caches produced by {@code CacheBuilder} are serializable, and the deserialized caches
+ * retain all the configuration properties of the original cache. Note that the serialized form does
+ * <i>not</i> include cache contents, but only configuration.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
+ * @param <K> the base key type for all caches created by this builder
+ * @param <V> the base value type for all caches created by this builder
  */
 public final class Caffeine<K, V> {
-  private static final Logger logger = Logger.getLogger(Caffeine.class.getName());
-
   private static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER =
       () -> DisabledStatsCounter.INSTANCE;
   private static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
@@ -107,18 +195,16 @@ public final class Caffeine<K, V> {
   }
 
   /**
-   * Sets the minimum total size for the internal hash tables. For example, if the initial capacity
-   * is {@code 60}, and the concurrency level is {@code 8}, then eight segments are created, each
-   * having a hash table of size eight. Providing a large enough estimate at construction time
-   * avoids the need for expensive resizing operations later, but setting this value unnecessarily
-   * high wastes memory.
+   * Sets the minimum total size for the internal hash tables. Providing a large enough estimate at
+   * construction time avoids the need for expensive resizing operations later, but setting this
+   * value unnecessarily high wastes memory.
    *
    * @throws IllegalArgumentException if {@code initialCapacity} is negative
    * @throws IllegalStateException if an initial capacity was already set
    */
   public Caffeine<K, V> initialCapacity(int initialCapacity) {
-    requireState(this.initialCapacity == UNSET_INT, "initial capacity was already set to %s",
-        this.initialCapacity);
+    requireState(this.initialCapacity == UNSET_INT,
+        "initial capacity was already set to %s", this.initialCapacity);
     requireArgument(initialCapacity >= 0);
     this.initialCapacity = initialCapacity;
     return this;
@@ -249,7 +335,7 @@ public final class Caffeine<K, V> {
   }
 
   long getMaximumWeight() {
-    if (expireAfterWriteNanos == 0 || expireAfterAccessNanos == 0) {
+    if ((expireAfterWriteNanos == 0) || (expireAfterAccessNanos == 0)) {
       return 0;
     }
     return (weigher == null) ? maximumSize : maximumWeight;
