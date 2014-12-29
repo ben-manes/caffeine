@@ -53,9 +53,6 @@ public final class EvictionTest {
   public void isWeighted() {}
   public void weightedSize() {}
   public void evict_weighted() {}
-  public void evict_alreadyRemoved() {}
-  public void evict_lru() {}
-  public void evict_lru_random() {}
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = MaximumSize.FULL,
