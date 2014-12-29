@@ -114,6 +114,8 @@ public interface Advanced<K, V> {
      * asynchronous nature of the page replacement policy, determining the retention ordering
      * requires a traversal of the entries.
      *
+     * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
+     *        the limit)
      * @return a snapshot view of the cache from coldest entry to the hottest
      */
     Map<K, V> coldest(int limit);
@@ -128,6 +130,8 @@ public interface Advanced<K, V> {
      * asynchronous nature of the page replacement policy, determining the retention ordering
      * requires a traversal of the entries.
      *
+     * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
+     *        the limit)
      * @return a snapshot view of the cache from hottest entry to the coldest
      */
     Map<K, V> hottest(int limit);
@@ -181,6 +185,8 @@ public interface Advanced<K, V> {
      * asynchronous nature of the page replacement policy, determining the retention ordering
      * requires a traversal of the entries.
      *
+     * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
+     *        the limit)
      * @return a snapshot view of the cache from oldest entry to the youngest
      */
     Map<K, V> oldest(int limit);
@@ -195,6 +201,8 @@ public interface Advanced<K, V> {
      * asynchronous nature of the page replacement policy, determining the retention ordering
      * requires a traversal of the entries.
      *
+     * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
+     *        the limit)
      * @return a snapshot view of the cache from youngest entry to the oldest
      */
     Map<K, V> youngest(int limit);
