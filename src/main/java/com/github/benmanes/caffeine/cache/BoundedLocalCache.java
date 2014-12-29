@@ -228,19 +228,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @SuppressWarnings({"unchecked", "cast"})
   private BoundedLocalCache(Caffeine<K, V> builder) {
     // The data store and its maximum capacity
-    data = new ConcurrentHashMap<K, Node<K, V>>(builder.initialCapacity());
-
-    if (builder.maximumSize != Caffeine.UNSET_INT) {
-      capacity = new PaddedAtomicLong(Math.min(builder.maximumSize, MAXIMUM_CAPACITY));
-    } else if (builder.maximumWeight == Caffeine.UNSET_INT) {
-      capacity = new PaddedAtomicLong(Math.min(builder.maximumWeight, MAXIMUM_CAPACITY));
-    } else {
-      throw new AssertionError("Requires a maximum size, for now");
-    }
+    data = new ConcurrentHashMap<K, Node<K, V>>(builder.getInitialCapacity());
+    capacity = new PaddedAtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY));
 
     // The eviction support
-    weigher = builder.weigher;
     evictionLock = new Sync();
+    weigher = builder.getWeigher();
     weightedSize = new PaddedAtomicLong();
     evictionDeque = new LinkedDeque<Node<K, V>>();
     writeBuffer = new SingleConsumerQueue<Runnable>();
@@ -261,7 +254,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     // The notification queue and listener
     removalListener = (RemovalListener<K, V>) builder.removalListener;
-    executor = builder.executor;
+    executor = builder.getExecutor();
 
     statsCounter = builder.statsCounterSupplier.get();
     isRecordingStats = builder.isRecordingStats();
@@ -1901,12 +1894,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
     final CacheLoader<? super K, V> loader;
-    final Executor executor;
 
     LocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder);
       this.loader = loader;
-      this.executor = builder.executor;
     }
 
     @Override
@@ -1930,7 +1921,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @Override
     public void refresh(K key) {
       requireNonNull(key);
-      executor.execute(() -> {
+      cache.executor.execute(() -> {
         try {
           cache.compute(key, loader::refresh);
         } catch (Throwable t) {
