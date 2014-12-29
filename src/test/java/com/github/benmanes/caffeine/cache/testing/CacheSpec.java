@@ -94,6 +94,8 @@ public @interface CacheSpec {
     ZERO(0L),
     /** A configuration that holds a single entry. */
     ONE(1L),
+    /** A configuration that holds ten entries. */
+    TEN(10L),
     /** A configuration that holds the {@link Population#FULL} count. */
     FULL(InitialCapacity.FULL.size()),
     /** A configuration where the threshold is too high for eviction to occur. */
