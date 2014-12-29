@@ -19,6 +19,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
 /**
  * Computes or retrieves values, based on a key, for use in populating a {@link LoadingCache}.
  * <p>
@@ -46,7 +49,8 @@ public interface CacheLoader<K, V> {
    * @param key the non-null key whose value should be loaded
    * @return the value associated with {@code key}
    */
-  V load(K key);
+  @CheckForNull
+  V load(@Nonnull K key);
 
   /**
    * Computes or retrieves the values corresponding to {@code keys}. This method is called by
@@ -66,7 +70,8 @@ public interface CacheLoader<K, V> {
    *         contain null values</b>
    * @throws UnsupportedOperationException if bulk loading is not implemented
    */
-  default Map<K, V> loadAll(Iterable<? extends K> keys) {
+  @Nonnull
+  default Map<K, V> loadAll(@Nonnull Iterable<? extends K> keys) {
     throw new UnsupportedOperationException();
   }
 
@@ -76,7 +81,8 @@ public interface CacheLoader<K, V> {
    * @param key the non-null key whose value should be loaded
    * @return the future value associated with {@code key}
    */
-  default CompletableFuture<V> asyncLoad(K key, Executor executor) {
+  @Nonnull
+  default CompletableFuture<V> asyncLoad(@Nonnull K key, @Nonnull Executor executor) {
     return CompletableFuture.supplyAsync(() -> load(key), executor);
   }
 
@@ -98,7 +104,8 @@ public interface CacheLoader<K, V> {
    *         that key; <b>may not contain null values</b>
    * @throws UnsupportedOperationException if bulk loading is not implemented
    */
-  default CompletableFuture<Map<K, V>> asyncLoadAll(K key, Executor executor) {
+  @Nonnull
+  default CompletableFuture<Map<K, V>> asyncLoadAll(@Nonnull K key, @Nonnull Executor executor) {
     throw new UnsupportedOperationException();
   }
 
@@ -114,7 +121,8 @@ public interface CacheLoader<K, V> {
    * @return the new value associated with {@code key}, or null if none
    * @throws RuntimeException or Error, in which case the mapping is unchanged
    */
-  default V refresh(K key, V oldValue) {
+  @CheckForNull
+  default V refresh(@Nonnull K key, @Nonnull V oldValue) {
     return load(key);
   }
 }

@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -33,7 +35,7 @@ public interface StatsCounter {
    *
    * @param count the number of hits to record
    */
-  void recordHits(int count);
+  void recordHits(@Nonnegative int count);
 
   /**
    * Records cache misses. This should be called when a cache request returns a value that was not
@@ -45,7 +47,7 @@ public interface StatsCounter {
    *
    * @param count the number of misses to record
    */
-  void recordMisses(int count);
+  void recordMisses(@Nonnegative int count);
 
   /**
    * Records the successful load of a new entry. This should be called when a cache request causes
@@ -54,7 +56,7 @@ public interface StatsCounter {
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    */
-  void recordLoadSuccess(long loadTime);
+  void recordLoadSuccess(@Nonnegative long loadTime);
 
   /**
    * Records the failed load of a new entry. This should be called when a cache request causes an
@@ -65,7 +67,7 @@ public interface StatsCounter {
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    *        prior to discovering the value doesn't exist or an exception being thrown
    */
-  void recordLoadFailure(long loadTime);
+  void recordLoadFailure(@Nonnegative long loadTime);
 
   /**
    * Records the eviction of an entry from the cache. This should only been called when an entry is
@@ -78,5 +80,6 @@ public interface StatsCounter {
    * Returns a snapshot of this counter's values. Note that this may be an inconsistent view, as it
    * may be interleaved with update operations.
    */
+  @Nonnull
   CacheStats snapshot();
 }

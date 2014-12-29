@@ -19,6 +19,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
+
 /**
  * An access point for inspecting and performing low-level operations based on the cache's runtime
  * characteristics. These operations are optional and dependent on how the cache was constructed
@@ -35,6 +38,7 @@ public interface Advanced<K, V> {
    *
    * @return access to low-level operations for this cache if an eviction policy is used
    */
+  @Nonnull
   Optional<Eviction<K, V>> eviction();
 
   /**
@@ -51,6 +55,7 @@ public interface Advanced<K, V> {
    * @return access to low-level operations for this cache if a time-to-idle expiration policy is
    *         used
    */
+  @Nonnull
   Optional<Expiration<K, V>> expireAfterRead();
 
   /**
@@ -64,6 +69,7 @@ public interface Advanced<K, V> {
    * @return access to low-level operations for this cache if a time-to-live expiration policy is
    *         used
    */
+  @Nonnull
   Optional<Expiration<K, V>> expireAfterWrite();
 
   /** The low-level operations for a cache with a size-based eviction policy. */
@@ -82,6 +88,7 @@ public interface Advanced<K, V> {
      *
      * @return the combined weight of the values in this cache
      */
+    @Nonnull
     Optional<Long> weightedSize();
 
     /**
@@ -102,7 +109,7 @@ public interface Advanced<K, V> {
      *        whether how this cache was constructed.
      * @throws IllegalArgumentException if the maximum size specified is negative
      */
-    void setMaximumSize(long maximumSize);
+    void setMaximumSize(@Nonnegative long maximumSize);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -118,7 +125,8 @@ public interface Advanced<K, V> {
      *        the limit)
      * @return a snapshot view of the cache from coldest entry to the hottest
      */
-    Map<K, V> coldest(int limit);
+    @Nonnull
+    Map<K, V> coldest(@Nonnegative int limit);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -134,7 +142,8 @@ public interface Advanced<K, V> {
      *        the limit)
      * @return a snapshot view of the cache from hottest entry to the coldest
      */
-    Map<K, V> hottest(int limit);
+    @Nonnull
+    Map<K, V> hottest(@Nonnegative int limit);
   }
 
   /** The low-level operations for a cache with a expiration policy. */
@@ -152,7 +161,8 @@ public interface Advanced<K, V> {
      * @param unit the unit that {@code age} is expressed in
      * @return the age if the entry is present in the cache
      */
-    Optional<Long> ageOf(K key, TimeUnit unit);
+    @Nonnull
+    Optional<Long> ageOf(@Nonnull K key, @Nonnull TimeUnit unit);
 
     /**
      * Returns the fixed duration used to determine if an entry should be automatically removed due
@@ -163,7 +173,8 @@ public interface Advanced<K, V> {
      * @param unit the unit that duration is expressed in
      * @return the length of time after which an entry should be automatically removed
      */
-    long getExpiresAfter(TimeUnit unit);
+    @Nonnegative
+    long getExpiresAfter(@Nonnull TimeUnit unit);
 
     /**
      * Specifies that each entry should be automatically removed from the cache once a fixed
@@ -173,7 +184,7 @@ public interface Advanced<K, V> {
      * @param unit the unit that {@code duration} is expressed in
      * @throws IllegalArgumentException if {@code duration} is negative
      */
-    void setExpiresAfter(long duration, TimeUnit unit);
+    void setExpiresAfter(@Nonnegative long duration, @Nonnull TimeUnit unit);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -189,7 +200,8 @@ public interface Advanced<K, V> {
      *        the limit)
      * @return a snapshot view of the cache from oldest entry to the youngest
      */
-    Map<K, V> oldest(int limit);
+    @Nonnull
+    Map<K, V> oldest(@Nonnegative int limit);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -205,6 +217,7 @@ public interface Advanced<K, V> {
      *        the limit)
      * @return a snapshot view of the cache from youngest entry to the oldest
      */
-    Map<K, V> youngest(int limit);
+    @Nonnull
+    Map<K, V> youngest(@Nonnegative int limit);
   }
 }

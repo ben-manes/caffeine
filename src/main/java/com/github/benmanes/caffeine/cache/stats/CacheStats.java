@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.stats;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -65,8 +67,9 @@ public class CacheStats {
   /**
    * Constructs a new {@code CacheStats} instance.
    */
-  public CacheStats(long hitCount, long missCount, long loadSuccessCount,
-      long loadFailureCount, long totalLoadTime, long evictionCount) {
+  public CacheStats(@Nonnegative long hitCount, @Nonnegative long missCount,
+      @Nonnegative long loadSuccessCount, @Nonnegative long loadFailureCount,
+      @Nonnegative long totalLoadTime, @Nonnegative long evictionCount) {
     if ((hitCount < 0) || (missCount < 0) || (loadSuccessCount < 0) || (loadFailureCount < 0)
         || (totalLoadTime < 0) || (evictionCount < 0)) {
       throw new IllegalArgumentException();
@@ -83,6 +86,7 @@ public class CacheStats {
    * Returns the number of times {@link Cache} lookup methods have returned either a cached or
    * uncached value. This is defined as {@code hitCount + missCount}.
    */
+  @Nonnegative
   public long requestCount() {
     return hitCount + missCount;
   }
@@ -90,6 +94,7 @@ public class CacheStats {
   /**
    * Returns the number of times {@link Cache} lookup methods have returned a cached value.
    */
+  @Nonnegative
   public long hitCount() {
     return hitCount;
   }
@@ -99,6 +104,7 @@ public class CacheStats {
    * {@code hitCount / requestCount}, or {@code 1.0} when {@code requestCount == 0}. Note that
    * {@code hitRate + missRate =~ 1.0}.
    */
+  @Nonnegative
   public double hitRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
@@ -110,6 +116,7 @@ public class CacheStats {
    * value can result in multiple misses, all returning the results of a single cache load
    * operation.
    */
+  @Nonnegative
   public long missCount() {
     return missCount;
   }
@@ -123,6 +130,7 @@ public class CacheStats {
    * that {@code missCount &gt;= loadSuccessCount + loadFailureCount}. Multiple
    * concurrent misses for the same key will result in a single load operation.
    */
+  @Nonnegative
   public double missRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
@@ -133,6 +141,7 @@ public class CacheStats {
    * values. This includes both successful load operations, as well as those that threw exceptions.
    * This is defined as {@code loadSuccessCount + loadFailureCount}.
    */
+  @Nonnegative
   public long loadCount() {
     return loadSuccessCount + loadFailureCount;
   }
@@ -144,6 +153,7 @@ public class CacheStats {
    * {@link #loadFailureCount}). Multiple concurrent misses for the same key will result in a
    * single load operation.
    */
+  @Nonnegative
   public long loadSuccessCount() {
     return loadSuccessCount;
   }
@@ -155,6 +165,7 @@ public class CacheStats {
    * loading completes successfully (see {@link #loadSuccessCount}). Multiple concurrent misses for
    * the same key will result in a single load operation.
    */
+  @Nonnegative
   public long loadFailureCount() {
     return loadFailureCount;
   }
@@ -164,6 +175,7 @@ public class CacheStats {
    * {@code loadFailureCount / (loadSuccessCount + loadFailureCount)}, or {@code 0.0} when
    * {@code loadSuccessCount + loadFailureCount == 0}.
    */
+  @Nonnegative
   public double loadExceptionRate() {
     long totalLoadCount = loadSuccessCount + loadFailureCount;
     return (totalLoadCount == 0)
@@ -176,6 +188,7 @@ public class CacheStats {
    * used to calculate the miss penalty. This value is increased every time {@code loadSuccessCount}
    * or {@code loadFailureCount} is incremented.
    */
+  @Nonnegative
   public long totalLoadTime() {
     return totalLoadTime;
   }
@@ -184,6 +197,7 @@ public class CacheStats {
    * Returns the average time spent loading new values. This is defined as
    * {@code totalLoadTime / (loadSuccessCount + loadFailureCount)}.
    */
+  @Nonnegative
   public double averageLoadPenalty() {
     long totalLoadCount = loadSuccessCount + loadFailureCount;
     return (totalLoadCount == 0)
@@ -195,6 +209,7 @@ public class CacheStats {
    * Returns the number of times an entry has been evicted. This count does not include manual
    * {@linkplain Cache#invalidate invalidations}.
    */
+  @Nonnegative
   public long evictionCount() {
     return evictionCount;
   }
@@ -204,7 +219,8 @@ public class CacheStats {
    * and {@code other}. Negative values, which aren't supported by {@code CacheStats} will be
    * rounded up to zero.
    */
-  public CacheStats minus(CacheStats other) {
+  @Nonnull
+  public CacheStats minus(@Nonnull CacheStats other) {
     return new CacheStats(
         Math.max(0, hitCount - other.hitCount),
         Math.max(0, missCount - other.missCount),
@@ -218,7 +234,8 @@ public class CacheStats {
    * Returns a new {@code CacheStats} representing the sum of this {@code CacheStats} and
    * {@code other}.
    */
-  public CacheStats plus(CacheStats other) {
+  @Nonnull
+  public CacheStats plus(@Nonnull CacheStats other) {
     return new CacheStats(
         hitCount + other.hitCount,
         missCount + other.missCount,

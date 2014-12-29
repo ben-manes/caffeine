@@ -1892,14 +1892,37 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     final class BoundedAdvanced implements Advanced<K, V> {
+      final Optional<Eviction<K, V>> eviction = Optional.of(new BoundedEviction());
+
       @Override public Optional<Eviction<K, V>> eviction() {
-        return Optional.empty();
+        return eviction;
       }
       @Override public Optional<Expiration<K, V>> expireAfterRead() {
         return Optional.empty();
       }
       @Override public Optional<Expiration<K, V>> expireAfterWrite() {
         return Optional.empty();
+      }
+
+      final class BoundedEviction implements Eviction<K, V> {
+        @Override public boolean isWeighted() {
+          return (cache.weigher != Weigher.singleton());
+        }
+        @Override public Optional<Long> weightedSize() {
+          return isWeighted() ? Optional.of(cache.weightedSize()) : Optional.empty();
+        }
+        @Override public long getMaximumSize() {
+          return cache.capacity();
+        }
+        @Override public void setMaximumSize(long maximumSize) {
+          cache.setCapacity(maximumSize);
+        }
+        @Override public Map<K, V> coldest(int limit) {
+          return cache.ascendingMapWithLimit(limit);
+        }
+        @Override public Map<K, V> hottest(int limit) {
+          return cache.descendingMapWithLimit(limit);
+        }
       }
     }
   }

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -36,6 +37,7 @@ public interface Weigher<K, V> {
    * @param value the value to weigh
    * @return the weight of the entry; must be non-negative
    */
+  @Nonnegative
   int weigh(@Nonnull K key, @Nonnull V value);
 
   /** Returns a weigher where an entry has a weight of <tt>1</tt>. */

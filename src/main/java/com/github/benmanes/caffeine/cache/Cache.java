@@ -152,6 +152,7 @@ public interface Cache<K, V> {
    *
    * @return the current snapshot of the statistics of this cache
    */
+  @Nonnull
   CacheStats stats();
 
   /**
@@ -164,6 +165,7 @@ public interface Cache<K, V> {
    *
    * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
    */
+  @Nonnull
   ConcurrentMap<K, V> asMap();
 
   /**
@@ -179,5 +181,6 @@ public interface Cache<K, V> {
    *
    * @return access to inspect and perform advanced operations based on the cache's characteristics
    */
+  @Nonnull
   Advanced<K, V> advanced();
 }
