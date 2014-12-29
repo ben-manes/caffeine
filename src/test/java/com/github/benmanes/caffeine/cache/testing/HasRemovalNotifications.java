@@ -105,6 +105,12 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
 
   @Factory
   public static <K, V> HasRemovalNotifications<K, V> hasRemovalNotifications(
+      CacheContext context, long count, RemovalCause cause) {
+    return new HasRemovalNotifications<K, V>(context, (int) count, cause);
+  }
+
+  @Factory
+  public static <K, V> HasRemovalNotifications<K, V> hasRemovalNotifications(
       CacheContext context, int count, RemovalCause cause) {
     return new HasRemovalNotifications<K, V>(context, count, cause);
   }

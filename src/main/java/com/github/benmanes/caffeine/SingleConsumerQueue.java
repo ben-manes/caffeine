@@ -86,7 +86,7 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
    *
    * [1] Non-intrusive MPSC node-based queue
    * http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
-   * [1] A Scalable Lock-free Stack Algorithm
+   * [2] A Scalable Lock-free Stack Algorithm
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.156.8728
    * [3] Using elimination to implement scalable and lock-free fifo queues
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.108.6422

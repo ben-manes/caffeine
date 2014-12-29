@@ -328,13 +328,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (node == null) {
         return;
       }
+      makeDead(node);
 
       // Notify the listener only if the entry was evicted
       if (data.remove(node.key, node) && hasRemovalListener()) {
         notifyRemoval(node.key, node.getValue(), RemovalCause.SIZE);
       }
-
-      makeDead(node);
     }
   }
 

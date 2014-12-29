@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.RejectedExecutionException;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
@@ -47,7 +48,7 @@ public final class RemovalListeners {
 
     @Override public void onRemoval(RemovalNotification<K, V> notification) {
       if (reject) {
-        throw new AssertionError("Rejected eviction of " + notification);
+        throw new RejectedExecutionException("Rejected eviction of " + notification);
       }
     }
   }

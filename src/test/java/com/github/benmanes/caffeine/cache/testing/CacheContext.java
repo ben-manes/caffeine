@@ -20,8 +20,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -74,7 +74,7 @@ public final class CacheContext {
   boolean isLoading;
 
   public CacheContext() {
-    original = new HashMap<>();
+    original = new LinkedHashMap<>();
   }
 
   public Integer firstKey() {
@@ -131,6 +131,7 @@ public final class CacheContext {
     return (maximumSize == MaximumSize.DISABLED) || (maximumSize == MaximumSize.UNREACHABLE);
   }
 
+  /** The initial entries in the cache, iterable in insertion order. */
   public Map<Integer, Integer> original() {
     return original;
   }

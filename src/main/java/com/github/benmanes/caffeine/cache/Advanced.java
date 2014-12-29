@@ -104,6 +104,9 @@ public interface Advanced<K, V> {
      * or unweighted threshold size based on how this cache was constructed. If the cache currently
      * exceeds the new maximum size this operation eagerly evict entries until the cache shrinks to
      * the appropriate size.
+     * <p>
+     * Note that some implementations may have an internal inherit bound on the maximum total size.
+     * If the value specified exceeds that bound, then the value is set to the internal maximum.
      *
      * @param maximumSize the maximum size, interpreted as weighted or unweighted depending on the
      *        whether how this cache was constructed.

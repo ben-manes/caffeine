@@ -183,7 +183,7 @@ final class CacheGenerator {
       CacheContext context) {
     CacheContext copy = context.copy();
     Cache<Integer, Integer> cache = newCache(copy);
-    context.population.populate(copy, cache);
+    context.population.populate(cache, copy);
     return Maps.immutableEntry(copy, cache);
   }
 

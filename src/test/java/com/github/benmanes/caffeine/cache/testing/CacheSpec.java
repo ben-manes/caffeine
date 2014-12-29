@@ -95,7 +95,7 @@ public @interface CacheSpec {
     /** A configuration that holds a single entry. */
     ONE(1L),
     /** A configuration that holds the {@link Population#FULL} count. */
-    FULL(100L),
+    FULL(InitialCapacity.FULL.size()),
     /** A configuration where the threshold is too high for eviction to occur. */
     UNREACHABLE(Long.MAX_VALUE);
 
@@ -231,7 +231,9 @@ public @interface CacheSpec {
 
   /**
    * The number of entries to populate the cache with. The keys and values are integers starting
-   * from 0, with the value being the negated key. Each configuration results in a new combination.
+   * from 0, with the value being the negated key. The cache will never be populated to exceed the
+   * maximum size, if defined, thereby ensuring that no evictions occur prior to the test. Each
+   * configuration results in a new combination.
    */
   Population[] population() default {
     Population.EMPTY,
@@ -242,18 +244,8 @@ public @interface CacheSpec {
 
   /** The population scenarios. */
   enum Population {
-    EMPTY(0) {
-      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {}
-    },
-    SINGLETON(1) {
-      @Override public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-        context.firstKey = 1;
-        context.lastKey = 1;
-        context.middleKey = 1;
-        context.original.put(1, -1);
-        cache.put(1, -1);
-      }
-    },
+    EMPTY(0),
+    SINGLETON(1),
     PARTIAL(InitialCapacity.FULL.size() / 2),
     FULL(InitialCapacity.FULL.size());
 
@@ -267,13 +259,11 @@ public @interface CacheSpec {
       return size;
     }
 
-    public void populate(CacheContext context, Cache<Integer, Integer> cache) {
-      int maximum = context.isUnbounded()
-          ? (int) size()
-          : (int) context.maximumSize();
-      context.firstKey = 1;
+    public void populate(Cache<Integer, Integer> cache, CacheContext context) {
+      int maximum = (int) Math.min(context.maximumSize(), size());
+      context.firstKey = (int) Math.min(1, size());
       context.lastKey = maximum;
-      context.middleKey = (context.lastKey - context.firstKey) / 2;
+      context.middleKey = Math.max(context.firstKey, ((context.lastKey - context.firstKey) / 2));
       for (int i = 1; i <= maximum; i++) {
         context.original.put(i, -i);
         cache.put(i, -i);
