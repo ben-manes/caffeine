@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -743,6 +744,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   static class LocalManualCache<K, V> implements Cache<K, V> {
     final UnboundedLocalCache<K, V> cache;
+    transient Advanced<K, V> advanced;
 
     LocalManualCache(Caffeine<K, V> builder) {
       this.cache = new UnboundedLocalCache<>(builder);
@@ -807,6 +809,23 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
     @Override
     public ConcurrentMap<K, V> asMap() {
       return cache;
+    }
+
+    @Override
+    public Advanced<K, V> advanced() {
+      return (advanced == null) ? (advanced = new UnboundedAdvanced()) : advanced;
+    }
+
+    final class UnboundedAdvanced implements Advanced<K, V> {
+      @Override public Optional<Eviction<K, V>> eviction() {
+        return Optional.empty();
+      }
+      @Override public Optional<Expiration<K, V>> expireAfterRead() {
+        return Optional.empty();
+      }
+      @Override public Optional<Expiration<K, V>> expireAfterWrite() {
+        return Optional.empty();
+      }
     }
   }
 

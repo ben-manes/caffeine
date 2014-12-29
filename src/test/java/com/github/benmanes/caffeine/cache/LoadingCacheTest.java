@@ -44,9 +44,9 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.ImmutableList;
 
 /**
- * The test cases for the {@link Cache} interface that simulate the most generic usages. These
- * tests do not validate eviction management, concurrency behavior, or the {@link Cache#asMap()}
- * view.
+ * The test cases for the {@link LoadingCache} interface that simulate the most generic usages.
+ * These tests do not validate eviction management, concurrency behavior, or the
+ * {@link Cache#asMap()} view.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

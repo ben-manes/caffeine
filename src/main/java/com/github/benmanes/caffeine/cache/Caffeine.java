@@ -282,17 +282,17 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #maximumSize}.
    *
-   * @param weight the maximum total weight of entries the cache may contain
+   * @param maximumWeight the maximum total weight of entries the cache may contain
    * @throws IllegalArgumentException if {@code weight} is negative
    * @throws IllegalStateException if a maximum weight or size was already set
    */
-  public Caffeine<K, V> maximumWeight(long weight) {
+  public Caffeine<K, V> maximumWeight(long maximumWeight) {
     requireState(this.maximumWeight == UNSET_INT,
         "maximum weight was already set to %s", this.maximumWeight);
     requireState(this.maximumSize == UNSET_INT,
         "maximum size was already set to %s", this.maximumSize);
-    this.maximumWeight = weight;
-    requireArgument(weight >= 0, "maximum weight must not be negative");
+    this.maximumWeight = maximumWeight;
+    requireArgument(maximumWeight >= 0, "maximum weight must not be negative");
     return this;
   }
 

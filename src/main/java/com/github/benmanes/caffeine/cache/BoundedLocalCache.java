@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1810,7 +1811,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   /* ---------------- Manual Cache -------------- */
 
   static class LocalManualCache<K, V> implements Cache<K, V> {
-    BoundedLocalCache<K, V> cache;
+    final BoundedLocalCache<K, V> cache;
+    transient Advanced<K, V> advanced;
 
     LocalManualCache(Caffeine<K, V> builder) {
       this.cache = new BoundedLocalCache<>(builder);
@@ -1881,6 +1883,23 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         cache.drainBuffers();
       } finally {
         evictionLock.unlock();
+      }
+    }
+
+    @Override
+    public Advanced<K, V> advanced() {
+      return (advanced == null) ? (advanced = new BoundedAdvanced()) : advanced;
+    }
+
+    final class BoundedAdvanced implements Advanced<K, V> {
+      @Override public Optional<Eviction<K, V>> eviction() {
+        return Optional.empty();
+      }
+      @Override public Optional<Expiration<K, V>> expireAfterRead() {
+        return Optional.empty();
+      }
+      @Override public Optional<Expiration<K, V>> expireAfterWrite() {
+        return Optional.empty();
       }
     }
   }

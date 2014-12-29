@@ -171,4 +171,13 @@ public interface Cache<K, V> {
    * performed -- if any -- is implementation-dependent.
    */
   void cleanUp();
+
+  /**
+   * Returns access to inspect and perform low-level operations on this cache based on its runtime
+   * characteristics. These operations are optional and dependent on how the cache was constructed
+   * and what abilities the implementation exposes.
+   *
+   * @return access to inspect and perform advanced operations based on the cache's characteristics
+   */
+  Advanced<K, V> advanced();
 }
