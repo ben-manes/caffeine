@@ -104,3 +104,8 @@ public final class CacheTest {
   }
 }
 ```
+
+#### A special thanks to...
+![YourKit](http://www.yourkit.com/images/yklogo.png)
+
+[YourKit](http://www.yourkit.com) supports open source projects with its full-featured Java Profiler.
