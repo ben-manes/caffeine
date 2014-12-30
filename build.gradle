@@ -75,7 +75,7 @@ dependencies {
   jmh 'com.github.stephenc.high-scale-lib:high-scale-lib:1.1.4'
   jmh configurations.testCompile.allDependencies
 
-  // Eclipse fails to include all of dependencies without this workaround
+  // Eclipse fails to include all of the dependencies without this workaround
   testCompile configurations.jmh.allDependencies
 }
 

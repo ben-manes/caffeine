@@ -27,9 +27,9 @@ caused by multiple producers.
 A high-performance cache with a Guava inspired API. This implementation draws on the author's 
 experience designing [ConcurrentLinkedHashMap](https://code.google.com/p/concurrentlinkedhashmap/)
 and co-authoring [Guava's Cache](https://code.google.com/p/guava-libraries/wiki/CachesExplained).
-The API is extended to include an asynchronous [CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html)
-interface and to expose low-level options like changing the maximum size, expiration timeouts, and
-traversing in retention order. To simplify integration, a Guava compatible adapter is available.
+The API is extended to include an asynchronous cache and to expose low-level options like changing
+the maximum size, expiration timeouts, and traversing in retention order. To simplify integration,
+a Guava compatible adapter is available.
 
 | Interface | Description |
 | --------- | ----------- |
