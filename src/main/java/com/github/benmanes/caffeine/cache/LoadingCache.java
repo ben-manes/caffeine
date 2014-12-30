@@ -68,10 +68,11 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * loaded entries; it will never contain null keys or values.
    * <p>
    * Caches loaded by a {@link CacheLoader} will issue a single request to
-   * {@link CacheLoader#loadAll} for all keys which are not already present in the cache. If another
-   * call to {@link #get} is tries to load the value for a key in {@code keys}, that thread simply
-   * waits for this thread to finish and returns the loaded value. Note that multiple threads can
-   * concurrently load values for distinct keys.
+   * {@link CacheLoader#loadAll} for all keys which are not already present in the cache. All
+   * entries returned by {@link CacheLoader#loadAll} will be stored in the cache, over-writing any
+   * previously cached values. If another call to {@link #get} is tries to load the value for a key
+   * in {@code keys}, that thread simply waits for this thread to finish and returns the loaded
+   * value. Note that multiple threads can concurrently load values for distinct keys.
    * <p>
    * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
    * ignored.

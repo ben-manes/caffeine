@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
@@ -178,9 +179,11 @@ final class CacheGenerator {
       if (!isLoadingOnly) {
         combinations.add(context);
       }
-      CacheContext copy = context.copy();
-      copy.isLoading = true;
-      combinations.add(copy);
+      for (Loader loader : cacheSpec.loader()) {
+        CacheContext copy = context.copy();
+        copy.loader = loader;
+        combinations.add(copy);
+      }
     }
     swap();
   }
@@ -211,10 +214,10 @@ final class CacheGenerator {
     if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
     }
-    if (context.isLoading) {
-      context.cache = builder.build(cacheSpec.loader());
-    } else {
+    if (context.loader == null) {
       context.cache = builder.build();
+    } else {
+      context.cache = builder.build(context.loader);
     }
     return context.cache;
   }

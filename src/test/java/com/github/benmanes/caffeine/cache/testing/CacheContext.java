@@ -39,6 +39,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
@@ -58,12 +59,12 @@ public final class CacheContext {
   MaximumSize maximumSize;
   Population population;
   Executor executor;
+  Loader loader;
   Stats stats;
 
   ReferenceType keyStrength;
   ReferenceType valueStrength;
 
-  boolean isLoading;
   Cache<Integer, Integer> cache;
   Map<Integer, Integer> original;
 
@@ -145,6 +146,10 @@ public final class CacheContext {
     return ReferenceType.STRONG;
   }
 
+  public Loader loader() {
+    return loader;
+  }
+
   public Listener removalListenerType() {
     return removalListenerType;
   }
@@ -171,13 +176,12 @@ public final class CacheContext {
     context.maximumSize = maximumSize;
     context.population = population;
     context.executor = executor;
+    context.loader = loader;
     context.stats = stats;
+    context.cache = cache;
 
     context.keyStrength = keyStrength;
     context.valueStrength = valueStrength;
-
-    context.isLoading = isLoading;
-    context.cache = cache;
 
     context.firstKey = firstKey;
     context.middleKey = middleKey;

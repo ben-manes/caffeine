@@ -103,13 +103,15 @@ public final class LoadingCacheTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_iterable_nullKey(LoadingCache<Integer, Integer> cache) {
     cache.getAll(Collections.singletonList(null));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_iterable_empty(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAll(ImmutableList.of());
     assertThat(result.size(), is(0));
@@ -122,31 +124,35 @@ public final class LoadingCacheTest {
     cache.getAll(context.absentKeys()).clear();
   }
 
-  @CacheSpec(loader = Loader.EXCEPTIONAL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   public void getAll_absent_failure(LoadingCache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.getAll(context.absentKeys());
     } finally {
-      // fails on & records the first key as no bulk loading support
-      assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+      // fails on & records the first key if no bulk loading support
+      int misses = context.loader().isBulk() ? context.absentKeys().size() : 1;
+      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
       assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
     }
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_absent(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAll(context.absentKeys());
 
     int count = context.absentKeys().size();
+    int loads = context.loader().isBulk() ? 1 : count;
     assertThat(result.size(), is(count));
     assertThat(context, both(hasMissCount(count)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_present_partial(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> expect = new HashMap<>();
@@ -161,7 +167,8 @@ public final class LoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_present_full(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAll(context.original().keySet());

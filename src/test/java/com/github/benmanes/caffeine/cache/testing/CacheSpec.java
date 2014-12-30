@@ -20,6 +20,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
@@ -150,7 +152,6 @@ public @interface CacheSpec {
     Listener.CONSUMING,
   };
 
-  /** The removal listeners, each resulting in a new combination. */
   enum Listener {
     /** A flag indicating that no removal listener is configured. */
     DEFAULT {
@@ -176,34 +177,66 @@ public @interface CacheSpec {
 
   /* ---------------- Executor -------------- */
 
-  Loader loader() default Loader.NEGATIVE;
+  Loader[] loader() default {
+    Loader.NEGATIVE,
+  };
 
   /** The {@link CacheLoader} for constructing the {@link LoadingCache}. */
   enum Loader implements CacheLoader<Integer, Integer> {
     /** A loader that always returns null (no mapping). */
-    NULL {
+    NULL(false) {
       @Override public Integer load(Integer key) {
         return null;
       }
     },
     /** A loader that returns the key. */
-    IDENTITY {
+    IDENTITY(false) {
       @Override public Integer load(Integer key) {
         return key;
       }
     },
     /** A loader that returns the key's negation. */
-    NEGATIVE {
+    NEGATIVE(false) {
       @Override public Integer load(Integer key) {
         return -key;
       }
     },
     /** A loader that always throws an exception. */
-    EXCEPTIONAL {
+    EXCEPTIONAL(false) {
       @Override public Integer load(Integer key) {
         throw new IllegalStateException();
       }
+    },
+
+    // Bulk versions
+    BULK_NEGATIVE(true) {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        Map<Integer, Integer> result = new HashMap<>();
+        keys.forEach(key -> result.put(key, -key));
+        return result;
+      }
+    },
+    BULK_EXCEPTIONAL(true) {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        throw new IllegalStateException();
+      }
     };
+
+    private final boolean bulk;
+
+    private Loader(boolean bulk) {
+      this.bulk = bulk;
+    }
+
+    public boolean isBulk() {
+      return bulk;
+    }
   }
 
   /* ---------------- Executor -------------- */

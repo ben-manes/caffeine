@@ -28,12 +28,14 @@ import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
@@ -1933,10 +1935,21 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
     final CacheLoader<? super K, V> loader;
+    final boolean hasBulkLoader;
 
     LocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder);
       this.loader = loader;
+      this.hasBulkLoader = hasLoadAll(loader);
+    }
+
+    private static boolean hasLoadAll(CacheLoader<?, ?> loader) {
+      try {
+        return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
+      } catch (NoSuchMethodException | SecurityException e) {
+        logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
+        return false;
+      }
     }
 
     @Override
@@ -1947,14 +1960,55 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @Override
     public Map<K, V> getAll(Iterable<? extends K> keys) {
       Map<K, V> result = new HashMap<K, V>();
+      List<K> keysToLoad = new ArrayList<>();
       for (K key : keys) {
-        requireNonNull(key);
-        V value = cache.computeIfAbsent(key, loader::load);
-        if (value != null) {
+        Node<K, V> node = cache.data.get(key);
+        V value = (node == null) ? null : node.getValue();
+        if (value == null) {
+          keysToLoad.add(key);
+        } else {
           result.put(key, value);
         }
       }
+      cache.statsCounter.recordHits(result.size());
+      if (keysToLoad.isEmpty()) {
+        return result;
+      }
+      bulkLoad(keysToLoad, result);
       return Collections.unmodifiableMap(result);
+    }
+
+    private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
+      if (!hasBulkLoader) {
+        for (K key : keysToLoad) {
+          V value = cache.compute(key, (k, v) -> loader.load(key));
+          result.put(key, value);
+        }
+        return;
+      }
+
+      boolean success = false;
+      long startTime = cache.ticker.read();
+      try {
+        @SuppressWarnings("unchecked")
+        Map<K, V> loaded = (Map<K, V>) loader.loadAll(keysToLoad);
+        cache.putAll(loaded);
+        for (K key : keysToLoad) {
+          V value = loaded.get(key);
+          if (value != null) {
+            result.put(key, value);
+          }
+        }
+        success = true;
+      } finally {
+        cache.statsCounter.recordMisses(keysToLoad.size());
+        long loadTime = cache.ticker.read() - startTime;
+        if (success) {
+          cache.statsCounter.recordLoadSuccess(loadTime);
+        } else {
+          cache.statsCounter.recordLoadFailure(loadTime);
+        }
+      }
     }
 
     @Override
