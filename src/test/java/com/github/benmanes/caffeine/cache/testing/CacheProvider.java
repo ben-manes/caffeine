@@ -77,7 +77,7 @@ public final class CacheProvider {
     });
   }
 
-  private static boolean hasLoadingCache(Method testMethod) throws Exception {
+  private static boolean hasLoadingCache(Method testMethod) {
     for (Class<?> param : testMethod.getParameterTypes()) {
       if (LoadingCache.class.isAssignableFrom(param)) {
         return true;

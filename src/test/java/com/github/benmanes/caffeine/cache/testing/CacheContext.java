@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -53,28 +54,29 @@ public final class CacheContext {
   Listener removalListenerType;
   @Nullable RemovalListener<Integer, Integer> removalListener;
 
+  InitialCapacity initialCapacity;
   MaximumSize maximumSize;
   Population population;
-
-  Stats stats;
-  Cache<Integer, Integer> cache;
-
-  InitialCapacity initialCapacity;
   Executor executor;
+  Stats stats;
+
+  ReferenceType keyStrength;
+  ReferenceType valueStrength;
+
+  boolean isLoading;
+  Cache<Integer, Integer> cache;
+  Map<Integer, Integer> original;
 
   @Nullable Integer firstKey;
   @Nullable Integer middleKey;
   @Nullable Integer lastKey;
 
-  Map<Integer, Integer> original;
-
   // Generated on-demand
   Integer absentKey;
   Set<Integer> absentKeys;
 
-  boolean isLoading;
-
   public CacheContext() {
+    removalListenerType = Listener.DEFAULT;
     original = new LinkedHashMap<>();
   }
 
@@ -105,8 +107,6 @@ public final class CacheContext {
     if (absentKeys != null) {
       return absentKeys;
     }
-
-    // FIXME(ben): do this smarter
     Set<Integer> absent = new HashSet<>();
     do {
       absent.add(nextAbsentKey());
@@ -151,7 +151,7 @@ public final class CacheContext {
 
   @SuppressWarnings("unchecked")
   public <R extends RemovalListener<K, V>, K, V> R removalListener() {
-    return (R) removalListener;
+    return (R) requireNonNull(removalListener);
   }
 
   public boolean isRecordingStats() {
@@ -164,18 +164,25 @@ public final class CacheContext {
 
   public CacheContext copy() {
     CacheContext context = new CacheContext();
+
+    context.removalListener = removalListenerType.create();
     context.removalListenerType = removalListenerType;
-    context.removalListener = (removalListenerType == null) ? null : removalListenerType.create();
     context.initialCapacity = initialCapacity;
     context.maximumSize = maximumSize;
     context.population = population;
     context.executor = executor;
+    context.stats = stats;
+
+    context.keyStrength = keyStrength;
+    context.valueStrength = valueStrength;
+
+    context.isLoading = isLoading;
+    context.cache = cache;
+
     context.firstKey = firstKey;
     context.middleKey = middleKey;
     context.lastKey = lastKey;
-    context.stats = stats;
-    context.cache = cache;
-    context.isLoading = isLoading;
+
     return context;
   }
 

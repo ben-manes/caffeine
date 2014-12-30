@@ -21,11 +21,13 @@ import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractSet;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -45,12 +47,16 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
+ * An in-memory cache that has no capabilities for bounding the map. This implementation provides
+ * a lightweight wrapper on top of {@link ConcurrentHashMap}.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializable {
   private static final long serialVersionUID = 1L;
 
   @Nullable final RemovalListener<K, V> removalListener;
+  final ConcurrentHashMap<K, V> data;
   final Executor executor;
   final Ticker ticker;
 
@@ -60,8 +66,6 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   boolean isRecordingStats;
   StatsCounter statsCounter;
-
-  final ConcurrentHashMap<K, V> data;
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder) {
     this.data = new ConcurrentHashMap<K, V>(builder.getInitialCapacity());
@@ -368,7 +372,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   @Override
   public V get(Object key) {
-    return data.get(key);
+    return getIfPresent(key);
   }
 
   @Override
@@ -455,7 +459,6 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
   public String toString() {
     return data.toString();
   }
-
 
   @Override
   public Set<K> keySet() {
@@ -836,10 +839,21 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
     static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
     final CacheLoader<? super K, V> loader;
+    final boolean hasBulkLoader;
 
     LocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder);
       this.loader = loader;
+      this.hasBulkLoader = hasLoadAll(loader);
+    }
+
+    private static boolean hasLoadAll(CacheLoader<?, ?> loader) {
+      try {
+        return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
+      } catch (NoSuchMethodException | SecurityException e) {
+        logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
+        return false;
+      }
     }
 
     @Override
@@ -850,14 +864,54 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
     @Override
     public Map<K, V> getAll(Iterable<? extends K> keys) {
       Map<K, V> result = new HashMap<K, V>();
+      List<K> keysToLoad = new ArrayList<>();
       for (K key : keys) {
-        requireNonNull(key);
-        V value = cache.computeIfAbsent(key, loader::load);
-        if (value != null) {
+        V value = cache.data.get(key);
+        if (value == null) {
+          keysToLoad.add(key);
+        } else {
           result.put(key, value);
         }
       }
+      cache.statsCounter.recordHits(result.size());
+      if (keysToLoad.isEmpty()) {
+        return result;
+      }
+      bulkLoad(keysToLoad, result);
       return Collections.unmodifiableMap(result);
+    }
+
+    private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
+      if (!hasBulkLoader) {
+        for (K key : keysToLoad) {
+          V value = cache.compute(key, (k, v) -> loader.load(key));
+          result.put(key, value);
+        }
+        return;
+      }
+
+      boolean success = false;
+      long startTime = cache.ticker.read();
+      try {
+        @SuppressWarnings("unchecked")
+        Map<K, V> loaded = (Map<K, V>) loader.loadAll(keysToLoad);
+        cache.putAll(loaded);
+        for (K key : keysToLoad) {
+          V value = loaded.get(key);
+          if (value != null) {
+            result.put(key, value);
+          }
+        }
+        success = true;
+      } finally {
+        cache.statsCounter.recordMisses(keysToLoad.size());
+        long loadTime = cache.ticker.read() - startTime;
+        if (success) {
+          cache.statsCounter.recordLoadSuccess(loadTime);
+        } else {
+          cache.statsCounter.recordLoadFailure(loadTime);
+        }
+      }
     }
 
     @Override

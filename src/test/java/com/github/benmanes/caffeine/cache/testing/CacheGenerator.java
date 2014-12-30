@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
@@ -58,9 +59,8 @@ final class CacheGenerator {
     makeInitialCapacities();
     makeCacheStats();
     makeMaximumSizes();
-    // Disabled until supported to avoid duplicated tests
-    // makeKeyReferences();
-    // makeValueReferences();
+    makeKeyReferences();
+    makeValueReferences();
     makeExecutors();
     makeRemovalListeners();
     makePopulations();
@@ -123,12 +123,16 @@ final class CacheGenerator {
 
   /** Generates a new set of contexts with the key reference combinations. */
   private void makeKeyReferences() {
-    // TODO(ben): Support soft keys
+    for (CacheContext context : contexts) {
+      context.keyStrength = ReferenceType.STRONG;
+    }
   }
 
   /** Generates a new set of contexts with the value reference combinations. */
   private void makeValueReferences() {
-    // TODO(ben): Support soft and weak values
+    for (CacheContext context : contexts) {
+      context.valueStrength = ReferenceType.STRONG;
+    }
   }
 
   /** Generates a new set of contexts with the executor combinations. */
