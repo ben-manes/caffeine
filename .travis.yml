@@ -5,7 +5,7 @@ jdk:
   - oraclejdk8
 
 env:
- - TERM=dumb JAVA_OPTS="-server -Xmx384m -XX:+UseG1GC"
+ - TERM=dumb
 
 after_success:
 - ./gradlew jacocoTestReport coveralls
