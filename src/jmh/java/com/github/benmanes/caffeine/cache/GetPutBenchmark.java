@@ -56,7 +56,7 @@ public class GetPutBenchmark {
 
   @Setup
   public void setup() {
-    cache = cacheType.create(2 * SIZE, 25);
+    cache = cacheType.create(2 * SIZE, 64);
     for (int i = 0; i < SIZE; i++) {
       cache.put(i, Boolean.TRUE);
     }
@@ -69,22 +69,22 @@ public class GetPutBenchmark {
     }
   }
 
-  @Benchmark @Group("read_only") @GroupThreads(25)
+  @Benchmark @Group("read_only") @GroupThreads(4)
   public void get_readOnly(ThreadState threadState) {
     cache.get(ints[threadState.index++ & MASK]);
   }
 
-  @Benchmark @Group("write_only") @GroupThreads(8)
+  @Benchmark @Group("write_only") @GroupThreads(4)
   public void put_writeOnly(ThreadState threadState) {
     cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
   }
 
-  @Benchmark @Group("readwrite") @GroupThreads(18)
+  @Benchmark @Group("readwrite") @GroupThreads(3)
   public void readwrite_get(ThreadState threadState) {
     cache.get(ints[threadState.index++ & MASK]);
   }
 
-  @Benchmark @Group("readwrite") @GroupThreads(2)
+  @Benchmark @Group("readwrite") @GroupThreads(1)
   public void readwrite_put(ThreadState threadState) {
     cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
   }

@@ -6,6 +6,7 @@ jdk:
 
 env:
 - TERM=dumb
+- JAVA_OPTS="-server -Xmx384m -XX:+UseG1GC"
 
 after_success:
 - ./gradlew jacocoTestReport coveralls
