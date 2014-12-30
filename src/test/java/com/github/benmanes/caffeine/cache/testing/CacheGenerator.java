@@ -32,7 +32,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
@@ -44,7 +43,9 @@ import com.google.common.collect.Maps;
 final class CacheGenerator {
   private final CacheSpec cacheSpec;
   private final boolean isLoadingOnly;
+
   private List<CacheContext> contexts;
+  private List<CacheContext> combinations;
 
   public CacheGenerator(CacheSpec cacheSpec, boolean isLoadingOnly) {
     this.isLoadingOnly = isLoadingOnly;
@@ -70,14 +71,22 @@ final class CacheGenerator {
   }
 
   private void initialize() {
-    contexts = ImmutableList.of(new CacheContext());
+    contexts = new ArrayList<>(64);
+    contexts.add(new CacheContext());
+    combinations = new ArrayList<>(64);
+  }
+
+  private void swap() {
+    List<CacheContext> temp = contexts;
+    contexts = combinations;
+    combinations = temp;
+    temp.clear();
   }
 
   /** Generates a new set of contexts with the initial capacity combinations. */
   private void makeInitialCapacities() {
     assertThat(cacheSpec.initialCapacity().length, is(greaterThan(0)));
 
-    List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (InitialCapacity initialCapacity : cacheSpec.initialCapacity()) {
         CacheContext copy = context.copy();
@@ -85,12 +94,11 @@ final class CacheGenerator {
         combinations.add(copy);
       }
     }
-    contexts = combinations;
+    swap();
   }
 
   /** Generates a new set of contexts with the cache statistic combinations. */
   private void makeCacheStats() {
-    List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (Stats stats : cacheSpec.stats()) {
         CacheContext copy = context.copy();
@@ -98,12 +106,11 @@ final class CacheGenerator {
         combinations.add(copy);
       }
     }
-    contexts = combinations;
+    swap();
   }
 
   /** Generates a new set of contexts with the maximum size combinations. */
   private void makeMaximumSizes() {
-    List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (MaximumSize maximumSize : cacheSpec.maximumSize()) {
         CacheContext copy = context.copy();
@@ -111,7 +118,7 @@ final class CacheGenerator {
         combinations.add(copy);
       }
     }
-    contexts = combinations;
+    swap();
   }
 
   /** Generates a new set of contexts with the key reference combinations. */
@@ -126,7 +133,6 @@ final class CacheGenerator {
 
   /** Generates a new set of contexts with the executor combinations. */
   private void makeExecutors() {
-    List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (CacheExecutor executor : cacheSpec.executor()) {
         CacheContext copy = context.copy();
@@ -134,12 +140,11 @@ final class CacheGenerator {
         combinations.add(copy);
       }
     }
-    contexts = combinations;
+    swap();
   }
 
   /** Generates a new set of builders with the removal listener combinations. */
   private void makeRemovalListeners() {
-    List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (Listener removalListenerType : cacheSpec.removalListener()) {
         CacheContext copy = context.copy();
@@ -148,12 +153,11 @@ final class CacheGenerator {
         combinations.add(copy);
       }
     }
-    contexts = combinations;
+    swap();
   }
 
   /** Generates a new set of builders with the population combinations. */
   private void makePopulations() {
-    List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       for (Population population : cacheSpec.population()) {
         CacheContext copy = context.copy();
@@ -161,21 +165,20 @@ final class CacheGenerator {
         combinations.add(copy);
       }
     }
-    contexts = combinations;
+    swap();
   }
 
   /** Generates a new set of builders with the population combinations. */
   private void makeManualAndLoading() {
-    List<CacheContext> combinations = new ArrayList<>();
     for (CacheContext context : contexts) {
       if (!isLoadingOnly) {
-        combinations.add(context.copy());
+        combinations.add(context);
       }
       CacheContext copy = context.copy();
       copy.isLoading = true;
       combinations.add(copy);
     }
-    contexts = combinations;
+    swap();
   }
 
   /** Constructs cache and populates. */
@@ -201,7 +204,7 @@ final class CacheGenerator {
     if (context.executor != null) {
       builder.executor(context.executor);
     }
-    if (context.removalListener != null) {
+    if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
     }
     if (context.isLoading) {

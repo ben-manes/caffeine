@@ -50,8 +50,9 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheContext {
-  @Nullable RemovalListener<Integer, Integer> removalListener;
   Listener removalListenerType;
+  @Nullable RemovalListener<Integer, Integer> removalListener;
+
   MaximumSize maximumSize;
   Population population;
 
