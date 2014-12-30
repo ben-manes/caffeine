@@ -158,6 +158,10 @@ jmh {
   benchmarkMode = 'thrpt'
   // Available time units are: [m, s, ms, us, ns]
   timeUnit = 's'
+  
+  // Charts: http://nilskp.github.io/jmh-charts
+  resultFormat = 'json'
+  resultsFile = file("${buildDir}/reports/jmh/results.json")
 
   jvmArgs = '-server -Xmx512m -XX:+UseG1GC'
   warmupIterations = 10

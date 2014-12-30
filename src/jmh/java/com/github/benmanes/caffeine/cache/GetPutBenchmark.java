@@ -36,11 +36,16 @@ import com.github.benmanes.caffeine.generator.ScrambledZipfianGenerator;
 public class GetPutBenchmark {
   private static final int MASK = (2 << 14) - 1;
 
-  @Param({"ConcurrentLinkedHashMap", "Guava", "LinkedHashMap_Lru",
-    "ConcurrentHashMapV7", "ConcurrentHashMap", "NonBlockingHashMap"})
+  @Param({
+    "LinkedHashMap_Lru",
+    "ConcurrentHashMap",
+    "ConcurrentLinkedHashMap",
+    "Caffeine",
+    "Guava",
+  })
   CacheType cacheType;
-  @Param("100000")
-  int maximumSize;
+  @Param("10000")
+  int sampleSize;
 
   Map<Integer, Boolean> cache;
   Integer[] ints;
@@ -52,8 +57,8 @@ public class GetPutBenchmark {
 
   @Setup
   public void setup() {
-    cache = cacheType.create(maximumSize);
-    for (int i = 0; i < maximumSize; i++) {
+    cache = cacheType.create(5 * sampleSize, 16);
+    for (int i = 0; i < sampleSize; i++) {
       cache.put(i, Boolean.TRUE);
     }
 
@@ -65,17 +70,22 @@ public class GetPutBenchmark {
     }
   }
 
-  @Benchmark @Group("read_only") @GroupThreads(4)
+  @Benchmark @Group("read_only") @GroupThreads(25)
   public void get_readOnly(ThreadState threadState) {
     cache.get(ints[threadState.index++ & MASK]);
   }
 
-  @Benchmark @Group("readwrite") @GroupThreads(4)
+  @Benchmark @Group("write_only") @GroupThreads(8)
+  public void put_writeOnly(ThreadState threadState) {
+    cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
+  }
+
+  @Benchmark @Group("readwrite") @GroupThreads(18)
   public void readwrite_get(ThreadState threadState) {
     cache.get(ints[threadState.index++ & MASK]);
   }
 
-  @Benchmark @Group("readwrite") @GroupThreads(1)
+  @Benchmark @Group("readwrite") @GroupThreads(2)
   public void readwrite_put(ThreadState threadState) {
     cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
   }

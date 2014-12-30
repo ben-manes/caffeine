@@ -30,38 +30,51 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum CacheType {
+  Caffeine() {
+    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+      return com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+          .maximumSize(maximumSize)
+          .<K, V>build()
+          .asMap();
+    }
+  },
+  ConcurrentHashMapV7() { // unbounded, see OpenJDK/7u40-b43
+    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+      return new ConcurrentHashMapV7<K, V>(maximumSize, 0.75f, concurrencyLevel);
+    }
+  },
+  ConcurrentHashMap() { // unbounded
+    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+      return new ConcurrentHashMap<K, V>(maximumSize, 0.75f, concurrencyLevel);
+    }
+  },
   ConcurrentLinkedHashMap() {
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
+    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
       return new ConcurrentLinkedHashMap.Builder<K, V>()
         .maximumWeightedCapacity(maximumSize)
+        .concurrencyLevel(concurrencyLevel)
         .build();
     }
   },
   Guava() {
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return CacheBuilder.newBuilder().maximumSize(maximumSize).<K, V>build().asMap();
+    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+      return CacheBuilder.newBuilder()
+          .concurrencyLevel(concurrencyLevel)
+          .maximumSize(maximumSize)
+          .<K, V>build()
+          .asMap();
     }
   },
   LinkedHashMap_Lru() {
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
+    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
       return Collections.synchronizedMap(new BoundedLinkedHashMap<K, V>(true, maximumSize));
     }
   },
-  ConcurrentHashMapV7() { // unbounded, see OpenJDK/7u40-b43
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return new ConcurrentHashMapV7<K, V>(maximumSize);
-    }
-  },
-  ConcurrentHashMap() { // unbounded
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return new ConcurrentHashMap<K, V>(maximumSize);
-    }
-  },
   NonBlockingHashMap() { // unbounded
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
+    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
       return new NonBlockingHashMap<K, V>(maximumSize);
     }
   };
 
-  public abstract <K, V> Map<K, V> create(int maximumSize);
+  public abstract <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel);
 }

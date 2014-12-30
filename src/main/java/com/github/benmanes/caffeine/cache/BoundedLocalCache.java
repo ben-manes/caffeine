@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -163,7 +164,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   static final long MAXIMUM_CAPACITY = Long.MAX_VALUE - Integer.MAX_VALUE;
 
   /** The number of read buffers to use. */
-  static final int NUMBER_OF_READ_BUFFERS = ceilingNextPowerOfTwo(NCPU);
+  static final int NUMBER_OF_READ_BUFFERS = 4 * ceilingNextPowerOfTwo(NCPU);
 
   /** Mask value for indexing into the read buffers. */
   static final int READ_BUFFERS_MASK = NUMBER_OF_READ_BUFFERS - 1;
@@ -233,7 +234,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     capacity = new PaddedAtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY));
 
     // The eviction support
-    evictionLock = new Sync();
+    evictionLock = new ReentrantLock();
     weigher = builder.getWeigher();
     weightedSize = new PaddedAtomicLong();
     evictionDeque = new LinkedDeque<Node<K, V>>();
