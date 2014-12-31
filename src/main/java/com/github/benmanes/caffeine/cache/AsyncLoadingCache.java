@@ -54,7 +54,7 @@ public interface AsyncLoadingCache<K, V> {
    */
   @Nonnull
   CompletableFuture<V> get(@Nonnull K key,
-      @Nonnull Function<? super K, CompletableFuture<? extends V>> mappingFunction);
+      @Nonnull Function<? super K, CompletableFuture<V>> mappingFunction);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from

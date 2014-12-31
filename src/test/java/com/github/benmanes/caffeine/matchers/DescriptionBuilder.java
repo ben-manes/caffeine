@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.matchers;
 
+import java.util.function.Supplier;
+
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 
@@ -38,19 +40,30 @@ public final class DescriptionBuilder {
     return expectThat("", actual, matcher);
   }
 
-  public <T> DescriptionBuilder expectThat(String reason, T actual, Matcher<? super T> matcher) {
+  public <T> DescriptionBuilder expectThat(Supplier<String> reason, T actual, Matcher<? super T> matcher) {
     if (!matcher.matches(actual)) {
-      description.appendText(reason)
-        .appendText("\nExpected: ")
-        .appendDescriptionOf(matcher)
-        .appendText("\n     but: ");
-      matcher.describeMismatch(actual, description);
-      description.appendText("\nLocation: ")
-        .appendText(Throwables.getStackTraceAsString(new Exception()));
-
-      matches = false;
+      addError(reason.get(), actual, matcher);
     }
     return this;
+  }
+
+  public <T> DescriptionBuilder expectThat(String reason, T actual, Matcher<? super T> matcher) {
+    if (!matcher.matches(actual)) {
+      addError(reason, actual, matcher);
+    }
+    return this;
+  }
+
+  private <T> void addError(String reason, T actual, Matcher<? super T> matcher) {
+    description.appendText(reason)
+      .appendText("\nExpected: ")
+      .appendDescriptionOf(matcher)
+      .appendText("\n     but: ");
+    matcher.describeMismatch(actual, description);
+    description.appendText("\nLocation: ")
+      .appendText(Throwables.getStackTraceAsString(new Exception()));
+
+    matches = false;
   }
 
   public <T> DescriptionBuilder expected(String reason) {

@@ -45,7 +45,7 @@ public class ComputeBenchmark {
   static final int MASK = SIZE - 1;
   static final Integer COMPUTE_KEY = SIZE / 2;
 
-  @Param({"ConcurrentHashMap", /* "Caffeine", "Guava", */ "ConcurrentHashMap2"})
+  @Param({"ConcurrentHashMap", "Caffeine", "Guava"})
   String computingType;
 
   Function<Integer, Boolean> benchmarkFunction;

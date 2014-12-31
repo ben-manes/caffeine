@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
@@ -71,7 +72,7 @@ public final class IsValidLinkedDeque<E>
     while (iterator.hasNext()) {
       Linked<?> element = iterator.next();
       checkElement(deque, element, desc);
-      String errorMsg = String.format("Loop detected: %s in %s", element, seen);
+      Supplier<String> errorMsg = () -> String.format("Loop detected: %s in %s", element, seen);
       desc.expectThat(errorMsg, seen.add(element), is(true));
     }
     desc.expectThat(deque, hasSize(seen.size()));

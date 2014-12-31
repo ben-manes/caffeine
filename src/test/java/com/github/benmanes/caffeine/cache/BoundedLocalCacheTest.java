@@ -25,17 +25,15 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.mockito.Mockito.verify;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
-import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
-import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.LocalManualCache;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
@@ -237,9 +235,9 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Runnable task = Mockito.mock(Runnable.class);
-    localCache.afterWrite(task);
-    verify(task).run();
+    boolean[] ran = new boolean[1];
+    localCache.afterWrite(() -> ran[0] = true);
+    assertThat(ran[0], is(true));
 
     assertThat(localCache.writeBuffer, hasSize(0));
   }
@@ -250,7 +248,7 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
 
     int index = BoundedLocalCache.readBufferIndex();
-    PaddedAtomicReference<Node<Integer, Integer>>[] buffer = localCache.readBuffers[index];
+    AtomicReference<Node<Integer, Integer>>[] buffer = localCache.readBuffers[index];
     PaddedAtomicLong writeCounter = localCache.readBufferWriteCount[index];
 
     for (int i = context.firstKey(); i <= BoundedLocalCache.READ_BUFFER_THRESHOLD; i++) {
@@ -258,7 +256,7 @@ public final class BoundedLocalCacheTest {
     }
 
     int pending = 0;
-    for (PaddedAtomicReference<?> slot : buffer) {
+    for (AtomicReference<?> slot : buffer) {
       if (slot.get() != null) {
         pending++;
       }

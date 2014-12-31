@@ -18,15 +18,13 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.IsValidLinkedDeque.validLinkedDeque;
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.hasValue;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
@@ -106,7 +104,8 @@ public final class IsValidBoundedLocalCache<K, V>
     long weightedSize = 0;
     Set<Node> seen = Sets.newIdentityHashSet();
     for (Node<? extends K, ? extends V> node : map.evictionDeque) {
-      String errorMsg = String.format("Loop detected: %s, saw %s in %s", node, seen, map);
+      Supplier<String> errorMsg = () -> String.format(
+          "Loop detected: %s, saw %s in %s", node, seen, map);
       desc.expectThat(errorMsg, seen.add(node), is(true));
       weightedSize += ((WeightedValue) node.get()).weight;
       checkNode(map, node, desc);
@@ -129,9 +128,10 @@ public final class IsValidBoundedLocalCache<K, V>
     builder.expectThat(node.getValue(), is(not(nullValue())));
     builder.expectThat("weight", node.get().weight, is(weigher.weigh(node.key, node.getValue())));
 
-    builder.expectThat("inconsistent", map, hasKey(node.key));
-    builder.expectThat("Could not find value: " + node.getValue(), map, hasValue(node.getValue()));
-    builder.expectThat("found wrong node", map.data, hasEntry(node.key, node));
+    builder.expectThat("inconsistent", map.containsKey(node.key), is(true));
+    builder.expectThat(() -> "Could not find value: " + node.getValue(),
+        map.containsValue(node.getValue()), is(true));
+    builder.expectThat("found wrong node", map.data.get(node.key), is(node));
   }
 
   @Factory

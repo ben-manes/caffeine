@@ -206,7 +206,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   final Queue<Runnable> writeBuffer;
   final PaddedAtomicLong[] readBufferWriteCount;
   final PaddedAtomicLong[] readBufferDrainAtWriteCount;
-  final PaddedAtomicReference<Node<K, V>>[][] readBuffers;
+  final AtomicReference<Node<K, V>>[][] readBuffers;
 
   final PaddedAtomicReference<DrainStatus> drainStatus;
   final Weigher<? super K, ? super V> weigher;
@@ -243,13 +243,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     readBufferReadCount = new long[NUMBER_OF_READ_BUFFERS];
     readBufferWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
     readBufferDrainAtWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
-    readBuffers = new PaddedAtomicReference[NUMBER_OF_READ_BUFFERS][READ_BUFFER_SIZE];
+    readBuffers = new AtomicReference[NUMBER_OF_READ_BUFFERS][READ_BUFFER_SIZE];
     for (int i = 0; i < NUMBER_OF_READ_BUFFERS; i++) {
       readBufferWriteCount[i] = new PaddedAtomicLong();
       readBufferDrainAtWriteCount[i] = new PaddedAtomicLong();
-      readBuffers[i] = new PaddedAtomicReference[READ_BUFFER_SIZE];
+      readBuffers[i] = new AtomicReference[READ_BUFFER_SIZE];
       for (int j = 0; j < READ_BUFFER_SIZE; j++) {
-        readBuffers[i][j] = new PaddedAtomicReference<Node<K, V>>();
+        readBuffers[i][j] = new AtomicReference<Node<K, V>>();
       }
     }
 
@@ -446,7 +446,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     final long writeCount = readBufferWriteCount[bufferIndex].get();
     for (int i = 0; i < READ_BUFFER_DRAIN_THRESHOLD; i++) {
       final int index = (int) (readBufferReadCount[bufferIndex] & READ_BUFFER_INDEX_MASK);
-      final PaddedAtomicReference<Node<K, V>> slot = readBuffers[bufferIndex][index];
+      final AtomicReference<Node<K, V>> slot = readBuffers[bufferIndex][index];
       final Node<K, V> node = slot.get();
       if (node == null) {
         break;
