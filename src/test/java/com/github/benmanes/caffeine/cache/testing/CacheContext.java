@@ -34,7 +34,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
@@ -58,12 +58,13 @@ public final class CacheContext {
   final ReferenceType keyStrength;
   final MaximumSize maximumSize;
   final Population population;
-  final Expiration afterAccess;
-  final Expiration afterWrite;
+  final Expire afterAccess;
+  final Expire afterWrite;
   final Executor executor;
   final Loader loader;
   final Stats stats;
 
+  final FakeTicker ticker;
   final Map<Integer, Integer> original;
   final RemovalListener<Integer, Integer> removalListener;
 
@@ -77,7 +78,7 @@ public final class CacheContext {
   Set<Integer> absentKeys;
 
   public CacheContext(InitialCapacity initialCapacity, Stats stats, MaximumSize maximumSize,
-      Expiration afterAccess, Expiration afterWrite, ReferenceType keyStrength,
+      Expire afterAccess, Expire afterWrite, ReferenceType keyStrength,
       ReferenceType valueStrength, CacheExecutor cacheExecutor, Listener removalListenerType,
       Population population, boolean isLoading, Loader loader) {
     this.initialCapacity = requireNonNull(initialCapacity);
@@ -93,6 +94,7 @@ public final class CacheContext {
     this.removalListener = removalListenerType.create();
     this.population = requireNonNull(population);
     this.loader = isLoading ? requireNonNull(loader) : null;
+    this.ticker = expires() ? new FakeTicker() : null;
     this.original = new LinkedHashMap<>();
   }
 
@@ -180,6 +182,14 @@ public final class CacheContext {
 
   public CacheStats stats() {
     return cache.stats();
+  }
+
+  public boolean expires() {
+    return (afterAccess != Expire.DISABLED) || (afterWrite != Expire.DISABLED);
+  }
+
+  public FakeTicker ticker() {
+    return requireNonNull(ticker);
   }
 
   @Override

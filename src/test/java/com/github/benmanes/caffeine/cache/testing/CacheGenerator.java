@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
@@ -83,8 +83,8 @@ final class CacheGenerator {
         (InitialCapacity) combination.get(0),
         (Stats) combination.get(1),
         (MaximumSize) combination.get(2),
-        (Expiration) combination.get(3),
-        (Expiration) combination.get(4),
+        (Expire) combination.get(3),
+        (Expire) combination.get(4),
         (ReferenceType) combination.get(5),
         (ReferenceType) combination.get(6),
         (CacheExecutor) combination.get(7),
@@ -105,11 +105,14 @@ final class CacheGenerator {
     if (context.maximumSize != MaximumSize.DISABLED) {
       builder.maximumSize(context.maximumSize.max());
     }
-    if (context.afterAccess != Expiration.DISABLED) {
+    if (context.afterAccess != Expire.DISABLED) {
       builder.expireAfterAccess(context.afterAccess.timeNanos(), TimeUnit.NANOSECONDS);
     }
-    if (context.afterWrite != Expiration.DISABLED) {
+    if (context.afterWrite != Expire.DISABLED) {
       builder.expireAfterWrite(context.afterWrite.timeNanos(), TimeUnit.NANOSECONDS);
+    }
+    if (context.expires()) {
+      builder.ticker(context.ticker());
     }
     if (context.keyStrength == ReferenceType.WEAK) {
       builder.weakKeys();

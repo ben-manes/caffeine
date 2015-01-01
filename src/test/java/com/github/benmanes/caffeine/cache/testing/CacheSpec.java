@@ -117,18 +117,18 @@ public @interface CacheSpec {
   /* ---------------- Expiration -------------- */
 
   /** The expiration time-to-idle setting, each resulting in a new combination. */
-  Expiration[] expireAfterAccess() default {
-    Expiration.DISABLED,
+  Expire[] expireAfterAccess() default {
+    Expire.DISABLED,
     //Expiration.FOREVER
   };
 
   /** The expiration time-to-live setting, each resulting in a new combination. */
-  Expiration[] expireAfterWrite() default {
-    Expiration.DISABLED,
-    //Expiration.FOREVER
+  Expire[] expireAfterWrite() default {
+    Expire.DISABLED,
+    Expire.FOREVER
   };
 
-  enum Expiration {
+  enum Expire {
     /** A flag indicating that entries are not evicted due to expiration. */
     DISABLED(Long.MIN_VALUE),
     /** A configuration where entries are evicted immediately. */
@@ -140,7 +140,7 @@ public @interface CacheSpec {
 
     private final long timeNanos;
 
-    private Expiration(long timeNanos) {
+    private Expire(long timeNanos) {
       this.timeNanos = timeNanos;
     }
 

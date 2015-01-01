@@ -28,6 +28,7 @@ import org.testng.annotations.DataProvider;
 import com.github.benmanes.caffeine.cache.Advanced;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.google.common.collect.Iterators;
 
 /**
@@ -42,7 +43,7 @@ public final class CacheProvider {
   /**
    * The provided test parameters are optional and may be specified in any order. Supports injecting
    * {@link LoadingCache}, {@link Cache}, {@link CacheContext}, the {@link ConcurrentMap}
-   * {@link Cache#asMap()} view, and {@link Advanced.Eviction}.
+   * {@link Cache#asMap()} view, {@link Advanced.Eviction}, and {@link FakeTicker}.
    */
   @DataProvider(name = "caches")
   public static Iterator<Object[]> providesCaches(Method testMethod) throws Exception {
@@ -69,6 +70,8 @@ public final class CacheProvider {
           params[i] = entry.getValue().asMap();
         } else if (parameterClasses[i].isAssignableFrom(Advanced.Eviction.class)) {
           params[i] = entry.getValue().advanced().eviction().get();
+        } else if (parameterClasses[i].isAssignableFrom(Ticker.class)) {
+          params[i] = entry.getKey().ticker();
         } else {
           throw new AssertionError("Unknown parameter type: " + parameterClasses[i]);
         }
