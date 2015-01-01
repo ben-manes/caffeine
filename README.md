@@ -78,9 +78,8 @@ For convenience, the project's package is prepended to the supplied class name.
 
 Cache unit tests can opt into being run against all cache configurations that meet a specification
 constraint. A test method annotated with a configured `@CacheSpec` and using the `CacheProvider`
-[data provider](http://testng.org/doc/documentation-main.html#parameters-dataproviders) will be
-executed with all possible combinations. The test case can inspect the execution configuration by
-accepting the `CacheContext` as a parameter.
+will be executed with all possible combinations. The test case can inspect the execution
+configuration by accepting the `CacheContext` as a parameter.
 
 Parameterized tests can take advantage of automatic validation of the cache's internal data
 structures to detect corruption. The `CacheValidationListener` is run after a successful test case
@@ -92,15 +91,16 @@ and if an error is detected then the test is set with the failure information.
 public final class CacheTest {
 
   @CacheSpec(
-    keys = { ReferenceType.STRONG, ReferenceType.SOFT },
-    values = { ReferenceType.STRONG, ReferenceType.SOFT, ReferenceType.WEAK },
-    maximumSize = { 0, CacheSpec.DEFAULT_MAXIMUM_SIZE, CacheSpec.UNBOUNDED })
+    keys = { ReferenceType.STRONG, ReferenceType.WEAK },
+    values = { ReferenceType.STRONG, ReferenceType.WEAK, ReferenceType.SOFT },
+    maximumSize = { MaximumSize.DISABLED, MaximumSize.FULL, MaximumSize.UNREACHABLE })
   @Test(dataProvider = "caches")
   public void getIfPresent_notFound(
       Cache<Integer, Integer> cache, CacheContext context) {
     // This test is run against 72 different cache configurations
     // (2 key types) * (3 value types) * (3 max sizes) * (4 population modes)
-    cache.getIfPresent(context.getAbsentKey());
+    assertThat(cache.getIfPresent(context.getAbsentKey()), is(nullValue());
+    assertThat(cache.stats(), both(hasMissCount(1)).and(hasHitCount(0)));
   }
 }
 ```
