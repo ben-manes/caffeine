@@ -92,7 +92,7 @@ public final class IsValidBoundedLocalCache<K, V>
   @SuppressWarnings("unchecked")
   private void checkEvictionDeque(BoundedLocalCache<? extends K, ? extends V> map,
       DescriptionBuilder desc) {
-    LinkedDeque<?> deque = map.evictionDeque;
+    LinkedDeque<?> deque = map.accessOrderDeque;
 
     checkLinks(map, desc);
     desc.expectThat(deque, hasSize(map.size()));
@@ -104,7 +104,7 @@ public final class IsValidBoundedLocalCache<K, V>
       DescriptionBuilder desc) {
     long weightedSize = 0;
     Set<Node> seen = Sets.newIdentityHashSet();
-    for (Node<? extends K, ? extends V> node : map.evictionDeque) {
+    for (Node<? extends K, ? extends V> node : map.accessOrderDeque) {
       Supplier<String> errorMsg = () -> String.format(
           "Loop detected: %s, saw %s in %s", node, seen, map);
       desc.expectThat(errorMsg, seen.add(node), is(true));

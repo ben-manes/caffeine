@@ -195,7 +195,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @GuardedBy("evictionLock")
   final long[] readBufferReadCount;
   @GuardedBy("evictionLock")
-  final LinkedDeque<Node<K, V>> evictionDeque;
+  final LinkedDeque<Node<K, V>> writeOrderDeque;
+  @GuardedBy("evictionLock")
+  final LinkedDeque<Node<K, V>> accessOrderDeque;
 
   @GuardedBy("evictionLock") // must write under lock
   final PaddedAtomicLong weightedSize;
@@ -236,7 +238,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     evictionLock = new Sync();
     weigher = builder.getWeigher();
     weightedSize = new PaddedAtomicLong();
-    evictionDeque = new AccessOrderDeque<Node<K, V>>();
+    writeOrderDeque = new WriteOrderDeque<Node<K, V>>();
+    accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
     writeBuffer = new SingleConsumerQueue<Runnable>();
     drainStatus = new PaddedAtomicReference<DrainStatus>(IDLE);
 
@@ -323,7 +326,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     // that if an eviction is still required then a new victim will be chosen
     // for removal.
     while (hasOverflowed()) {
-      final Node<K, V> node = evictionDeque.poll();
+      final Node<K, V> node = accessOrderDeque.poll();
 
       // If weighted values are used, then the pending operations will adjust
       // the size to reflect the correct weight
@@ -466,8 +469,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     // This can occur when the entry was concurrently read while a writer was
     // removing it. If the entry is no longer linked then it does not need to
     // be processed.
-    if (evictionDeque.contains(node)) {
-      evictionDeque.moveToBack(node);
+    if (accessOrderDeque.contains(node)) {
+      accessOrderDeque.moveToBack(node);
     }
   }
 
@@ -558,7 +561,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
       // ignore out-of-order write operations
       if (node.get().isAlive()) {
-        evictionDeque.add(node);
+        accessOrderDeque.add(node);
         evict();
       }
     }
@@ -576,7 +579,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       // add may not have been processed yet
-      evictionDeque.remove(node);
+      accessOrderDeque.remove(node);
       makeDead(node);
     }
   }
@@ -637,7 +640,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     try {
       // Discard all entries
       Node<K, V> node;
-      while ((node = evictionDeque.poll()) != null) {
+      while ((node = accessOrderDeque.poll()) != null) {
         data.remove(node.key, node);
         if (hasRemovalListener()) {
           notifyRemoval(node.key, node.getValue(), RemovalCause.EXPLICIT);
@@ -1233,8 +1236,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           : 16;
       final Set<K> keys = new LinkedHashSet<K>(initialCapacity);
       final Iterator<Node<K, V>> iterator = ascending
-          ? evictionDeque.iterator()
-          : evictionDeque.descendingIterator();
+          ? accessOrderDeque.iterator()
+          : accessOrderDeque.descendingIterator();
       while (iterator.hasNext() && (limit > keys.size())) {
         keys.add(iterator.next().key);
       }
@@ -1343,8 +1346,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           : 16;
       final Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
       final Iterator<Node<K, V>> iterator = ascending
-          ? evictionDeque.iterator()
-          : evictionDeque.descendingIterator();
+          ? accessOrderDeque.iterator()
+          : accessOrderDeque.descendingIterator();
       while (iterator.hasNext() && (limit > map.size())) {
         Node<K, V> node = iterator.next();
         map.put(node.key, node.getValue());
@@ -1433,12 +1436,20 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    */
   @SuppressWarnings("serial")
   static final class Node<K, V> extends AtomicReference<WeightedValue<V>>
-      implements AccessOrder<Node<K, V>> {
+      implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
+    volatile long accessTime;
+    @GuardedBy("evictionLock")
+    Node<K, V> prevAccessOrder;
+    @GuardedBy("evictionLock")
+    Node<K, V> nextAccessOrder;
+
+    volatile long writeTime;
+    @GuardedBy("evictionLock")
+    Node<K, V> prevWriteOrder;
+    @GuardedBy("evictionLock")
+    Node<K, V> nextWriteOrder;
+
     final K key;
-    @GuardedBy("evictionLock")
-    Node<K, V> prev;
-    @GuardedBy("evictionLock")
-    Node<K, V> next;
 
     /** Creates a new, unlinked node. */
     Node(K key, WeightedValue<V> weightedValue) {
@@ -1446,33 +1457,61 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       this.key = key;
     }
 
+    /** Retrieves the value held by the current <tt>WeightedValue</tt>. */
+    V getValue() {
+      return get().value;
+    }
+
+    /* ---------------- Access order -------------- */
+
     @Override
     @GuardedBy("evictionLock")
     public Node<K, V> getPreviousInAccessOrder() {
-      return prev;
+      return prevAccessOrder;
     }
 
     @Override
     @GuardedBy("evictionLock")
     public void setPreviousInAccessOrder(Node<K, V> prev) {
-      this.prev = prev;
+      this.prevAccessOrder = prev;
     }
 
     @Override
     @GuardedBy("evictionLock")
     public Node<K, V> getNextInAccessOrder() {
-      return next;
+      return nextAccessOrder;
     }
 
     @Override
     @GuardedBy("evictionLock")
     public void setNextInAccessOrder(Node<K, V> next) {
-      this.next = next;
+      this.nextAccessOrder = next;
     }
 
-    /** Retrieves the value held by the current <tt>WeightedValue</tt>. */
-    V getValue() {
-      return get().value;
+    /* ---------------- Write order -------------- */
+
+    @Override
+    @GuardedBy("evictionLock")
+    public Node<K, V> getPreviousInWriteOrder() {
+      return prevWriteOrder;
+    }
+
+    @Override
+    @GuardedBy("evictionLock")
+    public void setPreviousInWriteOrder(Node<K, V> prev) {
+      this.prevWriteOrder = prev;
+    }
+
+    @Override
+    @GuardedBy("evictionLock")
+    public Node<K, V> getNextInWriteOrder() {
+      return nextWriteOrder;
+    }
+
+    @Override
+    @GuardedBy("evictionLock")
+    public void setNextInWriteOrder(Node<K, V> next) {
+      this.nextWriteOrder = next;
     }
   }
 
