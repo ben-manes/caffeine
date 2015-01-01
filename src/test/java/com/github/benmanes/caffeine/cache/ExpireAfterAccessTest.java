@@ -41,14 +41,17 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterAccessTest {
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
   public void getIfPresent(Cache<Integer, Integer> cache, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
     cache.getIfPresent(context.firstKey());
-    context.ticker().advance(1, TimeUnit.MINUTES);
+    context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getIfPresent(context.firstKey()), is(-context.firstKey()));
     assertThat(cache.getIfPresent(context.lastKey()), is(nullValue()));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPIRED));
+
+    long count = context.initialSize() - 1;
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }
 }

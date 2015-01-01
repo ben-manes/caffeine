@@ -125,7 +125,7 @@ public @interface CacheSpec {
   /** The expiration time-to-live setting, each resulting in a new combination. */
   Expire[] expireAfterWrite() default {
     Expire.DISABLED,
-    Expire.FOREVER
+    //Expire.FOREVER
   };
 
   enum Expire {
@@ -136,7 +136,7 @@ public @interface CacheSpec {
     /** A configuration that holds a single entry. */
     ONE_MINUTE(TimeUnit.MINUTES.toNanos(1L)),
     /** A configuration that holds the {@link Population#FULL} count. */
-    FOREVER(Integer.MAX_VALUE);
+    FOREVER(Long.MAX_VALUE);
 
     private final long timeNanos;
 

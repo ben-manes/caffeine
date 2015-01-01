@@ -154,8 +154,8 @@ public final class Caffeine<K, V> {
   private Executor executor;
   private Ticker ticker;
 
-  private Strength keyStrength;
-  private Strength valueStrength;
+  private Strength keyStrength = Strength.STRONG;
+  private Strength valueStrength = Strength.STRONG;
 
   private Caffeine() {}
 
@@ -617,6 +617,14 @@ public final class Caffeine<K, V> {
         : ENABLED_STATS_COUNTER_SUPPLIER;
   }
 
+  boolean isBounded() {
+    return (maximumSize != UNSET_INT)
+        || (expireAfterAccessNanos != UNSET_INT)
+        || (expireAfterWriteNanos != UNSET_INT)
+        || (keyStrength != Strength.STRONG)
+        || (valueStrength != Strength.STRONG);
+  }
+
   /**
    * Builds a cache which does not automatically load values when keys are requested.
    * <p>
@@ -635,9 +643,9 @@ public final class Caffeine<K, V> {
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return (maximumSize == UNSET_INT)
-        ? new UnboundedLocalCache.LocalManualCache<K1, V1>(self)
-        : new BoundedLocalCache.LocalManualCache<K1, V1>(self);
+    return isBounded()
+        ? new BoundedLocalCache.LocalManualCache<K1, V1>(self)
+        : new UnboundedLocalCache.LocalManualCache<K1, V1>(self);
   }
 
   /**
@@ -660,9 +668,9 @@ public final class Caffeine<K, V> {
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return (maximumSize == UNSET_INT)
-        ? new UnboundedLocalCache.LocalLoadingCache<K1, V1>(self, loader)
-        : new BoundedLocalCache.LocalLoadingCache<K1, V1>(self, loader);
+    return isBounded()
+        ? new BoundedLocalCache.LocalLoadingCache<K1, V1>(self, loader)
+        : new UnboundedLocalCache.LocalLoadingCache<K1, V1>(self, loader);
   }
 
   /**

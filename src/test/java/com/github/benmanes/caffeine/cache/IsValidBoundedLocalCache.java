@@ -78,10 +78,12 @@ public final class IsValidBoundedLocalCache<K, V>
 
   private void checkMap(BoundedLocalCache<? extends K, ? extends V> map, DescriptionBuilder desc) {
     desc.expectThat("Inconsistent size", map.data.size(), is(map.size()));
-    desc.expectThat("weightedSize", map.weightedSize(), is(map.weightedSize.get()));
-    desc.expectThat("capacity", map.capacity(), is(map.maximumWeightedSize.get()));
-    desc.expectThat("overflow", map.maximumWeightedSize.get(),
-        is(greaterThanOrEqualTo(map.weightedSize())));
+    if (map.evicts()) {
+      desc.expectThat("weightedSize", map.weightedSize(), is(map.weightedSize.get()));
+      desc.expectThat("capacity", map.capacity(), is(map.maximumWeightedSize.get()));
+      desc.expectThat("overflow", map.maximumWeightedSize.get(),
+          is(greaterThanOrEqualTo(map.weightedSize())));
+    }
     desc.expectThat(((BoundedLocalCache.Sync) map.evictionLock).isLocked(), is(false));
 
     if (map.isEmpty()) {

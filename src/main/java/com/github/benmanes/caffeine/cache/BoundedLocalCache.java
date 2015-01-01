@@ -246,9 +246,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     writeOrderDeque = expiresAfterWrite() ? new WriteOrderDeque<Node<K, V>>() : null;
 
     boolean evicts = (builder.getMaximumWeight() != Caffeine.UNSET_INT);
+    maximumWeightedSize = evicts
+        ? new PaddedAtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY))
+        : null;
     if (expiresAfterAccess() || evicts) {
-      maximumWeightedSize = new PaddedAtomicLong(
-          Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY));
       readBufferReadCount = new long[NUMBER_OF_READ_BUFFERS];
       readBufferWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
       readBufferDrainAtWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
@@ -266,7 +267,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     } else {
       readBuffers = null;
       accessOrderDeque = null;
-      maximumWeightedSize = null;
       readBufferReadCount = null;
       readBufferWriteCount = null;
       readBufferDrainAtWriteCount = null;
@@ -317,6 +317,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /* ---------------- Eviction Support -------------- */
 
+  boolean evicts() {
+    return (maximumWeightedSize != null);
+  }
+
   /**
    * Retrieves the maximum weighted capacity of the map.
    *
@@ -357,6 +361,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    */
   @GuardedBy("evictionLock")
   void evict() {
+    if (!evicts()) {
+      return;
+    }
+
     // Attempts to evict entries from the map if it exceeds the maximum
     // capacity. If the eviction fails due to a concurrent removal of the
     // victim, that removal may cancel out the addition that triggered this
@@ -371,13 +379,50 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (node == null) {
         return;
       }
-      makeDead(node);
 
-      // Notify the listener only if the entry was evicted
-      if (data.remove(node.key, node) && hasRemovalListener()) {
-        notifyRemoval(node.key, node.getValue(), RemovalCause.SIZE);
+      evict(node, RemovalCause.SIZE);
+    }
+  }
+
+  @GuardedBy("evictionLock")
+  void evict(Node<K, V> node, RemovalCause cause) {
+    makeDead(node);
+
+    // Notify the listener only if the entry was evicted
+    if (data.remove(node.key, node) && hasRemovalListener()) {
+      notifyRemoval(node.key, node.getValue(), cause);
+    }
+  }
+
+  @GuardedBy("evictionLock")
+  void expire() {
+    long now = ticker.read();
+    if (expiresAfterAccess()) {
+      long expirationTime = now - expireAfterAccessNanos;
+      for (;;) {
+        final Node<K, V> node = accessOrderDeque.peekFirst();
+        if ((node == null) || (node.getAccessTime() > expirationTime)) {
+          break;
+        }
+        accessOrderDeque.pollFirst();
+        evict(node, RemovalCause.EXPIRED);
       }
     }
+    if (expiresAfterWrite()) {
+      long expirationTime = now - expireAfterWriteNanos;
+      for (;;) {
+        final Node<K, V> node = writeOrderDeque.peekFirst();
+        if ((node == null) || (node.getWriteTime() > expirationTime)) {
+          break;
+        }
+        evict(node, RemovalCause.EXPIRED);
+      }
+    }
+  }
+
+  boolean hasExpired(Node<K, V> node, long now) {
+    return (expiresAfterAccess() && (now - node.getAccessTime() >= expireAfterAccessNanos))
+        || (expiresAfterWrite() && (now - node.getWriteTime() >= expireAfterWriteNanos));
   }
 
   /**
@@ -458,6 +503,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       try {
         drainStatus.lazySet(PROCESSING);
         drainBuffers();
+        expire();
       } finally {
         drainStatus.compareAndSet(PROCESSING, IDLE);
         evictionLock.unlock();
@@ -602,6 +648,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (node.get().isAlive()) {
         node.setWriteTime(ticker.read());
         accessOrderDeque.add(node);
+//        writeOrderDeque.add(node);
         evict();
       }
     }
@@ -620,6 +667,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     public void run() {
       // add may not have been processed yet
       accessOrderDeque.remove(node);
+//      writeOrderDeque.remove(node);
       makeDead(node);
     }
   }
@@ -728,6 +776,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     final Node<K, V> node = data.get(key);
     if (node == null) {
       statsCounter.recordMisses(1);
+      return null;
+    } else if (hasExpired(node, ticker.read())) {
+      statsCounter.recordMisses(1);
+      tryToDrainBuffers();
       return null;
     }
     afterRead(node);
@@ -1508,6 +1560,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     /* ---------------- Access order -------------- */
 
+    long getAccessTime() {
+      return accessTime;
+    }
+
     /** Sets the access time in nanoseconds. */
     void setAccessTime(long time) {
       accessTime = time;
@@ -1538,6 +1594,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     /* ---------------- Write order -------------- */
+
+    long getWriteTime() {
+      return writeTime;
+    }
 
     /** Sets the write time in nanoseconds. */
     void setWriteTime(long time) {
