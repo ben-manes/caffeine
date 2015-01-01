@@ -30,13 +30,11 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
@@ -44,6 +42,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -52,22 +51,23 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheContext {
-  Listener removalListenerType;
-  @Nullable RemovalListener<Integer, Integer> removalListener;
+  final InitialCapacity initialCapacity;
+  final Listener removalListenerType;
+  final CacheExecutor cacheExecutor;
+  final ReferenceType valueStrength;
+  final ReferenceType keyStrength;
+  final MaximumSize maximumSize;
+  final Population population;
+  final Expiration afterAccess;
+  final Expiration afterWrite;
+  final Executor executor;
+  final Loader loader;
+  final Stats stats;
 
-  InitialCapacity initialCapacity;
-  MaximumSize maximumSize;
-  Population population;
-  Executor executor;
-  Loader loader;
-  Stats stats;
-
-  ReferenceType keyStrength;
-  ReferenceType valueStrength;
+  final Map<Integer, Integer> original;
+  final RemovalListener<Integer, Integer> removalListener;
 
   Cache<Integer, Integer> cache;
-  Map<Integer, Integer> original;
-
   @Nullable Integer firstKey;
   @Nullable Integer middleKey;
   @Nullable Integer lastKey;
@@ -76,9 +76,24 @@ public final class CacheContext {
   Integer absentKey;
   Set<Integer> absentKeys;
 
-  public CacheContext() {
-    removalListenerType = Listener.DEFAULT;
-    original = new LinkedHashMap<>();
+  public CacheContext(InitialCapacity initialCapacity, Stats stats, MaximumSize maximumSize,
+      Expiration afterAccess, Expiration afterWrite, ReferenceType keyStrength,
+      ReferenceType valueStrength, CacheExecutor cacheExecutor, Listener removalListenerType,
+      Population population, boolean isLoading, Loader loader) {
+    this.initialCapacity = requireNonNull(initialCapacity);
+    this.stats = requireNonNull(stats);
+    this.maximumSize = requireNonNull(maximumSize);
+    this.afterAccess = requireNonNull(afterAccess);
+    this.afterWrite = requireNonNull(afterWrite);
+    this.keyStrength = requireNonNull(keyStrength);
+    this.valueStrength = requireNonNull(valueStrength);
+    this.cacheExecutor = requireNonNull(cacheExecutor);
+    this.executor = cacheExecutor.get();
+    this.removalListenerType = removalListenerType;
+    this.removalListener = removalListenerType.create();
+    this.population = requireNonNull(population);
+    this.loader = isLoading ? requireNonNull(loader) : null;
+    this.original = new LinkedHashMap<>();
   }
 
   public Integer firstKey() {
@@ -167,41 +182,20 @@ public final class CacheContext {
     return cache.stats();
   }
 
-  public CacheContext copy() {
-    CacheContext context = new CacheContext();
-
-    context.removalListener = removalListenerType.create();
-    context.removalListenerType = removalListenerType;
-    context.initialCapacity = initialCapacity;
-    context.maximumSize = maximumSize;
-    context.population = population;
-    context.executor = executor;
-    context.loader = loader;
-    context.stats = stats;
-    context.cache = cache;
-
-    context.keyStrength = keyStrength;
-    context.valueStrength = valueStrength;
-
-    context.firstKey = firstKey;
-    context.middleKey = middleKey;
-    context.lastKey = lastKey;
-
-    return context;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    return EqualsBuilder.reflectionEquals(this, o);
-  }
-
-  @Override
-  public int hashCode() {
-    return HashCodeBuilder.reflectionHashCode(this);
-  }
-
   @Override
   public String toString() {
-    return ToStringBuilder.reflectionToString(this);
+    return MoreObjects.toStringHelper(this)
+        .add("population", population)
+        .add("maximumSize", maximumSize)
+        .add("afterAccess", afterAccess)
+        .add("afterWrite", afterWrite)
+        .add("keyStrength", keyStrength)
+        .add("valueStrength", valueStrength)
+        .add("loader", loader)
+        .add("cacheExecutor", cacheExecutor)
+        .add("removalListener", removalListenerType)
+        .add("initialCapacity", initialCapacity)
+        .add("stats", stats)
+        .toString();
   }
 }

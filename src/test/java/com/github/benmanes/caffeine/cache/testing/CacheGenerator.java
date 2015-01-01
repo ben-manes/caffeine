@@ -15,18 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
-
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
@@ -34,8 +32,9 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.google.common.collect.Iterators;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * Generates test case scenarios based on the {@link CacheSpec}.
@@ -46,9 +45,6 @@ final class CacheGenerator {
   private final CacheSpec cacheSpec;
   private final boolean isLoadingOnly;
 
-  private List<CacheContext> contexts;
-  private List<CacheContext> combinations;
-
   public CacheGenerator(CacheSpec cacheSpec, boolean isLoadingOnly) {
     this.isLoadingOnly = isLoadingOnly;
     this.cacheSpec = cacheSpec;
@@ -56,145 +52,46 @@ final class CacheGenerator {
 
   /** Returns an iterator so that creating a test case is lazy and GC-able after use. */
   public Iterator<Entry<CacheContext, Cache<Integer, Integer>>> generate() {
-    initialize();
-    makeInitialCapacities();
-    makeCacheStats();
-    makeMaximumSizes();
-    makeKeyReferences();
-    makeValueReferences();
-    makeExecutors();
-    makeRemovalListeners();
-    makePopulations();
-    makeManualAndLoading();
-
-    return Iterators.transform(Iterators.consumingIterator(contexts.iterator()),
-        context -> makeCache(context));
+    return combinations().stream()
+        .map(this::newCacheContext)
+        .map(context -> {
+          Cache<Integer, Integer> cache = newCache(context);
+          populate(context, cache);
+          return Maps.immutableEntry(context, cache);
+        }).iterator();
   }
 
-  private void initialize() {
-    contexts = new ArrayList<>(64);
-    contexts.add(new CacheContext());
-    combinations = new ArrayList<>(64);
+  @SuppressWarnings("unchecked")
+  private Set<List<Object>> combinations() {
+    return Sets.cartesianProduct(
+        ImmutableSet.copyOf(cacheSpec.initialCapacity()),
+        ImmutableSet.copyOf(cacheSpec.stats()),
+        ImmutableSet.copyOf(cacheSpec.maximumSize()),
+        ImmutableSet.copyOf(cacheSpec.expireAfterAccess()),
+        ImmutableSet.copyOf(cacheSpec.expireAfterWrite()),
+        ImmutableSet.copyOf(cacheSpec.keys()),
+        ImmutableSet.copyOf(cacheSpec.values()),
+        ImmutableSet.copyOf(cacheSpec.executor()),
+        ImmutableSet.copyOf(cacheSpec.removalListener()),
+        ImmutableSet.copyOf(cacheSpec.population()),
+        ImmutableSet.of(true, isLoadingOnly),
+        ImmutableSet.copyOf(cacheSpec.loader()));
   }
 
-  private void swap() {
-    List<CacheContext> temp = contexts;
-    contexts = combinations;
-    combinations = temp;
-    temp.clear();
-  }
-
-  /** Generates a new set of contexts with the initial capacity combinations. */
-  private void makeInitialCapacities() {
-    assertThat(cacheSpec.initialCapacity().length, is(greaterThan(0)));
-
-    for (CacheContext context : contexts) {
-      for (InitialCapacity initialCapacity : cacheSpec.initialCapacity()) {
-        CacheContext copy = context.copy();
-        copy.initialCapacity = initialCapacity;
-        combinations.add(copy);
-      }
-    }
-    swap();
-  }
-
-  /** Generates a new set of contexts with the cache statistic combinations. */
-  private void makeCacheStats() {
-    for (CacheContext context : contexts) {
-      for (Stats stats : cacheSpec.stats()) {
-        CacheContext copy = context.copy();
-        copy.stats = stats;
-        combinations.add(copy);
-      }
-    }
-    swap();
-  }
-
-  /** Generates a new set of contexts with the maximum size combinations. */
-  private void makeMaximumSizes() {
-    for (CacheContext context : contexts) {
-      for (MaximumSize maximumSize : cacheSpec.maximumSize()) {
-        CacheContext copy = context.copy();
-        copy.maximumSize = maximumSize;
-        combinations.add(copy);
-      }
-    }
-    swap();
-  }
-
-  /** Generates a new set of contexts with the key reference combinations. */
-  private void makeKeyReferences() {
-    for (CacheContext context : contexts) {
-      context.keyStrength = ReferenceType.STRONG;
-    }
-  }
-
-  /** Generates a new set of contexts with the value reference combinations. */
-  private void makeValueReferences() {
-    for (CacheContext context : contexts) {
-      context.valueStrength = ReferenceType.STRONG;
-    }
-  }
-
-  /** Generates a new set of contexts with the executor combinations. */
-  private void makeExecutors() {
-    for (CacheContext context : contexts) {
-      for (CacheExecutor executor : cacheSpec.executor()) {
-        CacheContext copy = context.copy();
-        copy.executor = executor.get();
-        combinations.add(copy);
-      }
-    }
-    swap();
-  }
-
-  /** Generates a new set of builders with the removal listener combinations. */
-  private void makeRemovalListeners() {
-    for (CacheContext context : contexts) {
-      for (Listener removalListenerType : cacheSpec.removalListener()) {
-        CacheContext copy = context.copy();
-        copy.removalListenerType = removalListenerType;
-        copy.removalListener = removalListenerType.create();
-        combinations.add(copy);
-      }
-    }
-    swap();
-  }
-
-  /** Generates a new set of builders with the population combinations. */
-  private void makePopulations() {
-    for (CacheContext context : contexts) {
-      for (Population population : cacheSpec.population()) {
-        CacheContext copy = context.copy();
-        copy.population = population;
-        combinations.add(copy);
-      }
-    }
-    swap();
-  }
-
-  /** Generates a new set of builders with the population combinations. */
-  private void makeManualAndLoading() {
-    for (CacheContext context : contexts) {
-      if (!isLoadingOnly) {
-        combinations.add(context);
-      }
-      for (Loader loader : cacheSpec.loader()) {
-        CacheContext copy = context.copy();
-        copy.loader = loader;
-        combinations.add(copy);
-      }
-    }
-    swap();
-  }
-
-  /** Constructs cache and populates. */
-  private Entry<CacheContext, Cache<Integer, Integer>> makeCache(
-      CacheContext context) {
-    CacheContext copy = context.copy();
-    Cache<Integer, Integer> cache = newCache(copy);
-    context.population.populate(cache, copy);
-    return Maps.immutableEntry(copy, cache);
+  private CacheContext newCacheContext(List<Object> combination) {
+    return new CacheContext(
+        (InitialCapacity) combination.get(0),
+        (Stats) combination.get(1),
+        (MaximumSize) combination.get(2),
+        (Expiration) combination.get(3),
+        (Expiration) combination.get(4),
+        (ReferenceType) combination.get(5),
+        (ReferenceType) combination.get(6),
+        (CacheExecutor) combination.get(7),
+        (Listener) combination.get(8),
+        (Population) combination.get(9),
+        (Boolean) combination.get(10),
+        (Loader) combination.get(11));
   }
 
   private Cache<Integer, Integer> newCache(CacheContext context) {
@@ -208,6 +105,22 @@ final class CacheGenerator {
     if (context.maximumSize != MaximumSize.DISABLED) {
       builder.maximumSize(context.maximumSize.max());
     }
+    if (context.afterAccess != Expiration.DISABLED) {
+      builder.expireAfterAccess(context.afterAccess.timeNanos(), TimeUnit.NANOSECONDS);
+    }
+    if (context.afterWrite != Expiration.DISABLED) {
+      builder.expireAfterWrite(context.afterWrite.timeNanos(), TimeUnit.NANOSECONDS);
+    }
+    if (context.keyStrength == ReferenceType.WEAK) {
+      builder.weakKeys();
+    } else if (context.keyStrength == ReferenceType.SOFT) {
+      throw new IllegalStateException();
+    }
+    if (context.valueStrength == ReferenceType.WEAK) {
+      builder.weakValues();
+    } else if (context.valueStrength == ReferenceType.SOFT) {
+      builder.softValues();
+    }
     if (context.executor != null) {
       builder.executor(context.executor);
     }
@@ -220,5 +133,16 @@ final class CacheGenerator {
       context.cache = builder.build(context.loader);
     }
     return context.cache;
+  }
+
+  private void populate(CacheContext context, Cache<Integer, Integer> cache) {
+    int maximum = (int) Math.min(context.maximumSize(), context.population.size());
+    context.firstKey = (int) Math.min(1, context.population.size());
+    context.lastKey = maximum;
+    context.middleKey = Math.max(context.firstKey, ((context.lastKey - context.firstKey) / 2));
+    for (int i = 1; i <= maximum; i++) {
+      context.original.put(i, -i);
+      cache.put(i, -i);
+    }
   }
 }

@@ -349,6 +349,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    */
   void afterRead(Node<K, V> node) {
     statsCounter.recordHits(1);
+    node.setAccessTime(ticker.read());
     final int bufferIndex = readBufferIndex();
     final long writeCount = recordRead(bufferIndex, node);
     drainOnReadIfNeeded(bufferIndex, writeCount);
@@ -561,6 +562,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
       // ignore out-of-order write operations
       if (node.get().isAlive()) {
+        node.setWriteTime(ticker.read());
         accessOrderDeque.add(node);
         evict();
       }
@@ -598,6 +600,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       weightedSize.lazySet(weightedSize.get() + weightDifference);
+      node.setWriteTime(ticker.read());
       applyRead(node);
       evict();
     }
@@ -779,6 +782,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
       final int weightedDifference = weight - oldWeightedValue.weight;
       if (weightedDifference == 0) {
+        node.setWriteTime(ticker.read());
         afterRead(prior);
       } else {
         afterWrite(new UpdateTask(prior, weightedDifference));
@@ -863,6 +867,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
     final int weightedDifference = weight - oldWeightedValue.weight;
     if (weightedDifference == 0) {
+      node.setWriteTime(ticker.read());
       afterRead(node);
     } else {
       afterWrite(new UpdateTask(node, weightedDifference));
@@ -896,6 +901,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
     final int weightedDifference = weight - oldWeightedValue.weight;
     if (weightedDifference == 0) {
+      node.setWriteTime(ticker.read());
       afterRead(node);
     } else {
       afterWrite(new UpdateTask(node, weightedDifference));
@@ -1464,6 +1470,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     /* ---------------- Access order -------------- */
 
+    /** Sets the access time in nanoseconds. */
+    void setAccessTime(long time) {
+      accessTime = time;
+    }
+
     @Override
     @GuardedBy("evictionLock")
     public Node<K, V> getPreviousInAccessOrder() {
@@ -1489,6 +1500,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     /* ---------------- Write order -------------- */
+
+    /** Sets the write time in nanoseconds. */
+    void setWriteTime(long time) {
+      writeTime = time;
+    }
 
     @Override
     @GuardedBy("evictionLock")

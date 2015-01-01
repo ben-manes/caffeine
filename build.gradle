@@ -59,7 +59,6 @@ dependencies {
 
   // unit testing
   testCompile "com.google.guava:guava:${versions.guava}"
-  testCompile 'org.apache.commons:commons-lang3:3.3.2'
   testCompile 'com.jayway.awaitility:awaitility:1.6.3'
   testCompile dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
     exclude group: 'junit'

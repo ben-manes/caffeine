@@ -24,9 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -114,6 +114,41 @@ public @interface CacheSpec {
     }
   }
 
+  /* ---------------- Expiration -------------- */
+
+  /** The expiration time-to-idle setting, each resulting in a new combination. */
+  Expiration[] expireAfterAccess() default {
+    Expiration.DISABLED,
+    //Expiration.FOREVER
+  };
+
+  /** The expiration time-to-live setting, each resulting in a new combination. */
+  Expiration[] expireAfterWrite() default {
+    Expiration.DISABLED,
+    //Expiration.FOREVER
+  };
+
+  enum Expiration {
+    /** A flag indicating that entries are not evicted due to expiration. */
+    DISABLED(Long.MIN_VALUE),
+    /** A configuration where entries are evicted immediately. */
+    IMMEDIATELY(0L),
+    /** A configuration that holds a single entry. */
+    ONE_MINUTE(TimeUnit.MINUTES.toNanos(1L)),
+    /** A configuration that holds the {@link Population#FULL} count. */
+    FOREVER(Integer.MAX_VALUE);
+
+    private final long timeNanos;
+
+    private Expiration(long timeNanos) {
+      this.timeNanos = timeNanos;
+    }
+
+    public long timeNanos() {
+      return timeNanos;
+    }
+  }
+
   /* ---------------- Reference-based -------------- */
 
   /**
@@ -125,10 +160,17 @@ public @interface CacheSpec {
   boolean retain() default true;
 
   /** The reference type of that the cache holds a key with (strong or weak only). */
-  ReferenceType[] keys() default { ReferenceType.STRONG, ReferenceType.WEAK };
+  ReferenceType[] keys() default {
+    ReferenceType.STRONG,
+    //ReferenceType.WEAK
+  };
 
   /** The reference type of that the cache holds a value with (strong, soft, or weak). */
-  ReferenceType[] values() default { ReferenceType.STRONG, ReferenceType.WEAK, ReferenceType.SOFT };
+  ReferenceType[] values() default {
+    ReferenceType.STRONG,
+    //ReferenceType.WEAK,
+    //ReferenceType.SOFT
+  };
 
   /** The reference type of cache keys and/or values. */
   enum ReferenceType {
@@ -175,7 +217,7 @@ public @interface CacheSpec {
     public abstract <K, V> RemovalListener<K, V> create();
   }
 
-  /* ---------------- Executor -------------- */
+  /* ---------------- CacheLoader -------------- */
 
   Loader[] loader() default {
     Loader.NEGATIVE,
@@ -292,17 +334,6 @@ public @interface CacheSpec {
 
     public long size() {
       return size;
-    }
-
-    public void populate(Cache<Integer, Integer> cache, CacheContext context) {
-      int maximum = (int) Math.min(context.maximumSize(), size());
-      context.firstKey = (int) Math.min(1, size());
-      context.lastKey = maximum;
-      context.middleKey = Math.max(context.firstKey, ((context.lastKey - context.firstKey) / 2));
-      for (int i = 1; i <= maximum; i++) {
-        context.original.put(i, -i);
-        cache.put(i, -i);
-      }
     }
   }
 }

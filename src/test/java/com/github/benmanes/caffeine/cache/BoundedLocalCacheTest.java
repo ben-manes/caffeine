@@ -27,6 +27,9 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -44,6 +47,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.Lists;
+import com.jayway.awaitility.Awaitility;
 
 /**
  * The test cases for the implementation details of {@link BoundedLocalCache}.
@@ -53,6 +57,12 @@ import com.google.common.collect.Lists;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class BoundedLocalCacheTest {
+  final Executor executor = Executors.newCachedThreadPool();
+
+  static {
+    Awaitility.setDefaultPollDelay(1, TimeUnit.MILLISECONDS);
+    Awaitility.setDefaultPollInterval(1, TimeUnit.MILLISECONDS);
+  }
 
   static BoundedLocalCache<Integer, Integer> asBoundedLocalCache(Cache<Integer, Integer> cache) {
     LocalManualCache<Integer, Integer> local = (LocalManualCache<Integer, Integer>) cache;
@@ -219,15 +229,16 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onRead(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    Node<Integer, Integer> dummy = new Node<>(null, null);
 
     int index = BoundedLocalCache.readBufferIndex();
     PaddedAtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
     localCache.readBufferWriteCount[index].set(BoundedLocalCache.READ_BUFFER_THRESHOLD - 1);
 
-    localCache.afterRead(null);
+    localCache.afterRead(dummy);
     assertThat(drainCounter.get(), is(0L));
 
-    localCache.afterRead(null);
+    localCache.afterRead(dummy);
     assertThat(drainCounter.get(), is(BoundedLocalCache.READ_BUFFER_THRESHOLD + 1L));
   }
 
@@ -352,15 +363,14 @@ public final class BoundedLocalCacheTest {
   void checkDrainBlocks(BoundedLocalCache<Integer, Integer> localCache, Runnable task) {
     BoundedLocalCache.Sync lock = (BoundedLocalCache.Sync) localCache.evictionLock;
     AtomicBoolean done = new AtomicBoolean();
-    Thread thread = new Thread(() -> {
-      localCache.drainStatus.set(DrainStatus.REQUIRED);
-      task.run();
-      done.set(true);
-    });
     lock.lock();
     try {
-      thread.start();
-      await().until(() -> lock.isQueued(thread));
+      executor.execute(() -> {
+        localCache.drainStatus.set(DrainStatus.REQUIRED);
+        task.run();
+        done.set(true);
+      });
+      await().until(() -> lock.hasQueuedThreads());
     } finally {
       lock.unlock();
     }
