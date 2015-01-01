@@ -89,13 +89,14 @@ public final class IsValidBoundedLocalCache<K, V>
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void checkEvictionDeque(BoundedLocalCache<? extends K, ? extends V> map,
       DescriptionBuilder desc) {
     LinkedDeque<?> deque = map.evictionDeque;
 
     checkLinks(map, desc);
     desc.expectThat(deque, hasSize(map.size()));
-    validLinkedDeque().matchesSafely(map.evictionDeque, desc.getDescription());
+    validLinkedDeque().matchesSafely((LinkedDeque<Object>) deque, desc.getDescription());
   }
 
   @SuppressWarnings("rawtypes")

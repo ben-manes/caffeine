@@ -21,7 +21,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -38,8 +37,7 @@ import com.google.common.collect.Sets;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class IsValidLinkedDeque<E>
-    extends TypeSafeDiagnosingMatcher<LinkedDeque<? extends E>> {
+public final class IsValidLinkedDeque<E> extends TypeSafeDiagnosingMatcher<LinkedDeque<E>> {
 
   @Override
   public void describeTo(Description description) {
@@ -47,7 +45,7 @@ public final class IsValidLinkedDeque<E>
   }
 
   @Override
-  protected boolean matchesSafely(LinkedDeque<? extends E> deque, Description description) {
+  protected boolean matchesSafely(LinkedDeque<E> deque, Description description) {
     DescriptionBuilder desc = new DescriptionBuilder(description);
 
     if (deque.isEmpty()) {
@@ -59,18 +57,17 @@ public final class IsValidLinkedDeque<E>
     return desc.matches();
   }
 
-  void checkEmpty(Deque<? extends Linked<? extends E>> deque, DescriptionBuilder desc) {
+  void checkEmpty(LinkedDeque<? extends E> deque, DescriptionBuilder desc) {
     desc.expectThat(deque, deeplyEmpty());
     desc.expectThat(deque.pollFirst(), is(nullValue()));
     desc.expectThat(deque.pollLast(), is(nullValue()));
     desc.expectThat(deque.poll(), is(nullValue()));
   }
 
-  void checkIterator(Deque<? extends Linked<? extends E>> deque,
-      Iterator<? extends Linked<? extends E>> iterator, DescriptionBuilder desc) {
-    Set<Linked<?>> seen = Sets.newIdentityHashSet();
+  void checkIterator(LinkedDeque<E> deque, Iterator<E> iterator, DescriptionBuilder desc) {
+    Set<E> seen = Sets.newIdentityHashSet();
     while (iterator.hasNext()) {
-      Linked<?> element = iterator.next();
+      E element = iterator.next();
       checkElement(deque, element, desc);
       Supplier<String> errorMsg = () -> String.format("Loop detected: %s in %s", element, seen);
       desc.expectThat(errorMsg, seen.add(element), is(true));
@@ -78,19 +75,18 @@ public final class IsValidLinkedDeque<E>
     desc.expectThat(deque, hasSize(seen.size()));
   }
 
-  void checkElement(Deque<? extends Linked<? extends E>> deque,
-      Linked<?> element, DescriptionBuilder desc) {
-    Linked<?> first = deque.peekFirst();
-    Linked<?> last = deque.peekLast();
+  void checkElement(LinkedDeque<E> deque, E element, DescriptionBuilder desc) {
+    E first = deque.peekFirst();
+    E last = deque.peekLast();
     if (element == first) {
-      desc.expectThat("not null prev", element.getPrevious(), is(nullValue()));
+      desc.expectThat("not null prev", deque.getPrevious(element), is(nullValue()));
     }
     if (element == last) {
-      desc.expectThat("not null next", element.getNext(), is(nullValue()));
+      desc.expectThat("not null next", deque.getNext(element), is(nullValue()));
     }
     if ((element != first) && (element != last)) {
-      desc.expectThat(element.getPrevious(), is(not(nullValue())));
-      desc.expectThat(element.getNext(), is(not(nullValue())));
+      desc.expectThat(deque.getPrevious(element), is(not(nullValue())));
+      desc.expectThat(deque.getNext(element), is(not(nullValue())));
     }
   }
 

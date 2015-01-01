@@ -236,7 +236,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     evictionLock = new Sync();
     weigher = builder.getWeigher();
     weightedSize = new PaddedAtomicLong();
-    evictionDeque = new LinkedDeque<Node<K, V>>();
+    evictionDeque = new AccessOrderDeque<Node<K, V>>();
     writeBuffer = new SingleConsumerQueue<Runnable>();
     drainStatus = new PaddedAtomicReference<DrainStatus>(IDLE);
 
@@ -1433,7 +1433,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    */
   @SuppressWarnings("serial")
   static final class Node<K, V> extends AtomicReference<WeightedValue<V>>
-      implements Linked<Node<K, V>> {
+      implements AccessOrder<Node<K, V>> {
     final K key;
     @GuardedBy("evictionLock")
     Node<K, V> prev;
@@ -1448,25 +1448,25 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     @GuardedBy("evictionLock")
-    public Node<K, V> getPrevious() {
+    public Node<K, V> getPreviousInAccessOrder() {
       return prev;
     }
 
     @Override
     @GuardedBy("evictionLock")
-    public void setPrevious(Node<K, V> prev) {
+    public void setPreviousInAccessOrder(Node<K, V> prev) {
       this.prev = prev;
     }
 
     @Override
     @GuardedBy("evictionLock")
-    public Node<K, V> getNext() {
+    public Node<K, V> getNextInAccessOrder() {
       return next;
     }
 
     @Override
     @GuardedBy("evictionLock")
-    public void setNext(Node<K, V> next) {
+    public void setNextInAccessOrder(Node<K, V> next) {
       this.next = next;
     }
 
