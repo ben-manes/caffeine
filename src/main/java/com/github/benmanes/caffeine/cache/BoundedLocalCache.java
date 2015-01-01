@@ -503,7 +503,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       try {
         drainStatus.lazySet(PROCESSING);
         drainBuffers();
-        expire();
       } finally {
         drainStatus.compareAndSet(PROCESSING, IDLE);
         evictionLock.unlock();
@@ -516,6 +515,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   void drainBuffers() {
     drainReadBuffers();
     drainWriteBuffer();
+    expire();
   }
 
   /** Drains the read buffers, each up to an amortized threshold. */
@@ -1004,11 +1004,20 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   @Override
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-    // optimistic fast path due to computeIfAbsent always locking
+    // optimistic fast path due to computeIfAbsent always locking is leveraged expiration check
+
+    long now = ticker.read();
     Node<K, V> node = data.get(key);
-    if (node != null) {
-      afterRead(node);
-      return node.getValue();
+    if ((node != null)) {
+      if (hasExpired(node, now)) {
+        if (data.remove(key, node)) {
+          afterWrite(new RemovalTask(node));
+          notifyRemoval(key, node.getValue(), RemovalCause.EXPIRED);
+        }
+      } else {
+        afterRead(node);
+        return node.getValue();
+      }
     }
 
     @SuppressWarnings("unchecked")

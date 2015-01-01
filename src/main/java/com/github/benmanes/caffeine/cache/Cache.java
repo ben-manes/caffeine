@@ -137,9 +137,11 @@ public interface Cache<K, V> {
 
   /**
    * Returns the approximate number of entries in this cache. The value returned is an estimate; the
-   * actual count may differ if there are concurrent insertions or removals.
+   * actual count may differ if there are concurrent insertions or removals, or if some entries are
+   * pending removal due to expiration or soft/weak reference collection. In the case of stale
+   * entries, this inaccuracy can be mitigated by performing a {@link #cleanUp()} first.
    *
-   * @return the number of mappings
+   * @return the estimated number of mappings
    */
   long size();
 

@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -50,8 +51,35 @@ public final class ExpireAfterAccessTest {
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getIfPresent(context.firstKey()), is(-context.firstKey()));
     assertThat(cache.getIfPresent(context.lastKey()), is(nullValue()));
+    assertThat(cache.size(), is(1L));
 
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE,
+      population = { Population.PARTIAL, Population.FULL })
+  public void get(Cache<Integer, Integer> cache, CacheContext context) {
+    Function<Integer, Integer> mappingFunction = key -> -key;
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    cache.get(context.firstKey(), mappingFunction);
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    cache.get(context.firstKey(), mappingFunction);
+    cache.get(context.lastKey(), mappingFunction); // recreated
+    assertThat(cache.size(), is(2L));
+
+    long count = context.initialSize() - 1;
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void size(Cache<Integer, Integer> cache, CacheContext context) {
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    assertThat(cache.size(), is(context.initialSize()));
+    cache.cleanUp();
+    assertThat(cache.size(), is(0L));
   }
 }
