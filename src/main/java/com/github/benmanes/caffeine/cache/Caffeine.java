@@ -134,7 +134,7 @@ public final class Caffeine<K, V> {
   private static final Ticker DISABLED_TICKER = () -> 0;
   private enum Strength { STRONG, WEAK, SOFT }
 
-  private static final int UNSET_INT = -1;
+  static final int UNSET_INT = -1;
 
   private static final int DEFAULT_INITIAL_CAPACITY = 16;
   private static final int DEFAULT_EXPIRATION_NANOS = 0;

@@ -191,35 +191,42 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   // The backing data store holding the key-value associations
   final ConcurrentHashMap<K, Node<K, V>> data;
 
-  // These fields provide support to bound the map by a maximum capacity
-  @GuardedBy("evictionLock")
-  final long[] readBufferReadCount;
-  @GuardedBy("evictionLock")
-  final LinkedDeque<Node<K, V>> writeOrderDeque;
+  // How long after the last access to an entry the map will retain that entry
+  volatile long expireAfterAccessNanos;
   @GuardedBy("evictionLock")
   final LinkedDeque<Node<K, V>> accessOrderDeque;
 
+  // How long after the last write to an entry the map will retain that entry
+  volatile long expireAfterWriteNanos;
+  @GuardedBy("evictionLock")
+  final LinkedDeque<Node<K, V>> writeOrderDeque;
+
+  // These fields provide support to bound the map by a maximum capacity
+  final Weigher<? super K, ? super V> weigher;
   @GuardedBy("evictionLock") // must write under lock
   final PaddedAtomicLong weightedSize;
   @GuardedBy("evictionLock") // must write under lock
-  final PaddedAtomicLong capacity;
+  final PaddedAtomicLong maximumWeightedSize;
 
+  // These fields provide support for batch updates to the eviction and expiration policies
   final Lock evictionLock;
   final Queue<Runnable> writeBuffer;
+  final PaddedAtomicReference<DrainStatus> drainStatus;
+
+  @GuardedBy("evictionLock")
+  final long[] readBufferReadCount;
   final PaddedAtomicLong[] readBufferWriteCount;
   final PaddedAtomicLong[] readBufferDrainAtWriteCount;
   final AtomicReference<Node<K, V>>[][] readBuffers;
-
-  final PaddedAtomicReference<DrainStatus> drainStatus;
-  final Weigher<? super K, ? super V> weigher;
 
   // These fields provide support for notifying a listener.
   final RemovalListener<K, V> removalListener;
   final Executor executor;
 
-  final StatsCounter statsCounter;
-  final boolean isRecordingStats;
+  // These fields provide support for recording stats
   final Ticker ticker;
+  final boolean isRecordingStats;
+  final StatsCounter statsCounter;
 
   transient Set<K> keySet;
   transient Collection<V> values;
@@ -232,34 +239,51 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   private BoundedLocalCache(Caffeine<K, V> builder) {
     // The data store and its maximum capacity
     data = new ConcurrentHashMap<K, Node<K, V>>(builder.getInitialCapacity());
-    capacity = new PaddedAtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY));
+
+    // The expiration support
+    expireAfterWriteNanos = builder.getExpireAfterWriteNanos();
+    expireAfterAccessNanos = builder.getExpireAfterAccessNanos();
+    writeOrderDeque = expiresAfterWrite() ? new WriteOrderDeque<Node<K, V>>() : null;
+
+    boolean evicts = (builder.getMaximumWeight() != Caffeine.UNSET_INT);
+    if (expiresAfterAccess() || evicts) {
+      maximumWeightedSize = new PaddedAtomicLong(
+          Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY));
+      readBufferReadCount = new long[NUMBER_OF_READ_BUFFERS];
+      readBufferWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
+      readBufferDrainAtWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
+      readBuffers = new AtomicReference[NUMBER_OF_READ_BUFFERS][READ_BUFFER_SIZE];
+      for (int i = 0; i < NUMBER_OF_READ_BUFFERS; i++) {
+        readBufferWriteCount[i] = new PaddedAtomicLong();
+        readBufferDrainAtWriteCount[i] = new PaddedAtomicLong();
+        readBuffers[i] = new AtomicReference[READ_BUFFER_SIZE];
+        for (int j = 0; j < READ_BUFFER_SIZE; j++) {
+          readBuffers[i][j] = new AtomicReference<Node<K, V>>();
+        }
+      }
+      accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
+      writeBuffer = new SingleConsumerQueue<Runnable>();
+    } else {
+      readBuffers = null;
+      accessOrderDeque = null;
+      maximumWeightedSize = null;
+      readBufferReadCount = null;
+      readBufferWriteCount = null;
+      readBufferDrainAtWriteCount = null;
+      writeBuffer = expiresAfterWrite() ? new SingleConsumerQueue<Runnable>() : null;
+    }
 
     // The eviction support
     evictionLock = new Sync();
     weigher = builder.getWeigher();
     weightedSize = new PaddedAtomicLong();
-    writeOrderDeque = new WriteOrderDeque<Node<K, V>>();
-    accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
-    writeBuffer = new SingleConsumerQueue<Runnable>();
     drainStatus = new PaddedAtomicReference<DrainStatus>(IDLE);
-
-    readBufferReadCount = new long[NUMBER_OF_READ_BUFFERS];
-    readBufferWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
-    readBufferDrainAtWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
-    readBuffers = new AtomicReference[NUMBER_OF_READ_BUFFERS][READ_BUFFER_SIZE];
-    for (int i = 0; i < NUMBER_OF_READ_BUFFERS; i++) {
-      readBufferWriteCount[i] = new PaddedAtomicLong();
-      readBufferDrainAtWriteCount[i] = new PaddedAtomicLong();
-      readBuffers[i] = new AtomicReference[READ_BUFFER_SIZE];
-      for (int j = 0; j < READ_BUFFER_SIZE; j++) {
-        readBuffers[i][j] = new AtomicReference<Node<K, V>>();
-      }
-    }
 
     // The notification queue and listener
     removalListener = builder.getRemovalListener();
     executor = builder.getExecutor();
 
+    // The statistics
     statsCounter = builder.getStatsCounterSupplier().get();
     isRecordingStats = builder.isRecordingStats();
     ticker = builder.getTicker();
@@ -277,6 +301,20 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         new RemovalNotification<K, V>(key, value, cause)));
   }
 
+  /* ---------------- Expiration Support -------------- */
+
+  boolean expires() {
+    return expiresAfterWrite() || expiresAfterAccess();
+  }
+
+  boolean expiresAfterWrite() {
+    return expireAfterWriteNanos > 0;
+  }
+
+  boolean expiresAfterAccess() {
+    return expireAfterAccessNanos > 0;
+  }
+
   /* ---------------- Eviction Support -------------- */
 
   /**
@@ -285,7 +323,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * @return the maximum weighted capacity
    */
   public long capacity() {
-    return capacity.get();
+    return maximumWeightedSize.get();
   }
 
   /**
@@ -299,7 +337,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     Caffeine.requireArgument(capacity >= 0);
     evictionLock.lock();
     try {
-      this.capacity.lazySet(Math.min(capacity, MAXIMUM_CAPACITY));
+      this.maximumWeightedSize.lazySet(Math.min(capacity, MAXIMUM_CAPACITY));
       drainBuffers();
       evict();
     } finally {
@@ -310,7 +348,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   /** Determines whether the map has exceeded its capacity. */
   @GuardedBy("evictionLock")
   boolean hasOverflowed() {
-    return weightedSize.get() > capacity.get();
+    return weightedSize.get() > maximumWeightedSize.get();
   }
 
   /**
@@ -1847,7 +1885,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     SerializationProxy(BoundedLocalCache<K, V> map) {
       removalListener = map.removalListener;
       data = new HashMap<K, V>(map);
-      capacity = map.capacity.get();
+      capacity = map.maximumWeightedSize.get();
       weigher = map.weigher;
     }
 
