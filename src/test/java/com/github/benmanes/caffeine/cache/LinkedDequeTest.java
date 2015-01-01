@@ -137,6 +137,38 @@ public final class LinkedDequeTest {
     assertThat(deque.getLast(), is(element));
   }
 
+  /* ---------------- First / Last -------------- */
+
+  @Test(dataProvider = "empty")
+  public void isFirst_whenEmpty(LinkedDeque<LinkedValue> deque) {
+    assertThat(deque.isFirst(new LinkedValue(0)), is(false));
+    assertThat(deque.isFirst(null), is(false));
+  }
+
+  @Test(dataProvider = "full")
+  public void isFirst_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
+    LinkedValue first = deque.first;
+    assertThat(deque.isFirst(first), is(true));
+    assertThat(deque.first, is(first));
+    assertThat(deque, hasSize(SIZE));
+    assertThat(deque.contains(first), is(true));
+  }
+
+  @Test(dataProvider = "empty")
+  public void isLast_whenEmpty(LinkedDeque<LinkedValue> deque) {
+    assertThat(deque.isLast(new LinkedValue(0)), is(false));
+    assertThat(deque.isLast(null), is(false));
+  }
+
+  @Test(dataProvider = "full")
+  public void isLast_whenPopulated(AbstractLinkedDeque<LinkedValue> deque) {
+    LinkedValue last = deque.last;
+    assertThat(deque.isLast(last), is(true));
+    assertThat(deque.last, is(last));
+    assertThat(deque, hasSize(SIZE));
+    assertThat(deque.contains(last), is(true));
+  }
+
   /* ---------------- Peek -------------- */
 
   @Test(dataProvider = "empty")

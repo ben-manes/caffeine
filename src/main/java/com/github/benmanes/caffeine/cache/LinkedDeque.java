@@ -45,6 +45,20 @@ import javax.annotation.concurrent.NotThreadSafe;
 interface LinkedDeque<E> extends Deque<E> {
 
   /**
+   * Returns if the element is at the front of the deque.
+   *
+   * @param e the linked element
+   */
+  public boolean isFirst(E e);
+
+  /**
+   * Returns if the element is at the back of the deque.
+   *
+   * @param e the linked element
+   */
+  public boolean isLast(E e);
+
+  /**
    * Moves the element to the front of the deque so that it becomes the first element.
    *
    * @param e the linked element

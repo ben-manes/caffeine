@@ -174,22 +174,14 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   @Override
   public abstract boolean contains(Object o);
 
-  /**
-   * Returns if the element is at the front of the deque.
-   *
-   * @param e the linked element
-   */
+  @Override
   public boolean isFirst(E e) {
-    return (e == first);
+    return (e != null) && (e == first);
   }
 
-  /**
-   * Returns if the element is at the back of the deque.
-   *
-   * @param e the linked element
-   */
+  @Override
   public boolean isLast(E e) {
-    return (e == last);
+    return (e != null) && (e == last);
   }
 
   @Override
