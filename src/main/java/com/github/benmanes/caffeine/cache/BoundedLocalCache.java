@@ -532,6 +532,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   /** Drains the read buffers, each up to an amortized threshold. */
   @GuardedBy("evictionLock")
   void drainReadBuffers() {
+    if (!evicts() && !expiresAfterAccess()) {
+      return;
+    }
     final int start = (int) Thread.currentThread().getId();
     final int end = start + NUMBER_OF_READ_BUFFERS;
     for (int i = start; i < end; i++) {
@@ -658,8 +661,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       // ignore out-of-order write operations
       if (node.get().isAlive()) {
         node.setWriteTime(ticker.read());
-        accessOrderDeque.add(node);
-//        writeOrderDeque.add(node);
+        if (expiresAfterWrite()) {
+          writeOrderDeque.add(node);
+        }
+        if (evicts() || expiresAfterAccess()) {
+          accessOrderDeque.add(node);
+        }
         evict();
       }
     }
@@ -677,8 +684,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       // add may not have been processed yet
-      accessOrderDeque.remove(node);
-//      writeOrderDeque.remove(node);
+      if (expiresAfterWrite()) {
+        writeOrderDeque.remove(node);
+      }
+      if (evicts() || expiresAfterAccess()) {
+        accessOrderDeque.remove(node);
+      }
       makeDead(node);
     }
   }
@@ -739,19 +750,20 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     evictionLock.lock();
     try {
       // Discard all entries
-      Node<K, V> node;
-      while ((node = accessOrderDeque.poll()) != null) {
-        data.remove(node.key, node);
-        if (hasRemovalListener()) {
-          notifyRemoval(node.key, node.getValue(), RemovalCause.EXPLICIT);
+      if (evicts() || expiresAfterAccess()) {
+        Node<K, V> node;
+        while ((node = accessOrderDeque.poll()) != null) {
+          if (data.remove(node.key, node) && hasRemovalListener()) {
+            notifyRemoval(node.key, node.getValue(), RemovalCause.EXPLICIT);
+          }
+          makeDead(node);
         }
-        makeDead(node);
-      }
 
-      // Discard all pending reads
-      for (AtomicReference<Node<K, V>>[] buffer : readBuffers) {
-        for (AtomicReference<Node<K, V>> slot : buffer) {
-          slot.lazySet(null);
+        // Discard all pending reads
+        for (AtomicReference<Node<K, V>>[] buffer : readBuffers) {
+          for (AtomicReference<Node<K, V>> slot : buffer) {
+            slot.lazySet(null);
+          }
         }
       }
 
@@ -759,6 +771,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       Runnable task;
       while ((task = writeBuffer.poll()) != null) {
         task.run();
+      }
+
+      if (expiresAfterWrite()) {
+        Node<K, V> node;
+        while ((node = writeOrderDeque.poll()) != null) {
+          if (data.remove(node.key, node) && hasRemovalListener()) {
+            notifyRemoval(node.key, node.getValue(), RemovalCause.EXPLICIT);
+          }
+          makeDead(node);
+        }
       }
     } finally {
       evictionLock.unlock();
@@ -2070,6 +2092,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       }
     }
 
+    void asyncCleanup() {
+      cache.executor.execute(this::cleanUp);
+    }
+
     @Override
     public Advanced<K, V> advanced() {
       return (advanced == null) ? (advanced = new BoundedAdvanced()) : advanced;
@@ -2114,9 +2140,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       final class BoundedExpireAfterAccess implements Expiration<K, V> {
         @Override public Optional<Long> ageOf(K key, TimeUnit unit) {
           Node<K, V> node = cache.data.get(key);
-          return (node == null)
+          if (node == null) {
+            return Optional.empty();
+          }
+          long age = cache.ticker.read() - node.getAccessTime();
+          return (age > cache.expireAfterAccessNanos)
               ? Optional.empty()
-              : Optional.of(unit.convert(node.getAccessTime(), TimeUnit.NANOSECONDS));
+              : Optional.of(unit.convert(age, TimeUnit.NANOSECONDS));
         }
         @Override public long getExpiresAfter(TimeUnit unit) {
           return unit.convert(cache.expireAfterAccessNanos, TimeUnit.NANOSECONDS);
@@ -2124,6 +2154,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         @Override public void setExpiresAfter(long duration, TimeUnit unit) {
           Caffeine.requireArgument(duration >= 0);
           cache.expireAfterAccessNanos = unit.toNanos(duration);
+          asyncCleanup();
         }
         @Override public Map<K, V> oldest(int limit) {
           throw new UnsupportedOperationException("TODO");
@@ -2136,9 +2167,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       final class BoundedExpireAfterWrite implements Expiration<K, V> {
         @Override public Optional<Long> ageOf(K key, TimeUnit unit) {
           Node<K, V> node = cache.data.get(key);
-          return (node == null)
+          if (node == null) {
+            return Optional.empty();
+          }
+          long age = cache.ticker.read() - node.getWriteTime();
+          return (age > cache.expireAfterWriteNanos)
               ? Optional.empty()
-              : Optional.of(unit.convert(node.getWriteTime(), TimeUnit.NANOSECONDS));
+              : Optional.of(unit.convert(age, TimeUnit.NANOSECONDS));
         }
         @Override public long getExpiresAfter(TimeUnit unit) {
           return unit.convert(cache.expireAfterWriteNanos, TimeUnit.NANOSECONDS);
@@ -2146,6 +2181,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         @Override public void setExpiresAfter(long duration, TimeUnit unit) {
           Caffeine.requireArgument(duration >= 0);
           cache.expireAfterWriteNanos = unit.toNanos(duration);
+          asyncCleanup();
         }
         @Override public Map<K, V> oldest(int limit) {
           throw new UnsupportedOperationException("TODO");

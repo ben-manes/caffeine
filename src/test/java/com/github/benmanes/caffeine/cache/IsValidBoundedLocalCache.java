@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.IsValidLinkedDeque.validLinkedDeque;
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -31,7 +30,6 @@ import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.WeightedValue;
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 import com.google.common.collect.Sets;
 
@@ -41,7 +39,7 @@ import com.google.common.collect.Sets;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsValidBoundedLocalCache<K, V>
-    extends TypeSafeDiagnosingMatcher<BoundedLocalCache<? extends K, ? extends V>> {
+    extends TypeSafeDiagnosingMatcher<BoundedLocalCache<K, V>> {
 
   @Override
   public void describeTo(Description description) {
@@ -49,7 +47,7 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   @Override
-  protected boolean matchesSafely(BoundedLocalCache<? extends K, ? extends V> map,
+  protected boolean matchesSafely(BoundedLocalCache<K, V> map,
       Description description) {
     DescriptionBuilder desc = new DescriptionBuilder(description);
 
@@ -59,7 +57,11 @@ public final class IsValidBoundedLocalCache<K, V>
     return desc.matches();
   }
 
-  private void drain(BoundedLocalCache<? extends K, ? extends V> map) {
+  private void drain(BoundedLocalCache<K, V> map) {
+    if (!map.evicts() && !map.expiresAfterAccess()) {
+      return;
+    }
+
     for (int i = 0; i < map.readBuffers.length; i++) {
       for (;;) {
         map.drainBuffers();
@@ -76,7 +78,7 @@ public final class IsValidBoundedLocalCache<K, V>
     }
   }
 
-  private void checkMap(BoundedLocalCache<? extends K, ? extends V> map, DescriptionBuilder desc) {
+  private void checkMap(BoundedLocalCache<K, V> map, DescriptionBuilder desc) {
     desc.expectThat("Inconsistent size", map.data.size(), is(map.size()));
     if (map.evicts()) {
       desc.expectThat("weightedSize", map.weightedSize(), is(map.weightedSize.get()));
@@ -91,40 +93,46 @@ public final class IsValidBoundedLocalCache<K, V>
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private void checkEvictionDeque(BoundedLocalCache<? extends K, ? extends V> map,
+  private void checkEvictionDeque(BoundedLocalCache<K, V> map,
       DescriptionBuilder desc) {
-    LinkedDeque<?> deque = map.accessOrderDeque;
-
-    checkLinks(map, desc);
-    desc.expectThat(deque, hasSize(map.size()));
-    validLinkedDeque().matchesSafely((LinkedDeque<Object>) deque, desc.getDescription());
+    if (map.evicts() || map.expiresAfterAccess()) {
+      checkLinks(map, map.accessOrderDeque, desc);
+      checkDeque(map.accessOrderDeque, map.size(), desc);
+    }
+    if (map.expiresAfterWrite()) {
+      checkLinks(map, map.writeOrderDeque, desc);
+      checkDeque(map.writeOrderDeque, map.size(), desc);
+    }
   }
 
-  @SuppressWarnings("rawtypes")
-  private void checkLinks(BoundedLocalCache<? extends K, ? extends V> map,
-      DescriptionBuilder desc) {
+  private void checkDeque(LinkedDeque<Node<K, V>> deque, int size, DescriptionBuilder desc) {
+    desc.expectThat(deque, hasSize(size));
+    IsValidLinkedDeque.<Node<K, V>>validLinkedDeque().matchesSafely(deque, desc.getDescription());
+  }
+
+  private void checkLinks(BoundedLocalCache<K, V> map,
+      LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
     long weightedSize = 0;
-    Set<Node> seen = Sets.newIdentityHashSet();
-    for (Node<? extends K, ? extends V> node : map.accessOrderDeque) {
+    Set<Node<K, V>> seen = Sets.newIdentityHashSet();
+    for (Node<K, V> node : deque) {
       Supplier<String> errorMsg = () -> String.format(
           "Loop detected: %s, saw %s in %s", node, seen, map);
       desc.expectThat(errorMsg, seen.add(node), is(true));
-      weightedSize += ((WeightedValue) node.get()).weight;
+      weightedSize += node.get().weight;
       checkNode(map, node, desc);
     }
 
+    final long weighted = weightedSize;
     desc.expectThat("Size != list length", map.size(), is(seen.size()));
-    desc.expectThat("WeightedSize != link weights"
-        + " [" + map.weightedSize() + " vs. " + weightedSize + "]"
-        + " {size: " + map.size() + " vs. " + seen.size() + "}",
-        map.weightedSize(), is(weightedSize));
+    Supplier<String> error = () -> String.format(
+        "WeightedSize != link weights [%d vs %d] {%d vs %d}",
+        map.weightedSize(), weighted, seen.size(), map.size());
+    desc.expectThat(error, map.weightedSize(), is(weightedSize));
   }
 
-  private void checkNode(BoundedLocalCache<? extends K, ? extends V> map,
-      Node<? extends K, ? extends V> node, DescriptionBuilder builder) {
-    @SuppressWarnings("unchecked")
-    Weigher<Object, Object> weigher = (Weigher<Object, Object>) map.weigher;
+  private void checkNode(BoundedLocalCache<K, V> map,
+      Node<K, V> node, DescriptionBuilder builder) {
+    Weigher<? super K, ? super V> weigher = map.weigher;
 
     builder.expectThat(node.key, is(not(nullValue())));
     builder.expectThat(node.get(), is(not(nullValue())));

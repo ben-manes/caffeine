@@ -35,6 +35,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.ExpireAfterAccess;
+import com.github.benmanes.caffeine.cache.testing.ExpireAfterWrite;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -150,19 +151,67 @@ public final class ExpireAfterAccessTest {
   /* ---------------- Advanced: @ExpireAfterAccess -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void getExpiresAfter_access(
       @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(1L));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void setExpiresAfter_access(
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  public void setExpiresAfter_access(Cache<Integer, Integer> cache, CacheContext context,
       @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.setExpiresAfter(2, TimeUnit.MINUTES);
     assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(2L));
+
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.size(), is(context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void ageOf_access(CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(0L));
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(30L));
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
+  }
+
+  /* ---------------- Advanced: @ExpireAfterWrite -------------- */
+
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
+  public void getExpiresAfter_write(
+      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
+    assertThat(expireAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(1L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
+  public void setExpiresAfter_write(Cache<Integer, Integer> cache, CacheContext context,
+      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
+    expireAfterWrite.setExpiresAfter(2, TimeUnit.MINUTES);
+    assertThat(expireAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(2L));
+
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.size(), is(context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void ageOf_write(CacheContext context,
+      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(0L));
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(30L));
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
   }
 }
