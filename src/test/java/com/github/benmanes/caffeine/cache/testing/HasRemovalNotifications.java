@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
@@ -33,7 +34,6 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
@@ -64,12 +64,12 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
   protected boolean matchesSafely(Object ignored, Description description) {
     DescriptionBuilder desc = new DescriptionBuilder(description);
 
-    if (context.removalListenerType() == Listener.CONSUMING) {
+    List<RemovalNotification<Integer, Integer>> notifications = context.consumedNotifications();
+    if (!notifications.isEmpty()) {
       ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
-      ConsumingRemovalListener<Integer, Integer> removalListener = context.removalListener();
-      desc.expectThat(removalListener.evicted(), hasSize(count));
+      desc.expectThat(notifications, hasSize(count));
 
-      for (RemovalNotification<?, ?> notification : removalListener.evicted()) {
+      for (RemovalNotification<?, ?> notification : notifications) {
         checkNotification(notification);
       }
     }

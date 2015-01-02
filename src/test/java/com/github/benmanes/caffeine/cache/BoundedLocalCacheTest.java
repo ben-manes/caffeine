@@ -257,8 +257,10 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    Node<Integer, Integer> dummy = new Node<>(null, null);
+
     boolean[] ran = new boolean[1];
-    localCache.afterWrite(() -> ran[0] = true);
+    localCache.afterWrite(dummy, () -> ran[0] = true);
     assertThat(ran[0], is(true));
 
     assertThat(localCache.writeBuffer, hasSize(0));

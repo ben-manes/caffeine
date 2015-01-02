@@ -56,7 +56,7 @@ public interface Advanced<K, V> {
    *         used
    */
   @Nonnull
-  Optional<Expiration<K, V>> expireAfterRead();
+  Optional<Expiration<K, V>> expireAfterAccess();
 
   /**
    * Returns access to perform operations based on the time-to-live expiration policy. This policy

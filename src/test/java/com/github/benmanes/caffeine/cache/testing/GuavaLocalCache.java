@@ -241,7 +241,7 @@ public final class GuavaLocalCache {
         @Override public Optional<Eviction<K, V>> eviction() {
           return Optional.empty();
         }
-        @Override public Optional<Expiration<K, V>> expireAfterRead() {
+        @Override public Optional<Expiration<K, V>> expireAfterAccess() {
           return Optional.empty();
         }
         @Override public Optional<Expiration<K, V>> expireAfterWrite() {

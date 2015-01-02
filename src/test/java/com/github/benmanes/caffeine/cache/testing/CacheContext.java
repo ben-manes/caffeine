@@ -21,8 +21,10 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -32,6 +34,7 @@ import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
@@ -43,6 +46,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
+import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
@@ -177,6 +181,12 @@ public final class CacheContext {
   @SuppressWarnings("unchecked")
   public <T extends RemovalListener<Integer, Integer>> T removalListener() {
     return (T) requireNonNull(removalListener);
+  }
+
+  public List<RemovalNotification<Integer, Integer>> consumedNotifications() {
+    return (removalListenerType() == Listener.CONSUMING)
+        ? ((ConsumingRemovalListener<Integer, Integer>) removalListener).evicted()
+        : Collections.emptyList();
   }
 
   public boolean isRecordingStats() {

@@ -495,7 +495,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    *
    * @param task the pending operation to be applied
    */
-  void afterWrite(Runnable task) {
+  void afterWrite(Node<K, V> node, Runnable task) {
+    if (node != null) {
+      node.setAccessTime(ticker.read());
+    }
+
     writeBuffer.add(task);
     drainStatus.lazySet(REQUIRED);
     tryToDrainBuffers();
@@ -862,7 +866,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     for (;;) {
       final Node<K, V> prior = data.putIfAbsent(node.key, node);
       if (prior == null) {
-        afterWrite(new AddTask(node, weight));
+        afterWrite(node, new AddTask(node, weight));
         return null;
       } else if (onlyIfAbsent) {
         afterRead(prior);
@@ -882,7 +886,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         node.setWriteTime(ticker.read());
         afterRead(prior);
       } else {
-        afterWrite(new UpdateTask(prior, weightedDifference));
+        afterWrite(node, new UpdateTask(prior, weightedDifference));
       }
       if (hasRemovalListener()) {
         notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
@@ -899,7 +903,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     WeightedValue<V> retired = makeRetired(node);
-    afterWrite(new RemovalTask(node));
+    afterWrite(node, new RemovalTask(node));
 
     if (hasRemovalListener() && (retired != null)) {
       @SuppressWarnings("unchecked")
@@ -926,7 +930,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
               K castKey = (K) key;
               notifyRemoval(castKey, node.getValue(), RemovalCause.EXPLICIT);
             }
-            afterWrite(new RemovalTask(node));
+            afterWrite(node, new RemovalTask(node));
             return true;
           }
         } else {
@@ -967,7 +971,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       node.setWriteTime(ticker.read());
       afterRead(node);
     } else {
-      afterWrite(new UpdateTask(node, weightedDifference));
+      afterWrite(node, new UpdateTask(node, weightedDifference));
     }
     if (hasRemovalListener()) {
       notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
@@ -1001,7 +1005,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       node.setWriteTime(ticker.read());
       afterRead(node);
     } else {
-      afterWrite(new UpdateTask(node, weightedDifference));
+      afterWrite(node, new UpdateTask(node, weightedDifference));
     }
     if (hasRemovalListener()) {
       notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
@@ -1018,7 +1022,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     if ((node != null)) {
       if (hasExpired(node, now)) {
         if (data.remove(key, node)) {
-          afterWrite(new RemovalTask(node));
+          afterWrite(node, new RemovalTask(node));
           notifyRemoval(key, node.getValue(), RemovalCause.EXPIRED);
         }
       } else {
@@ -1046,7 +1050,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       afterRead(node);
       return node.getValue();
     } else {
-      afterWrite(new AddTask(node, weightedValue[0].weight));
+      afterWrite(node, new AddTask(node, weightedValue[0].weight));
       return weightedValue[0].value;
     }
   }
@@ -1093,7 +1097,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     if (task[0] == null) {
       afterRead(node);
     } else {
-      afterWrite(task[0]);
+      afterWrite(node, task[0]);
     }
     return (weightedValue[0] == null) ? null : weightedValue[0].value;
   }
@@ -1110,7 +1114,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @SuppressWarnings("unchecked")
     V[] newValue = (V[]) new Object[1];
     Runnable[] task = new Runnable[2];
-    data.compute(key, (k, prior) -> {
+    Node<K, V> node = data.compute(key, (k, prior) -> {
       if (prior == null) {
         newValue[0] = statsAware(remappingFunction, isRefresh).apply(k, null);
         if (newValue[0] == null) {
@@ -1165,10 +1169,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       }
     });
     if (task[0] != null) {
-      afterWrite(task[0]);
+      afterWrite(node, task[0]);
     }
     if (task[1] != null) {
-      afterWrite(task[1]);
+      afterWrite(node, task[1]);
     }
     return newValue[0];
   }
@@ -2073,15 +2077,17 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     final class BoundedAdvanced implements Advanced<K, V> {
       final Optional<Eviction<K, V>> eviction = Optional.of(new BoundedEviction());
+      final Optional<Expiration<K, V>> afterWrite = Optional.of(new BoundedExpireAfterWrite());
+      final Optional<Expiration<K, V>> afterAccess = Optional.of(new BoundedExpireAfterAccess());
 
       @Override public Optional<Eviction<K, V>> eviction() {
         return eviction;
       }
-      @Override public Optional<Expiration<K, V>> expireAfterRead() {
-        return Optional.empty();
+      @Override public Optional<Expiration<K, V>> expireAfterAccess() {
+        return afterAccess;
       }
       @Override public Optional<Expiration<K, V>> expireAfterWrite() {
-        return Optional.empty();
+        return afterWrite;
       }
 
       final class BoundedEviction implements Eviction<K, V> {
@@ -2102,6 +2108,50 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         }
         @Override public Map<K, V> hottest(int limit) {
           return cache.descendingMapWithLimit(limit);
+        }
+      }
+
+      final class BoundedExpireAfterAccess implements Expiration<K, V> {
+        @Override public Optional<Long> ageOf(K key, TimeUnit unit) {
+          Node<K, V> node = cache.data.get(key);
+          return (node == null)
+              ? Optional.empty()
+              : Optional.of(unit.convert(node.getAccessTime(), TimeUnit.NANOSECONDS));
+        }
+        @Override public long getExpiresAfter(TimeUnit unit) {
+          return unit.convert(cache.expireAfterAccessNanos, TimeUnit.NANOSECONDS);
+        }
+        @Override public void setExpiresAfter(long duration, TimeUnit unit) {
+          Caffeine.requireArgument(duration >= 0);
+          cache.expireAfterAccessNanos = unit.toNanos(duration);
+        }
+        @Override public Map<K, V> oldest(int limit) {
+          throw new UnsupportedOperationException("TODO");
+        }
+        @Override public Map<K, V> youngest(int limit) {
+          throw new UnsupportedOperationException("TODO");
+        }
+      }
+
+      final class BoundedExpireAfterWrite implements Expiration<K, V> {
+        @Override public Optional<Long> ageOf(K key, TimeUnit unit) {
+          Node<K, V> node = cache.data.get(key);
+          return (node == null)
+              ? Optional.empty()
+              : Optional.of(unit.convert(node.getWriteTime(), TimeUnit.NANOSECONDS));
+        }
+        @Override public long getExpiresAfter(TimeUnit unit) {
+          return unit.convert(cache.expireAfterWriteNanos, TimeUnit.NANOSECONDS);
+        }
+        @Override public void setExpiresAfter(long duration, TimeUnit unit) {
+          Caffeine.requireArgument(duration >= 0);
+          cache.expireAfterWriteNanos = unit.toNanos(duration);
+        }
+        @Override public Map<K, V> oldest(int limit) {
+          throw new UnsupportedOperationException("TODO");
+        }
+        @Override public Map<K, V> youngest(int limit) {
+          throw new UnsupportedOperationException("TODO");
         }
       }
     }

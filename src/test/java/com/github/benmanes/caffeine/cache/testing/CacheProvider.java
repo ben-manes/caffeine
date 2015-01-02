@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.testing;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -43,7 +44,8 @@ public final class CacheProvider {
   /**
    * The provided test parameters are optional and may be specified in any order. Supports injecting
    * {@link LoadingCache}, {@link Cache}, {@link CacheContext}, the {@link ConcurrentMap}
-   * {@link Cache#asMap()} view, {@link Advanced.Eviction}, and {@link FakeTicker}.
+   * {@link Cache#asMap()} view, {@link Advanced.Eviction}, {@link Advanced.Expiration},
+   * and {@link FakeTicker}.
    */
   @DataProvider(name = "caches")
   public static Iterator<Object[]> providesCaches(Method testMethod) throws Exception {
@@ -70,6 +72,15 @@ public final class CacheProvider {
           params[i] = entry.getValue().asMap();
         } else if (parameterClasses[i].isAssignableFrom(Advanced.Eviction.class)) {
           params[i] = entry.getValue().advanced().eviction().get();
+        } else if (parameterClasses[i].isAssignableFrom(Advanced.Expiration.class)) {
+          Parameter[] parameters = testMethod.getParameters();
+          if (parameters[i].isAnnotationPresent(ExpireAfterAccess.class)) {
+            params[i] = entry.getValue().advanced().expireAfterAccess().get();
+          } else if (parameters[i].isAnnotationPresent(ExpireAfterWrite.class)) {
+            params[i] = entry.getValue().advanced().expireAfterWrite().get();
+          } else {
+            throw new AssertionError("Expiration parameter must have a qualifier annotation");
+          }
         } else if (parameterClasses[i].isAssignableFrom(Ticker.class)) {
           params[i] = entry.getKey().ticker();
         } else {
