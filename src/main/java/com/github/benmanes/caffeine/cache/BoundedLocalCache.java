@@ -2236,7 +2236,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           result.put(key, value);
         }
       }
-      cache.statsCounter.recordHits(result.size());
       if (keysToLoad.isEmpty()) {
         return result;
       }
