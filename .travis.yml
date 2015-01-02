@@ -8,7 +8,7 @@ env:
  - TERM=dumb
 
 script:
- - JAVA_OPTS="-Xmx384m" ./gradlew check
+ - ./gradlew check
 
 after_success:
 - ./gradlew jacocoTestReport coveralls
