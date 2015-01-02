@@ -57,6 +57,11 @@ public @interface CacheSpec {
 
   /* ---------------- Initial capacity -------------- */
 
+  InitialCapacity[] initialCapacity() default {
+    InitialCapacity.DEFAULT
+  };
+
+  /** The initial capacities, each resulting in a new combination. */
   enum InitialCapacity {
     /** A flag indicating that the initial capacity is not configured. */
     DEFAULT(16),
@@ -80,19 +85,17 @@ public @interface CacheSpec {
     }
   }
 
-  /** The initial capacities, each resulting in a new combination. */
-  InitialCapacity[] initialCapacity() default {
-    InitialCapacity.DEFAULT
-  };
-
   /* ---------------- Statistics -------------- */
-
-  enum Stats { ENABLED, DISABLED }
 
   Stats[] stats() default {
     Stats.ENABLED,
     Stats.DISABLED
   };
+
+  enum Stats {
+    ENABLED,
+    DISABLED
+  }
 
   /* ---------------- Maximum size -------------- */
 
@@ -132,7 +135,7 @@ public @interface CacheSpec {
   /** The expiration time-to-idle setting, each resulting in a new combination. */
   Expire[] expireAfterAccess() default {
     Expire.DISABLED,
-    //Expiration.FOREVER
+    Expire.FOREVER
   };
 
   /** The expiration time-to-live setting, each resulting in a new combination. */
@@ -205,6 +208,7 @@ public @interface CacheSpec {
   /** The removal listeners, each resulting in a new combination. */
   Listener[] removalListener() default {
     Listener.CONSUMING,
+    Listener.DEFAULT,
   };
 
   enum Listener {

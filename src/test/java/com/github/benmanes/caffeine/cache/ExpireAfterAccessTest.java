@@ -16,13 +16,19 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -32,12 +38,14 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.ExpireAfterAccess;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 
 /**
  * The test cases for caches that support the expire after read (time-to-idle) policy.
@@ -222,6 +230,104 @@ public final class ExpireAfterAccessTest {
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
+    Assert.assertFalse(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent());
+  }
+
+  /* ---------------- Advanced: oldest -------------- */
+
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void oldest_unmodifiable(
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    expireAfterAccess.oldest(Integer.MAX_VALUE).clear();;
+  }
+
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  public void oldest_negative(@ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    expireAfterAccess.oldest(-1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldest_zero(@ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    assertThat(expireAfterAccess.oldest(0), is(emptyMap()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldest_partial(CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    int count = (int) context.initialSize() / 2;
+    assertThat(expireAfterAccess.oldest(count).size(), is(count));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void oldest_order(CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    Map<Integer, Integer> oldest = expireAfterAccess.oldest(Integer.MAX_VALUE);
+    assertThat(Iterables.elementsEqual(oldest.keySet(), context.original().keySet()), is(true));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  public void oldest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    Map<Integer, Integer> oldest = expireAfterAccess.oldest(Integer.MAX_VALUE);
+    cache.invalidateAll();
+    assertThat(oldest, is(equalTo(context.original())));
+  }
+
+  /* ---------------- Advanced: youngest -------------- */
+
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void youngest_unmodifiable(
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    expireAfterAccess.youngest(Integer.MAX_VALUE).clear();;
+  }
+
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  public void youngest_negative(@ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    expireAfterAccess.youngest(-1);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngest_zero(@ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    assertThat(expireAfterAccess.youngest(0), is(emptyMap()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngest_partial(CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    int count = (int) context.initialSize() / 2;
+    assertThat(expireAfterAccess.youngest(count).size(), is(count));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void youngest_order(CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    Map<Integer, Integer> youngest = expireAfterAccess.youngest(Integer.MAX_VALUE);
+    Set<Integer> keys = new LinkedHashSet<>(ImmutableList.copyOf(youngest.keySet()).reverse());
+    assertThat(Iterables.elementsEqual(keys, context.original().keySet()), is(true));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  public void youngest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    Map<Integer, Integer> youngest = expireAfterAccess.youngest(Integer.MAX_VALUE);
+    cache.invalidateAll();
+    assertThat(youngest, is(equalTo(context.original())));
   }
 }

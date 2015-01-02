@@ -1045,7 +1045,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (hasExpired(node, now)) {
         if (data.remove(key, node)) {
           afterWrite(node, new RemovalTask(node));
-          notifyRemoval(key, node.getValue(), RemovalCause.EXPIRED);
+          if (hasRemovalListener()) {
+            notifyRemoval(key, node.getValue(), RemovalCause.EXPIRED);
+          }
         }
       } else {
         afterRead(node);
@@ -2157,10 +2159,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           asyncCleanup();
         }
         @Override public Map<K, V> oldest(int limit) {
-          throw new UnsupportedOperationException("TODO");
+          return cache.ascendingMapWithLimit(limit);
         }
         @Override public Map<K, V> youngest(int limit) {
-          throw new UnsupportedOperationException("TODO");
+          return cache.descendingMapWithLimit(limit);
         }
       }
 

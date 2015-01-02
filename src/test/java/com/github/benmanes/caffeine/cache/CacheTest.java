@@ -39,6 +39,7 @@ import java.util.stream.IntStream;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -393,6 +394,15 @@ public final class CacheTest {
   }
 
   /* ---------------- stats -------------- */
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void stats(Cache<Integer, Integer> cache) {
+    CacheStats stats = cache.stats()
+        .plus(new CacheStats(1, 2, 3, 4, 5, 6)
+        .minus(new CacheStats(6, 5, 4, 3, 2, 1)));
+    assertThat(stats, is(new CacheStats(0, 0, 0, 1, 3, 5)));
+  }
 
   /* ---------------- serialize -------------- */
 
