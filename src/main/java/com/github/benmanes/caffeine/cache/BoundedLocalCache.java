@@ -188,6 +188,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
   }
 
+  static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
+
   // The backing data store holding the key-value associations
   final ConcurrentHashMap<K, Node<K, V>> data;
 
@@ -297,8 +299,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   /** Asynchronously sends a removal notification to the listener. */
   protected void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
     requireNonNull(removalListener, "Notification should be guarded with a check");
-    executor.execute(() -> removalListener.onRemoval(
-        new RemovalNotification<K, V>(key, value, cause)));
+    executor.execute(() -> {
+      try {
+        removalListener.onRemoval(new RemovalNotification<K, V>(key, value, cause));
+      } catch (Throwable t) {
+        logger.log(Level.WARNING, "Exception thrown by removal listener", t);
+      }
+    });
   }
 
   /* ---------------- Expiration Support -------------- */
@@ -1093,6 +1100,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    return compute(key, remappingFunction, false);
+  }
+
+  V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+      boolean isRefresh) {
     requireNonNull(remappingFunction);
 
     @SuppressWarnings("unchecked")
@@ -1100,7 +1112,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     Runnable[] task = new Runnable[2];
     data.compute(key, (k, prior) -> {
       if (prior == null) {
-        newValue[0] = statsAware(remappingFunction).apply(k, null);
+        newValue[0] = statsAware(remappingFunction, isRefresh).apply(k, null);
         if (newValue[0] == null) {
           return null;
         }
@@ -1124,7 +1136,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           }
           oldValue = null;
         }
-        newValue[0] = statsAware(remappingFunction).apply(k, oldValue);
+        newValue[0] = statsAware(remappingFunction, isRefresh).apply(k, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
@@ -1224,15 +1236,20 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     };
   }
 
-  /** Decorates the remapping function to record statistics if enabled. */
   <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
+    return statsAware(remappingFunction, false);
+  }
+
+  /** Decorates the remapping function to record statistics if enabled. */
+  <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
+      BiFunction<? super T, ? super U, ? extends R> remappingFunction, boolean isRefresh) {
     if (!isRecordingStats) {
       return remappingFunction;
     }
     return (t, u) -> {
       R result;
-      if (u == null) {
+      if ((u == null) && !isRefresh) {
         statsCounter.recordMisses(1);
       }
       long startTime = ticker.read();
@@ -2142,9 +2159,17 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
       if (!hasBulkLoader) {
-        for (K key : keysToLoad) {
-          V value = cache.compute(key, (k, v) -> loader.load(key));
-          result.put(key, value);
+        int misses = keysToLoad.size();
+        try {
+          for (K key : keysToLoad) {
+            misses--;
+            V value = cache.compute(key, (k, v) -> loader.load(key));
+            result.put(key, value);
+          }
+        } finally {
+          if (misses > 0) {
+            cache.statsCounter.recordMisses(misses);
+          }
         }
         return;
       }
@@ -2178,7 +2203,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       requireNonNull(key);
       cache.executor.execute(() -> {
         try {
-          cache.compute(key, loader::refresh);
+          cache.compute(key, loader::refresh, true);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }

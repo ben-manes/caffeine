@@ -24,9 +24,7 @@ import static org.hamcrest.Matchers.is;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.RejectedExecutionException;
 
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -34,10 +32,12 @@ import com.github.benmanes.caffeine.cache.Advanced.Eviction;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -58,16 +58,21 @@ public final class EvictionTest {
   @CacheSpec(population = Population.FULL, maximumSize = MaximumSize.FULL,
       removalListener = Listener.REJECTING)
   public void removalListener_fails(Cache<Integer, Integer> cache, CacheContext context) {
-    try {
-      cache.put(context.absentKey(), context.absentKey());
-      Assert.fail("unreachable");
-    } catch (RejectedExecutionException e) {
-      // allow automatic validation to assert that the cache is not corrupt
+    RejectingRemovalListener<Integer, Integer> removalListener = context.removalListener();
+    // Guava-style caches reject before the max size is reached & are unpredictable
+    removalListener.rejected = 0;
+    long size = cache.size();
+    for (Integer key : context.absentKeys()) {
+      cache.put(key, -key);
+      if (cache.size() != ++size) {
+        break;
+      }
     }
+    assertThat(removalListener.rejected, is(1));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       maximumSize = { MaximumSize.ZERO, MaximumSize.ONE, MaximumSize.FULL })
   public void evict(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.absentKeys()) {
@@ -81,7 +86,7 @@ public final class EvictionTest {
   /* ---------------- Advanced: MaximumSize -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void maximumSize_decrease(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
@@ -95,7 +100,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void maximumSize_decrease_min(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
@@ -107,7 +112,7 @@ public final class EvictionTest {
     assertThat(cache, hasRemovalNotifications(context, context.initialSize(), RemovalCause.SIZE));
   }
 
-  @CacheSpec(maximumSize = MaximumSize.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void maximumSize_decrease_negative(Cache<Integer, Integer> cache, CacheContext context,
@@ -121,7 +126,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void maximumSize_increase(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
@@ -131,7 +136,8 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL, removalListener = Listener.REJECTING)
+  @CacheSpec(implementation = Implementation.Caffeine,
+      maximumSize = MaximumSize.FULL, removalListener = Listener.REJECTING)
   public void maximumSize_increase_max(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
     eviction.setMaximumSize(Long.MAX_VALUE);
@@ -141,33 +147,34 @@ public final class EvictionTest {
 
   /* ---------------- Advanced: Coldest -------------- */
 
-  @CacheSpec(maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void coldest_unmodifiable(Eviction<Integer, Integer> eviction) {
     eviction.coldest(Integer.MAX_VALUE).clear();;
   }
 
-  @CacheSpec(maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void coldest_negative(Eviction<Integer, Integer> eviction) {
     eviction.coldest(-1);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   public void coldest_zero(Eviction<Integer, Integer> eviction) {
     assertThat(eviction.coldest(0), is(emptyMap()));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void coldest_partial(CacheContext context, Eviction<Integer, Integer> eviction) {
     int count = (int) context.initialSize() / 2;
     assertThat(eviction.coldest(count).size(), is(count));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void coldest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
     Map<Integer, Integer> coldest = eviction.coldest(Integer.MAX_VALUE);
@@ -175,7 +182,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   public void coldest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
     Map<Integer, Integer> coldest = eviction.coldest(Integer.MAX_VALUE);
@@ -185,33 +192,35 @@ public final class EvictionTest {
 
   /* ---------------- Advanced: Hottest -------------- */
 
-  @CacheSpec(maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void hottest_unmodifiable(Eviction<Integer, Integer> eviction) {
     eviction.hottest(Integer.MAX_VALUE).clear();;
   }
 
-  @CacheSpec(maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void hottest_negative(Eviction<Integer, Integer> eviction) {
     eviction.hottest(-1);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   public void hottest_zero(Eviction<Integer, Integer> eviction) {
     assertThat(eviction.hottest(0), is(emptyMap()));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void hottest_partial(CacheContext context, Eviction<Integer, Integer> eviction) {
     int count = (int) context.initialSize() / 2;
     assertThat(eviction.hottest(count).size(), is(count));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, maximumSize = MaximumSize.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void hottest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
     Map<Integer, Integer> hottest = eviction.hottest(Integer.MAX_VALUE);
@@ -220,7 +229,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   public void hottest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
     Map<Integer, Integer> hottest = eviction.hottest(Integer.MAX_VALUE);

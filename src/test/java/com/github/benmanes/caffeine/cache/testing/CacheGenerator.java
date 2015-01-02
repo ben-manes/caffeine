@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
@@ -75,7 +76,8 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.removalListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
         ImmutableSet.of(true, isLoadingOnly),
-        ImmutableSet.copyOf(cacheSpec.loader()));
+        ImmutableSet.copyOf(cacheSpec.loader()),
+        ImmutableSet.copyOf(cacheSpec.implementation()));
   }
 
   private CacheContext newCacheContext(List<Object> combination) {
@@ -91,7 +93,8 @@ final class CacheGenerator {
         (Listener) combination.get(8),
         (Population) combination.get(9),
         (Boolean) combination.get(10),
-        (Loader) combination.get(11));
+        (Loader) combination.get(11),
+        (Implementation) combination.get(12));
   }
 
   private Cache<Integer, Integer> newCache(CacheContext context) {
@@ -130,7 +133,9 @@ final class CacheGenerator {
     if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
     }
-    if (context.loader == null) {
+    if (context.implementation() == Implementation.Guava) {
+      context.cache = GuavaLocalCache.newGuavaCache(context);
+    } else if (context.loader == null) {
       context.cache = builder.build();
     } else {
       context.cache = builder.build(context.loader);

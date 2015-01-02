@@ -237,15 +237,20 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    return compute(key, remappingFunction, false);
+  }
+
+  V compute(K key,
+      BiFunction<? super K, ? super V, ? extends V> remappingFunction, boolean isRefresh) {
     if (!hasRemovalListener()) {
-      return data.compute(key, statsAware(remappingFunction));
+      return data.compute(key, statsAware(remappingFunction, isRefresh));
     }
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = data.compute(key, (K k, V oldValue) -> {
-      V newValue = statsAware(remappingFunction).apply(k, oldValue);
+      V newValue = statsAware(remappingFunction, isRefresh).apply(k, oldValue);
       if (oldValue != null) {
         notification[0] = (newValue == null)
             ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
@@ -308,15 +313,20 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
     };
   }
 
-  /** Decorates the remapping function to record statistics if enabled. */
   <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
+    return statsAware(remappingFunction, false);
+  }
+
+  /** Decorates the remapping function to record statistics if enabled. */
+  <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
+      BiFunction<? super T, ? super U, ? extends R> remappingFunction, boolean isRefresh) {
     if (!isRecordingStats) {
       return remappingFunction;
     }
     return (t, u) -> {
       R result;
-      if (u == null) {
+      if ((u == null) && !isRefresh) {
         statsCounter.recordMisses(1);
       }
       long startTime = ticker.read();
@@ -883,9 +893,17 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
     private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
       if (!hasBulkLoader) {
-        for (K key : keysToLoad) {
-          V value = cache.compute(key, (k, v) -> loader.load(key));
-          result.put(key, value);
+        int misses = keysToLoad.size();
+        try {
+          for (K key : keysToLoad) {
+            misses--;
+            V value = cache.compute(key, (k, v) -> loader.load(key));
+            result.put(key, value);
+          }
+        } finally {
+          if (misses > 0) {
+            cache.statsCounter.recordMisses(misses);
+          }
         }
         return;
       }
@@ -919,7 +937,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
       requireNonNull(key);
       cache.executor.execute(() -> {
         try {
-          cache.compute(key, loader::refresh);
+          cache.compute(key, loader::refresh, true);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }

@@ -20,10 +20,10 @@ import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
 import static com.google.common.collect.Maps.immutableEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -47,6 +47,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -1040,8 +1041,13 @@ public final class AsMapTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void toString_empty(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map, hasToString(context.original().toString()));
+  public void toString(Map<Integer, Integer> map, CacheContext context) {
+    String toString = map.toString();
+    if (!context.original().toString().equals(toString)) {
+      for (Entry<Integer, Integer> entry : map.entrySet()) {
+        assertThat(toString, containsString(entry.getKey() + "=" + entry.getValue()));
+      }
+    }
   }
 
   /* ---------------- serialize -------------- */
@@ -1278,7 +1284,7 @@ public final class AsMapTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY,
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void entrySet_addIsSupported(Map<Integer, Integer> map) {
     assertThat(map.entrySet().add(immutableEntry(1, 2)), is(true));
@@ -1354,7 +1360,8 @@ public final class AsMapTest {
   /* ---------------- WriteThroughEntry -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void writeThroughEntry(Map<Integer, Integer> map, CacheContext context) {
     Entry<Integer, Integer> entry = map.entrySet().iterator().next();
 
@@ -1365,13 +1372,15 @@ public final class AsMapTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void writeThroughEntry_null(Map<Integer, Integer> map) {
     map.entrySet().iterator().next().setValue(null);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void writeThroughEntry_serialize(Map<Integer, Integer> map) {
     Entry<Integer, Integer> entry = map.entrySet().iterator().next();
     Object copy = SerializableTester.reserialize(entry);

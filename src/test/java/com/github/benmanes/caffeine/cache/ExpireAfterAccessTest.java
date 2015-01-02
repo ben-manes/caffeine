@@ -51,8 +51,9 @@ public final class ExpireAfterAccessTest {
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getIfPresent(context.firstKey()), is(-context.firstKey()));
     assertThat(cache.getIfPresent(context.lastKey()), is(nullValue()));
-    assertThat(cache.size(), is(1L));
 
+    cache.cleanUp();
+    assertThat(cache.size(), is(1L));
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }
@@ -67,8 +68,9 @@ public final class ExpireAfterAccessTest {
     context.ticker().advance(45, TimeUnit.SECONDS);
     cache.get(context.firstKey(), mappingFunction);
     cache.get(context.lastKey(), mappingFunction); // recreated
-    assertThat(cache.size(), is(2L));
 
+    cache.cleanUp();
+    assertThat(cache.size(), is(2L));
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }

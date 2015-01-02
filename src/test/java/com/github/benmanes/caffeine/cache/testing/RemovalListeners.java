@@ -45,9 +45,11 @@ public final class RemovalListeners {
 
   public static final class RejectingRemovalListener<K, V> implements RemovalListener<K, V> {
     public boolean reject = true;
+    public int rejected;
 
     @Override public void onRemoval(RemovalNotification<K, V> notification) {
       if (reject) {
+        rejected++;
         throw new RejectedExecutionException("Rejected eviction of " + notification);
       }
     }

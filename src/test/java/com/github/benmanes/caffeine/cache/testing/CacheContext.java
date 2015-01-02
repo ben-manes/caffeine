@@ -35,6 +35,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
@@ -52,6 +53,7 @@ import com.google.common.collect.ImmutableSet;
  */
 public final class CacheContext {
   final InitialCapacity initialCapacity;
+  final Implementation implementation;
   final Listener removalListenerType;
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
@@ -80,7 +82,7 @@ public final class CacheContext {
   public CacheContext(InitialCapacity initialCapacity, Stats stats, MaximumSize maximumSize,
       Expire afterAccess, Expire afterWrite, ReferenceType keyStrength,
       ReferenceType valueStrength, CacheExecutor cacheExecutor, Listener removalListenerType,
-      Population population, boolean isLoading, Loader loader) {
+      Population population, boolean isLoading, Loader loader, Implementation implementation) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.maximumSize = requireNonNull(maximumSize);
@@ -95,6 +97,7 @@ public final class CacheContext {
     this.population = requireNonNull(population);
     this.loader = isLoading ? requireNonNull(loader) : null;
     this.ticker = expires() ? new FakeTicker() : null;
+    this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
   }
 
@@ -172,8 +175,8 @@ public final class CacheContext {
   }
 
   @SuppressWarnings("unchecked")
-  public <R extends RemovalListener<K, V>, K, V> R removalListener() {
-    return (R) requireNonNull(removalListener);
+  public <T extends RemovalListener<Integer, Integer>> T removalListener() {
+    return (T) requireNonNull(removalListener);
   }
 
   public boolean isRecordingStats() {
@@ -192,6 +195,10 @@ public final class CacheContext {
     return requireNonNull(ticker);
   }
 
+  public Implementation implementation() {
+    return implementation;
+  }
+
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
@@ -206,6 +213,7 @@ public final class CacheContext {
         .add("removalListener", removalListenerType)
         .add("initialCapacity", initialCapacity)
         .add("stats", stats)
+        .add("implementation", implementation)
         .toString();
   }
 }

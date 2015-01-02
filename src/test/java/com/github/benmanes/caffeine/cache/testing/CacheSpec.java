@@ -42,6 +42,19 @@ import com.google.common.util.concurrent.MoreExecutors;
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
 
+  /* ---------------- Implementation -------------- */
+
+  enum Implementation {
+    Caffeine,
+    Guava
+  }
+
+  /** The implementation, each resulting in a new combination. */
+  Implementation[] implementation() default {
+    Implementation.Caffeine,
+    Implementation.Guava,
+  };
+
   /* ---------------- Initial capacity -------------- */
 
   enum InitialCapacity {

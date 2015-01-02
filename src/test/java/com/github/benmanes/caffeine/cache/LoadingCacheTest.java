@@ -37,6 +37,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
@@ -130,8 +131,7 @@ public final class LoadingCacheTest {
     try {
       cache.getAll(context.absentKeys());
     } finally {
-      // fails on & records the first key if no bulk loading support
-      int misses = context.loader().isBulk() ? context.absentKeys().size() : 1;
+      int misses = context.absentKeys().size();
       assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
       assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
     }
@@ -186,7 +186,8 @@ public final class LoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.NULL,
+  @CacheSpec(implementation = Implementation.Caffeine,
+      executor = CacheExecutor.DIRECT, loader = Loader.NULL,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void refresh_remove(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.refresh(context.firstKey());
@@ -197,11 +198,14 @@ public final class LoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.EXCEPTIONAL,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void refresh_failure(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    // Shouldn't leak exception to caller
+    // Shouldn't leak exception to caller and should retain stale entry
     cache.refresh(context.absentKey());
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    cache.refresh(context.firstKey());
+    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(2)));
   }
 
   @Test(dataProvider = "caches")
@@ -210,7 +214,7 @@ public final class LoadingCacheTest {
   public void refresh_absent(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.refresh(context.absentKey());
     assertThat(cache.size(), is(1 + context.initialSize()));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
 
     // records a hit
