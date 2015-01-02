@@ -24,6 +24,7 @@ import org.testng.IInvokedMethodListener;
 import org.testng.ITestResult;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.TestGarbageCollector;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 
@@ -68,6 +69,7 @@ public final class CacheValidationListener implements IInvokedMethodListener {
         if (context.removalListener instanceof ConsumingRemovalListener<?, ?>) {
           ((ConsumingRemovalListener<?, ?>) context.removalListener).evicted().clear();
         }
+        TestGarbageCollector.discard(context.cache);
       }
     }
   }
