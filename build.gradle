@@ -83,14 +83,6 @@ test {
   options {
     threadCount = 4
     parallel = 'methods'
-
-    if (System.env.'CI') {
-      useDefaultListeners = false
-      reports {
-        junitXml.enabled = false
-        html.enabled = false
-      }
-    }
   }
   testLogging {
     events 'skipped'

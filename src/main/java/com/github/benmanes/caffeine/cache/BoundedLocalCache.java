@@ -2019,7 +2019,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   /* ---------------- Manual Cache -------------- */
 
   static class LocalManualCache<K, V> implements Cache<K, V> {
-    BoundedLocalCache<K, V> cache;
+    final BoundedLocalCache<K, V> cache;
     transient Advanced<K, V> advanced;
 
     LocalManualCache(Caffeine<K, V> builder) {
