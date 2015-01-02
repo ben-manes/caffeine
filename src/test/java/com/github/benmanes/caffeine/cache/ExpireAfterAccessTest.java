@@ -32,10 +32,11 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.ExpireAfterAccess;
-import com.github.benmanes.caffeine.cache.testing.ExpireAfterWrite;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -46,6 +47,8 @@ import com.google.common.collect.ImmutableMap;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterAccessTest {
+
+  /* ---------------- Cache -------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE,
@@ -148,7 +151,48 @@ public final class ExpireAfterAccessTest {
     assertThat(cache.size(), is(0L));
   }
 
-  /* ---------------- Advanced: @ExpireAfterAccess -------------- */
+  /* ---------------- LoadingCache -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
+      population = { Population.PARTIAL, Population.FULL })
+  public void get(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    cache.get(context.firstKey());
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(cache.get(context.lastKey()), is(context.lastKey()));
+    cache.cleanUp();
+    assertThat(cache.size(), is(2L));
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.size(), is(1L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
+      population = { Population.PARTIAL, Population.FULL })
+  public void getAll(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    assertThat(cache.getAll(ImmutableList.of(context.firstKey(), context.middleKey())),
+        is(ImmutableMap.of(context.firstKey(), -context.firstKey(),
+            context.middleKey(), -context.middleKey())));
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.getAll(ImmutableList.of(context.firstKey(), context.absentKey())),
+        is(ImmutableMap.of(context.firstKey(), -context.firstKey(),
+            context.absentKey(), context.absentKey())));
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.getAll(ImmutableList.of(context.middleKey(), context.absentKey())),
+        is(ImmutableMap.of(context.middleKey(), context.middleKey(),
+            context.absentKey(), context.absentKey())));
+    assertThat(cache.size(), is(3L));
+  }
+
+  /* ---------------- Advanced -------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
@@ -179,39 +223,5 @@ public final class ExpireAfterAccessTest {
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
-  }
-
-  /* ---------------- Advanced: @ExpireAfterWrite -------------- */
-
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
-  public void getExpiresAfter_write(
-      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
-    assertThat(expireAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(1L));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
-  public void setExpiresAfter_write(Cache<Integer, Integer> cache, CacheContext context,
-      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
-    expireAfterWrite.setExpiresAfter(2, TimeUnit.MINUTES);
-    assertThat(expireAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(2L));
-
-    context.ticker().advance(90, TimeUnit.SECONDS);
-    cache.cleanUp();
-    assertThat(cache.size(), is(context.initialSize()));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void ageOf_write(CacheContext context,
-      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
-    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(0L));
-    context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(30L));
-    context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
   }
 }

@@ -2232,6 +2232,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         if (value == null) {
           keysToLoad.add(key);
         } else {
+          cache.afterRead(node); // TODO(ben): batch
           result.put(key, value);
         }
       }
