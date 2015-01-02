@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Stream;
 
 import org.testng.annotations.DataProvider;
 
@@ -30,7 +31,6 @@ import com.github.benmanes.caffeine.cache.Advanced;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
-import com.google.common.collect.Iterators;
 
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
@@ -59,21 +59,21 @@ public final class CacheProvider {
 
   /** Converts each scenario into test case parameters. */
   private static Iterator<Object[]> asTestCases(Method testMethod,
-      Iterator<Entry<CacheContext, Cache<Integer, Integer>>> scenarios) {
-    Class<?>[] parameterClasses = testMethod.getParameterTypes();
-    return Iterators.transform(scenarios, entry -> {
-      Object[] params = new Object[parameterClasses.length];
+      Stream<Entry<CacheContext, Cache<Integer, Integer>>> scenarios) {
+    Parameter[] parameters = testMethod.getParameters();
+    return scenarios.map(entry -> {
+      Object[] params = new Object[parameters.length];
       for (int i = 0; i < params.length; i++) {
-        if (parameterClasses[i].isAssignableFrom(entry.getKey().getClass())) {
+        Class<?> clazz = parameters[i].getType();
+        if (clazz.isAssignableFrom(entry.getKey().getClass())) {
           params[i] = entry.getKey();
-        } else if (parameterClasses[i].isAssignableFrom(entry.getValue().getClass())) {
+        } else if (clazz.isAssignableFrom(entry.getValue().getClass())) {
           params[i] = entry.getValue();
-        } else if (parameterClasses[i].isAssignableFrom(Map.class)) {
+        } else if (clazz.isAssignableFrom(Map.class)) {
           params[i] = entry.getValue().asMap();
-        } else if (parameterClasses[i].isAssignableFrom(Advanced.Eviction.class)) {
+        } else if (clazz.isAssignableFrom(Advanced.Eviction.class)) {
           params[i] = entry.getValue().advanced().eviction().get();
-        } else if (parameterClasses[i].isAssignableFrom(Advanced.Expiration.class)) {
-          Parameter[] parameters = testMethod.getParameters();
+        } else if (clazz.isAssignableFrom(Advanced.Expiration.class)) {
           if (parameters[i].isAnnotationPresent(ExpireAfterAccess.class)) {
             params[i] = entry.getValue().advanced().expireAfterAccess().get();
           } else if (parameters[i].isAnnotationPresent(ExpireAfterWrite.class)) {
@@ -81,14 +81,14 @@ public final class CacheProvider {
           } else {
             throw new AssertionError("Expiration parameter must have a qualifier annotation");
           }
-        } else if (parameterClasses[i].isAssignableFrom(Ticker.class)) {
+        } else if (clazz.isAssignableFrom(Ticker.class)) {
           params[i] = entry.getKey().ticker();
         } else {
-          throw new AssertionError("Unknown parameter type: " + parameterClasses[i]);
+          throw new AssertionError("Unknown parameter type: " + clazz);
         }
       }
       return params;
-    });
+    }).iterator();
   }
 
   private static boolean hasLoadingCache(Method testMethod) {

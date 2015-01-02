@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -51,15 +51,15 @@ final class CacheGenerator {
     this.cacheSpec = cacheSpec;
   }
 
-  /** Returns an iterator so that creating a test case is lazy and GC-able after use. */
-  public Iterator<Entry<CacheContext, Cache<Integer, Integer>>> generate() {
+  /** Returns a lazy stream so that the test case is lazy and GC-able after use. */
+  public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate() {
     return combinations().stream()
         .map(this::newCacheContext)
         .map(context -> {
           Cache<Integer, Integer> cache = newCache(context);
           populate(context, cache);
           return Maps.immutableEntry(context, cache);
-        }).iterator();
+        });
   }
 
   @SuppressWarnings("unchecked")

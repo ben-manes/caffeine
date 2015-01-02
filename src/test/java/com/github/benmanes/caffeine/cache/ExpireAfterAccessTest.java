@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.ExpireAfterAccess;
@@ -146,10 +147,22 @@ public final class ExpireAfterAccessTest {
     assertThat(cache.size(), is(0L));
   }
 
-  @Test(enabled = false, dataProvider = "caches")
-  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void expireAfterAccess(@ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+  /* ---------------- Advanced: @ExpireAfterAccess -------------- */
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void getExpiresAfter_access(
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(1L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void setExpiresAfter_access(
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    expireAfterAccess.setExpiresAfter(2, TimeUnit.MINUTES);
+    assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(2L));
   }
 }
