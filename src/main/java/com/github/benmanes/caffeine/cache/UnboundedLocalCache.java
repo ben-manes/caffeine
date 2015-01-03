@@ -78,13 +78,15 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   /* ---------------- Cache -------------- */
 
-  public V getIfPresent(Object key) {
+  V getIfPresent(Object key, boolean recordStats) {
     V value = data.get(key);
 
-    if (value == null) {
-      statsCounter.recordMisses(1);
-    } else {
-      statsCounter.recordHits(1);
+    if (recordStats) {
+      if (value == null) {
+        statsCounter.recordMisses(1);
+      } else {
+        statsCounter.recordHits(1);
+      }
     }
     return value;
   }
@@ -146,7 +148,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   @Override
   public V getOrDefault(Object key, V defaultValue) {
-    V value = getIfPresent(key);
+    V value = getIfPresent(key, true);
     return (value == null) ? defaultValue : value;
   }
 
@@ -182,6 +184,8 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   @Override
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+    requireNonNull(mappingFunction);
+
     // optimistic fast path due to computeIfAbsent always locking
     V value = data.get(key);
     if (value != null) {
@@ -384,7 +388,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   @Override
   public V get(Object key) {
-    return getIfPresent(key);
+    return getIfPresent(key, false);
   }
 
   @Override
@@ -783,7 +787,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
     @Override
     public @Nullable V getIfPresent(Object key) {
-      return cache.getIfPresent(key);
+      return cache.getIfPresent(key, true);
     }
 
     @Override

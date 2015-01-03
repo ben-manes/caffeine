@@ -815,10 +815,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   public V getIfPresent(Object key, boolean recordStats) {
     final Node<K, V> node = data.get(key);
     if (node == null) {
-      statsCounter.recordMisses(1);
+      if (recordStats) {
+        statsCounter.recordMisses(1);
+      }
       return null;
     } else if (hasExpired(node, ticker.read())) {
-      statsCounter.recordMisses(1);
+      if (recordStats) {
+        statsCounter.recordMisses(1);
+      }
       tryToDrainBuffers();
       return null;
     }
@@ -1044,6 +1048,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   @Override
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+    requireNonNull(mappingFunction);
+
     // optimistic fast path due to computeIfAbsent always locking is leveraged expiration check
 
     long now = ticker.read();

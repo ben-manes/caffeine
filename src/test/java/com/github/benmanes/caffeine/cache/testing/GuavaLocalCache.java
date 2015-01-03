@@ -263,7 +263,8 @@ public final class GuavaLocalCache {
           requireNonNull(remappingFunction);
           V oldValue;
           long now = ticker.read();
-          if ((oldValue = getIfPresent(key)) != null) {
+          if ((oldValue = get(key)) != null) {
+            statsCounter.recordHits(1);
             try {
               V newValue = remappingFunction.apply(key, oldValue);
               long loadTime = ticker.read() - now;
