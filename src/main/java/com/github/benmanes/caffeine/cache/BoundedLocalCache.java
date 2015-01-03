@@ -1002,7 +1002,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     final int weightedDifference = weight - oldWeightedValue.weight;
     if (weightedDifference == 0) {
       node.setWriteTime(ticker.read());
-      afterRead(node, true);
+      afterRead(node, false);
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
@@ -1036,7 +1036,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     final int weightedDifference = weight - oldWeightedValue.weight;
     if (weightedDifference == 0) {
       node.setWriteTime(ticker.read());
-      afterRead(node, true);
+      afterRead(node, false);
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }

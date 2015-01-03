@@ -253,53 +253,41 @@ public final class AsMapTest {
     map.put(null, null);
   }
 
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_insert(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.put(context.absentKey(), -context.absentKey()), is(nullValue()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
-
     assertThat(map.get(context.absentKey()), is(-context.absentKey()));
     assertThat(map.size(), is(context.original().size() + 1));
   }
 
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void put_replace_sameValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.put(key, -key), is(-key));
-    }
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
-
-    for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(-key));
     }
-    assertThat(map.size(), is(context.original().size()));
-
     int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void put_replace_differentValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.put(key, -context.absentKey()), is(-key));
-    }
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
-
-    for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(-context.absentKey()));
     }
 
-    assertThat(map.size(), is(context.original().size()));
-
     int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
@@ -542,9 +530,8 @@ public final class AsMapTest {
       assertThat(map.replace(key, -context.absentKey()), is(-key));
       assertThat(map.get(key), is(-context.absentKey()));
     }
-    assertThat(map.size(), is(context.original().size()));
-
     int count = context.firstMiddleLastKeys().size();
+    assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
@@ -1032,7 +1019,6 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
 
-  @CheckNoStats
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches")
@@ -1047,7 +1033,6 @@ public final class AsMapTest {
     assertThat(value, is(-context.firstKey()));
   }
 
-  @CheckNoStats
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = StackOverflowError.class)
@@ -1069,14 +1054,16 @@ public final class AsMapTest {
     map.merge(context.firstKey(), -context.firstKey(), mappingFunction);
   }
 
-  @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+  @CacheSpec(implementation = Implementation.Guava,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void merge_error(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.merge(context.firstKey(), -context.firstKey(), (key, value) -> { throw new Error(); });
     } catch (Error e) {}
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
     assertThat(map, is(equalTo(context.original())));
   }
 

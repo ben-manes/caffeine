@@ -147,12 +147,6 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
   /* ---------------- JDK8+ Map extensions -------------- */
 
   @Override
-  public V getOrDefault(Object key, V defaultValue) {
-    V value = getIfPresent(key, true);
-    return (value == null) ? defaultValue : value;
-  }
-
-  @Override
   public void forEach(BiConsumer<? super K, ? super V> action) {
     data.forEach(action);
   }

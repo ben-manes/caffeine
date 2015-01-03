@@ -22,7 +22,6 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailure
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.is;
 
 import java.lang.reflect.Method;
@@ -47,7 +46,7 @@ public class CacheValidationListener implements IInvokedMethodListener {
   @Override
   public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
     Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    boolean checkNoStats = false;//testMethod.isAnnotationPresent(CheckNoStats.class);
+    boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class);
     try {
       if (testResult.isSuccess()) {
         for (Object param : testResult.getParameters()) {
@@ -58,8 +57,10 @@ public class CacheValidationListener implements IInvokedMethodListener {
           } else if (checkNoStats && (param instanceof CacheContext)) {
             checkNoStats = false;
             CacheContext context = (CacheContext) param;
-            assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-            assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+            assertThat(context, hasHitCount(0));
+            assertThat(context, hasMissCount(0));
+            assertThat(context, hasLoadSuccessCount(0));
+            assertThat(context, hasLoadFailureCount(0));
           }
         }
         if (checkNoStats) {
