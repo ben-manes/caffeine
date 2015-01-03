@@ -806,8 +806,8 @@ public final class AsMapTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size() - count));
-//    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
-//    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(count)));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
 
@@ -867,15 +867,13 @@ public final class AsMapTest {
     assertThat(map, is(equalTo(context.original())));
   }
 
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfPresent_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.computeIfPresent(context.absentKey(), (key, value) -> -key), is(nullValue()));
     assertThat(map.get(context.absentKey()), is(nullValue()));
     assertThat(map.size(), is(context.original().size()));
-
-
-
   }
 
   @Test(dataProvider = "caches")
@@ -883,14 +881,16 @@ public final class AsMapTest {
   public void computeIfPresent_present(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.computeIfPresent(key, (k, v) -> k), is(key));
-      assertThat(map.get(key), is(key));
     }
     int count = context.firstMiddleLastKeys().size();
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
+    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(map.get(key), is(key));
+    }
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
-
-
-
   }
 
   /* ---------------- compute -------------- */
@@ -965,11 +965,10 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void compute_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.compute(context.absentKey(), (key, value) -> -key), is(-context.absentKey()));
+//    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+//    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
     assertThat(map.get(context.absentKey()), is(-context.absentKey()));
     assertThat(map.size(), is(1 + context.original().size()));
-
-
-
   }
 
   @Test(dataProvider = "caches")
@@ -977,14 +976,16 @@ public final class AsMapTest {
   public void compute_sameValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.compute(key, (k, v) -> -k), is(-key));
+    }
+//  assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+//  assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+
+    for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(-key));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
-
-
-
   }
 
   @Test(dataProvider = "caches")
@@ -992,14 +993,15 @@ public final class AsMapTest {
   public void compute_differentValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.compute(key, (k, v) -> k), is(key));
+    }
+//  assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+//  assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(key));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
-
-
-
   }
 
   /* ---------------- merge -------------- */
@@ -1031,13 +1033,12 @@ public final class AsMapTest {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.merge(key, -key, (k, v) -> null), is(nullValue()));
     }
+//  assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+//  assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size() - count));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-
-
-
   }
 
   @CheckNoStats
@@ -1093,11 +1094,10 @@ public final class AsMapTest {
   public void merge_absent(Map<Integer, Integer> map, CacheContext context) {
     Integer result = map.merge(context.absentKey(), -context.absentKey(), (key, value) -> -key);
     assertThat(result, is(-context.absentKey()));
+//  assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+//  assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
     assertThat(map.get(context.absentKey()), is(-context.absentKey()));
     assertThat(map.size(), is(1 + context.original().size()));
-
-
-
   }
 
   @Test(dataProvider = "caches")
@@ -1105,14 +1105,15 @@ public final class AsMapTest {
   public void merge_sameValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.merge(key, -key, (k, v) -> k), is(-key));
+    }
+//  assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+//  assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(-key));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
-
-
-
   }
 
   @Test(dataProvider = "caches")
@@ -1120,14 +1121,16 @@ public final class AsMapTest {
   public void merge_differentValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.merge(key, key, (k, v) -> k + v), is(0));
+    }
+//  assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+//  assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+
+    for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(0));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
-
-
-
   }
 
   /* ---------------- equals / hashCode -------------- */

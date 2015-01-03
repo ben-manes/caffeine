@@ -1100,6 +1100,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     Runnable[] task = new Runnable[1];
     Node<K, V> node = data.computeIfPresent(key, (k, prior) -> {
+      statsCounter.recordHits(1);
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
         V newValue = statsAware(remappingFunction).apply(k, oldWeightedValue.value);
@@ -1126,7 +1127,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       }
     });
     if (task[0] == null) {
-      afterRead(node, true);
+      afterRead(node, false);
     } else {
       afterWrite(node, task[0]);
     }
@@ -1139,7 +1140,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean isRefresh) {
+      boolean recordMiss) {
     requireNonNull(remappingFunction);
 
     @SuppressWarnings("unchecked")
@@ -1147,7 +1148,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     Runnable[] task = new Runnable[2];
     Node<K, V> node = data.compute(key, (k, prior) -> {
       if (prior == null) {
-        newValue[0] = statsAware(remappingFunction, isRefresh).apply(k, null);
+        newValue[0] = statsAware(remappingFunction, recordMiss).apply(k, null);
         if (newValue[0] == null) {
           return null;
         }
@@ -1171,7 +1172,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           }
           oldValue = null;
         }
-        newValue[0] = statsAware(remappingFunction, isRefresh).apply(k, oldValue);
+        newValue[0] = statsAware(remappingFunction, recordMiss).apply(k, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
@@ -1273,18 +1274,18 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
-    return statsAware(remappingFunction, false);
+    return statsAware(remappingFunction, true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
   <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
-      BiFunction<? super T, ? super U, ? extends R> remappingFunction, boolean isRefresh) {
+      BiFunction<? super T, ? super U, ? extends R> remappingFunction, boolean recordMiss) {
     if (!isRecordingStats) {
       return remappingFunction;
     }
     return (t, u) -> {
       R result;
-      if ((u == null) && !isRefresh) {
+      if ((u == null) && recordMiss) {
         statsCounter.recordMisses(1);
       }
       long startTime = ticker.read();
@@ -2254,17 +2255,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
       if (!hasBulkLoader) {
-        int misses = keysToLoad.size();
         try {
           for (K key : keysToLoad) {
-            misses--;
             V value = cache.compute(key, (k, v) -> loader.load(key));
             result.put(key, value);
           }
         } finally {
-          if (misses > 0) {
-            cache.statsCounter.recordMisses(misses);
-          }
+          cache.statsCounter.recordMisses(keysToLoad.size());
         }
         return;
       }
@@ -2298,7 +2295,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       requireNonNull(key);
       cache.executor.execute(() -> {
         try {
-          cache.compute(key, loader::refresh, true);
+          cache.compute(key, loader::refresh, false);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }

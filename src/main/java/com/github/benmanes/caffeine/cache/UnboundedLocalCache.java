@@ -217,13 +217,15 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
       return null;
     }
     if (!hasRemovalListener()) {
-      return data.computeIfPresent(key, statsAware(remappingFunction));
+      statsCounter.recordHits(1);
+      return data.computeIfPresent(key, statsAware(remappingFunction, false));
     }
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = data.computeIfPresent(key, (K k, V oldValue) -> {
-      V newValue = statsAware(remappingFunction).apply(k, oldValue);
+      statsCounter.recordHits(1);
+      V newValue = statsAware(remappingFunction, false).apply(k, oldValue);
       notification[0] = (newValue == null)
           ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
           : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
@@ -241,16 +243,16 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
   }
 
   V compute(K key,
-      BiFunction<? super K, ? super V, ? extends V> remappingFunction, boolean isRefresh) {
+      BiFunction<? super K, ? super V, ? extends V> remappingFunction, boolean recordMiss) {
     if (!hasRemovalListener()) {
-      return data.compute(key, statsAware(remappingFunction, isRefresh));
+      return data.compute(key, statsAware(remappingFunction, recordMiss));
     }
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = data.compute(key, (K k, V oldValue) -> {
-      V newValue = statsAware(remappingFunction, isRefresh).apply(k, oldValue);
+      V newValue = statsAware(remappingFunction, recordMiss).apply(k, oldValue);
       if (oldValue != null) {
         notification[0] = (newValue == null)
             ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
@@ -315,18 +317,18 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
-    return statsAware(remappingFunction, false);
+    return statsAware(remappingFunction, true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
   <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
-      BiFunction<? super T, ? super U, ? extends R> remappingFunction, boolean isRefresh) {
+      BiFunction<? super T, ? super U, ? extends R> remappingFunction, boolean recordMiss) {
     if (!isRecordingStats) {
       return remappingFunction;
     }
     return (t, u) -> {
       R result;
-      if ((u == null) && !isRefresh) {
+      if ((u == null) && recordMiss) {
         statsCounter.recordMisses(1);
       }
       long startTime = ticker.read();
@@ -899,17 +901,13 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
     private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
       if (!hasBulkLoader) {
-        int misses = keysToLoad.size();
         try {
           for (K key : keysToLoad) {
-            misses--;
             V value = cache.compute(key, (k, v) -> loader.load(key));
             result.put(key, value);
           }
         } finally {
-          if (misses > 0) {
-            cache.statsCounter.recordMisses(misses);
-          }
+          cache.statsCounter.recordMisses(keysToLoad.size());
         }
         return;
       }
@@ -943,7 +941,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
       requireNonNull(key);
       cache.executor.execute(() -> {
         try {
-          cache.compute(key, loader::refresh, true);
+          cache.compute(key, loader::refresh, false);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }
