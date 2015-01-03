@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -95,6 +96,36 @@ public @interface CacheSpec {
   enum Stats {
     ENABLED,
     DISABLED
+  }
+
+  /* ---------------- Maximum size -------------- */
+
+  /** The weigher, each resulting in a new combination. */
+  CacheWeigher[] weigher() default {
+    CacheWeigher.DEFAULT,
+    CacheWeigher.TEN
+  };
+
+  enum CacheWeigher implements Weigher<Object, Object> {
+    /** A flag indicating that no weigher is set when building the cache. */
+    DEFAULT(1),
+    /** A flag indicating that every entry is valued at 10 units. */
+    TEN(10);
+
+    private int multiplier;
+
+    private CacheWeigher(int multiplier) {
+      this.multiplier = multiplier;
+    }
+
+    @Override
+    public int weigh(Object key, Object value) {
+      return multiplier;
+    }
+
+    public int multipler() {
+      return multiplier;
+    }
   }
 
   /* ---------------- Maximum size -------------- */

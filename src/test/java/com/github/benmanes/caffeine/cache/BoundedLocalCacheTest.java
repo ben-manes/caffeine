@@ -42,6 +42,7 @@ import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
@@ -111,7 +112,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(implementation = Implementation.Caffeine, weigher = CacheWeigher.DEFAULT,
       population = Population.EMPTY, maximumSize = MaximumSize.TEN)
   public void evict_lru(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);

@@ -18,12 +18,11 @@ package com.github.benmanes.caffeine.cache.testing;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
@@ -56,7 +55,7 @@ final class CacheGenerator {
     return combinations().stream()
         .map(this::newCacheContext)
         .map(context -> {
-          Cache<Integer, Integer> cache = newCache(context);
+          Cache<Integer, Integer> cache = CacheFromContext.newCache(context);
           populate(context, cache);
           return Maps.immutableEntry(context, cache);
         });
@@ -67,6 +66,7 @@ final class CacheGenerator {
     return Sets.cartesianProduct(
         ImmutableSet.copyOf(cacheSpec.initialCapacity()),
         ImmutableSet.copyOf(cacheSpec.stats()),
+        ImmutableSet.copyOf(cacheSpec.weigher()),
         ImmutableSet.copyOf(cacheSpec.maximumSize()),
         ImmutableSet.copyOf(cacheSpec.expireAfterAccess()),
         ImmutableSet.copyOf(cacheSpec.expireAfterWrite()),
@@ -81,66 +81,22 @@ final class CacheGenerator {
   }
 
   private CacheContext newCacheContext(List<Object> combination) {
+    int index = 0;
     return new CacheContext(
-        (InitialCapacity) combination.get(0),
-        (Stats) combination.get(1),
-        (MaximumSize) combination.get(2),
-        (Expire) combination.get(3),
-        (Expire) combination.get(4),
-        (ReferenceType) combination.get(5),
-        (ReferenceType) combination.get(6),
-        (CacheExecutor) combination.get(7),
-        (Listener) combination.get(8),
-        (Population) combination.get(9),
-        (Boolean) combination.get(10),
-        (Loader) combination.get(11),
-        (Implementation) combination.get(12));
-  }
-
-  private Cache<Integer, Integer> newCache(CacheContext context) {
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
-    if (context.initialCapacity != InitialCapacity.DEFAULT) {
-      builder.initialCapacity(context.initialCapacity.size());
-    }
-    if (context.isRecordingStats()) {
-      builder.recordStats();
-    }
-    if (context.maximumSize != MaximumSize.DISABLED) {
-      builder.maximumSize(context.maximumSize.max());
-    }
-    if (context.afterAccess != Expire.DISABLED) {
-      builder.expireAfterAccess(context.afterAccess.timeNanos(), TimeUnit.NANOSECONDS);
-    }
-    if (context.afterWrite != Expire.DISABLED) {
-      builder.expireAfterWrite(context.afterWrite.timeNanos(), TimeUnit.NANOSECONDS);
-    }
-    if (context.expires()) {
-      builder.ticker(context.ticker());
-    }
-    if (context.keyStrength == ReferenceType.WEAK) {
-      builder.weakKeys();
-    } else if (context.keyStrength == ReferenceType.SOFT) {
-      throw new IllegalStateException();
-    }
-    if (context.valueStrength == ReferenceType.WEAK) {
-      builder.weakValues();
-    } else if (context.valueStrength == ReferenceType.SOFT) {
-      builder.softValues();
-    }
-    if (context.executor != null) {
-      builder.executor(context.executor);
-    }
-    if (context.removalListenerType != Listener.DEFAULT) {
-      builder.removalListener(context.removalListener);
-    }
-    if (context.implementation() == Implementation.Guava) {
-      context.cache = GuavaLocalCache.newGuavaCache(context);
-    } else if (context.loader == null) {
-      context.cache = builder.build();
-    } else {
-      context.cache = builder.build(context.loader);
-    }
-    return context.cache;
+        (InitialCapacity) combination.get(index++),
+        (Stats) combination.get(index++),
+        (CacheWeigher) combination.get(index++),
+        (MaximumSize) combination.get(index++),
+        (Expire) combination.get(index++),
+        (Expire) combination.get(index++),
+        (ReferenceType) combination.get(index++),
+        (ReferenceType) combination.get(index++),
+        (CacheExecutor) combination.get(index++),
+        (Listener) combination.get(index++),
+        (Population) combination.get(index++),
+        (Boolean) combination.get(index++),
+        (Loader) combination.get(index++),
+        (Implementation) combination.get(index++));
   }
 
   private void populate(CacheContext context, Cache<Integer, Integer> cache) {

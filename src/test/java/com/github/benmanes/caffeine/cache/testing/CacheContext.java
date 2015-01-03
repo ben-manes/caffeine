@@ -37,6 +37,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
@@ -64,6 +65,7 @@ public final class CacheContext {
   final ReferenceType keyStrength;
   final MaximumSize maximumSize;
   final Population population;
+  final CacheWeigher weigher;
   final Expire afterAccess;
   final Expire afterWrite;
   final Executor executor;
@@ -74,7 +76,7 @@ public final class CacheContext {
   final Map<Integer, Integer> original;
   final RemovalListener<Integer, Integer> removalListener;
 
-  Cache<Integer, Integer> cache;
+  Cache<?, ?> cache;
   @Nullable Integer firstKey;
   @Nullable Integer middleKey;
   @Nullable Integer lastKey;
@@ -83,12 +85,13 @@ public final class CacheContext {
   Integer absentKey;
   Set<Integer> absentKeys;
 
-  public CacheContext(InitialCapacity initialCapacity, Stats stats, MaximumSize maximumSize,
-      Expire afterAccess, Expire afterWrite, ReferenceType keyStrength,
+  public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
+      MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, ReferenceType keyStrength,
       ReferenceType valueStrength, CacheExecutor cacheExecutor, Listener removalListenerType,
       Population population, boolean isLoading, Loader loader, Implementation implementation) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
+    this.weigher = requireNonNull(weigher);
     this.maximumSize = requireNonNull(maximumSize);
     this.afterAccess = requireNonNull(afterAccess);
     this.afterWrite = requireNonNull(afterWrite);
@@ -151,6 +154,18 @@ public final class CacheContext {
   public long maximumSize() {
     assertThat("Invalid usage of context", maximumSize, is(not(nullValue())));
     return maximumSize.max();
+  }
+
+  public long maximumWeight() {
+    assertThat("Invalid usage of context", (weigher != CacheWeigher.DEFAULT), is(not(nullValue())));
+    long maximum = weigher.multipler() * maximumSize.max();
+    return (maximum < 0) ? Long.MAX_VALUE : maximum;
+  }
+
+  public long maximumWeightOrSize() {
+    return (weigher == CacheWeigher.DEFAULT)
+        ? maximumSize()
+        : maximumWeight();
   }
 
   public boolean isUnbounded() {

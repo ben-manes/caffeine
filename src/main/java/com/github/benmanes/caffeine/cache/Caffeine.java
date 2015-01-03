@@ -619,6 +619,7 @@ public final class Caffeine<K, V> {
 
   boolean isBounded() {
     return (maximumSize != UNSET_INT)
+        || (maximumWeight != UNSET_INT)
         || (expireAfterAccessNanos != UNSET_INT)
         || (expireAfterWriteNanos != UNSET_INT)
         || (keyStrength != Strength.STRONG)

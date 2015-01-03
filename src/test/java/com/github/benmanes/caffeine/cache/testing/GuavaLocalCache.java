@@ -34,6 +34,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
@@ -55,7 +56,7 @@ public final class GuavaLocalCache {
   private GuavaLocalCache() {}
 
   /** Returns a Guava-backed cache. */
-  public static Cache<Integer, Integer> newGuavaCache(CacheContext context) {
+  public static <K, V> Cache<K, V> newGuavaCache(CacheContext context) {
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());
@@ -64,7 +65,12 @@ public final class GuavaLocalCache {
       builder.recordStats();
     }
     if (context.maximumSize != MaximumSize.DISABLED) {
-      builder.maximumSize(context.maximumSize.max());
+      if (context.weigher == CacheWeigher.DEFAULT) {
+        builder.maximumSize(context.maximumSize.max());
+      } else {
+        builder.weigher((key, value) -> context.weigher.weigh(key, value));
+        builder.maximumWeight(context.maximumWeight());
+      }
     }
     if (context.afterAccess != Expire.DISABLED) {
       builder.expireAfterAccess(context.afterAccess.timeNanos(), TimeUnit.NANOSECONDS);
@@ -114,7 +120,9 @@ public final class GuavaLocalCache {
         }
       }), ticker);
     }
-    return context.cache;
+    @SuppressWarnings("unchecked")
+    Cache<K, V> castedCache = (Cache<K, V>) context.cache;
+    return castedCache;
   }
 
   static class GuavaCache<K, V> implements Cache<K, V> {

@@ -81,7 +81,7 @@ dependencies {
 test {
   useTestNG()
   options {
-    threadCount = 4
+    threadCount = 6
     parallel = 'methods'
   }
   testLogging {
