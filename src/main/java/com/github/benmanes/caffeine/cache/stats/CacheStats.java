@@ -42,11 +42,12 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  *     <li>Cache lookups that encounter a missing cache entry that is still loading will wait
  *         for loading to complete (whether successful or not) and then increment {@code missCount}.
  *   </ul>
+ *   <li>When an entry is computed through the {@linkplain Cache#asMap asMap}.
  *   <li>When an entry is evicted from the cache, {@code evictionCount} is incremented.
  *   <li>No stats are modified when a cache entry is invalidated or manually removed.
  *   <li>No stats are modified on a query to {@link Cache#getIfPresent}.
- *   <li>No stats are modified by operations invoked on the {@linkplain Cache#asMap asMap} view of
- *       the cache.
+ *   <li>No stats are modified by non-computing operations invoked on the
+ *       {@linkplain Cache#asMap asMap} view of the cache.
  * </ul>
  * <p>
  * A lookup is specifically defined as an invocation of one of the methods

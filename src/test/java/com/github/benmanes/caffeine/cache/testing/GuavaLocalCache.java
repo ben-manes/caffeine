@@ -23,6 +23,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
@@ -31,12 +32,16 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.google.common.base.Throwables;
+import com.google.common.cache.AbstractCache.SimpleStatsCounter;
+import com.google.common.cache.AbstractCache.StatsCounter;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.collect.ForwardingConcurrentMap;
@@ -89,8 +94,9 @@ public final class GuavaLocalCache {
         context.removalListener().onRemoval(notif);
       });
     }
+    Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker;
     if (context.loader == null) {
-      context.cache = new GuavaCache<>(builder.<Integer, Integer>build());
+      context.cache = new GuavaCache<>(builder.<Integer, Integer>build(), ticker);
     } else if (context.loader().isBulk()) {
       context.cache = new GuavaLoadingCache<>(builder.build(new CacheLoader<Integer, Integer>() {
         @Override
@@ -101,22 +107,26 @@ public final class GuavaLocalCache {
         public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) throws Exception {
           return context.loader().loadAll(keys);
         }
-      }));
+      }), ticker);
     } else {
       context.cache = new GuavaLoadingCache<>(builder.build(new CacheLoader<Integer, Integer>() {
         @Override  public Integer load(Integer key) throws Exception {
           return context.loader().load(key);
         }
-      }));
+      }), ticker);
     }
     return context.cache;
   }
 
   static class GuavaCache<K, V> implements Cache<K, V> {
     private final com.google.common.cache.Cache<K, V> cache;
+    private final StatsCounter statsCounter;
+    private final Ticker ticker;
 
-    GuavaCache(com.google.common.cache.Cache<K, V> cache) {
+    GuavaCache(com.google.common.cache.Cache<K, V> cache, Ticker ticker) {
+      this.statsCounter = new SimpleStatsCounter();
       this.cache = requireNonNull(cache);
+      this.ticker = ticker;
     }
 
     @Override
@@ -177,7 +187,7 @@ public final class GuavaLocalCache {
 
     @Override
     public CacheStats stats() {
-      com.google.common.cache.CacheStats stats = cache.stats();
+      com.google.common.cache.CacheStats stats = statsCounter.snapshot().plus(cache.stats());
       return new CacheStats(stats.hitCount(), stats.missCount(), stats.loadSuccessCount(),
           stats.loadExceptionCount(), stats.totalLoadTime(), stats.evictionCount());
     }
@@ -224,6 +234,57 @@ public final class GuavaLocalCache {
           return delegate().replace(key, oldValue, newValue);
         }
         @Override
+        public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+          requireNonNull(mappingFunction);
+          V value = getIfPresent(key);
+          if (value != null) {
+            return value;
+          }
+          long now = ticker.read();
+          try {
+            value = mappingFunction.apply(key);
+            long loadTime = (ticker.read() - now);
+            if (value == null) {
+              statsCounter.recordLoadException(loadTime);
+              return null;
+            } else {
+              statsCounter.recordLoadSuccess(loadTime);
+              V v = putIfAbsent(key, value);
+              return (v == null) ? value : v;
+            }
+          } catch (Throwable t) {
+            statsCounter.recordLoadException((ticker.read() - now));
+            throw Throwables.propagate(t);
+          }
+        }
+        @Override
+        public V computeIfPresent(K key,
+            BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+          requireNonNull(remappingFunction);
+          V oldValue;
+          long now = ticker.read();
+          if ((oldValue = getIfPresent(key)) != null) {
+            try {
+              V newValue = remappingFunction.apply(key, oldValue);
+              long loadTime = ticker.read() - now;
+              if (newValue == null) {
+                statsCounter.recordLoadException(loadTime);
+                remove(key);
+                return null;
+              } else {
+                statsCounter.recordLoadSuccess(loadTime);
+                put(key, newValue);
+                return newValue;
+              }
+            } catch (Throwable t) {
+              statsCounter.recordLoadException(ticker.read() - now);
+              throw Throwables.propagate(t);
+            }
+          } else {
+            return null;
+          }
+        }
+        @Override
         protected ConcurrentMap<K, V> delegate() {
           return cache.asMap();
         }
@@ -254,8 +315,8 @@ public final class GuavaLocalCache {
   static class GuavaLoadingCache<K, V> extends GuavaCache<K, V> implements LoadingCache<K, V> {
     private final com.google.common.cache.LoadingCache<K, V> cache;
 
-    GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache) {
-      super(cache);
+    GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache, Ticker ticker) {
+      super(cache, ticker);
       this.cache = requireNonNull(cache);
     }
 

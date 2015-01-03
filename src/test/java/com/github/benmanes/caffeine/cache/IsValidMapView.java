@@ -15,17 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.Map;
+
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 /**
- * A matcher that evaluates a {@link Cache} to determine if it is in a valid state.
+ * A matcher that evaluates a {@link Cache#asMap()} to determine if it is in a valid state.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class IsValidCache<K, V>
-    extends TypeSafeDiagnosingMatcher<Cache<K, V>> {
+public final class IsValidMapView<K, V> extends TypeSafeDiagnosingMatcher<Map<K, V>> {
 
   @Override
   public void describeTo(Description description) {
@@ -33,17 +34,16 @@ public final class IsValidCache<K, V>
   }
 
   @Override
-  protected boolean matchesSafely(Cache<K, V> cache, Description description) {
-    if (cache instanceof BoundedLocalCache.LocalManualCache<?, ?>) {
-      BoundedLocalCache.LocalManualCache<K, V> local =
-          (BoundedLocalCache.LocalManualCache<K, V>) cache;
-      return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
+  protected boolean matchesSafely(Map<K, V> map, Description description) {
+    if (map instanceof BoundedLocalCache<?, ?>) {
+      BoundedLocalCache<K, V> cache = (BoundedLocalCache<K, V>) map;
+      return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(cache, description);
     }
     return true;
   }
 
   @Factory
-  public static <K, V> IsValidCache<K, V> validCache() {
-    return new IsValidCache<K, V>();
+  public static <K, V> IsValidMapView<K, V> validAsMap() {
+    return new IsValidMapView<K, V>();
   }
 }

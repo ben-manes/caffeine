@@ -436,9 +436,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * Performs the post-processing work required after a read.
    *
    * @param node the entry in the page replacement policy
+   * @param recordStats if the hit count should be incremented
    */
-  void afterRead(Node<K, V> node) {
-    statsCounter.recordHits(1);
+  void afterRead(Node<K, V> node, boolean recordStats) {
+    if (recordStats) {
+      statsCounter.recordHits(1);
+    }
     node.setAccessTime(ticker.read());
     final int bufferIndex = readBufferIndex();
     final long writeCount = recordRead(bufferIndex, node);
@@ -806,6 +809,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   @Override
   public V get(Object key) {
+    return getIfPresent(key, false);
+  }
+
+  public V getIfPresent(Object key, boolean recordStats) {
     final Node<K, V> node = data.get(key);
     if (node == null) {
       statsCounter.recordMisses(1);
@@ -815,7 +822,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       tryToDrainBuffers();
       return null;
     }
-    afterRead(node);
+    afterRead(node, recordStats);
     return node.getValue();
   }
 
@@ -835,7 +842,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       result.put(castKey, value);
 
       // TODO(ben): batch reads to call tryLock once
-      afterRead(node);
+      afterRead(node, true);
     }
     statsCounter.recordMisses(misses);
     return Collections.unmodifiableMap(result);
@@ -891,7 +898,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         afterWrite(node, new AddTask(node, weight));
         return null;
       } else if (onlyIfAbsent) {
-        afterRead(prior);
+        afterRead(prior, true);
         return prior.getValue();
       }
       WeightedValue<V> oldWeightedValue;
@@ -906,7 +913,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       final int weightedDifference = weight - oldWeightedValue.weight;
       if (weightedDifference == 0) {
         node.setWriteTime(ticker.read());
-        afterRead(prior);
+        afterRead(prior, false);
       } else {
         afterWrite(node, new UpdateTask(prior, weightedDifference));
       }
@@ -991,7 +998,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     final int weightedDifference = weight - oldWeightedValue.weight;
     if (weightedDifference == 0) {
       node.setWriteTime(ticker.read());
-      afterRead(node);
+      afterRead(node, true);
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
@@ -1025,7 +1032,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     final int weightedDifference = weight - oldWeightedValue.weight;
     if (weightedDifference == 0) {
       node.setWriteTime(ticker.read());
-      afterRead(node);
+      afterRead(node, true);
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
@@ -1050,7 +1057,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           }
         }
       } else {
-        afterRead(node);
+        afterRead(node, true);
         return node.getValue();
       }
     }
@@ -1071,7 +1078,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return null;
     }
     if (weightedValue[0] == null) {
-      afterRead(node);
+      afterRead(node, true);
       return node.getValue();
     } else {
       afterWrite(node, new AddTask(node, weightedValue[0].weight));
@@ -1119,7 +1126,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       }
     });
     if (task[0] == null) {
-      afterRead(node);
+      afterRead(node, true);
     } else {
       afterWrite(node, task[0]);
     }
@@ -2028,7 +2035,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public V getIfPresent(Object key) {
-      return cache.get(key);
+      return cache.getIfPresent(key, true);
     }
 
     @Override
@@ -2234,7 +2241,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         if (value == null) {
           keysToLoad.add(key);
         } else {
-          cache.afterRead(node); // TODO(ben): batch
+          cache.afterRead(node, true); // TODO(ben): batch
           result.put(key, value);
         }
       }

@@ -15,9 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static com.github.benmanes.caffeine.cache.IsValidCache.validate;
+import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
+import static com.github.benmanes.caffeine.cache.IsValidMapView.validAsMap;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.is;
+
+import java.lang.reflect.Method;
+import java.util.Map;
 
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
@@ -30,19 +39,31 @@ import com.github.benmanes.caffeine.cache.Cache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CacheValidationListener implements IInvokedMethodListener {
+public class CacheValidationListener implements IInvokedMethodListener {
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
 
   @Override
   public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
+    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+    boolean checkNoStats = false;//testMethod.isAnnotationPresent(CheckNoStats.class);
     try {
       if (testResult.isSuccess()) {
         for (Object param : testResult.getParameters()) {
           if (param instanceof Cache<?, ?>) {
-            assertThat((Cache<?, ?>) param, is(validate()));
+            assertThat((Cache<?, ?>) param, is(validCache()));
+          } else if (param instanceof Map<?, ?>) {
+            assertThat((Map<?, ?>) param, is(validAsMap()));
+          } else if (checkNoStats && (param instanceof CacheContext)) {
+            checkNoStats = false;
+            CacheContext context = (CacheContext) param;
+            assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+            assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
           }
+        }
+        if (checkNoStats) {
+          throw new AssertionError("Test requires CacheContext param for validation");
         }
       }
     } catch (AssertionError caught) {

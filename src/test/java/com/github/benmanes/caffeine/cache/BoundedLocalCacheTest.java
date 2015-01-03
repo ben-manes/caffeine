@@ -245,10 +245,10 @@ public final class BoundedLocalCacheTest {
     PaddedAtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
     localCache.readBufferWriteCount[index].set(BoundedLocalCache.READ_BUFFER_THRESHOLD - 1);
 
-    localCache.afterRead(dummy);
+    localCache.afterRead(dummy, true);
     assertThat(drainCounter.get(), is(0L));
 
-    localCache.afterRead(dummy);
+    localCache.afterRead(dummy, true);
     assertThat(drainCounter.get(), is(BoundedLocalCache.READ_BUFFER_THRESHOLD + 1L));
   }
 

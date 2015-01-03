@@ -396,7 +396,13 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   @Override
   public V putIfAbsent(K key, V value) {
-    return data.putIfAbsent(key, value);
+    V val = data.putIfAbsent(key, value);
+    if (val == null) {
+      statsCounter.recordMisses(1);
+    } else {
+      statsCounter.recordHits(1);
+    }
+    return val;
   }
 
   @Override
