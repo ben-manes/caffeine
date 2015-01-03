@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
-import static com.jayway.awaitility.Awaitility.await;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -60,11 +59,6 @@ import com.jayway.awaitility.Awaitility;
 public final class BoundedLocalCacheTest {
   final Executor executor = Executors.newCachedThreadPool();
 
-  static {
-    Awaitility.setDefaultPollDelay(1, TimeUnit.MILLISECONDS);
-    Awaitility.setDefaultPollInterval(1, TimeUnit.MILLISECONDS);
-  }
-
   static BoundedLocalCache<Integer, Integer> asBoundedLocalCache(Cache<Integer, Integer> cache) {
     LocalManualCache<Integer, Integer> local = (LocalManualCache<Integer, Integer>) cache;
     return local.cache;
@@ -84,7 +78,10 @@ public final class BoundedLocalCacheTest {
         localCache.put(context.absentKey(), -context.absentKey());
         assertThat(localCache.remove(context.firstKey()), is(-context.firstKey()));
       }).start();
-      await().until(() -> localCache.containsKey(context.firstKey()), is(false));
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .await().until(() -> localCache.containsKey(context.firstKey()), is(false));
       checkStatus(localCache, node, Status.RETIRED);
       localCache.drainBuffers();
 
@@ -239,7 +236,7 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onRead(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> dummy = new Node<>(null, null);
+    Node<Integer, Integer> dummy = new Node<>(null, null, 0);
 
     int index = BoundedLocalCache.readBufferIndex();
     PaddedAtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
@@ -257,7 +254,7 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> dummy = new Node<>(null, null);
+    Node<Integer, Integer> dummy = new Node<>(null, null, 0);
 
     boolean[] ran = new boolean[1];
     localCache.afterWrite(dummy, () -> ran[0] = true);
@@ -320,7 +317,10 @@ public final class BoundedLocalCacheTest {
     localCache.evictionLock.lock();
     try {
       thread.start();
-      await().untilTrue(done);
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .untilTrue(done);
     } finally {
       localCache.evictionLock.unlock();
     }
@@ -392,10 +392,16 @@ public final class BoundedLocalCacheTest {
         task.run();
         done.set(true);
       });
-      await().until(() -> lock.hasQueuedThreads());
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .until(() -> lock.hasQueuedThreads());
     } finally {
       lock.unlock();
     }
-    await().untilTrue(done);
+    Awaitility.with()
+        .pollDelay(1, TimeUnit.MILLISECONDS).and()
+        .pollInterval(1, TimeUnit.MILLISECONDS)
+        .untilTrue(done);
   }
 }

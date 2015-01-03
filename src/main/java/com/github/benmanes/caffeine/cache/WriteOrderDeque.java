@@ -48,7 +48,7 @@ final class WriteOrderDeque<E extends WriteOrder<E>> extends AbstractLinkedDeque
   }
 
   // A fast-path removal
-  boolean remove(E e) {
+  public boolean remove(E e) {
     if (contains(e)) {
       unlink(e);
       return true;

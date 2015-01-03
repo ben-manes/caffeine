@@ -296,9 +296,6 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
-  public abstract boolean remove(Object o);
-
-  @Override
   public E removeFirst() {
     checkNotEmpty();
     return pollFirst();

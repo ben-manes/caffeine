@@ -39,17 +39,12 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.google.common.testing.SerializableTester;
-import com.jayway.awaitility.Awaitility;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EliminationStackTest {
   static final int POPULATED_SIZE = 5;
-
-  static {
-    Awaitility.reset();
-  }
 
   @Test(dataProvider = "empty")
   public void clear_whenEmpty(EliminationStack<Integer> stack) {

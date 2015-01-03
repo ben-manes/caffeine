@@ -193,14 +193,14 @@ public @interface CacheSpec {
     /** Prevents referent from being reclaimed by the garbage collector. */
     STRONG,
 
+    /** Referent reclaimed when no strong or soft references exist. */
+    WEAK,
+
     /**
      * Referent reclaimed in an LRU fashion when the VM runs low on memory and no strong
      * references exist.
      */
-    SOFT,
-
-    /** Referent reclaimed when no strong or soft references exist. */
-    WEAK
+    SOFT
   }
 
   /* ---------------- Removal -------------- */
