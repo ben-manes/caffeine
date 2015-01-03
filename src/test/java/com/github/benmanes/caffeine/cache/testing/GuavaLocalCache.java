@@ -311,6 +311,38 @@ public final class GuavaLocalCache {
           }
         }
         @Override
+        public V merge(K key, V value,
+            BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+          requireNonNull(remappingFunction);
+          requireNonNull(value);
+          V oldValue = get(key);
+          for (;;) {
+            if (oldValue != null) {
+              long now = ticker.read();
+              try {
+                V newValue = remappingFunction.apply(oldValue, value);
+                if (newValue != null) {
+                  if (replace(key, oldValue, newValue)) {
+                    statsCounter.recordLoadSuccess(ticker.read() - now);
+                    return newValue;
+                  }
+                } else if (remove(key, oldValue)) {
+                  statsCounter.recordLoadException(ticker.read() - now);
+                  return null;
+                }
+              } catch (RuntimeException | Error e) {
+                statsCounter.recordLoadException(ticker.read() - now);
+                throw e;
+              }
+              oldValue = get(key);
+            } else {
+              if ((oldValue = putIfAbsent(key, value)) == null) {
+                return value;
+              }
+            }
+          }
+        }
+        @Override
         protected ConcurrentMap<K, V> delegate() {
           return cache.asMap();
         }
