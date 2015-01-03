@@ -227,14 +227,16 @@ public final class LoadingCacheTest {
   public void refresh_present_sameValue(LoadingCache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.refresh(key);
-      // records a hit
-      assertThat(cache.get(key), is(-key));
     }
     int count = context.firstMiddleLastKeys().size();
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+
+    for (Integer key : context.firstMiddleLastKeys()) {
+      assertThat(cache.get(key), is(-key));
+    }
     assertThat(cache.size(), is(context.initialSize()));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
   }
 
   @Test(dataProvider = "caches")

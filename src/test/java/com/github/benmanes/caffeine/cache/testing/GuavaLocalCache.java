@@ -39,7 +39,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
-import com.google.common.base.Throwables;
 import com.google.common.cache.AbstractCache.SimpleStatsCounter;
 import com.google.common.cache.AbstractCache.StatsCounter;
 import com.google.common.cache.CacheBuilder;
@@ -252,9 +251,9 @@ public final class GuavaLocalCache {
               V v = putIfAbsent(key, value);
               return (v == null) ? value : v;
             }
-          } catch (Throwable t) {
+          } catch (RuntimeException | Error e) {
             statsCounter.recordLoadException((ticker.read() - now));
-            throw Throwables.propagate(t);
+            throw e;
           }
         }
         @Override
@@ -277,12 +276,38 @@ public final class GuavaLocalCache {
                 put(key, newValue);
                 return newValue;
               }
-            } catch (Throwable t) {
+            } catch (RuntimeException | Error e) {
               statsCounter.recordLoadException(ticker.read() - now);
-              throw Throwables.propagate(t);
+              throw e;
             }
           } else {
             return null;
+          }
+        }
+        @Override
+        public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+          requireNonNull(remappingFunction);
+          V oldValue = get(key);
+
+          long now = ticker.read();
+          try {
+            V newValue = remappingFunction.apply(key, oldValue);
+            if (newValue == null) {
+              if (oldValue != null || containsKey(key)) {
+                remove(key);
+                statsCounter.recordLoadException(ticker.read() - now);
+                return null;
+              } else {
+                return null;
+              }
+            } else {
+              statsCounter.recordLoadSuccess(ticker.read() - now);
+              put(key, newValue);
+              return newValue;
+            }
+          } catch (RuntimeException | Error e) {
+            statsCounter.recordLoadException(ticker.read() - now);
+            throw e;
           }
         }
         @Override

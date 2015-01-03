@@ -69,11 +69,7 @@ import com.google.common.testing.SerializableTester;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsMapTest {
-  // Guava does not record stats for the asMap() view. While a reasonable expectation in earlier
-  // versions of Java, the new computable methods requires a reconsideration. Caffeine records
-  // stats for lookups and computations.
-
-  // Verify: get, getOrDefault, put, putIfAbsent, replace, compute, merge, entrySet#add
+  // Statistics are recorded only for computing methods for loadSuccess and loadFailure
 
   /* ---------------- is empty / size / clear -------------- */
 
@@ -389,20 +385,13 @@ public final class AsMapTest {
     map.putIfAbsent(null, null);
   }
 
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
   removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putIfAbsent_present(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.putIfAbsent(key, key), is(-key));
-    }
-    if (context.implementation() != Implementation.Guava) {
-      int count = context.firstMiddleLastKeys().size();
-      assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
-    }
-
-    for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(-key));
     }
     assertThat(map.size(), is(context.original().size()));
@@ -811,7 +800,6 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
 
-  @CheckNoStats
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = StackOverflowError.class)
@@ -834,7 +822,6 @@ public final class AsMapTest {
     map.computeIfPresent(context.firstKey(), mappingFunction);
   }
 
-  @CheckNoStats
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = StackOverflowError.class)
@@ -856,7 +843,6 @@ public final class AsMapTest {
     map.computeIfPresent(context.firstKey(), mappingFunction);
   }
 
-  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -865,6 +851,8 @@ public final class AsMapTest {
       map.computeIfPresent(context.firstKey(), (key, value) -> { throw new Error(); });
     } catch (Error e) {}
     assertThat(map, is(equalTo(context.original())));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(1)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
   }
 
   @CheckNoStats
@@ -909,7 +897,6 @@ public final class AsMapTest {
     map.computeIfPresent(1, null);
   }
 
-  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void compute_remove(Map<Integer, Integer> map, CacheContext context) {
@@ -918,6 +905,9 @@ public final class AsMapTest {
     }
 
     int count = context.firstMiddleLastKeys().size();
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(count)));
+
     assertThat(map.size(), is(context.original().size() - count));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
@@ -951,7 +941,6 @@ public final class AsMapTest {
     map.computeIfPresent(context.firstKey(), mappingFunction);
   }
 
-  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void compute_error(Map<Integer, Integer> map, CacheContext context) {
@@ -959,6 +948,8 @@ public final class AsMapTest {
       map.compute(context.absentKey(), (key, value) -> { throw new Error(); });
     } catch (Error e) {}
     assertThat(map, is(equalTo(context.original())));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
   }
 
   @Test(dataProvider = "caches")

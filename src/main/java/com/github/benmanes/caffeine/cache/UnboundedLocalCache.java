@@ -402,13 +402,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   @Override
   public V putIfAbsent(K key, V value) {
-    V val = data.putIfAbsent(key, value);
-    if (val == null) {
-      statsCounter.recordMisses(1);
-    } else {
-      statsCounter.recordHits(1);
-    }
-    return val;
+    return data.putIfAbsent(key, value);
   }
 
   @Override
@@ -904,14 +898,11 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
     }
 
     private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
+      cache.statsCounter.recordMisses(keysToLoad.size());
       if (!hasBulkLoader) {
-        try {
-          for (K key : keysToLoad) {
-            V value = cache.compute(key, (k, v) -> loader.load(key));
-            result.put(key, value);
-          }
-        } finally {
-          cache.statsCounter.recordMisses(keysToLoad.size());
+        for (K key : keysToLoad) {
+          V value = cache.compute(key, (k, v) -> loader.load(key), false);
+          result.put(key, value);
         }
         return;
       }
@@ -930,7 +921,6 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
         }
         success = true;
       } finally {
-        cache.statsCounter.recordMisses(keysToLoad.size());
         long loadTime = cache.ticker.read() - startTime;
         if (success) {
           cache.statsCounter.recordLoadSuccess(loadTime);

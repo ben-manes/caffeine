@@ -42,7 +42,8 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  *     <li>Cache lookups that encounter a missing cache entry that is still loading will wait
  *         for loading to complete (whether successful or not) and then increment {@code missCount}.
  *   </ul>
- *   <li>When an entry is computed through the {@linkplain Cache#asMap asMap}.
+ *   <li>When an entry is computed through the {@linkplain Cache#asMap asMap} the
+ *       {@code loadSuccessCount} or {@code loadFailureCount} is incremented.
  *   <li>When an entry is evicted from the cache, {@code evictionCount} is incremented.
  *   <li>No stats are modified when a cache entry is invalidated or manually removed.
  *   <li>No stats are modified on a query to {@link Cache#getIfPresent}.

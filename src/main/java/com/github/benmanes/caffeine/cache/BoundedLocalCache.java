@@ -902,7 +902,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         afterWrite(node, new AddTask(node, weight));
         return null;
       } else if (onlyIfAbsent) {
-        afterRead(prior, true);
+        afterRead(prior, false);
         return prior.getValue();
       }
       WeightedValue<V> oldWeightedValue;
@@ -2260,14 +2260,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
+      cache.statsCounter.recordMisses(keysToLoad.size());
+
       if (!hasBulkLoader) {
-        try {
-          for (K key : keysToLoad) {
-            V value = cache.compute(key, (k, v) -> loader.load(key));
-            result.put(key, value);
-          }
-        } finally {
-          cache.statsCounter.recordMisses(keysToLoad.size());
+        for (K key : keysToLoad) {
+          V value = cache.compute(key, (k, v) -> loader.load(key), false);
+          result.put(key, value);
         }
         return;
       }
@@ -2286,7 +2284,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         }
         success = true;
       } finally {
-        cache.statsCounter.recordMisses(keysToLoad.size());
         long loadTime = cache.ticker.read() - startTime;
         if (success) {
           cache.statsCounter.recordLoadSuccess(loadTime);
