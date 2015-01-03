@@ -141,7 +141,7 @@ public @interface CacheSpec {
   /** The expiration time-to-live setting, each resulting in a new combination. */
   Expire[] expireAfterWrite() default {
     Expire.DISABLED,
-    //Expire.FOREVER
+    Expire.FOREVER
   };
 
   enum Expire {

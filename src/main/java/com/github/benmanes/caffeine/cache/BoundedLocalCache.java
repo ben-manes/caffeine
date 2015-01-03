@@ -399,6 +399,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     if (data.remove(node.key, node) && hasRemovalListener()) {
       notifyRemoval(node.key, node.getValue(), cause);
     }
+
+    writeOrderDeque.remove(node);
   }
 
   @GuardedBy("evictionLock")
