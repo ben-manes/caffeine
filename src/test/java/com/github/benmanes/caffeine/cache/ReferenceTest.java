@@ -21,8 +21,8 @@ import static org.hamcrest.Matchers.is;
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -42,10 +42,11 @@ import com.google.common.testing.GcFinalization;
 public final class ReferenceTest {
   // These are slow tests due to requiring a garbage collection cycle
 
-  @Test(enabled = false, dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL)
+  @Test(dataProvider = "caches")
+  @CacheSpec(keys = ReferenceType.WEAK, population = Population.EMPTY)
   public void evict_weakKeys(Cache<Integer, Integer> cache, CacheContext context) {
     context.original().clear();
+    cache.put(new Random().nextInt(), 0);
     GcFinalization.awaitFullGc();
     cleanUp(cache, context, 0);
     assertThat(cache.size(), is(0L));
@@ -77,7 +78,8 @@ public final class ReferenceTest {
         return; // passed
       }
     }
-    Assert.fail("Expected an empty cache but has size: " + cache.size());
+    cache.cleanUp();
+    assertThat(cache.size(), is(0L));
   }
 
   static void awaitSoftRefGc() {

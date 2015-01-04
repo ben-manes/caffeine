@@ -100,6 +100,10 @@ final class CacheGenerator {
   }
 
   private void populate(CacheContext context, Cache<Integer, Integer> cache) {
+    if (context.population.size() == 0) {
+      return;
+    }
+
     // Integer caches the object identity semantics of autoboxing for values between
     // -128 and 127 (inclusive) as required by JLS
     int base = 1000;

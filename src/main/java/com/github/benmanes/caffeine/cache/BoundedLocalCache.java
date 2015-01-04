@@ -403,9 +403,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     makeDead(node);
 
     // Notify the listener only if the entry was evicted
-    K key = node.getKey(keyStrategy);
-    if (data.remove(key, node) && hasRemovalListener()) {
-      notifyRemoval(key, node.getValue(valueStrategy), cause);
+    if (data.remove(node.keyRef, node) && hasRemovalListener()) {
+      notifyRemoval(node.getKey(keyStrategy), node.getValue(valueStrategy), cause);
     }
 
     accessOrderDeque.remove(node);
@@ -942,7 +941,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     final Object keyRef = keyStrategy.referenceKey(key, keyReferenceQueue);
     final Object valueRef = valueStrategy.referenceValue(keyRef, value, valueReferenceQueue);
     final WeightedValue<V> weightedValue = new WeightedValue<V>(valueRef, weight);
-    final Node<K, V> node = new Node<K, V>(key, weightedValue, now);
+    final Node<K, V> node = new Node<K, V>(keyRef, weightedValue, now);
 
     for (;;) {
       final Node<K, V> prior = data.putIfAbsent(keyRef, node);
@@ -2086,7 +2085,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     final E e;
 
     Ref(E e) {
-      this.e = requireNonNull(e);
+      this.e = e;
     }
     @Override public E get() {
       return e;
