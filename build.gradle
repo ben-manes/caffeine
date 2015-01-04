@@ -51,6 +51,7 @@ repositories {
 }
 
 def versions = [
+  checkstyle: '6.2',
   guava: '18.0',
 ]
 
@@ -76,6 +77,11 @@ dependencies {
 
   // Eclipse fails to include all of the dependencies without this workaround
   testCompile configurations.jmh.allDependencies
+
+  // For Google style checks
+  checkstyleConfig dependencies.create("com.puppycrawl.tools:checkstyle:${versions.checkstyle}") {
+    transitive = false
+  }
 }
 
 test {
@@ -93,9 +99,10 @@ test {
 }
 
 checkstyle {
-  toolVersion = '6.1.1'
   showViolations = true
   sourceSets = [sourceSets.main]
+  toolVersion = "${versions.checkstyle}"
+  config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
 }
 
 findbugs {
@@ -109,11 +116,16 @@ pmd {
 }
 
 tasks.withType(Checkstyle) {
-  enabled = false
+  enabled = System.properties.get('checkstyle', false)
+  doLast {
+    ant.xslt(in: "${buildDir}/reports/checkstyle/main.xml",
+             style: 'config/checkstyle/checkstyle.xsl',
+             out:"${buildDir}/reports/checkstyle/checkstyle.html")
+  }
 }
 
 tasks.withType(FindBugs) {
-  enabled = false
+  enabled = System.properties.get('findBugs', false)
   reports {
     xml.enabled = false
     html.enabled = true
@@ -121,7 +133,7 @@ tasks.withType(FindBugs) {
 }
 
 tasks.withType(Pmd) {
-  enabled = false
+  enabled = System.properties.get('pmd', false)
   reports {
     xml.enabled = false
     html.enabled = true
