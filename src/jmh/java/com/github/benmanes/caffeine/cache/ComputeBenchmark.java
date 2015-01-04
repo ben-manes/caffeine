@@ -89,24 +89,18 @@ public class ComputeBenchmark {
 
   private void setupConcurrentHashMap() {
     ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>(SIZE);
-    benchmarkFunction = (Integer key) -> map.computeIfAbsent(key, (Integer k) -> Boolean.TRUE);
+    benchmarkFunction = key -> map.computeIfAbsent(key, any -> Boolean.TRUE);
   }
 
   private void setupCaffeine() {
     Cache<Integer, Boolean> cache = Caffeine.newBuilder().build();
-    benchmarkFunction = (Integer key) -> {
-      try {
-        return cache.get(key, any -> Boolean.TRUE);
-      } catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-    };
+    benchmarkFunction = key -> cache.get(key, any -> Boolean.TRUE);
   }
 
   private void setupGuava() {
     com.google.common.cache.Cache<Integer, Boolean> cache =
         CacheBuilder.newBuilder().initialCapacity(SIZE).build();
-    benchmarkFunction = (Integer key) -> {
+    benchmarkFunction = key -> {
       try {
         return cache.get(key, () -> Boolean.TRUE);
       } catch (Exception e) {

@@ -172,3 +172,8 @@ jmh {
   forceGC = true
   fork = 1  
 }
+
+task stress(type: JavaExec, description: 'Executes a stress test') {
+  classpath sourceSets.jmh.runtimeClasspath
+  main = 'com.github.benmanes.caffeine.cache.Stresser'
+}

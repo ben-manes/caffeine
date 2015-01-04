@@ -45,6 +45,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -62,7 +63,6 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 
-import com.github.benmanes.caffeine.SingleConsumerQueue;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
@@ -274,7 +274,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         readBuffers[i][j] = new AtomicReference<Node<K, V>>();
       }
     }
-    writeBuffer = new SingleConsumerQueue<Runnable>();
+    writeBuffer = new ConcurrentLinkedQueue<Runnable>();
 
     // The eviction support
     evictionLock = new Sync();
@@ -449,10 +449,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * Performs the post-processing work required after a read.
    *
    * @param node the entry in the page replacement policy
-   * @param recordStats if the hit count should be incremented
+   * @param recordHit if the hit count should be incremented
    */
-  void afterRead(Node<K, V> node, boolean recordStats) {
-    if (recordStats) {
+  void afterRead(Node<K, V> node, boolean recordHit) {
+    if (recordHit) {
       statsCounter.recordHits(1);
     }
     node.setAccessTime(ticker.read());
@@ -962,7 +962,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       }
 
       final int weightedDifference = weight - oldWeightedValue.weight;
-      afterWrite(prior, new UpdateTask(prior, weightedDifference));
+      if (!expiresAfterWrite() && (weightedDifference == 0)) {
+        afterRead(prior, false);
+      } else {
+        afterWrite(prior, new UpdateTask(prior, weightedDifference));
+      }
       if (hasRemovalListener()) {
         notifyRemoval(key, oldWeightedValue.getValue(valueStrategy), RemovalCause.REPLACED);
       }

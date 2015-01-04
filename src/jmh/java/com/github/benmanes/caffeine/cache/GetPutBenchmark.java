@@ -38,8 +38,8 @@ public class GetPutBenchmark {
   private static final int MASK = SIZE - 1;
 
   @Param({
-    "LinkedHashMap_Lru",
-    "ConcurrentHashMap",
+//    "LinkedHashMap_Lru",
+//    "ConcurrentHashMap",
     "ConcurrentLinkedHashMap",
     "Caffeine",
     "Guava",
