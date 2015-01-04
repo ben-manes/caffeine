@@ -416,6 +416,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       notifyRemoval(node.key, node.getValue(), cause);
     }
 
+    accessOrderDeque.remove(node);
     writeOrderDeque.remove(node);
   }
 
@@ -555,6 +556,30 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     drainReadBuffers();
     drainWriteBuffer();
     expire();
+
+    drainKeyReferences();
+  }
+
+  void drainKeyReferences() {
+    Reference<? extends K> keyRef;
+    while ((keyRef = keyReferenceQueue.poll()) != null) {
+      Node<K, V> node = data.get(keyRef);
+      if (node != null) {
+        evict(node, RemovalCause.COLLECTED);
+      }
+    }
+  }
+
+  void drainValueReferences() {
+    Reference<? extends V> valueRef;
+    while ((valueRef = valueReferenceQueue.poll()) != null) {
+      @SuppressWarnings("unchecked")
+      InternalReference<V> ref = (InternalReference<V>) valueRef;
+      Node<K, V> node = data.get(ref.getKeyReference());
+      if (node != null) {
+        evict(node, RemovalCause.COLLECTED);
+      }
+    }
   }
 
   /** Drains the read buffers, each up to an amortized threshold. */
@@ -1967,7 +1992,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       @Override <K> Object referenceKey(K key, ReferenceQueue<K> queue) {
         return key;
       }
-      @Override <V> Object referenceValue(V value, ReferenceQueue<V> queue) {
+      @Override <V> Object referenceValue(Object keyReference, V value, ReferenceQueue<V> queue) {
         return value;
       }
       @Override <K> Object dereferenceKey(Object referent) {
@@ -1981,8 +2006,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       @Override <K> Object referenceKey(K key, ReferenceQueue<K> queue) {
         return new WeakKeyReference<K>(key, queue);
       }
-      @Override <V> Object referenceValue(V value, ReferenceQueue<V> queue) {
-        return new WeakValueReference<V>(value, queue);
+      @Override <V> Object referenceValue(Object keyReference, V value, ReferenceQueue<V> queue) {
+        return new WeakValueReference<V>(keyReference, value, queue);
       }
       @Override <K> Object dereferenceKey(Object referent) {
         @SuppressWarnings("unchecked")
@@ -1999,8 +2024,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       @Override <K> Object referenceKey(K key, ReferenceQueue<K> queue) {
         throw new UnsupportedOperationException();
       }
-      @Override <V> Object referenceValue(V value, ReferenceQueue<V> queue) {
-        return new SoftValueReference<V>(value, queue);
+      @Override <V> Object referenceValue(Object keyReference, V value, ReferenceQueue<V> queue) {
+        return new SoftValueReference<V>(keyReference, value, queue);
       }
       @Override <K> Object dereferenceKey(Object referent) {
         @SuppressWarnings("unchecked")
@@ -2016,7 +2041,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     abstract <K> Object referenceKey(K key, ReferenceQueue<K> queue);
 
-    abstract <V> Object referenceValue(V value, ReferenceQueue<V> queue);
+    abstract <V> Object referenceValue(Object keyReference, V value, ReferenceQueue<V> queue);
 
     abstract <K> Object dereferenceKey(Object reference);
 
@@ -2045,6 +2070,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @Override public E get() {
       return e;
     }
+    @Override public Object getKeyReference() {
+      return this;
+    }
     @Override public int hashCode() {
       return System.identityHashCode(e);
     }
@@ -2056,6 +2084,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   interface InternalReference<E> {
 
     E get();
+
+    Object getKeyReference();
 
     default boolean referenceEquals(Reference<?> reference, Object object) {
       if (object == reference) {
@@ -2077,6 +2107,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       super(key, queue);
       hashCode = System.identityHashCode(key);
     }
+    @Override public Object getKeyReference() {
+      return this;
+    }
     @Override public int hashCode() {
       return hashCode;
     }
@@ -2087,22 +2120,31 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   static final class WeakValueReference<V>
       extends WeakReference<V> implements InternalReference<V> {
-    public WeakValueReference(V value, ReferenceQueue<V> queue) {
+    final Object keyReference;
+
+    public WeakValueReference(Object keyReference, V value, ReferenceQueue<V> queue) {
       super(value, queue);
+      this.keyReference = keyReference;
     }
-    @Override
-    public boolean equals(Object object) {
+    @Override public Object getKeyReference() {
+      return keyReference;
+    }
+    @Override public boolean equals(Object object) {
       return referenceEquals(this, object);
     }
   }
 
   static final class SoftValueReference<V>
       extends SoftReference<V> implements InternalReference<V> {
+    final Object keyReference;
 
-    public SoftValueReference(V value, ReferenceQueue<V> queue) {
+    public SoftValueReference(Object keyReference, V value, ReferenceQueue<V> queue) {
       super(value, queue);
+      this.keyReference = keyReference;
     }
-    @Override public boolean equals(Object object) {
+    @Override public Object getKeyReference() {
+      return keyReference;
+    } @Override public boolean equals(Object object) {
       return referenceEquals(this, object);
     }
   }
