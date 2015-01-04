@@ -132,7 +132,7 @@ public final class Caffeine<K, V> {
   private static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
       () -> new ConcurrentStatsCounter();
   private static final Ticker DISABLED_TICKER = () -> 0;
-  private enum Strength { STRONG, WEAK, SOFT }
+  enum Strength { STRONG, WEAK, SOFT }
 
   static final int UNSET_INT = -1;
 
@@ -373,6 +373,10 @@ public final class Caffeine<K, V> {
     throw new UnsupportedOperationException();
   }
 
+  Strength getKeyStrength() {
+    return keyStrength;
+  }
+
   /**
    * Specifies that each value (not key) stored in the cache should be wrapped in a
    * {@link WeakReference} (by default, strong references are used).
@@ -394,6 +398,10 @@ public final class Caffeine<K, V> {
   @Nonnull
   public Caffeine<K, V> weakValues() {
     throw new UnsupportedOperationException();
+  }
+
+  Strength getValueStrength() {
+    return valueStrength;
   }
 
   /**

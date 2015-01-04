@@ -25,6 +25,10 @@ import static java.util.Objects.requireNonNull;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -61,6 +65,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.SingleConsumerQueue;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
+import com.github.benmanes.caffeine.cache.Caffeine.Strength;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
@@ -203,6 +208,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @GuardedBy("evictionLock")
   final WriteOrderDeque<Node<K, V>> writeOrderDeque;
 
+  // These fields provide support for reference-based eviction
+  final ReferenceStrategy keyStrategy;
+  final ReferenceStrategy valueStrategy;
+  final ReferenceQueue<K> keyReferenceQueue;
+  final ReferenceQueue<V> valueReferenceQueue;
+
   // These fields provide support to bound the map by a maximum capacity
   final Weigher<? super K, ? super V> weigher;
   @GuardedBy("evictionLock") // must write under lock
@@ -210,7 +221,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @GuardedBy("evictionLock") // must write under lock
   final PaddedAtomicLong maximumWeightedSize;
 
-  // These fields provide support for batch updates to the eviction and expiration policies
   final Lock evictionLock;
   final Queue<Runnable> writeBuffer;
   final PaddedAtomicReference<DrainStatus> drainStatus;
@@ -280,6 +290,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     weigher = builder.getWeigher();
     weightedSize = new PaddedAtomicLong();
     drainStatus = new PaddedAtomicReference<DrainStatus>(IDLE);
+
+    // The reference eviction support
+    keyStrategy = ReferenceStrategy.forStength(builder.getKeyStrength());
+    valueStrategy = ReferenceStrategy.forStength(builder.getValueStrength());
+    keyReferenceQueue = new ReferenceQueue<K>();
+    valueReferenceQueue = new ReferenceQueue<V>();
 
     // The notification queue and listener
     removalListener = builder.getRemovalListener();
@@ -619,7 +635,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    */
   boolean tryToRetire(Node<K, V> node, WeightedValue<V> expect) {
     if (expect.isAlive()) {
-      final WeightedValue<V> retired = new WeightedValue<V>(expect.value, -expect.weight);
+      final WeightedValue<V> retired = new WeightedValue<V>(expect.getValue(), -expect.weight);
       synchronized (node) {
         if (node.get() == expect) {
           node.lazySet(retired);
@@ -643,7 +659,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (!current.isAlive()) {
         return null;
       }
-      final WeightedValue<V> retired = new WeightedValue<V>(current.value, -current.weight);
+      final WeightedValue<V> retired = new WeightedValue<V>(current.getValue(), -current.weight);
       node.lazySet(retired);
       return retired;
     }
@@ -659,7 +675,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   void makeDead(Node<K, V> node) {
     synchronized (node) {
       WeightedValue<V> current = node.get();
-      WeightedValue<V> dead = new WeightedValue<V>(current.value, 0);
+      WeightedValue<V> dead = new WeightedValue<V>(current.getValue(), 0);
       if (node.compareAndSet(current, dead)) {
         weightedSize.lazySet(weightedSize.get() - Math.abs(current.weight));
         return;
@@ -940,9 +956,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       final int weightedDifference = weight - oldWeightedValue.weight;
       afterWrite(prior, new UpdateTask(prior, weightedDifference));
       if (hasRemovalListener()) {
-        notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
+        notifyRemoval(key, oldWeightedValue.getValue(), RemovalCause.REPLACED);
       }
-      return oldWeightedValue.value;
+      return oldWeightedValue.getValue();
     }
   }
 
@@ -959,7 +975,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     if (hasRemovalListener() && (retired != null)) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
-      notifyRemoval(castKey, retired.value, RemovalCause.EXPLICIT);
+      notifyRemoval(castKey, retired.getValue(), RemovalCause.EXPLICIT);
     }
     return node.getValue();
   }
@@ -1025,9 +1041,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
     if (hasRemovalListener()) {
-      notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
+      notifyRemoval(key, oldWeightedValue.getValue(), RemovalCause.REPLACED);
     }
-    return oldWeightedValue.value;
+    return oldWeightedValue.getValue();
   }
 
   @Override
@@ -1059,7 +1075,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
     if (hasRemovalListener()) {
-      notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
+      notifyRemoval(key, oldWeightedValue.getValue(), RemovalCause.REPLACED);
     }
     return true;
   }
@@ -1106,7 +1122,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return node.getValue();
     } else {
       afterWrite(node, new AddTask(node, weightedValue[0].weight));
-      return weightedValue[0].value;
+      return weightedValue[0].getValue();
     }
   }
 
@@ -1127,7 +1143,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       statsCounter.recordHits(1);
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
-        V newValue = statsAware(remappingFunction).apply(k, oldWeightedValue.value);
+        V newValue = statsAware(remappingFunction).apply(k, oldWeightedValue.getValue());
         if (newValue == null) {
           makeRetired(prior);
           task[0] = new RemovalTask(prior);
@@ -1155,7 +1171,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     } else {
       afterWrite(node, task[0]);
     }
-    return (weightedValue[0] == null) ? null : weightedValue[0].value;
+    return (weightedValue[0] == null) ? null : weightedValue[0].getValue();
   }
 
   @Override
@@ -1187,13 +1203,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         WeightedValue<V> oldWeightedValue = prior.get();
         V oldValue;
         if (oldWeightedValue.isAlive()) {
-          oldValue = oldWeightedValue.value;
+          oldValue = oldWeightedValue.getValue();
         } else {
           // conditionally removed won, but we got the entry lock first
           // so help out and pretend like we are inserting a fresh entry
           task[1] = new RemovalTask(prior);
           if (hasRemovalListener()) {
-            notifyRemoval(key, oldWeightedValue.value, RemovalCause.EXPLICIT);
+            notifyRemoval(key, oldWeightedValue.getValue(), RemovalCause.EXPLICIT);
           }
           oldValue = null;
         }
@@ -1201,7 +1217,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
-            notifyRemoval(key, oldWeightedValue.value, RemovalCause.EXPLICIT);
+            notifyRemoval(key, oldWeightedValue.getValue(), RemovalCause.EXPLICIT);
           }
           return null;
         }
@@ -1216,7 +1232,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
             task[0] = new UpdateTask(prior, weightedDifference);
           }
           if (hasRemovalListener()) {
-            notifyRemoval(key, oldWeightedValue.value, RemovalCause.REPLACED);
+            notifyRemoval(key, oldWeightedValue.getValue(), RemovalCause.REPLACED);
           }
         } else {
           final long now = ticker.read();
@@ -1266,7 +1282,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           // so help out and pretend like we are inserting a fresh entry
           // ...
         }
-        remappingFunction.apply(oldWeightedValue.value, value);
+        remappingFunction.apply(oldWeightedValue.getValue(), value);
       }
       return null;
     });
@@ -1580,15 +1596,20 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @Immutable
   static final class WeightedValue<V> {
     final int weight;
-    final V value;
+    final Object value;
 
-    WeightedValue(V value, int weight) {
+    WeightedValue(Object value, int weight) {
       this.weight = weight;
       this.value = value;
     }
 
     boolean contains(Object o) {
-      return (o == value) || value.equals(o);
+      return (o == getValue()) || getValue().equals(o);
+    }
+
+    @SuppressWarnings("unchecked")
+    V getValue() {
+      return (V) value;
     }
 
     /**
@@ -1646,7 +1667,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     /** Retrieves the value held by the current <tt>WeightedValue</tt>. */
     V getValue() {
-      return get().value;
+      return get().getValue();
     }
 
     /* ---------------- Access order -------------- */
@@ -1938,6 +1959,151 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     Object writeReplace() {
       return weigher;
+    }
+  }
+
+  enum ReferenceStrategy {
+    STRONG {
+      @Override <K> Object referenceKey(K key, ReferenceQueue<K> queue) {
+        return key;
+      }
+      @Override <V> Object referenceValue(V value, ReferenceQueue<V> queue) {
+        return value;
+      }
+      @Override <K> Object dereferenceKey(Object referent) {
+        return referent;
+      }
+      @Override <V> Object dereferenceValue(Object referent) {
+        return referent;
+      }
+    },
+    WEAK{
+      @Override <K> Object referenceKey(K key, ReferenceQueue<K> queue) {
+        return new WeakKeyReference<K>(key, queue);
+      }
+      @Override <V> Object referenceValue(V value, ReferenceQueue<V> queue) {
+        return new WeakValueReference<V>(value, queue);
+      }
+      @Override <K> Object dereferenceKey(Object referent) {
+        @SuppressWarnings("unchecked")
+        WeakKeyReference<K> ref = (WeakKeyReference<K>) referent;
+        return ref.get();
+      }
+      @Override <V> Object dereferenceValue(Object referent) {
+        @SuppressWarnings("unchecked")
+        WeakValueReference<V> ref = (WeakValueReference<V>) referent;
+        return ref.get();
+      }
+    },
+    SOFT{
+      @Override <K> Object referenceKey(K key, ReferenceQueue<K> queue) {
+        throw new UnsupportedOperationException();
+      }
+      @Override <V> Object referenceValue(V value, ReferenceQueue<V> queue) {
+        return new SoftValueReference<V>(value, queue);
+      }
+      @Override <K> Object dereferenceKey(Object referent) {
+        @SuppressWarnings("unchecked")
+        SoftValueReference<K> ref = (SoftValueReference<K>) referent;
+        return ref.get();
+      }
+      @Override <V> Object dereferenceValue(Object referent) {
+        @SuppressWarnings("unchecked")
+        SoftValueReference<V> ref = (SoftValueReference<V>) referent;
+        return ref.get();
+      }
+    };
+
+    abstract <K> Object referenceKey(K key, ReferenceQueue<K> queue);
+
+    abstract <V> Object referenceValue(V value, ReferenceQueue<V> queue);
+
+    abstract <K> Object dereferenceKey(Object reference);
+
+    abstract <V> Object dereferenceValue(Object object);
+
+    static ReferenceStrategy forStength(Strength strength) {
+      switch (strength) {
+        case STRONG:
+          return ReferenceStrategy.STRONG;
+        case WEAK:
+          return ReferenceStrategy.WEAK;
+        case SOFT:
+          return ReferenceStrategy.SOFT;
+        default:
+          throw new IllegalArgumentException();
+      }
+    }
+  }
+
+  static final class Ref<E> implements InternalReference<E> {
+    final E e;
+
+    Ref(E e) {
+      this.e = requireNonNull(e);
+    }
+    @Override public E get() {
+      return e;
+    }
+    @Override public int hashCode() {
+      return System.identityHashCode(e);
+    }
+    @Override public boolean equals(Object object) {
+      return object.equals(this);
+    }
+  }
+
+  interface InternalReference<E> {
+
+    E get();
+
+    default boolean referenceEquals(Reference<?> reference, Object object) {
+      if (object == reference) {
+        return true;
+      } else if (object instanceof InternalReference) {
+        Object referent = ((InternalReference<?>) object).get();
+        return (referent != null) && (referent == reference.get());
+      } else if (object instanceof Ref<?>) {
+        return ((Ref<?>) object).get() == reference.get();
+      }
+      return false;
+    }
+  }
+
+  static final class WeakKeyReference<K> extends WeakReference<K> implements InternalReference<K> {
+    final int hashCode;
+
+    public WeakKeyReference(K key, ReferenceQueue<K> queue) {
+      super(key, queue);
+      hashCode = System.identityHashCode(key);
+    }
+    @Override public int hashCode() {
+      return hashCode;
+    }
+    @Override public boolean equals(Object object) {
+      return referenceEquals(this, object);
+    }
+  }
+
+  static final class WeakValueReference<V>
+      extends WeakReference<V> implements InternalReference<V> {
+    public WeakValueReference(V value, ReferenceQueue<V> queue) {
+      super(value, queue);
+    }
+    @Override
+    public boolean equals(Object object) {
+      return referenceEquals(this, object);
+    }
+  }
+
+  static final class SoftValueReference<V>
+      extends SoftReference<V> implements InternalReference<V> {
+
+    public SoftValueReference(V value, ReferenceQueue<V> queue) {
+      super(value, queue);
+    }
+    @Override public boolean equals(Object object) {
+      return referenceEquals(this, object);
     }
   }
 
