@@ -196,7 +196,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
 
   // The backing data store holding the key-value associations
-  final ConcurrentHashMap<K, Node<K, V>> data;
+  final ConcurrentHashMap<Object, Node<K, V>> data;
 
   // How long after the last access to an entry the map will retain that entry
   volatile long expireAfterAccessNanos;
@@ -250,7 +250,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @SuppressWarnings({"unchecked", "cast"})
   private BoundedLocalCache(Caffeine<K, V> builder) {
     // The data store and its maximum capacity
-    data = new ConcurrentHashMap<K, Node<K, V>>(builder.getInitialCapacity());
+    data = new ConcurrentHashMap<>(builder.getInitialCapacity());
 
     // The expiration support
     expireAfterWriteNanos = builder.getExpireAfterWriteNanos();
@@ -875,7 +875,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   public V getIfPresent(Object key, boolean recordStats) {
-    final Node<K, V> node = data.get(key);
+    final Node<K, V> node = data.get(keyStrategy.getKeyRef(key));
     if (node == null) {
       if (recordStats) {
         statsCounter.recordMisses(1);
@@ -898,7 +898,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     long now = ticker.read();
     Map<K, V> result = new LinkedHashMap<>();
     for (Object key : keys) {
-      final Node<K, V> node = data.get(key);
+      final Node<K, V> node = data.get(keyStrategy.getKeyRef(key));
       if ((node == null) || hasExpired(node, now)) {
         misses++;
         continue;
@@ -913,22 +913,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
     statsCounter.recordMisses(misses);
     return Collections.unmodifiableMap(result);
-  }
-
-  /**
-   * Returns the value to which the specified key is mapped, or {@code null}
-   * if this map contains no mapping for the key. This method differs from
-   * {@link #get(Object)} in that it does not record the operation with the
-   * page replacement policy.
-   *
-   * @param key the key whose associated value is to be returned
-   * @return the value to which the specified key is mapped, or
-   *     {@code null} if this map contains no mapping for the key
-   * @throws NullPointerException if the specified key is null
-   */
-  public V getQuietly(Object key) {
-    final Node<K, V> node = data.get(key);
-    return (node == null) ? null : node.getValue();
   }
 
   @Override
@@ -1131,7 +1115,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     node = data.computeIfAbsent(key, k -> {
       V value;
-      value = statsAware(mappingFunction).apply(k);
+      value = statsAware(mappingFunction).apply(key);
       if (value == null) {
         return null;
       }
@@ -1168,7 +1152,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       statsCounter.recordHits(1);
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
-        V newValue = statsAware(remappingFunction).apply(k, oldWeightedValue.getValue());
+        V newValue = statsAware(remappingFunction).apply(key, oldWeightedValue.getValue());
         if (newValue == null) {
           makeRetired(prior);
           task[0] = new RemovalTask(prior);
@@ -1213,7 +1197,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     Runnable[] task = new Runnable[2];
     Node<K, V> node = data.compute(key, (k, prior) -> {
       if (prior == null) {
-        newValue[0] = statsAware(remappingFunction, recordMiss).apply(k, null);
+        newValue[0] = statsAware(remappingFunction, recordMiss).apply(key, null);
         if (newValue[0] == null) {
           return null;
         }
@@ -1238,7 +1222,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           }
           oldValue = null;
         }
-        newValue[0] = statsAware(remappingFunction, recordMiss).apply(k, oldValue);
+        newValue[0] = statsAware(remappingFunction, recordMiss).apply(key, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
@@ -1808,7 +1792,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /** An adapter to safely externalize the key iterator. */
   final class KeyIterator implements Iterator<K> {
-    final Iterator<K> iterator = data.keySet().iterator();
+    final Iterator<Object> iterator = data.keySet().iterator();
     K current;
 
     @Override
@@ -1818,7 +1802,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public K next() {
-      current = iterator.next();
+      @SuppressWarnings("unchecked")
+      K castedKey = (K) keyStrategy.dereferenceKey(iterator.next());
+      current = castedKey;
       return current;
     }
 
@@ -2001,8 +1987,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       @Override <V> Object dereferenceValue(Object referent) {
         return referent;
       }
+      @Override <K> Object getKeyRef(K key) {
+        return key;
+      }
     },
-    WEAK{
+    WEAK {
       @Override <K> Object referenceKey(K key, ReferenceQueue<K> queue) {
         return new WeakKeyReference<K>(key, queue);
       }
@@ -2019,8 +2008,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         WeakValueReference<V> ref = (WeakValueReference<V>) referent;
         return ref.get();
       }
+      @Override <K> Object getKeyRef(K key) {
+        return new Ref<K>(key);
+      }
     },
-    SOFT{
+    SOFT {
       @Override <K> Object referenceKey(K key, ReferenceQueue<K> queue) {
         throw new UnsupportedOperationException();
       }
@@ -2037,6 +2029,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         SoftValueReference<V> ref = (SoftValueReference<V>) referent;
         return ref.get();
       }
+      @Override <K> Object getKeyRef(K key) {
+        throw new UnsupportedOperationException();
+      }
     };
 
     abstract <K> Object referenceKey(K key, ReferenceQueue<K> queue);
@@ -2046,6 +2041,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     abstract <K> Object dereferenceKey(Object reference);
 
     abstract <V> Object dereferenceValue(Object object);
+
+    abstract <K> Object getKeyRef(K key);
 
     static ReferenceStrategy forStength(Strength strength) {
       switch (strength) {

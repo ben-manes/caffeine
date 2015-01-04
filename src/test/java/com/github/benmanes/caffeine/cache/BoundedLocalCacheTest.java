@@ -177,8 +177,6 @@ public final class BoundedLocalCacheTest {
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
     Node<Integer, Integer> last = localCache.accessOrderDeque.peekLast();
     long drained = drainCounter.get();
-
-    localCache.getQuietly(first.key);
     localCache.drainBuffers();
 
     assertThat(localCache.accessOrderDeque.peekFirst(), is(first));
