@@ -134,15 +134,17 @@ public final class IsValidBoundedLocalCache<K, V>
       Node<K, V> node, DescriptionBuilder builder) {
     Weigher<? super K, ? super V> weigher = map.weigher;
 
-    builder.expectThat(node.key, is(not(nullValue())));
+    K key = node.getKey(map.keyStrategy);
+    builder.expectThat(key, is(not(nullValue())));
     builder.expectThat(node.get(), is(not(nullValue())));
-    builder.expectThat(node.getValue(), is(not(nullValue())));
-    builder.expectThat("weight", node.get().weight, is(weigher.weigh(node.key, node.getValue())));
+    builder.expectThat(node.getValue(map.valueStrategy), is(not(nullValue())));
+    builder.expectThat("weight", node.get().weight,
+        is(weigher.weigh(key, node.getValue(map.valueStrategy))));
 
-    builder.expectThat("inconsistent", map.containsKey(node.key), is(true));
-    builder.expectThat(() -> "Could not find value: " + node.getValue(),
-        map.containsValue(node.getValue()), is(true));
-    builder.expectThat("found wrong node", map.data.get(node.key), is(node));
+    builder.expectThat("inconsistent", map.containsKey(key), is(true));
+    builder.expectThat(() -> "Could not find value: " + node.getValue(map.valueStrategy),
+        map.containsValue(node.getValue(map.valueStrategy)), is(true));
+    builder.expectThat("found wrong node", map.data.get(key), is(node));
   }
 
   @Factory

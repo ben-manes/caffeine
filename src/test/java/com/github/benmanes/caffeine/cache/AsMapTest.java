@@ -1538,7 +1538,7 @@ public final class AsMapTest {
     Entry<Integer, Integer> entry = map.entrySet().iterator().next();
 
     entry.setValue(3);
-    assertThat(map.get(context.firstKey()), is(3));
+    assertThat(map.get(entry.getKey()), is(3));
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }

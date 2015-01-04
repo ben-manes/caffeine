@@ -100,13 +100,18 @@ final class CacheGenerator {
   }
 
   private void populate(CacheContext context, Cache<Integer, Integer> cache) {
+    // Integer caches the object identity semantics of autoboxing for values between
+    // -128 and 127 (inclusive) as required by JLS
+    int base = 1000;
+
     int maximum = (int) Math.min(context.maximumSize(), context.population.size());
-    context.firstKey = (int) Math.min(1, context.population.size());
-    context.lastKey = maximum;
-    context.middleKey = Math.max(context.firstKey, ((context.lastKey - context.firstKey) / 2));
+    context.firstKey = base + (int) Math.min(1, context.population.size());
+    context.lastKey = base + maximum;
+    context.middleKey = Math.max(context.firstKey, base + ((context.lastKey - context.firstKey) / 2));
     for (int i = 1; i <= maximum; i++) {
-      context.original.put(i, -i);
-      cache.put(i, -i);
+      int val = (base + i);
+      context.original.put(val, -val);
+      cache.put(val, -val);
     }
   }
 }

@@ -108,6 +108,10 @@ public final class CacheContext {
     this.original = new LinkedHashMap<>();
   }
 
+  public Population population() {
+    return population;
+  }
+
   public Integer firstKey() {
     assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
     return firstKey;

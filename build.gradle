@@ -81,6 +81,9 @@ dependencies {
 test {
   useTestNG()
   options {
+    if (!hasProperty('slow')) {
+      excludeGroups = ['slow']
+    }
     threadCount = 6
     parallel = 'methods'
   }

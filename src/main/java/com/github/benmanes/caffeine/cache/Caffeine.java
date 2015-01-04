@@ -154,8 +154,8 @@ public final class Caffeine<K, V> {
   private Executor executor;
   private Ticker ticker;
 
-  private Strength keyStrength = Strength.STRONG;
-  private Strength valueStrength = Strength.STRONG;
+  private Strength keyStrength;
+  private Strength valueStrength;
 
   private Caffeine() {}
 
@@ -370,11 +370,13 @@ public final class Caffeine<K, V> {
    */
   @Nonnull
   public Caffeine<K, V> weakKeys() {
-    throw new UnsupportedOperationException();
+    requireState(keyStrength == null, "Key strength was already set to %s", keyStrength);
+    keyStrength = Strength.WEAK;
+    return this;
   }
 
   Strength getKeyStrength() {
-    return keyStrength;
+    return (keyStrength == null) ? Strength.STRONG : keyStrength;
   }
 
   /**
@@ -397,11 +399,13 @@ public final class Caffeine<K, V> {
    */
   @Nonnull
   public Caffeine<K, V> weakValues() {
-    throw new UnsupportedOperationException();
+    requireState(valueStrength == null, "Value strength was already set to %s", valueStrength);
+    valueStrength = Strength.WEAK;
+    return this;
   }
 
   Strength getValueStrength() {
-    return valueStrength;
+    return (valueStrength == null) ? Strength.STRONG : valueStrength;
   }
 
   /**
@@ -427,7 +431,9 @@ public final class Caffeine<K, V> {
    */
   @Nonnull
   public Caffeine<K, V> softValues() {
-    throw new UnsupportedOperationException();
+    requireState(valueStrength == null, "Value strength was already set to %s", valueStrength);
+    valueStrength = Strength.SOFT;
+    return this;
   }
 
   /**
@@ -630,8 +636,8 @@ public final class Caffeine<K, V> {
         || (maximumWeight != UNSET_INT)
         || (expireAfterAccessNanos != UNSET_INT)
         || (expireAfterWriteNanos != UNSET_INT)
-        || (keyStrength != Strength.STRONG)
-        || (valueStrength != Strength.STRONG);
+        || (keyStrength != null)
+        || (valueStrength != null);
   }
 
   /**

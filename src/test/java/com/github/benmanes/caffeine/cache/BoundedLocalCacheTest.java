@@ -151,7 +151,8 @@ public final class BoundedLocalCacheTest {
       Integer... expect) {
     localCache.drainBuffers();
     List<Integer> evictionList = Lists.newArrayList();
-    localCache.accessOrderDeque.forEach(node -> evictionList.add(node.key));
+    localCache.accessOrderDeque.forEach(
+        node -> evictionList.add(node.getKey(localCache.keyStrategy)));
     assertThat(localCache.size(), is(equalTo(expect.length)));
     assertThat(localCache.keySet(), containsInAnyOrder(expect));
     assertThat(evictionList, is(equalTo(asList(expect))));
@@ -163,7 +164,7 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onGet(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.get(first.key));
+    updateRecency(localCache, () -> localCache.get(first.getKey(localCache.keyStrategy)));
   }
 
   @Test(dataProvider = "caches")
@@ -190,7 +191,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.putIfAbsent(first.key, first.key));
+    updateRecency(localCache, () -> localCache.putIfAbsent(
+        first.getKey(localCache.keyStrategy), first.getKey(localCache.keyStrategy)));
   }
 
   @Test(dataProvider = "caches")
@@ -199,7 +201,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onPut(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.put(first.key, first.key));
+    updateRecency(localCache, () -> localCache.put(
+        first.getKey(localCache.keyStrategy), first.getKey(localCache.keyStrategy)));
   }
 
   @Test(dataProvider = "caches")
@@ -208,7 +211,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onReplace(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.replace(first.key, first.key));
+    updateRecency(localCache, () -> localCache.replace(
+        first.getKey(localCache.keyStrategy), first.getKey(localCache.keyStrategy)));
   }
 
   @Test(dataProvider = "caches")
@@ -217,7 +221,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onReplaceConditionally(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.replace(first.key, -first.key, -first.key));
+    updateRecency(localCache, () -> localCache.replace(first.getKey(localCache.keyStrategy),
+        -first.getKey(localCache.keyStrategy), -first.getKey(localCache.keyStrategy)));
   }
 
   private void updateRecency(BoundedLocalCache<Integer, Integer> cache, Runnable operation) {
@@ -272,8 +277,8 @@ public final class BoundedLocalCacheTest {
     AtomicReference<Node<Integer, Integer>>[] buffer = localCache.readBuffers[index];
     PaddedAtomicLong writeCounter = localCache.readBufferWriteCount[index];
 
-    for (int i = context.firstKey(); i <= BoundedLocalCache.READ_BUFFER_THRESHOLD; i++) {
-      localCache.get(1);
+    for (int i = 0; i < BoundedLocalCache.READ_BUFFER_THRESHOLD; i++) {
+      localCache.get(context.firstKey());
     }
 
     int pending = 0;
@@ -285,7 +290,7 @@ public final class BoundedLocalCacheTest {
     assertThat(pending, is(equalTo(BoundedLocalCache.READ_BUFFER_THRESHOLD)));
     assertThat((int) writeCounter.get(), is(equalTo(pending)));
 
-    localCache.get(1);
+    localCache.get(context.firstKey());
     assertThat(localCache.readBufferReadCount[index], is(equalTo(writeCounter.get())));
     for (int i = 0; i < localCache.readBuffers.length; i++) {
       assertThat(localCache.readBuffers[index][i].get(), is(nullValue()));
