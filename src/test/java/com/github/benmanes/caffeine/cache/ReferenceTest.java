@@ -49,7 +49,7 @@ public final class ReferenceTest {
     cache.put(new Random().nextInt(), 0);
     GcFinalization.awaitFullGc();
     cleanUp(cache, context, 0);
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
   }
 
   @Test(dataProvider = "caches")
@@ -58,7 +58,7 @@ public final class ReferenceTest {
     context.original().clear();
     GcFinalization.awaitFullGc();
     cleanUp(cache, context, 0);
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
   }
 
   @Test(dataProvider = "caches")
@@ -67,19 +67,19 @@ public final class ReferenceTest {
     context.original().clear();
     awaitSoftRefGc();
     cleanUp(cache, context, 0);
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
   }
 
   static void cleanUp(Cache<Integer, Integer> cache, CacheContext context, long finalSize) {
     // As clean-up is amortized, pretend that the increment count may be as low as per entry
     for (int i = 0; i < context.population().size(); i++) {
       cache.cleanUp();
-      if (cache.size() == finalSize) {
+      if (cache.estimatedSize() == finalSize) {
         return; // passed
       }
     }
     cache.cleanUp();
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
   }
 
   static void awaitSoftRefGc() {

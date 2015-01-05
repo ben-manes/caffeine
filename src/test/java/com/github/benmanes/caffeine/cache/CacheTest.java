@@ -63,8 +63,8 @@ public final class CacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void size(Cache<Integer, Integer> cache, CacheContext context) {
-    assertThat(cache.size(), is(context.initialSize()));
+  public void estimatedSize(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
   }
 
   /* ---------------- getIfPresent -------------- */
@@ -213,7 +213,7 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_insert(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), -context.absentKey());
-    assertThat(cache.size(), is(context.initialSize() + 1));
+    assertThat(cache.estimatedSize(), is(context.initialSize() + 1));
     assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
   }
 
@@ -224,7 +224,7 @@ public final class CacheTest {
       cache.put(key, -key);
       assertThat(cache.getIfPresent(key), is(-key));
     }
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
@@ -237,7 +237,7 @@ public final class CacheTest {
       cache.put(key, -context.absentKey());
       assertThat(cache.getIfPresent(key), is(-context.absentKey()));
     }
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
@@ -271,7 +271,7 @@ public final class CacheTest {
         .range(startKey, 100 + startKey).boxed()
         .collect(Collectors.toMap(Function.identity(), key -> -key));
     cache.putAll(entries);
-    assertThat(cache.size(), is(100 + context.initialSize()));
+    assertThat(cache.estimatedSize(), is(100 + context.initialSize()));
   }
 
   @Test(dataProvider = "caches")
@@ -306,7 +306,7 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_empty(Cache<Integer, Integer> cache, CacheContext context) {
     cache.putAll(new HashMap<>());
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
   }
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -321,7 +321,7 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void invalidate_absent(Cache<Integer, Integer> cache, CacheContext context) {
     cache.invalidate(context.absentKey());
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
   }
 
   @Test(dataProvider = "caches")
@@ -330,7 +330,7 @@ public final class CacheTest {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.invalidate(key);
     }
-    assertThat(cache.size(), is(context.initialSize() - context.firstMiddleLastKeys().size()));
+    assertThat(cache.estimatedSize(), is(context.initialSize() - context.firstMiddleLastKeys().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
@@ -348,7 +348,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
     cache.invalidateAll();
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
     assertThat(cache, hasRemovalNotifications(context,
         context.original().size(), RemovalCause.EXPLICIT));
   }
@@ -366,7 +366,7 @@ public final class CacheTest {
         .filter(i -> ((i % 2) == 0))
         .collect(Collectors.toList());
     cache.invalidateAll(keys);
-    assertThat(cache.size(), is(context.initialSize() - keys.size()));
+    assertThat(cache.estimatedSize(), is(context.initialSize() - keys.size()));
     assertThat(cache, hasRemovalNotifications(context, keys.size(), RemovalCause.EXPLICIT));
   }
 
@@ -374,7 +374,7 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void invalidateAll_full(Cache<Integer, Integer> cache, CacheContext context) {
     cache.invalidateAll(context.original().keySet());
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
     assertThat(cache, hasRemovalNotifications(context,
         context.original().size(), RemovalCause.EXPLICIT));
   }

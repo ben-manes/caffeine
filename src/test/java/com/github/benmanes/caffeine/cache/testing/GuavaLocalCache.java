@@ -188,7 +188,7 @@ public final class GuavaLocalCache {
     }
 
     @Override
-    public long size() {
+    public long estimatedSize() {
       return cache.size();
     }
 

@@ -60,7 +60,7 @@ public final class ExpireAfterWriteTest {
     assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
 
     cache.cleanUp();
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
     assertThat(cache, hasRemovalNotifications(context, context.initialSize(), RemovalCause.EXPIRED));
   }
 
@@ -75,7 +75,7 @@ public final class ExpireAfterWriteTest {
     cache.get(context.lastKey(), mappingFunction); // recreated
 
     cache.cleanUp();
-    assertThat(cache.size(), is(1L));
+    assertThat(cache.estimatedSize(), is(1L));
     long count = context.initialSize();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }
@@ -90,7 +90,7 @@ public final class ExpireAfterWriteTest {
     assertThat(cache.getAllPresent(context.firstMiddleLastKeys()).size(), is(0));
 
     cache.cleanUp();
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
     long count = context.initialSize();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }
@@ -111,7 +111,7 @@ public final class ExpireAfterWriteTest {
     assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
 
     cache.cleanUp();
-    assertThat(cache.size(), is(2L));
+    assertThat(cache.estimatedSize(), is(2L));
     long count = Math.max(1, context.initialSize() - 1);
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }
@@ -134,7 +134,7 @@ public final class ExpireAfterWriteTest {
     assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
 
     cache.cleanUp();
-    assertThat(cache.size(), is(2L));
+    assertThat(cache.estimatedSize(), is(2L));
     long count = Math.max(1, context.initialSize() - 1);
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }
@@ -144,9 +144,9 @@ public final class ExpireAfterWriteTest {
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void size(Cache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(90, TimeUnit.SECONDS);
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
     cache.cleanUp();
-    assertThat(cache.size(), is(0L));
+    assertThat(cache.estimatedSize(), is(0L));
   }
 
   /* ---------------- LoadingCache -------------- */
@@ -160,7 +160,7 @@ public final class ExpireAfterWriteTest {
     cache.get(context.absentKey());
     context.ticker().advance(45, TimeUnit.SECONDS);
     cache.cleanUp();
-    assertThat(cache.size(), is(1L));
+    assertThat(cache.estimatedSize(), is(1L));
     assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
   }
 
@@ -178,7 +178,7 @@ public final class ExpireAfterWriteTest {
     assertThat(cache.getAll(ImmutableList.of(context.firstKey(), context.absentKey())),
         is(ImmutableMap.of(context.firstKey(), context.firstKey(),
             context.absentKey(), context.absentKey())));
-    assertThat(cache.size(), is(2L));
+    assertThat(cache.estimatedSize(), is(2L));
   }
 
   /* ---------------- Advanced -------------- */
@@ -199,7 +199,7 @@ public final class ExpireAfterWriteTest {
 
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
   }
 
   @Test(dataProvider = "caches")

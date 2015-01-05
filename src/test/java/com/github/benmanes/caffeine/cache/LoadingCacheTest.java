@@ -191,7 +191,7 @@ public final class LoadingCacheTest {
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void refresh_remove(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.refresh(context.firstKey());
-    assertThat(cache.size(), is(context.initialSize() - 1));
+    assertThat(cache.estimatedSize(), is(context.initialSize() - 1));
     assertThat(cache.get(context.firstKey()), is(nullValue()));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
   }
@@ -204,7 +204,7 @@ public final class LoadingCacheTest {
     // Shouldn't leak exception to caller and should retain stale entry
     cache.refresh(context.absentKey());
     cache.refresh(context.firstKey());
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(2)));
   }
 
@@ -213,7 +213,7 @@ public final class LoadingCacheTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void refresh_absent(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.refresh(context.absentKey());
-    assertThat(cache.size(), is(1 + context.initialSize()));
+    assertThat(cache.estimatedSize(), is(1 + context.initialSize()));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
 
@@ -235,7 +235,7 @@ public final class LoadingCacheTest {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(cache.get(key), is(-key));
     }
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
@@ -250,7 +250,7 @@ public final class LoadingCacheTest {
       assertThat(cache.get(key), is(key));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
     assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));

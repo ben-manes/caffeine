@@ -143,7 +143,7 @@ public interface Cache<K, V> {
    *
    * @return the estimated number of mappings
    */
-  long size();
+  long estimatedSize();
 
   /**
    * Returns a current snapshot of this cache's cumulative statistics. All statistics are

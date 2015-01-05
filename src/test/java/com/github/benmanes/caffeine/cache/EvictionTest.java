@@ -61,10 +61,10 @@ public final class EvictionTest {
     RejectingRemovalListener<Integer, Integer> removalListener = context.removalListener();
     // Guava-style caches reject before the max size is reached & are unpredictable
     removalListener.rejected = 0;
-    long size = cache.size();
+    long size = cache.estimatedSize();
     for (Integer key : context.absentKeys()) {
       cache.put(key, -key);
-      if (cache.size() != ++size) {
+      if (cache.estimatedSize() != ++size) {
         break;
       }
     }
@@ -82,7 +82,7 @@ public final class EvictionTest {
     if (eviction.isWeighted()) {
       assertThat(eviction.weightedSize().get(), is(context.maximumWeight()));
     } else {
-      assertThat(cache.size(), is(context.maximumSize()));
+      assertThat(cache.estimatedSize(), is(context.maximumSize()));
     }
     assertThat(cache, hasRemovalNotifications(
         context, context.absentKeys().size(), RemovalCause.SIZE));
@@ -99,7 +99,7 @@ public final class EvictionTest {
     eviction.setMaximumSize(newSize);
     assertThat(eviction.getMaximumSize(), is(newSize));
     if (context.initialSize() > newSize) {
-      assertThat(cache.size(), is(newSize));
+      assertThat(cache.estimatedSize(), is(newSize));
       assertThat(cache, hasRemovalNotifications(context, newSize, RemovalCause.SIZE));
     }
   }
@@ -112,7 +112,7 @@ public final class EvictionTest {
     eviction.setMaximumSize(0);
     assertThat(eviction.getMaximumSize(), is(0L));
     if (context.initialSize() > 0) {
-      assertThat(cache.size(), is(0L));
+      assertThat(cache.estimatedSize(), is(0L));
     }
     assertThat(cache, hasRemovalNotifications(context, context.initialSize(), RemovalCause.SIZE));
   }
@@ -136,7 +136,7 @@ public final class EvictionTest {
   public void maximumSize_increase(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
     eviction.setMaximumSize(2 * context.maximumWeightOrSize());
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
     assertThat(eviction.getMaximumSize(), is(2 * context.maximumWeightOrSize()));
   }
 
@@ -146,7 +146,7 @@ public final class EvictionTest {
   public void maximumSize_increase_max(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
     eviction.setMaximumSize(Long.MAX_VALUE);
-    assertThat(cache.size(), is(context.initialSize()));
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
     assertThat(eviction.getMaximumSize(), is(Long.MAX_VALUE - Integer.MAX_VALUE)); // impl detail
   }
 

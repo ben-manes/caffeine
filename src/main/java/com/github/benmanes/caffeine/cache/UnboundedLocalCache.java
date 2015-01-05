@@ -764,7 +764,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
     }
 
     @Override
-    public long size() {
+    public long estimatedSize() {
       return cache.mappingCount();
     }
 
