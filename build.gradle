@@ -116,7 +116,7 @@ pmd {
 }
 
 tasks.withType(Checkstyle) {
-  enabled = System.properties.get('checkstyle', false)
+  enabled = System.properties.containsKey('checkstyle')
   doLast {
     ant.xslt(in: "${buildDir}/reports/checkstyle/main.xml",
              style: 'config/checkstyle/checkstyle.xsl',
@@ -125,7 +125,7 @@ tasks.withType(Checkstyle) {
 }
 
 tasks.withType(FindBugs) {
-  enabled = System.properties.get('findBugs', false)
+  enabled = System.properties.containsKey('findbugs')
   reports {
     xml.enabled = false
     html.enabled = true
@@ -133,7 +133,7 @@ tasks.withType(FindBugs) {
 }
 
 tasks.withType(Pmd) {
-  enabled = System.properties.get('pmd', false)
+  enabled = System.properties.containsKey('pmd')
   reports {
     xml.enabled = false
     html.enabled = true

@@ -74,6 +74,13 @@ gradlew [object-layout task] -PclassName=[class-name]
 
 For convenience, the project's package is prepended to the supplied class name.
 
+#### Static analysis
+Static code analysis tasks are not enabled by default and can be run using
+
+```gradle
+gradlew clean build -Dcheckstyle -Dfindbugs -Dpmd
+```
+
 #### Parameterized testing
 
 Cache unit tests can opt into being run against all cache configurations that meet a specification
