@@ -75,7 +75,7 @@ public final class IsEmptyIterable<E> extends TypeSafeDiagnosingMatcher<Iterable
   }
 
   private void checkCollection(Collection<? extends E> c, DescriptionBuilder builder) {
-    builder.expectThat(c, hasSize(0));
+    builder.expectThat("empty collection", c, hasSize(0));
     builder.expectThat("not empty", c.isEmpty(), is(true));
     builder.expectThat("toArray has data", c.toArray(), is(arrayWithSize(0)));
     builder.expectThat("toArray has data", c.toArray(new Object[0]), is(arrayWithSize(0)));
@@ -96,15 +96,15 @@ public final class IsEmptyIterable<E> extends TypeSafeDiagnosingMatcher<Iterable
   }
 
   private void checkQueue(Queue<? extends E> queue, DescriptionBuilder builder) {
-    builder.expectThat(queue.peek(), is(nullValue()));
+    builder.expectThat("empty queue", queue.peek(), is(nullValue()));
     checkNoSuchElementException("remove", builder, () -> queue.remove());
     checkNoSuchElementException("element", builder, () -> queue.element());
   }
 
   private void checkDeque(Deque<? extends E> deque, DescriptionBuilder builder) {
-    builder.expectThat(deque.peekFirst(), is(nullValue()));
-    builder.expectThat(deque.peekLast(), is(nullValue()));
-    builder.expectThat(deque.descendingIterator().hasNext(), is(false));
+    builder.expectThat("empty deque", deque.peekFirst(), is(nullValue()));
+    builder.expectThat("empty deque", deque.peekLast(), is(nullValue()));
+    builder.expectThat("empty deque", deque.descendingIterator().hasNext(), is(false));
   }
 
   private void checkNoSuchElementException(String label,

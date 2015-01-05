@@ -53,18 +53,19 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
       return true;
     }
 
+    CacheStats stats = context.stats();
     DescriptionBuilder desc = new DescriptionBuilder(description);
     switch (type) {
       case HIT:
-        return desc.expectThat(context.stats().hitCount(), is(count)).matches();
+        return desc.expectThat(type.name(), stats.hitCount(), is(count)).matches();
       case MISS:
-        return desc.expectThat(context.stats().missCount(), is(count)).matches();
+        return desc.expectThat(type.name(), stats.missCount(), is(count)).matches();
       case EVICTION:
-        return desc.expectThat(context.stats().evictionCount(), is(count)).matches();
+        return desc.expectThat(type.name(), stats.evictionCount(), is(count)).matches();
       case LOAD_SUCCESS:
-        return desc.expectThat(context.stats().loadSuccessCount(), is(count)).matches();
+        return desc.expectThat(type.name(), stats.loadSuccessCount(), is(count)).matches();
       case LOAD_FAILURE:
-        return desc.expectThat(context.stats().loadFailureCount(), is(count)).matches();
+        return desc.expectThat(type.name(), stats.loadFailureCount(), is(count)).matches();
       default:
         throw new AssertionError("Unknown stats type");
     }

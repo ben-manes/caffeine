@@ -58,10 +58,10 @@ public final class IsValidLinkedDeque<E> extends TypeSafeDiagnosingMatcher<Linke
   }
 
   void checkEmpty(LinkedDeque<? extends E> deque, DescriptionBuilder desc) {
-    desc.expectThat(deque, deeplyEmpty());
-    desc.expectThat(deque.pollFirst(), is(nullValue()));
-    desc.expectThat(deque.pollLast(), is(nullValue()));
-    desc.expectThat(deque.poll(), is(nullValue()));
+    desc.expectThat("empty deque", deque, deeplyEmpty());
+    desc.expectThat("empty deque", deque.pollFirst(), is(nullValue()));
+    desc.expectThat("empty deque", deque.pollLast(), is(nullValue()));
+    desc.expectThat("empty deque", deque.poll(), is(nullValue()));
   }
 
   void checkIterator(LinkedDeque<E> deque, Iterator<E> iterator, DescriptionBuilder desc) {
@@ -72,7 +72,7 @@ public final class IsValidLinkedDeque<E> extends TypeSafeDiagnosingMatcher<Linke
       Supplier<String> errorMsg = () -> String.format("Loop detected: %s in %s", element, seen);
       desc.expectThat(errorMsg, seen.add(element), is(true));
     }
-    desc.expectThat(deque, hasSize(seen.size()));
+    desc.expectThat("deque size", deque, hasSize(seen.size()));
   }
 
   void checkElement(LinkedDeque<E> deque, E element, DescriptionBuilder desc) {
@@ -85,8 +85,8 @@ public final class IsValidLinkedDeque<E> extends TypeSafeDiagnosingMatcher<Linke
       desc.expectThat("not null next", deque.getNext(element), is(nullValue()));
     }
     if ((element != first) && (element != last)) {
-      desc.expectThat(deque.getPrevious(element), is(not(nullValue())));
-      desc.expectThat(deque.getNext(element), is(not(nullValue())));
+      desc.expectThat("empty deque", deque.getPrevious(element), is(not(nullValue())));
+      desc.expectThat("empty deque", deque.getNext(element), is(not(nullValue())));
     }
   }
 

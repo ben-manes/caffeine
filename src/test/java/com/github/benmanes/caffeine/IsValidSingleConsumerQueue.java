@@ -48,11 +48,11 @@ public final class IsValidSingleConsumerQueue<E>
     DescriptionBuilder builder = new DescriptionBuilder(description);
 
     if (queue.isEmpty()) {
-      builder.expectThat(queue, is(deeplyEmpty()));
-      builder.expectThat(queue.tail, is(queue.head));
-      builder.expectThat(queue.tail.next, is(nullValue()));
+      builder.expectThat("empty queue", queue, is(deeplyEmpty()));
+      builder.expectThat("empty queue", queue.tail, is(queue.head));
+      builder.expectThat("empty queue", queue.tail.next, is(nullValue()));
     }
-    builder.expectThat(queue.head.next, is(nullValue()));
+    builder.expectThat("corrupted queue node", queue.head.next, is(nullValue()));
     checkForLoop(queue, builder);
 
     return builder.matches();
@@ -65,11 +65,11 @@ public final class IsValidSingleConsumerQueue<E>
       String errorMsg = String.format("Loop detected: %s in %s", node, seen);
       builder.expectThat(errorMsg, seen.add(node), is(true));
       if (node != queue.tail) {
-        builder.expectThat(node.value, is(not(nullValue())));
+        builder.expectThat("not null value", node.value, is(not(nullValue())));
       }
       node = node.next;
     }
-    builder.expectThat(queue, hasSize(seen.size()));
+    builder.expectThat("queue size", queue, hasSize(seen.size()));
   }
 
   @Factory

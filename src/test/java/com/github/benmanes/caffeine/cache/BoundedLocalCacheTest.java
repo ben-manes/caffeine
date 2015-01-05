@@ -76,7 +76,8 @@ public final class BoundedLocalCacheTest {
     localCache.put(oldKey, -oldKey);
     localCache.evictionLock.lock();
     try {
-      Node<Integer, Integer> node = localCache.data.get(oldKey);
+      Object keyRef = localCache.keyStrategy.getKeyRef(oldKey);
+      Node<Integer, Integer> node = localCache.data.get(keyRef);
       checkStatus(localCache, node, Status.ALIVE);
       new Thread(() -> {
         localCache.put(newKey, -newKey);

@@ -45,16 +45,16 @@ public @interface CacheSpec {
 
   /* ---------------- Implementation -------------- */
 
-  enum Implementation {
-    Caffeine,
-    Guava
-  }
-
   /** The implementation, each resulting in a new combination. */
   Implementation[] implementation() default {
     Implementation.Caffeine,
     Implementation.Guava,
   };
+
+  enum Implementation {
+    Caffeine,
+    Guava
+  }
 
   /* ---------------- Initial capacity -------------- */
 
@@ -198,13 +198,8 @@ public @interface CacheSpec {
 
   /* ---------------- Reference-based -------------- */
 
-  /**
-   * Whether to retain a strong reference copy of the initial cache entries within the context. This
-   * allows soft/weak combinations to be tested in cases where eviction is not desired. The copy
-   * held by the context can be mutated for additional flexibility during testing.
-   */
-  // FIXME(ben): May not be useful due to Java's integer cache (or needs to exceed cached range?)
-  boolean retain() default true;
+  // TODO(ben): Weak & Soft reference tests disabled due to causing GC thrashing / OOME.
+  // The build needs to fork those tests into their own JVMs to ensure memory limits
 
   /** The reference type of that the cache holds a key with (strong or weak only). */
   ReferenceType[] keys() default {
@@ -215,8 +210,8 @@ public @interface CacheSpec {
   /** The reference type of that the cache holds a value with (strong, soft, or weak). */
   ReferenceType[] values() default {
     ReferenceType.STRONG,
-    ReferenceType.WEAK,
-    ReferenceType.SOFT
+    //ReferenceType.WEAK,
+    //ReferenceType.SOFT
   };
 
   /** The reference type of cache keys and/or values. */

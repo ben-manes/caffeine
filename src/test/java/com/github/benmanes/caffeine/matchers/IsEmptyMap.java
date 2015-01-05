@@ -45,10 +45,10 @@ public final class IsEmptyMap<K, V>
   protected boolean matchesSafely(Map<? extends K, ? extends V> map, Description description) {
     DescriptionBuilder desc = new DescriptionBuilder(description);
 
-    desc.expectThat(map.keySet(), is(deeplyEmpty()));
-    desc.expectThat(map.values(), is(deeplyEmpty()));
-    desc.expectThat(map.entrySet(), is(deeplyEmpty()));
-    desc.expectThat(map, is(Collections.EMPTY_MAP));
+    desc.expectThat("empty keyset", map.keySet(), is(deeplyEmpty()));
+    desc.expectThat("empty values", map.values(), is(deeplyEmpty()));
+    desc.expectThat("empty entrySet", map.entrySet(), is(deeplyEmpty()));
+    desc.expectThat("empty map", map, is(Collections.EMPTY_MAP));
     desc.expectThat("Size != 0", map.size(), is(0));
     desc.expectThat("Not empty", map.isEmpty(), is(true));
     desc.expectThat("hashcode", map.hashCode(), is(ImmutableMap.of().hashCode()));

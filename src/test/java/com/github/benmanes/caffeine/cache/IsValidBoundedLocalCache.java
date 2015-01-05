@@ -86,15 +86,14 @@ public final class IsValidBoundedLocalCache<K, V>
       desc.expectThat("overflow", map.maximumWeightedSize.get(),
           is(greaterThanOrEqualTo(map.weightedSize())));
     }
-    desc.expectThat(((BoundedLocalCache.Sync) map.evictionLock).isLocked(), is(false));
+    desc.expectThat("unlocked", ((BoundedLocalCache.Sync) map.evictionLock).isLocked(), is(false));
 
     if (map.isEmpty()) {
-      desc.expectThat(map, emptyMap());
+      desc.expectThat("empty map", map, emptyMap());
     }
   }
 
-  private void checkEvictionDeque(BoundedLocalCache<K, V> map,
-      DescriptionBuilder desc) {
+  private void checkEvictionDeque(BoundedLocalCache<K, V> map, DescriptionBuilder desc) {
     if (map.evicts() || map.expiresAfterAccess()) {
       checkLinks(map, map.accessOrderDeque, desc);
       checkDeque(map.accessOrderDeque, map.size(), desc);
@@ -106,7 +105,7 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkDeque(LinkedDeque<Node<K, V>> deque, int size, DescriptionBuilder desc) {
-    desc.expectThat(deque, hasSize(size));
+    desc.expectThat("deque size", deque, hasSize(size));
     IsValidLinkedDeque.<Node<K, V>>validLinkedDeque().matchesSafely(deque, desc.getDescription());
   }
 
@@ -130,22 +129,26 @@ public final class IsValidBoundedLocalCache<K, V>
     desc.expectThat(error, map.weightedSize(), is(weightedSize));
   }
 
-  private void checkNode(BoundedLocalCache<K, V> map,
-      Node<K, V> node, DescriptionBuilder builder) {
+  private void checkNode(BoundedLocalCache<K, V> map, Node<K, V> node, DescriptionBuilder desc) {
     Weigher<? super K, ? super V> weigher = map.weigher;
     V value = node.getValue(map.valueStrategy);
 
     K key = node.getKey(map.keyStrategy);
-    builder.expectThat(key, is(not(nullValue())));
-    builder.expectThat(node.get(), is(not(nullValue())));
-    builder.expectThat("weight", node.get().weight, is(weigher.weigh(key, value)));
+    desc.expectThat("not null weighted value", node.get(), is(not(nullValue())));
+    desc.expectThat("weight", node.get().weight, is(weigher.weigh(key, value)));
 
-    builder.expectThat("inconsistent", map.containsKey(key), is(true));
-    builder.expectThat("found wrong node", map.data.get(node.keyRef), is(node));
+    if (map.collectKeys()) {
+      if (key != null) {
+        desc.expectThat("inconsistent", map.containsKey(key), is(true));
+      }
+    } else {
+      desc.expectThat("not null key", key, is(not(nullValue())));
+    }
+    desc.expectThat("found wrong node", map.data.get(node.keyRef), is(node));
 
     if (!map.collectValues()) {
-      builder.expectThat(value, is(not(nullValue())));
-      builder.expectThat(() -> "Could not find value: " + value, map.containsValue(value), is(true));
+      desc.expectThat("not null value", value, is(not(nullValue())));
+      desc.expectThat(() -> "Could not find value: " + value, map.containsValue(value), is(true));
     }
   }
 

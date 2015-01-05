@@ -373,7 +373,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void invalidateAll_full(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.invalidateAll(cache.asMap().keySet());
+    cache.invalidateAll(context.original().keySet());
     assertThat(cache.size(), is(0L));
     assertThat(cache, hasRemovalNotifications(context,
         context.original().size(), RemovalCause.EXPLICIT));

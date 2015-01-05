@@ -67,7 +67,7 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
     List<RemovalNotification<Integer, Integer>> notifications = context.consumedNotifications();
     if (!notifications.isEmpty()) {
       ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
-      desc.expectThat(notifications, hasSize(count));
+      desc.expectThat("notification size", notifications, hasSize(count));
 
       for (RemovalNotification<?, ?> notification : notifications) {
         checkNotification(notification);

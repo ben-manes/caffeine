@@ -33,10 +33,12 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
@@ -227,7 +229,12 @@ public final class AsMapTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void forEach_modify(Map<Integer, Integer> map, CacheContext context) {
     // non-deterministic traversal behavior with modifications, but shouldn't become corrupted
-    map.forEach((key, value) -> map.put(context.lastKey() + key, key));
+    List<Integer> modified = new ArrayList<>();
+    map.forEach((key, value) -> {
+      Integer newKey = context.lastKey() + key;
+      modified.add(newKey); // for weak keys
+      map.put(newKey, key);
+    });
   }
 
   /* ---------------- put -------------- */
