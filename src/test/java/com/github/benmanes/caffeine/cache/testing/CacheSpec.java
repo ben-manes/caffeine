@@ -204,14 +204,14 @@ public @interface CacheSpec {
   /** The reference type of that the cache holds a key with (strong or weak only). */
   ReferenceType[] keys() default {
     ReferenceType.STRONG,
-    //ReferenceType.WEAK
+    ReferenceType.WEAK
   };
 
   /** The reference type of that the cache holds a value with (strong, soft, or weak). */
   ReferenceType[] values() default {
     ReferenceType.STRONG,
-    //ReferenceType.WEAK,
-    //ReferenceType.SOFT
+    ReferenceType.WEAK,
+    ReferenceType.SOFT
   };
 
   /** The reference type of cache keys and/or values. */

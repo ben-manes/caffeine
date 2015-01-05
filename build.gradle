@@ -98,6 +98,11 @@ test {
   }
 }
 
+// G1 handles weak & soft references very well
+tasks.withType(JavaForkOptions) {
+  jvmArgs "-XX:+UseG1GC"
+}
+
 checkstyle {
   showViolations = true
   sourceSets = [sourceSets.main]
