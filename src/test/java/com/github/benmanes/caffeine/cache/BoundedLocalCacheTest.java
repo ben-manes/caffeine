@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -118,7 +119,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, weigher = CacheWeigher.DEFAULT,
       population = Population.EMPTY, maximumSize = MaximumSize.TEN)
-  public void evict_lru(Cache<Integer, Integer> cache) {
+  public void evict_lru(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     for (int i = 0; i < 10; i++) {
       cache.put(i, -i);
@@ -137,6 +138,8 @@ public final class BoundedLocalCacheTest {
 
     // evict 9, 0, 1
     checkEvict(localCache, asList(13, 14, 15), 2, 10, 11, 12, 6, 7, 8, 13, 14, 15);
+
+    assertThat(context, hasEvictionCount(6));
   }
 
   private void checkReorder(BoundedLocalCache<Integer, Integer> localCache,

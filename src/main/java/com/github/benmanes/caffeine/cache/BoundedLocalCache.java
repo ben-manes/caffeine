@@ -415,8 +415,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     makeDead(node);
 
     // Notify the listener only if the entry was evicted
-    if (data.remove(node.keyRef, node) && hasRemovalListener()) {
-      notifyRemoval(node.getKey(keyStrategy), node.getValue(valueStrategy), cause);
+    if (data.remove(node.keyRef, node)) {
+      if (hasRemovalListener()) {
+        notifyRemoval(node.getKey(keyStrategy), node.getValue(valueStrategy), cause);
+      }
+      statsCounter.recordEviction();
     }
 
     accessOrderDeque.remove(node);

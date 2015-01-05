@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -84,8 +85,9 @@ public final class EvictionTest {
     } else {
       assertThat(cache.estimatedSize(), is(context.maximumSize()));
     }
-    assertThat(cache, hasRemovalNotifications(
-        context, context.absentKeys().size(), RemovalCause.SIZE));
+    int count = context.absentKeys().size();
+    assertThat(context, hasEvictionCount(count));
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.SIZE));
   }
 
   /* ---------------- Advanced: MaximumSize -------------- */
