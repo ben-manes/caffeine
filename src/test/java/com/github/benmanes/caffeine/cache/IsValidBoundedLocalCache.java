@@ -141,7 +141,7 @@ public final class IsValidBoundedLocalCache<K, V>
     builder.expectThat("weight", node.get().weight, is(weigher.weigh(key, value)));
 
     builder.expectThat("inconsistent", map.containsKey(key), is(true));
-    builder.expectThat("found wrong node", map.data.get(key), is(node));
+    builder.expectThat("found wrong node", map.data.get(node.keyRef), is(node));
 
     if (!map.collectValues()) {
       builder.expectThat(value, is(not(nullValue())));

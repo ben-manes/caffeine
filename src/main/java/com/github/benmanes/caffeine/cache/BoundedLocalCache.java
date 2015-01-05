@@ -874,7 +874,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   @Override
   public boolean containsKey(Object key) {
-    return data.containsKey(key);
+    return data.containsKey(keyStrategy.getKeyRef(key));
   }
 
   @Override
