@@ -315,6 +315,18 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     });
   }
 
+  boolean collectKeys() {
+    return (keyStrategy != ReferenceStrategy.STRONG);
+  }
+
+  boolean collectValues() {
+    return (valueStrategy != ReferenceStrategy.STRONG);
+  }
+
+  boolean collects() {
+    return collectKeys() || collectValues();
+  }
+
   /* ---------------- Expiration Support -------------- */
 
   boolean expires() {
@@ -653,7 +665,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   boolean tryToRetire(Node<K, V> node, WeightedValue<V> expect) {
     if (expect.isAlive()) {
       final WeightedValue<V> retired = new WeightedValue<V>(
-          expect.getValue(valueStrategy), -expect.weight);
+          expect.getValueRef(), -expect.weight);
       synchronized (node) {
         if (node.get() == expect) {
           node.lazySet(retired);
@@ -678,7 +690,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         return null;
       }
       final WeightedValue<V> retired = new WeightedValue<V>(
-          current.getValue(valueStrategy), -current.weight);
+          current.getValueRef(), -current.weight);
       node.lazySet(retired);
       return retired;
     }
@@ -694,7 +706,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   void makeDead(Node<K, V> node) {
     synchronized (node) {
       WeightedValue<V> current = node.get();
-      WeightedValue<V> dead = new WeightedValue<V>(current.getValue(valueStrategy), 0);
+      WeightedValue<V> dead = new WeightedValue<V>(current.getValueRef(), 0);
       if (node.compareAndSet(current, dead)) {
         weightedSize.lazySet(weightedSize.get() - Math.abs(current.weight));
         return;
@@ -813,8 +825,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         Node<K, V> node;
         while ((node = accessOrderDeque.poll()) != null) {
           // FIXME(ben): Handle case when key is null (weak reference)
-          K key = node.getKey(keyStrategy);
-          if (data.remove(key, node) && hasRemovalListener()) {
+          if (data.remove(node.keyRef, node) && hasRemovalListener()) {
+            K key = node.getKey(keyStrategy);
             notifyRemoval(key, node.getValue(valueStrategy), RemovalCause.EXPLICIT);
           }
           makeDead(node);
@@ -837,8 +849,19 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (expiresAfterWrite()) {
         Node<K, V> node;
         while ((node = writeOrderDeque.poll()) != null) {
-          K key = node.getKey(keyStrategy);
-          if (data.remove(key, node) && hasRemovalListener()) {
+          if (data.remove(node.keyRef, node) && hasRemovalListener()) {
+            K key = node.getKey(keyStrategy);
+            notifyRemoval(key, node.getValue(valueStrategy), RemovalCause.EXPLICIT);
+          }
+          makeDead(node);
+        }
+      }
+
+      if (collects()) {
+        for (Entry<Object, Node<K, V>> entry : data.entrySet()) {
+          Node<K, V> node = entry.getValue();
+          if (data.remove(node.keyRef, node) && hasRemovalListener()) {
+            K key = node.getKey(keyStrategy);
             notifyRemoval(key, node.getValue(valueStrategy), RemovalCause.EXPLICIT);
           }
           makeDead(node);
@@ -859,7 +882,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     requireNonNull(value);
 
     for (Node<K, V> node : data.values()) {
-      if (node.getValue(valueStrategy).equals(value)) {
+      if (value.equals(node.getValue(valueStrategy))) {
         return true;
       }
     }
@@ -1031,8 +1054,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     requireNonNull(value);
 
     final int weight = weigher.weigh(key, value);
-    final WeightedValue<V> weightedValue = new WeightedValue<V>(value, weight);
-
     final Node<K, V> node = data.get(key);
     if (node == null) {
       return null;
@@ -1043,6 +1064,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (!oldWeightedValue.isAlive()) {
         return null;
       }
+      final WeightedValue<V> weightedValue = new WeightedValue<V>(
+          valueStrategy.referenceValue(node.keyRef, value, valueReferenceQueue), weight);
       node.lazySet(weightedValue);
     }
     final int weightedDifference = weight - oldWeightedValue.weight;
@@ -1065,7 +1088,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     requireNonNull(newValue);
 
     final int weight = weigher.weigh(key, newValue);
-    final WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValue, weight);
 
     final Node<K, V> node = data.get(key);
     if (node == null) {
@@ -1077,6 +1099,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (!oldWeightedValue.isAlive() || !oldWeightedValue.contains(oldValue, valueStrategy)) {
         return false;
       }
+      final WeightedValue<V> newWeightedValue = new WeightedValue<V>(
+          valueStrategy.referenceValue(node.keyRef, newValue, valueReferenceQueue), weight);
       node.lazySet(newWeightedValue);
     }
     final int weightedDifference = weight - oldWeightedValue.weight;
@@ -1094,12 +1118,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   @Override
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+    requireNonNull(key);
     requireNonNull(mappingFunction);
 
     // optimistic fast path due to computeIfAbsent always locking is leveraged expiration check
 
     long now = ticker.read();
-    Node<K, V> node = data.get(key);
+    Node<K, V> node = data.get(keyStrategy.getKeyRef(key));
     if ((node != null)) {
       if (hasExpired(node, now)) {
         if (data.remove(key, node)) {
@@ -1116,15 +1141,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @SuppressWarnings("unchecked")
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
-    node = data.computeIfAbsent(key, k -> {
+    Object keyRef = keyStrategy.referenceKey(key, keyReferenceQueue);
+    node = data.computeIfAbsent(keyRef, k -> {
       V value;
       value = statsAware(mappingFunction).apply(key);
       if (value == null) {
         return null;
       }
       int weight = weigher.weigh(key, value);
-      weightedValue[0] = new WeightedValue<V>(value, weight);
-      final Object keyRef = keyStrategy.referenceKey(key, keyReferenceQueue);
+      Object valueRef = valueStrategy.referenceValue(keyRef, value, valueReferenceQueue);
+      weightedValue[0] = new WeightedValue<V>(valueRef, weight);
       return new Node<K, V>(keyRef, weightedValue[0], now);
     });
     if (node == null) {
@@ -1152,7 +1178,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @SuppressWarnings("unchecked")
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     Runnable[] task = new Runnable[1];
-    Node<K, V> node = data.computeIfPresent(key, (k, prior) -> {
+    Node<K, V> node = data.computeIfPresent(key, (keyRef, prior) -> {
       statsCounter.recordHits(1);
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
@@ -1167,7 +1193,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           return null;
         }
         int weight = weigher.weigh(key, newValue);
-        WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValue, weight);
+        Object newValueRef = valueStrategy.referenceValue(keyRef, newValue, valueReferenceQueue);
+        WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValueRef, weight);
         prior.lazySet(newWeightedValue);
         weightedValue[0] = newWeightedValue;
         final int weightedDifference = weight - oldWeightedValue.weight;
@@ -1209,7 +1236,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         final long now = ticker.read();
         final int weight = weigher.weigh(key, newValue[0]);
         final Object keyRef = keyStrategy.referenceKey(key, keyReferenceQueue);
-        final WeightedValue<V> weightedValue = new WeightedValue<V>(newValue[0], weight);
+        final WeightedValue<V> weightedValue = new WeightedValue<V>(
+            valueStrategy.referenceValue(keyRef, newValue[0], valueReferenceQueue), weight);
         final Node<K, V> newNode = new Node<K, V>(keyRef, weightedValue, now);
         task[0] = new AddTask(newNode, weight);
         return newNode;
@@ -1237,7 +1265,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           return null;
         }
         final int weight = weigher.weigh(key, newValue[0]);
-        final WeightedValue<V> weightedValue = new WeightedValue<V>(newValue[0], weight);
+        final WeightedValue<V> weightedValue = new WeightedValue<V>(
+            valueStrategy.referenceValue(prior.keyRef, newValue[0], valueReferenceQueue), weight);
         Node<K, V> newNode;
         if (task[1] == null) {
           newNode = prior;
@@ -1628,6 +1657,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     boolean contains(Object o, ReferenceStrategy valueStrategy) {
       return (o == getValue(valueStrategy)) || getValue(valueStrategy).equals(o);
+    }
+
+    Object getValueRef() {
+      return valueRef;
     }
 
     V getValue(ReferenceStrategy valueStrategy) {
@@ -2378,13 +2411,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       final Optional<Expiration<K, V>> afterAccess = Optional.of(new BoundedExpireAfterAccess());
 
       @Override public Optional<Eviction<K, V>> eviction() {
-        return eviction;
+        return cache.evicts() ? eviction : Optional.empty();
       }
       @Override public Optional<Expiration<K, V>> expireAfterAccess() {
-        return afterAccess;
+        return cache.expiresAfterAccess() ? afterAccess : Optional.empty();
       }
       @Override public Optional<Expiration<K, V>> expireAfterWrite() {
-        return afterWrite;
+        return cache.expiresAfterWrite() ? afterWrite : Optional.empty();
       }
 
       final class BoundedEviction implements Eviction<K, V> {

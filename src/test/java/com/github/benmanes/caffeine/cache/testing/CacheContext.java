@@ -83,6 +83,8 @@ public final class CacheContext {
 
   // Generated on-demand
   Integer absentKey;
+  Integer absentValue;
+
   Set<Integer> absentKeys;
 
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
@@ -133,6 +135,10 @@ public final class CacheContext {
 
   public Integer absentKey() {
     return (absentKey == null) ? (absentKey = nextAbsentKey()) : absentKey;
+  }
+
+  public Integer absentValue() {
+    return (absentValue == null) ? (absentValue = -absentKey()) : absentValue;
   }
 
   public Set<Integer> absentKeys() {

@@ -139,7 +139,7 @@ public final class AsMapTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void containsValue_present(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      assertThat(map.containsValue(-key), is(true));
+      assertThat(map.containsValue(context.original().get(key)), is(true));
     }
   }
 
@@ -471,7 +471,7 @@ public final class AsMapTest {
   public void removeConditionally_presentKeyAndValue(Map<Integer, Integer> map,
       CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      assertThat(map.remove(key, -key), is(true));
+      assertThat(map.remove(key, context.original().get(key)), is(true));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size() - count));
@@ -614,7 +614,7 @@ public final class AsMapTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replaceConditionally_sameValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      assertThat(map.replace(key, -key, -key), is(true));
+      assertThat(map.replace(key, context.original().get(key), -key), is(true));
       assertThat(map.get(key), is(-key));
     }
     assertThat(map.size(), is(context.original().size()));
@@ -628,7 +628,7 @@ public final class AsMapTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replaceConditionally_differentValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      assertThat(map.replace(key, -key, -context.absentKey()), is(true));
+      assertThat(map.replace(key, context.original().get(key), -context.absentKey()), is(true));
       assertThat(map.get(key), is(-context.absentKey()));
     }
     assertThat(map.size(), is(context.original().size()));
@@ -750,10 +750,11 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfAbsent_absent(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.computeIfAbsent(context.absentKey(), key -> -key), is(-context.absentKey()));
+    assertThat(map.computeIfAbsent(context.absentKey(),
+        key -> context.absentValue()), is(context.absentValue()));
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
-    assertThat(map.get(context.absentKey()), is(-context.absentKey()));
+    assertThat(map.get(context.absentKey()), is(context.absentValue()));
     assertThat(map.size(), is(1 + context.original().size()));
   }
 

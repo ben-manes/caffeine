@@ -133,18 +133,20 @@ public final class IsValidBoundedLocalCache<K, V>
   private void checkNode(BoundedLocalCache<K, V> map,
       Node<K, V> node, DescriptionBuilder builder) {
     Weigher<? super K, ? super V> weigher = map.weigher;
+    V value = node.getValue(map.valueStrategy);
 
     K key = node.getKey(map.keyStrategy);
     builder.expectThat(key, is(not(nullValue())));
     builder.expectThat(node.get(), is(not(nullValue())));
-    builder.expectThat(node.getValue(map.valueStrategy), is(not(nullValue())));
-    builder.expectThat("weight", node.get().weight,
-        is(weigher.weigh(key, node.getValue(map.valueStrategy))));
+    builder.expectThat("weight", node.get().weight, is(weigher.weigh(key, value)));
 
     builder.expectThat("inconsistent", map.containsKey(key), is(true));
-    builder.expectThat(() -> "Could not find value: " + node.getValue(map.valueStrategy),
-        map.containsValue(node.getValue(map.valueStrategy)), is(true));
     builder.expectThat("found wrong node", map.data.get(key), is(node));
+
+    if (!map.collectValues()) {
+      builder.expectThat(value, is(not(nullValue())));
+      builder.expectThat(() -> "Could not find value: " + value, map.containsValue(value), is(true));
+    }
   }
 
   @Factory

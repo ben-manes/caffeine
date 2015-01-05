@@ -109,13 +109,24 @@ final class CacheGenerator {
     int base = 1000;
 
     int maximum = (int) Math.min(context.maximumSize(), context.population.size());
-    context.firstKey = base + (int) Math.min(1, context.population.size());
-    context.lastKey = base + maximum;
-    context.middleKey = Math.max(context.firstKey, base + ((context.lastKey - context.firstKey) / 2));
+    int first = base + (int) Math.min(1, context.population.size());
+    int last = base + maximum;
+    int middle = Math.max(first, base + ((last - first) / 2));
+
+    // Ensure references are the same for identity comparison (soft, weak)
     for (int i = 1; i <= maximum; i++) {
-      int val = (base + i);
-      context.original.put(val, -val);
-      cache.put(val, -val);
+      Integer key = (base + i);
+      if (key == first) {
+        context.firstKey = key;
+      }
+      if (key == middle) {
+        context.middleKey = key;
+      }
+      if (key == last) {
+        context.lastKey = key;
+      }
+      context.original.put(key, -key);
     }
+    cache.putAll(context.original);
   }
 }
