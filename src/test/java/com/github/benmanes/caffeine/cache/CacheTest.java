@@ -127,8 +127,8 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void get_absent(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
-    Integer value = cache.get(key, k -> -key);
-    assertThat(value, is(-key));
+    Integer value = cache.get(key, k -> context.absentValue());
+    assertThat(value, is(context.absentValue()));
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
@@ -137,9 +137,12 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(Cache<Integer, Integer> cache, CacheContext context) {
     Function<Integer, Integer> loader = key -> { throw new RuntimeException(); };
-    assertThat(cache.get(context.firstKey(), loader), is(-context.firstKey()));
-    assertThat(cache.get(context.middleKey(), loader), is(-context.middleKey()));
-    assertThat(cache.get(context.lastKey(), loader), is(-context.lastKey()));
+    assertThat(cache.get(context.firstKey(), loader),
+        is(context.original().get(context.firstKey())));
+    assertThat(cache.get(context.middleKey(), loader),
+        is(context.original().get(context.middleKey())));
+    assertThat(cache.get(context.lastKey(), loader),
+        is(context.original().get(context.lastKey())));
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
@@ -188,9 +191,9 @@ public final class CacheTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_present_partial(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> expect = new HashMap<>();
-    expect.put(context.firstKey(), -context.firstKey());
-    expect.put(context.middleKey(), -context.middleKey());
-    expect.put(context.lastKey(), -context.lastKey());
+    expect.put(context.firstKey(), context.original().get(context.firstKey()));
+    expect.put(context.middleKey(), context.original().get(context.middleKey()));
+    expect.put(context.lastKey(), context.original().get(context.lastKey()));
     Map<Integer, Integer> result = cache.getAllPresent(expect.keySet());
     assertThat(result, is(equalTo(expect)));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(expect.size())));
@@ -221,8 +224,9 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      cache.put(key, -key);
-      assertThat(cache.getIfPresent(key), is(-key));
+      Integer value = context.original().get(key);
+      cache.put(key, value);
+      assertThat(cache.getIfPresent(key), is(value));
     }
     assertThat(cache.estimatedSize(), is(context.initialSize()));
 
@@ -246,7 +250,7 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.put(null, -context.absentKey());
+    cache.put(null, context.absentValue());
   }
 
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
