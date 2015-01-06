@@ -38,7 +38,7 @@ import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 
 /**
  * An unbounded thread-safe stack based on linked nodes. This stack orders elements LIFO
- * (last-in-last-out). The <em>top</em> of the stack is that element that has been on the stack
+ * (last-in-first-out). The <em>top</em> of the stack is that element that has been on the stack
  * the shortest time. New elements are inserted at and retrieved from the top of the stack. A
  * {@code EliminationStack} is an appropriate choice when many threads will exchange elements
  * through shared access to a common collection. Like most other concurrent collection
