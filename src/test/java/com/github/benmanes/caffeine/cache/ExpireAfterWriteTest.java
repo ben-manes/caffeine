@@ -99,16 +99,18 @@ public final class ExpireAfterWriteTest {
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put(Cache<Integer, Integer> cache, CacheContext context) {
+    Integer firstValue = context.original().get(context.firstKey());
+
     context.ticker().advance(30, TimeUnit.SECONDS);
-    cache.put(context.firstKey(), -context.firstKey());
-    cache.put(context.absentKey(), -context.absentKey());
+    cache.put(context.firstKey(), firstValue);
+    cache.put(context.absentKey(), context.absentValue());
 
     // Ignore replacement notification
     context.consumedNotifications().clear();
 
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.firstKey()), is(-context.firstKey()));
-    assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
+    assertThat(cache.getIfPresent(context.firstKey()), is(firstValue));
+    assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(2L));
@@ -121,17 +123,19 @@ public final class ExpireAfterWriteTest {
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void putAll(Cache<Integer, Integer> cache, CacheContext context) {
+    Integer firstValue = context.original().get(context.firstKey());
+
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.putAll(ImmutableMap.of(
-        context.firstKey(), -context.firstKey(),
-        context.absentKey(), -context.absentKey()));
+        context.firstKey(), firstValue,
+        context.absentKey(), context.absentValue()));
 
     // Ignore replacement notification
     context.consumedNotifications().clear();
 
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(cache.getIfPresent(context.firstKey()), is(-context.firstKey()));
-    assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
+    assertThat(cache.getIfPresent(context.firstKey()), is(firstValue));
+    assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(2L));

@@ -32,6 +32,8 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -259,6 +261,10 @@ public @interface CacheSpec {
 
   /* ---------------- CacheLoader -------------- */
 
+  // FIXME: A hack to allow the NEGATIVE loader's return value to be retained on refresh
+  static final ThreadLocal<Interner<Integer>> interner =
+      ThreadLocal.withInitial(() -> Interners.newStrongInterner());
+
   Loader[] loader() default {
     Loader.NEGATIVE,
   };
@@ -280,7 +286,7 @@ public @interface CacheSpec {
     /** A loader that returns the key's negation. */
     NEGATIVE(false) {
       @Override public Integer load(Integer key) {
-        return -key;
+        return interner.get().intern(-key);
       }
     },
     /** A loader that always throws an exception. */

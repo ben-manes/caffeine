@@ -224,7 +224,8 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT,
   population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void refresh_present_sameValue(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void refresh_present_sameValue(
+      LoadingCache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.refresh(key);
     }
@@ -233,7 +234,7 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
 
     for (Integer key : context.firstMiddleLastKeys()) {
-      assertThat(cache.get(key), is(-key));
+      assertThat(cache.get(key), is(context.original().get(key)));
     }
     assertThat(cache.estimatedSize(), is(context.initialSize()));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));

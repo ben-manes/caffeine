@@ -80,5 +80,6 @@ public class CacheValidationListener implements IInvokedMethodListener {
     for (int i = 0; i < testResult.getParameters().length; i++) {
       testResult.getParameters()[i] = testResult.getParameters()[i].toString();
     }
+    CacheSpec.interner.remove();
   }
 }

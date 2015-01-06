@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -332,8 +333,8 @@ public final class AsMapTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_replace(Map<Integer, Integer> map, CacheContext context) {
-    Map<Integer, Integer> entries = context.original();
-    entries.replaceAll((key, value) -> value + 1);
+    Map<Integer, Integer> entries = new LinkedHashMap<>(context.original());
+    entries.replaceAll((key, value) -> key);
     map.putAll(entries);
     assertThat(map, is(equalTo(entries)));
     assertThat(map, hasRemovalNotifications(context, entries.size(), RemovalCause.REPLACED));
@@ -520,8 +521,9 @@ public final class AsMapTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replace_sameValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      assertThat(map.replace(key, -key), is(-key));
-      assertThat(map.get(key), is(-key));
+      Integer value = context.original().get(key);
+      assertThat(map.replace(key, value), is(value));
+      assertThat(map.get(key), is(value));
     }
     assertThat(map.size(), is(context.original().size()));
 
@@ -674,7 +676,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void replaceAll_differentValue(Map<Integer, Integer> map, CacheContext context) {
-    map.replaceAll((key, value) -> -value);
+    map.replaceAll((key, value) -> key);
     map.forEach((key, value) -> assertThat(value, is(equalTo(key))));
     assertThat(map, hasRemovalNotifications(context, map.size(), RemovalCause.REPLACED));
   }
@@ -950,10 +952,11 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void compute_absent(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.compute(context.absentKey(), (key, value) -> -key), is(-context.absentKey()));
+    assertThat(map.compute(context.absentKey(),
+        (key, value) -> context.absentValue()), is(context.absentValue()));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
-    assertThat(map.get(context.absentKey()), is(-context.absentKey()));
+    assertThat(map.get(context.absentKey()), is(context.absentValue()));
     assertThat(map.size(), is(1 + context.original().size()));
   }
 

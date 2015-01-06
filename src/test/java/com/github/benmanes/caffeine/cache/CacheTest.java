@@ -212,9 +212,9 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_insert(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.put(context.absentKey(), -context.absentKey());
+    cache.put(context.absentKey(), context.absentValue());
     assertThat(cache.estimatedSize(), is(context.initialSize() + 1));
-    assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
   }
 
   @Test(dataProvider = "caches")
@@ -234,8 +234,8 @@ public final class CacheTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_differentValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      cache.put(key, -context.absentKey());
-      assertThat(cache.getIfPresent(key), is(-context.absentKey()));
+      cache.put(key, context.absentValue());
+      assertThat(cache.getIfPresent(key), is(context.absentValue()));
     }
     assertThat(cache.estimatedSize(), is(context.initialSize()));
 

@@ -225,11 +225,15 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
-  public void updateRecency_onReplaceConditionally(Cache<Integer, Integer> cache) {
+  public void updateRecency_onReplaceConditionally(
+      Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.replace(first.getKey(localCache.keyStrategy),
-        -first.getKey(localCache.keyStrategy), -first.getKey(localCache.keyStrategy)));
+    Integer key = first.getKey(localCache.keyStrategy);
+    Integer value = context.original().get(key);
+
+    updateRecency(localCache, () -> localCache.replace(
+        first.getKey(localCache.keyStrategy), value, value));
   }
 
   private void updateRecency(BoundedLocalCache<Integer, Integer> cache, Runnable operation) {
