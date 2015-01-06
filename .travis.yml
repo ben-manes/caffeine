@@ -7,13 +7,5 @@ jdk:
 env:
  - TERM=dumb
 
-script:
- - JAVA_OPTS="-Xmx384m -XX:+UseG1GC" ./gradlew check
- - JAVA_OPTS="-Xmx384m -XX:+UseG1GC" ./gradlew check -Dcache
- - JAVA_OPTS="-Xmx384m -XX:+UseG1GC" ./gradlew check -Dcache -DweakKeys
- - JAVA_OPTS="-Xmx384m -XX:+UseG1GC" ./gradlew check -Dcache -DweakKeys -DweakValues
- - JAVA_OPTS="-Xmx384m -XX:+UseG1GC" ./gradlew check -Dcache -DweakKeys -DsoftValues
- - JAVA_OPTS="-Xmx384m -XX:+UseG1GC" ./gradlew check -Dcache -DsoftValues
-
 after_success:
 - ./gradlew jacocoTestReport coveralls

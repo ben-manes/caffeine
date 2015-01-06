@@ -396,8 +396,8 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putIfAbsent_insert(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.putIfAbsent(context.absentKey(), -context.absentKey()), is(nullValue()));
-    assertThat(map.get(context.absentKey()), is(-context.absentKey()));
+    assertThat(map.putIfAbsent(context.absentKey(), context.absentValue()), is(nullValue()));
+    assertThat(map.get(context.absentKey()), is(context.absentValue()));
     assertThat(map.size(), is(context.original().size() + 1));
   }
 

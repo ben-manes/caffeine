@@ -40,10 +40,18 @@ buildscript {
 
 configurations {
   checkstyleConfig
+  [weakKeysTest, weakValuesTest, softValuesTest]*.each {
+    it.extendsFrom testCompile
+    it.extendsFrom testRuntime
+  }
 }
 
 sourceSets {
   jmh.java.srcDirs += sourceSets.test.java.srcDirs
+  [weakKeysTest, weakValuesTest, softValuesTest]*.each {
+    it.java.srcDir 'src/test/java'
+    it.resources.srcDir 'src/test/resources'
+  }
 }
 
 repositories {
@@ -84,7 +92,38 @@ dependencies {
   }
 }
 
-test {
+['weakKeys', 'weakValues', 'softValues'].each {
+  def referent = it
+  task "${it}Test"(type: Test) {
+    useTestNG()
+    description = "Runs %{referent} tests."
+    include 'com/github/benmanes/caffeine/cache/**'
+
+    testClassesDir = sourceSets."${name}".output.classesDir
+    classpath = sourceSets."${name}".runtimeClasspath
+    systemProperties["${referent}"] = 'true'
+
+    // ensure we don't overwrite default report directories used by 'test' task
+    reports.html.destination = "${buildDir}/reports/${name}"
+    reports.junitXml.destination = "${buildDir}/${name}-results"
+    binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
+
+    // always run integration tests after unit tests in order to fail fast
+    mustRunAfter test    
+  }
+}
+
+[tasks.weakKeysTest, tasks.weakValuesTest, tasks.softValuesTest]*.each {
+  def taskName = it.name
+  tasks.check.dependsOn(it)
+  dependencies {
+    "${taskName}Compile" sourceSets.main.output, sourceSets.test.output
+    "${taskName}Compile" configurations.compile, configurations.testCompile
+    "${taskName}Runtime" configurations.runtime, configurations.testRuntime
+  }
+}
+
+tasks.withType(Test) {
   useTestNG()
   options {
     if (!hasProperty('slow')) {
@@ -96,9 +135,8 @@ test {
   testLogging {
     events 'skipped'
   }
-  maxHeapSize = '512m'
-  jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=250'
-  systemProperties = System.getProperties()
+  maxHeapSize = '384m'
+  jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=250'
 }
 
 checkstyle {
