@@ -5,7 +5,11 @@ jdk:
   - oraclejdk8
 
 env:
- - TERM=dumb
+ - TERM=dumb TASK=check
+ - TERM=dumb TASK=slowTest
+
+script:
+ - ./gradlew $TASK
 
 after_success:
 - ./gradlew jacocoTestReport coveralls
