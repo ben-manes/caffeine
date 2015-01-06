@@ -33,7 +33,9 @@ public final class GarbageCollector {
     SoftReference<Object> flag = new SoftReference<>(new Object());
     List<Object> softRefs = new ArrayList<>();
     while (flag.get() != null) {
-      garbage = new byte[Math.max(garbage.length, garbage.length << 2)];
+      int free = Math.abs((int) Runtime.getRuntime().freeMemory());
+      int nextLength = Math.max(garbage.length, garbage.length << 2);
+      garbage = new byte[Math.min(free >> 2, nextLength)];
       softRefs.add(new SoftReference<>(garbage));
     }
   }

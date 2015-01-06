@@ -38,7 +38,11 @@ import com.google.common.testing.GcFinalization;
 @Listeners(CacheValidationListener.class)
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
-  // These are slow tests due to requiring a garbage collection cycle
+  // These are slow tests due to requiring a garbage collection cycle. Note that the G1 collector
+  // should not be used due to not providing a deterministic approach (pure LRU) for when soft
+  // references are discarded.
+
+  // To run these tests in an IDE, either pass in `-Dslow` or hard code the value in CacheProvider
 
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.EMPTY)
@@ -47,7 +51,6 @@ public final class ReferenceTest {
     cache.put(new Random().nextInt(), 0);
     GcFinalization.awaitFullGc();
     cleanUp(cache, context, 0);
-    assertThat(cache.estimatedSize(), is(0L));
   }
 
   @Test(dataProvider = "caches")
@@ -56,7 +59,6 @@ public final class ReferenceTest {
     context.original().clear();
     GcFinalization.awaitFullGc();
     cleanUp(cache, context, 0);
-    assertThat(cache.estimatedSize(), is(0L));
   }
 
   @Test(dataProvider = "caches")
@@ -65,7 +67,6 @@ public final class ReferenceTest {
     context.original().clear();
     GarbageCollector.awaitSoftRefGc();
     cleanUp(cache, context, 0);
-    assertThat(cache.estimatedSize(), is(0L));
   }
 
   static void cleanUp(Cache<Integer, Integer> cache, CacheContext context, long finalSize) {

@@ -52,11 +52,12 @@ final class CacheGenerator {
 
   /** Returns a lazy stream so that the test case is lazy and GC-able after use. */
   public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate(
-      boolean weakKeys, boolean weakValues, boolean softValues) {
+      boolean slow, boolean weakKeys, boolean weakValues, boolean softValues) {
     return combinations().stream()
         .map(this::newCacheContext)
         .filter(context -> {
-          return ((weakKeys == (context.keyStrength() == ReferenceType.WEAK))
+          return slow
+              || ((weakKeys == (context.keyStrength() == ReferenceType.WEAK))
               && (weakValues == (context.valueStrength() == ReferenceType.WEAK))
               && (softValues == (context.valueStrength() == ReferenceType.SOFT)));
         }).map(context -> {

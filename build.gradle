@@ -40,7 +40,7 @@ buildscript {
 
 configurations {
   checkstyleConfig
-  [weakKeysTest, weakValuesTest, softValuesTest]*.each {
+  [weakKeysTest, weakValuesTest, softValuesTest, slowTest]*.each {
     it.extendsFrom testCompile
     it.extendsFrom testRuntime
   }
@@ -48,7 +48,7 @@ configurations {
 
 sourceSets {
   jmh.java.srcDirs += sourceSets.test.java.srcDirs
-  [weakKeysTest, weakValuesTest, softValuesTest]*.each {
+  [weakKeysTest, weakValuesTest, softValuesTest, slowTest]*.each {
     it.java.srcDir 'src/test/java'
     it.resources.srcDir 'src/test/resources'
   }
@@ -92,7 +92,7 @@ dependencies {
   }
 }
 
-['weakKeys', 'weakValues', 'softValues'].each {
+['weakKeys', 'weakValues', 'softValues', 'slow'].each {
   def referent = it
   task "${it}Test"(type: Test) {
     useTestNG()
@@ -113,9 +113,11 @@ dependencies {
   }
 }
 
-[tasks.weakKeysTest, tasks.weakValuesTest, tasks.softValuesTest]*.each {
+[tasks.weakKeysTest, tasks.weakValuesTest, tasks.softValuesTest, tasks.slowTest]*.each {
   def taskName = it.name
-  tasks.check.dependsOn(it)
+  if ((System.env.'CI') || (it != tasks.slowTest)) {
+    tasks.check.dependsOn(it)
+  }
   dependencies {
     "${taskName}Compile" sourceSets.main.output, sourceSets.test.output
     "${taskName}Compile" configurations.compile, configurations.testCompile
@@ -126,17 +128,20 @@ dependencies {
 tasks.withType(Test) {
   useTestNG()
   options {
-    if (!hasProperty('slow')) {
+    if (name == 'slowTest') {
+      includeGroups = ['slow']    
+    } else {
       excludeGroups = ['slow']
+      jvmArgs '-XX:+UseG1GC',
+      parallel = 'methods'
+      threadCount = 6
     }
-    threadCount = 6
-    parallel = 'methods'
   }
   testLogging {
     events 'skipped'
   }
   maxHeapSize = '384m'
-  jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=250'
+  jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=250'
 }
 
 checkstyle {

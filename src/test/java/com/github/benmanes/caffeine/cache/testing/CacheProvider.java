@@ -53,13 +53,14 @@ public final class CacheProvider {
     CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
     requireNonNull(cacheSpec, "@CacheSpec not found");
 
+    boolean slow = System.getProperties().containsKey("slow");
     boolean weakKeys = System.getProperties().containsKey("weakKeys");
     boolean weakValues = System.getProperties().containsKey("weakValues");
     boolean softValues = System.getProperties().containsKey("softValues");
 
     boolean isLoadingOnly = hasLoadingCache(testMethod);
     CacheGenerator generator = new CacheGenerator(cacheSpec, isLoadingOnly);
-    return asTestCases(testMethod, generator.generate(weakKeys, weakValues, softValues));
+    return asTestCases(testMethod, generator.generate(slow, weakKeys, weakValues, softValues));
   }
 
   /** Converts each scenario into test case parameters. */
