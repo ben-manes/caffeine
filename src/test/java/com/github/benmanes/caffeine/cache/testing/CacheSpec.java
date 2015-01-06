@@ -198,9 +198,6 @@ public @interface CacheSpec {
 
   /* ---------------- Reference-based -------------- */
 
-  // TODO(ben): Weak & Soft reference tests disabled due to causing GC thrashing / OOME.
-  // The build needs to fork those tests into their own JVMs to ensure memory limits
-
   /** The reference type of that the cache holds a key with (strong or weak only). */
   ReferenceType[] keys() default {
     ReferenceType.STRONG,

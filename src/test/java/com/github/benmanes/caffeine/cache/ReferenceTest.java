@@ -18,9 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-import java.lang.ref.SoftReference;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 import org.testng.annotations.Listeners;
@@ -32,6 +29,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.GarbageCollector;
 import com.google.common.testing.GcFinalization;
 
 /**
@@ -65,7 +63,7 @@ public final class ReferenceTest {
   @CacheSpec(values = ReferenceType.SOFT, population = Population.FULL)
   public void evict_softValues(Cache<Integer, Integer> cache, CacheContext context) {
     context.original().clear();
-    awaitSoftRefGc();
+    GarbageCollector.awaitSoftRefGc();
     cleanUp(cache, context, 0);
     assertThat(cache.estimatedSize(), is(0L));
   }
@@ -80,15 +78,5 @@ public final class ReferenceTest {
     }
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(0L));
-  }
-
-  static void awaitSoftRefGc() {
-    byte[] garbage = new byte[1024];
-    SoftReference<Object> flag = new SoftReference<>(new Object());
-    List<Object> softRefs = new ArrayList<>();
-    while (flag.get() != null) {
-      garbage = new byte[Math.max(garbage.length, garbage.length << 2)];
-      softRefs.add(new SoftReference<>(garbage));
-    }
   }
 }

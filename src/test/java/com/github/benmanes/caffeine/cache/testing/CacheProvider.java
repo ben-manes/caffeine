@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.testng.annotations.DataProvider;
@@ -38,6 +39,8 @@ import com.github.benmanes.caffeine.cache.Ticker;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheProvider {
+  private static final int MASK = (1 << 12) - 1;
+  private static final AtomicInteger count = new AtomicInteger();
 
   private CacheProvider() {}
 
@@ -86,6 +89,13 @@ public final class CacheProvider {
         } else {
           throw new AssertionError("Unknown parameter type: " + clazz);
         }
+      }
+      boolean isCi = System.getenv().containsKey("CI");
+      if (true) {
+        // Force a full GC to cleanup soft references
+        if ((count.incrementAndGet() & MASK) == 0) {
+          GarbageCollector.awaitSoftRefGc();
+        };
       }
       return params;
     }).iterator();
