@@ -115,7 +115,7 @@ dependencies {
 
 [tasks.weakKeysTest, tasks.weakValuesTest, tasks.softValuesTest, tasks.slowTest]*.each {
   def taskName = it.name
-  if ((System.env.'CI') || (it != tasks.slowTest)) {
+  if (it != tasks.slowTest) {
     tasks.check.dependsOn(it)
   }
   dependencies {
@@ -129,10 +129,11 @@ tasks.withType(Test) {
   useTestNG()
   options {
     if (name == 'slowTest') {
+      jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=250'
       includeGroups = ['slow']    
     } else {
+      jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=250'
       excludeGroups = ['slow']
-      jvmArgs '-XX:+UseG1GC',
       parallel = 'methods'
       threadCount = 6
     }
@@ -141,7 +142,6 @@ tasks.withType(Test) {
     events 'skipped'
   }
   maxHeapSize = '384m'
-  jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=250'
 }
 
 checkstyle {
