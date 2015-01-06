@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.testng.annotations.DataProvider;
@@ -33,14 +32,13 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
 
+
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheProvider {
-  private static final int MASK = (1 << 12) - 1;
-  private static final AtomicInteger count = new AtomicInteger();
 
   private CacheProvider() {}
 
@@ -55,9 +53,13 @@ public final class CacheProvider {
     CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
     requireNonNull(cacheSpec, "@CacheSpec not found");
 
+    boolean weakKeys = System.getProperties().containsKey("weakKeys");
+    boolean weakValues = System.getProperties().containsKey("weakValues");
+    boolean softValues = System.getProperties().containsKey("softValues");
+
     boolean isLoadingOnly = hasLoadingCache(testMethod);
     CacheGenerator generator = new CacheGenerator(cacheSpec, isLoadingOnly);
-    return asTestCases(testMethod, generator.generate());
+    return asTestCases(testMethod, generator.generate(weakKeys, weakValues, softValues));
   }
 
   /** Converts each scenario into test case parameters. */
@@ -89,13 +91,6 @@ public final class CacheProvider {
         } else {
           throw new AssertionError("Unknown parameter type: " + clazz);
         }
-      }
-      boolean isCi = System.getenv().containsKey("CI");
-      if (true) {
-        // Force a full GC to cleanup soft references
-        if ((count.incrementAndGet() & MASK) == 0) {
-          GarbageCollector.awaitSoftRefGc();
-        };
       }
       return params;
     }).iterator();

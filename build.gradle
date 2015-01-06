@@ -96,11 +96,9 @@ test {
   testLogging {
     events 'skipped'
   }
-}
-
-// G1 handles weak & soft references very well
-tasks.withType(JavaForkOptions) {
-  jvmArgs "-XX:+UseG1GC"
+  maxHeapSize = '512m'
+  jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=250'
+  systemProperties = System.getProperties()
 }
 
 checkstyle {

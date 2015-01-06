@@ -187,12 +187,12 @@ public final class CacheContext {
     return original;
   }
 
-  public ReferenceType keyReferenceType() {
-    return ReferenceType.STRONG;
+  public ReferenceType keyStrength() {
+    return keyStrength;
   }
 
-  public ReferenceType valueReferenceType() {
-    return ReferenceType.STRONG;
+  public ReferenceType valueStrength() {
+    return valueStrength;
   }
 
   public Loader loader() {

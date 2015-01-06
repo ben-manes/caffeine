@@ -51,10 +51,15 @@ final class CacheGenerator {
   }
 
   /** Returns a lazy stream so that the test case is lazy and GC-able after use. */
-  public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate() {
+  public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate(
+      boolean weakKeys, boolean weakValues, boolean softValues) {
     return combinations().stream()
         .map(this::newCacheContext)
-        .map(context -> {
+        .filter(context -> {
+          return ((weakKeys == (context.keyStrength() == ReferenceType.WEAK))
+              && (weakValues == (context.valueStrength() == ReferenceType.WEAK))
+              && (softValues == (context.valueStrength() == ReferenceType.SOFT)));
+        }).map(context -> {
           Cache<Integer, Integer> cache = CacheFromContext.newCache(context);
           populate(context, cache);
           return Maps.immutableEntry(context, cache);

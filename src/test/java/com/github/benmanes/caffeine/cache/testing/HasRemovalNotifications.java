@@ -91,10 +91,10 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
         break;
       case COLLECTED:
         assertThat(notification.wasEvicted(), is(true));
-        if (context.keyReferenceType() == ReferenceType.STRONG) {
+        if (context.keyStrength() == ReferenceType.STRONG) {
           assertThat(notification.getKey(), is(not(nullValue())));
         }
-        if (context.valueReferenceType() == ReferenceType.STRONG) {
+        if (context.valueStrength() == ReferenceType.STRONG) {
           assertThat(notification.getKey(), is(not(nullValue())));
         }
     }
