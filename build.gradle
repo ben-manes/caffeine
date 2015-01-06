@@ -129,7 +129,7 @@ tasks.withType(Test) {
   useTestNG()
   options {
     if (name == 'slowTest') {
-      jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=250'
+      jvmArgs '-XX:+UseParallelGC', '-XX:+UseParallelOldGC', '-XX:SoftRefLRUPolicyMSPerMB=250'
       includeGroups = ['slow']    
     } else {
       jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=250'
