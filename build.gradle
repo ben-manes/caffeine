@@ -85,9 +85,7 @@ dependencies {
   }
 }
 
-test {
-  exclude 'com/github/benmanes/caffeine/cache/**'
-}
+tasks.test.exclude 'com/github/benmanes/caffeine/cache/**'
 
 tasks.withType(Test) {
   useTestNG()
@@ -116,6 +114,11 @@ tasks.withType(Test) {
     testLogging.info.events 'passed'    
   } else {
     maxHeapSize = '384m'
+  }
+  jacoco {
+    append = true
+    destinationFile = file("${buildDir}/jacoco/jacocoTest.exec")
+    classDumpFile = file("${buildDir}/jacoco/classpathdumps")
   }
 }
 
