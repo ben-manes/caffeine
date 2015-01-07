@@ -25,9 +25,9 @@ import com.google.common.cache.LoadingCache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CaffinatedGuava {
+public final class CaffeinatedGuava {
 
-  private CaffinatedGuava() {}
+  private CaffeinatedGuava() {}
 
   /** Returns a Caffeine cache wrapped in a Guava {@link Cache} facade. */
   public <K, V> Cache<K, V> build(Caffeine<K, V> builder) {
