@@ -15,3 +15,8 @@ dependencies {
   testCompile test_libraries.truth
   testCompile test_libraries.easymock
 }
+
+tasks.withType(Test) {
+  useJUnit()
+  maxParallelForks = 2
+}

@@ -1,14 +1,3 @@
-apply plugin: 'com.github.ethankhall.semantic-versioning'
-apply plugin: 'com.github.kt3k.coveralls'
-apply plugin: 'org.kordamp.gradle.stats'
-apply plugin: 'me.champeau.gradle.jmh'
-apply plugin: 'org.dm.bundle'
-apply plugin: 'checkstyle'
-apply plugin: 'findbugs'
-apply plugin: 'eclipse'
-apply plugin: 'jacoco'
-apply plugin: 'pmd'
-
 apply from: "${rootDir}/gradle/jmh.gradle"
 apply from: "${rootDir}/gradle/code_quality.gradle"
 apply from: "${rootDir}/gradle/dependencies.gradle"
@@ -24,11 +13,9 @@ dependencies {
   testCompile test_libraries.guava_testlib
   testCompile test_libraries.testng
 
-  jmh benchmark_libraries.jmh
   jmh benchmark_libraries.koloboke
   jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.concurrentlinkedhashmap
-  jmh configurations.testCompile.allDependencies
 
   checkstyleConfig gradle_plugins.checkstyle
 }
@@ -51,6 +38,5 @@ tasks.withType(Test) {
 }
 
 bundle {
-  instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
   instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
 }

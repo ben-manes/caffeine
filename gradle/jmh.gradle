@@ -12,6 +12,11 @@ plugins.withType(EclipsePlugin) {
   project.eclipse.classpath.plusConfigurations += [ configurations.jmh ]
 }
 
+dependencies {
+  jmh benchmark_libraries.jmh
+  jmh configurations.testCompile.allDependencies
+}
+
 jmh {
   if (project.hasProperty('includePattern')) {
     include = project.includePattern

@@ -1,6 +1,5 @@
 apply plugin: 'com.github.ethankhall.semantic-versioning'
 apply plugin: 'com.github.ben-manes.versions'
-apply plugin: 'eclipse'
 
 group = 'com.github.ben-manes'
 project.version.with {
@@ -28,6 +27,7 @@ buildscript {
 }
 
 subprojects {
+  apply plugin: 'org.dm.bundle'
   apply plugin: 'java'
 
   sourceCompatibility = JavaVersion.VERSION_1_8
@@ -35,5 +35,9 @@ subprojects {
   
   repositories {
     jcenter()
+  }
+
+  bundle {
+    instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
   }
 }
