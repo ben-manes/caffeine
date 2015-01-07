@@ -1,0 +1,91 @@
+/**
+ * Configurations for code quality analysis
+ */
+apply plugin: 'com.github.kt3k.coveralls'
+apply plugin: 'org.kordamp.gradle.stats'
+apply plugin: 'checkstyle'
+apply plugin: 'findbugs'
+apply plugin: 'jacoco'
+apply plugin: 'pmd'
+
+configurations {
+  checkstyleConfig
+}
+
+checkstyle {
+  showViolations = true
+  sourceSets = [sourceSets.main]
+  toolVersion = "${gradle_plugins.checkstyle}"
+  config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
+}
+
+findbugs {
+  effort = 'max'
+  sourceSets = [sourceSets.main]
+}
+
+pmd {
+  sourceSets = [sourceSets.main]
+  ruleSets = [/* 'java-basic', */ 'java-braces']
+}
+
+tasks.withType(Test) {
+  options {
+    jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
+  }
+  testLogging {
+    events 'skipped'
+    error {
+      events 'failed'
+      showCauses = true
+      showExceptions = true
+      exceptionFormat 'short'
+    }
+  }
+  jacoco {
+    append = true
+    destinationFile = file("${buildDir}/jacoco/jacocoTest.exec")
+    classDumpFile = file("${buildDir}/jacoco/classpathdumps")
+  }
+  maxHeapSize = '384m'
+}
+
+tasks.withType(Checkstyle) {
+  enabled = System.properties.containsKey('checkstyle')
+  group = 'Checkstyle'
+  doLast {
+    ant.xslt(in: "${buildDir}/reports/checkstyle/main.xml",
+             style: 'config/checkstyle/checkstyle.xsl',
+             out:"${buildDir}/reports/checkstyle/checkstyle.html")
+  }
+}
+
+tasks.withType(FindBugs) {
+  enabled = System.properties.containsKey('findbugs')
+  group = 'Findbugs'
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+}
+
+tasks.withType(Pmd) {
+  enabled = System.properties.containsKey('pmd')
+  group = 'PMD'
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+}
+
+jacocoTestReport {
+  reports {
+    xml.enabled = true
+    html.enabled = true
+  }
+}
+
+tasks.coveralls {
+  dependsOn 'check'
+  onlyIf { System.env.'CI' }
+}

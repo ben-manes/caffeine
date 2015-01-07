@@ -7,44 +7,14 @@ apply plugin: 'checkstyle'
 apply plugin: 'findbugs'
 apply plugin: 'eclipse'
 apply plugin: 'jacoco'
-apply plugin: 'java'
 apply plugin: 'pmd'
 
-apply from: "${rootDir}/gradle/caches.gradle"
+apply from: "${rootDir}/gradle/jmh.gradle"
+apply from: "${rootDir}/gradle/code_quality.gradle"
 apply from: "${rootDir}/gradle/dependencies.gradle"
 apply from: "${rootDir}/gradle/object_layout.gradle"
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-compileJava.options.incremental = true
-
-buildscript {
-  apply from: "${rootDir}/gradle/dependencies.gradle"
-
-  repositories {
-    jcenter()
-  }
-
-  dependencies {
-    classpath gradle_plugins.bundle
-    classpath gradle_plugins.coveralls
-    classpath gradle_plugins.jmh
-    classpath gradle_plugins.stats
-    classpath gradle_plugins.semantic_versioning
-    classpath gradle_plugins.versions
-  }
-}
-
-configurations {
-  checkstyleConfig
-}
-
-sourceSets {
-  jmh.java.srcDirs += sourceSets.test.java.srcDirs
-}
-
-repositories {
-  jcenter()
-}
+apply from: "${projectDir}/cache_tests.gradle"
 
 dependencies {
   compile libraries.jsr305
@@ -63,10 +33,6 @@ dependencies {
   checkstyleConfig gradle_plugins.checkstyle
 }
 
-plugins.withType(EclipsePlugin) {
-  project.eclipse.classpath.plusConfigurations += [ configurations.jmh ]
-}
-
 test {
   exclude 'com/github/benmanes/caffeine/cache/**'
 }
@@ -74,124 +40,17 @@ test {
 tasks.withType(Test) {
   useTestNG()
   options {
-    if (name == 'slowTest') {
-      jvmArgs '-XX:+UseParallelGC', '-XX:+UseParallelOldGC', '-XX:SoftRefLRUPolicyMSPerMB=10'
-      includeGroups = ['slow']
-    } else {
-      jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
-      excludeGroups = ['slow']
-      parallel = 'methods'
-      threadCount = 6
-    }
-  }
-  testLogging {
-    events 'skipped'
-    error {
-      events 'failed'
-      showCauses = true
-      showExceptions = true
-      exceptionFormat 'short'
-    }
+    excludeGroups = ['slow']
+    parallel = 'methods'
+    threadCount = 6
   }
   if (name == 'slowTest') {
     maxHeapSize = '128m'
     testLogging.info.events 'passed'
-  } else {
-    maxHeapSize = '384m'
   }
-  jacoco {
-    append = true
-    destinationFile = file("${buildDir}/jacoco/jacocoTest.exec")
-    classDumpFile = file("${buildDir}/jacoco/classpathdumps")
-  }
-}
-
-checkstyle {
-  showViolations = true
-  sourceSets = [sourceSets.main]
-  toolVersion = "${gradle_plugins.checkstyle}"
-  config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
-}
-
-findbugs {
-  effort = 'max'
-  sourceSets = [sourceSets.main]
-}
-
-pmd {
-  sourceSets = [sourceSets.main]
-  ruleSets = [/* 'java-basic', */ 'java-braces']
-}
-
-tasks.withType(Checkstyle) {
-  enabled = System.properties.containsKey('checkstyle')
-  group = 'Checkstyle'
-  doLast {
-    ant.xslt(in: "${buildDir}/reports/checkstyle/main.xml",
-             style: 'config/checkstyle/checkstyle.xsl',
-             out:"${buildDir}/reports/checkstyle/checkstyle.html")
-  }
-}
-
-tasks.withType(FindBugs) {
-  enabled = System.properties.containsKey('findbugs')
-  group = 'Findbugs'
-  reports {
-    xml.enabled = false
-    html.enabled = true
-  }
-}
-
-tasks.withType(Pmd) {
-  enabled = System.properties.containsKey('pmd')
-  group = 'PMD'
-  reports {
-    xml.enabled = false
-    html.enabled = true
-  }
-}
-
-jacocoTestReport {
-  reports {
-    xml.enabled = true
-    html.enabled = true
-  }
-}
-
-tasks.coveralls {
-  dependsOn 'check'
-  onlyIf { System.env.'CI' }
 }
 
 bundle {
   instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
   instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
-}
-
-jmh {
-  if (project.hasProperty('includePattern')) {
-    include = project.includePattern
-  }
-  // Benchmark parameters: Seperated by '&' for parameter types, and ',' for multiple values
-  if (project.hasProperty('benchmarkParameters')) {
-    benchmarkParameters = data.split('&').inject([:]) { map, token ->
-      token.split('=').with { map[it[0]] = it[1] }
-    }
-  }
-
-  // Benchmark mode: Throughput/thrpt, AverageTime/avgt, SampleTime/sample, SingleShotTime/ss, All/all
-  benchmarkMode = 'thrpt'
-  // Available time units are: [m, s, ms, us, ns]
-  timeUnit = 's'
-
-  // Charts: http://nilskp.github.io/jmh-charts
-  resultFormat = 'json'
-  resultsFile = file("${buildDir}/reports/jmh/results.json")
-
-  jvmArgs = '-server -Xmx512m -XX:+UseG1GC'
-  warmupIterations = 10
-  failOnError = true
-  iterations = 10
-  forceGC = true
-  fork = 1
 }

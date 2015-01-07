@@ -1,0 +1,41 @@
+/**
+ * Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin
+ */
+apply plugin: 'me.champeau.gradle.jmh'
+apply plugin: 'eclipse'
+
+sourceSets {
+  jmh.java.srcDirs += sourceSets.test.java.srcDirs
+}
+
+plugins.withType(EclipsePlugin) {
+  project.eclipse.classpath.plusConfigurations += [ configurations.jmh ]
+}
+
+jmh {
+  if (project.hasProperty('includePattern')) {
+    include = project.includePattern
+  }
+  // Benchmark parameters: Seperated by '&' for parameter types, and ',' for multiple values
+  if (project.hasProperty('benchmarkParameters')) {
+    benchmarkParameters = data.split('&').inject([:]) { map, token ->
+      token.split('=').with { map[it[0]] = it[1] }
+    }
+  }
+
+  // Benchmark mode: Throughput/thrpt, AverageTime/avgt, SampleTime/sample, SingleShotTime/ss, All/all
+  benchmarkMode = 'thrpt'
+  // Available time units are: [m, s, ms, us, ns]
+  timeUnit = 's'
+
+  // Charts: http://nilskp.github.io/jmh-charts
+  resultFormat = 'json'
+  resultsFile = file("${buildDir}/reports/jmh/results.json")
+
+  jvmArgs = '-server -Xmx512m -XX:+UseG1GC'
+  warmupIterations = 10
+  failOnError = true
+  iterations = 10
+  forceGC = true
+  fork = 1
+}

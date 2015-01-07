@@ -1,11 +1,10 @@
-// Guava tests are forked from commit e370dde
-apply plugin: 'java'
-
+/**
+ * Guava compatibility adapter
+ *
+ * The tests are forked from Guava commit e370dde.
+ */
+apply from: "${rootDir}/gradle/code_quality.gradle"
 apply from: "${rootDir}/gradle/dependencies.gradle"
-
-repositories {
-  jcenter()
-}
 
 dependencies {
   compile libraries.guava

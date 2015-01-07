@@ -1,5 +1,6 @@
-/* Java object layout: http://openjdk.java.net/projects/code-tools/jol */
-
+/**
+ * Java object layout: http://openjdk.java.net/projects/code-tools/jol
+ */
 configurations {
   objectLayout
 }

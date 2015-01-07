@@ -1,6 +1,5 @@
 apply plugin: 'com.github.ethankhall.semantic-versioning'
 apply plugin: 'com.github.ben-manes.versions'
-apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'eclipse'
 
 group = 'com.github.ben-manes'
@@ -12,13 +11,29 @@ project.version.with {
 }
 
 buildscript {
+  apply from: "${rootDir}/gradle/dependencies.gradle"
+
   repositories {
     jcenter()
   }
 
   dependencies {
-    classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.1.0'
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.6'
-    classpath 'io.ehdev:gradle-semantic-versioning:1.1.0'
+    classpath gradle_plugins.bundle
+    classpath gradle_plugins.coveralls
+    classpath gradle_plugins.jmh
+    classpath gradle_plugins.semantic_versioning
+    classpath gradle_plugins.stats
+    classpath gradle_plugins.versions
+  }
+}
+
+subprojects {
+  apply plugin: 'java'
+
+  sourceCompatibility = JavaVersion.VERSION_1_8
+  compileJava.options.incremental = true
+  
+  repositories {
+    jcenter()
   }
 }
