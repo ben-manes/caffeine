@@ -63,7 +63,7 @@ public final class ReferenceTest {
     cleanUp(cache, context, 0);
   }
 
-  @Test(dataProvider = "caches")
+  @Test(enabled = false, dataProvider = "caches")
   @CacheSpec(values = ReferenceType.SOFT, population = Population.FULL)
   public void evict_softValues(Cache<Integer, Integer> cache, CacheContext context) {
     context.clear();
