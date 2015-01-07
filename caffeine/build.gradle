@@ -11,8 +11,6 @@ dependencies {
   jmh benchmark_libraries.koloboke
   jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.concurrentlinkedhashmap
-
-  checkstyleConfig gradle_plugins.checkstyle
 }
 
 test {

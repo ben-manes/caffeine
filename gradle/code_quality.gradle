@@ -12,6 +12,10 @@ configurations {
   checkstyleConfig
 }
 
+dependencies {
+  checkstyleConfig gradle_plugins.checkstyle
+}
+
 checkstyle {
   showViolations = true
   sourceSets = [sourceSets.main]
