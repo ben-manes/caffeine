@@ -93,10 +93,10 @@ tasks.withType(Test) {
   useTestNG()
   options {
     if (name == 'slowTest') {
-      jvmArgs '-XX:+UseParallelGC', '-XX:+UseParallelOldGC', '-XX:SoftRefLRUPolicyMSPerMB=250'
+      jvmArgs '-XX:+UseParallelGC', '-XX:+UseParallelOldGC', '-XX:SoftRefLRUPolicyMSPerMB=10'
       includeGroups = ['slow']
     } else {
-      jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=250'
+      jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
       excludeGroups = ['slow']
       parallel = 'methods'
       threadCount = 6
@@ -105,13 +105,18 @@ tasks.withType(Test) {
   testLogging {
     events 'skipped'
     error {
-      events "failed"
+      events 'failed'
       showCauses = true
       showExceptions = true
-      exceptionFormat "short"
+      exceptionFormat 'short'
     }
   }
-  maxHeapSize = '384m'
+  if (name == 'slowTest') {
+    maxHeapSize = '128m'
+    testLogging.info.events 'passed'    
+  } else {
+    maxHeapSize = '384m'
+  }
 }
 
 checkstyle {

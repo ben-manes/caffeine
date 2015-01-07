@@ -132,6 +132,15 @@ public final class CacheContext {
     return ImmutableSet.of(firstKey, middleKey, lastKey);
   }
 
+  public void clear() {
+    original.clear();
+    absent = null;
+    absentKey = null;
+    firstKey = null;
+    middleKey = null;
+    lastKey = null;
+  }
+
   public Integer absentKey() {
     return (absentKey == null) ? (absentKey = nextAbsentKey()) : absentKey;
   }

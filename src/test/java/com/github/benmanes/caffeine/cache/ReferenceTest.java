@@ -18,6 +18,9 @@ package com.github.benmanes.caffeine.cache;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+import java.lang.ref.SoftReference;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import org.testng.annotations.Listeners;
@@ -29,7 +32,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.cache.testing.GarbageCollector;
 import com.google.common.testing.GcFinalization;
 
 /**
@@ -64,8 +66,8 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(values = ReferenceType.SOFT, population = Population.FULL)
   public void evict_softValues(Cache<Integer, Integer> cache, CacheContext context) {
-    context.original().clear();
-    GarbageCollector.awaitSoftRefGc();
+    context.clear();
+    awaitSoftRefGc();
     cleanUp(cache, context, 0);
   }
 
@@ -77,7 +79,25 @@ public final class ReferenceTest {
         return; // passed
       }
     }
+    GcFinalization.awaitFullGc();
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(0L));
+  }
+
+  /**
+   * Tries to coerce a major GC cycle that evicts soft references, assuming that they are held
+   * globally in LRU order.
+   */
+  static void awaitSoftRefGc() {
+    byte[] garbage = new byte[1024];
+    SoftReference<Object> flag = new SoftReference<>(new Object());
+    List<Object> softRefs = new ArrayList<>();
+    while (flag.get() != null) {
+      int free = Math.abs((int) Runtime.getRuntime().freeMemory());
+      int nextLength = Math.max(garbage.length, garbage.length << 2);
+      garbage = new byte[Math.min(free >> 2, nextLength)];
+      softRefs.add(new SoftReference<>(garbage));
+    }
+    softRefs.clear();
   }
 }

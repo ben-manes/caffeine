@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -107,11 +108,7 @@ public final class CacheProvider {
   }
 
   private static boolean hasLoadingCache(Method testMethod) {
-    for (Class<?> param : testMethod.getParameterTypes()) {
-      if (LoadingCache.class.isAssignableFrom(param)) {
-        return true;
-      }
-    }
-    return false;
+    return Arrays.stream(testMethod.getParameterTypes()).anyMatch(param ->
+        LoadingCache.class.isAssignableFrom(param));
   }
 }
