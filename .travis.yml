@@ -8,7 +8,7 @@ env:
  - TERM=dumb
 
 script:
- - ./gradlew check
+ - ./gradlew check slowTest
 
 after_success:
 - ./gradlew jacocoTestReport coveralls
