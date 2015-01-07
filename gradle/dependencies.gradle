@@ -34,7 +34,7 @@ ext {
     mockito: '1.10.19',
     junit: '4.12',
     testng: '6.8.13',
-    truth: '0.25',
+    truth: '0.24',
   ]
   benchmark_versions = [
     concurrentlinkedhashmap: '1.4.1',
@@ -61,6 +61,7 @@ ext {
     awaitility: "com.jayway.awaitility:awaitility-scala:${test_versions.awaitility}",
     easymock: "org.easymock:easymock:${test_versions.easymock}",
     guava_testlib: dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
+      exclude group: 'com.google.truth'
       exclude group: 'junit'
     },
     junit: "junit:junit:${test_versions.junit}",
