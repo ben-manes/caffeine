@@ -26,14 +26,16 @@ test {
 
 tasks.withType(Test) {
   useTestNG()
-  options {
-    excludeGroups = ['slow']
-    parallel = 'methods'
-    threadCount = 6
-  }
   if (name == 'slowTest') {
     maxHeapSize = '128m'
     testLogging.info.events 'passed'
+    options.includeGroups = ['slow']
+  } else {
+    options {
+      excludeGroups = ['slow']
+      parallel = 'methods'
+      threadCount = 6
+    }
   }
 }
 
