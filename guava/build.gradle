@@ -3,9 +3,6 @@
  *
  * The tests are forked from Guava commit e370dde.
  */
-apply from: "${rootDir}/gradle/code_quality.gradle"
-apply from: "${rootDir}/gradle/dependencies.gradle"
-
 dependencies {
   compile project(":caffeine")
   compile libraries.guava

@@ -1,5 +1,5 @@
 /**
- * The configuration to break cache tests into independant tasks based on the reference types.
+ * The configuration to break cache tests into independant tasks.
  */
 configurations {
   [ slowTest,

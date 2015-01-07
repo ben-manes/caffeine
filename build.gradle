@@ -19,8 +19,13 @@ buildscript {
 }
 
 subprojects {
-  apply plugin: 'com.github.ethankhall.semantic-versioning'
+  apply from: "${rootDir}/gradle/jmh.gradle"
   apply from: "${rootDir}/gradle/publish.gradle"
+  apply from: "${rootDir}/gradle/code_quality.gradle"
+  apply from: "${rootDir}/gradle/dependencies.gradle"
+  apply from: "${rootDir}/gradle/object_layout.gradle"
+
+  apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'org.dm.bundle'
   apply plugin: 'java'
 
