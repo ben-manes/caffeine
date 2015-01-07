@@ -104,6 +104,12 @@ tasks.withType(Test) {
   }
   testLogging {
     events 'skipped'
+    error {
+      events "failed"
+      showCauses = true
+      showExceptions = true
+      exceptionFormat "short"
+    }
   }
   maxHeapSize = '384m'
 }
