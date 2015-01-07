@@ -1,0 +1,39 @@
+/**
+ * Configuration for publishing to Maven Central
+ */
+apply plugin: 'com.bmuschko.nexus'
+
+modifyPom {
+  project {
+    name 'Caffeine cache'
+    description 'Concurrent data-structures for Java'
+    url 'https://github.com/ben-manes/caffeine'
+    inceptionYear '2014'
+
+    scm {
+      url 'https://github.com/ben-manes/caffeine'
+      connection 'scm:https://ben-manes@github.com/ben-manes/caffeine.git'
+      developerConnection 'scm:git://github.com/ben-manes/caffeine.git'
+    }
+
+    licenses {
+      license {
+        name 'The Apache Software License, Version 2.0'
+        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+        distribution 'repo'
+      }
+    }
+
+    developers {
+      developer {
+        id 'ben-manes'
+        name 'Ben Manes'
+        email 'ben.manes@gmail.com'
+        roles {
+          role 'owner'
+          role 'developer'
+        }
+      }
+    }
+  }
+}

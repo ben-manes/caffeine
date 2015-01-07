@@ -63,7 +63,7 @@ import javax.annotation.Nullable;
  * results if this collection is modified during traversal.
  *
  * @author ben.manes@gmail.com (Ben Manes)
- * @see https://github.com/ben-manes/caffeine
+ * @see <a href="https://github.com/ben-manes/caffeine">Caffeine</a>
  * @param <E> the type of elements held in this collection
  */
 public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {

@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.stats;
 
 import java.util.Objects;
-import java.util.concurrent.Callable;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
@@ -52,8 +51,8 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  * </ul>
  * <p>
  * A lookup is specifically defined as an invocation of one of the methods
- * {@link LoadingCache#get(Object)}, {@link LoadingCache#getUnchecked(Object)},
- * {@link Cache#get(Object, Callable)}, or {@link LoadingCache#getAll(Iterable)}.
+ * {@link LoadingCache#get(Object)}, {@link Cache#get(Object, java.util.function.Function)}, or
+ * {@link LoadingCache#getAll(Iterable)}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

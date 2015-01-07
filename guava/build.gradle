@@ -21,3 +21,7 @@ tasks.withType(Test) {
   useJUnit()
   maxParallelForks = 2
 }
+
+bundle {
+  instruction 'Export-Package', 'com.github.benmanes.caffeine.guava.*'
+}

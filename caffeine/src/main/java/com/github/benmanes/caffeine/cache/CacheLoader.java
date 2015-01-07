@@ -95,9 +95,9 @@ public interface CacheLoader<K, V> {
    * keys not present in {@code keys} then all returned entries will be cached, but only the entries
    * for {@code keys} will be returned from {@code getAll}.
    * <p>
-   * This method should be overriden when bulk retrieval is significantly more efficient than many
+   * This method should be overridden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link AsyncLoadingCache#getAll} will defer to individual calls
-   * to {@link AsyncLoadingCache#get} if this method is not overriden.
+   * to {@link AsyncLoadingCache#get} if this method is not overridden.
    *
    * @param keys the unique, non-null keys whose values should be loaded
    * @return a future containing the map from each key in {@code keys} to the value associated with
@@ -105,7 +105,8 @@ public interface CacheLoader<K, V> {
    * @throws UnsupportedOperationException if bulk loading is not implemented
    */
   @Nonnull
-  default CompletableFuture<Map<K, V>> asyncLoadAll(@Nonnull K key, @Nonnull Executor executor) {
+  default CompletableFuture<Map<K, V>> asyncLoadAll(
+      Iterable<? extends K> keys, @Nonnull Executor executor) {
     throw new UnsupportedOperationException();
   }
 
@@ -122,7 +123,7 @@ public interface CacheLoader<K, V> {
    * @throws RuntimeException or Error, in which case the mapping is unchanged
    */
   @CheckForNull
-  default V refresh(@Nonnull K key, @Nonnull V oldValue) {
+  default V reload(@Nonnull K key, @Nonnull V oldValue) {
     return load(key);
   }
 }

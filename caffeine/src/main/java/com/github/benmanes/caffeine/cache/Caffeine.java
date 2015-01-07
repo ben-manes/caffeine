@@ -98,15 +98,15 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * If {@linkplain #expireAfterWrite expireAfterWrite} or
  * {@linkplain #expireAfterAccess expireAfterAccess} is requested entries may be evicted on each
  * cache modification, on occasional cache accesses, or on calls to {@link Cache#cleanUp}. Expired
- * entries may be counted by {@link Cache#size}, but will never be visible to read or write
- * operations.
+ * entries may be counted by {@link Cache#estimatedSize()}, but will never be visible to read or
+ * write operations.
  * <p>
  * If {@linkplain #weakKeys weakKeys}, {@linkplain #weakValues weakValues}, or
  * {@linkplain #softValues softValues} are requested, it is possible for a key or value present in
  * the cache to be reclaimed by the garbage collector. Entries with reclaimed keys or values may be
  * removed from the cache on each cache modification, on occasional cache accesses, or on calls to
- * {@link Cache#cleanUp}; such entries may be counted in {@link Cache#size}, but will never be
- * visible to read or write operations.
+ * {@link Cache#cleanUp}; such entries may be counted in {@link Cache#estimatedSize()}, but will
+ * never be visible to read or write operations.
  * <p>
  * Certain cache configurations will result in the accrual of periodic maintenance tasks which
  * will be performed during write operations, or during occasional read operations in the absence of
@@ -255,7 +255,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #maximumWeight}.
    *
-   * @param size the maximum size of the cache
+   * @param maximumSize the maximum size of the cache
    * @throws IllegalArgumentException if {@code size} is negative
    * @throws IllegalStateException if a maximum size or weight was already set
    */
@@ -362,9 +362,9 @@ public final class Caffeine<K, V> {
    * <b>Warning:</b> when this method is used, the resulting cache will use identity ({@code ==})
    * comparison to determine equality of keys.
    * <p>
-   * Entries with keys that have been garbage collected may be counted in {@link Cache#size}, but
-   * will never be visible to read or write operations; such entries are cleaned up as part of the
-   * routine maintenance described in the class javadoc.
+   * Entries with keys that have been garbage collected may be counted in
+   * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
+   * entries are cleaned up as part of the routine maintenance described in the class javadoc.
    *
    * @throws IllegalStateException if the key strength was already set
    */
@@ -389,9 +389,9 @@ public final class Caffeine<K, V> {
    * <b>Note:</b> when this method is used, the resulting cache will use identity ({@code ==})
    * comparison to determine equality of values.
    * <p>
-   * Entries with values that have been garbage collected may be counted in {@link Cache#size}, but
-   * will never be visible to read or write operations; such entries are cleaned up as part of the
-   * routine maintenance described in the class javadoc.
+   * Entries with values that have been garbage collected may be counted in
+   * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
+   * entries are cleaned up as part of the routine maintenance described in the class javadoc.
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
@@ -421,9 +421,9 @@ public final class Caffeine<K, V> {
    * <b>Note:</b> when this method is used, the resulting cache will use identity ({@code ==})
    * comparison to determine equality of values.
    * <p>
-   * Entries with values that have been garbage collected may be counted in {@link Cache#size}, but
-   * will never be visible to read or write operations; such entries are cleaned up as part of the
-   * routine maintenance described in the class javadoc.
+   * Entries with values that have been garbage collected may be counted in
+   * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
+   * entries are cleaned up as part of the routine maintenance described in the class javadoc.
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
@@ -444,9 +444,9 @@ public final class Caffeine<K, V> {
    * {@code (0)}, ignoring any otherwise-specified maximum size or weight. This can be useful in
    * testing, or to disable caching temporarily without a code change.
    * <p>
-   * Expired entries may be counted in {@link Cache#size}, but will never be visible to read or
-   * write operations. Expired entries are cleaned up as part of the routine maintenance described
-   * in the class javadoc.
+   * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
+   * read or write operations. Expired entries are cleaned up as part of the routine maintenance
+   * described in the class javadoc.
    *
    * @param duration the length of time after an entry is created that it should be automatically
    *        removed
@@ -479,9 +479,9 @@ public final class Caffeine<K, V> {
    * {@code (0)}, ignoring any otherwise-specified maximum size or weight. This can be useful in
    * testing, or to disable caching temporarily without a code change.
    * <p>
-   * Expired entries may be counted in {@link Cache#size}, but will never be visible to read or
-   * write operations. Expired entries are cleaned up as part of the routine maintenance described
-   * in the class javadoc.
+   * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
+   * read or write operations. Expired entries are cleaned up as part of the routine maintenance
+   * described in the class javadoc.
    *
    * @param duration the length of time after an entry is last accessed that it should be
    *        automatically removed

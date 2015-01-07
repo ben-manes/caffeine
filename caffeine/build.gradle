@@ -40,5 +40,6 @@ tasks.withType(Test) {
 }
 
 bundle {
+  instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
   instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
 }

@@ -2608,7 +2608,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       requireNonNull(key);
       cache.executor.execute(() -> {
         try {
-          cache.compute(key, loader::refresh, false);
+          cache.compute(key, loader::reload, false);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }

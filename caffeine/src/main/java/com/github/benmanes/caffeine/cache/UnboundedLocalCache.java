@@ -929,7 +929,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
       requireNonNull(key);
       cache.executor.execute(() -> {
         try {
-          cache.compute(key, loader::refresh, false);
+          cache.compute(key, loader::reload, false);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }
