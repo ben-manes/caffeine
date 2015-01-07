@@ -1,0 +1,18 @@
+// Guava tests are forked from commit e370dde
+apply plugin: 'java'
+
+apply from: "${rootDir}/gradle/dependencies.gradle"
+
+repositories {
+  jcenter()
+}
+
+dependencies {
+  compile libraries.guava
+
+  testCompile test_libraries.junit
+  testCompile test_libraries.guava_testlib
+  testCompile test_libraries.mockito
+  testCompile test_libraries.truth
+  testCompile test_libraries.easymock
+}
