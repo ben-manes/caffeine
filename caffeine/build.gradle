@@ -1,0 +1,208 @@
+apply plugin: 'com.github.ethankhall.semantic-versioning'
+apply plugin: 'com.github.kt3k.coveralls'
+apply plugin: 'org.kordamp.gradle.stats'
+apply plugin: 'me.champeau.gradle.jmh'
+apply plugin: 'org.dm.bundle'
+apply plugin: 'checkstyle'
+apply plugin: 'findbugs'
+apply plugin: 'eclipse'
+apply plugin: 'jacoco'
+apply plugin: 'java'
+apply plugin: 'pmd'
+
+apply from: "${rootDir}/gradle/caches.gradle"
+apply from: "${rootDir}/gradle/object_layout.gradle"
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+compileJava.options.incremental = true
+
+buildscript {
+  repositories {
+    jcenter()
+  }
+
+  dependencies {
+    classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.1.0'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.6'
+    classpath 'org.kordamp.gradle:stats-gradle-plugin:0.1.3'
+    classpath 'me.champeau.gradle:jmh-gradle-plugin:0.1.3'
+    classpath 'io.ehdev:gradle-semantic-versioning:1.1.0'
+    classpath 'org.dm.gradle:gradle-bundle-plugin:0.6.2'
+  }
+}
+
+configurations {
+  checkstyleConfig
+}
+
+sourceSets {
+  jmh.java.srcDirs += sourceSets.test.java.srcDirs
+}
+
+repositories {
+  jcenter()
+}
+
+def versions = [
+  checkstyle: '6.2',
+  guava: '18.0',
+]
+
+dependencies {
+  compile 'com.google.code.findbugs:jsr305:3.0.0'
+
+  // unit testing
+  testCompile "com.google.guava:guava:${versions.guava}"
+  testCompile 'com.jayway.awaitility:awaitility:1.6.3'
+  testCompile dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
+    exclude group: 'junit'
+  }
+  testCompile dependencies.create('org.testng:testng:6.8.13') {
+    exclude group: 'junit'
+  }
+
+  // benchmarking
+  jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.4.1', 'org.openjdk.jmh:jmh-core:1.4.1'
+  jmh 'net.openhft:koloboke-api-jdk8:0.6.5', 'net.openhft:koloboke-impl-jdk8:0.6.5'
+  jmh 'com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:1.4.1'
+  jmh 'com.github.stephenc.high-scale-lib:high-scale-lib:1.1.4'
+  jmh configurations.testCompile.allDependencies
+
+  // For Google style checks
+  checkstyleConfig dependencies.create("com.puppycrawl.tools:checkstyle:${versions.checkstyle}") {
+    transitive = false
+  }
+}
+
+plugins.withType(EclipsePlugin) {
+  project.eclipse.classpath.plusConfigurations += [ configurations.jmh ]
+}
+
+test {
+  exclude 'com/github/benmanes/caffeine/cache/**'
+}
+
+tasks.withType(Test) {
+  useTestNG()
+  options {
+    if (name == 'slowTest') {
+      jvmArgs '-XX:+UseParallelGC', '-XX:+UseParallelOldGC', '-XX:SoftRefLRUPolicyMSPerMB=10'
+      includeGroups = ['slow']
+    } else {
+      jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
+      excludeGroups = ['slow']
+      parallel = 'methods'
+      threadCount = 6
+    }
+  }
+  testLogging {
+    events 'skipped'
+    error {
+      events 'failed'
+      showCauses = true
+      showExceptions = true
+      exceptionFormat 'short'
+    }
+  }
+  if (name == 'slowTest') {
+    maxHeapSize = '128m'
+    testLogging.info.events 'passed'
+  } else {
+    maxHeapSize = '384m'
+  }
+  jacoco {
+    append = true
+    destinationFile = file("${buildDir}/jacoco/jacocoTest.exec")
+    classDumpFile = file("${buildDir}/jacoco/classpathdumps")
+  }
+}
+
+checkstyle {
+  showViolations = true
+  sourceSets = [sourceSets.main]
+  toolVersion = "${versions.checkstyle}"
+  config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
+}
+
+findbugs {
+  effort = 'max'
+  sourceSets = [sourceSets.main]
+}
+
+pmd {
+  sourceSets = [sourceSets.main]
+  ruleSets = [/* 'java-basic', */ 'java-braces']
+}
+
+tasks.withType(Checkstyle) {
+  enabled = System.properties.containsKey('checkstyle')
+  group = 'Checkstyle'
+  doLast {
+    ant.xslt(in: "${buildDir}/reports/checkstyle/main.xml",
+             style: 'config/checkstyle/checkstyle.xsl',
+             out:"${buildDir}/reports/checkstyle/checkstyle.html")
+  }
+}
+
+tasks.withType(FindBugs) {
+  enabled = System.properties.containsKey('findbugs')
+  group = 'Findbugs'
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+}
+
+tasks.withType(Pmd) {
+  enabled = System.properties.containsKey('pmd')
+  group = 'PMD'
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+}
+
+jacocoTestReport {
+  reports {
+    xml.enabled = true
+    html.enabled = true
+  }
+}
+
+tasks.coveralls {
+  dependsOn 'check'
+  onlyIf { System.env.'CI' }
+}
+
+bundle {
+  instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
+  instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
+}
+
+jmh {
+  if (project.hasProperty('includePattern')) {
+    include = project.includePattern
+  }
+  // Benchmark parameters: Seperated by '&' for parameter types, and ',' for multiple values
+  if (project.hasProperty('benchmarkParameters')) {
+    benchmarkParameters = data.split('&').inject([:]) { map, token ->
+      token.split('=').with { map[it[0]] = it[1] }
+    }
+  }
+
+  // Benchmark mode: Throughput/thrpt, AverageTime/avgt, SampleTime/sample, SingleShotTime/ss, All/all
+  benchmarkMode = 'thrpt'
+  // Available time units are: [m, s, ms, us, ns]
+  timeUnit = 's'
+
+  // Charts: http://nilskp.github.io/jmh-charts
+  resultFormat = 'json'
+  resultsFile = file("${buildDir}/reports/jmh/results.json")
+
+  jvmArgs = '-server -Xmx512m -XX:+UseG1GC'
+  warmupIterations = 10
+  failOnError = true
+  iterations = 10
+  forceGC = true
+  fork = 1
+}
