@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -52,14 +53,16 @@ final class CacheGenerator {
 
   /** Returns a lazy stream so that the test case is lazy and GC-able after use. */
   public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate(
-      boolean slow, boolean weakKeys, boolean weakValues, boolean softValues) {
+      Optional<ReferenceType> keys, Optional<ReferenceType> values) {
     return combinations().stream()
         .map(this::newCacheContext)
         .filter(context -> {
-          return slow
-              || ((weakKeys == (context.keyStrength() == ReferenceType.WEAK))
-              && (weakValues == (context.valueStrength() == ReferenceType.WEAK))
-              && (softValues == (context.valueStrength() == ReferenceType.SOFT)));
+          if ((keys.isPresent() && (keys.get() != context.keyStrength()))) {
+            return false;
+          } else if ((values.isPresent() && (values.get() != context.valueStrength()))) {
+            return false;
+          }
+          return true;
         }).map(context -> {
           Cache<Integer, Integer> cache = CacheFromContext.newCache(context);
           populate(context, cache);

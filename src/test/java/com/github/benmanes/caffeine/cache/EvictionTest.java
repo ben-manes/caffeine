@@ -77,9 +77,7 @@ public final class EvictionTest {
       maximumSize = { MaximumSize.ZERO, MaximumSize.ONE, MaximumSize.FULL })
   public void evict(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
-    for (Integer key : context.absentKeys()) {
-      cache.put(key, -key);
-    }
+    cache.putAll(context.absent());
     if (eviction.isWeighted()) {
       assertThat(eviction.weightedSize().get(), is(context.maximumWeight()));
     } else {

@@ -22,7 +22,6 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +84,7 @@ public final class CacheContext {
   Integer absentKey;
   Integer absentValue;
 
-  Set<Integer> absentKeys;
+  Map<Integer, Integer> absent;
 
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
       MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, ReferenceType keyStrength,
@@ -141,15 +140,20 @@ public final class CacheContext {
     return (absentValue == null) ? (absentValue = -absentKey()) : absentValue;
   }
 
-  public Set<Integer> absentKeys() {
-    if (absentKeys != null) {
-      return absentKeys;
+  public Map<Integer, Integer> absent() {
+    if (absent != null) {
+      return absent;
     }
-    Set<Integer> absent = new HashSet<>();
+    absent = new LinkedHashMap<>();
     do {
-      absent.add(nextAbsentKey());
+      Integer key = nextAbsentKey();
+      absent.put(key, -key);
     } while (absent.size() < 10);
     return absent;
+  }
+
+  public Set<Integer> absentKeys() {
+    return absent().keySet();
   }
 
   private Integer nextAbsentKey() {

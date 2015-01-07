@@ -10,6 +10,7 @@ apply plugin: 'jacoco'
 apply plugin: 'java'
 apply plugin: 'pmd'
 
+apply from: "${rootDir}/gradle/caches.gradle"
 apply from: "${rootDir}/gradle/object_layout.gradle"
 
 group = 'com.github.ben-manes'
@@ -29,7 +30,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.0.1'
+    classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.1.0'
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.6'
     classpath 'org.kordamp.gradle:stats-gradle-plugin:0.1.3'
     classpath 'me.champeau.gradle:jmh-gradle-plugin:0.1.3'
@@ -40,18 +41,10 @@ buildscript {
 
 configurations {
   checkstyleConfig
-  [weakKeysTest, weakValuesTest, softValuesTest, slowTest]*.each {
-    it.extendsFrom testCompile
-    it.extendsFrom testRuntime
-  }
 }
 
 sourceSets {
   jmh.java.srcDirs += sourceSets.test.java.srcDirs
-  [weakKeysTest, weakValuesTest, softValuesTest, slowTest]*.each {
-    it.java.srcDir 'src/test/java'
-    it.resources.srcDir 'src/test/resources'
-  }
 }
 
 repositories {
@@ -92,37 +85,8 @@ dependencies {
   }
 }
 
-['weakKeys', 'weakValues', 'softValues', 'slow'].each {
-  def referent = it
-  task "${it}Test"(type: Test) {
-    useTestNG()
-    description = "Runs %{referent} tests."
-    include 'com/github/benmanes/caffeine/cache/**'
-
-    testClassesDir = sourceSets."${name}".output.classesDir
-    classpath = sourceSets."${name}".runtimeClasspath
-    systemProperties["${referent}"] = 'true'
-
-    // ensure we don't overwrite default report directories used by 'test' task
-    reports.html.destination = "${buildDir}/reports/${name}"
-    reports.junitXml.destination = "${buildDir}/${name}-results"
-    binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
-
-    // always run integration tests after unit tests in order to fail fast
-    mustRunAfter test    
-  }
-}
-
-[tasks.weakKeysTest, tasks.weakValuesTest, tasks.softValuesTest, tasks.slowTest]*.each {
-  def taskName = it.name
-  if (it != tasks.slowTest) {
-    tasks.check.dependsOn(it)
-  }
-  dependencies {
-    "${taskName}Compile" sourceSets.main.output, sourceSets.test.output
-    "${taskName}Compile" configurations.compile, configurations.testCompile
-    "${taskName}Runtime" configurations.runtime, configurations.testRuntime
-  }
+test {
+  exclude 'com/github/benmanes/caffeine/cache/**'
 }
 
 tasks.withType(Test) {
@@ -130,7 +94,7 @@ tasks.withType(Test) {
   options {
     if (name == 'slowTest') {
       jvmArgs '-XX:+UseParallelGC', '-XX:+UseParallelOldGC', '-XX:SoftRefLRUPolicyMSPerMB=250'
-      includeGroups = ['slow']    
+      includeGroups = ['slow']
     } else {
       jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=250'
       excludeGroups = ['slow']
@@ -163,6 +127,7 @@ pmd {
 
 tasks.withType(Checkstyle) {
   enabled = System.properties.containsKey('checkstyle')
+  group = 'Checkstyle'
   doLast {
     ant.xslt(in: "${buildDir}/reports/checkstyle/main.xml",
              style: 'config/checkstyle/checkstyle.xsl',
@@ -172,6 +137,7 @@ tasks.withType(Checkstyle) {
 
 tasks.withType(FindBugs) {
   enabled = System.properties.containsKey('findbugs')
+  group = 'Findbugs'
   reports {
     xml.enabled = false
     html.enabled = true
@@ -180,6 +146,7 @@ tasks.withType(FindBugs) {
 
 tasks.withType(Pmd) {
   enabled = System.properties.containsKey('pmd')
+  group = 'PMD'
   reports {
     xml.enabled = false
     html.enabled = true
@@ -229,9 +196,4 @@ jmh {
   iterations = 10
   forceGC = true
   fork = 1  
-}
-
-task stress(type: JavaExec, description: 'Executes a stress test') {
-  classpath sourceSets.jmh.runtimeClasspath
-  main = 'com.github.benmanes.caffeine.cache.Stresser'
 }

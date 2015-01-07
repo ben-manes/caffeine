@@ -1,0 +1,66 @@
+configurations {
+  [ slowTest,
+    strongKeysAndStrongValuesTest, strongKeysAndWeakValuesTest, strongKeysAndSoftValuesTest,
+    weakKeysAndStrongValuesTest, weakKeysAndWeakValuesTest, weakKeysAndSoftValuesTest
+  ]*.each {
+    it.extendsFrom testCompile
+    it.extendsFrom testRuntime
+  }
+}
+
+sourceSets {
+  [ slowTest, 
+    strongKeysAndStrongValuesTest, strongKeysAndWeakValuesTest, strongKeysAndSoftValuesTest,
+    weakKeysAndStrongValuesTest, weakKeysAndWeakValuesTest, weakKeysAndSoftValuesTest
+  ]*.each {
+    it.java.srcDir 'src/test/java'
+    it.resources.srcDir 'src/test/resources'
+  }
+}
+
+[ 'slow', 'strongKeysAndStrongValues', 'strongKeysAndWeakValues', 'strongKeysAndSoftValues',
+  'weakKeysAndStrongValues', 'weakKeysAndWeakValues', 'weakKeysAndSoftValues'
+].each {
+  def labels = it.split('And').collect { it[0].toLowerCase() + it.substring(1) }
+  task "${it}Test"(type: Test) {
+    useTestNG()
+    group = 'Cache tests'
+    description = "Runs " + labels.join(' ') + " tests."
+    include 'com/github/benmanes/caffeine/cache/**'
+
+    testClassesDir = sourceSets."${name}".output.classesDir
+    classpath = sourceSets."${name}".runtimeClasspath
+    if (labels.size() == 2) {
+      def strength = labels.collect{ it.split('Keys|Values') }.flatten()
+      systemProperties['keys'] = strength[0]
+      systemProperties['values'] = strength[1]
+    }
+
+    // ensure we don't overwrite default report directories used by 'test' task
+    reports.html.destination = "${buildDir}/reports/${name}"
+    reports.junitXml.destination = "${buildDir}/${name}-results"
+    binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
+
+    // always run integration tests after unit tests in order to fail fast
+    mustRunAfter test    
+  }
+}
+
+[ slowTest, strongKeysAndStrongValuesTest, strongKeysAndWeakValuesTest, strongKeysAndSoftValuesTest,
+  weakKeysAndStrongValuesTest, weakKeysAndWeakValuesTest, weakKeysAndSoftValuesTest
+]*.each {
+  def taskName = it.name
+  if (taskName != 'slowTest') {
+    tasks.test.finalizedBy(it)
+  }
+  dependencies {
+    "${taskName}Compile" sourceSets.main.output, sourceSets.test.output
+    "${taskName}Compile" configurations.compile, configurations.testCompile
+    "${taskName}Runtime" configurations.runtime, configurations.testRuntime
+  }
+}
+
+task stress(type: JavaExec, group: 'Cache tests', description: 'Executes a stress test') {
+  classpath sourceSets.jmh.runtimeClasspath
+  main = 'com.github.benmanes.caffeine.cache.Stresser'
+}
