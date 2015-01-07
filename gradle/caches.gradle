@@ -50,7 +50,7 @@ sourceSets {
   weakKeysAndStrongValuesTest, weakKeysAndWeakValuesTest, weakKeysAndSoftValuesTest
 ]*.each {
   def taskName = it.name
-  if (System.env.'CI' || (taskName != 'slowTest')) {
+  if (taskName != 'slowTest') {
     tasks.test.finalizedBy(it)
   }
   dependencies {
