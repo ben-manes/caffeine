@@ -6,6 +6,7 @@ apply plugin: 'me.champeau.gradle.jmh'
 apply plugin: 'org.dm.bundle'
 apply plugin: 'checkstyle'
 apply plugin: 'findbugs'
+apply plugin: 'eclipse'
 apply plugin: 'jacoco'
 apply plugin: 'java'
 apply plugin: 'pmd'
@@ -14,8 +15,8 @@ apply from: "${rootDir}/gradle/caches.gradle"
 apply from: "${rootDir}/gradle/object_layout.gradle"
 
 group = 'com.github.ben-manes'
-project.version.with { 
-  major = 1 // incompatible API changes  
+project.version.with {
+  major = 1 // incompatible API changes
   minor = 0 // backwards-compatible additions
   patch = 0 // backwards-compatible bug fixes
   releaseBuild = true
@@ -68,7 +69,7 @@ dependencies {
   testCompile dependencies.create('org.testng:testng:6.8.13') {
     exclude group: 'junit'
   }
-  
+
   // benchmarking
   jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.4.1', 'org.openjdk.jmh:jmh-core:1.4.1'
   jmh 'net.openhft:koloboke-api-jdk8:0.6.5', 'net.openhft:koloboke-impl-jdk8:0.6.5'
@@ -76,16 +77,19 @@ dependencies {
   jmh 'com.github.stephenc.high-scale-lib:high-scale-lib:1.1.4'
   jmh configurations.testCompile.allDependencies
 
-  // Eclipse fails to include all of the dependencies without this workaround
-  testCompile configurations.jmh.allDependencies
-
   // For Google style checks
   checkstyleConfig dependencies.create("com.puppycrawl.tools:checkstyle:${versions.checkstyle}") {
     transitive = false
   }
 }
 
-tasks.test.exclude 'com/github/benmanes/caffeine/cache/**'
+plugins.withType(EclipsePlugin) {
+  project.eclipse.classpath.plusConfigurations += [ configurations.jmh ]
+}
+
+test {
+  exclude 'com/github/benmanes/caffeine/cache/**'
+}
 
 tasks.withType(Test) {
   useTestNG()
@@ -111,7 +115,7 @@ tasks.withType(Test) {
   }
   if (name == 'slowTest') {
     maxHeapSize = '128m'
-    testLogging.info.events 'passed'    
+    testLogging.info.events 'passed'
   } else {
     maxHeapSize = '384m'
   }
@@ -190,7 +194,7 @@ jmh {
   }
   // Benchmark parameters: Seperated by '&' for parameter types, and ',' for multiple values
   if (project.hasProperty('benchmarkParameters')) {
-    benchmarkParameters = data.split('&').inject([:]) { map, token -> 
+    benchmarkParameters = data.split('&').inject([:]) { map, token ->
       token.split('=').with { map[it[0]] = it[1] }
     }
   }
@@ -199,7 +203,7 @@ jmh {
   benchmarkMode = 'thrpt'
   // Available time units are: [m, s, ms, us, ns]
   timeUnit = 's'
-  
+
   // Charts: http://nilskp.github.io/jmh-charts
   resultFormat = 'json'
   resultsFile = file("${buildDir}/reports/jmh/results.json")
@@ -209,5 +213,5 @@ jmh {
   failOnError = true
   iterations = 10
   forceGC = true
-  fork = 1  
+  fork = 1
 }

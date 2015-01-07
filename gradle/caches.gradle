@@ -41,7 +41,7 @@ sourceSets {
     reports.junitXml.destination = "${buildDir}/${name}-results"
     binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
 
-    // always run integration tests after unit tests in order to fail fast
+    // always run these tests after unit tests in order to fail fast
     mustRunAfter test
   }
 }
