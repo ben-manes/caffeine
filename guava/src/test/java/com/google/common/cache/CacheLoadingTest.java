@@ -109,6 +109,7 @@ public class CacheLoadingTest extends TestCase {
   public void testLoad() throws ExecutionException {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats().executor(MoreExecutors.directExecutor()), identityLoader());
+    //LoadingCache<Object, Object> cache = CacheBuilder.newBuilder().recordStats().build(identityLoader());
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
