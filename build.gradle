@@ -1,4 +1,5 @@
 apply plugin: 'com.github.ben-manes.versions'
+apply plugin: 'com.github.kt3k.coveralls'
 
 buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
@@ -18,7 +19,7 @@ buildscript {
   }
 }
 
-subprojects {
+subprojects { proj ->
   apply from: "${rootDir}/gradle/jmh.gradle"
   apply from: "${rootDir}/gradle/publish.gradle"
   apply from: "${rootDir}/gradle/code_quality.gradle"
@@ -42,5 +43,10 @@ subprojects {
 
   repositories {
     jcenter()
+  }
+  
+  rootProject.tasks.coveralls {
+    dependsOn proj.tasks.'check'
+    onlyIf { System.env.'CI' }
   }
 }

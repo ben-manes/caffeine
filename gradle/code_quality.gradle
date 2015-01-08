@@ -1,7 +1,6 @@
 /**
  * Configurations for code quality analysis
  */
-apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'checkstyle'
 apply plugin: 'findbugs'
@@ -48,8 +47,8 @@ tasks.withType(Test) {
   }
   jacoco {
     append = true
-    destinationFile = file("${buildDir}/jacoco/jacocoTest.exec")
-    classDumpFile = file("${buildDir}/jacoco/classpathdumps")
+    destinationFile = file("${rootDir}/build/jacoco/jacocoTest.exec")
+    classDumpFile = file("${rootDir}/build/jacoco/classpathdumps")
   }
   maxHeapSize = '384m'
 }
@@ -87,9 +86,4 @@ jacocoTestReport {
     xml.enabled = true
     html.enabled = true
   }
-}
-
-tasks.coveralls {
-  dependsOn 'check'
-  onlyIf { System.env.'CI' }
 }
