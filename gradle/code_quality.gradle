@@ -81,6 +81,8 @@ tasks.withType(Pmd) {
   }
 }
 
+jacoco.reportsDir = file("${rootDir}/build/reports/jacoco")
+
 jacocoTestReport {
   reports {
     xml.enabled = true
