@@ -21,6 +21,16 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.CaffeinatedGuava;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilderFactory.DurationSpec;
 import com.google.common.cache.LocalCache.Strength;
@@ -31,14 +41,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.testing.EqualsTester;
-
-import junit.framework.TestCase;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  * {@link LoadingCache} tests that deal with caches that actually contain some key-value mappings.
@@ -247,13 +249,13 @@ public class PopulatedCachesTest extends TestCase {
       List<Entry<Object, Object>> warmed = warmUp(cache, WARMUP_MIN, WARMUP_MAX);
 
       Set<?> expected = Maps.newHashMap(cache.asMap()).entrySet();
-      assertThat(entries).containsExactlyElementsIn((Collection<Entry<Object, Object>>) expected);
+      assertThat(entries).containsExactlyElementsIn(expected);
       assertThat(entries.toArray())
           .asList()
-          .containsExactlyElementsIn((Collection<Object>) expected);
+          .containsExactlyElementsIn(expected);
       assertThat(entries.toArray(new Entry[0]))
           .asList()
-          .containsExactlyElementsIn((Collection<Entry>) expected);
+          .containsExactlyElementsIn(expected);
 
       new EqualsTester()
           .addEqualityGroup(cache.asMap().entrySet(), entries)
@@ -299,10 +301,10 @@ public class PopulatedCachesTest extends TestCase {
     // lots of different ways to configure a LoadingCache
     CacheBuilderFactory factory = cacheFactory();
     return Iterables.transform(factory.buildAllPermutations(),
-        new Function<CacheBuilder<Object, Object>, LoadingCache<Object, Object>>() {
+        new Function<Caffeine<Object, Object>, LoadingCache<Object, Object>>() {
           @Override public LoadingCache<Object, Object> apply(
-              CacheBuilder<Object, Object> builder) {
-            return builder.recordStats().build(identityLoader());
+              Caffeine<Object, Object> builder) {
+            return CaffeinatedGuava.build(builder.recordStats(), identityLoader());
           }
         });
   }

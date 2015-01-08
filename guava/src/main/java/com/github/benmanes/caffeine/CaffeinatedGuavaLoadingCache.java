@@ -15,8 +15,11 @@
  */
 package com.github.benmanes.caffeine;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.ExecutionException;
 
+import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 
@@ -57,5 +60,25 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
   @Override
   public void refresh(K key) {
     cache.refresh(key);
+  }
+
+  // TODO(ben): Delegate to loadAll, reload, etc.
+  static final class CaffeinatedGuavaCacheLoader<K, V> implements CacheLoader<K, V> {
+    final com.google.common.cache.CacheLoader<K, V> cacheLoader;
+
+    CaffeinatedGuavaCacheLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+      this.cacheLoader = requireNonNull(cacheLoader);
+    }
+
+    @Override
+    public V load(K key) {
+      try {
+        return cacheLoader.load(key);
+      } catch (RuntimeException | Error e) {
+        throw e;
+      } catch (Exception e) {
+        throw new CacheLoaderException(e);
+      }
+    }
   }
 }

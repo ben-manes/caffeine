@@ -14,6 +14,13 @@
 
 package com.google.common.cache;
 
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nullable;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
@@ -23,12 +30,6 @@ import com.google.common.cache.LocalCache.Strength;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import javax.annotation.Nullable;
 
 /**
  * Helper class for creating {@link CacheBuilder} instances with all combinations of several sets of
@@ -89,14 +90,14 @@ class CacheBuilderFactory {
     return this;
   }
 
-  Iterable<CacheBuilder<Object, Object>> buildAllPermutations() {
+  Iterable<Caffeine<Object, Object>> buildAllPermutations() {
     @SuppressWarnings("unchecked")
     Iterable<List<Object>> combinations = buildCartesianProduct(concurrencyLevels,
         initialCapacities, maximumSizes, expireAfterWrites, expireAfterAccesses, refreshes,
         keyStrengths, valueStrengths);
     return Iterables.transform(combinations,
-        new Function<List<Object>, CacheBuilder<Object, Object>>() {
-          @Override public CacheBuilder<Object, Object> apply(List<Object> combination) {
+        new Function<List<Object>, Caffeine<Object, Object>>() {
+          @Override public Caffeine<Object, Object> apply(List<Object> combination) {
             return createCacheBuilder(
                 (Integer) combination.get(0),
                 (Integer) combination.get(1),
@@ -129,7 +130,7 @@ class CacheBuilderFactory {
    * "don't call the associated CacheBuilder method" - that is, get the default CacheBuilder
    * behavior. This method wraps the elements in the input sets (which may contain null) as
    * Optionals, calls Sets.cartesianProduct with those, then transforms the result to unwrap
-   * the Optionals. 
+   * the Optionals.
    */
   private Iterable<List<Object>> buildCartesianProduct(Set<?>... sets) {
     List<Set<Optional<?>>> optionalSets = Lists.newArrayListWithExpectedSize(sets.length);
@@ -147,14 +148,14 @@ class CacheBuilderFactory {
         });
   }
 
-  private CacheBuilder<Object, Object> createCacheBuilder(
+  private Caffeine<Object, Object> createCacheBuilder(
       Integer concurrencyLevel, Integer initialCapacity, Integer maximumSize,
       DurationSpec expireAfterWrite, DurationSpec expireAfterAccess, DurationSpec refresh,
       Strength keyStrength, Strength valueStrength) {
 
-    CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (concurrencyLevel != null) {
-      builder.concurrencyLevel(concurrencyLevel);
+      //builder.concurrencyLevel(concurrencyLevel);
     }
     if (initialCapacity != null) {
       builder.initialCapacity(initialCapacity);
@@ -171,11 +172,13 @@ class CacheBuilderFactory {
     if (refresh != null) {
       builder.refreshAfterWrite(refresh.duration, refresh.unit);
     }
-    if (keyStrength != null) {
-      builder.setKeyStrength(keyStrength);
+    if (keyStrength == Strength.WEAK) {
+      builder.weakKeys();
     }
-    if (valueStrength != null) {
-      builder.setValueStrength(valueStrength);
+    if (valueStrength == Strength.WEAK) {
+      builder.weakValues();
+    } else if (valueStrength == Strength.SOFT) {
+      builder.softValues();
     }
     return builder;
   }

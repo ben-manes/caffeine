@@ -18,15 +18,17 @@ import static com.google.common.cache.LocalCache.Strength.STRONG;
 import static com.google.common.collect.Maps.immutableEntry;
 import static com.google.common.truth.Truth.assertThat;
 
+import java.lang.ref.WeakReference;
+
+import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.CaffeinatedGuava;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Function;
 import com.google.common.cache.LocalCache.Strength;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-
-import junit.framework.TestCase;
-
-import java.lang.ref.WeakReference;
 
 /**
  * Tests of basic {@link LoadingCache} operations with all possible combinations of key & value
@@ -52,9 +54,9 @@ public class CacheReferencesTest extends TestCase {
   private Iterable<LoadingCache<Key, String>> caches() {
     CacheBuilderFactory factory = factoryWithAllKeyStrengths();
     return Iterables.transform(factory.buildAllPermutations(),
-        new Function<CacheBuilder<Object, Object>, LoadingCache<Key, String>>() {
-          @Override public LoadingCache<Key, String> apply(CacheBuilder<Object, Object> builder) {
-            return builder.build(KEY_TO_STRING_LOADER);
+        new Function<Caffeine<Object, Object>, LoadingCache<Key, String>>() {
+          @Override public LoadingCache<Key, String> apply(Caffeine<Object, Object> builder) {
+            return CaffeinatedGuava.build(builder, KEY_TO_STRING_LOADER);
           }
         });
   }

@@ -15,9 +15,10 @@
  */
 package com.github.benmanes.caffeine;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.CaffeinatedGuavaLoadingCache.CaffeinatedGuavaCacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.cache.Cache;
+import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
 /**
@@ -30,12 +31,22 @@ public final class CaffeinatedGuava {
   private CaffeinatedGuava() {}
 
   /** Returns a Caffeine cache wrapped in a Guava {@link Cache} facade. */
-  public <K, V> Cache<K, V> build(Caffeine<K, V> builder) {
+  public static <K, V> Cache<K, V> build(Caffeine<K, V> builder) {
     return new CaffeinatedGuavaCache<K, V>(builder.build());
   }
 
   /** Returns a Caffeine cache wrapped in a Guava {@link LoadingCache} facade. */
-  public <K, V> LoadingCache<K, V> build(Caffeine<K, V> builder, CacheLoader<K, V> cacheLoader) {
-    return new CaffeinatedGuavaLoadingCache<K, V>(builder.build(cacheLoader));
+  public static <K1 extends K, K, V1 extends V, V> LoadingCache<K1, V1> build(
+      Caffeine<K, V> builder, CacheLoader<? super K1, V1> cacheLoader) {
+    @SuppressWarnings("unchecked")
+    CacheLoader<K1, V1> loader = (CacheLoader<K1, V1>) cacheLoader;
+    return build(builder, new CaffeinatedGuavaCacheLoader<>(loader));
+  }
+
+  /** Returns a Caffeine cache wrapped in a Guava {@link LoadingCache} facade. */
+  public static <K1 extends K, K, V1 extends V, V> LoadingCache<K1, V1> build(
+      Caffeine<K, V> builder,
+      com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> cacheLoader) {
+    return new CaffeinatedGuavaLoadingCache<K1, V1>(builder.build(cacheLoader));
   }
 }

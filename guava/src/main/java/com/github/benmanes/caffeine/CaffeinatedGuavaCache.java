@@ -17,7 +17,10 @@ package com.github.benmanes.caffeine;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -26,6 +29,10 @@ import javax.annotation.Nullable;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheStats;
+import com.google.common.collect.ForwardingCollection;
+import com.google.common.collect.ForwardingConcurrentMap;
+import com.google.common.collect.ForwardingMapEntry;
+import com.google.common.collect.ForwardingSet;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
@@ -110,7 +117,65 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V> {
 
   @Override
   public ConcurrentMap<K, V> asMap() {
-    return cache.asMap();
+    return new ForwardingConcurrentMap<K, V>() {
+      @Override public boolean containsKey(Object key) {
+        return (key != null) && delegate().containsKey(key);
+      }
+      @Override
+      public boolean containsValue(Object value) {
+        return (value != null) && delegate().containsValue(value);
+      }
+      @Override public Set<K> keySet() {
+        return new ForwardingSet<K>() {
+          @Override public boolean remove(Object o) {
+            return (o != null) && delegate().remove(o);
+          }
+          @Override protected Set<K> delegate() {
+            return cache.asMap().keySet();
+          }
+        };
+      }
+      @Override public Collection<V> values() {
+        return new ForwardingCollection<V>() {
+          @Override public boolean remove(Object o) {
+            return (o != null) && delegate().remove(o);
+          }
+          @Override protected Collection<V> delegate() {
+            return cache.asMap().values();
+          }
+        };
+      }
+      @Override public Set<Entry<K, V>> entrySet() {
+        return new ForwardingSet<Entry<K, V>>() {
+          @Override public boolean add(Entry<K, V> entry) {
+            throw new UnsupportedOperationException();
+          }
+          @Override public boolean addAll(Collection<? extends Entry<K, V>> entry) {
+            throw new UnsupportedOperationException();
+          }
+          @Override
+          public Iterator<Entry<K, V>> iterator() {
+            return delegate().stream().map(entry -> {
+              Entry<K, V> e = new ForwardingMapEntry<K, V>() {
+                @Override public V setValue(V value) {
+                  throw new UnsupportedOperationException();
+                }
+                @Override protected Entry<K, V> delegate() {
+                  return entry;
+                }
+              };
+              return e;
+            }).iterator();
+          }
+          @Override protected Set<Entry<K, V>> delegate() {
+            return cache.asMap().entrySet();
+          }
+        };
+      }
+      @Override protected ConcurrentMap<K, V> delegate() {
+        return cache.asMap();
+      }
+    };
   }
 
   @Override

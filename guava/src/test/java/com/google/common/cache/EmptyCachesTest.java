@@ -20,6 +20,15 @@ import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import java.util.Collection;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+
+import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.CaffeinatedGuava;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilderFactory.DurationSpec;
 import com.google.common.cache.LocalCache.Strength;
@@ -27,13 +36,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.testing.EqualsTester;
-
-import junit.framework.TestCase;
-
-import java.util.Collection;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 /**
  * {@link LoadingCache} tests that deal with empty caches.
@@ -77,12 +79,12 @@ public class EmptyCachesTest extends TestCase {
   }
 
   public void testEqualsAndHashCode_different() {
-    for (CacheBuilder<Object, Object> builder : cacheFactory().buildAllPermutations()) {
+    for (Caffeine<Object, Object> builder : cacheFactory().buildAllPermutations()) {
       // all caches should be different: instance equality
       new EqualsTester()
-          .addEqualityGroup(builder.build(identityLoader()))
-          .addEqualityGroup(builder.build(identityLoader()))
-          .addEqualityGroup(builder.build(identityLoader()))
+          .addEqualityGroup(CaffeinatedGuava.build(builder, identityLoader()))
+          .addEqualityGroup(CaffeinatedGuava.build(builder, identityLoader()))
+          .addEqualityGroup(CaffeinatedGuava.build(builder, identityLoader()))
           .testEquals();
     }
   }
@@ -351,10 +353,10 @@ public class EmptyCachesTest extends TestCase {
     // lots of different ways to configure a LoadingCache
     CacheBuilderFactory factory = cacheFactory();
     return Iterables.transform(factory.buildAllPermutations(),
-        new Function<CacheBuilder<Object, Object>, LoadingCache<Object, Object>>() {
+        new Function<Caffeine<Object, Object>, LoadingCache<Object, Object>>() {
           @Override public LoadingCache<Object, Object> apply(
-              CacheBuilder<Object, Object> builder) {
-            return builder.build(identityLoader());
+              Caffeine<Object, Object> builder) {
+            return CaffeinatedGuava.build(builder, identityLoader());
           }
         });
   }
