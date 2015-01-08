@@ -32,6 +32,15 @@ pmd {
   ruleSets = [/* 'java-basic', */ 'java-braces']
 }
 
+jacoco.reportsDir = file("${rootDir}/build/reports/jacoco")
+
+jacocoTestReport {
+  reports {
+    xml.enabled = true
+    html.enabled = true
+  }
+}
+
 tasks.withType(Test) {
   options {
     jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
@@ -77,15 +86,6 @@ tasks.withType(Pmd) {
   group = 'PMD'
   reports {
     xml.enabled = false
-    html.enabled = true
-  }
-}
-
-jacoco.reportsDir = file("${rootDir}/build/reports/jacoco")
-
-jacocoTestReport {
-  reports {
-    xml.enabled = true
     html.enabled = true
   }
 }

@@ -108,7 +108,7 @@ public class CacheLoadingTest extends TestCase {
 
   public void testLoad() throws ExecutionException {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .recordStats(), identityLoader());
+        .recordStats().executor(MoreExecutors.directExecutor()), identityLoader());
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -181,7 +181,7 @@ public class CacheLoadingTest extends TestCase {
     };
 
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
-        Caffeine.newBuilder().recordStats(), loader);
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -291,7 +291,8 @@ public class CacheLoadingTest extends TestCase {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
         .ticker(ticker)
-        .refreshAfterWrite(1, MILLISECONDS),
+        .refreshAfterWrite(1, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor()),
         loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
@@ -380,7 +381,7 @@ public class CacheLoadingTest extends TestCase {
   public void testBulkLoad_loadAll() throws ExecutionException {
     IdentityLoader<Integer> backingLoader = identityLoader();
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .recordStats(), bulkLoader(backingLoader));
+        .recordStats().executor(MoreExecutors.directExecutor()), bulkLoader(backingLoader));
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -442,7 +443,8 @@ public class CacheLoadingTest extends TestCase {
         return result;
       }
     };
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().executor(MoreExecutors.directExecutor()), loader);
 
     Object[] lookupKeys = new Object[] { new Object(), new Object(), new Object() };
     Map<Object, Object> result = cache.getAll(asList(lookupKeys));
@@ -670,7 +672,8 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -715,7 +718,8 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -764,7 +768,8 @@ public class CacheLoadingTest extends TestCase {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
         .ticker(ticker)
-        .refreshAfterWrite(1, MILLISECONDS), loader);
+        .refreshAfterWrite(1, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -859,8 +864,8 @@ public class CacheLoadingTest extends TestCase {
   public void testLoadError() throws ExecutionException {
     Error e = new Error();
     CacheLoader<Object, Object> loader = errorLoader(e);
-    LoadingCache<Object, Object> cache =
-        CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .recordStats().executor(MoreExecutors.directExecutor()), loader);
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -945,7 +950,8 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -991,7 +997,8 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -1041,7 +1048,8 @@ public class CacheLoadingTest extends TestCase {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
         .ticker(ticker)
-        .refreshAfterWrite(1, MILLISECONDS),
+        .refreshAfterWrite(1, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor()),
         loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
@@ -1111,7 +1119,7 @@ public class CacheLoadingTest extends TestCase {
     Exception e = new Exception();
     CacheLoader<Object, Object> loader = exceptionLoader(e);
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
-        Caffeine.newBuilder().recordStats(), loader);
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -1267,7 +1275,8 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -1313,7 +1322,8 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -1363,7 +1373,8 @@ public class CacheLoadingTest extends TestCase {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
         .ticker(ticker)
-        .refreshAfterWrite(1, MILLISECONDS),
+        .refreshAfterWrite(1, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor()),
         loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
@@ -1433,7 +1444,7 @@ public class CacheLoadingTest extends TestCase {
     Exception e = new InterruptedException();
     CacheLoader<Object, Object> loader = exceptionLoader(e);
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .recordStats(), bulkLoader(loader));
+        .recordStats().executor(MoreExecutors.directExecutor()), bulkLoader(loader));
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -1457,7 +1468,8 @@ public class CacheLoadingTest extends TestCase {
   public void testLoadUncheckedException() throws ExecutionException {
     Exception e = new RuntimeException();
     CacheLoader<Object, Object> loader = exceptionLoader(e);
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -1537,7 +1549,8 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -1583,7 +1596,8 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
@@ -1633,7 +1647,8 @@ public class CacheLoadingTest extends TestCase {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
         .ticker(ticker)
-        .refreshAfterWrite(1, MILLISECONDS),
+        .refreshAfterWrite(1, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor()),
         loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
@@ -1916,7 +1931,9 @@ public class CacheLoadingTest extends TestCase {
   }
 
   public void testConcurrentExpirationLoading() throws InterruptedException {
-    testConcurrentLoading(Caffeine.newBuilder().expireAfterWrite(10, TimeUnit.SECONDS));
+    testConcurrentLoading(Caffeine.newBuilder()
+        .expireAfterWrite(10, TimeUnit.SECONDS)
+        .executor(MoreExecutors.directExecutor()));
   }
 
   private static void testConcurrentLoading(Caffeine<Object, Object> builder)

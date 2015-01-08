@@ -73,7 +73,17 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
 
   @Override
   public ImmutableMap<K, V> getAll(Iterable<? extends K> keys) throws ExecutionException {
-    return ImmutableMap.copyOf(cache.getAll(keys));
+    try {
+      return ImmutableMap.copyOf(cache.getAll(keys));
+    } catch (NullPointerException | InvalidCacheLoadException e) {
+      throw e;
+    } catch (CacheLoaderException e) {
+      throw new UncheckedExecutionException(e.getCause());
+    } catch (Exception e) {
+      throw new UncheckedExecutionException(e);
+    } catch (Error e) {
+      throw new ExecutionError(e);
+    }
   }
 
   @Override
