@@ -45,6 +45,20 @@ subprojects { proj ->
     jcenter()
   }
   
+  configurations {
+    testArtifacts
+  }
+  
+  task testJar(type: Jar, group: "Build") {
+    description = "Assembles a jar archive containing the test classes."
+    baseName = "${project.name}-test"
+    from sourceSets.test.output
+  }
+  
+  artifacts {
+    testArtifacts testJar
+  }
+  
   rootProject.tasks.coveralls {
     dependsOn proj.tasks.'check'
     onlyIf { System.env.'CI' }
