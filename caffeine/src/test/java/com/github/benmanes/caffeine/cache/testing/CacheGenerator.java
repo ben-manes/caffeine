@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -53,17 +54,10 @@ final class CacheGenerator {
 
   /** Returns a lazy stream so that the test case is lazy and GC-able after use. */
   public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate(
-      Optional<ReferenceType> keys, Optional<ReferenceType> values) {
-    return combinations().stream()
+      Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
+    return combinations(keyType, valueType).stream()
         .map(this::newCacheContext)
-        .filter(context -> {
-          if ((keys.isPresent() && (keys.get() != context.keyStrength()))) {
-            return false;
-          } else if ((values.isPresent() && (values.get() != context.valueStrength()))) {
-            return false;
-          }
-          return true;
-        }).map(context -> {
+        .map(context -> {
           Cache<Integer, Integer> cache = CacheFromContext.newCache(context);
           populate(context, cache);
           return Maps.immutableEntry(context, cache);
@@ -71,7 +65,14 @@ final class CacheGenerator {
   }
 
   @SuppressWarnings("unchecked")
-  private Set<List<Object>> combinations() {
+  private Set<List<Object>> combinations(
+      Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
+    Set<ReferenceType> keys = filterReferenceTypes(keyType, cacheSpec.keys());
+    Set<ReferenceType> values = filterReferenceTypes(valueType, cacheSpec.values());
+    if (keys.isEmpty() || values.isEmpty()) {
+      return ImmutableSet.of();
+    }
+
     return Sets.cartesianProduct(
         ImmutableSet.copyOf(cacheSpec.initialCapacity()),
         ImmutableSet.copyOf(cacheSpec.stats()),
@@ -79,14 +80,24 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.maximumSize()),
         ImmutableSet.copyOf(cacheSpec.expireAfterAccess()),
         ImmutableSet.copyOf(cacheSpec.expireAfterWrite()),
-        ImmutableSet.copyOf(cacheSpec.keys()),
-        ImmutableSet.copyOf(cacheSpec.values()),
+        ImmutableSet.copyOf(keys),
+        ImmutableSet.copyOf(values),
         ImmutableSet.copyOf(cacheSpec.executor()),
         ImmutableSet.copyOf(cacheSpec.removalListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
         ImmutableSet.of(true, isLoadingOnly),
         ImmutableSet.copyOf(cacheSpec.loader()),
         ImmutableSet.copyOf(cacheSpec.implementation()));
+  }
+
+  private static ImmutableSet<ReferenceType> filterReferenceTypes(
+      Optional<ReferenceType> type, ReferenceType[] options) {
+    if (type.isPresent()) {
+      return type.filter(Arrays.asList(options)::contains).isPresent()
+          ? ImmutableSet.of(type.get())
+          : ImmutableSet.of();
+    }
+    return ImmutableSet.copyOf(options);
   }
 
   private CacheContext newCacheContext(List<Object> combination) {

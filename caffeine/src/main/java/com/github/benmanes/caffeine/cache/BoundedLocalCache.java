@@ -2607,7 +2607,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
             result.put(key, value);
           }
         }
-        success = true;
+        success = !loaded.isEmpty();
       } finally {
         long loadTime = cache.ticker.read() - startTime;
         if (success) {

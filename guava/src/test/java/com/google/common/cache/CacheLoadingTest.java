@@ -813,7 +813,7 @@ public class CacheLoadingTest extends TestCase {
 
   public void testBulkLoadNull() throws ExecutionException {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .recordStats(), bulkLoader(constantLoader(null)));
+        .recordStats().executor(MoreExecutors.directExecutor()), bulkLoader(constantLoader(null)));
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());

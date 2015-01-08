@@ -913,7 +913,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
             result.put(key, value);
           }
         }
-        success = true;
+        success = !loaded.isEmpty();
       } finally {
         long loadTime = cache.ticker.read() - startTime;
         if (success) {

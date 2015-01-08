@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
@@ -35,8 +36,10 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, V>
+final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, V>
     implements LoadingCache<K, V> {
+  static final ThreadLocal<Boolean> nullBulkLoad = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
   final com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache;
 
   CaffeinatedGuavaLoadingCache(com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache) {
@@ -78,7 +81,17 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
   @Override
   public ImmutableMap<K, V> getAll(Iterable<? extends K> keys) throws ExecutionException {
     try {
-      return ImmutableMap.copyOf(cache.getAll(keys));
+      Map<K, V> result = cache.getAll(keys);
+      if (nullBulkLoad.get()) {
+        nullBulkLoad.set(false);
+        throw new InvalidCacheLoadException("null key or value");
+      }
+      for (K key : keys) {
+        if (!result.containsKey(key)) {
+          throw new InvalidCacheLoadException("loadAll failed to return a value for " + key);
+        }
+      }
+      return ImmutableMap.copyOf(result);
     } catch (NullPointerException | InvalidCacheLoadException e) {
       throw e;
     } catch (CacheLoaderException e) {
@@ -141,13 +154,17 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
     @Override
     public Map<K, V> loadAll(Iterable<? extends K> keys) {
       try {
-        Map<K, V> result = new HashMap<>();
-        for (K key : keys) {
-          V value = load(key);
-          if (value == null) {
-            throw new InvalidCacheLoadException("null value");
+        Map<K, V> loaded = cacheLoader.loadAll(keys);
+        if (loaded == null) {
+          throw new InvalidCacheLoadException("null map");
+        }
+        Map<K, V> result = new HashMap<>(loaded.size());
+        for (Entry<K, V> entry : loaded.entrySet()) {
+          if ((entry.getKey() == null) || (entry.getValue() == null)) {
+            nullBulkLoad.set(true);
+          } else {
+            result.put(entry.getKey(), entry.getValue());
           }
-          result.put(key, value);
         }
         return result;
       } catch (RuntimeException | Error e) {
