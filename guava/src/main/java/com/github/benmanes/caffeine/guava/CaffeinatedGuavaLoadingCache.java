@@ -100,10 +100,10 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
     cache.refresh(key);
   }
 
-  static final class CaffeinatedGuavaCacheLoader<K, V> implements CacheLoader<K, V> {
+  static class SingleLoader<K, V> implements CacheLoader<K, V> {
     final com.google.common.cache.CacheLoader<K, V> cacheLoader;
 
-    CaffeinatedGuavaCacheLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+    SingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       this.cacheLoader = requireNonNull(cacheLoader);
     }
 
@@ -123,29 +123,37 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
     }
 
     @Override
-    public Map<K, V> loadAll(Iterable<? extends K> keys) {
-      try {
-        return cacheLoader.loadAll(keys);
-      } catch (UnsupportedOperationException e) {
-        Map<K, V> results = new HashMap<>();
-        for (K key : keys) {
-          V value = load(key);
-          results.put(key, value);
-        }
-        return results;
-      } catch (RuntimeException | Error e) {
-        throw e;
-      } catch (Exception e) {
-        throw new CacheLoaderException(e);
-      }
-    }
-
-    @Override
     public V reload(K key, V oldValue) {
       try {
         return Futures.getUnchecked(cacheLoader.reload(key, oldValue));
       } catch (Exception e) {
         throw Throwables.propagate(e);
+      }
+    }
+  }
+
+  static final class BulkLoader<K, V> extends SingleLoader<K, V> {
+
+    BulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
+      super(cacheLoader);
+    }
+
+    @Override
+    public Map<K, V> loadAll(Iterable<? extends K> keys) {
+      try {
+        Map<K, V> result = new HashMap<>();
+        for (K key : keys) {
+          V value = load(key);
+          if (value == null) {
+            throw new InvalidCacheLoadException("null value");
+          }
+          result.put(key, value);
+        }
+        return result;
+      } catch (RuntimeException | Error e) {
+        throw e;
+      } catch (Exception e) {
+        throw new CacheLoaderException(e);
       }
     }
   }

@@ -15,8 +15,11 @@
  */
 package com.github.benmanes.caffeine.guava;
 
+import java.lang.reflect.Method;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.CaffeinatedGuavaCacheLoader;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.BulkLoader;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.SingleLoader;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -40,7 +43,9 @@ public final class CaffeinatedGuava {
       Caffeine<K, V> builder, CacheLoader<? super K1, V1> cacheLoader) {
     @SuppressWarnings("unchecked")
     CacheLoader<K1, V1> loader = (CacheLoader<K1, V1>) cacheLoader;
-    return build(builder, new CaffeinatedGuavaCacheLoader<>(loader));
+    return build(builder, hasLoadAll(cacheLoader)
+        ? new BulkLoader<>(loader)
+        : new SingleLoader<>(loader));
   }
 
   /** Returns a Caffeine cache wrapped in a Guava {@link LoadingCache} facade. */
@@ -48,5 +53,14 @@ public final class CaffeinatedGuava {
       Caffeine<K, V> builder,
       com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> cacheLoader) {
     return new CaffeinatedGuavaLoadingCache<K1, V1>(builder.build(cacheLoader));
+  }
+
+  private static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {
+    try {
+      Method method = cacheLoader.getClass().getMethod("loadAll", Iterable.class);
+      return (method.getDeclaringClass() != CacheLoader.class);
+    } catch (NoSuchMethodException | SecurityException e) {
+      return false;
+    }
   }
 }
