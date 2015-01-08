@@ -361,7 +361,7 @@ class CacheTesting {
     return Math.max(accessQueueSize(cache), writeQueueSize(cache));
   }
 
-  static void processPendingNotifications(Cache<?, ?> cache) {
+  static void processPendingNotifications() {
     ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
   }
 

@@ -80,7 +80,7 @@ public class CacheEvictionTest extends TestCase {
     }
 
     assertEquals(MAX_SIZE, cache.size());
-    CacheTesting.processPendingNotifications(cache);
+    CacheTesting.processPendingNotifications();
     assertEquals(MAX_SIZE, removalListener.getCount());
     CacheTesting.checkValidState(cache);
   }
@@ -98,7 +98,7 @@ public class CacheEvictionTest extends TestCase {
     }
 
     assertEquals(MAX_SIZE, cache.size());
-    CacheTesting.processPendingNotifications(cache);
+    CacheTesting.processPendingNotifications();
     assertEquals(MAX_SIZE, removalListener.getCount());
     CacheTesting.checkValidState(cache);
   }
@@ -112,7 +112,7 @@ public class CacheEvictionTest extends TestCase {
         .removalListener(removalListener), loader);
     cache.getUnchecked(objectWithHash(0));
     cache.getUnchecked(objectWithHash(0));
-    CacheTesting.processPendingNotifications(cache);
+    CacheTesting.processPendingNotifications();
     assertEquals(1, removalListener.getCount());
   }
 

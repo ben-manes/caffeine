@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 
 import com.google.common.cache.Cache;
+import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.CacheStats;
 import com.google.common.collect.ForwardingCollection;
 import com.google.common.collect.ForwardingConcurrentMap;
@@ -60,7 +61,13 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V> {
     try {
       return cache.get(key, k -> {
         try {
-          return valueLoader.call();
+          V value = valueLoader.call();
+          if (value == null) {
+            throw new InvalidCacheLoadException("null value");
+          }
+          return value;
+        } catch (InvalidCacheLoadException e) {
+          throw e;
         } catch (RuntimeException e) {
           throw new UncheckedExecutionException(e);
         } catch (Exception e) {

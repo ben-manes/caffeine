@@ -148,7 +148,7 @@ public class CacheReferencesTest extends TestCase {
       } catch (OutOfMemoryError e) {}
     }
 
-    CacheTesting.processPendingNotifications(cache);
+    CacheTesting.processPendingNotifications();
     assertEquals(1, cache.size());
     assertEquals(1, removalListener.getCount());
   }

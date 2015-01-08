@@ -320,7 +320,7 @@ public class CacheBuilderTest extends TestCase {
     assertEquals(0, nullCache.size());
     Object key = new Object();
     assertSame(key, nullCache.getUnchecked(key));
-    CacheTesting.processPendingNotifications(nullCache);
+    CacheTesting.processPendingNotifications();
     assertEquals(1, listener.getCount());
     assertEquals(0, nullCache.size());
     CacheTesting.checkEmpty(nullCache.asMap());

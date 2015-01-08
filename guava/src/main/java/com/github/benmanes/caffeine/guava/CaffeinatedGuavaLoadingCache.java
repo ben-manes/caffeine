@@ -42,7 +42,18 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
 
   @Override
   public V get(K key) throws ExecutionException {
-    return cache.get(key);
+    requireNonNull(key);
+    try {
+      return cache.get(key);
+    } catch (InvalidCacheLoadException e) {
+      throw e;
+    } catch (CacheLoaderException e) {
+      throw new ExecutionException(e.getCause());
+    } catch (RuntimeException e) {
+      throw new UncheckedExecutionException(e);
+    } catch (Error e) {
+      throw new ExecutionError(e);
+    }
   }
 
   @Override
@@ -51,10 +62,10 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
       return cache.get(key);
     } catch (NullPointerException | InvalidCacheLoadException e) {
       throw e;
-    } catch (RuntimeException e) {
-      throw new UncheckedExecutionException(e);
+    } catch (CacheLoaderException e) {
+      throw new UncheckedExecutionException(e.getCause());
     } catch (Exception e) {
-      throw new CacheLoaderException(e);
+      throw new UncheckedExecutionException(e);
     } catch (Error e) {
       throw new ExecutionError(e);
     }

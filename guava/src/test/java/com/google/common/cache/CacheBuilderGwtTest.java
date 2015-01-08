@@ -304,6 +304,7 @@ public class CacheBuilderGwtTest extends TestCase {
 
     cache.invalidateAll();
 
+    CacheTesting.processPendingNotifications();
     assertEquals(2, stats[0]);
     assertEquals(2, stats[1]);
     assertEquals(4, stats[2]);

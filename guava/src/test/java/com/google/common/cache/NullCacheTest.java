@@ -51,7 +51,7 @@ public class NullCacheTest extends TestCase {
 
     Object key = new Object();
     assertSame(computed, cache.getUnchecked(key));
-    CacheTesting.processPendingNotifications(cache);
+    CacheTesting.processPendingNotifications();
     RemovalNotification<Object, Object> notification = listener.remove();
     assertSame(key, notification.getKey());
     assertSame(computed, notification.getValue());
@@ -69,7 +69,7 @@ public class NullCacheTest extends TestCase {
 
     Object key = new Object();
     assertSame(computed, cache.getUnchecked(key));
-    CacheTesting.processPendingNotifications(cache);
+    CacheTesting.processPendingNotifications();
     RemovalNotification<Object, Object> notification = listener.remove();
     assertSame(key, notification.getKey());
     assertSame(computed, notification.getValue());
@@ -87,7 +87,7 @@ public class NullCacheTest extends TestCase {
 
     Object key = new Object();
     assertSame(computed, cache.getUnchecked(key));
-    CacheTesting.processPendingNotifications(cache);
+    CacheTesting.processPendingNotifications();
     RemovalNotification<Object, Object> notification = listener.remove();
     assertSame(key, notification.getKey());
     assertSame(computed, notification.getValue());

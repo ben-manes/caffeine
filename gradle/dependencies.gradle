@@ -48,7 +48,7 @@ ext {
     coveralls: '2.1.0',
     jmh: '0.1.3',
     nexus: '2.2',
-    versions: '0.6',
+    versions: '0.7',
     semantic_versioning: '1.1.0',
     stats: '0.1.3',
   ]
