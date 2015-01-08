@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ExecutionException;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ExecutionError;
@@ -48,6 +49,8 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
   public V getUnchecked(K key) {
     try {
       return cache.get(key);
+    } catch (NullPointerException | InvalidCacheLoadException e) {
+      throw e;
     } catch (RuntimeException e) {
       throw new UncheckedExecutionException(e);
     } catch (Exception e) {
@@ -83,7 +86,11 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
     @Override
     public V load(K key) {
       try {
-        return requireNonNull(cacheLoader.load(key));
+        V value = cacheLoader.load(key);
+        if (value == null) {
+          throw new InvalidCacheLoadException("null value");
+        }
+        return value;
       } catch (RuntimeException | Error e) {
         throw e;
       } catch (Exception e) {

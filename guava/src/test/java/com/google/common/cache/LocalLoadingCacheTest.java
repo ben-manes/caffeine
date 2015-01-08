@@ -30,11 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import junit.framework.TestCase;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.google.common.cache.LocalCache.LocalLoadingCache;
-import com.google.common.cache.LocalCache.Segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.NullPointerTester;
@@ -44,9 +41,9 @@ import com.google.common.testing.NullPointerTester;
  */
 public class LocalLoadingCacheTest extends TestCase {
 
-  private static <K, V> LocalLoadingCache<K, V> makeCache(
-      CacheBuilder<K, V> builder, CacheLoader<? super K, V> loader) {
-    throw new UnsupportedOperationException();
+  private static <K, V> LoadingCache<K, V> makeCache(
+      Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+    return CaffeinatedGuava.build(builder, loader);
   }
 
   private Caffeine<Object, Object> createCacheBuilder() {
@@ -62,8 +59,7 @@ public class LocalLoadingCacheTest extends TestCase {
         return new Object();
       }
     };
-    LocalLoadingCache<Object, Object> cache = makeCache(createCacheBuilder(), loader);
-    assertSame(loader, cache.localCache.defaultLoader);
+    LoadingCache<Object, Object> cache = makeCache(createCacheBuilder(), loader);
   }
 
   // null parameters test
@@ -77,10 +73,8 @@ public class LocalLoadingCacheTest extends TestCase {
   // stats tests
 
   public void testStats() {
-    CacheBuilder<Object, Object> builder = createCacheBuilder()
-        .concurrencyLevel(1)
-        .maximumSize(2);
-    LocalLoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
+    Caffeine<Object, Object> builder = createCacheBuilder().maximumSize(2);
+    LoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
     assertEquals(EMPTY_STATS, cache.stats());
 
     Object one = new Object();
@@ -137,10 +131,9 @@ public class LocalLoadingCacheTest extends TestCase {
   }
 
   public void testStatsNoops() {
-    CacheBuilder<Object, Object> builder = createCacheBuilder()
-        .concurrencyLevel(1);
-    LocalLoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
-    ConcurrentMap<Object, Object> map = cache.localCache; // modifiable map view
+    Caffeine<Object, Object> builder = createCacheBuilder();
+    LoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
+    ConcurrentMap<Object, Object> map = cache.asMap(); // modifiable map view
     assertEquals(EMPTY_STATS, cache.stats());
 
     Object one = new Object();
@@ -180,10 +173,8 @@ public class LocalLoadingCacheTest extends TestCase {
   }
 
   public void testNoStats() {
-    CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
-        .maximumSize(2);
-    LocalLoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
+    Caffeine<Object, Object> builder = Caffeine.newBuilder().maximumSize(2);
+    LoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
     assertEquals(EMPTY_STATS, cache.stats());
 
     Object one = new Object();
@@ -203,11 +194,10 @@ public class LocalLoadingCacheTest extends TestCase {
   }
 
   public void testRecordStats() {
-    CacheBuilder<Object, Object> builder = createCacheBuilder()
+    Caffeine<Object, Object> builder = createCacheBuilder()
         .recordStats()
-        .concurrencyLevel(1)
         .maximumSize(2);
-    LocalLoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
+    LoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
     assertEquals(0, cache.stats().hitCount());
     assertEquals(0, cache.stats().missCount());
 
@@ -234,8 +224,8 @@ public class LocalLoadingCacheTest extends TestCase {
   // asMap tests
 
   public void testAsMap() {
-    CacheBuilder<Object, Object> builder = createCacheBuilder();
-    LocalLoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
+    Caffeine<Object, Object> builder = createCacheBuilder();
+    LoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
     assertEquals(EMPTY_STATS, cache.stats());
 
     Object one = new Object();
@@ -287,27 +277,8 @@ public class LocalLoadingCacheTest extends TestCase {
     assertEquals(expectedValues, actualValues);
   }
 
-  /**
-   * Lookups on the map view shouldn't impact the recency queue.
-   */
-  public void testAsMapRecency() {
-    Caffeine<Object, Object> builder = createCacheBuilder()
-        .concurrencyLevel(1)
-        .maximumSize(SMALL_MAX_SIZE);
-    LocalLoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
-    Segment<Object, Object> segment = cache.localCache.segments[0];
-    ConcurrentMap<Object, Object> map = cache.asMap();
-
-    Object one = new Object();
-    assertSame(one, cache.getUnchecked(one));
-    assertTrue(segment.recencyQueue.isEmpty());
-    assertSame(one, map.get(one));
-    assertSame(one, segment.recencyQueue.peek().getKey());
-    assertSame(one, cache.getUnchecked(one));
-    assertFalse(segment.recencyQueue.isEmpty());
-  }
-
-  public void testRecursiveComputation() throws InterruptedException {
+  // Bug in JDK8; fixed but not released as of 1.8.0_25-b17
+  public void disabled_testRecursiveComputation() throws InterruptedException {
     final AtomicReference<LoadingCache<Integer, String>> cacheRef =
         new AtomicReference<LoadingCache<Integer, String>>();
     CacheLoader<Integer, String> recursiveLoader = new CacheLoader<Integer, String>() {

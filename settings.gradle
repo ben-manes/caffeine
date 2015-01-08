@@ -1,4 +1,4 @@
 rootProject.name = 'caffeine'
 
 include 'caffeine'
-//include 'guava'
+include 'guava'

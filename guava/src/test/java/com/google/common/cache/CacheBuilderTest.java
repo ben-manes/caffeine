@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.TestCase;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
@@ -146,7 +145,7 @@ public class CacheBuilderTest extends TestCase {
     Caffeine<Object, Object> builder = Caffeine.newBuilder()
         .maximumWeight(1);
     try {
-      builder.build(identityLoader());
+      CaffeinatedGuava.build(builder, identityLoader());
       fail();
     } catch (IllegalStateException expected) {}
   }
@@ -156,7 +155,7 @@ public class CacheBuilderTest extends TestCase {
     Caffeine<Object, Object> builder = Caffeine.newBuilder()
         .weigher(constantWeigher(42));
     try {
-      builder.build(identityLoader());
+      CaffeinatedGuava.build(builder, identityLoader());
       fail();
     } catch (IllegalStateException expected) {}
   }
@@ -218,9 +217,8 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testTimeToLive_small() {
-    Caffeine.newBuilder()
-        .expireAfterWrite(1, NANOSECONDS)
-        .build(identityLoader());
+    CaffeinatedGuava.build(Caffeine.newBuilder()
+        .expireAfterWrite(1, NANOSECONDS), identityLoader());
     // well, it didn't blow up.
   }
 
@@ -243,9 +241,8 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testTimeToIdle_small() {
-    Caffeine.newBuilder()
-        .expireAfterAccess(1, NANOSECONDS)
-        .build(identityLoader());
+    CaffeinatedGuava.build(Caffeine.newBuilder()
+        .expireAfterAccess(1, NANOSECONDS), identityLoader());
     // well, it didn't blow up.
   }
 
@@ -260,10 +257,10 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testTimeToIdleAndToLive() {
-    Caffeine.newBuilder()
+    CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1, NANOSECONDS)
-        .expireAfterAccess(1, NANOSECONDS)
-        .build(identityLoader());
+        .expireAfterAccess(1, NANOSECONDS),
+        identityLoader());
     // well, it didn't blow up.
   }
 
@@ -549,7 +546,7 @@ public class CacheBuilderTest extends TestCase {
   }
 
   @GwtIncompatible("CountDownLatch")
-  static final class DelayingIdentityLoader<T> implements CacheLoader<T, T> {
+  static final class DelayingIdentityLoader<T> extends CacheLoader<T, T> {
     private final AtomicBoolean shouldWait;
     private final CountDownLatch delayLatch;
 

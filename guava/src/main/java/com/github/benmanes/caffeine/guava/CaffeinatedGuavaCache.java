@@ -56,6 +56,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V> {
 
   @Override
   public V get(K key, Callable<? extends V> valueLoader) throws ExecutionException {
+    requireNonNull(valueLoader);
     try {
       return cache.get(key, k -> {
         try {
