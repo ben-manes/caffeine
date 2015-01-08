@@ -878,7 +878,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   @Override
   public boolean containsKey(Object key) {
-    Node<K, V> node = data.get(key);
+    Node<K, V> node = data.get(keyStrategy.getKeyRef(key));
     return (node != null) && (!hasExpired(node, ticker.read()));
   }
 
