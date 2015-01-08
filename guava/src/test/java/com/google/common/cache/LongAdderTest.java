@@ -14,6 +14,8 @@
 
 package com.google.common.cache;
 
+import com.github.benmanes.caffeine.cache.PackageSanityTests;
+
 /**
  * No-op null-pointer test for {@link LongAdder} to override the {@link PackageSanityTests} version,
  * which checks package-private methods that we don't want to have to annotate as {@code Nullable}

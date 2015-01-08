@@ -411,37 +411,11 @@ class CacheTesting {
 
   static void expireEntries(Cache<?, ?> cache, long expiringTime, FakeTicker ticker) {
     checkNotNull(ticker);
-    expireEntries(toLocalCache(cache), expiringTime, ticker);
-  }
-
-  static void expireEntries(
-      LocalCache<?, ?> cchm, long expiringTime, FakeTicker ticker) {
-
-    for (Segment<?, ?> segment : cchm.segments) {
-      drainRecencyQueue(segment);
-    }
-
     ticker.advance(2 * expiringTime, TimeUnit.MILLISECONDS);
-
-    long now = ticker.read();
-    for (Segment<?, ?> segment : cchm.segments) {
-      expireEntries(segment, now);
-      assertEquals("Expiration queue must be empty by now", 0, writeQueueSize(segment));
-      assertEquals("Expiration queue must be empty by now", 0, accessQueueSize(segment));
-      assertEquals("Segments must be empty by now", 0, segmentSize(segment));
-    }
-    cchm.processPendingNotifications();
+    cache.cleanUp();
+    CacheTesting.processPendingNotifications();
   }
 
-  static void expireEntries(Segment<?, ?> segment, long now) {
-    segment.lock();
-    try {
-      segment.expireEntries(now);
-      segment.cleanUp();
-    } finally {
-      segment.unlock();
-    }
-  }
   static void checkEmpty(Cache<?, ?> cache) {
     assertEquals(0, cache.size());
     assertFalse(cache.asMap().containsKey(null));
