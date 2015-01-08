@@ -42,7 +42,7 @@ a Guava compatible adapter is available.
 | [RemovalListener](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/RemovalListener.java) | Listens for notifications when an entry is removed from a cache |
 | [CacheStats](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/stats/CacheStats.java) | Statistics about the performance of a cache |
 | [Advanced](https://github.com/ben-manes/caffeine/blob/master/src/main/java/com/github/benmanes/caffeine/cache/Advanced.java) | Access to inspect and perform low-level cache operations based on its constructed configuration |
-| [CaffeinatedGuava](https://github.com/ben-manes/caffeine/blob/master/guava/src/main/java/com/github/benmanes/caffeine/CaffeinatedGuava.java) | An adapter that exposes a Caffeine cache through Guava facades |
+| [CaffeinatedGuava](https://github.com/ben-manes/caffeine/blob/master/guava/src/main/java/com/github/benmanes/caffeine/guava/CaffeinatedGuava.java) | An adapter that exposes a Caffeine cache through Guava facades |
 
 #### Tracing and Simulator
 A lightweight cache tracing api can be enabled to capture information on how well an application

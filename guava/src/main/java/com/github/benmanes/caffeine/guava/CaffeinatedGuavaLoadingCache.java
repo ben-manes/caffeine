@@ -17,13 +17,17 @@ package com.github.benmanes.caffeine.guava;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.google.common.base.Throwables;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ExecutionError;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
 /**
@@ -78,7 +82,7 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
     } catch (NullPointerException | InvalidCacheLoadException e) {
       throw e;
     } catch (CacheLoaderException e) {
-      throw new UncheckedExecutionException(e.getCause());
+      throw new ExecutionException(e.getCause());
     } catch (Exception e) {
       throw new UncheckedExecutionException(e);
     } catch (Error e) {
@@ -96,7 +100,6 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
     cache.refresh(key);
   }
 
-  // TODO(ben): Delegate to loadAll, reload, etc.
   static final class CaffeinatedGuavaCacheLoader<K, V> implements CacheLoader<K, V> {
     final com.google.common.cache.CacheLoader<K, V> cacheLoader;
 
@@ -116,6 +119,33 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
         throw e;
       } catch (Exception e) {
         throw new CacheLoaderException(e);
+      }
+    }
+
+    @Override
+    public Map<K, V> loadAll(Iterable<? extends K> keys) {
+      try {
+        return cacheLoader.loadAll(keys);
+      } catch (UnsupportedOperationException e) {
+        Map<K, V> results = new HashMap<>();
+        for (K key : keys) {
+          V value = load(key);
+          results.put(key, value);
+        }
+        return results;
+      } catch (RuntimeException | Error e) {
+        throw e;
+      } catch (Exception e) {
+        throw new CacheLoaderException(e);
+      }
+    }
+
+    @Override
+    public V reload(K key, V oldValue) {
+      try {
+        return Futures.getUnchecked(cacheLoader.reload(key, oldValue));
+      } catch (Exception e) {
+        throw Throwables.propagate(e);
       }
     }
   }
