@@ -29,8 +29,8 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.github.benmanes.caffeine.CaffeinatedGuava;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilderFactory.DurationSpec;
 import com.google.common.cache.LocalCache.Strength;

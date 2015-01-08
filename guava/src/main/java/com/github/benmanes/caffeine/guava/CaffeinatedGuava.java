@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine;
+package com.github.benmanes.caffeine.guava;
 
-import com.github.benmanes.caffeine.CaffeinatedGuavaLoadingCache.CaffeinatedGuavaCacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.CaffeinatedGuavaCacheLoader;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -31,8 +31,8 @@ public final class CaffeinatedGuava {
   private CaffeinatedGuava() {}
 
   /** Returns a Caffeine cache wrapped in a Guava {@link Cache} facade. */
-  public static <K, V> Cache<K, V> build(Caffeine<K, V> builder) {
-    return new CaffeinatedGuavaCache<K, V>(builder.build());
+  public static <K1 extends K, K, V1 extends V, V>Cache<K1, V1> build(Caffeine<K, V> builder) {
+    return new CaffeinatedGuavaCache<K1, V1>(builder.build());
   }
 
   /** Returns a Caffeine cache wrapped in a Guava {@link LoadingCache} facade. */

@@ -16,15 +16,6 @@
 
 package com.google.common.cache;
 
-import com.google.common.annotations.GwtCompatible;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import com.google.common.testing.FakeTicker;
-
-import junit.framework.TestCase;
-
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,6 +24,19 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
+import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.RemovalNotification;
+import com.github.benmanes.caffeine.cache.testing.FakeTicker;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
+import com.google.common.annotations.GwtCompatible;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 /**
  * Test suite for {@link CacheBuilder}.
@@ -54,8 +58,7 @@ public class CacheBuilderGwtTest extends TestCase {
 
   public void testLoader() throws ExecutionException {
 
-    final Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .build();
+    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
 
     Callable<Integer> loader = new Callable<Integer>() {
       private int i = 0;
@@ -81,9 +84,8 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testSizeConstraint() {
-    final Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .maximumSize(4)
-        .build();
+    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().maximumSize(4));
 
     cache.put(1, 10);
     cache.put(2, 20);
@@ -105,7 +107,7 @@ public class CacheBuilderGwtTest extends TestCase {
     assertEquals(Integer.valueOf(50), cache.getIfPresent(5));
     assertEquals(null, cache.getIfPresent(2));
   }
-  
+
   public void testLoadingCache() throws ExecutionException {
     CacheLoader<Integer, Integer> loader = new CacheLoader<Integer, Integer>() {
       int i = 0;
@@ -113,14 +115,13 @@ public class CacheBuilderGwtTest extends TestCase {
       public Integer load(Integer key) throws Exception {
         return i++;
       }
-      
+
     };
-    
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .build(loader);
-    
+
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder(), loader);
+
     cache.put(10, 20);
-    
+
     Map<Integer, Integer> map = cache.getAll(ImmutableList.of(10, 20, 30, 54, 443, 1));
 
     assertEquals(Integer.valueOf(20), map.get(10));
@@ -134,10 +135,9 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testExpireAfterAccess() {
-    final Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(1000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
+        .ticker(fakeTicker));
 
     cache.put(0, 10);
     cache.put(2, 30);
@@ -151,10 +151,9 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testExpireAfterWrite() {
-    final Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
+        .ticker(fakeTicker));
 
     cache.put(10, 100);
     cache.put(20, 200);
@@ -178,11 +177,10 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testExpireAfterWriteAndAccess() {
-    final Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .expireAfterAccess(500, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
+        .ticker(fakeTicker));
 
     cache.put(10, 100);
     cache.put(20, 200);
@@ -209,8 +207,7 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testMapMethods() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .build();
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
 
     ConcurrentMap<Integer, Integer> asMap = cache.asMap();
 
@@ -276,12 +273,11 @@ public class CacheBuilderGwtTest extends TestCase {
       }
     };
 
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .removalListener(countingListener)
         .ticker(fakeTicker)
-        .maximumSize(2)
-        .build();
+        .maximumSize(2));
 
     // Add more than two elements to increment size removals.
     cache.put(3, 20);
@@ -313,17 +309,16 @@ public class CacheBuilderGwtTest extends TestCase {
     assertEquals(4, stats[2]);
     assertEquals(3, stats[3]);
   }
-  
+
   public void testPutAll() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .build();
-    
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
+
     cache.putAll(ImmutableMap.of(10, 20, 30, 50, 60, 90));
 
     assertEquals(Integer.valueOf(20), cache.getIfPresent(10));
     assertEquals(Integer.valueOf(50), cache.getIfPresent(30));
     assertEquals(Integer.valueOf(90), cache.getIfPresent(60));
-    
+
     cache.asMap().putAll(ImmutableMap.of(10, 50, 30, 20, 60, 70, 5, 5));
 
     assertEquals(Integer.valueOf(50), cache.getIfPresent(10));
@@ -331,40 +326,38 @@ public class CacheBuilderGwtTest extends TestCase {
     assertEquals(Integer.valueOf(70), cache.getIfPresent(60));
     assertEquals(Integer.valueOf(5), cache.getIfPresent(5));
   }
-  
+
   public void testInvalidate() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .build();
-    
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
+
     cache.put(654, 2675);
     cache.put(2456, 56);
     cache.put(2, 15);
-    
+
     cache.invalidate(654);
 
     assertFalse(cache.asMap().containsKey(654));
     assertTrue(cache.asMap().containsKey(2456));
     assertTrue(cache.asMap().containsKey(2));
   }
-  
+
   public void testInvalidateAll() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .build();
-    
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder());
+
     cache.put(654, 2675);
     cache.put(2456, 56);
     cache.put(2, 15);
-    
+
     cache.invalidateAll();
     assertFalse(cache.asMap().containsKey(654));
     assertFalse(cache.asMap().containsKey(2456));
     assertFalse(cache.asMap().containsKey(2));
-    
+
     cache.put(654, 2675);
     cache.put(2456, 56);
     cache.put(2, 15);
     cache.put(1, 3);
-    
+
     cache.invalidateAll(ImmutableSet.of(1, 2));
 
     assertFalse(cache.asMap().containsKey(1));
@@ -372,72 +365,68 @@ public class CacheBuilderGwtTest extends TestCase {
     assertTrue(cache.asMap().containsKey(654));
     assertTrue(cache.asMap().containsKey(2456));
   }
-  
+
   public void testAsMap_containsValue() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(20000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
-    
+        .ticker(fakeTicker));
+
     cache.put(654, 2675);
     fakeTicker.advance(10000, TimeUnit.MILLISECONDS);
     cache.put(2456, 56);
     cache.put(2, 15);
-    
+
     fakeTicker.advance(10001, TimeUnit.MILLISECONDS);
 
     assertTrue(cache.asMap().containsValue(15));
     assertTrue(cache.asMap().containsValue(56));
     assertFalse(cache.asMap().containsValue(2675));
   }
-  
+
   public void testAsMap_containsKey() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(20000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
-    
+        .ticker(fakeTicker));
+
     cache.put(654, 2675);
     fakeTicker.advance(10000, TimeUnit.MILLISECONDS);
     cache.put(2456, 56);
     cache.put(2, 15);
-    
+
     fakeTicker.advance(10001, TimeUnit.MILLISECONDS);
 
     assertTrue(cache.asMap().containsKey(2));
     assertTrue(cache.asMap().containsKey(2456));
     assertFalse(cache.asMap().containsKey(654));
   }
-  
+
   public void testAsMapValues_contains() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
-    
+        .ticker(fakeTicker));
+
     cache.put(10, 20);
     fakeTicker.advance(500, TimeUnit.MILLISECONDS);
     cache.put(20, 22);
     cache.put(5, 10);
-    
+
     fakeTicker.advance(501, TimeUnit.MILLISECONDS);
 
     assertTrue(cache.asMap().values().contains(22));
     assertTrue(cache.asMap().values().contains(10));
     assertFalse(cache.asMap().values().contains(20));
   }
-  
+
   public void testAsMapKeySet() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
-    
+        .ticker(fakeTicker));
+
     cache.put(10, 20);
     fakeTicker.advance(500, TimeUnit.MILLISECONDS);
     cache.put(20, 22);
     cache.put(5, 10);
-    
+
     fakeTicker.advance(501, TimeUnit.MILLISECONDS);
 
     Set<Integer> foundKeys = Sets.newHashSet();
@@ -447,57 +436,54 @@ public class CacheBuilderGwtTest extends TestCase {
 
     assertEquals(ImmutableSet.of(20, 5), foundKeys);
   }
-  
+
 
   public void testAsMapKeySet_contains() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
-    
+        .ticker(fakeTicker));
+
     cache.put(10, 20);
     fakeTicker.advance(500, TimeUnit.MILLISECONDS);
     cache.put(20, 22);
     cache.put(5, 10);
-    
+
     fakeTicker.advance(501, TimeUnit.MILLISECONDS);
 
     assertTrue(cache.asMap().keySet().contains(20));
     assertTrue(cache.asMap().keySet().contains(5));
     assertFalse(cache.asMap().keySet().contains(10));
   }
-  
+
   public void testAsMapEntrySet() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
-    
+        .ticker(fakeTicker));
+
     cache.put(10, 20);
     fakeTicker.advance(500, TimeUnit.MILLISECONDS);
     cache.put(20, 22);
     cache.put(5, 10);
-    
+
     fakeTicker.advance(501, TimeUnit.MILLISECONDS);
-    
+
     int sum = 0;
     for (Entry<Integer, Integer> current : cache.asMap().entrySet()) {
       sum += current.getKey() + current.getValue();
     }
     assertEquals(57, sum);
   }
-  
+
   public void testAsMapValues_iteratorRemove() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
-        .ticker(fakeTicker)
-        .build();
-    
+        .ticker(fakeTicker));
+
     cache.put(10, 20);
     Iterator<Integer> iterator = cache.asMap().values().iterator();
     iterator.next();
     iterator.remove();
-    
+
     assertEquals(0, cache.size());
   }
 }

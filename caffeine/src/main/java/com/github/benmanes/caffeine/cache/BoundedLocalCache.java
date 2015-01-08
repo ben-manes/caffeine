@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
@@ -877,15 +878,17 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   @Override
   public boolean containsKey(Object key) {
-    return data.containsKey(keyStrategy.getKeyRef(key));
+    Node<K, V> node = data.get(key);
+    return (node != null) && (!hasExpired(node, ticker.read()));
   }
 
   @Override
   public boolean containsValue(Object value) {
     requireNonNull(value);
 
+    long now = ticker.read();
     for (Node<K, V> node : data.values()) {
-      if (value.equals(node.getValue(valueStrategy))) {
+      if (value.equals(node.getValue(valueStrategy)) && !hasExpired(node, now)) {
         return true;
       }
     }
@@ -1864,7 +1867,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /** An adapter to safely externalize the key iterator. */
   final class KeyIterator implements Iterator<K> {
-    final Iterator<Object> iterator = data.keySet().iterator();
+    final Iterator<Entry<K, V>> iterator = entrySet().iterator();
+    Node<K, V> next;
     K current;
 
     @Override
@@ -1874,8 +1878,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public K next() {
-      @SuppressWarnings("unchecked")
-      K castedKey = (K) keyStrategy.dereferenceKey(iterator.next());
+      K castedKey = iterator.next().getKey();
       current = castedKey;
       return current;
     }
@@ -1914,8 +1917,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /** An adapter to safely externalize the value iterator. */
   final class ValueIterator implements Iterator<V> {
-    final Iterator<Node<K, V>> iterator = data.values().iterator();
-    Node<K, V> current;
+    final Iterator<Entry<K, V>> iterator = entrySet().iterator();
 
     @Override
     public boolean hasNext() {
@@ -1924,18 +1926,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public V next() {
-      current = iterator.next();
-      return current.getValue(valueStrategy);
+      return iterator.next().getValue();
     }
 
     @Override
     public void remove() {
-      Caffeine.requireState(current != null);
-      K key = current.getKey(keyStrategy);
-      if (key != null) {
-        BoundedLocalCache.this.remove(key);
-      }
-      current = null;
+      iterator.remove();
     }
   }
 
@@ -1986,16 +1982,35 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   /** An adapter to safely externalize the entry iterator. */
   final class EntryIterator implements Iterator<Entry<K, V>> {
     final Iterator<Node<K, V>> iterator = data.values().iterator();
+    final long now = ticker.read();
     Node<K, V> current;
+    Node<K, V> next;
 
     @Override
     public boolean hasNext() {
-      return iterator.hasNext();
+      if (next != null) {
+        return true;
+      }
+      for (;;) {
+        if (iterator.hasNext()) {
+          next = iterator.next();
+          if (hasExpired(next, now)) {
+            next = null;
+            continue;
+          }
+          return true;
+        }
+        return false;
+      }
     }
 
     @Override
     public Entry<K, V> next() {
-      current = iterator.next();
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      current = next;
+      next = null;
       return new WriteThroughEntry(current, valueStrategy);
     }
 
