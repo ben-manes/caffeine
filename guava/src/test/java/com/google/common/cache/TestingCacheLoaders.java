@@ -16,16 +16,16 @@ package com.google.common.cache;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.annotations.GwtCompatible;
-import com.google.common.annotations.GwtIncompatible;
-import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
+
+import com.github.benmanes.caffeine.UnsafeAccess;
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.google.common.annotations.GwtCompatible;
+import com.google.common.annotations.GwtIncompatible;
+import com.google.common.collect.Maps;
 
 /**
  * Utility {@link CacheLoader} implementations intended for use in testing.
@@ -43,12 +43,12 @@ class TestingCacheLoaders {
     checkNotNull(loader);
     return new CacheLoader<K, V>() {
       @Override
-      public V load(K key) throws Exception {
+      public V load(K key) {
         return loader.load(key);
       }
 
       @Override
-      public Map<K, V> loadAll(Iterable<? extends K> keys) throws Exception {
+      public Map<K, V> loadAll(Iterable<? extends K> keys) {
         Map<K, V> result = Maps.newHashMap(); // allow nulls
         for (K key : keys) {
           result.put(key, load(key));
@@ -92,8 +92,9 @@ class TestingCacheLoaders {
     checkNotNull(e);
     return new CacheLoader<K, V>() {
       @Override
-      public V load(K key) throws Exception {
-        throw e;
+      public V load(K key) {
+        UnsafeAccess.UNSAFE.throwException(e);
+        return null; // impossible
       }
     };
   }
@@ -109,7 +110,7 @@ class TestingCacheLoaders {
    * Returns a {@code new Object()} for every request, and increments a counter for every request.
    * The count is accessible via {@link #getCount}.
    */
-  static class CountingLoader extends CacheLoader<Object, Object> {
+  static class CountingLoader implements CacheLoader<Object, Object> {
     private final AtomicInteger count = new AtomicInteger();
 
     @Override
@@ -123,7 +124,7 @@ class TestingCacheLoaders {
     }
   }
 
-  static final class ConstantLoader<K, V> extends CacheLoader<K, V> {
+  static final class ConstantLoader<K, V> implements com.github.benmanes.caffeine.cache.CacheLoader<K, V> {
     private final V constant;
 
     ConstantLoader(V constant) {
@@ -142,7 +143,7 @@ class TestingCacheLoaders {
    * old value on {@code reload} requests. The load counts are accessible via {@link #getLoadCount}
    * and {@link #getReloadCount}.
    */
-  static class IncrementingLoader extends CacheLoader<Integer, Integer> {
+  static class IncrementingLoader implements CacheLoader<Integer, Integer> {
     private final AtomicInteger countLoad = new AtomicInteger();
     private final AtomicInteger countReload = new AtomicInteger();
 
@@ -154,9 +155,9 @@ class TestingCacheLoaders {
 
     @GwtIncompatible("reload")
     @Override
-    public ListenableFuture<Integer> reload(Integer key, Integer oldValue) {
+    public Integer reload(Integer key, Integer oldValue) {
       countReload.incrementAndGet();
-      return Futures.immediateFuture(oldValue + 1);
+      return oldValue + 1;
     }
 
     public int getLoadCount() {
@@ -168,7 +169,7 @@ class TestingCacheLoaders {
     }
   }
 
-  static final class IdentityLoader<T> extends CacheLoader<T, T> {
+  static final class IdentityLoader<T> implements com.github.benmanes.caffeine.cache.CacheLoader<T, T> {
     @Override
     public T load(T key) {
       return key;

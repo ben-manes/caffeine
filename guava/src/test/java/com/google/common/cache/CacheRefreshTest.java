@@ -16,11 +16,12 @@ package com.google.common.cache;
 
 import static com.google.common.cache.TestingCacheLoaders.incrementingLoader;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
-import com.google.common.cache.TestingCacheLoaders.IncrementingLoader;
-import com.google.common.testing.FakeTicker;
-
 import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.testing.FakeTicker;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
+import com.google.common.cache.TestingCacheLoaders.IncrementingLoader;
 
 /**
  * Tests relating to automatic cache refreshing.
@@ -31,12 +32,10 @@ public class CacheRefreshTest extends TestCase {
   public void testAutoRefresh() {
     FakeTicker ticker = new FakeTicker();
     IncrementingLoader loader = incrementingLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .refreshAfterWrite(3, MILLISECONDS)
         .expireAfterWrite(6, MILLISECONDS)
-        .lenientParsing()
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker), loader);
     int expectedLoads = 0;
     int expectedReloads = 0;
     for (int i = 0; i < 3; i++) {

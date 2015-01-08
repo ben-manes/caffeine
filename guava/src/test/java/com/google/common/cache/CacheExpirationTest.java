@@ -20,18 +20,22 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
-import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
-import com.google.common.collect.Iterators;
-import com.google.common.testing.FakeTicker;
-import com.google.common.util.concurrent.Callables;
-
-import junit.framework.TestCase;
-
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.RemovalNotification;
+import com.github.benmanes.caffeine.cache.testing.FakeTicker;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
+import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
+import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
+import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.Callables;
 
 /**
  * Tests relating to cache expiration: make sure entries expire at the right times, make sure
@@ -50,11 +54,11 @@ public class CacheExpirationTest extends TestCase {
     FakeTicker ticker = new FakeTicker();
     CountingRemovalListener<String, Integer> removalListener = countingRemovalListener();
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
-    LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
         .removalListener(removalListener)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     checkExpiration(cache, loader, ticker, removalListener);
   }
 
@@ -62,11 +66,11 @@ public class CacheExpirationTest extends TestCase {
     FakeTicker ticker = new FakeTicker();
     CountingRemovalListener<String, Integer> removalListener = countingRemovalListener();
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
-    LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
         .removalListener(removalListener)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     checkExpiration(cache, loader, ticker, removalListener);
   }
 
@@ -83,13 +87,13 @@ public class CacheExpirationTest extends TestCase {
       assertFalse("Creator should not have been called @#" + i, loader.wasCalled());
     }
 
-    CacheTesting.expireEntries((LoadingCache<?, ?>) cache, EXPIRING_TIME, ticker);
+    CacheTesting.expireEntries(cache, EXPIRING_TIME, ticker);
 
     assertEquals("Map must be empty by now", 0, cache.size());
     assertEquals("Eviction notifications must be received", 10,
         removalListener.getCount());
 
-    CacheTesting.expireEntries((LoadingCache<?, ?>) cache, EXPIRING_TIME, ticker);
+    CacheTesting.expireEntries(cache, EXPIRING_TIME, ticker);
     // ensure that no new notifications are sent
     assertEquals("Eviction notifications must be received", 10,
         removalListener.getCount());
@@ -99,11 +103,11 @@ public class CacheExpirationTest extends TestCase {
     FakeTicker ticker = new FakeTicker();
     CountingRemovalListener<String, Integer> removalListener = countingRemovalListener();
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
-    LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
         .removalListener(removalListener)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     runExpirationTest(cache, loader, ticker, removalListener);
   }
 
@@ -111,11 +115,11 @@ public class CacheExpirationTest extends TestCase {
     FakeTicker ticker = new FakeTicker();
     CountingRemovalListener<String, Integer> removalListener = countingRemovalListener();
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
-    LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
         .removalListener(removalListener)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     runExpirationTest(cache, loader, ticker, removalListener);
   }
 
@@ -143,7 +147,7 @@ public class CacheExpirationTest extends TestCase {
     assertEquals(1, Iterators.size(cache.asMap().keySet().iterator()));
     assertEquals(1, Iterators.size(cache.asMap().values().iterator()));
 
-    CacheTesting.expireEntries((LoadingCache<?, ?>) cache, EXPIRING_TIME, ticker);
+    CacheTesting.expireEntries(cache, EXPIRING_TIME, ticker);
 
     for (int i = 0; i < 11; i++) {
       assertFalse(cache.asMap().containsKey(KEY_PREFIX + i));
@@ -158,11 +162,11 @@ public class CacheExpirationTest extends TestCase {
     }
 
     // expire new values we just created
-    CacheTesting.expireEntries((LoadingCache<?, ?>) cache, EXPIRING_TIME, ticker);
+    CacheTesting.expireEntries(cache, EXPIRING_TIME, ticker);
     assertEquals("Eviction notifications must be received", 21,
         removalListener.getCount());
 
-    CacheTesting.expireEntries((LoadingCache<?, ?>) cache, EXPIRING_TIME, ticker);
+    CacheTesting.expireEntries(cache, EXPIRING_TIME, ticker);
     // ensure that no new notifications are sent
     assertEquals("Eviction notifications must be received", 21,
         removalListener.getCount());
@@ -192,11 +196,11 @@ public class CacheExpirationTest extends TestCase {
       }
     };
 
-    LoadingCache<Integer, AtomicInteger> cache = CacheBuilder.newBuilder()
+    LoadingCache<Integer, AtomicInteger> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .removalListener(removalListener)
         .expireAfterWrite(10, MILLISECONDS)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
 
     // Increment 100 times
     for (int i = 0; i < 100; ++i) {
@@ -213,11 +217,11 @@ public class CacheExpirationTest extends TestCase {
     FakeTicker ticker = new FakeTicker();
     CountingRemovalListener<String, Integer> removalListener = countingRemovalListener();
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
-    LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
         .removalListener(removalListener)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     runRemovalScheduler(cache, removalListener, loader, ticker, KEY_PREFIX, EXPIRING_TIME);
   }
 
@@ -225,11 +229,11 @@ public class CacheExpirationTest extends TestCase {
     FakeTicker ticker = new FakeTicker();
     CountingRemovalListener<String, Integer> removalListener = countingRemovalListener();
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
-    LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
         .removalListener(removalListener)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     runRemovalScheduler(cache, removalListener, loader, ticker, KEY_PREFIX, EXPIRING_TIME);
   }
 
@@ -237,12 +241,12 @@ public class CacheExpirationTest extends TestCase {
     FakeTicker ticker = new FakeTicker();
     CountingRemovalListener<String, Integer> removalListener = countingRemovalListener();
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
-    LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
         .removalListener(removalListener)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     runRemovalScheduler(cache, removalListener, loader, ticker, KEY_PREFIX, EXPIRING_TIME);
   }
 
@@ -250,11 +254,10 @@ public class CacheExpirationTest extends TestCase {
     // test lru within a single segment
     FakeTicker ticker = new FakeTicker();
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(11, MILLISECONDS)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     for (int i = 0; i < 10; i++) {
       cache.getUnchecked(i);
       ticker.advance(1, MILLISECONDS);
@@ -302,11 +305,10 @@ public class CacheExpirationTest extends TestCase {
     // test lru within a single segment
     FakeTicker ticker = new FakeTicker();
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(11, MILLISECONDS)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     for (int i = 0; i < 10; i++) {
       cache.getUnchecked(i);
       ticker.advance(1, MILLISECONDS);
@@ -349,12 +351,11 @@ public class CacheExpirationTest extends TestCase {
     // test lru within a single segment
     FakeTicker ticker = new FakeTicker();
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(5, MILLISECONDS)
         .expireAfterAccess(3, MILLISECONDS)
-        .ticker(ticker)
-        .build(loader);
+        .ticker(ticker),
+        loader);
     for (int i = 0; i < 5; i++) {
       cache.getUnchecked(i);
     }

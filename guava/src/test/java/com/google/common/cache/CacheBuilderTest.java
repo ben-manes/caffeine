@@ -38,17 +38,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.TestCase;
 
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.RemovalNotification;
+import com.github.benmanes.caffeine.cache.Ticker;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
-import com.google.common.base.Ticker;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.cache.TestingRemovalListeners.QueuingRemovalListener;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.testing.NullPointerTester;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
- * Unit tests for CacheBuilder.
+ * Unit tests for Caffeine.
  */
 @GwtCompatible(emulated = true)
 public class CacheBuilderTest extends TestCase {
@@ -56,16 +62,15 @@ public class CacheBuilderTest extends TestCase {
   public void testNewBuilder() {
     CacheLoader<Object, Integer> loader = constantLoader(1);
 
-    LoadingCache<String, Integer> cache = CacheBuilder.newBuilder()
-        .removalListener(countingRemovalListener())
-        .build(loader);
+    LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .removalListener(countingRemovalListener()), loader);
 
     assertEquals(Integer.valueOf(1), cache.getUnchecked("one"));
     assertEquals(1, cache.size());
   }
 
   public void testInitialCapacity_negative() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     try {
       builder.initialCapacity(-1);
       fail();
@@ -73,7 +78,7 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testInitialCapacity_setTwice() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>().initialCapacity(16);
+    Caffeine<Object, Object> builder = Caffeine.newBuilder().initialCapacity(16);
     try {
       // even to the same value is not allowed
       builder.initialCapacity(16);
@@ -81,74 +86,14 @@ public class CacheBuilderTest extends TestCase {
     } catch (IllegalStateException expected) {}
   }
 
-  @GwtIncompatible("CacheTesting")
-  public void testInitialCapacity_small() {
-    LoadingCache<?, ?> cache = CacheBuilder.newBuilder()
-        .initialCapacity(5)
-        .build(identityLoader());
-    LocalCache<?, ?> map = CacheTesting.toLocalCache(cache);
-
-    assertEquals(4, map.segments.length);
-    assertEquals(2, map.segments[0].table.length());
-    assertEquals(2, map.segments[1].table.length());
-    assertEquals(2, map.segments[2].table.length());
-    assertEquals(2, map.segments[3].table.length());
-  }
-
-  @GwtIncompatible("CacheTesting")
-  public void testInitialCapacity_smallest() {
-    LoadingCache<?, ?> cache = CacheBuilder.newBuilder()
-        .initialCapacity(0)
-        .build(identityLoader());
-    LocalCache<?, ?> map = CacheTesting.toLocalCache(cache);
-
-    assertEquals(4, map.segments.length);
-    // 1 is as low as it goes, not 0. it feels dirty to know this/test this.
-    assertEquals(1, map.segments[0].table.length());
-    assertEquals(1, map.segments[1].table.length());
-    assertEquals(1, map.segments[2].table.length());
-    assertEquals(1, map.segments[3].table.length());
-  }
-
   public void testInitialCapacity_large() {
-    CacheBuilder.newBuilder().initialCapacity(Integer.MAX_VALUE);
+    Caffeine.newBuilder().initialCapacity(Integer.MAX_VALUE);
     // that the builder didn't blow up is enough;
     // don't actually create this monster!
   }
 
-  public void testConcurrencyLevel_zero() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>();
-    try {
-      builder.concurrencyLevel(0);
-      fail();
-    } catch (IllegalArgumentException expected) {}
-  }
-
-  public void testConcurrencyLevel_setTwice() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>().concurrencyLevel(16);
-    try {
-      // even to the same value is not allowed
-      builder.concurrencyLevel(16);
-      fail();
-    } catch (IllegalStateException expected) {}
-  }
-
-  @GwtIncompatible("CacheTesting")
-  public void testConcurrencyLevel_small() {
-    LoadingCache<?, ?> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
-        .build(identityLoader());
-    LocalCache<?, ?> map = CacheTesting.toLocalCache(cache);
-    assertEquals(1, map.segments.length);
-  }
-
-  public void testConcurrencyLevel_large() {
-    CacheBuilder.newBuilder().concurrencyLevel(Integer.MAX_VALUE);
-    // don't actually build this beast
-  }
-
   public void testMaximumSize_negative() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     try {
       builder.maximumSize(-1);
       fail();
@@ -156,7 +101,7 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testMaximumSize_setTwice() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>().maximumSize(16);
+    Caffeine<Object, Object> builder = Caffeine.newBuilder().maximumSize(16);
     try {
       // even to the same value is not allowed
       builder.maximumSize(16);
@@ -166,7 +111,7 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("maximumWeight")
   public void testMaximumSize_andWeight() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>().maximumSize(16);
+    Caffeine<Object, Object> builder = Caffeine.newBuilder().maximumSize(16);
     try {
       builder.maximumWeight(16);
       fail();
@@ -175,7 +120,7 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("maximumWeight")
   public void testMaximumWeight_negative() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     try {
       builder.maximumWeight(-1);
       fail();
@@ -184,7 +129,7 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("maximumWeight")
   public void testMaximumWeight_setTwice() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>().maximumWeight(16);
+    Caffeine<Object, Object> builder = Caffeine.newBuilder().maximumWeight(16);
     try {
       // even to the same value is not allowed
       builder.maximumWeight(16);
@@ -198,7 +143,7 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("maximumWeight")
   public void testMaximumWeight_withoutWeigher() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>()
+    Caffeine<Object, Object> builder = Caffeine.newBuilder()
         .maximumWeight(1);
     try {
       builder.build(identityLoader());
@@ -208,7 +153,7 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("weigher")
   public void testWeigher_withoutMaximumWeight() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>()
+    Caffeine<Object, Object> builder = Caffeine.newBuilder()
         .weigher(constantWeigher(42));
     try {
       builder.build(identityLoader());
@@ -219,13 +164,13 @@ public class CacheBuilderTest extends TestCase {
   @GwtIncompatible("weigher")
   public void testWeigher_withMaximumSize() {
     try {
-      CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>()
+      Caffeine<Object, Object> builder = Caffeine.newBuilder()
           .weigher(constantWeigher(42))
           .maximumSize(1);
       fail();
     } catch (IllegalStateException expected) {}
     try {
-      CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>()
+      Caffeine<Object, Object> builder = Caffeine.newBuilder()
           .maximumSize(1)
           .weigher(constantWeigher(42));
       fail();
@@ -234,7 +179,7 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("weakKeys")
   public void testKeyStrengthSetTwice() {
-    CacheBuilder<Object, Object> builder1 = new CacheBuilder<Object, Object>().weakKeys();
+    Caffeine<Object, Object> builder1 = Caffeine.newBuilder().weakKeys();
     try {
       builder1.weakKeys();
       fail();
@@ -243,7 +188,7 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("weakValues")
   public void testValueStrengthSetTwice() {
-    CacheBuilder<Object, Object> builder1 = new CacheBuilder<Object, Object>().weakValues();
+    Caffeine<Object, Object> builder1 = Caffeine.newBuilder().weakValues();
     try {
       builder1.weakValues();
       fail();
@@ -253,7 +198,7 @@ public class CacheBuilderTest extends TestCase {
       fail();
     } catch (IllegalStateException expected) {}
 
-    CacheBuilder<Object, Object> builder2 = new CacheBuilder<Object, Object>().softValues();
+    Caffeine<Object, Object> builder2 = Caffeine.newBuilder().softValues();
     try {
       builder2.softValues();
       fail();
@@ -265,7 +210,7 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testTimeToLive_negative() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     try {
       builder.expireAfterWrite(-1, SECONDS);
       fail();
@@ -273,15 +218,15 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testTimeToLive_small() {
-    CacheBuilder.newBuilder()
+    Caffeine.newBuilder()
         .expireAfterWrite(1, NANOSECONDS)
         .build(identityLoader());
     // well, it didn't blow up.
   }
 
   public void testTimeToLive_setTwice() {
-    CacheBuilder<Object, Object> builder =
-        new CacheBuilder<Object, Object>().expireAfterWrite(3600, SECONDS);
+    Caffeine<Object, Object> builder =
+        Caffeine.newBuilder().expireAfterWrite(3600, SECONDS);
     try {
       // even to the same value is not allowed
       builder.expireAfterWrite(3600, SECONDS);
@@ -290,7 +235,7 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testTimeToIdle_negative() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     try {
       builder.expireAfterAccess(-1, SECONDS);
       fail();
@@ -298,15 +243,15 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testTimeToIdle_small() {
-    CacheBuilder.newBuilder()
+    Caffeine.newBuilder()
         .expireAfterAccess(1, NANOSECONDS)
         .build(identityLoader());
     // well, it didn't blow up.
   }
 
   public void testTimeToIdle_setTwice() {
-    CacheBuilder<Object, Object> builder =
-        new CacheBuilder<Object, Object>().expireAfterAccess(3600, SECONDS);
+    Caffeine<Object, Object> builder =
+        Caffeine.newBuilder().expireAfterAccess(3600, SECONDS);
     try {
       // even to the same value is not allowed
       builder.expireAfterAccess(3600, SECONDS);
@@ -315,7 +260,7 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testTimeToIdleAndToLive() {
-    CacheBuilder.newBuilder()
+    Caffeine.newBuilder()
         .expireAfterWrite(1, NANOSECONDS)
         .expireAfterAccess(1, NANOSECONDS)
         .build(identityLoader());
@@ -324,7 +269,7 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("refreshAfterWrite")
   public void testRefresh_zero() {
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     try {
       builder.refreshAfterWrite(0, SECONDS);
       fail();
@@ -333,8 +278,8 @@ public class CacheBuilderTest extends TestCase {
 
   @GwtIncompatible("refreshAfterWrite")
   public void testRefresh_setTwice() {
-    CacheBuilder<Object, Object> builder =
-        new CacheBuilder<Object, Object>().refreshAfterWrite(3600, SECONDS);
+    Caffeine<Object, Object> builder =
+        Caffeine.newBuilder().refreshAfterWrite(3600, SECONDS);
     try {
       // even to the same value is not allowed
       builder.refreshAfterWrite(3600, SECONDS);
@@ -344,8 +289,8 @@ public class CacheBuilderTest extends TestCase {
 
   public void testTicker_setTwice() {
     Ticker testTicker = Ticker.systemTicker();
-    CacheBuilder<Object, Object> builder =
-        new CacheBuilder<Object, Object>().ticker(testTicker);
+    Caffeine<Object, Object> builder =
+        Caffeine.newBuilder().ticker(testTicker);
     try {
       // even to the same instance is not allowed
       builder.ticker(testTicker);
@@ -355,8 +300,8 @@ public class CacheBuilderTest extends TestCase {
 
   public void testRemovalListener_setTwice() {
     RemovalListener<Object, Object> testListener = nullRemovalListener();
-    CacheBuilder<Object, Object> builder =
-        new CacheBuilder<Object, Object>().removalListener(testListener);
+    Caffeine<Object, Object> builder =
+        Caffeine.newBuilder().removalListener(testListener);
     try {
       // even to the same instance is not allowed
       builder = builder.removalListener(testListener);
@@ -365,20 +310,20 @@ public class CacheBuilderTest extends TestCase {
   }
 
   public void testValuesIsNotASet() {
-    assertThat(new CacheBuilder<Object, Object>().build().asMap().values())
+    assertThat(Caffeine.newBuilder().build().asMap().values())
         .isNotInstanceOf(Set.class);
   }
 
   @GwtIncompatible("CacheTesting")
   public void testNullCache() {
     CountingRemovalListener<Object, Object> listener = countingRemovalListener();
-    LoadingCache<Object, Object> nullCache = new CacheBuilder<Object, Object>()
+    LoadingCache<Object, Object> nullCache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumSize(0)
-        .removalListener(listener)
-        .build(identityLoader());
+        .removalListener(listener), identityLoader());
     assertEquals(0, nullCache.size());
     Object key = new Object();
     assertSame(key, nullCache.getUnchecked(key));
+    CacheTesting.processPendingNotifications(nullCache);
     assertEquals(1, listener.getCount());
     assertEquals(0, nullCache.size());
     CacheTesting.checkEmpty(nullCache.asMap());
@@ -393,19 +338,17 @@ public class CacheBuilderTest extends TestCase {
     final AtomicBoolean shouldWait = new AtomicBoolean(false);
     final CountDownLatch computingLatch = new CountDownLatch(1);
     CacheLoader<String, String> computingFunction = new CacheLoader<String, String>() {
-      @Override public String load(String key) throws InterruptedException {
+      @Override public String load(String key) {
         if (shouldWait.get()) {
-          computingLatch.await();
+          Uninterruptibles.awaitUninterruptibly(computingLatch);
         }
         return key;
       }
     };
     QueuingRemovalListener<String, String> listener = queuingRemovalListener();
 
-    final LoadingCache<String, String> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
-        .removalListener(listener)
-        .build(computingFunction);
+    final LoadingCache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .removalListener(listener), computingFunction);
 
     // seed the map, so its segment's count > 0
     cache.getUnchecked("a");
@@ -459,11 +402,9 @@ public class CacheBuilderTest extends TestCase {
     AtomicBoolean computationShouldWait = new AtomicBoolean();
     CountDownLatch computationLatch = new CountDownLatch(1);
     QueuingRemovalListener<String, String> listener = queuingRemovalListener();
-    final LoadingCache <String, String> cache = CacheBuilder.newBuilder()
-        .removalListener(listener)
-        .concurrencyLevel(20)
-        .build(
-            new DelayingIdentityLoader<String>(computationShouldWait, computationLatch));
+    final LoadingCache <String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .removalListener(listener),
+        new DelayingIdentityLoader<String>(computationShouldWait, computationLatch));
 
     int nThreads = 100;
     int nTasks = 1000;
@@ -542,7 +483,7 @@ public class CacheBuilderTest extends TestCase {
     final AtomicInteger computeNullCount = new AtomicInteger();
     CacheLoader<String, String> countingIdentityLoader =
         new CacheLoader<String, String>() {
-          @Override public String load(String key) throws InterruptedException {
+          @Override public String load(String key) {
             int behavior = random.nextInt(4);
             if (behavior == 0) { // throw an exception
               exceptionCount.incrementAndGet();
@@ -551,7 +492,7 @@ public class CacheBuilderTest extends TestCase {
               computeNullCount.incrementAndGet();
               return null;
             } else if (behavior == 2) { // slight delay before returning
-              Thread.sleep(5);
+              Uninterruptibles.sleepUninterruptibly(5, TimeUnit.MILLISECONDS);
               computeCount.incrementAndGet();
               return key;
             } else {
@@ -560,13 +501,12 @@ public class CacheBuilderTest extends TestCase {
             }
           }
         };
-    final LoadingCache<String, String> cache = CacheBuilder.newBuilder()
+    final LoadingCache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
-        .concurrencyLevel(2)
         .expireAfterWrite(100, TimeUnit.MILLISECONDS)
         .removalListener(removalListener)
-        .maximumSize(5000)
-        .build(countingIdentityLoader);
+        .maximumSize(5000),
+        countingIdentityLoader);
 
     ExecutorService threadPool = Executors.newFixedThreadPool(nThreads);
     for (int i = 0; i < nTasks; i++) {
@@ -604,20 +544,12 @@ public class CacheBuilderTest extends TestCase {
   @GwtIncompatible("NullPointerTester")
   public void testNullParameters() throws Exception {
     NullPointerTester tester = new NullPointerTester();
-    CacheBuilder<Object, Object> builder = new CacheBuilder<Object, Object>();
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
     tester.testAllPublicInstanceMethods(builder);
   }
 
-  @GwtIncompatible("CacheTesting")
-  public void testSizingDefaults() {
-    LoadingCache<?, ?> cache = CacheBuilder.newBuilder().build(identityLoader());
-    LocalCache<?, ?> map = CacheTesting.toLocalCache(cache);
-    assertEquals(4, map.segments.length); // concurrency level
-    assertEquals(4, map.segments[0].table.length()); // capacity / conc level
-  }
-
   @GwtIncompatible("CountDownLatch")
-  static final class DelayingIdentityLoader<T> extends CacheLoader<T, T> {
+  static final class DelayingIdentityLoader<T> implements CacheLoader<T, T> {
     private final AtomicBoolean shouldWait;
     private final CountDownLatch delayLatch;
 
@@ -626,9 +558,9 @@ public class CacheBuilderTest extends TestCase {
       this.delayLatch = delayLatch;
     }
 
-    @Override public T load(T key) throws InterruptedException {
+    @Override public T load(T key) {
       if (shouldWait.get()) {
-        delayLatch.await();
+        Uninterruptibles.awaitUninterruptibly(delayLatch);
       }
       return key;
     }

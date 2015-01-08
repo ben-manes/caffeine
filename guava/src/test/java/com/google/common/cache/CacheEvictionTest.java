@@ -21,15 +21,17 @@ import static com.google.common.cache.TestingWeighers.intKeyWeigher;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 
+import java.util.List;
+import java.util.Set;
+
+import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.CacheTesting.Receiver;
 import com.google.common.cache.LocalCache.ReferenceEntry;
 import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
-
-import junit.framework.TestCase;
-
-import java.util.List;
-import java.util.Set;
 
 /**
  * Tests relating to cache eviction: what does and doesn't count toward maximumSize, what happens
@@ -40,33 +42,10 @@ import java.util.Set;
 public class CacheEvictionTest extends TestCase {
   static final int MAX_SIZE = 100;
 
-  public void testEviction_setMaxSegmentSize() {
-    IdentityLoader<Object> loader = identityLoader();
-    for (int i = 1; i < 1000; i++) {
-      LoadingCache<Object, Object> cache = CacheBuilder.newBuilder()
-          .maximumSize(i)
-          .build(loader);
-      assertEquals(i, CacheTesting.getTotalSegmentSize(cache));
-    }
-  }
-
-  public void testEviction_setMaxSegmentWeight() {
-    IdentityLoader<Object> loader = identityLoader();
-    for (int i = 1; i < 1000; i++) {
-      LoadingCache<Object, Object> cache = CacheBuilder.newBuilder()
-          .maximumWeight(i)
-          .weigher(constantWeigher(1))
-          .build(loader);
-      assertEquals(i, CacheTesting.getTotalSegmentSize(cache));
-    }
-  }
-
   public void testEviction_maxSizeOneSegment() {
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
-        .maximumSize(MAX_SIZE)
-        .build(loader);
+    LoadingCache<Integer, Integer> cache =
+        CaffeinatedGuava.build(Caffeine.newBuilder().maximumSize(MAX_SIZE), loader);
     for (int i = 0; i < 2 * MAX_SIZE; i++) {
       cache.getUnchecked(i);
       assertEquals(Math.min(i + 1, MAX_SIZE), cache.size());
@@ -78,11 +57,8 @@ public class CacheEvictionTest extends TestCase {
 
   public void testEviction_maxWeightOneSegment() {
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
-        .maximumWeight(2 * MAX_SIZE)
-        .weigher(constantWeigher(2))
-        .build(loader);
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .maximumWeight(2 * MAX_SIZE).weigher(constantWeigher(2)), loader);
     for (int i = 0; i < 2 * MAX_SIZE; i++) {
       cache.getUnchecked(i);
       assertEquals(Math.min(i + 1, MAX_SIZE), cache.size());
@@ -95,16 +71,14 @@ public class CacheEvictionTest extends TestCase {
   public void testEviction_maxSize() {
     CountingRemovalListener<Integer, Integer> removalListener = countingRemovalListener();
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumSize(MAX_SIZE)
-        .removalListener(removalListener)
-        .build(loader);
+        .removalListener(removalListener), loader);
     for (int i = 0; i < 2 * MAX_SIZE; i++) {
       cache.getUnchecked(i);
       assertTrue(cache.size() <= MAX_SIZE);
     }
 
-    assertEquals(MAX_SIZE, CacheTesting.accessQueueSize(cache));
     assertEquals(MAX_SIZE, cache.size());
     CacheTesting.processPendingNotifications(cache);
     assertEquals(MAX_SIZE, removalListener.getCount());
@@ -114,17 +88,15 @@ public class CacheEvictionTest extends TestCase {
   public void testEviction_maxWeight() {
     CountingRemovalListener<Integer, Integer> removalListener = countingRemovalListener();
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumWeight(2 * MAX_SIZE)
         .weigher(constantWeigher(2))
-        .removalListener(removalListener)
-        .build(loader);
+        .removalListener(removalListener), loader);
     for (int i = 0; i < 2 * MAX_SIZE; i++) {
       cache.getUnchecked(i);
       assertTrue(cache.size() <= MAX_SIZE);
     }
 
-    assertEquals(MAX_SIZE, CacheTesting.accessQueueSize(cache));
     assertEquals(MAX_SIZE, cache.size());
     CacheTesting.processPendingNotifications(cache);
     assertEquals(MAX_SIZE, removalListener.getCount());
@@ -134,12 +106,10 @@ public class CacheEvictionTest extends TestCase {
   public void testEviction_overflow() {
     CountingRemovalListener<Object, Object> removalListener = countingRemovalListener();
     IdentityLoader<Object> loader = identityLoader();
-    LoadingCache<Object, Object> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumWeight(1L << 31)
         .weigher(constantWeigher(Integer.MAX_VALUE))
-        .removalListener(removalListener)
-        .build(loader);
+        .removalListener(removalListener), loader);
     cache.getUnchecked(objectWithHash(0));
     cache.getUnchecked(objectWithHash(0));
     CacheTesting.processPendingNotifications(cache);
@@ -149,7 +119,7 @@ public class CacheEvictionTest extends TestCase {
   public void testUpdateRecency_onGet() {
     IdentityLoader<Integer> loader = identityLoader();
     final LoadingCache<Integer, Integer> cache =
-        CacheBuilder.newBuilder().maximumSize(MAX_SIZE).build(loader);
+        CaffeinatedGuava.build(Caffeine.newBuilder().maximumSize(MAX_SIZE), loader);
     CacheTesting.checkRecency(cache, MAX_SIZE,
         new Receiver<ReferenceEntry<Integer, Integer>>() {
           @Override
@@ -161,10 +131,8 @@ public class CacheEvictionTest extends TestCase {
 
   public void testUpdateRecency_onInvalidate() {
     IdentityLoader<Integer> loader = identityLoader();
-    final LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .maximumSize(MAX_SIZE)
-        .concurrencyLevel(1)
-        .build(loader);
+    final LoadingCache<Integer, Integer> cache =
+        CaffeinatedGuava.build(Caffeine.newBuilder().maximumSize(MAX_SIZE), loader);
     CacheTesting.checkRecency(cache, MAX_SIZE,
         new Receiver<ReferenceEntry<Integer, Integer>>() {
           @Override
@@ -178,10 +146,8 @@ public class CacheEvictionTest extends TestCase {
   public void testEviction_lru() {
     // test lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
-        .maximumSize(10)
-        .build(loader);
+    LoadingCache<Integer, Integer> cache =
+        CaffeinatedGuava.build(Caffeine.newBuilder().maximumSize(10), loader);
     CacheTesting.warmUp(cache, 0, 10);
     Set<Integer> keySet = cache.asMap().keySet();
     assertThat(keySet).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
@@ -210,11 +176,9 @@ public class CacheEvictionTest extends TestCase {
   public void testEviction_weightedLru() {
     // test weighted lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumWeight(45)
-        .weigher(intKeyWeigher())
-        .build(loader);
+        .weigher(intKeyWeigher()), loader);
     CacheTesting.warmUp(cache, 0, 10);
     Set<Integer> keySet = cache.asMap().keySet();
     assertThat(keySet).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
@@ -253,11 +217,9 @@ public class CacheEvictionTest extends TestCase {
   public void testEviction_overweight() {
     // test weighted lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumWeight(45)
-        .weigher(intKeyWeigher())
-        .build(loader);
+        .weigher(intKeyWeigher()), loader);
     CacheTesting.warmUp(cache, 0, 10);
     Set<Integer> keySet = cache.asMap().keySet();
     assertThat(keySet).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
@@ -276,10 +238,8 @@ public class CacheEvictionTest extends TestCase {
   public void testEviction_invalidateAll() {
     // test that .invalidateAll() resets total weight state correctly
     IdentityLoader<Integer> loader = identityLoader();
-    LoadingCache<Integer, Integer> cache = CacheBuilder.newBuilder()
-        .concurrencyLevel(1)
-        .maximumSize(10)
-        .build(loader);
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .maximumSize(10), loader);
 
     Set<Integer> keySet = cache.asMap().keySet();
     assertThat(keySet).isEmpty();

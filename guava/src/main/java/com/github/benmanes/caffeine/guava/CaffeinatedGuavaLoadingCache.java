@@ -22,6 +22,8 @@ import java.util.concurrent.ExecutionException;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ExecutionError;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 
 /**
  * A Caffeine-backed loading cache through a Guava facade.
@@ -44,7 +46,15 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
 
   @Override
   public V getUnchecked(K key) {
-    return cache.get(key);
+    try {
+      return cache.get(key);
+    } catch (RuntimeException e) {
+      throw new UncheckedExecutionException(e);
+    } catch (Exception e) {
+      throw new CacheLoaderException(e);
+    } catch (Error e) {
+      throw new ExecutionError(e);
+    }
   }
 
   @Override
@@ -73,7 +83,7 @@ public final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCa
     @Override
     public V load(K key) {
       try {
-        return cacheLoader.load(key);
+        return requireNonNull(cacheLoader.load(key));
       } catch (RuntimeException | Error e) {
         throw e;
       } catch (Exception e) {

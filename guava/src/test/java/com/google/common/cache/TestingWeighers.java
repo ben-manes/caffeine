@@ -14,6 +14,8 @@
 
 package com.google.common.cache;
 
+import com.github.benmanes.caffeine.cache.Weigher;
+
 /**
  * Utility {@link Weigher} implementations intended for use in testing.
  *

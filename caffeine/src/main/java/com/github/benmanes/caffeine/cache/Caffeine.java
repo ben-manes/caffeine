@@ -333,6 +333,7 @@ public final class Caffeine<K, V> {
   @Nonnull
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> weigher(
       @Nonnull Weigher<? super K1, ? super V1> weigher) {
+    requireNonNull(weigher);
     requireState(this.weigher == null);
     requireState(this.maximumSize == UNSET_INT,
         "weigher can not be combined with maximum size", this.maximumSize);
@@ -705,7 +706,8 @@ public final class Caffeine<K, V> {
   @Nonnull
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       @Nonnull CacheLoader<? super K1, V1> loader) {
-    requireState(valueStrength == Strength.STRONG);
+    requireState(valueStrength == null);
+    requireNonNull(loader);
     throw new UnsupportedOperationException();
   }
 

@@ -17,17 +17,8 @@
 package com.google.common.cache;
 
 import static com.google.common.cache.CacheBuilder.EMPTY_STATS;
-import static com.google.common.cache.LocalCacheTest.SMALL_MAX_SIZE;
 import static com.google.common.cache.TestingCacheLoaders.identityLoader;
 import static com.google.common.truth.Truth.assertThat;
-
-import com.google.common.cache.LocalCache.LocalLoadingCache;
-import com.google.common.cache.LocalCache.Segment;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.testing.NullPointerTester;
-
-import junit.framework.TestCase;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Map;
@@ -37,6 +28,17 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
+import com.google.common.cache.LocalCache.LocalLoadingCache;
+import com.google.common.cache.LocalCache.Segment;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.testing.NullPointerTester;
+
 /**
  * @author Charles Fry
  */
@@ -44,11 +46,11 @@ public class LocalLoadingCacheTest extends TestCase {
 
   private static <K, V> LocalLoadingCache<K, V> makeCache(
       CacheBuilder<K, V> builder, CacheLoader<? super K, V> loader) {
-    return new LocalLoadingCache<K, V>(builder, loader);
+    throw new UnsupportedOperationException();
   }
 
-  private CacheBuilder<Object, Object> createCacheBuilder() {
-    return CacheBuilder.newBuilder().recordStats();
+  private Caffeine<Object, Object> createCacheBuilder() {
+    return Caffeine.newBuilder().recordStats();
   }
 
   // constructor tests
@@ -289,7 +291,7 @@ public class LocalLoadingCacheTest extends TestCase {
    * Lookups on the map view shouldn't impact the recency queue.
    */
   public void testAsMapRecency() {
-    CacheBuilder<Object, Object> builder = createCacheBuilder()
+    Caffeine<Object, Object> builder = createCacheBuilder()
         .concurrencyLevel(1)
         .maximumSize(SMALL_MAX_SIZE);
     LocalLoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
@@ -319,10 +321,9 @@ public class LocalLoadingCacheTest extends TestCase {
       }
     };
 
-    LoadingCache<Integer, String> recursiveCache = new CacheBuilder<Integer, String>()
+    LoadingCache<Integer, String> recursiveCache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .weakKeys()
-        .weakValues()
-        .build(recursiveLoader);
+        .weakValues(), recursiveLoader);
     cacheRef.set(recursiveCache);
     assertEquals("3, 2, 1, 0", recursiveCache.getUnchecked(3));
 
@@ -333,10 +334,9 @@ public class LocalLoadingCacheTest extends TestCase {
       }
     };
 
-    recursiveCache = new CacheBuilder<Integer, String>()
+    recursiveCache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .weakKeys()
-        .weakValues()
-        .build(recursiveLoader);
+        .weakValues(), recursiveLoader);
     cacheRef.set(recursiveCache);
 
     // tells the test when the compution has completed

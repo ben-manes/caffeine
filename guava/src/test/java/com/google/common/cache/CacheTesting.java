@@ -23,6 +23,19 @@ import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertTrue;
 
+import java.lang.ref.Reference;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+
+import javax.annotation.Nullable;
+
 import com.google.common.base.Preconditions;
 import com.google.common.cache.LocalCache.LocalLoadingCache;
 import com.google.common.cache.LocalCache.ReferenceEntry;
@@ -35,18 +48,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.FakeTicker;
-
-import java.lang.ref.Reference;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceArray;
-
-import javax.annotation.Nullable;
 
 /**
  * A collection of utilities for {@link Cache} testing.
@@ -361,10 +362,7 @@ class CacheTesting {
   }
 
   static void processPendingNotifications(Cache<?, ?> cache) {
-    if (hasLocalCache(cache)) {
-      LocalCache<?, ?> cchm = toLocalCache(cache);
-      cchm.processPendingNotifications();
-    }
+    ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
   }
 
   interface Receiver<T> {
