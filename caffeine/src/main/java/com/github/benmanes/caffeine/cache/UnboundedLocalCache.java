@@ -215,14 +215,12 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
       return null;
     }
     if (!hasRemovalListener()) {
-      statsCounter.recordHits(1);
       return data.computeIfPresent(key, statsAware(remappingFunction, false));
     }
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings("unchecked")
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = data.computeIfPresent(key, (K k, V oldValue) -> {
-      statsCounter.recordHits(1);
       V newValue = statsAware(remappingFunction, false).apply(k, oldValue);
       notification[0] = (newValue == null)
           ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
@@ -929,9 +927,9 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
       requireNonNull(key);
       cache.executor.execute(() -> {
         try {
-          cache.compute(key,
-              (k, oldValue) -> (oldValue == null) ? loader.load(key) : loader.reload(key, oldValue),
-              false);
+          BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
+              (oldValue == null)  ? loader.load(key) : loader.reload(key, oldValue);
+          cache.compute(key, refreshFunction, false);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }

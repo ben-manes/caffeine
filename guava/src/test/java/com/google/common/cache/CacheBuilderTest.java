@@ -346,6 +346,7 @@ public class CacheBuilderTest extends TestCase {
     QueuingRemovalListener<String, String> listener = queuingRemovalListener();
 
     final LoadingCache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .executor(MoreExecutors.directExecutor())
         .removalListener(listener), computingFunction);
 
     // seed the map, so its segment's count > 0

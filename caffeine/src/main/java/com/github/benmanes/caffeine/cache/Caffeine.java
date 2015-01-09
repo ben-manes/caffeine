@@ -516,15 +516,9 @@ public final class Caffeine<K, V> {
    * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
    * {@link CacheLoader#reload}.
    * <p>
-   * As the default implementation of {@link CacheLoader#reload} is synchronous, it is recommended
-   * that users of this method override {@link CacheLoader#reload} with an asynchronous
-   * implementation; otherwise refreshes will be performed during unrelated cache read and write
-   * operations.
-   * <p>
-   * Currently automatic refreshes are performed when the first stale request for an entry occurs.
-   * The request triggering refresh will make a blocking call to {@link CacheLoader#reload} and
-   * immediately return the new value if the returned future is complete, and the old value
-   * otherwise.
+   * Automatic refreshes are performed when the first stale request for an entry occurs. The request
+   * triggering refresh will make an asynchronous call to {@link CacheLoader#reload} and immediately
+   * return the old value.
    * <p>
    * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
    *
@@ -546,6 +540,10 @@ public final class Caffeine<K, V> {
   @Nonnegative
   long getRefreshNanos() {
     return (refreshNanos == UNSET_INT) ? DEFAULT_REFRESH_NANOS : refreshNanos;
+  }
+
+  boolean refreshes() {
+    return refreshNanos > 0;
   }
 
   /**
@@ -654,12 +652,12 @@ public final class Caffeine<K, V> {
    */
   @Nonnull
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
-    checkWeightWithWeigher();
-    checkNonLoadingCache();
+    requireWeightWithWeigher();
+    requireNonLoadingCache();
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return isBounded()
+    return isBounded() || refreshes()
         ? new BoundedLocalCache.LocalManualCache<K1, V1>(self)
         : new UnboundedLocalCache.LocalManualCache<K1, V1>(self);
   }
@@ -680,11 +678,11 @@ public final class Caffeine<K, V> {
   @Nonnull
   public <K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       @Nonnull CacheLoader<? super K1, V1> loader) {
-    checkWeightWithWeigher();
+    requireWeightWithWeigher();
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return isBounded()
+    return isBounded() || refreshes()
         ? new BoundedLocalCache.LocalLoadingCache<K1, V1>(self, loader)
         : new UnboundedLocalCache.LocalLoadingCache<K1, V1>(self, loader);
   }
@@ -711,11 +709,11 @@ public final class Caffeine<K, V> {
     throw new UnsupportedOperationException();
   }
 
-  private void checkNonLoadingCache() {
+  private void requireNonLoadingCache() {
     requireState(refreshNanos == UNSET_INT, "refreshAfterWrite requires a LoadingCache");
   }
 
-  private void checkWeightWithWeigher() {
+  private void requireWeightWithWeigher() {
     if (weigher == null) {
       requireState(maximumWeight == UNSET_INT, "maximumWeight requires weigher");
     } else {
@@ -746,6 +744,9 @@ public final class Caffeine<K, V> {
     }
     if (expireAfterAccessNanos != UNSET_INT) {
       s.append("expireAfterAccess").append(expireAfterAccessNanos).append("ns,");
+    }
+    if (refreshNanos != UNSET_INT) {
+      s.append("refreshNanos").append(refreshNanos).append("ns,");
     }
     if (keyStrength != null) {
       s.append("keyStrength").append(keyStrength.toString().toLowerCase()).append(',');

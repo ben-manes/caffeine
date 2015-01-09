@@ -800,7 +800,7 @@ public final class AsMapTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size() - count));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(count)));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
@@ -856,7 +856,7 @@ public final class AsMapTest {
       map.computeIfPresent(context.firstKey(), (key, value) -> { throw new Error(); });
     } catch (Error e) {}
     assertThat(map, is(equalTo(context.original())));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(1)));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
   }
 
@@ -876,7 +876,7 @@ public final class AsMapTest {
       assertThat(map.computeIfPresent(key, (k, v) -> k), is(key));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
 
     for (Integer key : context.firstMiddleLastKeys()) {

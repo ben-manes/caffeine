@@ -25,7 +25,6 @@ import static java.lang.Thread.currentThread;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -45,7 +44,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
-import com.google.common.cache.TestingCacheLoaders.CountingLoader;
 import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.collect.ImmutableList;
@@ -1751,44 +1749,6 @@ public class CacheLoadingTest extends TestCase {
     assertEquals("2", cache.getUnchecked(2));
     assertEquals(0, removalListener.getCount());
 
-  }
-
-  public void testReloadAfterValueReclamation() throws InterruptedException, ExecutionException {
-    CountingLoader countingLoader = new CountingLoader();
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .weakValues().executor(MoreExecutors.directExecutor()), countingLoader);
-    ConcurrentMap<Object, Object> map = cache.asMap();
-
-    int iterations = 10;
-    WeakReference<Object> ref = new WeakReference<Object>(null);
-    int expectedComputations = 0;
-    for (int i = 0; i < iterations; i++) {
-      // The entry should get garbage collected and recomputed.
-      Object oldValue = ref.get();
-      if (oldValue == null) {
-        expectedComputations++;
-      }
-      ref = new WeakReference<Object>(cache.getUnchecked(1));
-      oldValue = null;
-      Thread.sleep(i);
-      System.gc();
-    }
-    assertEquals(expectedComputations, countingLoader.getCount());
-
-    for (int i = 0; i < iterations; i++) {
-      // The entry should get garbage collected and recomputed.
-      Object oldValue = ref.get();
-      if (oldValue == null) {
-        expectedComputations++;
-      }
-      cache.refresh(1);
-      checkNothingLogged();
-      ref = new WeakReference<Object>(map.get(1));
-      oldValue = null;
-      Thread.sleep(i);
-      System.gc();
-    }
-    assertEquals(expectedComputations, countingLoader.getCount());
   }
 
   /**

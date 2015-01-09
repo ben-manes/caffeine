@@ -209,6 +209,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @GuardedBy("evictionLock")
   final WriteOrderDeque<Node<K, V>> writeOrderDeque;
 
+  // How long after the last write an entry becomes a candidate for refresh
+  final long refreshNanos;
+  final @Nullable CacheLoader<? super K, V> loader;
+
   // These fields provide support for reference-based eviction
   final ReferenceStrategy keyStrategy;
   final ReferenceStrategy valueStrategy;
@@ -249,11 +253,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * Creates an instance based on the builder's configuration.
    */
   @SuppressWarnings({"unchecked", "cast"})
-  private BoundedLocalCache(Caffeine<K, V> builder) {
+  private BoundedLocalCache(Caffeine<K, V> builder, @Nullable CacheLoader<? super K, V> loader) {
     // The data store and its maximum capacity
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
+    this.loader = loader;
 
     // The expiration support
+    refreshNanos = builder.getRefreshNanos();
     expireAfterWriteNanos = builder.getExpireAfterWriteNanos();
     expireAfterAccessNanos = builder.getExpireAfterAccessNanos();
     writeOrderDeque = new WriteOrderDeque<Node<K, V>>();
@@ -340,6 +346,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   boolean expiresAfterAccess() {
     return expireAfterAccessNanos > 0;
+  }
+
+  boolean refreshes() {
+    return refreshNanos > 0;
   }
 
   /* ---------------- Eviction Support -------------- */
@@ -471,11 +481,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     if (recordHit) {
       statsCounter.recordHits(1);
     }
-    node.setAccessTime(ticker.read());
+    long now = ticker.read();
+    node.setAccessTime(now);
     if (evicts() || expiresAfterAccess()) {
       final int bufferIndex = readBufferIndex();
       final long writeCount = recordRead(bufferIndex, node);
       drainOnReadIfNeeded(bufferIndex, writeCount);
+    }
+
+    if (refreshes() && ((now - node.getWriteTime()) > refreshNanos)) {
+      // FIXME: make atomic and avoid race
+      node.setWriteTime(now);
+      executor.execute(() -> {
+        K key = node.getKey(keyStrategy);
+        if (key != null) {
+          computeIfPresent(node.getKey(keyStrategy),
+              (k, oldValue) -> loader.reload(key, oldValue));
+        }
+      });
     }
   }
 
@@ -1187,10 +1210,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     WeightedValue<V>[] weightedValue = new WeightedValue[1];
     Runnable[] task = new Runnable[1];
     Node<K, V> node = data.computeIfPresent(ref, (keyRef, prior) -> {
-      statsCounter.recordHits(1);
       synchronized (prior) {
         WeightedValue<V> oldWeightedValue = prior.get();
-        V newValue = statsAware(remappingFunction).apply(
+        V newValue = statsAware(remappingFunction, false).apply(
             key, oldWeightedValue.getValue(valueStrategy));
         if (newValue == null) {
           makeRetired(prior);
@@ -2330,6 +2352,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   static final class SerializationProxy<K, V> implements Serializable {
     final Weigher<? super K, ? super V> weigher;
     final RemovalListener<K, V> removalListener;
+    final CacheLoader<? super K, V> loader;
     final Map<K, V> data;
     final long capacity;
 
@@ -2338,6 +2361,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       data = new HashMap<K, V>(map);
       capacity = map.maximumWeightedSize.get();
       weigher = map.weigher;
+      loader = map.loader;
     }
 
     Object readResolve() {
@@ -2345,7 +2369,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           .removalListener(removalListener)
           .maximumWeight(capacity)
           .weigher(weigher);
-      BoundedLocalCache<K, V> map = new BoundedLocalCache<>(builder);
+      BoundedLocalCache<K, V> map = new BoundedLocalCache<>(builder, loader);
       map.putAll(data);
       return map;
     }
@@ -2360,7 +2384,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     transient Advanced<K, V> advanced;
 
     LocalManualCache(Caffeine<K, V> builder) {
-      this.cache = new BoundedLocalCache<>(builder);
+      this(builder, null);
+    }
+
+    LocalManualCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+      this.cache = new BoundedLocalCache<>(builder, loader);
     }
 
     @Override
@@ -2540,12 +2568,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       implements LoadingCache<K, V> {
     static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
-    final CacheLoader<? super K, V> loader;
     final boolean hasBulkLoader;
 
     LocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      super(builder);
-      this.loader = loader;
+      super(builder, loader);
+      requireNonNull(loader);
       this.hasBulkLoader = hasLoadAll(loader);
     }
 
@@ -2560,7 +2587,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     @Override
     public V get(K key) {
-      return cache.computeIfAbsent(key, loader::load);
+      return cache.computeIfAbsent(key, cache.loader::load);
     }
 
     @Override
@@ -2589,7 +2616,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
       if (!hasBulkLoader) {
         for (K key : keysToLoad) {
-          V value = cache.compute(key, (k, v) -> loader.load(key), false);
+          V value = cache.compute(key, (k, v) -> cache.loader.load(key), false);
           result.put(key, value);
         }
         return;
@@ -2599,7 +2626,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       long startTime = cache.ticker.read();
       try {
         @SuppressWarnings("unchecked")
-        Map<K, V> loaded = (Map<K, V>) loader.loadAll(keysToLoad);
+        Map<K, V> loaded = (Map<K, V>) cache.loader.loadAll(keysToLoad);
         cache.putAll(loaded);
         for (K key : keysToLoad) {
           V value = loaded.get(key);
@@ -2623,9 +2650,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       requireNonNull(key);
       cache.executor.execute(() -> {
         try {
-          cache.compute(key,
-              (k, oldValue) -> (oldValue == null) ? loader.load(key) : loader.reload(key, oldValue),
-              false);
+          BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
+              (oldValue == null)  ? cache.loader.load(key) : cache.loader.reload(key, oldValue);
+          cache.compute(key, refreshFunction, false);
         } catch (Throwable t) {
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }
