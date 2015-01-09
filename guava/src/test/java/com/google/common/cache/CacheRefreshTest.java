@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.TestingCacheLoaders.IncrementingLoader;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Tests relating to automatic cache refreshing.
@@ -35,6 +36,7 @@ public class CacheRefreshTest extends TestCase {
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .refreshAfterWrite(3, MILLISECONDS)
         .expireAfterWrite(6, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(ticker), loader);
     int expectedLoads = 0;
     int expectedReloads = 0;

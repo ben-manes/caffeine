@@ -1186,7 +1186,8 @@ public class CacheLoadingTest extends TestCase {
   public void testLoadInterruptedException() {
     Exception e = new InterruptedException();
     CacheLoader<Object, Object> loader = exceptionLoader(e);
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats(), loader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(
+        Caffeine.newBuilder().recordStats().executor(MoreExecutors.directExecutor()), loader);
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -1406,7 +1407,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.loadExceptionCount());
     assertEquals(2, stats.hitCount());
 
-    ticker.advance(1, MILLISECONDS);
+    ticker.advance(2, MILLISECONDS);
     assertSame(one, cache.getUnchecked(key));
     stats = cache.stats();
     assertEquals(1, stats.missCount());
@@ -1915,7 +1916,7 @@ public class CacheLoadingTest extends TestCase {
 
     List<Object> result = doConcurrentGet(cache, "bar", count, startSignal);
 
-    assertEquals(1, callCount.get());
+    assertEquals(count, callCount.get());
     for (int i = 0; i < count; i++) {
       assertTrue(result.get(i) instanceof InvalidCacheLoadException);
     }
@@ -1926,7 +1927,7 @@ public class CacheLoadingTest extends TestCase {
       fail();
     } catch (InvalidCacheLoadException expected) {
     }
-    assertEquals(2, callCount.get());
+    assertEquals(count + 1, callCount.get());
   }
 
   /**
@@ -1953,7 +1954,7 @@ public class CacheLoadingTest extends TestCase {
 
     List<Object> result = doConcurrentGet(cache, "bar", count, startSignal);
 
-    assertEquals(1, callCount.get());
+    assertEquals(count, callCount.get());
     for (int i = 0; i < count; i++) {
       // doConcurrentGet alternates between calling getUnchecked and calling get, but an unchecked
       // exception thrown by the loader is always wrapped as an UncheckedExecutionException.
@@ -1967,7 +1968,7 @@ public class CacheLoadingTest extends TestCase {
       fail();
     } catch (UncheckedExecutionException expected) {
     }
-    assertEquals(2, callCount.get());
+    assertEquals(count + 1, callCount.get());
   }
 
   /**
@@ -1981,11 +1982,11 @@ public class CacheLoadingTest extends TestCase {
     int count = 10;
     final AtomicInteger callCount = new AtomicInteger();
     final CountDownLatch startSignal = new CountDownLatch(count + 1);
-    final RuntimeException e = new RuntimeException();
+    final Exception e = new Exception();
 
     LoadingCache<String, String> cache = CaffeinatedGuava.build(builder,
         new CacheLoader<String, String>() {
-          @Override public String load(String key) {
+          @Override public String load(String key) throws Exception {
             callCount.incrementAndGet();
             Uninterruptibles.awaitUninterruptibly(startSignal);
             throw e;
@@ -1994,13 +1995,13 @@ public class CacheLoadingTest extends TestCase {
 
     List<Object> result = doConcurrentGet(cache, "bar", count, startSignal);
 
-    assertEquals(1, callCount.get());
+    assertEquals(count, callCount.get());
     for (int i = 0; i < count; i++) {
       // doConcurrentGet alternates between calling getUnchecked and calling get. If we call get(),
       // we should get an ExecutionException; if we call getUnchecked(), we should get an
       // UncheckedExecutionException.
-      int mod = i % 3;
-      if (mod == 0 || mod == 2) {
+      int mod = i % 2;
+      if (mod == 0) {
         assertTrue(result.get(i) instanceof ExecutionException);
         assertSame(e, ((ExecutionException) result.get(i)).getCause());
       } else {
@@ -2015,7 +2016,7 @@ public class CacheLoadingTest extends TestCase {
       fail();
     } catch (UncheckedExecutionException expected) {
     }
-    assertEquals(2, callCount.get());
+    assertEquals(count + 1, callCount.get());
   }
 
   /**
@@ -2041,15 +2042,12 @@ public class CacheLoadingTest extends TestCase {
           gettersStartedSignal.countDown();
           Object value = null;
           try {
-            int mod = index % 3;
+            int mod = index % 2;
             ready.set(true);
             if (mod == 0) {
               value = cache.get(key);
             } else if (mod == 1) {
               value = cache.getUnchecked(key);
-            } else {
-              cache.refresh(key);
-              value = cache.get(key);
             }
             result.set(index, value);
           } catch (Throwable t) {

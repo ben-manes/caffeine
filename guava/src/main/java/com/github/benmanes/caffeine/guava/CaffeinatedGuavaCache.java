@@ -70,6 +70,9 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V> {
           throw e;
         } catch (RuntimeException e) {
           throw new UncheckedExecutionException(e);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new CacheLoaderException(e);
         } catch (Exception e) {
           throw new CacheLoaderException(e);
         } catch (Error e) {

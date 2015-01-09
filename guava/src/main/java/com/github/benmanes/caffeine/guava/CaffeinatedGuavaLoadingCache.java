@@ -130,6 +130,9 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
         return value;
       } catch (RuntimeException | Error e) {
         throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CacheLoaderException(e);
       } catch (Exception e) {
         throw new CacheLoaderException(e);
       }
@@ -143,6 +146,9 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
           throw new InvalidCacheLoadException("null value");
         }
         return value;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CacheLoaderException(e);
       } catch (Exception e) {
         throw Throwables.propagate(e);
       }
@@ -173,6 +179,9 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
         return result;
       } catch (RuntimeException | Error e) {
         throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CacheLoaderException(e);
       } catch (Exception e) {
         throw new CacheLoaderException(e);
       }
