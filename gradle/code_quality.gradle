@@ -32,9 +32,10 @@ pmd {
   ruleSets = [/* 'java-basic', */ 'java-braces']
 }
 
-jacoco.reportsDir = file("${rootDir}/build/reports/jacoco")
-
 jacocoTestReport {
+  group = 'Coverage reports'
+  description = 'Generates a test coverage report for a projects'
+
   reports {
     xml.enabled = true
     html.enabled = true

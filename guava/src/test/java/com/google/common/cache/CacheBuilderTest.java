@@ -402,7 +402,8 @@ public class CacheBuilderTest extends TestCase {
     CountDownLatch computationLatch = new CountDownLatch(1);
     QueuingRemovalListener<String, String> listener = queuingRemovalListener();
     final LoadingCache <String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .removalListener(listener),
+        .removalListener(listener)
+        .executor(MoreExecutors.directExecutor()),
         new DelayingIdentityLoader<String>(computationShouldWait, computationLatch));
 
     int nThreads = 100;

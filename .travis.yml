@@ -11,7 +11,7 @@ script:
  - ./gradlew check
 
 after_success:
-- ./gradlew jacocoTestReport coveralls
+- ./gradlew coveralls
 
 matrix:
   fast_finish: true
