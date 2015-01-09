@@ -21,6 +21,10 @@ sourceSets {
   }
 }
 
+test {
+  exclude 'com/github/benmanes/caffeine/cache/**'
+}
+
 [ 'slow', 'strongKeysAndStrongValues', 'strongKeysAndWeakValues', 'strongKeysAndSoftValues',
   'weakKeysAndStrongValues', 'weakKeysAndWeakValues', 'weakKeysAndSoftValues'
 ].each {
@@ -60,6 +64,21 @@ sourceSets {
     "${taskName}Compile" sourceSets.main.output, sourceSets.test.output
     "${taskName}Compile" configurations.compile, configurations.testCompile
     "${taskName}Runtime" configurations.runtime, configurations.testRuntime
+  }
+}
+
+tasks.withType(Test) {
+  useTestNG()
+  if (name == 'slowTest') {
+    maxHeapSize = '128m'
+    testLogging.info.events 'passed'
+    options.includeGroups = ['slow']
+  } else {
+    options {
+      excludeGroups = ['slow']
+      parallel = 'methods'
+      threadCount = 6
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-apply from: "${projectDir}/cache_tests.gradle"
+apply from: "${projectDir}/testing.gradle"
 
 dependencies {
   compile libraries.jsr305
@@ -11,25 +11,6 @@ dependencies {
   jmh benchmark_libraries.koloboke
   jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.concurrentlinkedhashmap
-}
-
-test {
-  exclude 'com/github/benmanes/caffeine/cache/**'
-}
-
-tasks.withType(Test) {
-  useTestNG()
-  if (name == 'slowTest') {
-    maxHeapSize = '128m'
-    testLogging.info.events 'passed'
-    options.includeGroups = ['slow']
-  } else {
-    options {
-      excludeGroups = ['slow']
-      parallel = 'methods'
-      threadCount = 6
-    }
-  }
 }
 
 bundle {
