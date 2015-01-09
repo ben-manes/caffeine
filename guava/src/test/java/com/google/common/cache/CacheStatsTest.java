@@ -36,7 +36,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(0.0, stats.missRate());
     assertEquals(0, stats.loadSuccessCount());
     assertEquals(0, stats.loadFailureCount());
-    assertEquals(0.0, stats.loadExceptionRate());
+    assertEquals(0.0, stats.loadFailureRate());
     assertEquals(0, stats.loadCount());
     assertEquals(0, stats.totalLoadTime());
     assertEquals(0.0, stats.averageLoadPenalty());
@@ -52,7 +52,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(13.0/24, stats.missRate());
     assertEquals(17, stats.loadSuccessCount());
     assertEquals(19, stats.loadFailureCount());
-    assertEquals(19.0/36, stats.loadExceptionRate());
+    assertEquals(19.0/36, stats.loadFailureRate());
     assertEquals(17 + 19, stats.loadCount());
     assertEquals(23, stats.totalLoadTime());
     assertEquals(23.0/(17 + 19), stats.averageLoadPenalty());
@@ -71,7 +71,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(34.0/76, diff.missRate());
     assertEquals(26, diff.loadSuccessCount());
     assertEquals(22, diff.loadFailureCount());
-    assertEquals(22.0/48, diff.loadExceptionRate());
+    assertEquals(22.0/48, diff.loadFailureRate());
     assertEquals(26 + 22, diff.loadCount());
     assertEquals(14, diff.totalLoadTime());
     assertEquals(14.0/(26 + 22), diff.averageLoadPenalty());
@@ -92,7 +92,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(60.0/124, sum.missRate());
     assertEquals(56, sum.loadSuccessCount());
     assertEquals(52, sum.loadFailureCount());
-    assertEquals(52.0/108, sum.loadExceptionRate());
+    assertEquals(52.0/108, sum.loadFailureRate());
     assertEquals(56 + 52, sum.loadCount());
     assertEquals(48, sum.totalLoadTime());
     assertEquals(48.0/(56 + 52), sum.averageLoadPenalty());

@@ -177,7 +177,7 @@ public class CacheStats {
    * {@code loadSuccessCount + loadFailureCount == 0}.
    */
   @Nonnegative
-  public double loadExceptionRate() {
+  public double loadFailureRate() {
     long totalLoadCount = loadSuccessCount + loadFailureCount;
     return (totalLoadCount == 0)
         ? 0.0
