@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -43,6 +44,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * The test cases for the {@link LoadingCache} interface that simulate the most generic usages.
@@ -255,5 +257,32 @@ public final class LoadingCacheTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
     assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+  }
+
+  /* ---------------- CacheLoader -------------- */
+
+  @Test(expectedExceptions = UnsupportedOperationException.class)
+  public void loadAll() {
+    CacheLoader<Object, ?> loader = key -> key;
+    loader.loadAll(Collections.emptyList());
+  }
+
+  @Test
+  public void asyncLoad() throws Exception {
+    CacheLoader<Integer, ?> loader = key -> key;
+    CompletableFuture<?> future = loader.asyncLoad(1, MoreExecutors.directExecutor());
+    assertThat(future.get(), is(1));
+  }
+
+  @Test(expectedExceptions = UnsupportedOperationException.class)
+  public void asyncLoadAll() {
+    CacheLoader<Object, ?> loader = key -> key;
+    loader.asyncLoadAll(Collections.<Object>emptyList(), MoreExecutors.directExecutor());
+  }
+
+  @Test
+  public void reload() {
+    CacheLoader<Integer, Integer> loader = key -> key;
+    assertThat(loader.reload(1, 1), is(1));
   }
 }

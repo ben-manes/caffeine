@@ -40,6 +40,9 @@ public final class CacheStatsTest {
   public void empty() {
     CacheStats stats = new CacheStats(0, 0, 0, 0, 0, 0);
     checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0);
+
+    assertThat(stats, is(not(equalTo(null))));
+    assertThat(stats, is(not(equalTo(new Object()))));
     assertThat(stats, is(equalTo(new CacheStats(0, 0, 0, 0, 0, 0))));
     assertThat(stats.hashCode(), is(new CacheStats(0, 0, 0, 0, 0, 0).hashCode()));
     assertThat(stats, hasToString(new CacheStats(0, 0, 0, 0, 0, 0).toString()));

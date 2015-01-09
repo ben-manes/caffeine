@@ -40,6 +40,7 @@ ext {
     concurrentlinkedhashmap: '1.4.1',
     high_scale_lib: '1.0.6',
     jmh: '1.4.1',
+    java_object_layout: '0.2',
     koloboke: '0.6.5',
   ]
   plugin_versions = [
@@ -78,6 +79,7 @@ ext {
       "org.openjdk.jmh:jmh-generator-annprocess:${benchmark_versions.jmh}",
       "org.openjdk.jmh:jmh-core:${benchmark_versions.jmh}",
     ],
+    java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
     koloboke: [
       "net.openhft:koloboke-api-jdk8:${benchmark_versions.koloboke}",
       "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",

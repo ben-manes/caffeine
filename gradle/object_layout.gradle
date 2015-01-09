@@ -6,7 +6,7 @@ configurations {
 }
 
 dependencies {
-  objectLayout 'org.openjdk.jol:jol-cli:0.2'
+  objectLayout benchmark_libraries.java_object_layout
 }
 
 task objectEstimates(type: JavaExec, description: 'Print the field layout within the object') {

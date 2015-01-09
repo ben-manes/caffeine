@@ -35,17 +35,24 @@ public final class StatsCounterTest {
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
     assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0)));
+
+    for (DisabledStatsCounter type : DisabledStatsCounter.values()) {
+      assertThat(DisabledStatsCounter.valueOf(type.toString()), is(counter));
+    }
   }
 
   @Test
   public void enabled() {
-    StatsCounter counter = new ConcurrentStatsCounter();
+    ConcurrentStatsCounter counter = new ConcurrentStatsCounter();
     counter.recordHits(1);
     counter.recordMisses(1);
     counter.recordEviction();
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
     assertThat(counter.snapshot(), is(new CacheStats(1, 1, 1, 1, 2, 1)));
+
+    counter.incrementBy(counter);
+    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 2)));
   }
 
   @Test

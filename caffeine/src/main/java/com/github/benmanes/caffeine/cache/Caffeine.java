@@ -127,35 +127,35 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @param <V> the base value type for all caches created by this builder
  */
 public final class Caffeine<K, V> {
-  private static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER =
+  static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER =
       () -> DisabledStatsCounter.INSTANCE;
-  private static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
+  static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
       () -> new ConcurrentStatsCounter();
-  private static final Ticker DISABLED_TICKER = () -> 0;
+  static final Ticker DISABLED_TICKER = () -> 0;
   enum Strength { STRONG, WEAK, SOFT }
 
   static final int UNSET_INT = -1;
 
-  private static final int DEFAULT_INITIAL_CAPACITY = 16;
-  private static final int DEFAULT_EXPIRATION_NANOS = 0;
-  private static final int DEFAULT_REFRESH_NANOS = 0;
+  static final int DEFAULT_INITIAL_CAPACITY = 16;
+  static final int DEFAULT_EXPIRATION_NANOS = 0;
+  static final int DEFAULT_REFRESH_NANOS = 0;
 
-  private long maximumSize = UNSET_INT;
-  private long maximumWeight = UNSET_INT;
-  private int initialCapacity = UNSET_INT;
+  long maximumSize = UNSET_INT;
+  long maximumWeight = UNSET_INT;
+  int initialCapacity = UNSET_INT;
 
-  private long refreshNanos = UNSET_INT;
-  private long expireAfterWriteNanos = UNSET_INT;
-  private long expireAfterAccessNanos = UNSET_INT;
+  long refreshNanos = UNSET_INT;
+  long expireAfterWriteNanos = UNSET_INT;
+  long expireAfterAccessNanos = UNSET_INT;
 
-  private RemovalListener<? super K, ? super V> removalListener;
-  private Weigher<? super K, ? super V> weigher;
-  private Supplier<StatsCounter> statsCounterSupplier;
-  private Executor executor;
-  private Ticker ticker;
+  RemovalListener<? super K, ? super V> removalListener;
+  Weigher<? super K, ? super V> weigher;
+  Supplier<StatsCounter> statsCounterSupplier;
+  Executor executor;
+  Ticker ticker;
 
-  private Strength keyStrength;
-  private Strength valueStrength;
+  Strength keyStrength;
+  Strength valueStrength;
 
   private Caffeine() {}
 
@@ -235,6 +235,7 @@ public final class Caffeine<K, V> {
    */
   @Nonnull
   public Caffeine<K, V> executor(@Nonnull Executor executor) {
+    requireState(this.executor == null, "executor was already set to %s", this.executor);
     this.executor = requireNonNull(executor);
     return this;
   }

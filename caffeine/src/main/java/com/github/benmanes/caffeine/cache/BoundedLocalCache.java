@@ -2386,7 +2386,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   static class LocalManualCache<K, V> implements Cache<K, V> {
     final BoundedLocalCache<K, V> cache;
-    transient Advanced<K, V> advanced;
+    final boolean isWeighted;
+    Advanced<K, V> advanced;
 
     LocalManualCache(Caffeine<K, V> builder) {
       this(builder, null);
@@ -2394,6 +2395,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     LocalManualCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       this.cache = new BoundedLocalCache<>(builder, loader);
+      this.isWeighted = (builder.weigher != null);
     }
 
     @Override
@@ -2474,23 +2476,35 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     final class BoundedAdvanced implements Advanced<K, V> {
-      final Optional<Eviction<K, V>> eviction = Optional.of(new BoundedEviction());
-      final Optional<Expiration<K, V>> afterWrite = Optional.of(new BoundedExpireAfterWrite());
-      final Optional<Expiration<K, V>> afterAccess = Optional.of(new BoundedExpireAfterAccess());
+      Optional<Eviction<K, V>> eviction;
+      Optional<Expiration<K, V>> afterWrite;
+      Optional<Expiration<K, V>> afterAccess;
 
       @Override public Optional<Eviction<K, V>> eviction() {
-        return cache.evicts() ? eviction : Optional.empty();
+        return cache.evicts()
+            ? (eviction == null) ? (eviction = Optional.of(new BoundedEviction())) : eviction
+            : Optional.empty();
       }
       @Override public Optional<Expiration<K, V>> expireAfterAccess() {
-        return cache.expiresAfterAccess() ? afterAccess : Optional.empty();
+        if (!(cache.expireAfterAccessNanos >= 0)) {
+          return Optional.empty();
+        }
+        return (afterAccess == null)
+            ? (afterAccess = Optional.of(new BoundedExpireAfterAccess()))
+            : afterAccess;
       }
       @Override public Optional<Expiration<K, V>> expireAfterWrite() {
-        return cache.expiresAfterWrite() ? afterWrite : Optional.empty();
+        if (!(cache.expireAfterWriteNanos >= 0)) {
+          return Optional.empty();
+        }
+        return (afterWrite == null)
+            ? (afterWrite = Optional.of(new BoundedExpireAfterWrite()))
+            : afterWrite;
       }
 
       final class BoundedEviction implements Eviction<K, V> {
         @Override public boolean isWeighted() {
-          return (cache.weigher != Weigher.singleton());
+          return LocalManualCache.this.isWeighted;
         }
         @Override public Optional<Long> weightedSize() {
           return isWeighted() ? Optional.of(cache.weightedSize()) : Optional.empty();

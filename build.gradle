@@ -90,7 +90,7 @@ coveralls {
 
 tasks.coveralls {
   group = 'Coverage reports'
-  description = 'Uploads the aggregated coverage report Coveralls'
+  description = 'Uploads the aggregated coverage report to Coveralls'
 
   dependsOn jacocoRootReport
   onlyIf { System.env.'CI' }
