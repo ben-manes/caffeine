@@ -37,6 +37,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Test suite for {@link CacheBuilder}.
@@ -275,6 +276,7 @@ public class CacheBuilderGwtTest extends TestCase {
 
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(countingListener)
         .ticker(fakeTicker)
         .maximumSize(2));
@@ -304,7 +306,6 @@ public class CacheBuilderGwtTest extends TestCase {
 
     cache.invalidateAll();
 
-    CacheTesting.processPendingNotifications();
     assertEquals(2, stats[0]);
     assertEquals(2, stats[1]);
     assertEquals(4, stats[2]);

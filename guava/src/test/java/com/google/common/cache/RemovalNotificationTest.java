@@ -16,9 +16,11 @@
 
 package com.google.common.cache;
 
-import com.google.common.testing.EqualsTester;
-
 import junit.framework.TestCase;
+
+import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.RemovalNotification;
+import com.google.common.testing.EqualsTester;
 
 /**
  * Unit tests of {@link RemovalNotification}.

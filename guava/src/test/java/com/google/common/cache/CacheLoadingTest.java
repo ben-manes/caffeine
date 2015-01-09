@@ -102,7 +102,6 @@ public class CacheLoadingTest extends TestCase {
   }
 
   private void checkLoggedInvalidLoad() {
-    CacheTesting.processPendingNotifications();
     //assertTrue(popLoggedThrowable() instanceof InvalidCacheLoadException);
   }
 

@@ -32,6 +32,7 @@ import com.google.common.cache.CacheTesting.Receiver;
 import com.google.common.cache.LocalCache.ReferenceEntry;
 import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Tests relating to cache eviction: what does and doesn't count toward maximumSize, what happens
@@ -73,6 +74,7 @@ public class CacheEvictionTest extends TestCase {
     IdentityLoader<Integer> loader = identityLoader();
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumSize(MAX_SIZE)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener), loader);
     for (int i = 0; i < 2 * MAX_SIZE; i++) {
       cache.getUnchecked(i);
@@ -80,7 +82,6 @@ public class CacheEvictionTest extends TestCase {
     }
 
     assertEquals(MAX_SIZE, cache.size());
-    CacheTesting.processPendingNotifications();
     assertEquals(MAX_SIZE, removalListener.getCount());
     CacheTesting.checkValidState(cache);
   }
@@ -91,6 +92,7 @@ public class CacheEvictionTest extends TestCase {
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumWeight(2 * MAX_SIZE)
         .weigher(constantWeigher(2))
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener), loader);
     for (int i = 0; i < 2 * MAX_SIZE; i++) {
       cache.getUnchecked(i);
@@ -98,7 +100,6 @@ public class CacheEvictionTest extends TestCase {
     }
 
     assertEquals(MAX_SIZE, cache.size());
-    CacheTesting.processPendingNotifications();
     assertEquals(MAX_SIZE, removalListener.getCount());
     CacheTesting.checkValidState(cache);
   }
@@ -108,11 +109,11 @@ public class CacheEvictionTest extends TestCase {
     IdentityLoader<Object> loader = identityLoader();
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumWeight(1L << 31)
+        .executor(MoreExecutors.directExecutor())
         .weigher(constantWeigher(Integer.MAX_VALUE))
         .removalListener(removalListener), loader);
     cache.getUnchecked(objectWithHash(0));
     cache.getUnchecked(objectWithHash(0));
-    CacheTesting.processPendingNotifications();
     assertEquals(1, removalListener.getCount());
   }
 

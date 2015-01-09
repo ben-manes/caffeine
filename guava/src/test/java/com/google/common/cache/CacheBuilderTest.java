@@ -50,6 +50,7 @@ import com.google.common.cache.TestingRemovalListeners.QueuingRemovalListener;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.testing.NullPointerTester;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
@@ -316,11 +317,11 @@ public class CacheBuilderTest extends TestCase {
     CountingRemovalListener<Object, Object> listener = countingRemovalListener();
     LoadingCache<Object, Object> nullCache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumSize(0)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(listener), identityLoader());
     assertEquals(0, nullCache.size());
     Object key = new Object();
     assertSame(key, nullCache.getUnchecked(key));
-    CacheTesting.processPendingNotifications();
     assertEquals(1, listener.getCount());
     assertEquals(0, nullCache.size());
     CacheTesting.checkEmpty(nullCache.asMap());

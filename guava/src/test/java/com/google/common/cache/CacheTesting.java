@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
@@ -361,10 +360,6 @@ class CacheTesting {
     return Math.max(accessQueueSize(cache), writeQueueSize(cache));
   }
 
-  static void processPendingNotifications() {
-    ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
-  }
-
   interface Receiver<T> {
     void accept(@Nullable T object);
   }
@@ -413,7 +408,6 @@ class CacheTesting {
     checkNotNull(ticker);
     ticker.advance(2 * expiringTime, TimeUnit.MILLISECONDS);
     cache.cleanUp();
-    CacheTesting.processPendingNotifications();
   }
 
   static void checkEmpty(Cache<?, ?> cache) {

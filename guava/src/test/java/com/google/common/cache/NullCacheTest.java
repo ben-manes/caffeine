@@ -27,6 +27,7 @@ import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.TestingRemovalListeners.QueuingRemovalListener;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
 /**
@@ -45,13 +46,13 @@ public class NullCacheTest extends TestCase {
   public void testGet() {
     Object computed = new Object();
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .executor(MoreExecutors.directExecutor())
         .maximumSize(0)
         .removalListener(listener),
         constantLoader(computed));
 
     Object key = new Object();
     assertSame(computed, cache.getUnchecked(key));
-    CacheTesting.processPendingNotifications();
     RemovalNotification<Object, Object> notification = listener.remove();
     assertSame(key, notification.getKey());
     assertSame(computed, notification.getValue());
@@ -63,13 +64,13 @@ public class NullCacheTest extends TestCase {
   public void testGet_expireAfterWrite() {
     Object computed = new Object();
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .executor(MoreExecutors.directExecutor())
         .expireAfterWrite(0, SECONDS)
         .removalListener(listener),
         constantLoader(computed));
 
     Object key = new Object();
     assertSame(computed, cache.getUnchecked(key));
-    CacheTesting.processPendingNotifications();
     RemovalNotification<Object, Object> notification = listener.remove();
     assertSame(key, notification.getKey());
     assertSame(computed, notification.getValue());
@@ -81,13 +82,13 @@ public class NullCacheTest extends TestCase {
   public void testGet_expireAfterAccess() {
     Object computed = new Object();
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .executor(MoreExecutors.directExecutor())
         .expireAfterAccess(0, SECONDS)
         .removalListener(listener),
         constantLoader(computed));
 
     Object key = new Object();
     assertSame(computed, cache.getUnchecked(key));
-    CacheTesting.processPendingNotifications();
     RemovalNotification<Object, Object> notification = listener.remove();
     assertSame(key, notification.getKey());
     assertSame(computed, notification.getValue());

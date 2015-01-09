@@ -36,6 +36,7 @@ import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.Callables;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Tests relating to cache expiration: make sure entries expire at the right times, make sure
@@ -56,6 +57,7 @@ public class CacheExpirationTest extends TestCase {
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
     LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
         .ticker(ticker),
         loader);
@@ -68,6 +70,7 @@ public class CacheExpirationTest extends TestCase {
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
     LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
         .ticker(ticker),
         loader);
@@ -105,6 +108,7 @@ public class CacheExpirationTest extends TestCase {
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
     LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
         .ticker(ticker),
         loader);
@@ -117,6 +121,7 @@ public class CacheExpirationTest extends TestCase {
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
     LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
         .ticker(ticker),
         loader);
@@ -199,6 +204,7 @@ public class CacheExpirationTest extends TestCase {
     LoadingCache<Integer, AtomicInteger> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .removalListener(removalListener)
         .expireAfterWrite(10, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(ticker),
         loader);
 
@@ -210,7 +216,6 @@ public class CacheExpirationTest extends TestCase {
 
     assertEquals(evictionCount.get() + 1, applyCount.get());
     int remaining = cache.getUnchecked(10).get();
-    CacheTesting.processPendingNotifications();
     assertEquals(100, totalSum.get() + remaining);
   }
 
@@ -220,6 +225,7 @@ public class CacheExpirationTest extends TestCase {
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
     LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
         .ticker(ticker),
         loader);
@@ -232,6 +238,7 @@ public class CacheExpirationTest extends TestCase {
     WatchedCreatorLoader loader = new WatchedCreatorLoader();
     LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
         .ticker(ticker),
         loader);
@@ -245,6 +252,7 @@ public class CacheExpirationTest extends TestCase {
     LoadingCache<String, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
         .ticker(ticker),
         loader);
@@ -425,7 +433,6 @@ public class CacheExpirationTest extends TestCase {
           Integer.valueOf(i + shift2), cache.getUnchecked(keyPrefix + i));
     }
     //assertEquals(10, CacheTesting.expirationQueueSize(cache));
-    CacheTesting.processPendingNotifications();
     assertEquals(10, removalListener.getCount());  // these are the invalidated ones
 
     // old timeouts must expire after this wait

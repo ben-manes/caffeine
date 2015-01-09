@@ -18,6 +18,8 @@ package com.google.common.cache;
 
 import junit.framework.TestCase;
 
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
+
 /**
  * Unit test for {@link CacheStats}.
  *
@@ -33,7 +35,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(0, stats.missCount());
     assertEquals(0.0, stats.missRate());
     assertEquals(0, stats.loadSuccessCount());
-    assertEquals(0, stats.loadExceptionCount());
+    assertEquals(0, stats.loadFailureCount());
     assertEquals(0.0, stats.loadExceptionRate());
     assertEquals(0, stats.loadCount());
     assertEquals(0, stats.totalLoadTime());
@@ -49,7 +51,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(13, stats.missCount());
     assertEquals(13.0/24, stats.missRate());
     assertEquals(17, stats.loadSuccessCount());
-    assertEquals(19, stats.loadExceptionCount());
+    assertEquals(19, stats.loadFailureCount());
     assertEquals(19.0/36, stats.loadExceptionRate());
     assertEquals(17 + 19, stats.loadCount());
     assertEquals(23, stats.totalLoadTime());
@@ -68,7 +70,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(34, diff.missCount());
     assertEquals(34.0/76, diff.missRate());
     assertEquals(26, diff.loadSuccessCount());
-    assertEquals(22, diff.loadExceptionCount());
+    assertEquals(22, diff.loadFailureCount());
     assertEquals(22.0/48, diff.loadExceptionRate());
     assertEquals(26 + 22, diff.loadCount());
     assertEquals(14, diff.totalLoadTime());
@@ -89,7 +91,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(60, sum.missCount());
     assertEquals(60.0/124, sum.missRate());
     assertEquals(56, sum.loadSuccessCount());
-    assertEquals(52, sum.loadExceptionCount());
+    assertEquals(52, sum.loadFailureCount());
     assertEquals(52.0/108, sum.loadExceptionRate());
     assertEquals(56 + 52, sum.loadCount());
     assertEquals(48, sum.totalLoadTime());
