@@ -12,11 +12,11 @@ This project is in **early development** and released under the
 
 ## Collections
 
-#### [EliminationStack](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/EliminationStack.java)
+#### [EliminationStack](caffeine/src/main/java/com/github/benmanes/caffeine/EliminationStack.java)
 A lock-free stack that employs an elimination backoff arena to cancel operations with reverse
 semantics.
 
-#### [SingleConsumerQueue](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/SingleConsumerQueue.java)
+#### [SingleConsumerQueue](caffeine/src/main/java/com/github/benmanes/caffeine/SingleConsumerQueue.java)
 A lock-free queue that supports concurrent producers and is restricted to a single consumer. This
 implementation employs a combining backoff arena, the inverse of elimination, to reduce contention
 caused by multiple producers.
@@ -29,20 +29,20 @@ experience designing [ConcurrentLinkedHashMap](https://code.google.com/p/concurr
 and co-authoring [Guava's Cache](https://code.google.com/p/guava-libraries/wiki/CachesExplained).
 The API is extended to include an asynchronous cache and to expose low-level options like changing
 the maximum size, expiration timeouts, and traversing in retention order. To simplify integration,
-a Guava compatible adapter is available.
+a Guava compatible adapter is available (see [migration guide](MIGRATING.md)).
 
 | Interface | Description |
 | --------- | ----------- |
-| [Caffeine](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/Caffeine.java) | Builds cache instances based on a wide range of features |
-| [Cache](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/Cache.java) | Synchronous cache that allows entries to be manually added |
-| [LoadingCache](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/LoadingCache.java) | Synchronous cache that automatically loads entries when not present |
-| [AsyncLoadingCache](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/AsyncLoadingCache.java) |Asynchronous cache that automatically loads entries when not present and returns a [CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html) |
-| [CacheLoader](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/CacheLoader.java) | Computes or retrieves values, based on a key, for use in populating a cache |
-| [Weigher](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/Weigher.java) | Calculates the size of entries relative to each other; used if a maximum weight is specified |
-| [RemovalListener](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/RemovalListener.java) | Listens for notifications when an entry is removed from a cache |
-| [CacheStats](https://github.com/ben-manes/caffeine/blob/master/caffeine/src/main/java/com/github/benmanes/caffeine/cache/stats/CacheStats.java) | Statistics about the performance of a cache |
-| [Advanced](https://github.com/ben-manes/caffeine/blob/master/src/main/java/com/github/benmanes/caffeine/cache/Advanced.java) | Access to inspect and perform low-level cache operations based on its constructed configuration |
-| [CaffeinatedGuava](https://github.com/ben-manes/caffeine/blob/master/guava/src/main/java/com/github/benmanes/caffeine/guava/CaffeinatedGuava.java) | An adapter that exposes a Caffeine cache through Guava facades |
+| [Caffeine](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Caffeine.java) | Builds cache instances based on a wide range of features |
+| [Cache](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Cache.java) | Synchronous cache that allows entries to be manually added |
+| [LoadingCache](caffeine/src/main/java/com/github/benmanes/caffeine/cache/LoadingCache.java) | Synchronous cache that automatically loads entries when not present |
+| [AsyncLoadingCache](caffeine/src/main/java/com/github/benmanes/caffeine/cache/AsyncLoadingCache.java) |Asynchronous cache that automatically loads entries when not present and returns a [CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html) |
+| [CacheLoader](caffeine/src/main/java/com/github/benmanes/caffeine/cache/CacheLoader.java) | Computes or retrieves values, based on a key, for use in populating a cache |
+| [Weigher](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Weigher.java) | Calculates the size of entries relative to each other; used if a maximum weight is specified |
+| [RemovalListener](caffeine/src/main/java/com/github/benmanes/caffeine/cache/RemovalListener.java) | Listens for notifications when an entry is removed from a cache |
+| [CacheStats](caffeine/src/main/java/com/github/benmanes/caffeine/cache/stats/CacheStats.java) | Statistics about the performance of a cache |
+| [Advanced](src/main/java/com/github/benmanes/caffeine/cache/Advanced.java) | Access to inspect and perform low-level cache operations based on its constructed configuration |
+| [CaffeinatedGuava](guava/src/main/java/com/github/benmanes/caffeine/guava/CaffeinatedGuava.java) | An adapter that exposes a Caffeine cache through Guava facades |
 
 #### Tracing and Simulator
 A lightweight cache tracing api can be enabled to capture information on how well an application
