@@ -495,8 +495,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       executor.execute(() -> {
         K key = node.getKey(keyStrategy);
         if (key != null) {
-          computeIfPresent(node.getKey(keyStrategy),
-              (k, oldValue) -> loader.reload(key, oldValue));
+          try {
+            computeIfPresent(node.getKey(keyStrategy),
+                (k, oldValue) -> loader.reload(key, oldValue));
+          } catch (Throwable t) {
+            logger.log(Level.WARNING, "Exception thrown during reload", t);
+          }
         }
       });
     }

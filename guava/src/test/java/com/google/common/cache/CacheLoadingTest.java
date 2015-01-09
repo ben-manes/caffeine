@@ -800,7 +800,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.loadExceptionCount());
     assertEquals(2, stats.hitCount());
 
-    ticker.advance(1, MILLISECONDS);
+    ticker.advance(2, MILLISECONDS);
     assertSame(one, cache.getUnchecked(key));
     stats = cache.stats();
     assertEquals(1, stats.missCount());
@@ -1081,7 +1081,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.loadExceptionCount());
     assertEquals(2, stats.hitCount());
 
-    ticker.advance(1, MILLISECONDS);
+    ticker.advance(2, MILLISECONDS);
     assertSame(one, cache.getUnchecked(key));
     stats = cache.stats();
     assertEquals(1, stats.missCount());
@@ -1680,7 +1680,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.loadExceptionCount());
     assertEquals(2, stats.hitCount());
 
-    ticker.advance(1, MILLISECONDS);
+    ticker.advance(2, MILLISECONDS);
     assertSame(one, cache.getUnchecked(key));
     stats = cache.stats();
     assertEquals(1, stats.missCount());

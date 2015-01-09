@@ -138,7 +138,11 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
     @Override
     public V reload(K key, V oldValue) {
       try {
-        return Futures.getUnchecked(cacheLoader.reload(key, oldValue));
+        V value = Futures.getUnchecked(cacheLoader.reload(key, oldValue));
+        if (value == null) {
+          throw new InvalidCacheLoadException("null value");
+        }
+        return value;
       } catch (Exception e) {
         throw Throwables.propagate(e);
       }
