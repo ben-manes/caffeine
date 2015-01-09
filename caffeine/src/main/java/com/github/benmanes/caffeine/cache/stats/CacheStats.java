@@ -273,9 +273,9 @@ public class CacheStats {
     return getClass().getSimpleName() + '{'
         + "hitCount=" + hitCount + ','
         + "missCount=" + missCount + ','
-        + "loadSuccessCount" + loadSuccessCount + ','
-        + "loadFailureCount" + loadFailureCount + ','
-        + "totalLoadTime" + totalLoadTime + ','
-        + "evictionCount" + evictionCount + ',';
+        + "loadSuccessCount=" + loadSuccessCount + ','
+        + "loadFailureCount=" + loadFailureCount + ','
+        + "totalLoadTime=" + totalLoadTime + ','
+        + "evictionCount=" + evictionCount + ',';
   }
 }
