@@ -469,7 +469,7 @@ public class CacheBuilderTest extends TestCase {
    */
   @GwtIncompatible("QueuingRemovalListener")
   // FIXME(ben): disabled due to TravisCI killing the process
-  public void disabled_testRemovalNotification_get_basher() throws InterruptedException {
+  public void testRemovalNotification_get_basher() throws InterruptedException {
     int nTasks = 1000;
     int nThreads = 100;
     final int getsPerTask = 1000;
@@ -502,9 +502,11 @@ public class CacheBuilderTest extends TestCase {
         };
     final LoadingCache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
+        .executor(MoreExecutors.directExecutor())
         .expireAfterWrite(100, TimeUnit.MILLISECONDS)
         .removalListener(removalListener)
-        .maximumSize(5000),
+        //.maximumSize(5000)
+        ,
         countingIdentityLoader);
 
     ExecutorService threadPool = Executors.newFixedThreadPool(nThreads);

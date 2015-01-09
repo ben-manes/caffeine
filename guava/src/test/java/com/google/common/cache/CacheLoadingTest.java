@@ -1845,8 +1845,7 @@ public class CacheLoadingTest extends TestCase {
     }
   }
 
-  // FIXME
-  public void disabled_testConcurrentLoading() throws InterruptedException {
+  public void testConcurrentLoading() throws InterruptedException {
     testConcurrentLoading(Caffeine.newBuilder());
   }
 
@@ -2131,7 +2130,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(refreshKey + suffix, map.get(refreshKey));
   }
 
-  // FIXME
+  // ConcurrentHashMap does not support this, as it must return back the removed entry
   public void disabled_testInvalidateDuringLoading() throws InterruptedException, ExecutionException {
     // computation starts; invalidate() is called on the key being computed, computation finishes
     final CountDownLatch computationStarted = new CountDownLatch(2);
@@ -2188,7 +2187,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(2, cache.size());
   }
 
-  // FIXME
+  // ConcurrentHashMap does not support this, as it must return back the removed entry
   public void disabled_testInvalidateAndReloadDuringLoading()
       throws InterruptedException, ExecutionException {
     // computation starts; clear() is called, computation finishes
@@ -2259,94 +2258,6 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(2, cache.size());
     assertEquals(getKey + suffix, map.get(getKey));
     assertEquals(refreshKey + suffix, map.get(refreshKey));
-  }
-
-  // FIXME(ben): Fails on TravisCI
-  public void disabled_testExpandDuringRefresh() throws InterruptedException, ExecutionException {
-    final AtomicInteger callCount = new AtomicInteger();
-    // tells the computing thread when to start computing
-    final CountDownLatch computeSignal = new CountDownLatch(1);
-    // tells the main thread when computation is pending
-    final CountDownLatch secondSignal = new CountDownLatch(1);
-    // tells the main thread when the second get has started
-    final CountDownLatch thirdSignal = new CountDownLatch(1);
-    // tells the main thread when the third get has started
-    final CountDownLatch fourthSignal = new CountDownLatch(1);
-    // tells the test when all gets have returned
-    final CountDownLatch doneSignal = new CountDownLatch(3);
-    final String suffix = "Suffix";
-
-    CacheLoader<String, String> computeFunction = new CacheLoader<String, String>() {
-      @Override
-      public String load(String key) {
-        callCount.incrementAndGet();
-        secondSignal.countDown();
-        Uninterruptibles.awaitUninterruptibly(computeSignal);
-        return key + suffix;
-      }
-    };
-
-    final AtomicReferenceArray<String> result = new AtomicReferenceArray<String>(2);
-
-    final LoadingCache<String, String> cache = CaffeinatedGuava.build(
-        Caffeine.newBuilder(), computeFunction);
-    final String key = "bar";
-    cache.asMap().put(key, key);
-
-    // start computing thread
-    new Thread() {
-      @Override
-      public void run() {
-        cache.refresh(key);
-        doneSignal.countDown();
-      }
-    }.start();
-
-    // wait for computation to start
-    secondSignal.await();
-    checkNothingLogged();
-
-    // start waiting thread
-    new Thread() {
-      @Override
-      public void run() {
-        thirdSignal.countDown();
-        result.set(0, cache.getUnchecked(key));
-        doneSignal.countDown();
-      }
-    }.start();
-
-    // give the second get a chance to run; it is okay for this to be racy
-    // as the end result should be the same either way
-    thirdSignal.await();
-    Thread.yield();
-
-    // Expand!
-    CacheTesting.forceExpandSegment(cache, key);
-
-    // start another waiting thread
-    new Thread() {
-      @Override
-      public void run() {
-        fourthSignal.countDown();
-        result.set(1, cache.getUnchecked(key));
-        doneSignal.countDown();
-      }
-    }.start();
-
-    // give the third get a chance to run; it is okay for this to be racy
-    // as the end result should be the same either way
-    fourthSignal.await();
-    Thread.yield();
-
-    // let computation finish
-    computeSignal.countDown();
-    doneSignal.await();
-
-    assertTrue(callCount.get() == 1);
-    assertEquals(key, result.get(0));
-    assertEquals(key, result.get(1));
-    assertEquals(key + suffix, cache.getUnchecked(key));
   }
 
   static <T> Callable<T> throwing(final Exception exception) {

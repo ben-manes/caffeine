@@ -1166,6 +1166,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           if (hasRemovalListener()) {
             notifyRemoval(key, node.getValue(valueStrategy), RemovalCause.EXPIRED);
           }
+          statsCounter.recordEviction();
         }
       } else {
         afterRead(node, true);
