@@ -42,15 +42,18 @@ public final class CaffeineTest {
   public void unconfigured() {
     assertThat(Caffeine.newBuilder().build(), is(not(nullValue())));
     assertThat(Caffeine.newBuilder().build(single), is(not(nullValue())));
+    assertThat(Caffeine.newBuilder().toString(), is(Caffeine.newBuilder().toString()));
   }
 
   @Test
   public void configured() {
     Caffeine<Object, Object> configured = Caffeine.newBuilder()
-        .maximumSize(1).weakKeys().softValues();
+        .initialCapacity(1).maximumSize(1).weakKeys().softValues()
+        .expireAfterAccess(1, TimeUnit.SECONDS).expireAfterWrite(1, TimeUnit.SECONDS)
+        .removalListener(x -> {}).recordStats();
     assertThat(configured.build(), is(not(nullValue())));
     assertThat(configured.build(single), is(not(nullValue())));
-    assertThat(configured.build().toString(), is(not(Caffeine.newBuilder().toString())));
+    assertThat(configured.toString(), is(not(Caffeine.newBuilder().toString())));
   }
 
   /* ---------------- initialCapacity -------------- */
