@@ -79,6 +79,7 @@ public final class CacheContext {
   @Nullable Integer firstKey;
   @Nullable Integer middleKey;
   @Nullable Integer lastKey;
+  long initialSize;
 
   // Generated on-demand
   Integer absentKey;
@@ -107,6 +108,7 @@ public final class CacheContext {
     this.ticker = expires() ? new FakeTicker() : null;
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
+    this.initialSize = -1;
   }
 
   public Population population() {
@@ -171,7 +173,7 @@ public final class CacheContext {
   }
 
   public long initialSize() {
-    return original.size();
+    return (initialSize < 0) ? (initialSize = original.size()) : initialSize;
   }
 
   public long maximumSize() {
@@ -197,6 +199,7 @@ public final class CacheContext {
 
   /** The initial entries in the cache, iterable in insertion order. */
   public Map<Integer, Integer> original() {
+    initialSize(); // lazy initialize
     return original;
   }
 

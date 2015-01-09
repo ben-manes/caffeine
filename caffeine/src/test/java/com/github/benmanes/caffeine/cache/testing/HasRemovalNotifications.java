@@ -95,7 +95,7 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
           assertThat(notification.getKey(), is(not(nullValue())));
         }
         if (context.valueStrength() == ReferenceType.STRONG) {
-          assertThat(notification.getKey(), is(not(nullValue())));
+          assertThat(notification.getValue(), is(not(nullValue())));
         }
     }
     if (cause != null) {

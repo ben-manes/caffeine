@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
@@ -53,6 +54,7 @@ public final class ReferenceTest {
     cache.put(new Random().nextInt(), 0);
     GcFinalization.awaitFullGc();
     cleanUp(cache, context, 0);
+    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches")
@@ -61,6 +63,8 @@ public final class ReferenceTest {
     context.original().clear();
     GcFinalization.awaitFullGc();
     cleanUp(cache, context, 0);
+    assertThat(cache, hasRemovalNotifications(
+        context, context.initialSize(), RemovalCause.COLLECTED));
   }
 
   @Test(enabled = false, dataProvider = "caches")
@@ -69,6 +73,8 @@ public final class ReferenceTest {
     context.clear();
     awaitSoftRefGc();
     cleanUp(cache, context, 0);
+    assertThat(cache, hasRemovalNotifications(
+        context, context.initialSize(), RemovalCause.COLLECTED));
   }
 
   static void cleanUp(Cache<Integer, Integer> cache, CacheContext context, long finalSize) {
