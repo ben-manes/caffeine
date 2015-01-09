@@ -15,11 +15,12 @@
 package com.google.common.cache;
 
 import static java.util.Arrays.asList;
+import junit.framework.TestCase;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
-import junit.framework.TestCase;
 
 /**
  * @author Charles Fry
@@ -27,7 +28,7 @@ import junit.framework.TestCase;
 public class CacheManualTest extends TestCase {
 
   public void testGetIfPresent() {
-    Cache<Object, Object> cache = CacheBuilder.newBuilder().recordStats().build();
+    Cache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats());
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -103,7 +104,7 @@ public class CacheManualTest extends TestCase {
   }
 
   public void testGetAllPresent() {
-    Cache<Integer, Integer> cache = CacheBuilder.newBuilder().recordStats().build();
+    Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder().recordStats());
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());

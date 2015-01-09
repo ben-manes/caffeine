@@ -232,7 +232,8 @@ public class CacheLoadingTest extends TestCase {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
         .ticker(ticker)
-        .refreshAfterWrite(1, MILLISECONDS),
+        .refreshAfterWrite(1, MILLISECONDS)
+        .executor(MoreExecutors.directExecutor()),
         loader);
     Object key = new Object();
     CacheStats stats = cache.stats();
@@ -1731,7 +1732,8 @@ public class CacheLoadingTest extends TestCase {
     };
     CountingRemovalListener<Integer, String> removalListener = countingRemovalListener();
     LoadingCache<Integer, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .removalListener(removalListener), failOnceFunction);
+        .removalListener(removalListener).executor(MoreExecutors.directExecutor()),
+        failOnceFunction);
 
     try {
       cache.getUnchecked(1);
@@ -1754,8 +1756,8 @@ public class CacheLoadingTest extends TestCase {
 
   public void testReloadAfterValueReclamation() throws InterruptedException, ExecutionException {
     CountingLoader countingLoader = new CountingLoader();
-    LoadingCache<Object, Object> cache =
-        CaffeinatedGuava.build(Caffeine.newBuilder().weakValues(), countingLoader);
+    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .weakValues().executor(MoreExecutors.directExecutor()), countingLoader);
     ConcurrentMap<Object, Object> map = cache.asMap();
 
     int iterations = 10;
@@ -1788,49 +1790,6 @@ public class CacheLoadingTest extends TestCase {
       System.gc();
     }
     assertEquals(expectedComputations, countingLoader.getCount());
-  }
-
-  public void testReloadAfterSimulatedValueReclamation() throws ExecutionException {
-    CountingLoader countingLoader = new CountingLoader();
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .weakValues(), countingLoader);
-
-    Object key = new Object();
-    assertNotNull(cache.getUnchecked(key));
-
-    CacheTesting.simulateValueReclamation(cache, key);
-
-    // this blocks if computation can't deal with partially-collected values
-    assertNotNull(cache.getUnchecked(key));
-    assertEquals(1, cache.size());
-    assertEquals(2, countingLoader.getCount());
-
-    CacheTesting.simulateValueReclamation(cache, key);
-    cache.refresh(key);
-    checkNothingLogged();
-    assertEquals(1, cache.size());
-    assertEquals(3, countingLoader.getCount());
-  }
-
-  public void testReloadAfterSimulatedKeyReclamation() throws ExecutionException {
-    CountingLoader countingLoader = new CountingLoader();
-    LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .weakKeys(), countingLoader);
-
-    Object key = new Object();
-    assertNotNull(cache.getUnchecked(key));
-    assertEquals(1, cache.size());
-
-    CacheTesting.simulateKeyReclamation(cache, key);
-
-    // this blocks if computation can't deal with partially-collected values
-    assertNotNull(cache.getUnchecked(key));
-    assertEquals(2, countingLoader.getCount());
-
-    CacheTesting.simulateKeyReclamation(cache, key);
-    cache.refresh(key);
-    checkNothingLogged();
-    assertEquals(3, countingLoader.getCount());
   }
 
   /**
@@ -2343,93 +2302,6 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(2, cache.size());
     assertEquals(getKey + suffix, map.get(getKey));
     assertEquals(refreshKey + suffix, map.get(refreshKey));
-  }
-
-  public void testExpandDuringLoading() throws InterruptedException {
-    final int count = 3;
-    final AtomicInteger callCount = new AtomicInteger();
-    // tells the computing thread when to start computing
-    final CountDownLatch computeSignal = new CountDownLatch(1);
-    // tells the main thread when computation is pending
-    final CountDownLatch secondSignal = new CountDownLatch(1);
-    // tells the main thread when the second get has started
-    final CountDownLatch thirdSignal = new CountDownLatch(1);
-    // tells the main thread when the third get has started
-    final CountDownLatch fourthSignal = new CountDownLatch(1);
-    // tells the test when all gets have returned
-    final CountDownLatch doneSignal = new CountDownLatch(count);
-
-    CacheLoader<String, String> computeFunction = new CacheLoader<String, String>() {
-      @Override
-      public String load(String key) {
-        callCount.incrementAndGet();
-        secondSignal.countDown();
-        Uninterruptibles.awaitUninterruptibly(computeSignal);
-        return key + "foo";
-      }
-    };
-
-    final LoadingCache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
-        .weakKeys(), computeFunction);
-
-    final AtomicReferenceArray<String> result = new AtomicReferenceArray<String>(count);
-
-    final String key = "bar";
-
-    // start computing thread
-    new Thread() {
-      @Override
-      public void run() {
-        result.set(0, cache.getUnchecked(key));
-        doneSignal.countDown();
-      }
-    }.start();
-
-    // wait for computation to start
-    secondSignal.await();
-
-    // start waiting thread
-    new Thread() {
-      @Override
-      public void run() {
-        thirdSignal.countDown();
-        result.set(1, cache.getUnchecked(key));
-        doneSignal.countDown();
-      }
-    }.start();
-
-    // give the second get a chance to run; it is okay for this to be racy
-    // as the end result should be the same either way
-    thirdSignal.await();
-    Thread.yield();
-
-    // Expand!
-    CacheTesting.forceExpandSegment(cache, key);
-
-    // start another waiting thread
-    new Thread() {
-      @Override
-      public void run() {
-        fourthSignal.countDown();
-        result.set(2, cache.getUnchecked(key));
-        doneSignal.countDown();
-      }
-    }.start();
-
-    // give the third get a chance to run; it is okay for this to be racy
-    // as the end result should be the same either way
-    fourthSignal.await();
-    Thread.yield();
-
-    // let computation finish
-    computeSignal.countDown();
-    doneSignal.await();
-
-    assertTrue(callCount.get() == 1);
-    assertEquals("barfoo", result.get(0));
-    assertEquals("barfoo", result.get(1));
-    assertEquals("barfoo", result.get(2));
-    assertEquals("barfoo", cache.getUnchecked(key));
   }
 
   // FIXME(ben): Fails on TravisCI
