@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.guava;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -39,6 +40,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, V>
     implements LoadingCache<K, V> {
   static final ThreadLocal<Boolean> nullBulkLoad = ThreadLocal.withInitial(() -> Boolean.FALSE);
+  static final long serialVersionUID = 1L;
 
   final com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache;
 
@@ -113,7 +115,9 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
     cache.refresh(key);
   }
 
-  static class SingleLoader<K, V> implements CacheLoader<K, V> {
+  static class SingleLoader<K, V> implements CacheLoader<K, V>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     final com.google.common.cache.CacheLoader<K, V> cacheLoader;
 
     SingleLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
@@ -156,6 +160,7 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
   }
 
   static final class BulkLoader<K, V> extends SingleLoader<K, V> {
+    private static final long serialVersionUID = 1L;
 
     BulkLoader(com.google.common.cache.CacheLoader<K, V> cacheLoader) {
       super(cacheLoader);

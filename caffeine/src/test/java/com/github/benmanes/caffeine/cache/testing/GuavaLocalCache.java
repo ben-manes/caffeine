@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Optional;
@@ -32,7 +34,6 @@ import com.github.benmanes.caffeine.cache.Advanced;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
@@ -45,6 +46,9 @@ import com.google.common.cache.AbstractCache.SimpleStatsCounter;
 import com.google.common.cache.AbstractCache.StatsCounter;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.cache.Weigher;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
@@ -69,7 +73,7 @@ public final class GuavaLocalCache {
       if (context.weigher == CacheWeigher.DEFAULT) {
         builder.maximumSize(context.maximumSize.max());
       } else {
-        builder.weigher((key, value) -> context.weigher.weigh(key, value));
+        builder.weigher(new GuavaWeigher<Object, Object>(context.weigher));
         builder.maximumWeight(context.maximumWeight());
       }
     }
@@ -93,33 +97,17 @@ public final class GuavaLocalCache {
       builder.softValues();
     }
     if (context.removalListenerType != Listener.DEFAULT) {
-      builder.<Integer, Integer>removalListener(notification -> {
-        RemovalCause cause = RemovalCause.valueOf(notification.getCause().name());
-        RemovalNotification<Integer, Integer> notif = new RemovalNotification<>(
-            notification.getKey(), notification.getValue(), cause);
-        context.removalListener().onRemoval(notif);
-      });
+      builder.removalListener(new GuavaRemovalListener<>(context.removalListener()));
     }
     Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker;
     if (context.loader == null) {
       context.cache = new GuavaCache<>(builder.<Integer, Integer>build(), ticker);
     } else if (context.loader().isBulk()) {
-      context.cache = new GuavaLoadingCache<>(builder.build(new CacheLoader<Integer, Integer>() {
-        @Override
-        public Integer load(Integer key) throws Exception {
-          return context.loader().load(key);
-        }
-        @Override
-        public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) throws Exception {
-          return context.loader().loadAll(keys);
-        }
-      }), ticker);
+      context.cache = new GuavaLoadingCache<>(builder.build(
+          new BulkLoader<Integer, Integer>(context.loader())), ticker);
     } else {
-      context.cache = new GuavaLoadingCache<>(builder.build(new CacheLoader<Integer, Integer>() {
-        @Override  public Integer load(Integer key) throws Exception {
-          return context.loader().load(key);
-        }
-      }), ticker);
+      context.cache = new GuavaLoadingCache<>(builder.build(
+          new SingleLoader<Integer, Integer>(context.loader())), ticker);
     }
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) context.cache;
@@ -130,8 +118,9 @@ public final class GuavaLocalCache {
     private static final long serialVersionUID = 1L;
 
     private final com.google.common.cache.Cache<K, V> cache;
-    private final StatsCounter statsCounter;
     private final Ticker ticker;
+
+    transient StatsCounter statsCounter;
 
     GuavaCache(com.google.common.cache.Cache<K, V> cache, Ticker ticker) {
       this.statsCounter = new SimpleStatsCounter();
@@ -356,6 +345,10 @@ public final class GuavaLocalCache {
         protected ConcurrentMap<K, V> delegate() {
           return cache.asMap();
         }
+
+        private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+          statsCounter = new SimpleStatsCounter();
+        }
       };
     }
 
@@ -420,6 +413,65 @@ public final class GuavaLocalCache {
     @Override
     public void refresh(K key) {
       cache.refresh(key);
+    }
+  }
+
+  static final class GuavaWeigher<K, V> implements Weigher<K, V>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    final com.github.benmanes.caffeine.cache.Weigher<K, V> weigher;
+
+    GuavaWeigher(com.github.benmanes.caffeine.cache.Weigher<K, V> weigher) {
+      this.weigher = weigher;
+    }
+
+    @Override public int weigh(K key, V value) {
+      return weigher.weigh(key, value);
+    }
+  }
+
+  static final class GuavaRemovalListener<K, V> implements RemovalListener<K, V>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    final com.github.benmanes.caffeine.cache.RemovalListener<K, V> delegate;
+
+    GuavaRemovalListener(com.github.benmanes.caffeine.cache.RemovalListener<K, V> delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void onRemoval(RemovalNotification<K, V> notification) {
+      RemovalCause cause = RemovalCause.valueOf(notification.getCause().name());
+      delegate.onRemoval(new com.github.benmanes.caffeine.cache.RemovalNotification<K, V>(
+          notification.getKey(), notification.getValue(), cause));
+    }
+  }
+
+  static class SingleLoader<K, V> extends CacheLoader<K, V> implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    final com.github.benmanes.caffeine.cache.CacheLoader<K, V> delegate;
+
+    SingleLoader(com.github.benmanes.caffeine.cache.CacheLoader<K, V> delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public V load(K key) throws Exception {
+      return delegate.load(key);
+    }
+  }
+
+  static class BulkLoader<K, V> extends SingleLoader<K, V> {
+    private static final long serialVersionUID = 1L;
+
+    BulkLoader(com.github.benmanes.caffeine.cache.CacheLoader<K, V> delegate) {
+      super(delegate);
+    }
+
+    @Override
+    public Map<K, V> loadAll(Iterable<? extends K> keys) throws Exception {
+      return delegate.loadAll(keys);
     }
   }
 }

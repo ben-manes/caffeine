@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.guava;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -43,7 +44,9 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-class CaffeinatedGuavaCache<K, V> implements Cache<K, V> {
+class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
+  private static final long serialVersionUID = 1L;
+
   final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
 
   CaffeinatedGuavaCache(com.github.benmanes.caffeine.cache.Cache<K, V> cache) {

@@ -44,7 +44,6 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -412,7 +411,7 @@ public final class CacheTest {
 
   /* ---------------- serialize -------------- */
 
-  @CacheSpec(implementation = Implementation.Caffeine)
+  @CacheSpec
   @Test(dataProvider = "caches")
   public void serialize(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache, is(reserializable()));
