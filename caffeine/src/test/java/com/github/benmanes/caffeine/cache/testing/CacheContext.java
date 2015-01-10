@@ -183,7 +183,7 @@ public final class CacheContext {
 
   public long maximumWeight() {
     assertThat("Invalid usage of context", isWeighted(), is(not(nullValue())));
-    long maximum = weigher.multipler() * maximumSize.max();
+    long maximum = weigher.unitsPerEntry() * maximumSize.max();
     return (maximum < 0) ? Long.MAX_VALUE : maximum;
   }
 

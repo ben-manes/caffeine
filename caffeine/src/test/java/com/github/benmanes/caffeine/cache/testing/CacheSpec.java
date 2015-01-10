@@ -20,6 +20,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -112,21 +113,33 @@ public @interface CacheSpec {
     /** A flag indicating that no weigher is set when building the cache. */
     DEFAULT(1),
     /** A flag indicating that every entry is valued at 10 units. */
-    TEN(10);
+    TEN(10),
+    /** A flag indicating that every entry is valued at 0 unit. */
+    ZERO(0),
+    /** A flag indicating that every entry is valued at -1 unit. */
+    NEGATIVE(-1),
+    /** A flag indicating that every entry is valued at Integer.MAX_VALUE units. */
+    MAX_VALUE(Integer.MAX_VALUE),
+    /** A flag indicating that the entry is weighted by the value's collection size. */
+    COLLECTION(1) {
+      @Override public int weigh(Object key, Object value) {
+        return ((Collection<?>) value).size();
+      }
+    };
 
-    private int multiplier;
+    private int units;
 
     private CacheWeigher(int multiplier) {
-      this.multiplier = multiplier;
+      this.units = multiplier;
     }
 
     @Override
     public int weigh(Object key, Object value) {
-      return multiplier;
+      return units;
     }
 
-    public int multipler() {
-      return multiplier;
+    public int unitsPerEntry() {
+      return units;
     }
   }
 

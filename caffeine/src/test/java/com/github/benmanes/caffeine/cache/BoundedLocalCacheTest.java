@@ -38,7 +38,6 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.LocalManualCache;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
@@ -62,8 +61,25 @@ public final class BoundedLocalCacheTest {
   final Executor executor = Executors.newCachedThreadPool();
 
   static BoundedLocalCache<Integer, Integer> asBoundedLocalCache(Cache<Integer, Integer> cache) {
-    LocalManualCache<Integer, Integer> local = (LocalManualCache<Integer, Integer>) cache;
-    return local.cache;
+    return (BoundedLocalCache<Integer, Integer>) cache.asMap();
+  }
+
+  @Test
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.UNREACHABLE,
+      weigher = CacheWeigher.MAX_VALUE, population = Population.EMPTY)
+  public void putWeighted_noOverflow() {
+    Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .weigher(CacheWeigher.MAX_VALUE)
+        .maximumWeight(Long.MAX_VALUE)
+        .build();
+    BoundedLocalCache<Integer, Integer> map = asBoundedLocalCache(cache);
+
+    cache.put(1, 1);
+    map.weightedSize.set(BoundedLocalCache.MAXIMUM_CAPACITY);
+    cache.put(2, 2);
+
+    assertThat(map.size(), is(1));
+    assertThat(map.weightedSize(), is(BoundedLocalCache.MAXIMUM_CAPACITY));
   }
 
   @Test(dataProvider = "caches")

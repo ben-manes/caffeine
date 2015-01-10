@@ -285,7 +285,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     // The eviction support
     evictionLock = new Sync();
-    weigher = builder.getWeigher();
+    weigher = (builder.getWeigher() == Weigher.singleton())
+        ? Weigher.singleton()
+        : new BoundedWeigher<>(builder.getWeigher());
     weightedSize = new PaddedAtomicLong();
     drainStatus = new PaddedAtomicReference<DrainStatus>(IDLE);
 
@@ -2072,11 +2074,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /** A weigher that enforces that the weight falls within a valid range. */
-  static final class BoundedEntryWeigher<K, V> implements Weigher<K, V>, Serializable {
+  static final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
     static final long serialVersionUID = 1;
     final Weigher<? super K, ? super V> weigher;
 
-    BoundedEntryWeigher(Weigher<? super K, ? super V> weigher) {
+    BoundedWeigher(Weigher<? super K, ? super V> weigher) {
       requireNonNull(weigher);
       this.weigher = weigher;
     }
@@ -2084,7 +2086,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     @Override
     public int weigh(K key, V value) {
       int weight = weigher.weigh(key, value);
-      Caffeine.requireArgument(weight >= 1);
+      Caffeine.requireArgument(weight >= 0);
       return weight;
     }
 
