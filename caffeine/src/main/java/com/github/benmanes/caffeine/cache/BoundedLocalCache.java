@@ -19,7 +19,6 @@ import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.I
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.PROCESSING;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.REQUIRED;
 import static java.util.Collections.unmodifiableMap;
-import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InvalidObjectException;
@@ -38,7 +37,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -1447,103 +1445,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return (ks == null) ? (keySet = new KeySet()) : ks;
   }
 
-  /**
-   * Returns a unmodifiable snapshot {@link Set} view of the keys contained in
-   * this map. The set's iterator returns the keys whose order of iteration is
-   * the ascending order in which its entries are considered eligible for
-   * retention, from the least-likely to be retained to the most-likely.
-   * <p>
-   * Beware that, unlike in {@link #keySet()}, obtaining the set is <em>NOT</em>
-   * a constant-time operation. Because of the asynchronous nature of the page
-   * replacement policy, determining the retention ordering requires a traversal
-   * of the keys.
-   *
-   * @return an ascending snapshot view of the keys in this map
-   */
-  public Set<K> ascendingKeySet() {
-    return ascendingKeySetWithLimit(Integer.MAX_VALUE);
-  }
-
-  /**
-   * Returns an unmodifiable snapshot {@link Set} view of the keys contained in
-   * this map. The set's iterator returns the keys whose order of iteration is
-   * the ascending order in which its entries are considered eligible for
-   * retention, from the least-likely to be retained to the most-likely.
-   * <p>
-   * Beware that, unlike in {@link #keySet()}, obtaining the set is <em>NOT</em>
-   * a constant-time operation. Because of the asynchronous nature of the page
-   * replacement policy, determining the retention ordering requires a traversal
-   * of the keys.
-   *
-   * @param limit the maximum size of the returned set
-   * @return a ascending snapshot view of the keys in this map
-   * @throws IllegalArgumentException if the limit is negative
-   */
-  public Set<K> ascendingKeySetWithLimit(int limit) {
-    return orderedKeySet(true, limit);
-  }
-
-  /**
-   * Returns an unmodifiable snapshot {@link Set} view of the keys contained in
-   * this map. The set's iterator returns the keys whose order of iteration is
-   * the descending order in which its entries are considered eligible for
-   * retention, from the most-likely to be retained to the least-likely.
-   * <p>
-   * Beware that, unlike in {@link #keySet()}, obtaining the set is <em>NOT</em>
-   * a constant-time operation. Because of the asynchronous nature of the page
-   * replacement policy, determining the retention ordering requires a traversal
-   * of the keys.
-   *
-   * @return a descending snapshot view of the keys in this map
-   */
-  public Set<K> descendingKeySet() {
-    return descendingKeySetWithLimit(Integer.MAX_VALUE);
-  }
-
-  /**
-   * Returns an unmodifiable snapshot {@link Set} view of the keys contained in
-   * this map. The set's iterator returns the keys whose order of iteration is
-   * the descending order in which its entries are considered eligible for
-   * retention, from the most-likely to be retained to the least-likely.
-   * <p>
-   * Beware that, unlike in {@link #keySet()}, obtaining the set is <em>NOT</em>
-   * a constant-time operation. Because of the asynchronous nature of the page
-   * replacement policy, determining the retention ordering requires a traversal
-   * of the keys.
-   *
-   * @param limit the maximum size of the returned set
-   * @return a descending snapshot view of the keys in this map
-   * @throws IllegalArgumentException if the limit is negative
-   */
-  public Set<K> descendingKeySetWithLimit(int limit) {
-    return orderedKeySet(false, limit);
-  }
-
-  Set<K> orderedKeySet(boolean ascending, int limit) {
-    Caffeine.requireArgument(limit >= 0);
-    evictionLock.lock();
-    try {
-      drainBuffers();
-
-      final int initialCapacity = (weigher == Weigher.singleton())
-          ? Math.min(limit, (int) weightedSize())
-          : 16;
-      final Set<K> keys = new LinkedHashSet<K>(initialCapacity);
-      final Iterator<Node<K, V>> iterator = ascending
-          ? accessOrderDeque.iterator()
-          : accessOrderDeque.descendingIterator();
-      while (iterator.hasNext() && (limit > keys.size())) {
-        K key = iterator.next().getKey(keyStrategy);
-        if (key != null) {
-          keys.add(key);
-        }
-      }
-      return unmodifiableSet(keys);
-    } finally {
-      evictionLock.unlock();
-    }
-  }
-
   @Override
   public Collection<V> values() {
     final Collection<V> vs = values;
@@ -1556,83 +1457,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return (es == null) ? (entrySet = new EntrySet()) : es;
   }
 
-  /**
-   * Returns an unmodifiable snapshot {@link Map} view of the mappings contained
-   * in this map. The map's collections return the mappings whose order of
-   * iteration is the ascending order in which its entries are considered
-   * eligible for retention, from the least-likely to be retained to the
-   * most-likely.
-   * <p>
-   * Beware that obtaining the mappings is <em>NOT</em> a constant-time
-   * operation. Because of the asynchronous nature of the page replacement
-   * policy, determining the retention ordering requires a traversal of the
-   * entries.
-   *
-   * @return a ascending snapshot view of this map
-   */
-  public Map<K, V> ascendingMap() {
-    return ascendingMapWithLimit(Integer.MAX_VALUE);
-  }
-
-  /**
-   * Returns an unmodifiable snapshot {@link Map} view of the mappings contained
-   * in this map. The map's collections return the mappings whose order of
-   * iteration is the ascending order in which its entries are considered
-   * eligible for retention, from the least-likely to be retained to the
-   * most-likely.
-   * <p>
-   * Beware that obtaining the mappings is <em>NOT</em> a constant-time
-   * operation. Because of the asynchronous nature of the page replacement
-   * policy, determining the retention ordering requires a traversal of the
-   * entries.
-   *
-   * @param limit the maximum size of the returned map
-   * @return a ascending snapshot view of this map
-   * @throws IllegalArgumentException if the limit is negative
-   */
-  public Map<K, V> ascendingMapWithLimit(int limit) {
-    return orderedMap(true, limit);
-  }
-
-  /**
-   * Returns an unmodifiable snapshot {@link Map} view of the mappings contained
-   * in this map. The map's collections return the mappings whose order of
-   * iteration is the descending order in which its entries are considered
-   * eligible for retention, from the most-likely to be retained to the
-   * least-likely.
-   * <p>
-   * Beware that obtaining the mappings is <em>NOT</em> a constant-time
-   * operation. Because of the asynchronous nature of the page replacement
-   * policy, determining the retention ordering requires a traversal of the
-   * entries.
-   *
-   * @return a descending snapshot view of this map
-   */
-  public Map<K, V> descendingMap() {
-    return descendingMapWithLimit(Integer.MAX_VALUE);
-  }
-
-  /**
-   * Returns an unmodifiable snapshot {@link Map} view of the mappings contained
-   * in this map. The map's collections return the mappings whose order of
-   * iteration is the descending order in which its entries are considered
-   * eligible for retention, from the most-likely to be retained to the
-   * least-likely.
-   * <p>
-   * Beware that obtaining the mappings is <em>NOT</em> a constant-time
-   * operation. Because of the asynchronous nature of the page replacement
-   * policy, determining the retention ordering requires a traversal of the
-   * entries.
-   *
-   * @param limit the maximum size of the returned map
-   * @return a descending snapshot view of this map
-   * @throws IllegalArgumentException if the limit is negative
-   */
-  public Map<K, V> descendingMapWithLimit(int limit) {
-    return orderedMap(false, limit);
-  }
-
-  Map<K, V> orderedMap(boolean ascending, int limit) {
+  Map<K, V> orderedMap(LinkedDeque<Node<K, V>> deque, boolean ascending, int limit) {
     Caffeine.requireArgument(limit >= 0);
     evictionLock.lock();
     try {
@@ -1643,8 +1468,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           : 16;
       final Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
       final Iterator<Node<K, V>> iterator = ascending
-          ? accessOrderDeque.iterator()
-          : accessOrderDeque.descendingIterator();
+          ? deque.iterator()
+          : deque.descendingIterator();
       while (iterator.hasNext() && (limit > map.size())) {
         Node<K, V> node = iterator.next();
         K key = node.getKey(keyStrategy);
@@ -2415,10 +2240,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           cache.setCapacity(maximumSize);
         }
         @Override public Map<K, V> coldest(int limit) {
-          return cache.ascendingMapWithLimit(limit);
+          return cache.orderedMap(cache.accessOrderDeque, true, limit);
         }
         @Override public Map<K, V> hottest(int limit) {
-          return cache.descendingMapWithLimit(limit);
+          return cache.orderedMap(cache.accessOrderDeque, false, limit);
         }
       }
 
@@ -2443,10 +2268,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           asyncCleanup();
         }
         @Override public Map<K, V> oldest(int limit) {
-          return cache.ascendingMapWithLimit(limit);
+          return cache.orderedMap(cache.accessOrderDeque, true, limit);
         }
         @Override public Map<K, V> youngest(int limit) {
-          return cache.descendingMapWithLimit(limit);
+          return cache.orderedMap(cache.accessOrderDeque, false, limit);
         }
       }
 
@@ -2471,10 +2296,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           asyncCleanup();
         }
         @Override public Map<K, V> oldest(int limit) {
-          throw new UnsupportedOperationException("TODO");
+          return cache.orderedMap(cache.writeOrderDeque, true, limit);
         }
         @Override public Map<K, V> youngest(int limit) {
-          throw new UnsupportedOperationException("TODO");
+          return cache.orderedMap(cache.writeOrderDeque, false, limit);
         }
       }
     }

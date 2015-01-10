@@ -37,6 +37,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
+import com.github.benmanes.caffeine.cache.Advanced.Eviction;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
@@ -369,41 +370,10 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
-  public void drain_blocksAscendingKeySet(Cache<Integer, Integer> cache, CacheContext context) {
+  public void drain_blocksOrderedMap(Cache<Integer, Integer> cache,
+      CacheContext context, Eviction<Integer, Integer> eviction) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    checkDrainBlocks(localCache, () -> localCache.ascendingKeySet());
-    checkDrainBlocks(localCache, () ->
-        localCache.ascendingKeySetWithLimit((int) context.maximumSize()));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.EMPTY, maximumSize = MaximumSize.FULL)
-  public void drain_blocksDescendingKeySet(Cache<Integer, Integer> cache, CacheContext context) {
-    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    checkDrainBlocks(localCache, () -> localCache.descendingKeySet());
-    checkDrainBlocks(localCache, () ->
-        localCache.descendingKeySetWithLimit((int) context.maximumSize()));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.EMPTY, maximumSize = MaximumSize.FULL)
-  public void drain_blocksAscendingMap(Cache<Integer, Integer> cache, CacheContext context) {
-    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    checkDrainBlocks(localCache, () -> localCache.ascendingMap());
-    checkDrainBlocks(localCache, () ->
-        localCache.ascendingMapWithLimit((int) context.maximumSize()));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.EMPTY, maximumSize = MaximumSize.FULL)
-  public void drain_blocksDescendingMap(Cache<Integer, Integer> cache, CacheContext context) {
-    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    checkDrainBlocks(localCache, () -> localCache.descendingMap());
-    checkDrainBlocks(localCache, () ->
-        localCache.descendingMapWithLimit((int) context.maximumSize()));
+    checkDrainBlocks(localCache, () -> eviction.coldest(((int) context.maximumSize())));
   }
 
   @Test(dataProvider = "caches")
