@@ -67,15 +67,18 @@ repositories {
 
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', dependsOn: subprojects.test) {
   description = 'Generates an aggregate report from all subprojects'
-  additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
-  sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
-  classDirectories = files(subprojects.sourceSets.main.output)
-  executionData = files(subprojects.jacocoTestReport.executionData)
+
+  // Only report code coverage for projects that are distrubuted
+  def publishedProjects = subprojects.findAll { it.name != 'simulator' };
+
+  additionalSourceDirs = files(publishedProjects.sourceSets.main.allSource.srcDirs)
+  sourceDirectories = files(publishedProjects.sourceSets.main.allSource.srcDirs)
+  classDirectories = files(publishedProjects.sourceSets.main.output)
+  executionData = files(publishedProjects.jacocoTestReport.executionData)
 
   reports {
     html.enabled = true
     xml.enabled = true
-    csv.enabled = false
   }
 
   doFirst {
