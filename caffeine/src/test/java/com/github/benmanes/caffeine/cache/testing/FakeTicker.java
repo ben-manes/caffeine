@@ -15,9 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import java.io.Serializable;
+
 import com.github.benmanes.caffeine.cache.Ticker;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class FakeTicker extends com.google.common.testing.FakeTicker implements Ticker {}
+public final class FakeTicker extends com.google.common.testing.FakeTicker
+    implements Ticker, Serializable {
+  private static final long serialVersionUID = 1L;
+}

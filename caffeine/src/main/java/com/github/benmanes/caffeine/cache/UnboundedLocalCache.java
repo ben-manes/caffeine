@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractMap.SimpleEntry;
@@ -52,9 +54,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializable {
-  private static final long serialVersionUID = 1L;
-
+final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
   @Nullable final RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> data;
   final Executor executor;
@@ -753,7 +753,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
 
   /* ---------------- Manual Cache -------------- */
 
-  static class LocalManualCache<K, V> implements Cache<K, V> {
+  static class LocalManualCache<K, V> implements Cache<K, V>, Serializable {
     final UnboundedLocalCache<K, V> cache;
     transient Advanced<K, V> advanced;
 
@@ -836,6 +836,56 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
       }
       @Override public Optional<Expiration<K, V>> expireAfterWrite() {
         return Optional.empty();
+      }
+    }
+
+    /* ---------------- Serialization Support -------------- */
+
+    static final long serialVersionUID = 1;
+
+    Object writeReplace() {
+      return new ManualSerializationProxy<K, V>(this);
+    }
+
+    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+      throw new InvalidObjectException("Proxy required");
+    }
+
+    /**
+     * Serializes the configuration of the cache, reconsitituting it as a Cache using
+     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
+     */
+    static class ManualSerializationProxy<K, V> implements Serializable {
+      private static final long serialVersionUID = 1;
+
+      final Ticker ticker;
+      final boolean isRecordingStats;
+      final RemovalListener<K, V> removalListener;
+
+      ManualSerializationProxy(LocalManualCache<K, V> manual) {
+        isRecordingStats = manual.cache.isRecordingStats;
+        removalListener = manual.cache.removalListener;
+        ticker = (manual.cache.ticker == Caffeine.DISABLED_TICKER)
+            ? null
+            : manual.cache.ticker;
+      }
+
+      Caffeine<Object, Object> recreateCaffeine() {
+        Caffeine<Object, Object> builder = Caffeine.newBuilder();
+        if (ticker != null) {
+          builder.ticker(ticker);
+        }
+        if (removalListener != null) {
+          builder.removalListener(removalListener);
+        }
+        if (isRecordingStats) {
+          builder.recordStats();
+        }
+        return builder;
+      }
+
+      Object readResolve() {
+        return recreateCaffeine().build();
       }
     }
   }
@@ -934,6 +984,39 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V>, Serializab
           logger.log(Level.WARNING, "Exception thrown during refresh", t);
         }
       });
+    }
+
+    /* ---------------- Serialization Support -------------- */
+
+    static final long serialVersionUID = 1;
+
+    @Override
+    Object writeReplace() {
+      return new LoadingSerializationProxy<K, V>(this);
+    }
+
+    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+      throw new InvalidObjectException("Proxy required");
+    }
+
+    /**
+     * Serializes the configuration of the cache, reconsitituting it as a Cache using
+     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
+     */
+    static final class LoadingSerializationProxy<K, V> extends ManualSerializationProxy<K, V> {
+      private static final long serialVersionUID = 1;
+
+      final CacheLoader<? super K, V> loader;
+
+      LoadingSerializationProxy(LocalLoadingCache<K, V> loading) {
+        super(loading);
+        loader = loading.loader;
+      }
+
+      @Override
+      Object readResolve() {
+        return recreateCaffeine().build(loader);
+      }
     }
   }
 }

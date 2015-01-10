@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
@@ -23,31 +24,33 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 
 /**
+ * Some common removal listener implementations for tests.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class RemovalListeners {
 
   private RemovalListeners() {}
 
-  public static <K, V> RemovalListener<K, V> ignoring() {
-    return new RemovalListener<K, V>() {
-      @Override public void onRemoval(RemovalNotification<K, V> notification) {}
-    };
-  }
-
+  /** A removal listener that stores the notifications for inspection. */
   public static <K, V> RemovalListener<K, V> consuming() {
     return new ConsumingRemovalListener<K, V>();
   }
 
+  /** A removal listener that throws an exception if a notification arrives. */
   public static <K, V> RemovalListener<K, V> rejecting() {
     return new RejectingRemovalListener<K, V>();
   }
 
-  public static final class RejectingRemovalListener<K, V> implements RemovalListener<K, V> {
+  public static final class RejectingRemovalListener<K, V>
+      implements RemovalListener<K, V>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     public boolean reject = true;
     public int rejected;
 
-    @Override public void onRemoval(RemovalNotification<K, V> notification) {
+    @Override
+    public void onRemoval(RemovalNotification<K, V> notification) {
       if (reject) {
         rejected++;
         throw new RejectedExecutionException("Rejected eviction of " + notification);
@@ -55,7 +58,10 @@ public final class RemovalListeners {
     }
   }
 
-  public static final class ConsumingRemovalListener<K, V> implements RemovalListener<K, V> {
+  public static final class ConsumingRemovalListener<K, V>
+      implements RemovalListener<K, V>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final List<RemovalNotification<K, V>> evicted;
 
     public ConsumingRemovalListener() {

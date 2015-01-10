@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
@@ -125,7 +126,9 @@ public final class GuavaLocalCache {
     return castedCache;
   }
 
-  static class GuavaCache<K, V> implements Cache<K, V> {
+  static class GuavaCache<K, V> implements Cache<K, V>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final com.google.common.cache.Cache<K, V> cache;
     private final StatsCounter statsCounter;
     private final Ticker ticker;
@@ -377,7 +380,10 @@ public final class GuavaLocalCache {
     }
   }
 
-  static class GuavaLoadingCache<K, V> extends GuavaCache<K, V> implements LoadingCache<K, V> {
+  static class GuavaLoadingCache<K, V> extends GuavaCache<K, V>
+      implements LoadingCache<K, V>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final com.google.common.cache.LoadingCache<K, V> cache;
 
     GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache, Ticker ticker) {
