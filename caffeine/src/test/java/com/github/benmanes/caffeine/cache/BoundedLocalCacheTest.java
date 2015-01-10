@@ -47,6 +47,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import com.google.common.collect.Lists;
 import com.jayway.awaitility.Awaitility;
 
@@ -414,7 +415,7 @@ public final class BoundedLocalCacheTest {
   }
 
   void checkDrainBlocks(BoundedLocalCache<Integer, Integer> localCache, Runnable task) {
-    BoundedLocalCache.Sync lock = (BoundedLocalCache.Sync) localCache.evictionLock;
+    NonReentrantLock lock = localCache.evictionLock;
     AtomicBoolean done = new AtomicBoolean();
     lock.lock();
     try {

@@ -86,7 +86,7 @@ public final class IsValidBoundedLocalCache<K, V>
       desc.expectThat("overflow", map.maximumWeightedSize.get(),
           is(greaterThanOrEqualTo(map.weightedSize())));
     }
-    desc.expectThat("unlocked", ((BoundedLocalCache.Sync) map.evictionLock).isLocked(), is(false));
+    desc.expectThat("unlocked", map.evictionLock.isLocked(), is(false));
 
     if (map.isEmpty()) {
       desc.expectThat("empty map", map, emptyMap());

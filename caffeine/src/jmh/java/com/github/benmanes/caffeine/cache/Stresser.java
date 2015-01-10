@@ -26,7 +26,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.LongAdder;
 
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.Sync;
 import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -108,7 +107,7 @@ public final class Stresser {
         System.out.printf("Pending reads = %s%n", pendingReads);
         System.out.printf("Pending write = %s%n", pendingWrites);
         System.out.printf("Drain status = %s%n", local.drainStatus);
-        System.out.printf("Lock status = %s%n", ((Sync) local.evictionLock).isLocked());
+        System.out.printf("Lock status = %s%n", local.evictionLock.isLocked());
         System.out.printf("Evictions = %,d%n", evictions.intValue());
       }
     };

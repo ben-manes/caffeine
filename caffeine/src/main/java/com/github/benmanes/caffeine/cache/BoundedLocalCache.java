@@ -51,8 +51,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.AbstractQueuedSynchronizer;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -69,6 +67,7 @@ import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**
  * A hash table supporting full concurrency of retrievals, adjustable expected
@@ -228,8 +227,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   @GuardedBy("evictionLock") // must write under lock
   final PaddedAtomicLong maximumWeightedSize;
 
-  final Lock evictionLock;
   final Queue<Runnable> writeBuffer;
+  final NonReentrantLock evictionLock;
   final PaddedAtomicReference<DrainStatus> drainStatus;
 
   @GuardedBy("evictionLock")
@@ -286,7 +285,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     writeBuffer = new ConcurrentLinkedQueue<Runnable>();
 
     // The eviction support
-    evictionLock = new Sync();
+    evictionLock = new NonReentrantLock();
     weigher = (builder.getWeigher() == Weigher.singleton())
         ? Weigher.singleton()
         : new BoundedWeigher<>(builder.getWeigher());
@@ -2278,73 +2277,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return keyReference;
     } @Override public boolean equals(Object object) {
       return referenceEquals(this, object);
-    }
-  }
-
-  /** A non-fair lock using AQS state to represent if the lock is held. */
-  static final class Sync extends AbstractQueuedSynchronizer implements Lock, Serializable {
-    static final long serialVersionUID = 1L;
-    static final int UNLOCKED = 0;
-    static final int LOCKED = 1;
-
-    @Override
-    public void lock() {
-      acquire(LOCKED);
-    }
-
-    @Override
-    public void lockInterruptibly() throws InterruptedException {
-      acquireInterruptibly(LOCKED);
-    }
-
-    @Override
-    public boolean tryLock() {
-      return tryAcquire(LOCKED);
-    }
-
-    @Override
-    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-      return tryAcquireNanos(1, unit.toNanos(time));
-    }
-
-    @Override
-    public void unlock() {
-      release(1);
-    }
-
-    @Override
-    public Condition newCondition() {
-      return new ConditionObject();
-    }
-
-    @Override
-    protected boolean tryAcquire(int acquires) {
-      if (compareAndSetState(UNLOCKED, LOCKED)) {
-        setExclusiveOwnerThread(Thread.currentThread());
-        return true;
-      } else if (Thread.currentThread() == getExclusiveOwnerThread()) {
-        throw new IllegalMonitorStateException();
-      }
-      return false;
-    }
-
-    @Override
-    protected boolean tryRelease(int releases) {
-      if (Thread.currentThread() != getExclusiveOwnerThread()) {
-        throw new IllegalMonitorStateException();
-      }
-      setExclusiveOwnerThread(null);
-      setState(UNLOCKED);
-      return true;
-    }
-
-    @Override
-    protected boolean isHeldExclusively() {
-      return isLocked() && (getExclusiveOwnerThread() == Thread.currentThread());
-    }
-
-    public final boolean isLocked() {
-      return getState() == LOCKED;
     }
   }
 

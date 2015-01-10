@@ -17,7 +17,12 @@ package com.github.benmanes.caffeine.locks;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -39,22 +44,62 @@ public final class NonReentrantLockTest {
   }
 
   @Test(dataProvider = "lock")
-  public void lock(NonReentrantLock lock) {
-    lock.lock();
-    assertThat(lock.tryLock(), is(false));
+  public void tryLock_timed(NonReentrantLock lock) throws InterruptedException {
+    assertThat(lock.tryLock(1, TimeUnit.MINUTES), is(true));
     lock.unlock();
   }
 
   @Test(dataProvider = "lock")
-  public void exclusive(NonReentrantLock lock) {
-    new Thread(() -> {
+  public void lockInterruptibly(NonReentrantLock lock) throws InterruptedException {
+    lock.lockInterruptibly();
+    lock.unlock();
+  }
+
+  @Test(dataProvider = "lock")
+  public void lock(NonReentrantLock lock) {
+    lock.lock();
+    assertThat(lock.tryLock(), is(false));
+    assertThat(lock.isHeldByCurrentThread(), is(true));
+    assertThat(lock.getOwner(), is(Thread.currentThread()));
+    lock.unlock();
+  }
+
+  @Test(dataProvider = "lock")
+  public void lock_exclusive(NonReentrantLock lock) {
+    Thread testThread = Thread.currentThread();
+    Thread thread = new Thread(() -> {
       lock.lock();
       await().until(() -> lock.hasQueuedThreads());
+      assertThat(lock.getQueueLength(), is(1));
+      assertThat(lock.getQueuedThreads(), contains(testThread));
+      assertThat(lock.hasQueuedThread(testThread), is(true));
       lock.unlock();
-    }).start();
+    });
+    thread.start();
     await().until(() -> lock.isLocked());
     assertThat(lock.tryLock(), is(false));
     lock.lock();
+    lock.unlock();
+  }
+
+  @Test(dataProvider = "lock")
+  public void condition(NonReentrantLock lock) {
+    Condition condition = lock.newCondition();
+    AtomicBoolean ready = new AtomicBoolean();
+    Thread thread = new Thread(() -> {
+      lock.lock();
+      ready.set(true);
+      condition.awaitUninterruptibly();
+    });
+    thread.start();
+    await().untilTrue(ready);
+    lock.lock();
+
+    assertThat(lock.hasWaiters(condition), is(true));
+    assertThat(lock.getWaitQueueLength(condition), is(1));
+    assertThat(lock.getWaitingThreads(condition), contains(thread));
+
+    condition.signal();
     lock.unlock();
   }
 }
