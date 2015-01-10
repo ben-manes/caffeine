@@ -74,11 +74,15 @@ tasks.withType(Test) {
     testLogging.info.events 'passed'
     options.includeGroups = ['slow']
   } else {
+    maxHeapSize = '384m'
     options {
       threadCount = System.env.'CI' ? 2 : 6
       excludeGroups = ['slow']
       parallel = 'methods'
     }
+  }
+  if (System.env.'CI') {
+    forkEvery = 2
   }
 }
 
