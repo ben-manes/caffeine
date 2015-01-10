@@ -34,7 +34,7 @@ pmd {
 
 jacocoTestReport {
   group = 'Coverage reports'
-  description = 'Generates a test coverage report for a projects'
+  description = 'Generates a test coverage report for a project'
 
   reports {
     xml.enabled = true

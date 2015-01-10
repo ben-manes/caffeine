@@ -182,15 +182,17 @@ public final class CacheContext {
   }
 
   public long maximumWeight() {
-    assertThat("Invalid usage of context", (weigher != CacheWeigher.DEFAULT), is(not(nullValue())));
+    assertThat("Invalid usage of context", isWeighted(), is(not(nullValue())));
     long maximum = weigher.multipler() * maximumSize.max();
     return (maximum < 0) ? Long.MAX_VALUE : maximum;
   }
 
   public long maximumWeightOrSize() {
-    return (weigher == CacheWeigher.DEFAULT)
-        ? maximumSize()
-        : maximumWeight();
+    return isWeighted() ? maximumWeight() : maximumSize();
+  }
+
+  public boolean isWeighted() {
+    return (weigher != CacheWeigher.DEFAULT);
   }
 
   public boolean isUnbounded() {
@@ -240,6 +242,14 @@ public final class CacheContext {
 
   public boolean expires() {
     return (afterAccess != Expire.DISABLED) || (afterWrite != Expire.DISABLED);
+  }
+
+  public Expire expireAfterAccess() {
+    return afterAccess;
+  }
+
+  public Expire expireAfterWrite() {
+    return afterWrite;
   }
 
   public FakeTicker ticker() {
