@@ -45,9 +45,9 @@ a Guava compatible adapter is available (see [migration guide](MIGRATING.md)).
 | [CaffeinatedGuava](guava/src/main/java/com/github/benmanes/caffeine/guava/CaffeinatedGuava.java) | An adapter that exposes a Caffeine cache through Guava facades |
 
 #### Tracing and Simulator
-A lightweight cache tracing api can be enabled to capture information on how well an application
+A lightweight cache tracing API can be enabled to capture information on how well an application
 utilizes its caches. Typically caches are either too small due to statistics not being monitored, or
-too large due to over sizing to increase the hit rate. Running the simulator on traced data enables
+too large due to oversizing to increase the hit rate. Running the simulator on traced data enables
 adjusting the cache size based on both the hit rate and active content ratio.
 
 The simulator includes a family of eviction policies and distribution generators. As each policy is
