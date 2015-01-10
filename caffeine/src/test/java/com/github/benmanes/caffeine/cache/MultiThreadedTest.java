@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Google Inc. All Rights Reserved.
+ * Copyright 2015 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,12 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Lists.newArrayList;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.testng.Assert.fail;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -41,92 +37,85 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.testng.log4testng.Logger;
 
 import scala.concurrent.forkjoin.ThreadLocalRandom;
 
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.google.common.testing.SerializableTester;
+import com.github.benmanes.caffeine.cache.testing.CacheProvider;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
+import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * A test to assert basic concurrency characteristics by validating the internal state after load.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Listeners(CacheValidationListener.class)
+@Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class MultiThreadedTest{
   private static final Logger logger = Logger.getLogger(MultiThreadedTest.class);
 
-  private final int ITERATIONS = 40000;
-  private final int MAX_SIZE = 50000;
-  private final int NTHREADS = 20;
-  private final int TIMEOUT = 30;
+  private static final int ITERATIONS = 40000;
+  private static final int NTHREADS = 20;
+  private static final int TIMEOUT = 30;
 
-  @Test
-  public void concurrent() {
-    List<Integer> keys = newArrayList();
-    for (int i = 0; i < ITERATIONS; i++) {
-      keys.add(ThreadLocalRandom.current().nextInt(ITERATIONS / 100));
-    }
-    List<List<Integer>> sets = shuffle(NTHREADS, keys);
-    Queue<String> failures = new ConcurrentLinkedQueue<>();
-    Cache<Integer, Integer> cache = Caffeine.newBuilder()
-        .maximumSize(MAX_SIZE)
-        .build();
-    executeWithTimeOut(cache, failures, () ->
-        ConcurrentTestHarness.timeTasks(NTHREADS, new Thrasher(cache, sets, failures)));
+  private final List<List<Integer>> workingSets;
+
+  public MultiThreadedTest() {
+    List<Integer> keys = IntStream.range(0, ITERATIONS).boxed()
+        .map(i -> ThreadLocalRandom.current().nextInt(ITERATIONS / 100))
+        .collect(Collectors.toList());
+    workingSets = shuffle(NTHREADS, keys);
   }
 
-  @Test
-  public void concurrent_weighted() {
-    final Cache<Integer, List<Integer>> cache = Caffeine.newBuilder()
-        .weigher(CacheWeigher.COLLECTION)
-        .maximumWeight(NTHREADS)
-        .build();
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = MaximumSize.FULL, stats = Stats.ENABLED,
+      expireAfterAccess = Expire.FOREVER, expireAfterWrite = Expire.FOREVER,
+      population = Population.EMPTY, removalListener = Listener.DEFAULT)
+  public void concurrent(LoadingCache<Integer, Integer> cache) {
     Queue<String> failures = new ConcurrentLinkedQueue<>();
-    Queue<List<Integer>> values = new ConcurrentLinkedQueue<>();
-    for (int i = 1; i <= NTHREADS; i++) {
-      Integer[] array = new Integer[i];
-      Arrays.fill(array, Integer.MIN_VALUE);
-      values.add(Arrays.asList(array));
-    }
-    executeWithTimeOut(cache, failures, () ->
-        ConcurrentTestHarness.timeTasks(NTHREADS, () -> {
-          List<Integer> value = values.poll();
-          for (int i = 0; i < ITERATIONS; i++) {
-            cache.put(i % 10, value);
-          }
-        }));
+    Thrasher thrasher = new Thrasher(cache, workingSets, failures);
+    executeWithTimeOut(cache, failures, () -> ConcurrentTestHarness.timeTasks(NTHREADS, thrasher));
   }
 
   /**
    * Based on the passed in working set, creates N shuffled variants.
    *
    * @param samples the number of variants to create
-   * @param workingSet the base working set to build from
+   * @param baseline the base working set to build from
    */
-  private static <T> List<List<T>> shuffle(int samples, Collection<T> workingSet) {
-    List<List<T>> sets = new ArrayList<>(samples);
+  private static <T> List<List<T>> shuffle(int samples, Collection<T> baseline) {
+    List<List<T>> workingSets = new ArrayList<>(samples);
     for (int i = 0; i < samples; i++) {
-      List<T> set = new ArrayList<>(workingSet);
-      Collections.shuffle(set);
-      sets.add(set);
+      List<T> workingSet = new ArrayList<>(baseline);
+      Collections.shuffle(workingSet);
+      workingSets.add(ImmutableList.copyOf(workingSet));
     }
-    return sets;
+    return ImmutableList.copyOf(workingSets);
   }
 
-  /**
-   * Executes operations against the cache to simulate random load.
-   */
+  /** Executes operations against the cache to simulate random load. */
   private final class Thrasher implements Runnable {
-    private final Cache<Integer, Integer> cache;
+    private final LoadingCache<Integer, Integer> cache;
     private final List<List<Integer>> sets;
     private final Queue<String> failures;
     private final AtomicInteger index;
 
-    public Thrasher(Cache<Integer, Integer> cache,
+    public Thrasher(LoadingCache<Integer, Integer> cache,
         List<List<Integer>> sets, Queue<String> failures) {
       this.index = new AtomicInteger();
       this.failures = failures;
@@ -136,142 +125,79 @@ public final class MultiThreadedTest{
 
     @Override
     public void run() {
-      Operation[] ops = Operation.values();
-      int id = index.getAndIncrement();
       Random random = new Random();
+      int id = index.getAndIncrement();
       for (Integer key : sets.get(id)) {
-        Operation operation = ops[random.nextInt(ops.length)];
+        CacheOperation<Integer, Integer> operation = operations[random.nextInt(operations.length)];
         try {
-          operation.execute(cache, key);
+          operation.execute(cache, key, key);
         } catch (RuntimeException e) {
           failures.add(String.format("Failed: key %s on operation %s", key, operation));
           throw e;
         } catch (Throwable t) {
-          failures.add(String.format("Halted: key %s on operation %s", key, operation));
+          failures.add(String.format("Failed: key %s on operation %s", key, operation));
         }
       }
     }
   }
 
-  /**
-   * The public operations that can be performed on the cache.
-   */
-  private enum Operation {
-    CONTAINS_KEY() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().containsKey(key);
-      }
-    },
-    CONTAINS_VALUE() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().containsValue(key);
-      }
-    },
-    IS_EMPTY() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().isEmpty();
-      }
-    },
-    SIZE() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        checkState(cache.asMap().size() >= 0);
-      }
-    },
-    GET() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().get(key);
-      }
-    },
-    PUT() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().put(key, key);
-      }
-    },
-    PUT_IF_ABSENT() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().putIfAbsent(key, key);
-      }
-    },
-    REMOVE() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().remove(key);
-      }
-    },
-    REMOVE_IF_EQUAL() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().remove(key, key);
-      }
-    },
-    REPLACE() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().replace(key, key);
-      }
-    },
-    REPLACE_IF_EQUAL() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().replace(key, key, key);
-      }
-    },
-    CLEAR() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.asMap().clear();
-      }
-    },
-    KEY_SET() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        for (Integer i : cache.asMap().keySet()) {
-          checkNotNull(i);
-        }
-        cache.asMap().keySet().toArray(new Integer[cache.asMap().size()]);
-      }
-    },
-    VALUES() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        for (Integer i : cache.asMap().values()) {
-          checkNotNull(i);
-        }
-        cache.asMap().values().toArray(new Integer[cache.asMap().size()]);
-      }
-    },
-    ENTRY_SET() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        for (Entry<Integer, Integer> entry : cache.asMap().entrySet()) {
-          checkNotNull(entry);
-          checkNotNull(entry.getKey());
-          checkNotNull(entry.getValue());
-        }
-        cache.asMap().entrySet().toArray(new Entry[cache.asMap().size()]);
-      }
-    },
-    HASHCODE() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.hashCode();
-      }
-    },
-    EQUALS() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.equals(cache);
-      }
-    },
-    TO_STRING() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        cache.toString();
-      }
-    },
-    SERIALIZE() {
-      @Override void execute(Cache<Integer, Integer> cache, Integer key) {
-        SerializableTester.reserialize(cache);
-      }
-    };
-
-    /**
-     * Executes the operation.
-     *
-     * @param cache the cache to operate against
-     * @param key the key to perform the operation with
-     */
-    abstract void execute(Cache<Integer, Integer> cache, Integer key);
+  /** The public operations that can be performed on the cache. */
+  interface CacheOperation<K, V> {
+    void execute(LoadingCache<Integer, Integer> cache, Integer key, Integer value);
   }
+
+  @SuppressWarnings("unchecked")
+  CacheOperation<Integer, Integer>[] operations = new CacheOperation[] {
+      // LoadingCache
+      (cache, key, value) -> cache.get(key),
+      (cache, key, value) -> cache.getAll(ImmutableList.of(key)),
+      (cache, key, value) -> cache.refresh(key),
+
+      // Cache
+      (cache, key, value) -> cache.getIfPresent(key),
+      (cache, key, value) -> cache.get(key, Function.identity()),
+      (cache, key, value) -> cache.getAllPresent(ImmutableList.of(key)),
+      (cache, key, value) -> cache.put(key, value),
+      (cache, key, value) -> cache.putAll(ImmutableMap.of(key, value)),
+      (cache, key, value) -> cache.invalidate(key),
+      (cache, key, value) -> cache.invalidateAll(ImmutableList.of(key)),
+      (cache, key, value) -> { // expensive so do it less frequently
+        int random = ThreadLocalRandom.current().nextInt();
+        if ((random & 255) == 0) {
+          cache.invalidateAll();
+        }
+      },
+      (cache, key, value) -> checkState(cache.estimatedSize() >= 0),
+      (cache, key, value) -> cache.stats(),
+      (cache, key, value) -> cache.cleanUp(),
+
+      // Map
+      (cache, key, value) -> cache.asMap().containsKey(key),
+      (cache, key, value) -> cache.asMap().containsValue(value),
+      (cache, key, value) -> cache.asMap().isEmpty(),
+      (cache, key, value) -> checkState(cache.asMap().size() >= 0),
+      (cache, key, value) -> cache.asMap().get(key),
+      (cache, key, value) -> cache.asMap().put(key, value),
+      (cache, key, value) -> cache.asMap().putAll(ImmutableMap.of(key, value)),
+      (cache, key, value) -> cache.asMap().putIfAbsent(key, value),
+      (cache, key, value) -> cache.asMap().remove(key),
+      (cache, key, value) -> cache.asMap().remove(key, value),
+      (cache, key, value) -> cache.asMap().replace(key, value),
+      (cache, key, value) -> cache.asMap().replace(key, value, value),
+      (cache, key, value) -> { // expensive so do it less frequently
+        int random = ThreadLocalRandom.current().nextInt();
+        if ((random & 255) == 0) {
+          cache.asMap().clear();
+        }
+      },
+      (cache, key, value) -> cache.asMap().keySet().toArray(new Object[cache.asMap().size()]),
+      (cache, key, value) -> cache.asMap().values().toArray(new Object[cache.asMap().size()]),
+      (cache, key, value) -> cache.asMap().entrySet().toArray(new Entry[cache.asMap().size()]),
+      (cache, key, value) -> cache.hashCode(),
+      (cache, key, value) -> cache.equals(cache),
+      (cache, key, value) -> cache.toString(),
+      //(cache, key, value) -> SerializableTester.reserialize(cache),
+  };
 
   /* ---------------- Utilities -------------- */
 
@@ -303,7 +229,7 @@ public final class MultiThreadedTest{
     }
     es.shutdownNow();
     try {
-      es.awaitTermination(10, SECONDS);
+      es.awaitTermination(10, TimeUnit.SECONDS);
     } catch (InterruptedException ex) {
       fail("", ex);
     }

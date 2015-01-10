@@ -19,9 +19,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
@@ -39,6 +41,8 @@ import com.google.common.util.concurrent.Uninterruptibles;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ConcurrentTestHarness {
+  private static final Executor executor = Executors.newCachedThreadPool(
+      new ThreadFactoryBuilder().setDaemon(true).build());
 
   private ConcurrentTestHarness() {}
 
@@ -65,10 +69,9 @@ public final class ConcurrentTestHarness {
     CountDownLatch endGate = new CountDownLatch(nThreads);
     AtomicReferenceArray<T> results = new AtomicReferenceArray<T>(nThreads);
 
-    List<Thread> threads = new ArrayList<>(nThreads);
     for (int i = 0; i < nThreads; i++) {
       final int index = i;
-      Thread thread = new Thread(() -> {
+      executor.execute(() -> {
         try {
           startGate.await();
           try {
@@ -80,9 +83,6 @@ public final class ConcurrentTestHarness {
           throw new RuntimeException(e);
         }
       });
-      thread.setDaemon(true);
-      thread.start();
-      threads.add(thread);
     }
 
     long start = System.nanoTime();
