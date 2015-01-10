@@ -75,9 +75,9 @@ tasks.withType(Test) {
     options.includeGroups = ['slow']
   } else {
     options {
+      threadCount = System.env.'CI' ? 2 : 6
       excludeGroups = ['slow']
       parallel = 'methods'
-      threadCount = 6
     }
   }
 }
