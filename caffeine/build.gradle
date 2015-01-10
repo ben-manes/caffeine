@@ -3,6 +3,7 @@ apply from: "${projectDir}/testing.gradle"
 dependencies {
   compile libraries.jsr305
 
+  testCompile project(':simulator')
   testCompile libraries.guava
   testCompile test_libraries.awaitility
   testCompile test_libraries.guava_testlib

@@ -14,37 +14,31 @@
  * permissions and limitations under the License. See accompanying
  * LICENSE file.
  */
-package com.github.benmanes.caffeine.generator;
+package com.github.benmanes.caffeine.cache.simulator.generator;
 
 /**
- * The workload tried to do something bad.
+ * A trivial integer generator that always returns the same value.
  *
+ * @author sears
  * @see https://github.com/brianfrankcooper/YCSB
  */
-public class WorkloadException extends Exception
-{
-  /**
-   *
-   */
-  private static final long serialVersionUID = 8844396756042772132L;
+public class ConstantIntegerGenerator extends IntegerGenerator {
+	private final int i;
+	/**
+	 * @param i The integer that this generator will always return.
+	 */
+	public ConstantIntegerGenerator(int i) {
+		this.i = i;
+	}
 
-  public WorkloadException(String message)
-  {
-    super(message);
-  }
+	@Override
+	public int nextInt() {
+		return i;
+	}
 
-  public WorkloadException()
-  {
-    super();
-  }
+	@Override
+	public double mean() {
+		return i;
+	}
 
-  public WorkloadException(String message, Throwable cause)
-  {
-    super(message,cause);
-  }
-
-  public WorkloadException(Throwable cause)
-  {
-    super(cause);
-  }
 }

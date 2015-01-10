@@ -14,7 +14,7 @@
  * permissions and limitations under the License. See accompanying
  * LICENSE file.
  */
-package com.github.benmanes.caffeine.generator;
+package com.github.benmanes.caffeine.cache.simulator.generator;
 
 /**
  * Generate a popularity distribution of items, skewed to favor recent items significantly more than older items.

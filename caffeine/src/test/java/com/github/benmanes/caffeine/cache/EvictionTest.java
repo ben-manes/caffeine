@@ -35,6 +35,8 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Advanced.Eviction;
+import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -43,6 +45,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.google.common.collect.ImmutableList;
@@ -107,9 +110,9 @@ public final class EvictionTest {
       }
     };
     Map<Integer, Integer> all = new HashMap<>();
-    //IntegerGenerator generator = new ScrambledZipfianGenerator(10 * context.maximumSize());
+    IntegerGenerator generator = new ScrambledZipfianGenerator(10 * context.maximumSize());
     for (int i = 0; i < (10 * context.maximumSize()); i++) {
-      Integer next = 0;//generator.nextInt();
+      Integer next = generator.nextInt();
       all.putIfAbsent(next, next);
       Integer key = all.getOrDefault(next, next);
 
@@ -167,7 +170,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.put("a", asList(1, 2, 3));
     assertThat(cache.estimatedSize(), is(1L));
@@ -176,7 +180,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put_sameWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
@@ -187,7 +192,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put_changeWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
@@ -198,7 +204,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replace_sameWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
@@ -209,7 +216,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replace_changeWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
@@ -220,7 +228,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_sameWeight(
       Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
@@ -232,7 +241,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_changeWeight(
       Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
@@ -244,7 +254,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_fails(
       Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
@@ -256,7 +267,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void remove(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
@@ -267,7 +279,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void removeConditionally(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
@@ -278,7 +291,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void removeConditionally_fails(
       Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
@@ -290,7 +304,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY)
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void invalidateAll(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 

@@ -26,8 +26,8 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import com.github.benmanes.caffeine.generator.IntegerGenerator;
-import com.github.benmanes.caffeine.generator.ScrambledZipfianGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

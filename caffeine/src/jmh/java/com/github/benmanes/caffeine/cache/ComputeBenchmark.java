@@ -31,8 +31,8 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
-import com.github.benmanes.caffeine.generator.IntegerGenerator;
-import com.github.benmanes.caffeine.generator.ScrambledZipfianGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 

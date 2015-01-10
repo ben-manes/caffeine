@@ -14,7 +14,7 @@
  * permissions and limitations under the License. See accompanying
  * LICENSE file.
  */
-package com.github.benmanes.caffeine.generator;
+package com.github.benmanes.caffeine.cache.simulator.generator;
 
 /**
  * A generator that is capable of generating ints as well as strings

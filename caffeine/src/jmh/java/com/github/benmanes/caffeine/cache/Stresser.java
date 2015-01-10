@@ -27,8 +27,8 @@ import java.util.concurrent.atomic.LongAdder;
 
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Sync;
-import com.github.benmanes.caffeine.generator.IntegerGenerator;
-import com.github.benmanes.caffeine.generator.ScrambledZipfianGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
