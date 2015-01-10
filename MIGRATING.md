@@ -5,8 +5,8 @@
 #### API compatibility
 
 Caffeine provides an adapter to expose its caches using Guava's interfaces. These adapters provide
-the exact some API contract with the implementation caveats below. Where possible Guava like
-behavior is provided and validated with a port of Guava's test suite.
+the same API contract with the implementation caveats below. Where possible Guava like behavior is 
+emulated and validated with a port of Guava's test suite.
 
 When transitioning to Caffeine's interfaces, please note that while the two caches have similar
 method names the behavior may be slightly different. Please consult the JavaDoc to compare usages
@@ -19,10 +19,10 @@ has been crossed.
 
 #### Invalidation with concurrent computations
 
-Guava is able to remove entries while they are still being computed, deferring to the computing
-thread to notify the listener once complete. In Caffeine each entry being invalidated will block
-the caller until it has finished computing and will then be removed. The behavior is non-blocking
-if an asynchronous cache is used instead.
+Guava will ignore entries during invalidation while they are still being computed. In Caffeine
+each entry being invalidated will block the caller until it has finished computing and will then
+be removed. If an asynchronous cache is used instead then invalidation is non-blocking as the
+incomplete future will be removed and the removal notification delegated to the computing thread.
 
 #### Asynchronous notifications
 
@@ -38,7 +38,8 @@ executor (default: `ForkJoinPool.commonPool()`).
 
 Guava throws an exception when a null value has been computed and retains the entry if due to a
 refresh. Caffeine returns the null value and, if the computation was due to a refresh, removes the
-entry.
+entry. If the Guava adapters are used, Caffeine will behave as Guava does if built with a Guava
+`CacheLoader`.
 
 #### CacheStats
 
@@ -51,7 +52,7 @@ change is due to null computed values being treated as load failures and not as 
 #### Weigher
 
 ConcurrentLinkedHashMap requires a minimum weight of 1. Like Guava, Caffeine allows a mimimum 
-weight of 0.
+weight of 0 to indicate that the entry will not be evicted due to a size-based policy.
 
 #### Asynchronous notifications
 

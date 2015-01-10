@@ -149,13 +149,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * entry is encoded within the value's weight.
    *
    * Alive: The entry is in both the hash-table and the page replacement policy.
-   * This is represented by a positive weight.
+   * This is represented by a zero or positive weight.
    *
    * Retired: The entry is not in the hash-table and is pending removal from the
-   * page replacement policy. This is represented by a negative weight.
+   * page replacement policy. This is represented by a negative weight, where the
+   * hole of a retired entry with zero weight has no harmful impact on the policy
+   * behavior.
    *
    * Dead: The entry is not in the hash-table and is not in the page replacement
-   * policy. This is represented by a weight of zero.
+   * policy. This is represented by a weight of Integer.MIN_VALUE.
    *
    * The Least Recently Used page replacement algorithm was chosen due to its
    * simplicity, high hit rate, and ability to be implemented with O(1) time
@@ -419,7 +421,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         return;
       }
 
-      evict(node, RemovalCause.SIZE);
+      if (node.get().weight == 0) {
+        // When the weight of an entry is zero it will not be considered for size-based eviction
+        accessOrderDeque.add(node);
+      } else {
+        evict(node, RemovalCause.SIZE);
+      }
+
     }
   }
 
@@ -739,7 +747,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   void makeDead(Node<K, V> node) {
     synchronized (node) {
       WeightedValue<V> current = node.get();
-      WeightedValue<V> dead = new WeightedValue<V>(current.getValueRef(), 0);
+      if (current.isDead()) {
+        return;
+      }
+      WeightedValue<V> dead = new WeightedValue<V>(current.getValueRef(), Integer.MIN_VALUE);
       if (node.compareAndSet(current, dead)) {
         weightedSize.lazySet(weightedSize.get() - Math.abs(current.weight));
         return;
@@ -1711,7 +1722,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
      * If the entry is available in the hash-table and page replacement policy.
      */
     boolean isAlive() {
-      return weight > 0;
+      return weight >= 0;
     }
 
     /**
@@ -1719,7 +1730,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
      * the page replacement policy.
      */
     boolean isRetired() {
-      return weight < 0;
+      return !isDead() && (weight < 0);
     }
 
     /**
@@ -1727,7 +1738,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
      * policy.
      */
     boolean isDead() {
-      return weight == 0;
+      return weight == Integer.MIN_VALUE;
     }
   }
 

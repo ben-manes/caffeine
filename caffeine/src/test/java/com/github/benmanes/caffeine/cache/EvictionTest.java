@@ -133,21 +133,24 @@ public final class EvictionTest {
         .build();
     Eviction<?, ?> eviction = cache.advanced().eviction().get();
 
+    // Never evicted
+    cache.put(0, asList());
+
     cache.put(1, asList(1, 2));
     cache.put(2, asList(3, 4, 5, 6, 7));
     cache.put(3, asList(8, 9, 10));
-    assertThat(cache.estimatedSize(), is(3L));
+    assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().get(), is(10L));
 
     // evict (1)
     cache.put(4, asList(11));
     assertThat(cache.asMap().containsKey(1), is(false));
-    assertThat(cache.estimatedSize(), is(3L));
+    assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().get(), is(9L));
 
     // evict (2, 3)
     cache.put(5, asList(12, 13, 14, 15, 16, 17, 18, 19, 20));
-    assertThat(cache.estimatedSize(), is(2L));
+    assertThat(cache.estimatedSize(), is(3L));
     assertThat(eviction.weightedSize().get(), is(10L));
   }
 
@@ -163,7 +166,7 @@ public final class EvictionTest {
 
   @CacheSpec(maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.ZERO, population = Population.EMPTY)
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   public void put_zeroWeighted(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
   }
