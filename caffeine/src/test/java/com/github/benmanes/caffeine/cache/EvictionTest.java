@@ -94,9 +94,9 @@ public final class EvictionTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.SIZE));
   }
 
-  @Test(enabled = false, dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.EMPTY, maximumSize = { MaximumSize.FULL })
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      maximumSize = { MaximumSize.ZERO, MaximumSize.ONE, MaximumSize.FULL })
   public void evict_lru(Cache<Integer, Integer> cache, CacheContext context) {
     int[] evicted = new int[1];
     Map<Integer, Integer> lru = new LinkedHashMap<Integer, Integer>(1, 0.75f, true) {
