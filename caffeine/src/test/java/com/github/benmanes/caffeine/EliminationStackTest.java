@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -172,6 +173,23 @@ public final class EliminationStackTest {
       assertThat(stack.contains(value), is(false));
     }
     assertThat(stack.isEmpty(), is(true));
+  }
+
+  @Test(dataProvider = "empty")
+  public void asLifoQueue(EliminationStack<Integer> stack) {
+    Queue<Integer> queue = stack.asLifoQueue();
+    assertThat(queue.offer(1), is(true));
+    assertThat(queue.offer(2), is(true));
+    assertThat(queue.offer(3), is(true));
+    assertThat(queue.isEmpty(), is(false));
+    assertThat(queue.contains(1), is(true));
+    assertThat(queue.size(), is(3));
+    assertThat(queue.peek(), is(3));
+    assertThat(queue.poll(), is(3));
+    assertThat(queue.remove(2), is(true));
+    assertThat(queue.iterator().hasNext(), is(true));
+    queue.clear();
+    assertThat(queue.isEmpty(), is(true));
   }
 
   @Test(dataProvider = "empty")
