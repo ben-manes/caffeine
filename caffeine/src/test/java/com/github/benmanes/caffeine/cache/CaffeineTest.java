@@ -42,6 +42,7 @@ public final class CaffeineTest {
   public void unconfigured() {
     assertThat(Caffeine.newBuilder().build(), is(not(nullValue())));
     assertThat(Caffeine.newBuilder().build(single), is(not(nullValue())));
+    assertThat(Caffeine.newBuilder().buildAsync(single), is(not(nullValue())));
     assertThat(Caffeine.newBuilder().toString(), is(Caffeine.newBuilder().toString()));
   }
 
@@ -53,6 +54,7 @@ public final class CaffeineTest {
         .removalListener(x -> {}).recordStats();
     assertThat(configured.build(), is(not(nullValue())));
     assertThat(configured.build(single), is(not(nullValue())));
+    assertThat(Caffeine.newBuilder().buildAsync(single), is(not(nullValue())));
     assertThat(configured.toString(), is(not(Caffeine.newBuilder().toString())));
   }
 

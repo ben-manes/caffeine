@@ -25,6 +25,7 @@
  */
 ext {
   versions = [
+    disruptor: '3.3.0',
     guava: '18.0',
     jsr305: '3.0.0',
   ]
@@ -55,6 +56,7 @@ ext {
   ]
 
   libraries = [
+    disruptor: "com.lmax:disruptor:${versions.disruptor}",
     guava: "com.google.guava:guava:${versions.guava}",
     jsr305: "com.google.code.findbugs:jsr305:${versions.jsr305}",
   ]

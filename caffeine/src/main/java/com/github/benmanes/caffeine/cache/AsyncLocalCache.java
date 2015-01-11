@@ -15,12 +15,17 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
 import java.util.function.Function;
@@ -34,10 +39,10 @@ final class AsyncLocalCache<K, V> implements AsyncLoadingCache<K, V> {
   final Function<K, CompletableFuture<V>> mappingFunction;
   final Cache<K, CompletableFuture<V>> localCache;
   final RemovalListener<K, V> removalListener;
-  final CacheLoader<K, V> loader;
+  final CacheLoader<? super K, V> loader;
   final Executor executor;
 
-  AsyncLocalCache(Caffeine<K, V> builder, CacheLoader<K, V> loader) {
+  AsyncLocalCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
     this.loader = loader;
     this.localCache = null;
     this.executor = builder.getExecutor();
@@ -53,11 +58,18 @@ final class AsyncLocalCache<K, V> implements AsyncLoadingCache<K, V> {
 
   @Override
   public CompletableFuture<V> get(K key) {
+    if (true) {
+      return null;
+    }
     return localCache.get(key, mappingFunction);
   }
 
   @Override
   public CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys) {
+    if (true) {
+      throw new UnsupportedOperationException("TODO");
+    }
+
     List<K> keysToLoad = new ArrayList<>();
     FutureTask<Map<K, V>> loadTask = new FutureTask<>(() -> {
       if (keysToLoad.isEmpty()) {
@@ -66,7 +78,9 @@ final class AsyncLocalCache<K, V> implements AsyncLoadingCache<K, V> {
         K key = keysToLoad.get(0);
         return Collections.singletonMap(key, loader.load(key));
       }
-      return loader.loadAll(keysToLoad);
+      @SuppressWarnings("unchecked")
+      Map<K, V> result = (Map<K, V>) loader.loadAll(keysToLoad);
+      return result;
     });
 
 
@@ -84,7 +98,6 @@ final class AsyncLocalCache<K, V> implements AsyncLoadingCache<K, V> {
       futures.put(key, future);
     }
 
-
     return null;
   }
 
@@ -95,6 +108,34 @@ final class AsyncLocalCache<K, V> implements AsyncLoadingCache<K, V> {
 
   @Override
   public LoadingCache<K, V> synchronous() {
-    return null;
+    throw new UnsupportedOperationException("TODO");
+  }
+
+  /**
+   * A weigher for asynchronous computations. When the value is being loaded this weigher returns
+   * {@code 0} to indicate that the entry should not be evicted due to a size constraint. If the
+   * value is computed successfully the entry must be reinserted so that the weight is updated and
+   * the expiration timeouts reflect the value once present. This can be done safely using
+   * {@link Map#replace(Object, Object, Object)}.
+   */
+  static final class AsyncWeigher<K, V> implements Weigher<K, CompletableFuture<V>>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final Weigher<K, V> delegate;
+
+    AsyncWeigher(Weigher<K, V> delegate) {
+      this.delegate = requireNonNull(delegate);
+    }
+
+    @Override
+    public int weigh(K key, CompletableFuture<V> value) {
+      try {
+        return value.isDone() ? delegate.weigh(key, value.get()) : 0;
+      } catch (InterruptedException e) {
+        throw new CompletionException(e);
+      } catch (ExecutionException e) {
+        throw new CompletionException(e.getCause());
+      }
+    }
   }
 }

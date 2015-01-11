@@ -706,8 +706,12 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       @Nonnull CacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null);
+    requireWeightWithWeigher();
     requireNonNull(loader);
-    throw new UnsupportedOperationException();
+
+    @SuppressWarnings("unchecked")
+    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    return new AsyncLocalCache<K1, V1>(self, loader);
   }
 
   private void requireNonLoadingCache() {

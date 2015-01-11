@@ -1,1 +1,32 @@
+/** Cache tracing libraries as separate API and implementation dependencies. */
+apply plugin: 'eclipse'
 
+configurations {
+  api
+  apiArtifacts
+}
+
+sourceSets {
+  api.java.srcDirs = ['src/api/java']
+}
+
+dependencies {
+  compile libraries.jsr305
+  //compile project(path: ':tracing', configuration: 'apiArtifacts')
+  compile project(':caffeine')
+  compile libraries.disruptor
+}
+
+plugins.withType(EclipsePlugin) {
+  project.eclipse.classpath.plusConfigurations += [ configurations.api ]
+}
+
+task apiJar(type: Jar, group: "Build") {
+  description = 'Assembles a jar archive containing the api classes.'
+  baseName = "${project.name}-test"
+  from sourceSets.api.output
+}
+  
+artifacts {
+  apiArtifacts apiJar
+}

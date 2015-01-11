@@ -1,3 +1,4 @@
+/** Cache simulator using tracing data and a family of eviction policy options. */
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
 }

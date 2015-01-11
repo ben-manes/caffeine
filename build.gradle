@@ -69,7 +69,9 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', dependsOn: 
   description = 'Generates an aggregate report from all subprojects'
 
   // Only report code coverage for projects that are distrubuted
-  def publishedProjects = subprojects.findAll { it.name != 'simulator' };
+  def publishedProjects = subprojects.findAll {
+    (it.name != 'simulator') || (it.name != 'tracing')
+  };
 
   additionalSourceDirs = files(publishedProjects.sourceSets.main.allSource.srcDirs)
   sourceDirectories = files(publishedProjects.sourceSets.main.allSource.srcDirs)

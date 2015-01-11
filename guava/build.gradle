@@ -1,5 +1,5 @@
 /**
- * Guava compatibility adapter
+ * Guava compatibility adapter.
  *
  * The tests are forked from Guava commit e370dde.
  */
