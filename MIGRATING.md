@@ -44,7 +44,7 @@ entry. If the Guava adapters are used, Caffeine will behave as Guava does if bui
 #### CacheStats
 
 Guava's `CacheStats.loadExceptionCount()` and `CacheStats.loadExceptionRate()` are renamed to
-`CacheStats.loadFailureCount()` and `CacheStats.loadFailureRate()` respectfully in Caffeine. This
+`CacheStats.loadFailureCount()` and `CacheStats.loadFailureRate()` respectively in Caffeine. This
 change is due to null computed values being treated as load failures and not as exceptions.
 
 #### Android & GWT compatibility
@@ -55,15 +55,15 @@ Caffeine does not provide compatibility due to those platforms not supporting Ja
 
 #### Weigher
 
-ConcurrentLinkedHashMap requires a minimum weight of 1. Like Guava, Caffeine allows a mimimum 
+`ConcurrentLinkedHashMap` requires a minimum weight of 1. Like Guava, Caffeine allows a mimimum
 weight of 0 to indicate that the entry will not be evicted due to a size-based policy.
 
 #### Asynchronous notifications
 
-ConcurrentLinkedHashMap processes eviction notifications from a queue that any calling thread may
+`ConcurrentLinkedHashMap` processes eviction notifications from a queue that any calling thread may
 take from. Caffeine delegates to the configured executor (default: `ForkJoinPool.commonPool()`).
 
 #### Serialization
 
-ConcurrentLinkedHashMap retains the entries and discards the eviction order when serializing.
+`ConcurrentLinkedHashMap` retains the entries and discards the eviction order when serializing.
 Caffeine, like Guava, retains only the configuration and no data.
