@@ -370,7 +370,7 @@ public final class CaffeineTest {
   public void removalListener() {
     RemovalListener<Object, Object> removalListener = notif -> {};
     Caffeine<?, ?> builder = Caffeine.newBuilder().removalListener(removalListener);
-    assertThat(builder.getRemovalListener(), is(removalListener));
+    assertThat(builder.getRemovalListener(false), is(removalListener));
     builder.build();
   }
 }

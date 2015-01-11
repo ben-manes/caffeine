@@ -237,7 +237,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * Creates an instance based on the builder's configuration.
    */
   @SuppressWarnings({"unchecked", "cast"})
-  private BoundedLocalCache(Caffeine<K, V> builder, @Nullable CacheLoader<? super K, V> loader) {
+  private BoundedLocalCache(Caffeine<K, V> builder,
+      @Nullable CacheLoader<? super K, V> loader, boolean async) {
     // The data store and its maximum capacity
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     this.loader = loader;
@@ -282,7 +283,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     valueReferenceQueue = new ReferenceQueue<V>();
 
     // The notification queue and listener
-    removalListener = builder.getRemovalListener();
+    removalListener = builder.getRemovalListener(async);
     executor = builder.getExecutor();
 
     // The statistics
@@ -2088,7 +2089,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     LocalManualCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      this.cache = new BoundedLocalCache<>(builder, loader);
+      this.cache = new BoundedLocalCache<>(builder, loader, false);
       this.isWeighted = (builder.weigher != null);
     }
 

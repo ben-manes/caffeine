@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -67,10 +68,10 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
   boolean isRecordingStats;
   StatsCounter statsCounter;
 
-  UnboundedLocalCache(Caffeine<? super K, ? super V> builder) {
+  UnboundedLocalCache(Caffeine<? super K, ? super V> builder, boolean async) {
     this.data = new ConcurrentHashMap<K, V>(builder.getInitialCapacity());
     this.statsCounter = builder.getStatsCounterSupplier().get();
-    this.removalListener = builder.getRemovalListener();
+    this.removalListener = builder.getRemovalListener(async);
     this.isRecordingStats = builder.isRecordingStats();
     this.executor = builder.getExecutor();
     this.ticker = builder.getTicker();
@@ -758,7 +759,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     transient Advanced<K, V> advanced;
 
     LocalManualCache(Caffeine<K, V> builder) {
-      this.cache = new UnboundedLocalCache<>(builder);
+      this.cache = new UnboundedLocalCache<>(builder, false);
     }
 
     @Override
@@ -1017,6 +1018,142 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       Object readResolve() {
         return recreateCaffeine().build(loader);
       }
+    }
+  }
+
+  /* ---------------- Async Loading Cache -------------- */
+
+  static final class LocalAsyncLoadingCache<K, V> implements AsyncLoadingCache<K, V> {
+    final UnboundedLocalCache<K, CompletableFuture<V>> cache;
+    final CacheLoader<? super K, V> loader;
+
+    LoadingCacheView localCacheView;
+
+    LocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+      @SuppressWarnings("unchecked")
+      Caffeine<K, CompletableFuture<V>> futureBuilder = (Caffeine<K, CompletableFuture<V>>) builder;
+      this.cache = new UnboundedLocalCache<>(futureBuilder, true);
+      this.loader = loader;
+    }
+
+    @Override
+    public CompletableFuture<V> get(K key,
+        Function<? super K, CompletableFuture<V>> mappingFunction) {
+      return cache.get(key, mappingFunction);
+    }
+
+    @Override
+    public CompletableFuture<V> get(K key) {
+      return cache.get(key, k -> loader.asyncLoad(key, cache.executor));
+    }
+
+    @Override
+    public CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void put(K key, CompletableFuture<V> value) {
+      cache.put(key, value);
+    }
+
+    @Override
+    public LoadingCache<K, V> synchronous() {
+      return (localCacheView == null) ? (localCacheView = new LoadingCacheView()) : localCacheView;
+    }
+
+    final class LoadingCacheView implements LoadingCache<K, V> {
+
+      @Override
+      public V getIfPresent(Object key) {
+        CompletableFuture<V> future = cache.get(key);
+        return (future == null) ? null : future.getNow(null);
+      }
+
+      @Override
+      public Map<K, V> getAllPresent(Iterable<?> keys) {
+        int hits = 0;
+        int misses = 0;
+        Map<K, V> result = new LinkedHashMap<>();
+        for (Object key : keys) {
+          CompletableFuture<V> future = cache.data.get(key);
+          V value = (future == null) ? null : future.getNow(null);
+          if (value == null) {
+            misses++;
+          } else {
+            hits++;
+            @SuppressWarnings("unchecked")
+            K castKey = (K) key;
+            result.put(castKey, value);
+          }
+        }
+        cache.statsCounter.recordHits(hits);
+        cache.statsCounter.recordMisses(misses);
+        return Collections.unmodifiableMap(result);
+      }
+
+      @Override
+      public V get(K key, Function<? super K, ? extends V> mappingFunction) {
+        return null;
+      }
+
+      @Override
+      public V get(K key) {
+        return null;
+      }
+
+      @Override
+      public Map<K, V> getAll(Iterable<? extends K> keys) {
+        return null;
+      }
+
+      @Override
+      public void put(K key, V value) {
+        requireNonNull(value);
+        cache.put(key, CompletableFuture.completedFuture(value));
+      }
+
+      @Override
+      public void putAll(Map<? extends K, ? extends V> map) {
+        for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
+          put(entry.getKey(), entry.getValue());
+        }
+      }
+
+      @Override
+      public void invalidate(Object key) {}
+
+      @Override
+      public void invalidateAll(Iterable<?> keys) {}
+
+      @Override
+      public void invalidateAll() {}
+
+      @Override
+      public long estimatedSize() {
+        return 0;
+      }
+
+      @Override
+      public CacheStats stats() {
+        return cache.statsCounter.snapshot();
+      }
+
+      @Override
+      public ConcurrentMap<K, V> asMap() {
+        return null;
+      }
+
+      @Override
+      public void cleanUp() {}
+
+      @Override
+      public Advanced<K, V> advanced() {
+        return null;
+      }
+
+      @Override
+      public void refresh(K key) {}
     }
   }
 }

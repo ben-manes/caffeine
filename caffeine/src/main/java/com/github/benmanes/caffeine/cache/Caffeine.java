@@ -17,10 +17,15 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.ConcurrentModificationException;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
@@ -603,9 +608,16 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings("unchecked")
-  @Nonnull <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener() {
-    return (RemovalListener<K1, V1>) removalListener;
+  @Nonnull <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
+    @SuppressWarnings("unchecked")
+    RemovalListener<K1, V1> castedListener = (RemovalListener<K1, V1>) removalListener;
+    if (async) {
+      @SuppressWarnings("unchecked")
+      RemovalListener<K1, V1> asyncListener = (RemovalListener<K1, V1>)
+          new AsyncRemovalListener<K1, V1>(castedListener, executor);
+      return asyncListener;
+    }
+    return castedListener;
   }
 
   /**
@@ -711,7 +723,7 @@ public final class Caffeine<K, V> {
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return new AsyncLocalCache<K1, V1>(self, loader);
+    return new UnboundedLocalCache.LocalAsyncLoadingCache<K1, V1>(self, loader);
   }
 
   private void requireNonLoadingCache() {
@@ -766,5 +778,52 @@ public final class Caffeine<K, V> {
       s.deleteCharAt(s.length() - 1);
     }
     return s.append('}').toString();
+  }
+
+  static final class AsyncRemovalListener<K, V>
+      implements RemovalListener<K, CompletableFuture<V>> {
+    private final RemovalListener<K, V> delegate;
+    private final Executor executor;
+
+    AsyncRemovalListener(RemovalListener<K, V> delegate, Executor executor) {
+      this.delegate = delegate;
+      this.executor = executor;
+    }
+
+    @Override
+    public void onRemoval(RemovalNotification<K, CompletableFuture<V>> notification) {
+      notification.getValue().thenAcceptAsync(value -> {
+        delegate.onRemoval(new RemovalNotification<K, V>(
+            notification.getKey(), value, notification.getCause()));
+      }, executor);
+    }
+  }
+
+  /**
+   * A weigher for asynchronous computations. When the value is being loaded this weigher returns
+   * {@code 0} to indicate that the entry should not be evicted due to a size constraint. If the
+   * value is computed successfully the entry must be reinserted so that the weight is updated and
+   * the expiration timeouts reflect the value once present. This can be done safely using
+   * {@link Map#replace(Object, Object, Object)}.
+   */
+  static final class AsyncWeigher<K, V> implements Weigher<K, CompletableFuture<V>>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final Weigher<K, V> delegate;
+
+    AsyncWeigher(Weigher<K, V> delegate) {
+      this.delegate = requireNonNull(delegate);
+    }
+
+    @Override
+    public int weigh(K key, CompletableFuture<V> value) {
+      try {
+        return value.isDone() ? delegate.weigh(key, value.get()) : 0;
+      } catch (InterruptedException e) {
+        throw new CompletionException(e);
+      } catch (ExecutionException e) {
+        throw new CompletionException(e.getCause());
+      }
+    }
   }
 }

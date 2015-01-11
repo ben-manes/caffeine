@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
@@ -30,6 +31,7 @@ import java.util.stream.Stream;
 import org.testng.annotations.DataProvider;
 
 import com.github.benmanes.caffeine.cache.Advanced;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
@@ -62,8 +64,9 @@ public final class CacheProvider {
     Optional<ReferenceType> values = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
         System.getProperties().getProperty("values", "").toUpperCase()).orNull());
 
-    boolean isLoadingOnly = hasLoadingCache(testMethod);
-    CacheGenerator generator = new CacheGenerator(cacheSpec, isLoadingOnly);
+    boolean isAsyncLoadingOnly = hasCacheOfType(testMethod, AsyncLoadingCache.class);
+    boolean isLoadingOnly = hasCacheOfType(testMethod, LoadingCache.class);
+    CacheGenerator generator = new CacheGenerator(cacheSpec, isLoadingOnly, isAsyncLoadingOnly);
     return asTestCases(testMethod, generator.generate(keys, values));
   }
 
@@ -84,7 +87,13 @@ public final class CacheProvider {
           params[i] = entry.getKey();
           stashed[0] = null;
         } else if (clazz.isAssignableFrom(entry.getValue().getClass())) {
-          params[i] = entry.getValue(); // Cache, LoadingCache, or AsyncLoadingCache
+          params[i] = entry.getValue(); // Cache or LoadingCache
+        } else if (clazz.isAssignableFrom(AsyncLoadingCache.class)) {
+          // FIXME(ben): Hack to filter intermediate async support
+          if (entry.getKey().asyncCache == null) {
+            return null;
+          }
+          params[i] = entry.getKey().asyncCache;
         } else if (clazz.isAssignableFrom(Map.class)) {
           params[i] = entry.getValue().asMap();
         } else if (clazz.isAssignableFrom(Advanced.Eviction.class)) {
@@ -104,11 +113,11 @@ public final class CacheProvider {
         }
       }
       return params;
-    }).iterator();
+    }).filter(Objects::nonNull).iterator();
   }
 
-  private static boolean hasLoadingCache(Method testMethod) {
+  private static boolean hasCacheOfType(Method testMethod, Class<?> cacheType) {
     return Arrays.stream(testMethod.getParameterTypes()).anyMatch(param ->
-        LoadingCache.class.isAssignableFrom(param));
+        cacheType.isAssignableFrom(param));
   }
 }

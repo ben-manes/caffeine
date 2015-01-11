@@ -31,6 +31,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
@@ -71,11 +72,14 @@ public final class CacheContext {
   final Loader loader;
   final Stats stats;
 
+  final boolean isAsync;
   final FakeTicker ticker;
   final Map<Integer, Integer> original;
   final RemovalListener<Integer, Integer> removalListener;
 
   Cache<?, ?> cache;
+  AsyncLoadingCache<?, ?> asyncCache;
+
   @Nullable Integer firstKey;
   @Nullable Integer middleKey;
   @Nullable Integer lastKey;
@@ -90,7 +94,8 @@ public final class CacheContext {
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
       MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, ReferenceType keyStrength,
       ReferenceType valueStrength, CacheExecutor cacheExecutor, Listener removalListenerType,
-      Population population, boolean isLoading, Loader loader, Implementation implementation) {
+      Population population, boolean isLoading, boolean isAsync, Loader loader,
+      Implementation implementation) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = requireNonNull(weigher);
@@ -109,6 +114,11 @@ public final class CacheContext {
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
     this.initialSize = -1;
+    this.isAsync = isAsync;
+  }
+
+  public boolean isAsync() {
+    return isAsync;
   }
 
   public Population population() {

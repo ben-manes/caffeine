@@ -46,8 +46,10 @@ import com.google.common.collect.Sets;
 final class CacheGenerator {
   private final CacheSpec cacheSpec;
   private final boolean isLoadingOnly;
+  private final boolean isAsyncLoadingOnly;
 
-  public CacheGenerator(CacheSpec cacheSpec, boolean isLoadingOnly) {
+  public CacheGenerator(CacheSpec cacheSpec, boolean isLoadingOnly, boolean isAsyncLoadingOnly) {
+    this.isAsyncLoadingOnly = isAsyncLoadingOnly;
     this.isLoadingOnly = isLoadingOnly;
     this.cacheSpec = cacheSpec;
   }
@@ -72,6 +74,9 @@ final class CacheGenerator {
     if (keys.isEmpty() || values.isEmpty()) {
       return ImmutableSet.of();
     }
+    if (isAsyncLoadingOnly) {
+      values = ImmutableSet.of(ReferenceType.STRONG);
+    }
 
     return Sets.cartesianProduct(
         ImmutableSet.copyOf(cacheSpec.initialCapacity()),
@@ -86,6 +91,7 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.removalListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
         ImmutableSet.of(true, isLoadingOnly),
+        ImmutableSet.of(isAsyncLoadingOnly),
         ImmutableSet.copyOf(cacheSpec.loader()),
         ImmutableSet.copyOf(cacheSpec.implementation()));
   }
@@ -114,6 +120,7 @@ final class CacheGenerator {
         (CacheExecutor) combination.get(index++),
         (Listener) combination.get(index++),
         (Population) combination.get(index++),
+        (Boolean) combination.get(index++),
         (Boolean) combination.get(index++),
         (Loader) combination.get(index++),
         (Implementation) combination.get(index++));

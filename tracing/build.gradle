@@ -2,17 +2,20 @@
 apply plugin: 'eclipse'
 
 configurations {
-  api
-  apiArtifacts
+  api.extendsFrom compile
 }
 
 sourceSets {
-  api.java.srcDirs = ['src/api/java']
+  api {
+    java.srcDir 'src/api/java'
+    resources.srcDir 'src/api/resources'
+  }
 }
 
 dependencies {
-  compile libraries.jsr305
-  //compile project(path: ':tracing', configuration: 'apiArtifacts')
+  apiCompile libraries.jsr305
+
+  compile sourceSets.api.output
   compile project(':caffeine')
   compile libraries.disruptor
 }
@@ -23,10 +26,10 @@ plugins.withType(EclipsePlugin) {
 
 task apiJar(type: Jar, group: "Build") {
   description = 'Assembles a jar archive containing the api classes.'
-  baseName = "${project.name}-test"
+  baseName = "${project.name}-api"
   from sourceSets.api.output
 }
-  
+
 artifacts {
-  apiArtifacts apiJar
+  api apiJar
 }

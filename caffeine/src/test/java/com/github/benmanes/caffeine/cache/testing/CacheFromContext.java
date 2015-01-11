@@ -101,6 +101,9 @@ public final class CacheFromContext {
     }
     if (context.loader == null) {
       context.cache = builder.build();
+    } else if (context.isAsync) {
+      context.asyncCache = builder.buildAsync(context.loader);
+      context.cache = context.asyncCache.synchronous();
     } else {
       context.cache = builder.build(context.loader);
     }
