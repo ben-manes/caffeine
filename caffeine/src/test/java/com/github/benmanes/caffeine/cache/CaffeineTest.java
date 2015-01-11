@@ -58,6 +58,30 @@ public final class CaffeineTest {
     assertThat(configured.toString(), is(not(Caffeine.newBuilder().toString())));
   }
 
+  /* ---------------- loading -------------- */
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void loader_nullLoader() {
+    Caffeine.newBuilder().build(null);
+  }
+
+  /* ---------------- async -------------- */
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void async_nullLoader() {
+    Caffeine.newBuilder().buildAsync(null);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void async_weakValues() {
+    Caffeine.newBuilder().weakValues().buildAsync(single);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void async_softValues() {
+    Caffeine.newBuilder().softValues().buildAsync(single);
+  }
+
   /* ---------------- initialCapacity -------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)

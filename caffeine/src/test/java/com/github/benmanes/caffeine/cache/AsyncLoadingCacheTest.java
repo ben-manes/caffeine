@@ -24,6 +24,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.is;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -42,6 +45,61 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsyncLoadingCacheTest {
+
+  /* ---------------- getFunc -------------- */
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getFunc_nullKey(AsyncLoadingCache<Integer, Integer> cache) {
+    cache.get(null, key -> CompletableFuture.completedFuture(null));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getFunc_nullLoader(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    cache.get(context.absentKey(), null);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getFunc_nullKeyAndLoader(AsyncLoadingCache<Integer, Integer> cache) {
+    cache.get(null, null);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void getFunc_throwsException(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
+
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void getFunc_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    Integer key = context.absentKey();
+    CompletableFuture<Integer> value = cache.get(key,
+        k -> CompletableFuture.completedFuture(context.absentValue()));
+    assertThat(value, is(futureOf(context.absentValue())));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void getFunc_present(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    Function<Integer, CompletableFuture<Integer>> loader = key -> { throw new RuntimeException(); };
+    assertThat(cache.get(context.firstKey(), loader),
+        is(futureOf(context.original().get(context.firstKey()))));
+    assertThat(cache.get(context.middleKey(), loader),
+        is(futureOf(context.original().get(context.middleKey()))));
+    assertThat(cache.get(context.lastKey(), loader),
+        is(futureOf(context.original().get(context.lastKey()))));
+
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
 
   /* ---------------- get -------------- */
 
