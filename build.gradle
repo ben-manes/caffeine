@@ -70,7 +70,7 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', dependsOn: 
 
   // Only report code coverage for projects that are distrubuted
   def publishedProjects = subprojects.findAll {
-    (it.name != 'simulator') || (it.name != 'tracing')
+    (it.name != 'simulator') && (it.name != 'tracing')
   };
 
   additionalSourceDirs = files(publishedProjects.sourceSets.main.allSource.srcDirs)
