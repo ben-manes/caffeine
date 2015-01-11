@@ -10,7 +10,6 @@ dependencies {
   testCompile project(path: ":caffeine", configuration: "testArtifacts")
   testCompile test_libraries.junit
   testCompile test_libraries.guava_testlib
-  testCompile test_libraries.mockito
   testCompile test_libraries.truth
   testCompile test_libraries.easymock
 }

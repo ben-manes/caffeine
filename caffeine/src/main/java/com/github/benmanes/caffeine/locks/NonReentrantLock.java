@@ -63,9 +63,11 @@ import java.util.concurrent.locks.Lock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class NonReentrantLock implements Lock {
+public class NonReentrantLock implements Lock, Serializable {
+  static final long serialVersionUID = 1L;
+
   /** Synchronizer providing all implementation mechanics */
-  private final Sync sync;
+  final Sync sync;
 
   public NonReentrantLock() {
     this.sync = new Sync();
@@ -303,7 +305,7 @@ public class NonReentrantLock implements Lock {
   }
 
   /** A non-fair lock using AQS state to represent if the lock is held. */
-  private static final class Sync extends AbstractQueuedSynchronizer implements Lock, Serializable {
+  static final class Sync extends AbstractQueuedSynchronizer implements Lock, Serializable {
     static final long serialVersionUID = 1L;
     static final int UNLOCKED = 0;
     static final int LOCKED = 1;

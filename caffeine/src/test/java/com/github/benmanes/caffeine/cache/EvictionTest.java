@@ -22,6 +22,7 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -61,6 +63,8 @@ import com.google.common.collect.Iterables;
 @Test(dataProviderClass = CacheProvider.class)
 public final class EvictionTest {
 
+  /* ---------------- RemovalListener -------------- */
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = MaximumSize.FULL,
       removalListener = Listener.REJECTING)
@@ -77,6 +81,25 @@ public final class EvictionTest {
     }
     assertThat(removalListener.rejected, is(1));
   }
+
+  @Test
+  public void removalNotification() {
+    RemovalNotification<Integer, Integer> sizeOne =
+        new RemovalNotification<>(1, -1, RemovalCause.SIZE);
+    RemovalNotification<Integer, Integer> explicitOne =
+        new RemovalNotification<>(1, -1, RemovalCause.EXPLICIT);
+    RemovalNotification<Integer, Integer> sizeTwo =
+        new RemovalNotification<>(2, -2, RemovalCause.SIZE);
+    assertThat(sizeOne, is(equalTo(explicitOne)));
+    assertThat(sizeTwo, is(not(equalTo(explicitOne))));
+
+    try {
+      sizeOne.setValue(-2);
+      Assert.fail();
+    } catch (UnsupportedOperationException e) {}
+  }
+
+  /* ---------------- Evict (size/weight) -------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
@@ -160,14 +183,14 @@ public final class EvictionTest {
       weigher = CacheWeigher.NEGATIVE, population = Population.EMPTY)
   @Test(dataProvider = "caches",
       expectedExceptions = { IllegalArgumentException.class, IllegalStateException.class })
-  public void put_negativeWeighted(Cache<Integer, Integer> cache, CacheContext context) {
+  public void put_negativeWeight(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
   }
 
   @CacheSpec(maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.ZERO, population = Population.EMPTY)
   @Test(dataProvider = "caches")
-  public void put_zeroWeighted(Cache<Integer, Integer> cache, CacheContext context) {
+  public void put_zeroWeight(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
   }
 

@@ -55,7 +55,7 @@ public final class CaffeinatedGuava {
     return new CaffeinatedGuavaLoadingCache<K1, V1>(builder.build(cacheLoader));
   }
 
-  private static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {
+  static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {
     try {
       Method method = cacheLoader.getClass().getMethod("loadAll", Iterable.class);
       return (method.getDeclaringClass() != CacheLoader.class);

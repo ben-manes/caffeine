@@ -24,8 +24,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 
+import org.mockito.Mockito;
+import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+
+import com.google.common.testing.SerializableTester;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -83,6 +87,31 @@ public final class NonReentrantLockTest {
   }
 
   @Test(dataProvider = "lock")
+  public void lock_error(NonReentrantLock lock) {
+    Condition condition = Mockito.mock(Condition.class);
+
+    try {
+      lock.hasWaiters(condition);
+      Assert.fail();
+    } catch (IllegalArgumentException e) {}
+
+    try {
+      lock.getWaitQueueLength(condition);
+      Assert.fail();
+    } catch (IllegalArgumentException e) {}
+
+    try {
+      lock.getWaitingThreads(condition);
+      Assert.fail();
+    } catch (IllegalArgumentException e) {}
+
+    try {
+      lock.sync.tryRelease(1);
+      Assert.fail();
+    } catch (IllegalMonitorStateException e) {}
+  }
+
+  @Test(dataProvider = "lock")
   public void condition(NonReentrantLock lock) {
     Condition condition = lock.newCondition();
     AtomicBoolean ready = new AtomicBoolean();
@@ -101,5 +130,12 @@ public final class NonReentrantLockTest {
 
     condition.signal();
     lock.unlock();
+  }
+
+  @Test(dataProvider = "lock")
+  public void serialize(NonReentrantLock lock) {
+    lock.lock();
+    NonReentrantLock copy = SerializableTester.reserialize(lock);
+    assertThat(copy.isLocked(), is(false));
   }
 }
