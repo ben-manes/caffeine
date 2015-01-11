@@ -68,48 +68,40 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**
- * A hash table supporting full concurrency of retrievals, adjustable expected
- * concurrency for updates, and a maximum capacity to bound the map by. This
- * implementation differs from {@link ConcurrentHashMap} in that it maintains a
- * page replacement algorithm that is used to evict an entry when the map has
- * exceeded its capacity. Unlike the <tt>Java Collections Framework</tt>, this
- * map does not have a publicly visible constructor and instances are created
- * through a {@link Caffeine}.
+ * A hash table supporting full concurrency of retrievals, adjustable expected concurrency for
+ * updates, and a maximum capacity to bound the map by. This implementation differs from
+ * {@link ConcurrentHashMap} in that it maintains a page replacement algorithm that is used to evict
+ * an entry when the map has exceeded its capacity. Unlike the <tt>Java Collections Framework</tt>,
+ * this map does not have a publicly visible constructor and instances are created through a
+ * {@link Caffeine}.
  * <p>
- * An entry is evicted from the map when the <tt>weighted capacity</tt> exceeds
- * its <tt>maximum weighted capacity</tt> threshold. A {@link Weigher}
- * determines how many units of capacity that an entry consumes. The default
- * weigher assigns each value a weight of <tt>1</tt> to bound the map by the
- * total number of key-value pairs. A map that holds collections may choose to
- * weigh values by the number of elements in the collection and bound the map
- * by the total number of elements that it contains. A change to a value that
- * modifies its weight requires that an update operation is performed on the
- * map.
+ * An entry is evicted from the map when the <tt>weighted capacity</tt> exceeds its
+ * <tt>maximum weighted capacity</tt> threshold. A {@link Weigher} determines how many units of
+ * capacity that an entry consumes. The default weigher assigns each value a weight of <tt>1</tt> to
+ * bound the map by the total number of key-value pairs. A map that holds collections may choose to
+ * weigh values by the number of elements in the collection and bound the map by the total number of
+ * elements that it contains. A change to a value that modifies its weight requires that an update
+ * operation is performed on the map.
  * <p>
- * An {@link RemovalListener} may be supplied for notification when an entry
- * is evicted from the map. This listener is invoked on a caller's thread and
- * will not block other threads from operating on the map. An implementation
- * should be aware that the caller's thread will not expect long execution
- * times or failures as a side effect of the listener being notified. Execution
- * safety and a fast turn around time can be achieved by performing the
- * operation asynchronously, such as by submitting a task to an
- * {@link java.util.concurrent.ExecutorService}.
+ * An {@link RemovalListener} may be supplied for notification when an entry is evicted from the
+ * map. This listener is invoked on a caller's thread and will not block other threads from
+ * operating on the map. An implementation should be aware that the caller's thread will not expect
+ * long execution times or failures as a side effect of the listener being notified. Execution
+ * safety and a fast turn around time can be achieved by performing the operation asynchronously,
+ * such as by submitting a task to an {@link java.util.concurrent.ExecutorService}.
  * <p>
- * The <tt>concurrency level</tt> determines the number of threads that can
- * concurrently modify the table. Using a significantly higher or lower value
- * than needed can waste space or lead to thread contention, but an estimate
- * within an order of magnitude of the ideal value does not usually have a
- * noticeable impact. Because placement in hash tables is essentially random,
- * the actual concurrency will vary.
+ * The <tt>concurrency level</tt> determines the number of threads that can concurrently modify the
+ * table. Using a significantly higher or lower value than needed can waste space or lead to thread
+ * contention, but an estimate within an order of magnitude of the ideal value does not usually have
+ * a noticeable impact. Because placement in hash tables is essentially random, the actual
+ * concurrency will vary.
  * <p>
- * This class and its views and iterators implement all of the
- * <em>optional</em> methods of the {@link Map} and {@link Iterator}
- * interfaces.
+ * This class and its views and iterators implement all of the <em>optional</em> methods of the
+ * {@link Map} and {@link Iterator} interfaces.
  * <p>
- * Like {@link java.util.Hashtable} but unlike {@link HashMap}, this class
- * does <em>not</em> allow <tt>null</tt> to be used as a key or value. Unlike
- * {@link java.util.LinkedHashMap}, this class does <em>not</em> provide
- * predictable iteration order. A snapshot of the keys and entries may be
+ * Like {@link java.util.Hashtable} but unlike {@link HashMap}, this class does <em>not</em> allow
+ * <tt>null</tt> to be used as a key or value. Unlike {@link java.util.LinkedHashMap}, this class
+ * does <em>not</em> provide predictable iteration order. A snapshot of the keys and entries may be
  * obtained in ascending and descending order of retention.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -121,44 +113,37 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     implements ConcurrentMap<K, V>, Serializable {
 
   /*
-   * This class performs a best-effort bounding of a ConcurrentHashMap using a
-   * page-replacement algorithm to determine which entries to evict when the
-   * capacity is exceeded.
+   * This class performs a best-effort bounding of a ConcurrentHashMap using a page-replacement
+   * algorithm to determine which entries to evict when the capacity is exceeded.
    *
-   * The page replacement algorithm's data structures are kept eventually
-   * consistent with the map. An update to the map and recording of reads may
-   * not be immediately reflected on the algorithm's data structures. These
-   * structures are guarded by a lock and operations are applied in batches to
-   * avoid lock contention. The penalty of applying the batches is spread across
-   * threads so that the amortized cost is slightly higher than performing just
-   * the ConcurrentHashMap operation.
+   * The page replacement algorithm's data structures are kept eventually consistent with the map.
+   * An update to the map and recording of reads may not be immediately reflected on the algorithm's
+   * data structures. These structures are guarded by a lock and operations are applied in batches
+   * to avoid lock contention. The penalty of applying the batches is spread across threads so that
+   * the amortized cost is slightly higher than performing just the ConcurrentHashMap operation.
    *
-   * A memento of the reads and writes that were performed on the map are
-   * recorded in buffers. These buffers are drained at the first opportunity
-   * after a write or when the read buffer exceeds a threshold size. The reads
-   * are recorded in a lossy buffer, allowing the reordering operations to be
-   * discarded if the draining process cannot keep up. Due to the concurrent
-   * nature of the read and write operations a strict policy ordering is not
-   * possible, but is observably strict when single threaded.
+   * A memento of the reads and writes that were performed on the map are recorded in buffers. These
+   * buffers are drained at the first opportunity after a write or when the read buffer exceeds a
+   * threshold size. The reads are recorded in a lossy buffer, allowing the reordering operations to
+   * be discarded if the draining process cannot keep up. Due to the concurrent nature of the read
+   * and write operations a strict policy ordering is not possible, but is observably strict when
+   * single threaded.
    *
-   * Due to a lack of a strict ordering guarantee, a task can be executed
-   * out-of-order, such as a removal followed by its addition. The state of the
-   * entry is encoded within the value's weight.
+   * Due to a lack of a strict ordering guarantee, a task can be executed out-of-order, such as a
+   * removal followed by its addition. The state of the entry is encoded within the value's weight.
    *
-   * Alive: The entry is in both the hash-table and the page replacement policy.
-   * This is represented by a zero or positive weight.
+   * Alive: The entry is in both the hash-table and the page replacement policy. This is represented
+   * by a zero or positive weight.
    *
-   * Retired: The entry is not in the hash-table and is pending removal from the
-   * page replacement policy. This is represented by a negative weight, where the
-   * hole of a retired entry with zero weight has no harmful impact on the policy
-   * behavior.
+   * Retired: The entry is not in the hash-table and is pending removal from the page replacement
+   * policy. This is represented by a negative weight, where the hole of a retired entry with zero
+   * weight has no harmful impact on the policy behavior.
    *
-   * Dead: The entry is not in the hash-table and is not in the page replacement
-   * policy. This is represented by a weight of Integer.MIN_VALUE.
+   * Dead: The entry is not in the hash-table and is not in the page replacement policy. This is
+   * represented by a weight of Integer.MIN_VALUE.
    *
-   * The Least Recently Used page replacement algorithm was chosen due to its
-   * simplicity, high hit rate, and ability to be implemented with O(1) time
-   * complexity.
+   * The Least Recently Used page replacement algorithm was chosen due to its simplicity, high hit
+   * rate, and ability to be implemented with O(1) time complexity.
    */
 
   /** The number of CPUs */
@@ -369,8 +354,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Sets the maximum weighted capacity of the map and eagerly evicts entries
-   * until it shrinks to the appropriate size.
+   * Sets the maximum weighted capacity of the map and eagerly evicts entries until it shrinks to
+   * the appropriate size.
    *
    * @param capacity the maximum weighted capacity of the map
    * @throws IllegalArgumentException if the capacity is negative
@@ -394,8 +379,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Evicts entries from the map while it exceeds the capacity and appends
-   * evicted entries to the notification queue for processing.
+   * Evicts entries from the map while it exceeds the capacity and appends evicted entries to the
+   * notification queue for processing.
    */
   @GuardedBy("evictionLock")
   void evict() {
@@ -403,28 +388,23 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return;
     }
 
-    // Attempts to evict entries from the map if it exceeds the maximum
-    // capacity. If the eviction fails due to a concurrent removal of the
-    // victim, that removal may cancel out the addition that triggered this
-    // eviction. The victim is eagerly unlinked before the removal task so
-    // that if an eviction is still required then a new victim will be chosen
-    // for removal.
+    // Attempts to evict entries from the map if it exceeds the maximum capacity. If the eviction
+    // fails due to a concurrent removal of the victim, that removal may cancel out the addition
+    // that triggered this eviction. The victim is eagerly unlinked before the removal task so
+    // that if an eviction is still required then a new victim will be chosen for removal.
+    Node<K, V> node = accessOrderDeque.peek();
     while (hasOverflowed()) {
-      final Node<K, V> node = accessOrderDeque.poll();
-
-      // If weighted values are used, then the pending operations will adjust
-      // the size to reflect the correct weight
+      // If weighted values are used, then the pending operations will adjust the size to reflect
+      // the correct weight
       if (node == null) {
         return;
       }
 
-      if (node.get().weight == 0) {
-        // When the weight of an entry is zero it will not be considered for size-based eviction
-        accessOrderDeque.add(node);
-      } else {
+      Node<K, V> next = node.getNextInAccessOrder();
+      if (node.get().weight != 0) {
         evict(node, RemovalCause.SIZE);
       }
-
+      node = next;
     }
   }
 
@@ -515,9 +495,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /** Returns the index to the read buffer to record into. */
   static int readBufferIndex() {
-    // A buffer is chosen by the thread's id so that tasks are distributed in a
-    // pseudo evenly manner. This helps avoid hot entries causing contention
-    // due to other threads trying to append to the same buffer.
+    // A buffer is chosen by the thread's id so that tasks are distributed in a pseudo evenly
+    // manner. This helps avoid hot entries causing contention due to other threads trying to
+    // append to the same buffer.
     return ((int) Thread.currentThread().getId()) & READ_BUFFERS_MASK;
   }
 
@@ -529,9 +509,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * @return the number of writes on the chosen read buffer
    */
   long recordRead(int bufferIndex, Node<K, V> node) {
-    // The location in the buffer is chosen in a racy fashion as the increment
-    // is not atomic with the insertion. This means that concurrent reads can
-    // overlap and overwrite one another, resulting in a lossy buffer.
+    // The location in the buffer is chosen in a racy fashion as the increment is not atomic with
+    // the insertion. This means that concurrent reads can overlap and overwrite one another,
+    // resulting in a lossy buffer.
     final PaddedAtomicLong counter = readBufferWriteCount[bufferIndex];
     final long writeCount = counter.get();
     counter.lazySet(writeCount + 1);
@@ -543,8 +523,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Attempts to drain the buffers if it is determined to be needed when
-   * post-processing a read.
+   * Attempts to drain the buffers if it is determined to be needed when post-processing a read.
    *
    * @param bufferIndex the index to the chosen read buffer
    * @param writeCount the number of writes on the chosen read buffer
@@ -576,8 +555,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Attempts to acquire the eviction lock and apply the pending operations, up
-   * to the amortized threshold, to the page replacement policy.
+   * Attempts to acquire the eviction lock and apply the pending operations, up to the amortized
+   * threshold, to the page replacement policy.
    */
   void tryToDrainBuffers() {
     if (evictionLock.tryLock()) {
@@ -659,10 +638,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   /** Updates the node's location in the page replacement policy. */
   @GuardedBy("evictionLock")
   void applyRead(Node<K, V> node) {
-    // An entry may be scheduled for reordering despite having been removed.
-    // This can occur when the entry was concurrently read while a writer was
-    // removing it. If the entry is no longer linked then it does not need to
-    // be processed.
+    // An entry may be scheduled for reordering despite having been removed. This can occur when the
+    // entry was concurrently read while a writer was removing it. If the entry is no longer linked
+    // then it does not need to be processed.
     if (accessOrderDeque.contains(node)) {
       accessOrderDeque.moveToBack(node);
     }
@@ -671,10 +649,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   /** Updates the node's location in the expiration policy. */
   @GuardedBy("evictionLock")
   void applyWrite(Node<K, V> node) {
-    // An entry may be scheduled for reordering despite having been removed.
-    // This can occur when the entry was concurrently read while a writer was
-    // removing it. If the entry is no longer linked then it does not need to
-    // be processed.
+    // An entry may be scheduled for reordering despite having been removed. This can occur when the
+    // entry was concurrently read while a writer was removing it. If the entry is no longer linked
+    // then it does not need to be processed.
     if (writeOrderDeque.contains(node)) {
       writeOrderDeque.moveToBack(node);
     }
@@ -693,8 +670,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Attempts to transition the node from the <tt>alive</tt> state to the
-   * <tt>retired</tt> state.
+   * Attempts to transition the node from the <tt>alive</tt> state to the <tt>retired</tt> state.
    *
    * @param node the entry in the page replacement policy
    * @param expect the expected weighted value
@@ -715,8 +691,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Atomically transitions the node from the <tt>alive</tt> state to the
-   * <tt>retired</tt> state, if a valid transition.
+   * Atomically transitions the node from the <tt>alive</tt> state to the <tt>retired</tt> state, if
+   * a valid transition.
    *
    * @param node the entry in the page replacement policy
    * @return the retired weighted value if the transition was successful or null otherwise
@@ -735,8 +711,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Atomically transitions the node to the <tt>dead</tt> state and decrements
-   * the <tt>weightedSize</tt>.
+   * Atomically transitions the node to the <tt>dead</tt> state and decrements the
+   * <tt>weightedSize</tt>.
    *
    * @param node the entry in the page replacement policy
    */
@@ -989,13 +965,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /**
-   * Adds a node to the list and the data store. If an existing node is found,
-   * then its value is updated if allowed.
+   * Adds a node to the list and the data store. If an existing node is found, then its value is
+   * updated if allowed.
    *
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
-   * @param onlyIfAbsent a write is performed only if the key is not already
-   *     associated with a value
+   * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
    * @return the prior value in the data store or null if no mapping was found
    */
   V put(K key, V value, boolean onlyIfAbsent) {
@@ -1082,8 +1057,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
         } else {
           weightedValue = node.get();
           if (weightedValue.isAlive()) {
-            // retry as an intermediate update may have replaced the value with
-            // an equal instance that has a different reference identity
+            // retry as an intermediate update may have replaced the value with an equal instance
+            // that has a different reference identity
             continue;
           }
         }
@@ -1542,33 +1517,28 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return value;
     }
 
-    /**
-     * If the entry is available in the hash-table and page replacement policy.
-     */
+    /** If the entry is available in the hash-table and page replacement policy. */
     boolean isAlive() {
       return weight >= 0;
     }
 
     /**
-     * If the entry was removed from the hash-table and is awaiting removal from
-     * the page replacement policy.
+     * If the entry was removed from the hash-table and is awaiting removal from the page
+     * replacement policy.
      */
     boolean isRetired() {
       return !isDead() && (weight < 0);
     }
 
-    /**
-     * If the entry was removed from the hash-table and the page replacement
-     * policy.
-     */
+    /** If the entry was removed from the hash-table and the page replacement policy. */
     boolean isDead() {
       return weight == Integer.MIN_VALUE;
     }
   }
 
   /**
-   * A node contains the key, the weighted value, and the linkage pointers on
-   * the page-replacement algorithm's data structures.
+   * A node contains the key, the weighted value, and the linkage pointers on the page-replacement
+   * algorithm's data structures.
    */
   @SuppressWarnings("serial")
   static final class Node<K, V> extends AtomicReference<WeightedValue<V>>

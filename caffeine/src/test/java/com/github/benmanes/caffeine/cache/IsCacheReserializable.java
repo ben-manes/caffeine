@@ -54,15 +54,15 @@ public final class IsCacheReserializable<K, V> extends TypeSafeDiagnosingMatcher
       checkBoundedLocalManualCache((BoundedLocalCache.LocalManualCache<K, V>) cache,
           (BoundedLocalCache.LocalManualCache<K, V>) copy, desc);
     }
-    if (copy instanceof BoundedLocalCache.LocalLoadingCache<?, ?>) {
+    if (cache instanceof BoundedLocalCache.LocalLoadingCache<?, ?>) {
       checkBoundedLocalLoadingCache((BoundedLocalCache.LocalLoadingCache<K, V>) cache,
           (BoundedLocalCache.LocalLoadingCache<K, V>) copy, desc);
     }
-    if (copy instanceof UnboundedLocalCache.LocalLoadingCache<?, ?>) {
+    if (cache instanceof UnboundedLocalCache.LocalLoadingCache<?, ?>) {
       checkUnoundedLocalManualCache((UnboundedLocalCache.LocalManualCache<K, V>) cache,
           (UnboundedLocalCache.LocalManualCache<K, V>) copy, desc);
     }
-    if (copy instanceof UnboundedLocalCache.LocalLoadingCache<?, ?>) {
+    if (cache instanceof UnboundedLocalCache.LocalLoadingCache<?, ?>) {
       checkUnboundedLocalLoadingCache((UnboundedLocalCache.LocalLoadingCache<K, V>) cache,
           (UnboundedLocalCache.LocalLoadingCache<K, V>) copy, desc);
     }
