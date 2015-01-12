@@ -106,10 +106,10 @@ public interface AsyncLoadingCache<K, V> {
    * create, cache and return" pattern.
    *
    * @param key key with which the specified value is to be associated
-   * @param value value to be associated with the specified key
+   * @param valueFuture value to be associated with the specified key
    * @throws NullPointerException if the specified key or value is null
    */
-  void put(@Nonnull K key, @Nonnull CompletableFuture<V> value);
+  void put(@Nonnull K key, @Nonnull CompletableFuture<V> valueFuture);
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link LoadingCache}.

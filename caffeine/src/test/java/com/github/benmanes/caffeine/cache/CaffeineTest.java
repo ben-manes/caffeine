@@ -61,7 +61,7 @@ public final class CaffeineTest {
   /* ---------------- loading -------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
-  public void loader_nullLoader() {
+  public void loading_nullLoader() {
     Caffeine.newBuilder().build(null);
   }
 

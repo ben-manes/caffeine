@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -83,6 +85,8 @@ public interface CacheLoader<K, V> {
    */
   @Nonnull
   default CompletableFuture<V> asyncLoad(@Nonnull K key, @Nonnull Executor executor) {
+    requireNonNull(key);
+    requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> load(key), executor);
   }
 

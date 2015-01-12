@@ -906,7 +906,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       this.hasBulkLoader = hasLoadAll(loader);
     }
 
-    private static boolean hasLoadAll(CacheLoader<?, ?> loader) {
+    static boolean hasLoadAll(CacheLoader<?, ?> loader) {
       try {
         return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
       } catch (NoSuchMethodException | SecurityException e) {
@@ -922,8 +922,8 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
 
     @Override
     public Map<K, V> getAll(Iterable<? extends K> keys) {
-      Map<K, V> result = new HashMap<K, V>();
       List<K> keysToLoad = new ArrayList<>();
+      Map<K, V> result = new HashMap<>();
       for (K key : keys) {
         V value = cache.data.get(key);
         if (value == null) {
@@ -1024,6 +1024,8 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
   /* ---------------- Async Loading Cache -------------- */
 
   static final class LocalAsyncLoadingCache<K, V> implements AsyncLoadingCache<K, V> {
+    static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
+
     final UnboundedLocalCache<K, CompletableFuture<V>> cache;
     final CacheLoader<? super K, V> loader;
 
@@ -1036,25 +1038,116 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       this.loader = loader;
     }
 
+    static boolean hasLoadAll(CacheLoader<?, ?> loader) {
+      try {
+        return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
+      } catch (NoSuchMethodException | SecurityException e) {
+        logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
+        return false;
+      }
+    }
+
     @Override
     public CompletableFuture<V> get(K key,
         Function<? super K, CompletableFuture<V>> mappingFunction) {
-      return cache.get(key, mappingFunction);
+      @SuppressWarnings("unchecked")
+      CompletableFuture<V>[] result = new CompletableFuture[1];
+      CompletableFuture<V> future = cache.get(key, k -> {
+        return mappingFunction.apply(key).whenComplete((value, error) -> {
+          if (error != null) {
+            synchronized (result) {
+              if (result[0] != null) {
+                cache.remove(key, result[0]);
+              }
+            }
+          }
+        });
+      });
+      synchronized (result) {
+        result[0] = future;
+      }
+      if (future.isCompletedExceptionally()) {
+        cache.remove(key, future);
+      }
+      return future;
     }
 
     @Override
     public CompletableFuture<V> get(K key) {
-      return cache.get(key, k -> loader.asyncLoad(key, cache.executor));
+      return get(key, k -> loader.asyncLoad(key, cache.executor));
     }
 
     @Override
     public CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys) {
+      Map<K, CompletableFuture<V>> futures = new HashMap<>();
+      List<K> keysToLoad = new ArrayList<>();
+      for (K key : keys) {
+        CompletableFuture<V> valueFuture = cache.data.get(key);
+        if ((valueFuture == null) || valueFuture.isCompletedExceptionally()) {
+          keysToLoad.add(key);
+        } else {
+          futures.put(key, valueFuture);
+        }
+      }
+      cache.statsCounter.recordHits(futures.size());
+
+      if (keysToLoad.isEmpty()) {
+        return composeResult(futures);
+      }
+      // bulk load
+
       throw new UnsupportedOperationException();
     }
 
+    CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
+      if (futures.isEmpty()) {
+        return CompletableFuture.completedFuture(Collections.emptyMap());
+      }
+      CompletableFuture<?>[] array = futures.values().toArray(
+          new CompletableFuture[futures.size()]);
+      return CompletableFuture.allOf(array).thenApply(ignored -> {
+        Map<K, V> result = new HashMap<>(futures.size());
+        for (Entry<K, CompletableFuture<V>> entry : futures.entrySet()) {
+          V value = entry.getValue().getNow(null);
+          if (value == null) {
+            cache.remove(entry.getKey(), entry.getValue());
+          } else {
+            result.put(entry.getKey(), value);
+          }
+        }
+        return Collections.unmodifiableMap(result);
+      });
+    }
+
     @Override
-    public void put(K key, CompletableFuture<V> value) {
-      cache.put(key, value);
+    public void put(K key, CompletableFuture<V> valueFuture) {
+      if (valueFuture.isCompletedExceptionally()) {
+        cache.statsCounter.recordLoadFailure(0L);
+        return;
+      }
+      long now = cache.ticker.read();
+      @SuppressWarnings("unchecked")
+      CompletableFuture<V>[] future = new CompletableFuture[1];
+      CompletableFuture<V> errorHandlingFuture = valueFuture.whenComplete((value, error) -> {
+        long loadTime = cache.ticker.read() - now;
+        if (error == null) {
+          cache.statsCounter.recordLoadSuccess(loadTime);
+        } else {
+          synchronized (future) {
+            if (future[0] != null) {
+              cache.statsCounter.recordLoadFailure(loadTime);
+              cache.remove(key, future[0]);
+            }
+          }
+        }
+      });
+      cache.put(key, errorHandlingFuture);
+      synchronized (future) {
+        future[0] = errorHandlingFuture;
+      }
+      if (errorHandlingFuture.isCompletedExceptionally()) {
+        cache.remove(key, future);
+      }
     }
 
     @Override
@@ -1067,7 +1160,9 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       @Override
       public V getIfPresent(Object key) {
         CompletableFuture<V> future = cache.get(key);
-        return (future == null) ? null : future.getNow(null);
+        return (future != null) && future.isDone() && !future.isCompletedExceptionally()
+            ? future.getNow(null)
+            : null;
       }
 
       @Override
@@ -1131,7 +1226,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
 
       @Override
       public long estimatedSize() {
-        return 0;
+        return cache.size();
       }
 
       @Override

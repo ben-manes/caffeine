@@ -118,10 +118,12 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
-
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    try {
+      cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
+    } finally {
+      assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    }
   }
 
   @CacheSpec
