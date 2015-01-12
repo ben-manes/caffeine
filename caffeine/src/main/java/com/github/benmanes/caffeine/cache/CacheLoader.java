@@ -111,7 +111,9 @@ public interface CacheLoader<K, V> {
   @Nonnull
   default CompletableFuture<Map<K, V>> asyncLoadAll(
       Iterable<? extends K> keys, @Nonnull Executor executor) {
-    throw new UnsupportedOperationException();
+    requireNonNull(keys);
+    requireNonNull(executor);
+    return CompletableFuture.supplyAsync(() -> loadAll(keys), executor);
   }
 
   /**

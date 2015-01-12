@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.util.AbstractCollection;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractSet;
@@ -1027,20 +1028,26 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
     final UnboundedLocalCache<K, CompletableFuture<V>> cache;
-    final CacheLoader<? super K, V> loader;
+    final CacheLoader<K, V> loader;
+    final boolean canBulkLoad;
 
     LoadingCacheView localCacheView;
 
+    @SuppressWarnings("unchecked")
     LocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      @SuppressWarnings("unchecked")
       Caffeine<K, CompletableFuture<V>> futureBuilder = (Caffeine<K, CompletableFuture<V>>) builder;
       this.cache = new UnboundedLocalCache<>(futureBuilder, true);
-      this.loader = loader;
+      this.loader = (CacheLoader<K, V>) loader;
+      this.canBulkLoad = canBulkLoad(loader);
     }
 
-    static boolean hasLoadAll(CacheLoader<?, ?> loader) {
+    static boolean canBulkLoad(CacheLoader<?, ?> loader) {
       try {
-        return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
+        Method loadAll = loader.getClass().getMethod(
+            "loadAll", Iterable.class, Executor.class);
+        Method asyncLoadAll = loader.getClass().getMethod(
+            "asyncLoadAll", Iterable.class, Executor.class);
+        return !loadAll.isDefault() || !asyncLoadAll.isDefault();
       } catch (NoSuchMethodException | SecurityException e) {
         logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
         return false;
@@ -1094,7 +1101,13 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       if (keysToLoad.isEmpty()) {
         return composeResult(futures);
       }
-      // bulk load
+
+      if (canBulkLoad) {
+        // 1: insert proxies into the map
+        // 2: bulk load
+        CompletableFuture<Map<K, V>> bulkFuture = loader.asyncLoadAll(keysToLoad, cache.executor);
+        // 3: return combined future
+      }
 
       throw new UnsupportedOperationException();
     }
