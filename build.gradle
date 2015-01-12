@@ -20,6 +20,11 @@ buildscript {
   }
 }
 
+task testReport(type: TestReport, group: 'Build') {
+  description = 'Generates an aggregate test report'
+  destinationDir = file("${buildDir}/reports/allTests")
+}
+
 subprojects { proj ->
   apply from: "${rootDir}/gradle/jmh.gradle"
   apply from: "${rootDir}/gradle/publish.gradle"
@@ -49,6 +54,11 @@ subprojects { proj ->
   configurations {
     testArtifacts
   }
+  
+  tasks.withType(Test) {
+    rootProject.testReport.reportOn it
+  }
+
   
   task testJar(type: Jar, group: "Build") {
     description = "Assembles a jar archive containing the test classes."
