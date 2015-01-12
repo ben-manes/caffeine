@@ -15,6 +15,8 @@ dependencies {
   checkstyleConfig gradle_plugins.checkstyle
 }
 
+javadoc.options.links('http://docs.oracle.com/javase/8/docs/api/');
+
 checkstyle {
   showViolations = true
   sourceSets = [sourceSets.main]
