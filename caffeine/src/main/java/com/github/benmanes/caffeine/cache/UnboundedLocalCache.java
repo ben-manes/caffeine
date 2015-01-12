@@ -1040,7 +1040,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
 
   /* ---------------- Async Loading Cache -------------- */
 
-  static final class LocalAsyncLoadingCache<K, V> implements AsyncLoadingCache<K, V> {
+  static final class LocalAsyncLoadingCache<K, V> implements AsyncLoadingCache<K, V>, Serializable {
     static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
     final UnboundedLocalCache<K, CompletableFuture<V>> cache;
@@ -1146,7 +1146,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
               entry.getValue().obtrudeException(error);
             }
           }
-          long loadTime = cache.ticker.read();
+          long loadTime = cache.ticker.read() - now;
           if (error == null) {
             cache.statsCounter.recordLoadSuccess(loadTime);
           } else {
@@ -1227,8 +1227,69 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       return (localCacheView == null) ? (localCacheView = new LoadingCacheView()) : localCacheView;
     }
 
-    final class LoadingCacheView implements LoadingCache<K, V> {
+    /* ---------------- Serialization Support -------------- */
+
+    static final long serialVersionUID = 1;
+
+    Object writeReplace() {
+      return new AsyncLoadingSerializationProxy<K, V>(this);
+    }
+
+    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+      throw new InvalidObjectException("Proxy required");
+    }
+
+    /**
+     * Serializes the configuration of the cache, reconsitituting it as a Cache using
+     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
+     */
+    static final class AsyncLoadingSerializationProxy<K, V> implements Serializable {
+      private static final long serialVersionUID = 1;
+
+      final Ticker ticker;
+      final boolean isRecordingStats;
+      final CacheLoader<? super K, V> loader;
+      final RemovalListener<K, CompletableFuture<V>> removalListener;
+
+      AsyncLoadingSerializationProxy(LocalAsyncLoadingCache<K, V> async) {
+        isRecordingStats = async.cache.isRecordingStats;
+        removalListener = async.cache.removalListener;
+        ticker = (async.cache.ticker == Caffeine.DISABLED_TICKER)
+            ? null
+            : async.cache.ticker;
+        loader = async.loader;
+      }
+
+      Caffeine<Object, Object> recreateCaffeine() {
+        Caffeine<Object, Object> builder = Caffeine.newBuilder();
+        if (ticker != null) {
+          builder.ticker(ticker);
+        }
+        if (removalListener != null) {
+          builder.removalListener(removalListener);
+        }
+        if (isRecordingStats) {
+          builder.recordStats();
+        }
+        return builder;
+      }
+
+      Object readResolve() {
+        return recreateCaffeine().buildAsync(loader);
+      }
+    }
+
+    /* ---------------- Synchronous views -------------- */
+
+    final class LoadingCacheView implements LoadingCache<K, V>, Serializable {
+      private static final long serialVersionUID = 1L;
+
       transient AsMapView<K, V> asMapView;
+
+      /** A test-only method for validation. */
+      LocalAsyncLoadingCache<K, V> getOuter() {
+        return LocalAsyncLoadingCache.this;
+      }
 
       @Override
       public V getIfPresent(Object key) {

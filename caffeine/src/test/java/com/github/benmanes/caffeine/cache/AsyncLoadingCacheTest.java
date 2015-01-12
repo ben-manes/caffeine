@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.IsCacheReserializable.reserializable;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
@@ -368,5 +369,13 @@ public final class AsyncLoadingCacheTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  /* ---------------- serialize -------------- */
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void serialize(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache, is(reserializable()));
   }
 }

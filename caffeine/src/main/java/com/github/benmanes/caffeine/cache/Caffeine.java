@@ -781,7 +781,9 @@ public final class Caffeine<K, V> {
   }
 
   static final class AsyncRemovalListener<K, V>
-      implements RemovalListener<K, CompletableFuture<V>> {
+      implements RemovalListener<K, CompletableFuture<V>>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final RemovalListener<K, V> delegate;
     private final Executor executor;
 
@@ -796,6 +798,10 @@ public final class Caffeine<K, V> {
         delegate.onRemoval(new RemovalNotification<K, V>(
             notification.getKey(), value, notification.getCause()));
       }, executor);
+    }
+
+    Object writeReplace() {
+      return delegate;
     }
   }
 

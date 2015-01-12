@@ -416,8 +416,6 @@ public final class CacheTest {
   @CacheSpec
   @Test(dataProvider = "caches")
   public void serialize(Cache<Integer, Integer> cache, CacheContext context) {
-    if (!context.isAsync()) { // FIXME
-      assertThat(cache, is(reserializable()));
-    }
+    assertThat(cache, is(reserializable()));
   }
 }
