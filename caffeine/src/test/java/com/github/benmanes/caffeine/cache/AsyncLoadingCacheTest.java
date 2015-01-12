@@ -294,8 +294,8 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DEFAULT)
   public void put_insert_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
@@ -326,6 +326,34 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
     assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(context.absentValue()));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
+  public void put_replace_failure_async(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    AtomicBoolean ready = new AtomicBoolean();
+    CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
+      await().untilTrue(ready);
+      throw new IllegalStateException();
+    });
+
+    Integer key = context.absentKey();
+    cache.put(key, failedFuture);
+
+    CompletableFuture<Integer> successFuture =
+        CompletableFuture.completedFuture(context.absentValue());
+
+    cache.put(key, successFuture);
+    ready.set(true);
+
+    try {
+      failedFuture.get();
+    } catch (Exception ignored) {}
+    assertThat(cache.synchronous().getIfPresent(key), is(context.absentValue()));
+
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(1)));
   }
 
   @Test(dataProvider = "caches")
