@@ -1218,12 +1218,13 @@ public final class AsMapTest {
 
   /* ---------------- serialize -------------- */
 
-  // FIXME(ben)
   @CheckNoStats
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void serialize(Map<Integer, Integer> map, CacheContext context) {
-    SerializableTester.reserializeAndAssert(map);
+    if (!context.isAsync()) { // FIXME
+      SerializableTester.reserializeAndAssert(map);
+    }
   }
 
   /* ---------------- Key Set -------------- */

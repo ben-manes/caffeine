@@ -44,4 +44,9 @@ public enum DisabledStatsCounter implements StatsCounter {
   public CacheStats snapshot() {
     return EMPTY_STATS;
   }
+
+  @Override
+  public String toString() {
+    return snapshot().toString();
+  }
 }

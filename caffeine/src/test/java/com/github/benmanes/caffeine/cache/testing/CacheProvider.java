@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
+import java.util.logging.LogManager;
 import java.util.stream.Stream;
 
 import org.testng.annotations.DataProvider;
@@ -45,6 +46,11 @@ import com.google.common.base.Enums;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheProvider {
+
+  static {
+    // disable logging warnings caused by exceptions in asynchronous computations
+    LogManager.getLogManager().reset();
+  }
 
   private CacheProvider() {}
 

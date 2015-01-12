@@ -95,4 +95,9 @@ public final class ConcurrentStatsCounter implements StatsCounter {
     totalLoadTime.add(otherStats.totalLoadTime());
     evictionCount.add(otherStats.evictionCount());
   }
+
+  @Override
+  public String toString() {
+    return snapshot().toString();
+  }
 }

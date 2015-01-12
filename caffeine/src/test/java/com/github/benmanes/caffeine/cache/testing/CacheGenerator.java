@@ -59,6 +59,8 @@ final class CacheGenerator {
       Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
     return combinations(keyType, valueType).stream()
         .map(this::newCacheContext)
+        .filter(Optional::isPresent)
+        .map(Optional::get)
         .map(context -> {
           Cache<Integer, Integer> cache = CacheFromContext.newCache(context);
           populate(context, cache);
@@ -93,7 +95,7 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.removalListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
         ImmutableSet.of(true, isLoadingOnly),
-        ImmutableSet.of(isAsyncLoadingOnly),
+        ImmutableSet.of(true, isAsyncLoadingOnly),
         ImmutableSet.copyOf(cacheSpec.loader()),
         ImmutableSet.copyOf(cacheSpec.implementation()));
   }
@@ -108,9 +110,9 @@ final class CacheGenerator {
     return ImmutableSet.copyOf(options);
   }
 
-  private CacheContext newCacheContext(List<Object> combination) {
+  private Optional<CacheContext> newCacheContext(List<Object> combination) {
     int index = 0;
-    return new CacheContext(
+    CacheContext context = new CacheContext(
         (InitialCapacity) combination.get(index++),
         (Stats) combination.get(index++),
         (CacheWeigher) combination.get(index++),
@@ -126,6 +128,13 @@ final class CacheGenerator {
         (Boolean) combination.get(index++),
         (Loader) combination.get(index++),
         (Implementation) combination.get(index++));
+
+    boolean skip = context.isAsync && (context.implementation() != Implementation.Caffeine
+        || context.expires() || !context.isUnbounded()
+        || (context.keyStrength() != ReferenceType.STRONG)
+        || (context.valueStrength() != ReferenceType.STRONG));
+
+    return skip ? Optional.empty() : Optional.of(context);
   }
 
   private void populate(CacheContext context, Cache<Integer, Integer> cache) {

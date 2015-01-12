@@ -35,10 +35,12 @@ public final class StatsCounterTest {
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
     assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0)));
+    assertThat(counter.toString(), is(new CacheStats(0, 0, 0, 0, 0, 0).toString()));
 
     for (DisabledStatsCounter type : DisabledStatsCounter.values()) {
-      assertThat(DisabledStatsCounter.valueOf(type.toString()), is(counter));
+      assertThat(DisabledStatsCounter.valueOf(type.name()), is(counter));
     }
+
   }
 
   @Test
@@ -50,6 +52,7 @@ public final class StatsCounterTest {
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
     assertThat(counter.snapshot(), is(new CacheStats(1, 1, 1, 1, 2, 1)));
+    assertThat(counter.snapshot().toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
 
     counter.incrementBy(counter);
     assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 2)));

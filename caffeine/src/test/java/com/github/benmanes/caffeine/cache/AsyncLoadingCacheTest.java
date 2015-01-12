@@ -116,11 +116,11 @@ public final class AsyncLoadingCacheTest {
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, k -> failedFuture);
 
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
-
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
   @Test(dataProvider = "caches")
@@ -141,11 +141,11 @@ public final class AsyncLoadingCacheTest {
       valueFuture.get();
     } catch (Exception ignored) {}
 
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
-
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
   @CacheSpec
@@ -209,11 +209,11 @@ public final class AsyncLoadingCacheTest {
       valueFuture.get();
     } catch (Exception ignored) {}
 
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
-
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
   @Test(dataProvider = "caches")
@@ -311,10 +311,10 @@ public final class AsyncLoadingCacheTest {
     try {
       failedFuture.get();
     } catch (Exception ignored) {}
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
-
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+
+    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
   @Test(dataProvider = "caches")
@@ -350,10 +350,10 @@ public final class AsyncLoadingCacheTest {
     try {
       failedFuture.get();
     } catch (Exception ignored) {}
-    assertThat(cache.synchronous().getIfPresent(key), is(context.absentValue()));
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(1)));
+    assertThat(cache.synchronous().getIfPresent(key), is(context.absentValue()));
   }
 
   @Test(dataProvider = "caches")

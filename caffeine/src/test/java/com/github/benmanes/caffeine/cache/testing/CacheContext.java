@@ -279,6 +279,7 @@ public final class CacheContext {
         .add("afterWrite", afterWrite)
         .add("keyStrength", keyStrength)
         .add("valueStrength", valueStrength)
+        .add("async", isAsync)
         .add("loader", loader)
         .add("cacheExecutor", cacheExecutor)
         .add("removalListener", removalListenerType)

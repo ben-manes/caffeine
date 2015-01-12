@@ -132,8 +132,11 @@ public final class LoadingCacheTest {
       cache.getAll(context.absentKeys());
     } finally {
       int misses = context.absentKeys().size();
+      int loadFailures = context.loader().isBulk()
+          ? 1
+          : (context.isAsync() ? misses : 1);
       assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(loadFailures)));
     }
   }
 
