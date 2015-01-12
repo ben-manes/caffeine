@@ -1216,17 +1216,6 @@ public final class AsMapTest {
     }
   }
 
-  /* ---------------- serialize -------------- */
-
-  @CheckNoStats
-  @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void serialize(Map<Integer, Integer> map, CacheContext context) {
-    if (!context.isAsync()) { // FIXME
-      SerializableTester.reserializeAndAssert(map);
-    }
-  }
-
   /* ---------------- Key Set -------------- */
 
   @CheckNoStats

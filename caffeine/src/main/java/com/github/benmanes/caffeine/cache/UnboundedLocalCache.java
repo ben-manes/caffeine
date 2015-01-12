@@ -1599,7 +1599,6 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
         BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
       requireNonNull(value);
       requireNonNull(remappingFunction);
-      @SuppressWarnings("unchecked")
       CompletableFuture<V> mergedValueFuture = delegate.merge(
           key, CompletableFuture.completedFuture(value), (oldValueFuture, valueFuture) -> {
         V oldValue = getWhenSuccessful(oldValueFuture);

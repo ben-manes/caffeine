@@ -25,12 +25,15 @@ import static com.github.benmanes.caffeine.matchers.IsFutureValue.futureOf;
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.both;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
@@ -57,7 +60,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsyncLoadingCacheTest {
-  // FIXME: Ensure stats are recorded correctly for loads (only after the future completes)
 
   /* ---------------- CacheLoader -------------- */
 
@@ -258,11 +260,69 @@ public final class AsyncLoadingCacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void getAll_immutable(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    cache.getAll(context.absentKeys()).clear();
+  public void getAll_immutable(AsyncLoadingCache<Integer, Integer> cache, CacheContext context)
+      throws Exception {
+    cache.getAll(context.absentKeys()).get().clear();
   }
 
-  // TODO
+  @Test(dataProvider = "caches", expectedExceptions = ExecutionException.class)
+  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
+  public void getAll_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) throws Exception {
+    try {
+      cache.getAll(context.absentKeys()).get();
+    } finally {
+      int misses = context.absentKeys().size();
+      int loadFailures = context.loader().isBulk()
+          ? 1
+          : (context.isAsync() ? misses : 1);
+      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
+      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(loadFailures)));
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context)
+      throws Exception {
+    Map<Integer, Integer> result = cache.getAll(context.absentKeys()).get();
+
+    int count = context.absentKeys().size();
+    int loads = context.loader().isBulk() ? 1 : count;
+    assertThat(result.size(), is(count));
+    assertThat(context, both(hasMissCount(count)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_present_partial(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) throws Exception {
+    Map<Integer, Integer> expect = new HashMap<>();
+    expect.put(context.firstKey(), -context.firstKey());
+    expect.put(context.middleKey(), -context.middleKey());
+    expect.put(context.lastKey(), -context.lastKey());
+    Map<Integer, Integer> result = cache.getAll(expect.keySet()).get();
+
+    assertThat(result, is(equalTo(expect)));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(expect.size())));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_present_full(AsyncLoadingCache<Integer, Integer> cache, CacheContext context)
+      throws Exception {
+    Map<Integer, Integer> result = cache.getAll(context.original().keySet()).get();
+    assertThat(result, is(equalTo(context.original())));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
 
   /* ---------------- put -------------- */
 
