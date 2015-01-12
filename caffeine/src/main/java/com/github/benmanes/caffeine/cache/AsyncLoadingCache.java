@@ -43,7 +43,8 @@ public interface AsyncLoadingCache<K, V> {
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
-   * is performed atomically, so the function is applied at most once per key.
+   * is performed atomically, so the function is applied at most once per key. If the asynchronous
+   * computation fails, the entry will be automatically removed.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
@@ -58,7 +59,8 @@ public interface AsyncLoadingCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
-   * {@link CacheLoader#asyncLoad} if necessary.
+   * {@link CacheLoader#asyncLoad} if necessary. If the asynchronous computation fails, the entry
+   * will be automatically removed.
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
@@ -76,7 +78,8 @@ public interface AsyncLoadingCache<K, V> {
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
    * those values if necessary. The returned map contains entries that were already cached, combined
-   * with newly loaded entries; it will never contain null keys or values.
+   * with newly loaded entries; it will never contain null keys or values. If the any of the
+   * asynchronous computations fail, those entries will be automatically removed.
    * <p>
    * Caches loaded by a {@link CacheLoader} will issue a single request to
    * {@link CacheLoader#asyncLoadAll} for all keys which are not already present in the cache. If
@@ -100,7 +103,8 @@ public interface AsyncLoadingCache<K, V> {
 
   /**
    * Associates {@code value} with {@code key} in this cache. If the cache previously contained a
-   * value associated with {@code key}, the old value is replaced by {@code value}.
+   * value associated with {@code key}, the old value is replaced by {@code value}. If the
+   * asynchronous computation fails, the entry will be automatically removed.
    * <p>
    * Prefer {@link #get(Object, Function)} when using the conventional "if cached, return; otherwise
    * create, cache and return" pattern.
