@@ -611,10 +611,10 @@ public final class Caffeine<K, V> {
   @Nonnull <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
     @SuppressWarnings("unchecked")
     RemovalListener<K1, V1> castedListener = (RemovalListener<K1, V1>) removalListener;
-    if (async) {
+    if (async && (castedListener != null)) {
       @SuppressWarnings("unchecked")
       RemovalListener<K1, V1> asyncListener = (RemovalListener<K1, V1>)
-          new AsyncRemovalListener<K1, V1>(castedListener, executor);
+          new AsyncRemovalListener<K1, V1>(castedListener, getExecutor());
       return asyncListener;
     }
     return castedListener;
@@ -786,8 +786,8 @@ public final class Caffeine<K, V> {
     private final Executor executor;
 
     AsyncRemovalListener(RemovalListener<K, V> delegate, Executor executor) {
-      this.delegate = delegate;
-      this.executor = executor;
+      this.delegate = requireNonNull(delegate);
+      this.executor = requireNonNull(executor);
     }
 
     @Override

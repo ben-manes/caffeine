@@ -46,6 +46,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * The test cases for the {@link AsyncLoadingCache} interface that simulate the most generic usages.
@@ -56,6 +57,21 @@ import com.google.common.collect.ImmutableList;
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsyncLoadingCacheTest {
   // FIXME: Ensure stats are recorded correctly for loads (only after the future completes)
+
+  /* ---------------- CacheLoader -------------- */
+
+  @Test
+  public void asyncLoad() throws Exception {
+    CacheLoader<Integer, ?> loader = key -> key;
+    CompletableFuture<?> future = loader.asyncLoad(1, MoreExecutors.directExecutor());
+    assertThat(future.get(), is(1));
+  }
+
+  @Test(enabled = false, expectedExceptions = UnsupportedOperationException.class)
+  public void asyncLoadAll() {
+    CacheLoader<Object, ?> loader = key -> key;
+    loader.asyncLoadAll(Collections.<Object>emptyList(), MoreExecutors.directExecutor());
+  }
 
   /* ---------------- getFunc -------------- */
 
@@ -318,7 +334,7 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, value);
-      assertThat(cache.get(key), is(value));
+      assertThat(cache.get(key), is(futureOf(context.absentValue())));
     }
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
 

@@ -71,11 +71,13 @@ final class CacheGenerator {
       Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
     Set<ReferenceType> keys = filterReferenceTypes(keyType, cacheSpec.keys());
     Set<ReferenceType> values = filterReferenceTypes(valueType, cacheSpec.values());
+    if (isAsyncLoadingOnly) {
+      values = values.contains(ReferenceType.STRONG)
+          ? ImmutableSet.of(ReferenceType.STRONG)
+          : ImmutableSet.of();
+    }
     if (keys.isEmpty() || values.isEmpty()) {
       return ImmutableSet.of();
-    }
-    if (isAsyncLoadingOnly) {
-      values = ImmutableSet.of(ReferenceType.STRONG);
     }
 
     return Sets.cartesianProduct(
