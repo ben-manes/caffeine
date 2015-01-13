@@ -1117,66 +1117,40 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
 
     @Override
     public CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys) {
-      Map<K, CompletableFuture<V>> futures = new HashMap<>();
-      List<K> keysToLoad = new ArrayList<>();
-      for (K key : keys) {
-        CompletableFuture<V> valueFuture = cache.data.get(key);
-        if ((valueFuture == null) || valueFuture.isCompletedExceptionally()) {
-          keysToLoad.add(key);
-        } else {
-          futures.put(key, valueFuture);
-        }
-      }
-      cache.statsCounter.recordHits(futures.size());
-
-      if (keysToLoad.isEmpty()) {
-        return composeResult(futures);
-      }
-      cache.statsCounter.recordMisses(keysToLoad.size());
-
-      long now = cache.ticker.read();
       if (canBulkLoad) {
-        Map<K, CompletableFuture<V>> proxies = new HashMap<>();
-        for (K key : keysToLoad) {
+        return getAllBulk(keys);
+      }
+
+      Map<K, CompletableFuture<V>> result = new HashMap<>();
+      for (K key : keys) {
+        result.put(key, get(key));
+      }
+      return composeResult(result);
+    }
+
+    CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
+      Map<K, CompletableFuture<V>> futures = new HashMap<>();
+      Map<K, CompletableFuture<V>> proxies = new HashMap<>();
+      for (K key : keys) {
+        CompletableFuture<V> future = cache.data.get(key);
+        if (future == null) {
           CompletableFuture<V> proxy = new CompletableFuture<>();
-          CompletableFuture<V> future = cache.putIfAbsent(key, proxy);
+          future = cache.data.putIfAbsent(key, proxy);
           if (future == null) {
             future = proxy;
             proxies.put(key, proxy);
           }
-          futures.put(key, future);
         }
-
-        loader.asyncLoadAll(keysToLoad, cache.executor).whenComplete((result, error) -> {
-          for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
-            if (error == null) {
-              entry.getValue().obtrudeValue(result.get(entry.getKey()));
-            } else {
-              entry.getValue().obtrudeException(error);
-            }
-          }
-          long loadTime = cache.ticker.read() - now;
-          if (error == null) {
-            cache.statsCounter.recordLoadSuccess(loadTime);
-          } else {
-            cache.statsCounter.recordLoadFailure(loadTime);
-          }
-        });
-
+        futures.put(key, future);
+      }
+      cache.statsCounter.recordMisses(proxies.size());
+      cache.statsCounter.recordHits(futures.size() - proxies.size());
+      if (proxies.isEmpty()) {
         return composeResult(futures);
       }
 
-      // non-bulk
-      for (K key : keysToLoad) {
-        futures.put(key, loader.asyncLoad(key, cache.executor).whenComplete((value, error) -> {
-          long loadTime = cache.ticker.read();
-          if (error == null) {
-            cache.statsCounter.recordLoadSuccess(loadTime);
-          } else {
-            cache.statsCounter.recordLoadFailure(loadTime);
-          }
-        }));
-      }
+      loader.asyncLoadAll(proxies.keySet(), cache.executor)
+          .whenComplete(new AsyncBulkCompleter(proxies));
       return composeResult(futures);
     }
 
@@ -1234,6 +1208,56 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     @Override
     public LoadingCache<K, V> synchronous() {
       return (localCacheView == null) ? (localCacheView = new LoadingCacheView()) : localCacheView;
+    }
+
+    /** A function executed asynchronously after a bulk load completes. */
+    final class AsyncBulkCompleter implements BiConsumer<Map<K, V>, Throwable> {
+      final Map<K, CompletableFuture<V>> proxies;
+      final long now;
+
+      AsyncBulkCompleter(Map<K, CompletableFuture<V>> proxies) {
+        this.now = cache.ticker.read();
+        this.proxies = proxies;
+      }
+
+      @Override
+      public void accept(Map<K, V> result, Throwable error) {
+        long loadTime = cache.ticker.read() - now;
+
+        if (error == null) {
+          fillProxies(result);
+          addNewEntries(result);
+          cache.statsCounter.recordLoadSuccess(result.size());
+        } else if (error != null) {
+          for (CompletableFuture<V> proxy : proxies.values()) {
+            proxy.obtrudeException(error);
+          }
+          cache.statsCounter.recordLoadFailure(loadTime);
+        }
+      }
+
+      /** Populates the proxies with the computed result. */
+      private void fillProxies(Map<K, V> result) {
+        for (Entry<K, CompletableFuture<V>> proxy : proxies.entrySet()) {
+          V value = result.get(proxy.getKey());
+          proxy.getValue().obtrudeValue(value);
+          if (value == null) {
+            cache.data.remove(proxy.getKey(), proxy.getValue());
+          }
+        }
+      }
+
+      /** Adds to the cache any extra entries computed that were not requested. */
+      private void addNewEntries(Map<K, V> result) {
+        if (proxies.size() == result.size()) {
+          return;
+        }
+        for (Entry<K, V> entry : result.entrySet()) {
+          if (!proxies.containsKey(entry.getKey())) {
+            cache.put(entry.getKey(), CompletableFuture.completedFuture(entry.getValue()));
+          }
+        }
+      }
     }
 
     /* ---------------- Serialization Support -------------- */

@@ -75,7 +75,7 @@ tasks.withType(Test) {
   } else {
     maxHeapSize = '384m'
     options {
-      threadCount = System.env.'CI' ? 2 : 6
+      threadCount = System.env.'CI' ? 4 : 6
       excludeGroups = ['slow']
       parallel = 'methods'
     }

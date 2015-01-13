@@ -54,7 +54,7 @@ tasks.withType(Test) {
       events 'failed'
       showCauses = true
       showExceptions = true
-      exceptionFormat 'short'
+      exceptionFormat 'full'
     }
   }
   jacoco {

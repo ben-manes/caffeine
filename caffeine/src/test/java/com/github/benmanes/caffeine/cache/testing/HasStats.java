@@ -17,6 +17,9 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static org.hamcrest.Matchers.is;
 
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
@@ -55,6 +58,7 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
 
     CacheStats stats = context.stats();
     DescriptionBuilder desc = new DescriptionBuilder(description);
+    ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
     switch (type) {
       case HIT:
         return desc.expectThat(type.name(), stats.hitCount(), is(count)).matches();
