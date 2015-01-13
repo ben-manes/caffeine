@@ -37,9 +37,9 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
-import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
+import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -66,7 +66,7 @@ public final class BoundedLocalCacheTest {
     return (BoundedLocalCache<Integer, Integer>) cache.asMap();
   }
 
-  @Test
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.UNREACHABLE,
       weigher = CacheWeigher.MAX_VALUE, population = Population.EMPTY)
   public void putWeighted_noOverflow() {

@@ -31,15 +31,14 @@ import java.util.stream.Stream;
 
 import org.testng.annotations.DataProvider;
 
-import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.google.common.base.Enums;
-
 
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
