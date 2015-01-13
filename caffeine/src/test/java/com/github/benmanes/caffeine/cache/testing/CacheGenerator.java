@@ -56,8 +56,9 @@ final class CacheGenerator {
 
   /** Returns a lazy stream so that the test case is lazy and GC-able after use. */
   public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate(
-      Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
-    return combinations(keyType, valueType).stream()
+      Optional<Implementation> implementation, Optional<ReferenceType> keyType,
+      Optional<ReferenceType> valueType) {
+    return combinations(implementation, keyType, valueType).stream()
         .map(this::newCacheContext)
         .filter(Optional::isPresent)
         .map(Optional::get)
@@ -69,19 +70,23 @@ final class CacheGenerator {
   }
 
   @SuppressWarnings("unchecked")
-  private Set<List<Object>> combinations(
+  private Set<List<Object>> combinations(Optional<Implementation> implementation,
       Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
-    Set<ReferenceType> keys = filterReferenceTypes(keyType, cacheSpec.keys());
-    Set<ReferenceType> values = filterReferenceTypes(valueType, cacheSpec.values());
+    Set<ReferenceType> keys = filterTypes(keyType, cacheSpec.keys());
+    Set<ReferenceType> values = filterTypes(valueType, cacheSpec.values());
+    Set<Implementation> implementations = filterTypes(implementation, cacheSpec.implementation());
     if (isAsyncLoadingOnly) {
       values = values.contains(ReferenceType.STRONG)
           ? ImmutableSet.of(ReferenceType.STRONG)
           : ImmutableSet.of();
-    }
-    if (keys.isEmpty() || values.isEmpty()) {
-      return ImmutableSet.of();
+      implementations = implementations.contains(Implementation.Caffeine)
+          ? ImmutableSet.of(Implementation.Caffeine)
+          : ImmutableSet.of();
     }
 
+    if (implementations.isEmpty() || keys.isEmpty() || values.isEmpty()) {
+      return ImmutableSet.of();
+    }
     return Sets.cartesianProduct(
         ImmutableSet.copyOf(cacheSpec.initialCapacity()),
         ImmutableSet.copyOf(cacheSpec.stats()),
@@ -97,11 +102,10 @@ final class CacheGenerator {
         ImmutableSet.of(true, isLoadingOnly),
         ImmutableSet.of(true, isAsyncLoadingOnly),
         ImmutableSet.copyOf(cacheSpec.loader()),
-        ImmutableSet.copyOf(cacheSpec.implementation()));
+        ImmutableSet.copyOf(implementations));
   }
 
-  private static ImmutableSet<ReferenceType> filterReferenceTypes(
-      Optional<ReferenceType> type, ReferenceType[] options) {
+  private static <T> ImmutableSet<T> filterTypes(Optional<T> type, T[] options) {
     if (type.isPresent()) {
       return type.filter(Arrays.asList(options)::contains).isPresent()
           ? ImmutableSet.of(type.get())

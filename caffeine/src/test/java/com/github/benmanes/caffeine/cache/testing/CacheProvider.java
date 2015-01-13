@@ -36,6 +36,7 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.google.common.base.Enums;
 
@@ -65,6 +66,8 @@ public final class CacheProvider {
     CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
     requireNonNull(cacheSpec, "@CacheSpec not found");
 
+    Optional<Implementation> implementation = Optional.ofNullable(Enums.getIfPresent(
+        Implementation.class, System.getProperties().getProperty("implementation", "")).orNull());
     Optional<ReferenceType> keys = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
         System.getProperties().getProperty("keys", "").toUpperCase()).orNull());
     Optional<ReferenceType> values = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
@@ -73,7 +76,7 @@ public final class CacheProvider {
     boolean isAsyncLoadingOnly = hasCacheOfType(testMethod, AsyncLoadingCache.class);
     boolean isLoadingOnly = hasCacheOfType(testMethod, LoadingCache.class);
     CacheGenerator generator = new CacheGenerator(cacheSpec, isLoadingOnly, isAsyncLoadingOnly);
-    return asTestCases(testMethod, generator.generate(keys, values));
+    return asTestCases(testMethod, generator.generate(implementation, keys, values));
   }
 
   /** Converts each scenario into test case parameters. */

@@ -1,38 +1,43 @@
 /**
  * The configuration to break cache tests into independant tasks.
  */
+test {
+  exclude 'com/github/benmanes/caffeine/cache/**'
+}
+ 
 configurations {
-  [ slowTest,
-    strongKeysAndStrongValuesTest, strongKeysAndWeakValuesTest, strongKeysAndSoftValuesTest,
-    weakKeysAndStrongValuesTest, weakKeysAndWeakValuesTest, weakKeysAndSoftValuesTest
+  [ slowCaffeineTest, slowGuavaTest,
+    strongKeysAndStrongValuesCaffeineTest, strongKeysAndStrongValuesGuavaTest,
+    strongKeysAndWeakValuesCaffeineTest, strongKeysAndWeakValuesGuavaTest,
+    strongKeysAndSoftValuesCaffeineTest, strongKeysAndSoftValuesGuavaTest,
+    weakKeysAndStrongValuesCaffeineTest, weakKeysAndStrongValuesGuavaTest,
+    weakKeysAndWeakValuesCaffeineTest, weakKeysAndWeakValuesGuavaTest,
+    weakKeysAndSoftValuesCaffeineTest, weakKeysAndSoftValuesGuavaTest
   ]*.each {
     it.extendsFrom testCompile
     it.extendsFrom testRuntime
   }
 }
 
+def testConfigurations = configurations*.name.findAll { it.contains('Test') }
 sourceSets {
-  [ slowTest, 
-    strongKeysAndStrongValuesTest, strongKeysAndWeakValuesTest, strongKeysAndSoftValuesTest,
-    weakKeysAndStrongValuesTest, weakKeysAndWeakValuesTest, weakKeysAndSoftValuesTest
-  ]*.each {
-    it.java.srcDir 'src/test/java'
-    it.resources.srcDir 'src/test/resources'
+  testConfigurations.each {
+    def sourceSet = sourceSets.maybeCreate it
+    sourceSet.java.srcDir 'src/test/java'
+    sourceSet.resources.srcDir 'src/test/resources'
   }
 }
 
-test {
-  exclude 'com/github/benmanes/caffeine/cache/**'
-}
-
-[ 'slow', 'strongKeysAndStrongValues', 'strongKeysAndWeakValues', 'strongKeysAndSoftValues',
-  'weakKeysAndStrongValues', 'weakKeysAndWeakValues', 'weakKeysAndSoftValues'
-].each {
-  def labels = it.split('And').collect { it[0].toLowerCase() + it.substring(1) }
-  task "${it}Test"(type: Test) {
+testConfigurations.each { testName ->
+  def implementations = ['Caffeine', 'Guava']
+  def implementation = implementations.find { testName.contains(it) }
+  def testType = testName.minus(implementation + 'Test')
+  
+  def labels = testType.split('And').collect { it[0].toLowerCase() + it.substring(1) }
+  task "${testName}"(type: Test) {
     useTestNG()
     group = 'Cache tests'
-    description = "Runs " + labels.join(' ') + " tests."
+    description = "Runs " + labels.join(' with ') + " " + implementation + " tests."
     include 'com/github/benmanes/caffeine/cache/**'
 
     testClassesDir = sourceSets."${name}".output.classesDir
@@ -42,34 +47,28 @@ test {
       systemProperties['keys'] = strength[0]
       systemProperties['values'] = strength[1]
     }
+    systemProperties['implementation'] = implementation
 
     // ensure we don't overwrite default report directories used by 'test' task
     reports.html.destination = "${buildDir}/reports/${name}"
     reports.junitXml.destination = "${buildDir}/${name}-results"
     binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
 
-    // always run these tests after unit tests in order to fail fast
-    mustRunAfter test
-  }
-}
-
-[ slowTest, strongKeysAndStrongValuesTest, strongKeysAndWeakValuesTest, strongKeysAndSoftValuesTest,
-  weakKeysAndStrongValuesTest, weakKeysAndWeakValuesTest, weakKeysAndSoftValuesTest
-]*.each {
-  def taskName = it.name
-  if (System.env.'CI' || (taskName != 'slowTest')) {
-    tasks.test.finalizedBy(it)
-  }
-  dependencies {
-    "${taskName}Compile" sourceSets.main.output, sourceSets.test.output
-    "${taskName}Compile" configurations.compile, configurations.testCompile
-    "${taskName}Runtime" configurations.runtime, configurations.testRuntime
+    // Configure task dependencies
+    if (System.env.'CI' || !name.contains('slow')) {
+      tasks.test.dependsOn(it)
+    }
+    dependencies {
+      "${name}Compile" sourceSets.main.output, sourceSets.test.output
+      "${name}Compile" configurations.compile, configurations.testCompile
+      "${name}Runtime" configurations.runtime, configurations.testRuntime
+    }
   }
 }
 
 tasks.withType(Test) {
   useTestNG()
-  if (name == 'slowTest') {
+  if (name.contains('slow')) {
     maxHeapSize = '128m'
     testLogging.info.events 'passed'
     options.includeGroups = ['slow']
@@ -80,9 +79,6 @@ tasks.withType(Test) {
       excludeGroups = ['slow']
       parallel = 'methods'
     }
-  }
-  if (System.env.'CI') {
-    forkEvery = 2
   }
 }
 
