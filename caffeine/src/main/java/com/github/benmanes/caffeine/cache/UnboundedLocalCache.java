@@ -49,6 +49,7 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -1072,13 +1073,21 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     }
 
     @Override
+    public CompletableFuture<V> get(@Nonnull K key,
+        @Nonnull Function<? super K, ? extends V> mappingFunction) {
+      requireNonNull(mappingFunction);
+      return get(key, (k1, executor) -> CompletableFuture.<V>supplyAsync(
+          () -> mappingFunction.apply(key), executor));
+    }
+
+    @Override
     public CompletableFuture<V> get(K key,
-        Function<? super K, CompletableFuture<V>> mappingFunction) {
+        BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction) {
       long now = cache.ticker.read();
       @SuppressWarnings("unchecked")
       CompletableFuture<V>[] result = new CompletableFuture[1];
       CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
-        return mappingFunction.apply(key).whenComplete((value, error) -> {
+        return mappingFunction.apply(key, cache.executor).whenComplete((value, error) -> {
           long loadTime = cache.ticker.read() - now;
           if (error == null) {
             cache.statsCounter.recordLoadSuccess(loadTime);
@@ -1103,7 +1112,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
 
     @Override
     public CompletableFuture<V> get(K key) {
-      return get(key, k -> loader.asyncLoad(key, cache.executor));
+      return get(key, (k, executor) -> loader.asyncLoad(key, executor));
     }
 
     @Override
@@ -1324,8 +1333,8 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       @Override
       public V get(K key, Function<? super K, ? extends V> mappingFunction) {
         requireNonNull(mappingFunction);
-        CompletableFuture<V> future = LocalAsyncLoadingCache.this.get(key, k ->
-            CompletableFuture.supplyAsync(() -> mappingFunction.apply(key), cache.executor));
+        CompletableFuture<V> future = LocalAsyncLoadingCache.this.get(key, (k, executor) ->
+            CompletableFuture.supplyAsync(() -> mappingFunction.apply(key), executor));
         try {
           return future.get();
         } catch (ExecutionException e) {

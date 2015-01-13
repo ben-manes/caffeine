@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.annotation.Nonnull;
@@ -49,13 +51,32 @@ public interface AsyncLoadingCache<K, V> {
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
    * @return the current (existing or computed) future value associated with the specified key
-   * @throws NullPointerException if the specified key is null
-   * @throws RuntimeException or Error if the {@link CacheLoader} does when constructing the future,
+   * @throws NullPointerException if the specified key or mappingFunction is null
+   */
+  @Nonnull
+  CompletableFuture<V> get(@Nonnull K key,
+      @Nonnull Function<? super K, ? extends V> mappingFunction);
+
+  /**
+   * Returns the future associated with {@code key} in this cache, obtaining that value from
+   * {@link CacheLoader#asyncLoad} if necessary. This method provides a simple substitute for the
+   * conventional "if cached, return; otherwise create, cache and return" pattern.
+   * <p>
+   * If the specified key is not already associated with a value, attempts to compute its value
+   * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
+   * is performed atomically, so the function is applied at most once per key. If the asynchronous
+   * computation fails, the entry will be automatically removed.
+   *
+   * @param key key with which the specified value is to be associated
+   * @param mappingFunction the function to asynchronously compute a value
+   * @return the current (existing or computed) future value associated with the specified key
+   * @throws NullPointerException if the specified key or mappingFunction is null
+   * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
    *         in which case the mapping is left unestablished
    */
   @Nonnull
   CompletableFuture<V> get(@Nonnull K key,
-      @Nonnull Function<? super K, CompletableFuture<V>> mappingFunction);
+      @Nonnull BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
