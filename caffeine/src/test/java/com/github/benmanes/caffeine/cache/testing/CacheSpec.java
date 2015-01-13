@@ -20,19 +20,24 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import scala.concurrent.forkjoin.ThreadLocalRandom;
+
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -309,7 +314,7 @@ public @interface CacheSpec {
       }
     },
 
-    // Bulk versions
+    /** A bulk-only loader that returns the key's negation. */
     BULK_NEGATIVE(true) {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
@@ -320,6 +325,20 @@ public @interface CacheSpec {
         return result;
       }
     },
+    /** A bulk-only loader that loads more than requested. */
+    BULK_NEGATIVE_EXCEEDS(true) {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        List<Integer> moreKeys = new ArrayList<>(ImmutableList.copyOf(keys));
+        for (int i = 0; i < 10; i++) {
+          moreKeys.add(ThreadLocalRandom.current().nextInt());
+        }
+        return BULK_NEGATIVE.loadAll(moreKeys);
+      }
+    },
+    /** A bulk-only loader that always throws an exception. */
     BULK_EXCEPTIONAL(true) {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();

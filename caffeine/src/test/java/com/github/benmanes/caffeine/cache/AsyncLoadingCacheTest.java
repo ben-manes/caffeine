@@ -26,6 +26,7 @@ import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -77,7 +78,6 @@ public final class AsyncLoadingCacheTest {
     CacheLoader<Object, ?> loader = key -> key;
     loader.asyncLoadAll(Collections.<Object>emptyList(), MoreExecutors.directExecutor());
   }
-
 
   /* ---------------- getFunc -------------- */
 
@@ -402,15 +402,18 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+  @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAll_present_full(AsyncLoadingCache<Integer, Integer> cache, CacheContext context)
-      throws Exception {
-    Map<Integer, Integer> result = cache.getAll(context.original().keySet()).get();
-    assertThat(result, is(equalTo(context.original())));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  public void getAll_exceeds(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) throws Exception {
+    Map<Integer, Integer> result = cache.getAll(context.absentKeys()).get();
+
+    assertThat(result.keySet(), equalTo(context.absentKeys()));
+    assertThat(cache.synchronous().estimatedSize(),
+        is(greaterThan(context.initialSize() + context.absentKeys().size())));
+
+    assertThat(context, both(hasMissCount(result.size())).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
   /* ---------------- put -------------- */
