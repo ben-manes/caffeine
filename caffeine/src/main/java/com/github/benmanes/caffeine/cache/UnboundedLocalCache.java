@@ -774,7 +774,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
 
   static class LocalManualCache<K, V> implements Cache<K, V>, Serializable {
     final UnboundedLocalCache<K, V> cache;
-    transient Advanced<K, V> advanced;
+    transient Policy<K, V> policy;
 
     LocalManualCache(Caffeine<K, V> builder) {
       this.cache = new UnboundedLocalCache<>(builder, false);
@@ -842,8 +842,8 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     }
 
     @Override
-    public Advanced<K, V> advanced() {
-      return (advanced == null) ? (advanced = new UnboundedAdvanced<K, V>()) : advanced;
+    public Policy<K, V> policy() {
+      return (policy == null) ? (policy = new UnboundedPolicy<K, V>()) : policy;
     }
 
     /* ---------------- Serialization Support -------------- */
@@ -897,7 +897,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     }
   }
 
-  static final class UnboundedAdvanced<K, V> implements Advanced<K, V> {
+  static final class UnboundedPolicy<K, V> implements Policy<K, V> {
     @Override public Optional<Eviction<K, V>> eviction() {
       return Optional.empty();
     }
@@ -1049,7 +1049,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     final boolean canBulkLoad;
 
     transient LoadingCacheView localCacheView;
-    transient Advanced<K, V> advanced;
+    transient Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
     LocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
@@ -1449,8 +1449,8 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       }
 
       @Override
-      public Advanced<K, V> advanced() {
-        return (advanced == null) ? (advanced = new UnboundedAdvanced<K, V>()) : advanced;
+      public Policy<K, V> policy() {
+        return (policy == null) ? (policy = new UnboundedPolicy<K, V>()) : policy;
       }
 
       @Override

@@ -37,7 +37,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
-import com.github.benmanes.caffeine.cache.Advanced.Eviction;
+import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;

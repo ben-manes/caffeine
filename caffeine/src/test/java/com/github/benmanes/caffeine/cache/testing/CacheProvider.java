@@ -31,7 +31,7 @@ import java.util.stream.Stream;
 
 import org.testng.annotations.DataProvider;
 
-import com.github.benmanes.caffeine.cache.Advanced;
+import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -58,7 +58,7 @@ public final class CacheProvider {
   /**
    * The provided test parameters are optional and may be specified in any order. Supports injecting
    * {@link LoadingCache}, {@link Cache}, {@link CacheContext}, the {@link ConcurrentMap}
-   * {@link Cache#asMap()} view, {@link Advanced.Eviction}, {@link Advanced.Expiration},
+   * {@link Cache#asMap()} view, {@link Policy.Eviction}, {@link Policy.Expiration},
    * and {@link FakeTicker}.
    */
   @DataProvider(name = "caches")
@@ -105,13 +105,13 @@ public final class CacheProvider {
           params[i] = entry.getKey().asyncCache;
         } else if (clazz.isAssignableFrom(Map.class)) {
           params[i] = entry.getValue().asMap();
-        } else if (clazz.isAssignableFrom(Advanced.Eviction.class)) {
-          params[i] = entry.getValue().advanced().eviction().get();
-        } else if (clazz.isAssignableFrom(Advanced.Expiration.class)) {
+        } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
+          params[i] = entry.getValue().policy().eviction().get();
+        } else if (clazz.isAssignableFrom(Policy.Expiration.class)) {
           if (parameters[i].isAnnotationPresent(ExpireAfterAccess.class)) {
-            params[i] = entry.getValue().advanced().expireAfterAccess().get();
+            params[i] = entry.getValue().policy().expireAfterAccess().get();
           } else if (parameters[i].isAnnotationPresent(ExpireAfterWrite.class)) {
-            params[i] = entry.getValue().advanced().expireAfterWrite().get();
+            params[i] = entry.getValue().policy().expireAfterWrite().get();
           } else {
             throw new AssertionError("Expiration parameter must have a qualifier annotation");
           }

@@ -37,7 +37,7 @@ testConfigurations.each { testName ->
   task "${testName}"(type: Test) {
     useTestNG()
     group = 'Cache tests'
-    description = "Runs " + labels.join(' with ') + " " + implementation + " tests."
+    description = "Runs ${labels.join(' with ')} ${implementation} tests."
     include 'com/github/benmanes/caffeine/cache/**'
 
     testClassesDir = sourceSets."${name}".output.classesDir

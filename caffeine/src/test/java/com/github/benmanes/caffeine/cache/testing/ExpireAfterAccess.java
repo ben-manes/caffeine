@@ -21,7 +21,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import com.github.benmanes.caffeine.cache.Advanced.Expiration;
+import com.github.benmanes.caffeine.cache.Policy.Expiration;
 
 /**
  * An annotation to qualify the parameterized {@link Expiration}.

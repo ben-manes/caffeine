@@ -2081,7 +2081,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     final BoundedLocalCache<K, V> cache;
     final boolean isWeighted;
 
-    transient Advanced<K, V> advanced;
+    transient Policy<K, V> advanced;
 
     LocalManualCache(Caffeine<K, V> builder) {
       this(builder, null);
@@ -2165,11 +2165,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     }
 
     @Override
-    public Advanced<K, V> advanced() {
-      return (advanced == null) ? (advanced = new BoundedAdvanced()) : advanced;
+    public Policy<K, V> policy() {
+      return (advanced == null) ? (advanced = new BoundedPolicy()) : advanced;
     }
 
-    final class BoundedAdvanced implements Advanced<K, V> {
+    final class BoundedPolicy implements Policy<K, V> {
       Optional<Eviction<K, V>> eviction;
       Optional<Expiration<K, V>> afterWrite;
       Optional<Expiration<K, V>> afterAccess;

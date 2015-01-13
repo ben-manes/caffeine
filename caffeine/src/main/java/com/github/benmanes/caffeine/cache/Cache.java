@@ -184,5 +184,5 @@ public interface Cache<K, V> {
    * @return access to inspect and perform advanced operations based on the cache's characteristics
    */
   @Nonnull
-  Advanced<K, V> advanced();
+  Policy<K, V> policy();
 }

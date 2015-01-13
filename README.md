@@ -41,7 +41,7 @@ a Guava compatible adapter is available (see [migration guide](MIGRATING.md)).
 | [Weigher](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Weigher.java) | Calculates the size of entries relative to each other; used if a maximum weight is specified |
 | [RemovalListener](caffeine/src/main/java/com/github/benmanes/caffeine/cache/RemovalListener.java) | Listens for notifications when an entry is removed from a cache |
 | [CacheStats](caffeine/src/main/java/com/github/benmanes/caffeine/cache/stats/CacheStats.java) | Statistics about the performance of a cache |
-| [Advanced](src/main/java/com/github/benmanes/caffeine/cache/Advanced.java) | Access to inspect and perform low-level cache operations based on its constructed configuration |
+| [Policy](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Policy.java) | Access to inspect and perform low-level cache operations based on its constructed configuration |
 | [CaffeinatedGuava](guava/src/main/java/com/github/benmanes/caffeine/guava/CaffeinatedGuava.java) | An adapter that exposes a Caffeine cache through Guava facades |
 
 #### Tracing and Simulator

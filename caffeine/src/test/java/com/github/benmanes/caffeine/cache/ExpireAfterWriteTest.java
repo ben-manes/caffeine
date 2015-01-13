@@ -31,7 +31,7 @@ import java.util.function.Function;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.Advanced.Expiration;
+import com.github.benmanes.caffeine.cache.Policy.Expiration;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -192,7 +192,7 @@ public final class ExpireAfterWriteTest {
     assertThat(cache.estimatedSize(), is(2L));
   }
 
-  /* ---------------- Advanced -------------- */
+  /* ---------------- Policy -------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
@@ -226,7 +226,7 @@ public final class ExpireAfterWriteTest {
   }
 
 
-  /* ---------------- Advanced: oldest -------------- */
+  /* ---------------- Policy: oldest -------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
@@ -274,7 +274,7 @@ public final class ExpireAfterWriteTest {
     assertThat(oldest, is(equalTo(context.original())));
   }
 
-  /* ---------------- Advanced: youngest -------------- */
+  /* ---------------- Policy: youngest -------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)

@@ -30,7 +30,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
-import com.github.benmanes.caffeine.cache.Advanced;
+import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -358,8 +358,8 @@ public final class GuavaLocalCache {
     }
 
     @Override
-    public Advanced<K, V> advanced() {
-      return new Advanced<K, V>() {
+    public Policy<K, V> policy() {
+      return new Policy<K, V>() {
         @Override public Optional<Eviction<K, V>> eviction() {
           return Optional.empty();
         }

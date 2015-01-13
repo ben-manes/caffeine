@@ -36,7 +36,7 @@ import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.Advanced.Eviction;
+import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
@@ -154,7 +154,7 @@ public final class EvictionTest {
         .weigher(CacheWeigher.COLLECTION)
         .maximumWeight(10)
         .build();
-    Eviction<?, ?> eviction = cache.advanced().eviction().get();
+    Eviction<?, ?> eviction = cache.policy().eviction().get();
 
     // Never evicted
     cache.put(0, asList());
@@ -340,7 +340,7 @@ public final class EvictionTest {
     assertThat(eviction.weightedSize().get(), is(0L));
   }
 
-  /* ---------------- Advanced: IsWeighted -------------- */
+  /* ---------------- Policy: IsWeighted -------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
@@ -349,7 +349,7 @@ public final class EvictionTest {
     assertThat(eviction.isWeighted(), is(context.isWeighted()));
   }
 
-  /* ---------------- Advanced: WeightedSize -------------- */
+  /* ---------------- Policy: WeightedSize -------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
@@ -358,7 +358,7 @@ public final class EvictionTest {
     assertThat(eviction.weightedSize().get(), is(10 * cache.estimatedSize()));
   }
 
-  /* ---------------- Advanced: MaximumSize -------------- */
+  /* ---------------- Policy: MaximumSize -------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
@@ -420,7 +420,7 @@ public final class EvictionTest {
     assertThat(eviction.getMaximumSize(), is(Long.MAX_VALUE - Integer.MAX_VALUE)); // impl detail
   }
 
-  /* ---------------- Advanced: Coldest -------------- */
+  /* ---------------- Policy: Coldest -------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
@@ -465,7 +465,7 @@ public final class EvictionTest {
     assertThat(coldest, is(equalTo(context.original())));
   }
 
-  /* ---------------- Advanced: Hottest -------------- */
+  /* ---------------- Policy: Hottest -------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)

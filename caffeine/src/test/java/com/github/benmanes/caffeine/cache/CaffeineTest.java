@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.Advanced.Eviction;
-import com.github.benmanes.caffeine.cache.Advanced.Expiration;
+import com.github.benmanes.caffeine.cache.Policy.Eviction;
+import com.github.benmanes.caffeine.cache.Policy.Expiration;
 import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -136,7 +136,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder().maximumSize(0);
     assertThat(builder.maximumSize, is(0L));
     Cache<?, ?> cache = builder.build();
-    assertThat(cache.advanced().eviction().get().getMaximumSize(), is(0L));
+    assertThat(cache.policy().eviction().get().getMaximumSize(), is(0L));
   }
 
   @Test
@@ -144,7 +144,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder().maximumSize(Integer.MAX_VALUE);
     assertThat(builder.maximumSize, is((long) Integer.MAX_VALUE));
     Cache<?, ?> cache = builder.build();
-    assertThat(cache.advanced().eviction().get().getMaximumSize(), is((long) Integer.MAX_VALUE));
+    assertThat(cache.policy().eviction().get().getMaximumSize(), is((long) Integer.MAX_VALUE));
   }
 
   /* ---------------- maximumWeight -------------- */
@@ -174,7 +174,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder().maximumWeight(0).weigher(Weigher.singleton());
     assertThat(builder.weigher, is(Weigher.singleton()));
     assertThat(builder.maximumWeight, is(0L));
-    Eviction<?, ?> eviction = builder.build().advanced().eviction().get();
+    Eviction<?, ?> eviction = builder.build().policy().eviction().get();
     assertThat(eviction.getMaximumSize(), is(0L));
     assertThat(eviction.isWeighted(), is(true));
   }
@@ -186,7 +186,7 @@ public final class CaffeineTest {
     assertThat(builder.maximumWeight, is((long) Integer.MAX_VALUE));
     assertThat(builder.weigher, is(Weigher.singleton()));
 
-    Eviction<?, ?> eviction = builder.build().advanced().eviction().get();
+    Eviction<?, ?> eviction = builder.build().policy().eviction().get();
     assertThat(eviction.getMaximumSize(), is((long) Integer.MAX_VALUE));
     assertThat(eviction.isWeighted(), is(true));
   }
@@ -238,7 +238,7 @@ public final class CaffeineTest {
   public void expireAfterAccess_small() {
     Caffeine<?, ?> builder = Caffeine.newBuilder().expireAfterAccess(0, TimeUnit.MILLISECONDS);
     assertThat(builder.expireAfterAccessNanos, is(0L));
-    Expiration<?, ?> expiration = builder.build().advanced().expireAfterAccess().get();
+    Expiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS), is(0L));
   }
 
@@ -247,7 +247,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder()
         .expireAfterAccess(Integer.MAX_VALUE, TimeUnit.NANOSECONDS);
     assertThat(builder.expireAfterAccessNanos, is((long) Integer.MAX_VALUE));
-    Expiration<?, ?> expiration = builder.build().advanced().expireAfterAccess().get();
+    Expiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
@@ -268,7 +268,7 @@ public final class CaffeineTest {
   public void expireAfterWrite_small() {
     Caffeine<?, ?> builder = Caffeine.newBuilder().expireAfterWrite(0, TimeUnit.MILLISECONDS);
     assertThat(builder.expireAfterWriteNanos, is(0L));
-    Expiration<?, ?> expiration = builder.build().advanced().expireAfterWrite().get();
+    Expiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS), is(0L));
   }
 
@@ -277,7 +277,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder()
         .expireAfterWrite(Integer.MAX_VALUE, TimeUnit.NANOSECONDS);
     assertThat(builder.expireAfterWriteNanos, is((long) Integer.MAX_VALUE));
-    Expiration<?, ?> expiration = builder.build().advanced().expireAfterWrite().get();
+    Expiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
