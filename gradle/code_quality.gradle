@@ -44,25 +44,27 @@ jacocoTestReport {
   }
 }
 
-tasks.withType(Test) {
-  options {
-    jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
-  }
-  testLogging {
-    events 'skipped'
-    error {
-      events 'failed'
-      showCauses = true
-      showExceptions = true
-      exceptionFormat 'full'
+afterEvaluate {
+  tasks.withType(Test) {
+    options {
+      jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
     }
+    testLogging {
+      events 'skipped'
+      error {
+        events 'failed'
+        showCauses = true
+        showExceptions = true
+        exceptionFormat 'full'
+      }
+    }
+    jacoco {
+      append = true
+      destinationFile = file("${rootDir}/build/jacoco/jacocoTest.exec")
+      classDumpFile = file("${rootDir}/build/jacoco/classpathdumps")
+    }
+    maxHeapSize = '384m'
   }
-  jacoco {
-    append = true
-    destinationFile = file("${rootDir}/build/jacoco/jacocoTest.exec")
-    classDumpFile = file("${rootDir}/build/jacoco/classpathdumps")
-  }
-  maxHeapSize = '384m'
 }
 
 tasks.withType(Checkstyle) {

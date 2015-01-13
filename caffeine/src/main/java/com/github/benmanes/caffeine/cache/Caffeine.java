@@ -359,7 +359,11 @@ public final class Caffeine<K, V> {
 
   @Nonnull @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher() {
-    return (Weigher<K1, V1>) ((weigher == null) ? Weigher.singleton() : weigher);
+    return (Weigher<K1, V1>) (isWeighted() ? Weigher.singleton() : weigher);
+  }
+
+  boolean isWeighted() {
+    return (weigher == null);
   }
 
   /**
@@ -723,7 +727,9 @@ public final class Caffeine<K, V> {
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return new UnboundedLocalCache.LocalAsyncLoadingCache<K1, V1>(self, loader);
+    return isBounded() || refreshes()
+        ? new BoundedLocalCache.LocalAsyncLoadingCache<K1, V1>(self, loader)
+        : new UnboundedLocalCache.LocalAsyncLoadingCache<K1, V1>(self, loader);
   }
 
   private void requireNonLoadingCache() {
@@ -784,8 +790,8 @@ public final class Caffeine<K, V> {
       implements RemovalListener<K, CompletableFuture<V>>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    private final RemovalListener<K, V> delegate;
-    private final Executor executor;
+    final RemovalListener<K, V> delegate;
+    final Executor executor;
 
     AsyncRemovalListener(RemovalListener<K, V> delegate, Executor executor) {
       this.delegate = requireNonNull(delegate);

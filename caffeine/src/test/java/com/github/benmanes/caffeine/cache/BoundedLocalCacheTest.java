@@ -67,8 +67,8 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.UNREACHABLE,
-      weigher = CacheWeigher.MAX_VALUE, population = Population.EMPTY)
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, population = Population.EMPTY,
+      maximumSize = MaximumSize.UNREACHABLE, weigher = CacheWeigher.MAX_VALUE)
   public void putWeighted_noOverflow() {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .weigher(CacheWeigher.MAX_VALUE)
@@ -85,7 +85,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.ONE)
   public void evict_alreadyRemoved(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -135,8 +135,8 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, weigher = CacheWeigher.DEFAULT,
-      population = Population.EMPTY, maximumSize = MaximumSize.TEN)
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, maximumSize = MaximumSize.TEN, weigher = CacheWeigher.DEFAULT)
   public void evict_lru(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     for (int i = 0; i < 10; i++) {
@@ -184,7 +184,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onGet(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -193,7 +193,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onGetQuietly(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -211,7 +211,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -221,7 +221,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onPut(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -231,7 +231,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onReplace(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -241,7 +241,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onReplaceConditionally(
       Cache<Integer, Integer> cache, CacheContext context) {
@@ -265,7 +265,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onRead(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -283,7 +283,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -297,7 +297,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void drain_onRead(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -327,7 +327,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void drain_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -337,7 +337,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void drain_nonblocking(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -360,7 +360,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void drain_blocksClear(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
@@ -368,7 +368,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void drain_blocksOrderedMap(Cache<Integer, Integer> cache,
       CacheContext context, Eviction<Integer, Integer> eviction) {
@@ -377,7 +377,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void drain_blocksCapacity(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);

@@ -51,6 +51,14 @@ import com.google.common.util.concurrent.MoreExecutors;
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
 
+  /* ---------------- Async -------------- */
+
+  /**
+   * Indicates that the test does not support an asynchronous cache. This is for implementation
+   * specific tests that may inspect the internal state of a downcasted cache.
+   */
+  boolean async() default true;
+
   /* ---------------- Implementation -------------- */
 
   /** The implementation, each resulting in a new combination. */

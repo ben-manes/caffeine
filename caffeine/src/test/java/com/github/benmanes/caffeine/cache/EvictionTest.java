@@ -62,6 +62,7 @@ import com.google.common.collect.Iterables;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class EvictionTest {
+  // FIXME: Add async weighted size support
 
   /* ---------------- RemovalListener -------------- */
 
@@ -195,7 +196,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
@@ -205,7 +206,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put_sameWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
@@ -217,7 +218,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put_changeWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
@@ -229,7 +230,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replace_sameWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
@@ -241,7 +242,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replace_changeWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
@@ -253,7 +254,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_sameWeight(
@@ -266,7 +267,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_changeWeight(
@@ -279,7 +280,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_fails(
@@ -292,7 +293,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void remove(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
@@ -304,7 +305,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void removeConditionally(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
@@ -316,7 +317,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void removeConditionally_fails(
@@ -329,7 +330,7 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void invalidateAll(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
@@ -343,7 +344,7 @@ public final class EvictionTest {
   /* ---------------- Policy: IsWeighted -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       maximumSize = MaximumSize.FULL, population = Population.EMPTY)
   public void isWeighted(CacheContext context, Eviction<Integer, Integer> eviction) {
     assertThat(eviction.isWeighted(), is(context.isWeighted()));
@@ -352,7 +353,7 @@ public final class EvictionTest {
   /* ---------------- Policy: WeightedSize -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(async = false, implementation = Implementation.Caffeine,
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.TEN)
   public void weightedSize(Cache<Integer, Integer> cache, Eviction<Integer, Integer> eviction) {
     assertThat(eviction.weightedSize().get(), is(10 * cache.estimatedSize()));

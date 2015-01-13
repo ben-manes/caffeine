@@ -133,10 +133,10 @@ final class CacheGenerator {
         (Loader) combination.get(index++),
         (Implementation) combination.get(index++));
 
-    boolean skip = context.isAsync && (context.implementation() != Implementation.Caffeine
-        || context.expires() || !context.isUnbounded()
-        || (context.keyStrength() != ReferenceType.STRONG)
-        || (context.valueStrength() != ReferenceType.STRONG));
+    boolean asyncIncompatible = !cacheSpec.async()
+        || (context.implementation() != Implementation.Caffeine)
+        || (context.valueStrength() != ReferenceType.STRONG);
+    boolean skip = context.isAsync && asyncIncompatible;
 
     return skip ? Optional.empty() : Optional.of(context);
   }
