@@ -1013,10 +1013,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       } else {
         afterWrite(prior, new UpdateTask(prior, weightedDifference));
       }
-      if (hasRemovalListener()) {
-        notifyRemoval(key, oldWeightedValue.getValue(valueStrategy), RemovalCause.REPLACED);
+      V oldValue = oldWeightedValue.getValue(valueStrategy);
+      if (hasRemovalListener() && (value != oldValue)) {
+        notifyRemoval(key, value, RemovalCause.REPLACED);
       }
-      return oldWeightedValue.getValue(valueStrategy);
+      return oldValue;
     }
   }
 
@@ -1099,10 +1100,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
-    if (hasRemovalListener()) {
-      notifyRemoval(key, oldWeightedValue.getValue(valueStrategy), RemovalCause.REPLACED);
+    V oldValue = oldWeightedValue.getValue(valueStrategy);
+    if (hasRemovalListener() && (value != oldValue)) {
+      notifyRemoval(key, value, RemovalCause.REPLACED);
     }
-    return oldWeightedValue.getValue(valueStrategy);
+    return oldValue;
   }
 
   @Override
@@ -1134,8 +1136,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
-    if (hasRemovalListener()) {
-      notifyRemoval(key, oldWeightedValue.getValue(valueStrategy), RemovalCause.REPLACED);
+    if (hasRemovalListener() && (oldValue != newValue)) {
+      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
     }
     return true;
   }
@@ -1231,8 +1233,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
         if (weightedDifference != 0) {
           task[0] = new UpdateTask(prior, weightedDifference);
         }
-        if (hasRemovalListener()) {
-          notifyRemoval(key, prior.getValue(valueStrategy), RemovalCause.REPLACED);
+        V oldValue = prior.getValue(valueStrategy);
+        if (hasRemovalListener() && (newValue != oldValue)) {
+          notifyRemoval(key, oldValue, RemovalCause.REPLACED);
         }
         return prior;
       }
@@ -1306,8 +1309,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
           if (weightedDifference != 0) {
             task[0] = new UpdateTask(prior, weightedDifference);
           }
-          if (hasRemovalListener()) {
-            notifyRemoval(key, oldWeightedValue.getValue(valueStrategy), RemovalCause.REPLACED);
+          if (hasRemovalListener() && (newValue[0] != oldValue)) {
+            notifyRemoval(key, oldValue, RemovalCause.REPLACED);
           }
         } else {
           final long now = ticker.read();
@@ -2601,26 +2604,22 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     public CompletableFuture<V> get(K key,
         BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction) {
       long now = cache.ticker.read();
-      @SuppressWarnings("unchecked")
-      CompletableFuture<V>[] result = new CompletableFuture[1];
       CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
-        return mappingFunction.apply(key, cache.executor).whenComplete((value, error) -> {
+        CompletableFuture<V> valueFuture = mappingFunction.apply(key, cache.executor);
+        valueFuture.whenComplete((value, error) -> {
           long loadTime = cache.ticker.read() - now;
           if (error == null) {
+            // update the weight and expiration timestamps
+            cache.replace(key, valueFuture, valueFuture);
             cache.statsCounter.recordLoadSuccess(loadTime);
           } else {
             cache.statsCounter.recordLoadFailure(loadTime);
-            synchronized (result) {
-              if (result[0] != null) {
-                cache.remove(key, result[0]);
-              }
-            }
+            cache.remove(key, valueFuture);
           }
         });
+        return valueFuture;
       }, true);
-      synchronized (result) {
-        result[0] = future;
-      }
+
       if (future.isCompletedExceptionally()) {
         cache.remove(key, future);
       }
@@ -2645,6 +2644,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       return composeResult(result);
     }
 
+    /** Computes all of the missing entries in a single {@link CacheLoader#asyncLoadAll} call. */
     CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
       Map<K, CompletableFuture<V>> futures = new HashMap<>();
       Map<K, CompletableFuture<V>> proxies = new HashMap<>();
@@ -2671,6 +2671,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       return composeResult(futures);
     }
 
+    /**
+     * Returns a future that waits for all of the dependent futures to complete and returns the
+     * combined mapping if successful. If any future fails then it is automatically removed from
+     * the cache if still present.
+     */
     CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
       if (futures.isEmpty()) {
         return CompletableFuture.completedFuture(Collections.emptyMap());
@@ -2680,10 +2685,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       return CompletableFuture.allOf(array).thenApply(ignored -> {
         Map<K, V> result = new HashMap<>(futures.size());
         for (Entry<K, CompletableFuture<V>> entry : futures.entrySet()) {
-          V value = entry.getValue().getNow(null);
-          if (value == null) {
-            cache.remove(entry.getKey(), entry.getValue());
-          } else {
+          V value = getWhenSuccessful(entry.getValue());
+          if (value != null) {
             result.put(entry.getKey(), value);
           }
         }
@@ -2695,31 +2698,22 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     public void put(K key, CompletableFuture<V> valueFuture) {
       if (valueFuture.isCompletedExceptionally()) {
         cache.statsCounter.recordLoadFailure(0L);
+        cache.remove(key);
         return;
       }
       long now = cache.ticker.read();
-      @SuppressWarnings("unchecked")
-      CompletableFuture<V>[] future = new CompletableFuture[1];
-      CompletableFuture<V> errorHandlingFuture = valueFuture.whenComplete((value, error) -> {
+      cache.put(key, valueFuture);
+      valueFuture.whenComplete((value, error) -> {
         long loadTime = cache.ticker.read() - now;
         if (error == null) {
+          // update the weight and expiration timestamps
+          cache.replace(key, valueFuture, valueFuture);
           cache.statsCounter.recordLoadSuccess(loadTime);
         } else {
-          synchronized (future) {
-            if (future[0] != null) {
-              cache.statsCounter.recordLoadFailure(loadTime);
-              cache.remove(key, future[0]);
-            }
-          }
+          cache.remove(key, valueFuture);
+          cache.statsCounter.recordLoadFailure(loadTime);
         }
       });
-      cache.put(key, errorHandlingFuture);
-      synchronized (future) {
-        future[0] = errorHandlingFuture;
-      }
-      if (errorHandlingFuture.isCompletedExceptionally()) {
-        cache.remove(key, future);
-      }
     }
 
     @Override
@@ -2746,8 +2740,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
           addNewEntries(result);
           cache.statsCounter.recordLoadSuccess(result.size());
         } else if (error != null) {
-          for (CompletableFuture<V> proxy : proxies.values()) {
-            proxy.obtrudeException(error);
+          for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
+            cache.remove(entry.getKey(), entry.getValue());
+            entry.getValue().obtrudeException(error);
           }
           cache.statsCounter.recordLoadFailure(loadTime);
         }
@@ -2759,7 +2754,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
           V value = result.get(proxy.getKey());
           proxy.getValue().obtrudeValue(value);
           if (value == null) {
-            cache.data.remove(proxy.getKey(), proxy.getValue());
+            cache.remove(proxy.getKey(), proxy.getValue());
+          } else {
+            // update the weight and expiration timestamps
+            cache.replace(proxy.getKey(), proxy.getValue(), proxy.getValue());
           }
         }
       }
@@ -2808,8 +2806,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       final Weigher<? super K, ? super V> weigher;
       final Ticker ticker;
 
+      @SuppressWarnings("unchecked")
       AsyncLoadingSerializationProxy(LocalAsyncLoadingCache<K, V> async) {
-        weigher = (Weigher<K, V>) async.cache.weigher; // FIXME
+        weigher = (Weigher<K, V>) async.cache.weigher;
         keyStrategy = async.cache.keyStrategy;
         valueStrategy = async.cache.valueStrategy;
         removalListener = async.cache.hasRemovalListener()
@@ -2880,10 +2879,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
 
       @Override
       public V getIfPresent(Object key) {
-        CompletableFuture<V> future = cache.getIfPresent(key, true);
-        return (future != null) && future.isDone() && !future.isCompletedExceptionally()
-            ? future.getNow(null)
-            : null;
+        CompletableFuture<V> future = cache.getIfPresent(key, false);
+        V value = getIfReady(future);
+        if (value == null) {
+          cache.statsCounter.recordMisses(1);
+        } else {
+          cache.statsCounter.recordHits(1);
+        }
+        return value;
       }
 
       @Override

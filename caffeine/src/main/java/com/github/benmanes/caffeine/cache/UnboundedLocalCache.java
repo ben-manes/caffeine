@@ -405,7 +405,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
   @Override
   public V put(K key, V value) {
     V oldValue = data.put(key, value);
-    if (hasRemovalListener() && (oldValue != null)) {
+    if (hasRemovalListener() && (oldValue != null) && (oldValue != value)) {
       notifyRemoval(key, oldValue, RemovalCause.REPLACED);
     }
     return oldValue;
@@ -424,7 +424,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     }
     for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
       V oldValue = data.put(entry.getKey(), entry.getValue());
-      if (oldValue != null) {
+      if ((oldValue != null) && (oldValue != entry.getValue())) {
         notifyRemoval(entry.getKey(), oldValue, RemovalCause.REPLACED);
       }
     }
@@ -457,7 +457,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
   @Override
   public V replace(K key, V value) {
     V prev = data.replace(key, value);
-    if ((hasRemovalListener()) && prev != null) {
+    if ((hasRemovalListener()) && (prev != null) && (prev != value)) {
       notifyRemoval(key, value, RemovalCause.REPLACED);
     }
     return prev;
@@ -466,7 +466,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
     boolean replaced = data.replace(key, oldValue, newValue);
-    if (hasRemovalListener() && replaced) {
+    if (hasRemovalListener() && replaced  && (oldValue != newValue)) {
       notifyRemoval(key, oldValue, RemovalCause.REPLACED);
     }
     return replaced;
@@ -1164,9 +1164,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
         Map<K, V> result = new HashMap<>(futures.size());
         for (Entry<K, CompletableFuture<V>> entry : futures.entrySet()) {
           V value = entry.getValue().getNow(null);
-          if (value == null) {
-            cache.remove(entry.getKey(), entry.getValue());
-          } else {
+          if (value != null) {
             result.put(entry.getKey(), value);
           }
         }
@@ -1178,31 +1176,20 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     public void put(K key, CompletableFuture<V> valueFuture) {
       if (valueFuture.isCompletedExceptionally()) {
         cache.statsCounter.recordLoadFailure(0L);
+        cache.remove(key);
         return;
       }
       long now = cache.ticker.read();
-      @SuppressWarnings("unchecked")
-      CompletableFuture<V>[] future = new CompletableFuture[1];
-      CompletableFuture<V> errorHandlingFuture = valueFuture.whenComplete((value, error) -> {
+      cache.put(key, valueFuture);
+      valueFuture.whenComplete((value, error) -> {
         long loadTime = cache.ticker.read() - now;
         if (error == null) {
           cache.statsCounter.recordLoadSuccess(loadTime);
         } else {
-          synchronized (future) {
-            if (future[0] != null) {
-              cache.statsCounter.recordLoadFailure(loadTime);
-              cache.remove(key, future[0]);
-            }
-          }
+          cache.remove(key, valueFuture);
+          cache.statsCounter.recordLoadFailure(loadTime);
         }
       });
-      cache.put(key, errorHandlingFuture);
-      synchronized (future) {
-        future[0] = errorHandlingFuture;
-      }
-      if (errorHandlingFuture.isCompletedExceptionally()) {
-        cache.remove(key, future);
-      }
     }
 
     @Override
@@ -1229,8 +1216,9 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
           addNewEntries(result);
           cache.statsCounter.recordLoadSuccess(result.size());
         } else if (error != null) {
-          for (CompletableFuture<V> proxy : proxies.values()) {
-            proxy.obtrudeException(error);
+          for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
+            cache.remove(entry.getKey(), entry.getValue());
+            entry.getValue().obtrudeException(error);
           }
           cache.statsCounter.recordLoadFailure(loadTime);
         }
@@ -1338,7 +1326,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
         int misses = 0;
         Map<K, V> result = new LinkedHashMap<>();
         for (Object key : keys) {
-          CompletableFuture<V> future = cache.data.get(key);
+          CompletableFuture<V> future = cache.get(key);
           V value = (future == null) ? null : future.getNow(null);
           if (value == null) {
             misses++;
