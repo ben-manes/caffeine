@@ -46,7 +46,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * having any combination of the following features:
  *
  * <ul>
- *   <li>automatic loading of entries into the cache
+ *   <li>automatic loading of entries into the cache, optionally asynchronously
  *   <li>least-recently-used eviction when a maximum size is exceeded
  *   <li>time-based expiration of entries, measured since last access or last write
  *   <li>keys automatically wrapped in {@linkplain WeakReference weak} references
@@ -68,22 +68,12 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  *       .build(key -> createExpensiveGraph(key));
  * }</pre>
  * <p>
- * Or equivalently,
- * <pre>{@code
- *   // In real life this would come from a command-line flag or config file
- *   String spec = "maximumSize=10000,expireAfterWrite=10m";
- *
- *   LoadingCache<Key, Graph> graphs = Caffeine.from(spec)
- *       .removalListener(MY_LISTENER)
- *       .build(key -> createExpensiveGraph(key));
- * }</pre>
- * <p>
  * The returned cache is implemented as a hash table with similar performance characteristics to
  * {@link ConcurrentHashMap}. The {@code asMap} view (and its collection views) have <i>weakly
  * consistent iterators</i>. This means that they are safe for concurrent use, but if other threads
  * modify the cache after the iterator is created, it is undefined which of these changes, if any,
- * are reflected in that iterator. These iterators never throw {@link
- * ConcurrentModificationException}.
+ * are reflected in that iterator. These iterators never throw
+ * {@link ConcurrentModificationException}.
  * <p>
  * <b>Note:</b> by default, the returned cache uses equality comparisons (the
  * {@link Object#equals equals} method) to determine equality for keys or values. However, if
@@ -708,10 +698,11 @@ public final class Caffeine<K, V> {
   }
 
   /**
-   * Builds a cache, which either returns an already-loaded value for a given key or atomically
-   * computes or retrieves it using the supplied {@code CacheLoader}. If another thread is currently
-   * loading the value for this key, simply waits for that thread to finish and returns its loaded
-   * value. Note that multiple threads can concurrently load values for distinct keys.
+   * Builds a cache, which either returns a {@link CompletableFuture} already loaded or currently
+   * computing the value for a given key or atomically computes the value asynchronously through a
+   * supplied mapping function or the supplied {@code CacheLoader}. If the asynchronous
+   * computation fails then the entry will be automatically removed. Note that multiple threads can
+   * concurrently load values for distinct keys.
    * <p>
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
@@ -789,6 +780,10 @@ public final class Caffeine<K, V> {
     return s.append('}').toString();
   }
 
+  /**
+   * A removal listener that asynchronously forwards the value stored in a {@link CompletableFuture}
+   * if successful to the user-supplied removal listener.
+   */
   static final class AsyncRemovalListener<K, V>
       implements RemovalListener<K, CompletableFuture<V>>, Serializable {
     private static final long serialVersionUID = 1L;

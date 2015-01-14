@@ -32,11 +32,7 @@ import javax.annotation.Nonnull;
  * <p>
  * Usage example:
  * <pre>{@code
- *   CacheLoader<Key, Graph> loader = new CacheLoader<Key, Graph>() {
- *     public Graph load(Key key) throws AnyException {
- *       return createExpensiveGraph(key);
- *     }
- *   };
+ *   CacheLoader<Key, Graph> loader = key -> createExpensiveGraph(key);
  *   LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
  * }</pre>
  *
