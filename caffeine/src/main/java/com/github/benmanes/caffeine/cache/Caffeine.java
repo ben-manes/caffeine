@@ -113,7 +113,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * {@linkplain #weakValues weakValues}, or {@linkplain #softValues softValues} perform periodic
  * maintenance.
  * <p>
- * The caches produced by {@code CacheBuilder} are serializable, and the deserialized caches
+ * The caches produced by {@code Caffeine} are serializable, and the deserialized caches
  * retain all the configuration properties of the original cache. Note that the serialized form does
  * <i>not</i> include cache contents, but only configuration.
  *
