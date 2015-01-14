@@ -224,6 +224,10 @@ public final class CacheContext {
     return valueStrength;
   }
 
+  public boolean isLoading() {
+    return (loader != null);
+  }
+
   public Loader loader() {
     return loader;
   }

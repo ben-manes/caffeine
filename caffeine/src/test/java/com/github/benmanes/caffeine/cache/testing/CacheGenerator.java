@@ -142,7 +142,8 @@ final class CacheGenerator {
         (Implementation) combination.get(index++));
 
     boolean asyncIncompatible = (context.implementation() != Implementation.Caffeine)
-        || (context.valueStrength() != ReferenceType.STRONG);
+        || (context.valueStrength() != ReferenceType.STRONG)
+        || !context.isLoading();
     boolean skip = context.isAsync() && asyncIncompatible;
 
     return skip ? Optional.empty() : Optional.of(context);

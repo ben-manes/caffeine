@@ -447,8 +447,8 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
-  @CacheSpec
   @Test(dataProvider = "caches")
+  @CacheSpec(executor = CacheExecutor.DEFAULT)
   public void put_insert_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
@@ -481,8 +481,8 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(context.absentValue()));
   }
 
-  @CacheSpec
   @Test(dataProvider = "caches")
+  @CacheSpec(executor = CacheExecutor.DEFAULT)
   public void put_replace_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
