@@ -51,13 +51,21 @@ import com.google.common.util.concurrent.MoreExecutors;
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
 
-  /* ---------------- Async -------------- */
+  /* ---------------- Compute -------------- */
 
   /**
-   * Indicates that the test does not support an asynchronous cache. This is for implementation
-   * specific tests that may inspect the internal state of a downcasted cache.
+   * Indicates whether the test supports a cache allowing for asynchronous computations. This is
+   * for implementation specific tests that may inspect the internal state of a down casted cache.
    */
-  boolean async() default true;
+  Compute[] compute() default {
+    Compute.ASYNC,
+    Compute.SYNC
+  };
+
+  enum Compute {
+    ASYNC,
+    SYNC,
+  }
 
   /* ---------------- Implementation -------------- */
 

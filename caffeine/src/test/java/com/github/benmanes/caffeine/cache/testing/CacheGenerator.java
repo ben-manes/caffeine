@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.testing;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -25,6 +26,7 @@ import java.util.stream.Stream;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
@@ -54,11 +56,11 @@ final class CacheGenerator {
     this.cacheSpec = cacheSpec;
   }
 
-  /** Returns a lazy stream so that the test case is lazy and GC-able after use. */
+  /** Returns a lazy stream so that the test case (GC-able after use). */
   public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate(
-      Optional<Implementation> implementation, Optional<ReferenceType> keyType,
-      Optional<ReferenceType> valueType) {
-    return combinations(implementation, keyType, valueType).stream()
+      Optional<Compute> compute, Optional<Implementation> implementation,
+      Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
+    return combinations(compute, implementation, keyType, valueType).stream()
         .map(this::newCacheContext)
         .filter(Optional::isPresent)
         .map(Optional::get)
@@ -70,21 +72,27 @@ final class CacheGenerator {
   }
 
   @SuppressWarnings("unchecked")
-  private Set<List<Object>> combinations(Optional<Implementation> implementation,
-      Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
+  private Set<List<Object>> combinations(Optional<Compute> compute,
+      Optional<Implementation> implementation, Optional<ReferenceType> keyType,
+      Optional<ReferenceType> valueType) {
     Set<ReferenceType> keys = filterTypes(keyType, cacheSpec.keys());
     Set<ReferenceType> values = filterTypes(valueType, cacheSpec.values());
+    Set<Compute> computations = filterTypes(compute, cacheSpec.compute());
     Set<Implementation> implementations = filterTypes(implementation, cacheSpec.implementation());
+
     if (isAsyncLoadingOnly) {
       values = values.contains(ReferenceType.STRONG)
           ? ImmutableSet.of(ReferenceType.STRONG)
           : ImmutableSet.of();
+      computations.remove(Compute.SYNC);
+    }
+    if (isAsyncLoadingOnly || computations.equals(ImmutableSet.of(Compute.ASYNC))) {
       implementations = implementations.contains(Implementation.Caffeine)
           ? ImmutableSet.of(Implementation.Caffeine)
           : ImmutableSet.of();
     }
 
-    if (implementations.isEmpty() || keys.isEmpty() || values.isEmpty()) {
+    if (computations.isEmpty() || implementations.isEmpty() || keys.isEmpty() || values.isEmpty()) {
       return ImmutableSet.of();
     }
     return Sets.cartesianProduct(
@@ -100,18 +108,18 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.removalListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
         ImmutableSet.of(true, isLoadingOnly),
-        ImmutableSet.of(true, isAsyncLoadingOnly),
+        ImmutableSet.copyOf(computations),
         ImmutableSet.copyOf(cacheSpec.loader()),
         ImmutableSet.copyOf(implementations));
   }
 
-  private static <T> ImmutableSet<T> filterTypes(Optional<T> type, T[] options) {
+  private static <T> Set<T> filterTypes(Optional<T> type, T[] options) {
     if (type.isPresent()) {
       return type.filter(Arrays.asList(options)::contains).isPresent()
-          ? ImmutableSet.of(type.get())
-          : ImmutableSet.of();
+          ? new LinkedHashSet<>(Arrays.asList(type.get()))
+          : new LinkedHashSet<>();
     }
-    return ImmutableSet.copyOf(options);
+    return new LinkedHashSet<>(Arrays.asList(options));
   }
 
   private Optional<CacheContext> newCacheContext(List<Object> combination) {
@@ -129,14 +137,13 @@ final class CacheGenerator {
         (Listener) combination.get(index++),
         (Population) combination.get(index++),
         (Boolean) combination.get(index++),
-        (Boolean) combination.get(index++),
+        (Compute) combination.get(index++),
         (Loader) combination.get(index++),
         (Implementation) combination.get(index++));
 
-    boolean asyncIncompatible = !cacheSpec.async()
-        || (context.implementation() != Implementation.Caffeine)
+    boolean asyncIncompatible = (context.implementation() != Implementation.Caffeine)
         || (context.valueStrength() != ReferenceType.STRONG);
-    boolean skip = context.isAsync && asyncIncompatible;
+    boolean skip = context.isAsync() && asyncIncompatible;
 
     return skip ? Optional.empty() : Optional.of(context);
   }

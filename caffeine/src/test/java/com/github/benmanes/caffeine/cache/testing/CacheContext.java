@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
@@ -72,7 +73,7 @@ public final class CacheContext {
   final Loader loader;
   final Stats stats;
 
-  final boolean isAsync;
+  final Compute compute;
   final FakeTicker ticker;
   final Map<Integer, Integer> original;
   final RemovalListener<Integer, Integer> removalListener;
@@ -94,7 +95,7 @@ public final class CacheContext {
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
       MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, ReferenceType keyStrength,
       ReferenceType valueStrength, CacheExecutor cacheExecutor, Listener removalListenerType,
-      Population population, boolean isLoading, boolean isAsync, Loader loader,
+      Population population, boolean isLoading, Compute compute, Loader loader,
       Implementation implementation) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
@@ -114,11 +115,11 @@ public final class CacheContext {
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
     this.initialSize = -1;
-    this.isAsync = isAsync;
+    this.compute = compute;
   }
 
   public boolean isAsync() {
-    return isAsync;
+    return (compute == Compute.ASYNC);
   }
 
   public Population population() {
@@ -279,7 +280,7 @@ public final class CacheContext {
         .add("afterWrite", afterWrite)
         .add("keyStrength", keyStrength)
         .add("valueStrength", valueStrength)
-        .add("async", isAsync)
+        .add("compute", compute)
         .add("loader", loader)
         .add("cacheExecutor", cacheExecutor)
         .add("removalListener", removalListenerType)

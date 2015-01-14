@@ -99,14 +99,15 @@ public final class CacheFromContext {
     if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
     }
-    if (context.loader == null) {
-      context.cache = builder.build();
-    } else if (context.isAsync) {
+    if (context.isAsync()) {
       context.asyncCache = builder.buildAsync(context.loader);
       context.cache = context.asyncCache.synchronous();
+    } else if (context.loader == null) {
+      context.cache = builder.build();
     } else {
       context.cache = builder.build(context.loader);
     }
+
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) context.cache;
     return castedCache;

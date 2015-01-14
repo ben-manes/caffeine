@@ -56,9 +56,10 @@ subprojects { proj ->
   }
   
   tasks.withType(Test) {
-    rootProject.testReport.reportOn it
+    if (!it.name.startsWith('slow')) {
+      rootProject.testReport.reportOn it
+    }
   }
-
   
   task testJar(type: Jar, group: "Build") {
     description = "Assembles a jar archive containing the test classes."

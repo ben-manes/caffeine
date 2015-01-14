@@ -4,40 +4,37 @@
 test {
   exclude 'com/github/benmanes/caffeine/cache/**'
 }
- 
-configurations {
-  [ slowCaffeineTest, slowGuavaTest,
-    strongKeysAndStrongValuesCaffeineTest, strongKeysAndStrongValuesGuavaTest,
-    strongKeysAndWeakValuesCaffeineTest, strongKeysAndWeakValuesGuavaTest,
-    strongKeysAndSoftValuesCaffeineTest, strongKeysAndSoftValuesGuavaTest,
-    weakKeysAndStrongValuesCaffeineTest, weakKeysAndStrongValuesGuavaTest,
-    weakKeysAndWeakValuesCaffeineTest, weakKeysAndWeakValuesGuavaTest,
-    weakKeysAndSoftValuesCaffeineTest, weakKeysAndSoftValuesGuavaTest
-  ]*.each {
-    it.extendsFrom testCompile
-    it.extendsFrom testRuntime
-  }
-}
 
-def testConfigurations = configurations*.name.findAll { it.contains('Test') }
-sourceSets {
-  testConfigurations.each {
-    def sourceSet = sourceSets.maybeCreate it
-    sourceSet.java.srcDir 'src/test/java'
-    sourceSet.resources.srcDir 'src/test/resources'
-  }
+def implementations = ['Caffeine', 'Guava']
+def testConfigurations = [
+  'slow', 'strongKeysAndStrongValues', 'strongKeysAndWeakValues',
+  'weakKeysAndStrongValues', 'weakKeysAndWeakValues', 'weakKeysAndSoftValues']
+  .collect { type -> (type == 'slow') ? type : [type + 'Sync', type + 'Async'] }
+  .collectNested { type -> implementations.collect { type + it + 'Test' } }.flatten()
+
+testConfigurations.each {
+  // Create configurations
+  def config = configurations.maybeCreate it
+  config.extendsFrom configurations.testCompile
+  config.extendsFrom configurations.testRuntime
+  
+  // Create sourceSets
+  def sourceSet = sourceSets.maybeCreate it
+  sourceSet.java.srcDir 'src/test/java'
+  sourceSet.resources.srcDir 'src/test/resources'
 }
 
 testConfigurations.each { testName ->
-  def implementations = ['Caffeine', 'Guava']
+  def isAsync = testName.contains('Async')
   def implementation = implementations.find { testName.contains(it) }
-  def testType = testName.minus(implementation + 'Test')
-  
+  def testType = testName - implementation - 'Test' - 'Async' - 'Sync'
   def labels = testType.split('And').collect { it[0].toLowerCase() + it.substring(1) }
+
   task "${testName}"(type: Test) {
     useTestNG()
     group = 'Cache tests'
-    description = "Runs ${labels.join(' with ')} ${implementation} tests."
+    description = 'Runs ' + labels.join(' with ') + 
+      implementation + ' ' + (isAsync ? 'Async' : 'Sync') + ' tests.'
     include 'com/github/benmanes/caffeine/cache/**'
 
     testClassesDir = sourceSets."${name}".output.classesDir
@@ -48,6 +45,7 @@ testConfigurations.each { testName ->
       systemProperties['values'] = strength[1]
     }
     systemProperties['implementation'] = implementation
+    systemProperties['compute'] = isAsync ? 'async' : 'sync'
 
     // ensure we don't overwrite default report directories used by 'test' task
     reports.html.destination = "${buildDir}/reports/${name}"
@@ -55,7 +53,7 @@ testConfigurations.each { testName ->
     binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
 
     // Configure task dependencies
-    if (System.env.'CI' || !name.contains('slow')) {
+    if (System.env.'CI' || !name.startsWith('slow')) {
       tasks.test.dependsOn(it)
     }
     dependencies {
@@ -68,7 +66,7 @@ testConfigurations.each { testName ->
 
 tasks.withType(Test) {
   useTestNG()
-  if (name.contains('slow')) {
+  if (name.startsWith('slow')) {
     maxHeapSize = '128m'
     testLogging.info.events 'passed'
     options.includeGroups = ['slow']

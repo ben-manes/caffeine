@@ -104,11 +104,11 @@ public interface AsyncLoadingCache<K, V> {
    * <p>
    * Caches loaded by a {@link CacheLoader} supporting bulk loading will issue a single request to
    * {@link CacheLoader#asyncLoadAll} for all keys which are not already present in the cache. If
-   * another call to {@link #get} is tries to load the value for a key in {@code keys}, that thread
-   * simply waits for this thread to finish and returns the loaded value. Caches that do not use a
-   * {@link CacheLoader} with an optimized bulk load implementation will sequentially load each
-   * key by making individual {@link CacheLoader#asyncLoad} calls. Note that multiple threads can
-   * concurrently load values for distinct keys.
+   * another call to {@link #get} tries to load the value for a key in {@code keys}, that thread
+   * simply waits for this computation to finish and returns the loaded value. Caches that do not
+   * use a {@link CacheLoader} with an optimized bulk load implementation will sequentially load
+   * each key by making individual {@link CacheLoader#asyncLoad} calls. Note that multiple threads
+   * can concurrently load values for distinct keys.
    * <p>
    * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
    * ignored.
