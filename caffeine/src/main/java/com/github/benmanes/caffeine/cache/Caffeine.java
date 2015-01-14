@@ -358,12 +358,15 @@ public final class Caffeine<K, V> {
   }
 
   @Nonnull @SuppressWarnings("unchecked")
-  <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher() {
-    return (Weigher<K1, V1>) (isWeighted() ? Weigher.singleton() : weigher);
+  <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
+    Weigher<K, V> delegate = isWeighted()
+        ? new BoundedWeigher<>(weigher)
+        : Weigher.singleton();
+    return (Weigher<K1, V1>) (isAsync ? new AsyncWeigher<>(delegate) : delegate);
   }
 
   boolean isWeighted() {
-    return (weigher == null);
+    return (weigher != null) && (weigher != Weigher.singleton());
   }
 
   /**
@@ -821,21 +824,49 @@ public final class Caffeine<K, V> {
   static final class AsyncWeigher<K, V> implements Weigher<K, CompletableFuture<V>>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    private final Weigher<K, V> delegate;
+    final Weigher<K, V> delegate;
 
     AsyncWeigher(Weigher<K, V> delegate) {
       this.delegate = requireNonNull(delegate);
     }
 
     @Override
-    public int weigh(K key, CompletableFuture<V> value) {
+    public int weigh(K key, CompletableFuture<V> valueFuture) {
       try {
-        return value.isDone() ? delegate.weigh(key, value.get()) : 0;
+        return (valueFuture.isDone() && !valueFuture.isCompletedExceptionally())
+            ? delegate.weigh(key, valueFuture.get())
+            : 0;
       } catch (InterruptedException e) {
         throw new CompletionException(e);
       } catch (ExecutionException e) {
         throw new CompletionException(e.getCause());
       }
+    }
+
+    Object writeReplace() {
+      return delegate;
+    }
+  }
+
+  /** A weigher that enforces that the weight falls within a valid range. */
+  static final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
+    static final long serialVersionUID = 1;
+    final Weigher<? super K, ? super V> delegate;
+
+    BoundedWeigher(Weigher<? super K, ? super V> delegate) {
+      requireNonNull(delegate);
+      this.delegate = delegate;
+    }
+
+    @Override
+    public int weigh(K key, V value) {
+      int weight = delegate.weigh(key, value);
+      Caffeine.requireArgument(weight >= 0);
+      return weight;
+    }
+
+    Object writeReplace() {
+      return delegate;
     }
   }
 }

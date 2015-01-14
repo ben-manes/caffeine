@@ -244,7 +244,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
    */
   @SuppressWarnings({"unchecked", "cast"})
   private BoundedLocalCache(Caffeine<K, V> builder,
-      @Nullable CacheLoader<? super K, V> loader, boolean async) {
+      @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
     // The data store and its maximum capacity
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     this.loader = loader;
@@ -276,9 +276,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
 
     // The eviction support
     evictionLock = new NonReentrantLock();
-    weigher = (builder.getWeigher() == Weigher.singleton())
-        ? Weigher.singleton()
-        : new BoundedWeigher<>(builder.getWeigher());
+    weigher = builder.getWeigher(isAsync);
     weightedSize = new PaddedAtomicLong();
     drainStatus = new PaddedAtomicReference<DrainStatus>(IDLE);
 
@@ -289,7 +287,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     valueReferenceQueue = new ReferenceQueue<V>();
 
     // The notification queue and listener
-    removalListener = builder.getRemovalListener(async);
+    removalListener = builder.getRemovalListener(isAsync);
     executor = builder.getExecutor();
 
     // The statistics
@@ -1906,28 +1904,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
 
     Object writeReplace() {
       return new SimpleEntry<K, V>(this);
-    }
-  }
-
-  /** A weigher that enforces that the weight falls within a valid range. */
-  static final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
-    static final long serialVersionUID = 1;
-    final Weigher<? super K, ? super V> weigher;
-
-    BoundedWeigher(Weigher<? super K, ? super V> weigher) {
-      requireNonNull(weigher);
-      this.weigher = weigher;
-    }
-
-    @Override
-    public int weigh(K key, V value) {
-      int weight = weigher.weigh(key, value);
-      Caffeine.requireArgument(weight >= 0);
-      return weight;
-    }
-
-    Object writeReplace() {
-      return weigher;
     }
   }
 

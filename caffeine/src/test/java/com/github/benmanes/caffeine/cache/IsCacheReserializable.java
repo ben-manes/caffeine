@@ -24,7 +24,8 @@ import org.hamcrest.Factory;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedWeigher;
+import com.github.benmanes.caffeine.cache.Caffeine.AsyncWeigher;
+import com.github.benmanes.caffeine.cache.Caffeine.BoundedWeigher;
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 import com.google.common.testing.SerializableTester;
 
@@ -67,7 +68,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     return desc.matches();
   }
 
-  private <K, V> void checkAsynchronousCache(AsyncLoadingCache<K, V> original,
+  private static <K, V> void checkAsynchronousCache(AsyncLoadingCache<K, V> original,
       AsyncLoadingCache<K, V> copy, DescriptionBuilder desc) {
     if (original instanceof UnboundedLocalCache.LocalAsyncLoadingCache<?, ?>) {
       checkUnboundedLocalAsyncLoadingCache(
@@ -76,7 +77,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  private <K, V> void checkUnboundedLocalAsyncLoadingCache(
+  private static <K, V> void checkUnboundedLocalAsyncLoadingCache(
       UnboundedLocalCache.LocalAsyncLoadingCache<K, V> original,
       UnboundedLocalCache.LocalAsyncLoadingCache<K, V> copy, DescriptionBuilder desc) {
     checkUnboundedLocalCache(original.cache, copy.cache, desc);
@@ -84,7 +85,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
 
   }
 
-  private <K, V> void checkSyncronousCache(Cache<K, V> original, Cache<K, V> copy,
+  private static <K, V> void checkSyncronousCache(Cache<K, V> original, Cache<K, V> copy,
       DescriptionBuilder desc) {
     if (!IsValidCache.<K, V>validCache().matchesSafely(copy, desc.getDescription())) {
       desc.expected("valid cache");
@@ -116,13 +117,13 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  private <K, V> void checkBoundedLocalManualCache(
+  private static <K, V> void checkBoundedLocalManualCache(
       BoundedLocalCache.LocalManualCache<K, V> original,
       BoundedLocalCache.LocalManualCache<K, V> copy, DescriptionBuilder desc) {
     if (original.cache.weigher instanceof BoundedWeigher<?, ?>) {
       desc.expectThat("same weigher",
-          ((BoundedWeigher<?, ?>) copy.cache.weigher).weigher.getClass(),
-          equalTo((((BoundedWeigher<?, ?>) original.cache.weigher).weigher.getClass())));
+          unwrapWeigher(copy.cache.weigher).getClass(), is(equalTo(
+          unwrapWeigher(original.cache.weigher).getClass())));
     } else {
       desc.expectThat("same weigher", copy.cache.weigher, is(original.cache.weigher));
     }
@@ -152,19 +153,33 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  private <K, V> void checkBoundedLocalLoadingCache(
+  private static <K, V> Weigher<K, V> unwrapWeigher(Weigher<?, ?> weigher) {
+    for (;;) {
+      if (weigher instanceof BoundedWeigher<?, ?>) {
+        weigher = ((BoundedWeigher<?, ?>) weigher).delegate;
+      } else if (weigher instanceof AsyncWeigher<?, ?>) {
+        weigher = ((AsyncWeigher<?, ?>) weigher).delegate;
+      } else {
+        @SuppressWarnings("unchecked")
+        Weigher<K, V> castedWeigher = (Weigher<K, V>) weigher;
+        return castedWeigher;
+      }
+    }
+  }
+
+  private static <K, V> void checkBoundedLocalLoadingCache(
       BoundedLocalCache.LocalLoadingCache<K, V> original,
       BoundedLocalCache.LocalLoadingCache<K, V> copy, DescriptionBuilder desc) {
     desc.expectThat("same cacheLoader", copy.cache.loader, is(original.cache.loader));
   }
 
-  private <K, V> void checkUnoundedLocalManualCache(
+  private static <K, V> void checkUnoundedLocalManualCache(
       UnboundedLocalCache.LocalManualCache<K, V> original,
       UnboundedLocalCache.LocalManualCache<K, V> copy, DescriptionBuilder desc) {
     checkUnboundedLocalCache(original.cache, copy.cache, desc);
   }
 
-  private <K, V> void checkUnboundedLocalCache(UnboundedLocalCache<K, V> original,
+  private static <K, V> void checkUnboundedLocalCache(UnboundedLocalCache<K, V> original,
       UnboundedLocalCache<K, V> copy, DescriptionBuilder desc) {
     desc.expectThat("same ticker", copy.ticker, is(original.ticker));
     desc.expectThat("same isRecordingStats",
@@ -178,7 +193,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  private <K, V> void checkUnboundedLocalLoadingCache(
+  private static <K, V> void checkUnboundedLocalLoadingCache(
       UnboundedLocalCache.LocalLoadingCache<K, V> original,
       UnboundedLocalCache.LocalLoadingCache<K, V> copy, DescriptionBuilder desc) {
     desc.expectThat("same cacheLoader", copy.loader, is(original.loader));
