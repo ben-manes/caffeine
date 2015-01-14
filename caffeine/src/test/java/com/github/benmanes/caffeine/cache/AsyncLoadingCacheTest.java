@@ -231,6 +231,7 @@ public final class AsyncLoadingCacheTest {
     try {
       valueFuture.get();
     } catch (Exception ignored) {}
+    while (failedFuture.getNumberOfDependents() != 0) {}
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -464,6 +465,8 @@ public final class AsyncLoadingCacheTest {
     try {
       failedFuture.get();
     } catch (Exception ignored) {}
+    while (failedFuture.getNumberOfDependents() != 0) {}
+
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
@@ -503,6 +506,7 @@ public final class AsyncLoadingCacheTest {
     try {
       failedFuture.get();
     } catch (Exception ignored) {}
+    while (failedFuture.getNumberOfDependents() != 0) {}
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(1)));
