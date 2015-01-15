@@ -64,9 +64,9 @@ public final class LoadingCacheTest {
   }
 
   @CacheSpec(loader = Loader.NULL)
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
-    cache.get(context.absentKey());
+    assertThat(cache.get(context.absentKey()), is(nullValue()));
   }
 
   @CacheSpec(loader = Loader.EXCEPTIONAL)

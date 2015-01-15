@@ -2571,24 +2571,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     public CompletableFuture<V> get(K key,
         BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction) {
       long now = cache.ticker.read();
+      @SuppressWarnings("unchecked")
+      CompletableFuture<V>[] result = new CompletableFuture[1];
       CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
-        CompletableFuture<V> valueFuture = mappingFunction.apply(key, cache.executor);
-        valueFuture.whenComplete((value, error) -> {
+        result[0] = mappingFunction.apply(key, cache.executor);
+        return result[0];
+      }, true);
+      if (result[0] != null) {
+        result[0].whenComplete((value, error) -> {
           long loadTime = cache.ticker.read() - now;
-          if (error == null) {
-            // update the weight and expiration timestamps
-            cache.replace(key, valueFuture, valueFuture);
-            cache.statsCounter.recordLoadSuccess(loadTime);
-          } else {
+          if (value == null) {
             cache.statsCounter.recordLoadFailure(loadTime);
-            cache.remove(key, valueFuture);
+            cache.remove(key, result[0]);
+          } else {
+            // update the weight and expiration timestamps
+            cache.replace(key, result[0], result[0]);
+            cache.statsCounter.recordLoadSuccess(loadTime);
           }
         });
-        return valueFuture;
-      }, true);
-
-      if (future.isCompletedExceptionally()) {
-        cache.remove(key, future);
       }
       return future;
     }
@@ -2672,13 +2672,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       cache.put(key, valueFuture);
       valueFuture.whenComplete((value, error) -> {
         long loadTime = cache.ticker.read() - now;
-        if (error == null) {
+        if (value == null) {
+          cache.remove(key, valueFuture);
+          cache.statsCounter.recordLoadFailure(loadTime);
+        } else {
           // update the weight and expiration timestamps
           cache.replace(key, valueFuture, valueFuture);
           cache.statsCounter.recordLoadSuccess(loadTime);
-        } else {
-          cache.remove(key, valueFuture);
-          cache.statsCounter.recordLoadFailure(loadTime);
         }
       });
     }
@@ -2702,16 +2702,19 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       public void accept(Map<K, V> result, Throwable error) {
         long loadTime = cache.ticker.read() - now;
 
-        if (error == null) {
-          fillProxies(result);
-          addNewEntries(result);
-          cache.statsCounter.recordLoadSuccess(result.size());
-        } else if (error != null) {
+        if (result == null) {
+          if (error == null) {
+            error = new CompletionException("null map", null);
+          }
           for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
             cache.remove(entry.getKey(), entry.getValue());
             entry.getValue().obtrudeException(error);
           }
           cache.statsCounter.recordLoadFailure(loadTime);
+        } else {
+          fillProxies(result);
+          addNewEntries(result);
+          cache.statsCounter.recordLoadSuccess(result.size());
         }
       }
 

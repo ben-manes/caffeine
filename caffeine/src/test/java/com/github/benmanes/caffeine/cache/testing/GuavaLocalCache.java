@@ -30,9 +30,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
-import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -389,6 +389,9 @@ public final class GuavaLocalCache {
       try {
         return cache.get(key);
       } catch (UncheckedExecutionException e) {
+        if (e.getCause() instanceof CacheMissException) {
+          return null;
+        }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {
         throw new CompletionException(e);
@@ -458,7 +461,11 @@ public final class GuavaLocalCache {
 
     @Override
     public V load(K key) throws Exception {
-      return delegate.load(key);
+      V value = delegate.load(key);
+      if (value == null) {
+        throw new CacheMissException();
+      }
+      return value;
     }
   }
 
@@ -473,5 +480,9 @@ public final class GuavaLocalCache {
     public Map<K, V> loadAll(Iterable<? extends K> keys) throws Exception {
       return delegate.loadAll(keys);
     }
+  }
+
+  static final class CacheMissException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
   }
 }

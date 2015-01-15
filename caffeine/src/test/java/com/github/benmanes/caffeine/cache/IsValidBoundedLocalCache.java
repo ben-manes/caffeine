@@ -62,6 +62,8 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void drain(BoundedLocalCache<K, V> map) {
+    map.cleanUp();
+
     if (!map.evicts() && !map.expiresAfterAccess()) {
       return;
     }

@@ -1087,25 +1087,19 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       @SuppressWarnings("unchecked")
       CompletableFuture<V>[] result = new CompletableFuture[1];
       CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
-        return mappingFunction.apply(key, cache.executor).whenComplete((value, error) -> {
+        result[0] = mappingFunction.apply(key, cache.executor);
+        return result[0];
+      }, true);
+      if (result[0] != null) {
+        result[0].whenComplete((value, error) -> {
           long loadTime = cache.ticker.read() - now;
-          if (error == null) {
-            cache.statsCounter.recordLoadSuccess(loadTime);
-          } else {
+          if (value == null) {
             cache.statsCounter.recordLoadFailure(loadTime);
-            synchronized (result) {
-              if (result[0] != null) {
-                cache.remove(key, result[0]);
-              }
-            }
+            cache.remove(key, result[0]);
+          } else {
+            cache.statsCounter.recordLoadSuccess(loadTime);
           }
         });
-      }, true);
-      synchronized (result) {
-        result[0] = future;
-      }
-      if (future.isCompletedExceptionally()) {
-        cache.remove(key, future);
       }
       return future;
     }
@@ -1183,11 +1177,11 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       cache.put(key, valueFuture);
       valueFuture.whenComplete((value, error) -> {
         long loadTime = cache.ticker.read() - now;
-        if (error == null) {
-          cache.statsCounter.recordLoadSuccess(loadTime);
-        } else {
+        if (value == null) {
           cache.remove(key, valueFuture);
           cache.statsCounter.recordLoadFailure(loadTime);
+        } else {
+          cache.statsCounter.recordLoadSuccess(loadTime);
         }
       });
     }
@@ -1211,16 +1205,19 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       public void accept(Map<K, V> result, Throwable error) {
         long loadTime = cache.ticker.read() - now;
 
-        if (error == null) {
-          fillProxies(result);
-          addNewEntries(result);
-          cache.statsCounter.recordLoadSuccess(result.size());
-        } else if (error != null) {
+        if (result == null) {
+          if (error == null) {
+            error = new CompletionException("null map", null);
+          }
           for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
             cache.remove(entry.getKey(), entry.getValue());
             entry.getValue().obtrudeException(error);
           }
           cache.statsCounter.recordLoadFailure(loadTime);
+        } else {
+          fillProxies(result);
+          addNewEntries(result);
+          cache.statsCounter.recordLoadSuccess(result.size());
         }
       }
 
