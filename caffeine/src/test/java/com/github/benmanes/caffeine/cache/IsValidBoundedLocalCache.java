@@ -40,16 +40,20 @@ import com.google.common.collect.Sets;
  */
 public final class IsValidBoundedLocalCache<K, V>
     extends TypeSafeDiagnosingMatcher<BoundedLocalCache<K, V>> {
+  DescriptionBuilder desc;
 
   @Override
   public void describeTo(Description description) {
-    description.appendText("valid");
+    description.appendText("valid bounded cache");
+    if (desc.getDescription() != description) {
+      description.appendText(desc.getDescription().toString());
+    }
   }
 
   @Override
   protected boolean matchesSafely(BoundedLocalCache<K, V> map,
       Description description) {
-    DescriptionBuilder desc = new DescriptionBuilder(description);
+    desc = new DescriptionBuilder(description);
 
     drain(map);
     checkMap(map, desc);

@@ -18,7 +18,9 @@ package com.github.benmanes.caffeine.matchers;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
+import org.hamcrest.Description.NullDescription;
 import org.hamcrest.Matcher;
+import org.hamcrest.StringDescription;
 
 import com.google.common.base.Throwables;
 
@@ -32,7 +34,9 @@ public final class DescriptionBuilder {
   private boolean matches;
 
   public DescriptionBuilder(Description description) {
-    this.description = description;
+    this.description = (description instanceof NullDescription)
+        ? new StringDescription()
+        : description;
     this.matches = true;
   }
 

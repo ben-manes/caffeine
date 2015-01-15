@@ -37,8 +37,9 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
     HIT, MISS, EVICTION, LOAD_SUCCESS, LOAD_FAILURE, TOTAL_LOAD_TIME
   }
 
-  private final long count;
-  private final StatsType type;
+  final long count;
+  final StatsType type;
+  DescriptionBuilder desc;
 
   private HasStats(StatsType type, long count) {
     this.count = count;
@@ -48,6 +49,9 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
   @Override
   public void describeTo(Description description) {
     description.appendText("stats: " + type.name() + "=" + count);
+    if (description != desc.getDescription()) {
+      description.appendText(desc.getDescription().toString());
+    }
   }
 
   @Override
@@ -57,7 +61,7 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
     }
 
     CacheStats stats = context.stats();
-    DescriptionBuilder desc = new DescriptionBuilder(description);
+    desc = new DescriptionBuilder(description);
     ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
     switch (type) {
       case HIT:

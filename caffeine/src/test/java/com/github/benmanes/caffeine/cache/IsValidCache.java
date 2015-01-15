@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
@@ -26,18 +28,29 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
  */
 public final class IsValidCache<K, V>
     extends TypeSafeDiagnosingMatcher<Cache<K, V>> {
+  Description description;
 
   @Override
   public void describeTo(Description description) {
     description.appendText("cache");
+    if (this.description != description) {
+      description.appendText(description.toString());
+    }
   }
 
   @Override
   protected boolean matchesSafely(Cache<K, V> cache, Description description) {
+    this.description = description;
+
     if (cache instanceof BoundedLocalCache.LocalManualCache<?, ?>) {
       BoundedLocalCache.LocalManualCache<K, V> local =
           (BoundedLocalCache.LocalManualCache<K, V>) cache;
       return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
+    } else if (cache instanceof BoundedLocalCache.LocalAsyncLoadingCache<?, ?>.LoadingCacheView) {
+      BoundedLocalCache.LocalAsyncLoadingCache<K, V>.LoadingCacheView local =
+          (BoundedLocalCache.LocalAsyncLoadingCache<K, V>.LoadingCacheView) cache;
+      return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+          local.getOuter().cache, description);
     }
     return true;
   }

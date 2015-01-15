@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.hamcrest.Description;
@@ -23,38 +22,37 @@ import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 /**
- * A matcher that evaluates a {@link Cache#asMap()} to determine if it is in a valid state.
+ * A matcher that evaluates a {@link AsyncLoadingCache} to determine if it is in a valid state.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class IsValidMapView<K, V> extends TypeSafeDiagnosingMatcher<Map<K, V>> {
+public final class IsValidAsyncCache<K, V>
+    extends TypeSafeDiagnosingMatcher<AsyncLoadingCache<K, V>> {
   Description description;
 
   @Override
   public void describeTo(Description description) {
-    description.appendText("cache");
+    description.appendText("async cache");
     if (this.description != description) {
       description.appendText(this.description.toString());
     }
   }
 
   @Override
-  protected boolean matchesSafely(Map<K, V> map, Description description) {
+  protected boolean matchesSafely(AsyncLoadingCache<K, V> cache, Description description) {
     this.description = description;
 
-    if (map instanceof BoundedLocalCache<?, ?>) {
-      BoundedLocalCache<K, V> cache = (BoundedLocalCache<K, V>) map;
-      return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(cache, description);
-    } else if (map instanceof BoundedLocalCache.AsMapView<?, ?>) {
-      BoundedLocalCache.AsMapView<K, V> cache = (BoundedLocalCache.AsMapView<K, V>) map;
-      return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-          cache.delegate, description);
+    if (cache instanceof BoundedLocalCache.LocalAsyncLoadingCache<?, ?>) {
+      BoundedLocalCache.LocalAsyncLoadingCache<K, V> local =
+          (BoundedLocalCache.LocalAsyncLoadingCache<K, V>) cache;
+      return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid()
+          .matchesSafely(local.cache, description);
     }
     return true;
   }
 
   @Factory
-  public static <K, V> IsValidMapView<K, V> validAsMap() {
-    return new IsValidMapView<K, V>();
+  public static <K, V> IsValidAsyncCache<K, V> validAsyncCache() {
+    return new IsValidAsyncCache<K, V>();
   }
 }

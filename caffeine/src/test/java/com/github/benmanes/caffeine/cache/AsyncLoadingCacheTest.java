@@ -120,15 +120,15 @@ public final class AsyncLoadingCacheTest {
       CacheContext context) {
     Integer key = context.absentKey();
     AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
       await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    ready.set(true);
+    valueFuture.whenComplete((r, e) -> done.set(true));
 
-    try {
-      valueFuture.get();
-    } catch (Exception ignored) {}
+    ready.set(true);
+    await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -219,19 +219,17 @@ public final class AsyncLoadingCacheTest {
   public void getBiFunc_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
       await().untilTrue(ready);
       throw new IllegalStateException();
     });
+    failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
     ready.set(true);
-
-    try {
-      valueFuture.get();
-    } catch (Exception ignored) {}
-    while (failedFuture.getNumberOfDependents() != 0) {}
+    await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -294,13 +292,13 @@ public final class AsyncLoadingCacheTest {
   public void get_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key);
-    ready.set(true);
+    valueFuture.whenComplete((r, e) -> done.set(true));
 
-    try {
-      valueFuture.get();
-    } catch (Exception ignored) {}
+    ready.set(true);
+    await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -453,19 +451,17 @@ public final class AsyncLoadingCacheTest {
   public void put_insert_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
       await().untilTrue(ready);
       throw new IllegalStateException();
     });
+    failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
     cache.put(key, failedFuture);
     ready.set(true);
-
-    try {
-      failedFuture.get();
-    } catch (Exception ignored) {}
-    while (failedFuture.getNumberOfDependents() != 0) {}
+    await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -489,10 +485,12 @@ public final class AsyncLoadingCacheTest {
   public void put_replace_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
       await().untilTrue(ready);
       throw new IllegalStateException();
     });
+    failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
     cache.put(key, failedFuture);
@@ -502,11 +500,7 @@ public final class AsyncLoadingCacheTest {
 
     cache.put(key, successFuture);
     ready.set(true);
-
-    try {
-      failedFuture.get();
-    } catch (Exception ignored) {}
-    while (failedFuture.getNumberOfDependents() != 0) {}
+    await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(1)));
