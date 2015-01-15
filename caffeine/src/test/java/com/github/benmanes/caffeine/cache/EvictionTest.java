@@ -18,19 +18,21 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
+import static com.jayway.awaitility.Awaitility.await;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.Assert;
 import org.testng.annotations.Listeners;
@@ -149,14 +151,11 @@ public final class EvictionTest {
     assertThat(cache, hasRemovalNotifications(context, evicted[0], RemovalCause.SIZE));
   }
 
-  @Test
-  public void evict_weighted() {
-    Cache<Integer, Collection<Integer>> cache = Caffeine.newBuilder()
-        .weigher(CacheWeigher.COLLECTION)
-        .maximumWeight(10)
-        .build();
-    Eviction<?, ?> eviction = cache.policy().eviction().get();
-
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.TEN,
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  public void evict_weighted(Cache<Integer, List<Integer>> cache, Eviction<?, ?> eviction) {
     // Never evicted
     cache.put(0, asList());
 
@@ -176,6 +175,57 @@ public final class EvictionTest {
     cache.put(5, asList(12, 13, 14, 15, 16, 17, 18, 19, 20));
     assertThat(cache.estimatedSize(), is(3L));
     assertThat(eviction.weightedSize().get(), is(10L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.TEN,
+      weigher = CacheWeigher.VALUE, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  public void evict_weighted_async(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
+    AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    CompletableFuture<Integer> valueFuture = CompletableFuture.supplyAsync(() -> {
+      await().untilTrue(ready);
+      return 6;
+    });
+    valueFuture.whenComplete((r, e) -> done.set(true));
+
+    cache.put(5, CompletableFuture.completedFuture(5));
+    cache.put(4, CompletableFuture.completedFuture(4));
+    cache.put(6, valueFuture);
+    assertThat(eviction.weightedSize().get(), is(9L));
+    assertThat(cache.synchronous().estimatedSize(), is(3L));
+
+    ready.set(true);
+    await().untilTrue(done);
+    assertThat(eviction.weightedSize().get(), is(10L));
+    assertThat(cache.synchronous().estimatedSize(), is(2L));
+    assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.ZERO,
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  public void evict_zero_async(AsyncLoadingCache<Integer, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
+    AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    CompletableFuture<List<Integer>> valueFuture = CompletableFuture.supplyAsync(() -> {
+      await().untilTrue(ready);
+      return ImmutableList.of(1, 2, 3, 4, 5);
+    });
+    valueFuture.whenComplete((r, e) -> done.set(true));
+
+    cache.put(context.absentKey(), valueFuture);
+    assertThat(eviction.weightedSize().get(), is(0L));
+    assertThat(cache.synchronous().estimatedSize(), is(1L));
+
+    ready.set(true);
+    await().untilTrue(done);
+    assertThat(eviction.weightedSize().get(), is(0L));
+    assertThat(cache.synchronous().estimatedSize(), is(0L));
   }
 
   /* ---------------- Weighted -------------- */
@@ -227,6 +277,30 @@ public final class EvictionTest {
     cache.put("a", asList(-1, -2, -3, -4));
     assertThat(cache.estimatedSize(), is(2L));
     assertThat(eviction.weightedSize().get(), is(5L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  public void put_asyncWeight(AsyncLoadingCache<Integer, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
+    AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    CompletableFuture<List<Integer>> valueFuture = CompletableFuture.supplyAsync(() -> {
+      await().untilTrue(ready);
+      return ImmutableList.of(1, 2, 3, 4, 5);
+    });
+    valueFuture.whenComplete((r, e) -> done.set(true));
+
+    cache.put(context.absentKey(), valueFuture);
+    assertThat(eviction.weightedSize().get(), is(0L));
+    assertThat(cache.synchronous().estimatedSize(), is(1L));
+
+    ready.set(true);
+    await().untilTrue(done);
+    assertThat(eviction.weightedSize().get(), is(5L));
+    assertThat(cache.synchronous().estimatedSize(), is(1L));
   }
 
   @Test(dataProvider = "caches")
