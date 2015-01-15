@@ -42,7 +42,6 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 /**
  * A builder of {@link AsyncLoadingCache}, {@link LoadingCache}, and {@link Cache} instances
  * having any combination of the following features:
- *
  * <ul>
  *   <li>automatic loading of entries into the cache, optionally asynchronously
  *   <li>least-recently-used eviction when a maximum size is exceeded
@@ -105,15 +104,15 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * will be performed during write operations, or during occasional read operations in the absence of
  * writes. The {@link Cache#cleanUp} method of the returned cache will also perform maintenance, but
  * calling it should not be necessary with a high throughput cache. Only caches built with
- * {@linkplain #maximumSize}, {@linkplain #maximumWeight},
+ * {@linkplain #maximumSize maximumSize}, {@linkplain #maximumWeight maximumWeight},
  * {@linkplain #expireAfterWrite expireAfterWrite},
  * {@linkplain #expireAfterAccess expireAfterAccess}, {@linkplain #weakKeys weakKeys},
  * {@linkplain #weakValues weakValues}, or {@linkplain #softValues softValues} perform periodic
  * maintenance.
  * <p>
- * The caches produced by {@code Caffeine} are serializable, and the deserialized caches
- * retain all the configuration properties of the original cache. Note that the serialized form does
- * <i>not</i> include cache contents, but only configuration.
+ * The caches produced by {@code Caffeine} are serializable, and the deserialized caches retain all
+ * the configuration properties of the original cache. Note that the serialized form does <i>not</i>
+ * include cache contents, but only configuration.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the base key type for all caches created by this builder

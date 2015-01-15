@@ -58,7 +58,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -1464,7 +1463,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     return (es == null) ? (entrySet = new EntrySet()) : es;
   }
 
-  Map<K, V> orderedMap(LinkedDeque<Node<K, V>> deque, boolean ascending, int limit) {
+  Map<K, V> orderedMap(LinkedDeque<Node<K, V>> deque, Function<V, V> transformer,
+      boolean ascending, int limit) {
     Caffeine.requireArgument(limit >= 0);
     evictionLock.lock();
     try {
@@ -1480,7 +1480,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       while (iterator.hasNext() && (limit > map.size())) {
         Node<K, V> node = iterator.next();
         K key = node.getKey(keyStrategy);
-        V value = node.getValue(valueStrategy);
+        V value = transformer.apply(node.getValue(valueStrategy));
         if ((key != null) && (value != null)) {
           map.put(key, value);
         }
@@ -2167,7 +2167,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
     @Override
     public Policy<K, V> policy() {
       return (policy == null)
-          ? (policy = new BoundedPolicy<K, V>(cache, isWeighted, false))
+          ? (policy = new BoundedPolicy<K, V>(cache, Function.identity(), isWeighted))
           : policy;
     }
 
@@ -2258,17 +2258,18 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
   }
 
   static final class BoundedPolicy<K, V> implements Policy<K, V> {
-    BoundedLocalCache<K, ?> cache;
+    final BoundedLocalCache<K, V> cache;
+    final Function<V, V> transformer;
+    final boolean isWeighted;
+
     Optional<Eviction<K, V>> eviction;
     Optional<Expiration<K, V>> afterWrite;
     Optional<Expiration<K, V>> afterAccess;
-    boolean isWeighted;
-    boolean isAsync;
 
-    BoundedPolicy(BoundedLocalCache<K, ?> cache, boolean isWeighted, boolean isAsync) {
+    BoundedPolicy(BoundedLocalCache<K, V> cache, Function<V, V> transformer, boolean isWeighted) {
       this.cache = cache;
-      this.isAsync = isAsync;
       this.isWeighted = isWeighted;
+      this.transformer = transformer;
     }
 
     @Override public Optional<Eviction<K, V>> eviction() {
@@ -2307,45 +2308,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
         cache.setCapacity(maximumSize);
       }
       @Override public Map<K, V> coldest(int limit) {
-        return accessOrder(true, limit);
+        return cache.orderedMap(cache.accessOrderDeque, transformer, true, limit);
       }
       @Override public Map<K, V> hottest(int limit) {
-        return accessOrder(false, limit);
+        return cache.orderedMap(cache.accessOrderDeque, transformer, false, limit);
       }
-    }
-
-    // FIXME: This is a hack until we filter incomplete futures before limit is applied
-    Map<K, V> accessOrder(boolean ascending, int limit) {
-      if (!isAsync) {
-        BoundedLocalCache<K, V> syncCache = (BoundedLocalCache<K, V>) cache;
-        return syncCache.orderedMap(syncCache.accessOrderDeque, ascending, limit);
-      }
-      BoundedLocalCache<K, CompletableFuture<V>> asyncCache =
-          (BoundedLocalCache<K, CompletableFuture<V>>) cache;
-      Map<K, CompletableFuture<V>> result =
-          asyncCache.orderedMap(asyncCache.accessOrderDeque, ascending, limit);
-      return Collections.<K, V>unmodifiableMap(result.entrySet().stream()
-          .filter(entry -> isReady(entry.getValue()))
-          .collect(Collectors.toMap(entry -> entry.getKey(),
-              entry -> getIfReady(entry.getValue()),
-              (u, v) -> null, LinkedHashMap::new)));
-    }
-
-    // FIXME: This is a hack until we filter incomplete futures before limit is applied
-    Map<K, V> writeOrder(boolean ascending, int limit) {
-      if (!isAsync) {
-        BoundedLocalCache<K, V> syncCache = (BoundedLocalCache<K, V>) cache;
-        return syncCache.orderedMap(syncCache.writeOrderDeque, ascending, limit);
-      }
-      BoundedLocalCache<K, CompletableFuture<V>> asyncCache =
-          (BoundedLocalCache<K, CompletableFuture<V>>) cache;
-      Map<K, CompletableFuture<V>> result =
-          asyncCache.orderedMap(asyncCache.writeOrderDeque, ascending, limit);
-      return Collections.<K, V>unmodifiableMap(result.entrySet().stream()
-          .filter(entry -> isReady(entry.getValue()))
-          .collect(Collectors.toMap(entry -> entry.getKey(),
-              entry -> getIfReady(entry.getValue()),
-              (u, v) -> null, LinkedHashMap::new)));
     }
 
     final class BoundedExpireAfterAccess implements Expiration<K, V> {
@@ -2369,10 +2336,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
-        return accessOrder(true, limit);
+        return cache.orderedMap(cache.accessOrderDeque, transformer, true, limit);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return accessOrder(false, limit);
+        return cache.orderedMap(cache.accessOrderDeque, transformer, false, limit);
       }
     }
 
@@ -2397,10 +2364,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
-        return writeOrder(true, limit);
+        return cache.orderedMap(cache.writeOrderDeque, transformer, true, limit);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return writeOrder(false, limit);
+        return cache.orderedMap(cache.writeOrderDeque, transformer, false, limit);
       }
     }
   }
@@ -3033,9 +3000,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
 
       @Override
       public Policy<K, V> policy() {
-        return (policy == null)
-            ? (policy = new BoundedPolicy<K, V>(cache, isWeighted, true))
-            : policy;
+        if (policy == null) {
+          @SuppressWarnings("unchecked")
+          BoundedLocalCache<K, V> castedCache = (BoundedLocalCache<K, V>) cache;
+          Function<CompletableFuture<V>, V> transformer = BoundedLocalCache::getIfReady;
+          @SuppressWarnings("unchecked")
+          Function<V, V> castedTransformer = (Function<V, V>) transformer;
+          policy = new BoundedPolicy<K, V>(castedCache, castedTransformer, isWeighted);
+        }
+        return policy;
       }
 
       @Override
