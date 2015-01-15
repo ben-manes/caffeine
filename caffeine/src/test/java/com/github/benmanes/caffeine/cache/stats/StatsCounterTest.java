@@ -52,6 +52,7 @@ public final class StatsCounterTest {
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
     assertThat(counter.snapshot(), is(new CacheStats(1, 1, 1, 1, 2, 1)));
+    assertThat(counter.toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
     assertThat(counter.snapshot().toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
 
     counter.incrementBy(counter);

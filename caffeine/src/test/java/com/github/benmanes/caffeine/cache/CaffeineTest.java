@@ -49,13 +49,17 @@ public final class CaffeineTest {
   @Test
   public void configured() {
     Caffeine<Object, Object> configured = Caffeine.newBuilder()
-        .initialCapacity(1).maximumSize(1).weakKeys().softValues()
+        .initialCapacity(1).weakKeys().softValues()
         .expireAfterAccess(1, TimeUnit.SECONDS).expireAfterWrite(1, TimeUnit.SECONDS)
         .removalListener(x -> {}).recordStats();
     assertThat(configured.build(), is(not(nullValue())));
     assertThat(configured.build(single), is(not(nullValue())));
     assertThat(Caffeine.newBuilder().buildAsync(single), is(not(nullValue())));
-    assertThat(configured.toString(), is(not(Caffeine.newBuilder().toString())));
+
+    assertThat(configured.refreshAfterWrite(1, TimeUnit.SECONDS).toString(),
+        is(not(Caffeine.newBuilder().toString())));
+    assertThat(Caffeine.newBuilder().maximumSize(1).toString(),
+        is(not(Caffeine.newBuilder().maximumWeight(1).toString())));
   }
 
   /* ---------------- loading -------------- */

@@ -23,9 +23,7 @@ import java.lang.ref.WeakReference;
 import java.util.ConcurrentModificationException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
@@ -827,15 +825,9 @@ public final class Caffeine<K, V> {
 
     @Override
     public int weigh(K key, CompletableFuture<V> valueFuture) {
-      try {
-        return (valueFuture.isDone() && !valueFuture.isCompletedExceptionally())
-            ? delegate.weigh(key, valueFuture.get())
-            : 0;
-      } catch (InterruptedException e) {
-        throw new CompletionException(e);
-      } catch (ExecutionException e) {
-        throw new CompletionException(e.getCause());
-      }
+      return (valueFuture.isDone() && !valueFuture.isCompletedExceptionally())
+          ? delegate.weigh(key, valueFuture.join())
+          : 0;
     }
 
     Object writeReplace() {
