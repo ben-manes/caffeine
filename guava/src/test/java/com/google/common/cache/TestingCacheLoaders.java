@@ -16,6 +16,7 @@ package com.google.common.cache;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -34,7 +35,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * @author mike nonemacher
  */
 @GwtCompatible(emulated = true)
-class TestingCacheLoaders {
+public class TestingCacheLoaders {
 
   /**
    * Returns a {@link CacheLoader} that implements a naive {@link CacheLoader#loadAll}, delegating
@@ -103,7 +104,7 @@ class TestingCacheLoaders {
   /**
    * Returns a {@link CacheLoader} that returns the key for every request.
    */
-  static <T> IdentityLoader<T> identityLoader() {
+  public static <T> IdentityLoader<T> identityLoader() {
     return new IdentityLoader<T>();
   }
 
@@ -170,7 +171,9 @@ class TestingCacheLoaders {
     }
   }
 
-  static final class IdentityLoader<T> extends CacheLoader<T, T> {
+  public static final class IdentityLoader<T> extends CacheLoader<T, T> implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     @Override
     public T load(T key) {
       return key;

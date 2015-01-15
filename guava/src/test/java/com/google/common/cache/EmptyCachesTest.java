@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilderFactory.DurationSpec;
 import com.google.common.cache.LocalCache.Strength;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -286,6 +287,12 @@ public class EmptyCachesTest extends TestCase {
     for (LoadingCache<Object, Object> cache : caches()) {
       try {
         cache.asMap().entrySet().add(entryOf(1, 1));
+        fail();
+      } catch (UnsupportedOperationException e) {
+        // expected
+      }
+      try {
+        cache.asMap().entrySet().addAll(ImmutableList.of());
         fail();
       } catch (UnsupportedOperationException e) {
         // expected

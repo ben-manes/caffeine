@@ -27,11 +27,14 @@ import sun.misc.Unsafe;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class UnsafeAccess {
+  static final String ANDROID = "THE_ONE";
+  static final String OPEN_JDK = "theUnsafe";
+
   public static final Unsafe UNSAFE;
 
   static {
     try {
-      UNSAFE = load();
+      UNSAFE = load(OPEN_JDK, ANDROID);
     } catch (Exception e) {
       throw new Error("Failed to load sun.misc.Unsafe", e);
     }
@@ -46,15 +49,15 @@ public final class UnsafeAccess {
     }
   }
 
-  private static Unsafe load() throws Exception {
+  static Unsafe load(String openJdk, String android) throws Exception {
     Field field = null;
     try {
       // try OpenJDK field name
-      field = Unsafe.class.getDeclaredField("theUnsafe");
+      field = Unsafe.class.getDeclaredField(openJdk);
     } catch (NoSuchFieldException e) {
       try {
         // try Android field name
-        field = Unsafe.class.getDeclaredField("THE_ONE");
+        field = Unsafe.class.getDeclaredField(android);
       } catch (NoSuchFieldException e2) {
         // try to create a new instance
         Constructor<Unsafe> unsafeConstructor = Unsafe.class.getDeclaredConstructor();
@@ -66,5 +69,5 @@ public final class UnsafeAccess {
     return (Unsafe) field.get(null);
   }
 
-  private UnsafeAccess() {}
+  UnsafeAccess() {}
 }

@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.guava;
 
+import java.lang.reflect.Constructor;
+
 import junit.framework.TestCase;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
+import com.google.common.cache.TestingCacheLoaders;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -30,5 +33,13 @@ public final class CaffeinatedGuavaTest extends TestCase {
   public void testSerializable() {
     SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder()));
     SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder(), Loader.IDENTITY));
+    SerializableTester.reserialize(CaffeinatedGuava.build(
+        Caffeine.newBuilder(), TestingCacheLoaders.identityLoader()));
+  }
+
+  public void testReflectivelyConstruct() throws Exception {
+    Constructor<?> constructor = CaffeinatedGuava.class.getDeclaredConstructor();
+    constructor.setAccessible(true);
+    constructor.newInstance();
   }
 }
