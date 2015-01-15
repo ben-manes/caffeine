@@ -48,6 +48,14 @@ public final class IsValidAsyncCache<K, V>
       return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid()
           .matchesSafely(local.cache, description);
     }
+
+    if (cache instanceof UnboundedLocalCache.LocalAsyncLoadingCache<?, ?>) {
+      UnboundedLocalCache.LocalAsyncLoadingCache<K, V> local =
+          (UnboundedLocalCache.LocalAsyncLoadingCache<K, V>) cache;
+      return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid()
+          .matchesSafely(local.cache, description);
+    }
+
     return true;
   }
 

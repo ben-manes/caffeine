@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
-import static com.jayway.awaitility.Awaitility.await;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -32,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.Assert;
@@ -55,6 +55,7 @@ import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemo
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.jayway.awaitility.Awaitility;
 
 /**
  * The test cases for caches with a page replacement algorithm.
@@ -186,7 +187,10 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = CompletableFuture.supplyAsync(() -> {
-      await().untilTrue(ready);
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .await().untilTrue(ready);
       return 6;
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
@@ -198,7 +202,10 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(3L));
 
     ready.set(true);
-    await().untilTrue(done);
+    Awaitility.with()
+        .pollDelay(1, TimeUnit.MILLISECONDS).and()
+        .pollInterval(1, TimeUnit.MILLISECONDS)
+        .await().untilTrue(done);
     assertThat(eviction.weightedSize().get(), is(10L));
     assertThat(cache.synchronous().estimatedSize(), is(2L));
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
@@ -213,7 +220,10 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<List<Integer>> valueFuture = CompletableFuture.supplyAsync(() -> {
-      await().untilTrue(ready);
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .await().untilTrue(ready);
       return ImmutableList.of(1, 2, 3, 4, 5);
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
@@ -223,7 +233,10 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     ready.set(true);
-    await().untilTrue(done);
+    Awaitility.with()
+        .pollDelay(1, TimeUnit.MILLISECONDS).and()
+        .pollInterval(1, TimeUnit.MILLISECONDS)
+        .await().untilTrue(done);
     assertThat(eviction.weightedSize().get(), is(0L));
     assertThat(cache.synchronous().estimatedSize(), is(0L));
   }
@@ -288,7 +301,10 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<List<Integer>> valueFuture = CompletableFuture.supplyAsync(() -> {
-      await().untilTrue(ready);
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .await().untilTrue(ready);
       return ImmutableList.of(1, 2, 3, 4, 5);
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
@@ -298,7 +314,10 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     ready.set(true);
-    await().untilTrue(done);
+    Awaitility.with()
+        .pollDelay(1, TimeUnit.MILLISECONDS).and()
+        .pollInterval(1, TimeUnit.MILLISECONDS)
+        .await().untilTrue(done);
     assertThat(eviction.weightedSize().get(), is(5L));
     assertThat(cache.synchronous().estimatedSize(), is(1L));
   }

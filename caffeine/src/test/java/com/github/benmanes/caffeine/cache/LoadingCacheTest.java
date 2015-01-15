@@ -63,6 +63,12 @@ public final class LoadingCacheTest {
     cache.get(null);
   }
 
+  @CacheSpec(loader = Loader.NULL)
+  @Test(enabled = false, dataProvider = "caches")
+  public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    cache.get(context.absentKey());
+  }
+
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_absent_failure(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -195,7 +201,7 @@ public final class LoadingCacheTest {
   public void refresh_remove(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.refresh(context.firstKey());
     assertThat(cache.estimatedSize(), is(context.initialSize() - 1));
-    assertThat(cache.get(context.firstKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
   }
 

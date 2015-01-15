@@ -52,6 +52,18 @@ public final class IsValidCache<K, V>
       return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
           local.getOuter().cache, description);
     }
+
+    if (cache instanceof UnboundedLocalCache.LocalManualCache<?, ?>) {
+      UnboundedLocalCache.LocalManualCache<K, V> local =
+          (UnboundedLocalCache.LocalManualCache<K, V>) cache;
+      return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
+    } else if (cache instanceof UnboundedLocalCache.LocalAsyncLoadingCache<?, ?>.LoadingCacheView) {
+      UnboundedLocalCache.LocalAsyncLoadingCache<K, V>.LoadingCacheView local =
+          (UnboundedLocalCache.LocalAsyncLoadingCache<K, V>.LoadingCacheView) cache;
+      return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+          local.getOuter().cache, description);
+    }
+
     return true;
   }
 

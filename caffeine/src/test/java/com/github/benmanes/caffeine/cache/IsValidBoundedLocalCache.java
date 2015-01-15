@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
@@ -51,8 +52,7 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   @Override
-  protected boolean matchesSafely(BoundedLocalCache<K, V> map,
-      Description description) {
+  protected boolean matchesSafely(BoundedLocalCache<K, V> map, Description description) {
     desc = new DescriptionBuilder(description);
 
     drain(map);
@@ -95,6 +95,10 @@ public final class IsValidBoundedLocalCache<K, V>
     if (map.isEmpty()) {
       desc.expectThat("empty map", map, emptyMap());
     }
+
+    for (Node<K, V> node : map.data.values()) {
+      checkNode(map, node, desc);
+    }
   }
 
   private void checkEvictionDeque(BoundedLocalCache<K, V> map, DescriptionBuilder desc) {
@@ -122,7 +126,6 @@ public final class IsValidBoundedLocalCache<K, V>
           "Loop detected: %s, saw %s in %s", node, seen, map);
       desc.expectThat(errorMsg, seen.add(node), is(true));
       weightedSize += node.get().weight;
-      checkNode(map, node, desc);
     }
 
     final long weighted = weightedSize;
@@ -153,6 +156,13 @@ public final class IsValidBoundedLocalCache<K, V>
     if (!map.collectValues()) {
       desc.expectThat("not null value", value, is(not(nullValue())));
       desc.expectThat(() -> "Could not find value: " + value, map.containsValue(value), is(true));
+    }
+
+    if (value instanceof CompletableFuture<?>) {
+      CompletableFuture<?> future = (CompletableFuture<?>) value;
+      boolean success = future.isDone() && !future.isCompletedExceptionally();
+      desc.expectThat("future is done", success, is(true));
+      desc.expectThat("not null value", future.getNow(null), is(not(nullValue())));
     }
   }
 

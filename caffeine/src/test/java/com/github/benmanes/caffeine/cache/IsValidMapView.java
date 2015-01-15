@@ -50,6 +50,16 @@ public final class IsValidMapView<K, V> extends TypeSafeDiagnosingMatcher<Map<K,
       return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
           cache.delegate, description);
     }
+
+    if (map instanceof UnboundedLocalCache<?, ?>) {
+      UnboundedLocalCache<K, V> cache = (UnboundedLocalCache<K, V>) map;
+      return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(cache, description);
+    } else if (map instanceof UnboundedLocalCache.AsMapView<?, ?>) {
+      UnboundedLocalCache.AsMapView<K, V> cache = (UnboundedLocalCache.AsMapView<K, V>) map;
+      return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+          cache.delegate, description);
+    }
+
     return true;
   }
 
