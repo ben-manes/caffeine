@@ -198,11 +198,14 @@ public final class EliminationStackTest {
     final LongAdder popped = new LongAdder();
 
     ConcurrentTestHarness.timeTasks(10, () -> {
-      stack.push(ThreadLocalRandom.current().nextInt());
-      pushed.increment();
+      for (int i = 0; i < 100; i++) {
+        stack.push(ThreadLocalRandom.current().nextInt());
+        pushed.increment();
 
-      if (stack.pop() != null) {
-        popped.increment();
+        Thread.yield();
+        if (stack.pop() != null) {
+          popped.increment();
+        }
       }
     });
 
