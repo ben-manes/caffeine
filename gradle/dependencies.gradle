@@ -34,7 +34,7 @@ ext {
     easymock: '3.3.1',
     mockito: '1.10.19',
     junit: '4.12',
-    testng: '6.8.13',
+    testng: '6.8.17',
     truth: '0.24',
   ]
   benchmark_versions = [

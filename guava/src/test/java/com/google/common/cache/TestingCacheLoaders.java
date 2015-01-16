@@ -41,7 +41,7 @@ public class TestingCacheLoaders {
    * Returns a {@link CacheLoader} that implements a naive {@link CacheLoader#loadAll}, delegating
    * {@link CacheLoader#load} calls to {@code loader}.
    */
-  static <K, V> CacheLoader<K, V> bulkLoader(final CacheLoader<K, V> loader) {
+  public static <K, V> CacheLoader<K, V> bulkLoader(final CacheLoader<K, V> loader) {
     checkNotNull(loader);
     return new CacheLoader<K, V>() {
       @Override

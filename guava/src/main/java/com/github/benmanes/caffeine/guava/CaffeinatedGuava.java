@@ -56,8 +56,12 @@ public final class CaffeinatedGuava {
   }
 
   static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {
+    return hasMethod(cacheLoader, "loadAll", Iterable.class);
+  }
+
+  static boolean hasMethod(CacheLoader<?, ?> cacheLoader, String name, Class<?>... paramTypes) {
     try {
-      Method method = cacheLoader.getClass().getMethod("loadAll", Iterable.class);
+      Method method = cacheLoader.getClass().getMethod(name, paramTypes);
       return (method.getDeclaringClass() != CacheLoader.class);
     } catch (NoSuchMethodException | SecurityException e) {
       return false;
