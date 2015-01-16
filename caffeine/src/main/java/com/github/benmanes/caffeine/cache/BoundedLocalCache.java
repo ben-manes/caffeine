@@ -2428,7 +2428,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       if (!hasBulkLoader) {
         for (K key : keysToLoad) {
           V value = cache.compute(key, (k, v) -> cache.loader.load(key), false, false);
-          result.put(key, value);
+          if (value != null) {
+            result.put(key, value);
+          }
         }
         return;
       }
@@ -2575,6 +2577,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
       CompletableFuture<V>[] result = new CompletableFuture[1];
       CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
         result[0] = mappingFunction.apply(key, cache.executor);
+        requireNonNull(result[0]);
         return result[0];
       }, true);
       if (result[0] != null) {

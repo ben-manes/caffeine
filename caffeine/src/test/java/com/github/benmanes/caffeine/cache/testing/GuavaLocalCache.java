@@ -50,6 +50,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ForwardingConcurrentMap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
@@ -136,8 +137,17 @@ public final class GuavaLocalCache {
     @Override
     public V get(K key, Function<? super K, ? extends V> mappingFunction) {
       try {
-        return cache.get(key, () -> mappingFunction.apply(key));
+        return cache.get(key, () -> {
+          V value = mappingFunction.apply(key);
+          if (value == null) {
+            throw new CacheMissException();
+          }
+          return value;
+        });
       } catch (UncheckedExecutionException e) {
+        if (e.getCause() instanceof CacheMissException) {
+          return null;
+        }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {
         throw new CompletionException(e);
@@ -405,6 +415,9 @@ public final class GuavaLocalCache {
       try {
         return cache.getAll(keys);
       } catch (UncheckedExecutionException e) {
+        if (e.getCause() instanceof CacheMissException) {
+          return ImmutableMap.of();
+        }
         throw (RuntimeException) e.getCause();
       } catch (ExecutionException e) {
         throw new CompletionException(e);

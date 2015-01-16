@@ -963,7 +963,9 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       if (!hasBulkLoader) {
         for (K key : keysToLoad) {
           V value = cache.compute(key, (k, v) -> loader.load(key), false, false);
-          result.put(key, value);
+          if (value != null) {
+            result.put(key, value);
+          }
         }
         return;
       }
@@ -1088,6 +1090,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       CompletableFuture<V>[] result = new CompletableFuture[1];
       CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
         result[0] = mappingFunction.apply(key, cache.executor);
+        requireNonNull(result[0]);
         return result[0];
       }, true);
       if (result[0] != null) {

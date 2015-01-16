@@ -336,7 +336,15 @@ public @interface CacheSpec {
       }
     },
 
-    /** A bulk-only loader that returns the key's negation. */
+    /** A loader that always returns null (no mapping). */
+    BULK_NULL(true) {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        return null;
+      }
+    },
     BULK_NEGATIVE(true) {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();

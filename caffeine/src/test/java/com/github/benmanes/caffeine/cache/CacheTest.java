@@ -128,6 +128,12 @@ public final class CacheTest {
 
   @CacheSpec
   @Test(dataProvider = "caches")
+  public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.get(context.absentKey(), k -> null), is(nullValue()));
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches")
   public void get_absent(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
     Integer value = cache.get(key, k -> context.absentValue());

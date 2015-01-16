@@ -43,6 +43,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * The test cases for the {@link LoadingCache} interface that simulate the most generic usages.
@@ -131,6 +132,18 @@ public final class LoadingCacheTest {
     cache.getAll(context.absentKeys()).clear();
   }
 
+  @CacheSpec(loader = Loader.NULL)
+  @Test(dataProvider = "caches")
+  public void getAll_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.getAll(context.absentKeys()), is(ImmutableMap.of()));
+  }
+
+  @CacheSpec(loader = Loader.BULK_NULL)
+  @Test(dataProvider = "caches", expectedExceptions = Exception.class)
+  public void getAll_absent_bulkNull(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    cache.getAll(context.absentKeys());
+  }
+
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   public void getAll_absent_failure(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -217,6 +230,13 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(2)));
   }
 
+  @CacheSpec(loader = Loader.NULL)
+  @Test(dataProvider = "caches")
+  public void refresh_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    cache.refresh(context.absentKey());
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -252,7 +272,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.IDENTITY,
   population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void compute_present_differentValue(
+  public void refresh_present_differentValue(
       LoadingCache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.refresh(key);

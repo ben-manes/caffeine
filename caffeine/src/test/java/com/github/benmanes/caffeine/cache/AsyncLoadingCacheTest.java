@@ -101,6 +101,49 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DIRECT)
+  public void getFunc_absent_null(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    Integer key = context.absentKey();
+    CompletableFuture<Integer> valueFuture = cache.get(key, k -> null);
+
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+
+    assertThat(valueFuture.isDone(), is(true));
+    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DEFAULT)
+  public void getFunc_absent_null_async(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    Integer key = context.absentKey();
+    AtomicBoolean ready = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .await().untilTrue(ready);
+      return null;
+    });
+    valueFuture.whenComplete((r, e) -> done.set(true));
+
+    ready.set(true);
+    Awaitility.with()
+        .pollDelay(1, TimeUnit.MILLISECONDS).and()
+        .pollInterval(1, TimeUnit.MILLISECONDS)
+        .await().untilTrue(done);
+
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+
+    assertThat(valueFuture.isDone(), is(true));
+    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+  }
+
+  @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT)
   public void getFunc_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
@@ -141,6 +184,34 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
+    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DEFAULT)
+  public void getFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    Integer key = context.absentKey();
+    AtomicBoolean done = new AtomicBoolean();
+    CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .await().until(() -> done.get());
+      return null;
+    });
+    valueFuture.whenComplete((r, e) -> done.set(true));
+    valueFuture.cancel(true);
+
+    Awaitility.with()
+        .pollDelay(1, TimeUnit.MILLISECONDS).and()
+        .pollInterval(1, TimeUnit.MILLISECONDS)
+        .await().untilTrue(done);
+
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+
+    assertThat(valueFuture.isDone(), is(true));
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
@@ -204,6 +275,23 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
+  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DIRECT)
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getBiFunc_absent_null(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    CompletableFuture<Integer> failedFuture = CompletableFuture.completedFuture(null);
+    failedFuture.obtrudeException(new IllegalStateException());
+
+    Integer key = context.absentKey();
+    try {
+      cache.get(key, (k, executor) -> null);
+    } finally {
+      assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+      assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    }
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT)
   public void getBiFunc_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
@@ -248,6 +336,35 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
+    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(executor = CacheExecutor.DEFAULT)
+  public void getBiFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    AtomicBoolean done = new AtomicBoolean();
+    CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
+      Awaitility.with()
+          .pollDelay(1, TimeUnit.MILLISECONDS).and()
+          .pollInterval(1, TimeUnit.MILLISECONDS)
+          .await().untilTrue(done);
+      return null;
+    });
+    failedFuture.whenComplete((r, e) -> done.set(true));
+
+    Integer key = context.absentKey();
+    CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
+    valueFuture.cancel(true);
+    Awaitility.with()
+        .pollDelay(1, TimeUnit.MILLISECONDS).and()
+        .pollInterval(1, TimeUnit.MILLISECONDS)
+        .await().untilTrue(done);
+
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+
+    assertThat(valueFuture.isCancelled(), is(true));
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
@@ -367,6 +484,22 @@ public final class AsyncLoadingCacheTest {
   public void getAll_immutable(AsyncLoadingCache<Integer, Integer> cache, CacheContext context)
       throws Exception {
     cache.getAll(context.absentKeys()).get().clear();
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = ExecutionException.class)
+  @CacheSpec(loader = Loader.BULK_NULL)
+  public void getAll_absent_bulkNull(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) throws Exception {
+    try {
+      cache.getAll(context.absentKeys()).get();
+    } finally {
+      int misses = context.absentKeys().size();
+      int loadFailures = context.loader().isBulk()
+          ? 1
+          : (context.isAsync() ? misses : 1);
+      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
+      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(loadFailures)));
+    }
   }
 
   @Test(dataProvider = "caches", expectedExceptions = ExecutionException.class)
