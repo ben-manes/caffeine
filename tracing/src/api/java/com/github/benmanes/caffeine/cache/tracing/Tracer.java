@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.tracing;
 
+import java.util.ServiceLoader;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -35,6 +37,14 @@ public interface Tracer {
   /** Returns a weigher where an entry has a weight of <tt>1</tt>. */
   public static Tracer disabled() {
     return DisabledTracer.INSTANCE;
+  }
+
+  /** Returns the tracer implementation or a disabled instance if not found. */
+  public static Tracer getDefault() {
+    for (Tracer tracer : ServiceLoader.load(Tracer.class)) {
+      return tracer;
+    };
+    return disabled();
   }
 }
 

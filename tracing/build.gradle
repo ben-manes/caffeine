@@ -18,10 +18,19 @@ dependencies {
   compile sourceSets.api.output
   compile project(':caffeine')
   compile libraries.disruptor
+
+  testCompile libraries.guava
+  testCompile test_libraries.testng
+  testCompile test_libraries.mockito
+  testCompile test_libraries.awaitility
 }
 
 plugins.withType(EclipsePlugin) {
   project.eclipse.classpath.plusConfigurations += [ configurations.api ]
+}
+
+test {
+  useTestNG()
 }
 
 task apiJar(type: Jar, group: "Build") {
