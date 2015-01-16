@@ -326,10 +326,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Concurr
 
   /* ---------------- Expiration Support -------------- */
 
-  boolean expires() {
-    return expiresAfterWrite() || expiresAfterAccess();
-  }
-
   boolean expiresAfterWrite() {
     return expireAfterWriteNanos > 0;
   }

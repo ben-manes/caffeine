@@ -21,8 +21,12 @@ import junit.framework.TestCase;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
+import com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache.CacheLoaderException;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.cache.TestingCacheLoaders;
 import com.google.common.testing.SerializableTester;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -44,5 +48,37 @@ public final class CaffeinatedGuavaTest extends TestCase {
 
   public void testHasMethod_notFound() throws Exception {
     assertFalse(CaffeinatedGuava.hasMethod(TestingCacheLoaders.identityLoader(), "abc"));
+  }
+
+  public void testReload_interrupted() {
+    try {
+      LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
+          Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
+          new CacheLoader<Integer, Integer>() {
+            @Override public Integer load(Integer key) throws Exception {
+              throw new InterruptedException();
+            }
+          });
+      cache.put(1, 1);
+      cache.refresh(1);
+    } catch (CacheLoaderException e) {
+      assertTrue(Thread.currentThread().isInterrupted());
+    }
+  }
+
+  public void testReload_throwable() {
+    try {
+      LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(
+          Caffeine.newBuilder().executor(MoreExecutors.directExecutor()),
+          new CacheLoader<Integer, Integer>() {
+            @Override public Integer load(Integer key) throws Exception {
+              throw new Exception();
+            }
+          });
+      cache.put(1, 1);
+      cache.refresh(1);
+    } catch (CacheLoaderException e) {
+      assertTrue(Thread.currentThread().isInterrupted());
+    }
   }
 }
