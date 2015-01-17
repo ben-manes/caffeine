@@ -2,5 +2,6 @@ rootProject.name = 'caffeine'
 
 include 'caffeine'
 include 'guava'
-include 'tracing'
+include 'tracing:api'
+include 'tracing:async'
 include 'simulator'

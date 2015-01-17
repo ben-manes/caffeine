@@ -13,33 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.tracing;
+package com.github.benmanes.caffeine.cache.tracing.async;
 
+import java.nio.file.Paths;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
+import javax.annotation.concurrent.ThreadSafe;
+
+import com.github.benmanes.caffeine.cache.tracing.Tracer;
+import com.github.benmanes.caffeine.cache.tracing.async.CacheEvent.Action;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslatorTwoArg;
 import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.util.DaemonThreadFactory;
 
 /**
  * A tracing implementation implemented as a Disruptor multi-producer.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@ThreadSafe
 public final class AsyncTracer implements Tracer {
   final EventTranslatorTwoArg<CacheEvent, Action, Object> translator;
   final Disruptor<CacheEvent> disruptor;
 
+  public AsyncTracer() {
+    this(new LogEventHandler(Paths.get("caffeine.log"), LogFormat.TEXT), 64,
+        Executors.newSingleThreadExecutor(DaemonThreadFactory.INSTANCE));
+  }
+
   @SuppressWarnings("unchecked")
   public AsyncTracer(EventHandler<CacheEvent> handler, int ringBufferSize, Executor executor) {
-    disruptor = new Disruptor<>(CacheEvent::new, ringBufferSize, executor);
     translator = (event, seq, action, object) -> {
-      event.hashCode = object.hashCode();
+      event.timestamp = System.nanoTime();
+      event.hash = object.hashCode();
       event.action = action;
     };
+    disruptor = new Disruptor<>(CacheEvent::new, ringBufferSize, executor);
     disruptor.handleEventsWith(handler);
     disruptor.start();
+  }
+
+  public void shutdown() {
+    disruptor.shutdown();
   }
 
   @Override

@@ -32,8 +32,9 @@ ext {
   test_versions = [
     awaitility: '1.6.3',
     easymock: '3.3.1',
-    mockito: '1.10.19',
+    jimfs: '1.0',
     junit: '4.12',
+    mockito: '1.10.19',
     testng: '6.8.17',
     truth: '0.24',
   ]
@@ -67,6 +68,7 @@ ext {
       exclude group: 'com.google.truth'
       exclude group: 'junit'
     },
+    jimfs: "com.google.jimfs:jimfs:${test_versions.jimfs}",
     junit: "junit:junit:${test_versions.junit}",
     mockito: "org.mockito:mockito-core:${test_versions.mockito}",
     testng: dependencies.create("org.testng:testng:${test_versions.testng}") {

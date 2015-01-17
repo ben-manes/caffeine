@@ -26,6 +26,10 @@ task testReport(type: TestReport, group: 'Build') {
 }
 
 subprojects { proj ->
+  if (proj.name == 'tracing') {
+    return
+  }
+
   apply from: "${rootDir}/gradle/jmh.gradle"
   apply from: "${rootDir}/gradle/publish.gradle"
   apply from: "${rootDir}/gradle/code_quality.gradle"
@@ -46,6 +50,7 @@ subprojects { proj ->
     patch = 0 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
+  archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
 
   repositories {
     jcenter()
@@ -76,13 +81,14 @@ repositories {
   jcenter()
 }
 
-task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', dependsOn: subprojects.test) {
-  description = 'Generates an aggregate report from all subprojects'
+// Only report code coverage for projects that are distrubuted
+def publishedProjects = subprojects.findAll {
+  !it.path.startsWith(':simulator') && (it.path != ':tracing')
+}
 
-  // Only report code coverage for projects that are distrubuted
-  def publishedProjects = subprojects.findAll {
-    (it.name != 'simulator') && (it.name != 'tracing')
-  };
+task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
+  description = 'Generates an aggregate report from all subprojects'
+  dependsOn(publishedProjects.test)
 
   additionalSourceDirs = files(publishedProjects.sourceSets.main.allSource.srcDirs)
   sourceDirectories = files(publishedProjects.sourceSets.main.allSource.srcDirs)
@@ -101,7 +107,7 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports', dependsOn: 
 
 coveralls {
   jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-  subprojects.sourceSets.main.allSource.srcDirs*.path.each { sourceDirs.addAll(it) }
+  publishedProjects.sourceSets.main.allSource.srcDirs*.path.each { sourceDirs.addAll(it) }
 }
 
 tasks.coveralls {

@@ -13,9 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.tracing;
+package com.github.benmanes.caffeine.cache.tracing.async;
 
-import javax.annotation.concurrent.NotThreadSafe;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import javax.annotation.concurrent.ThreadSafe;
 
 import com.lmax.disruptor.EventHandler;
 
@@ -24,9 +30,25 @@ import com.lmax.disruptor.EventHandler;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@NotThreadSafe
+@ThreadSafe
 final class LogEventHandler implements EventHandler<CacheEvent> {
+  final BufferedWriter writer;
+  final LogFormat format;
+
+  LogEventHandler(Path filePath, LogFormat format) {
+    try {
+      this.writer = Files.newBufferedWriter(filePath);
+      this.format = format;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
 
   @Override
-  public void onEvent(CacheEvent event, long sequence, boolean endOfBatch) throws Exception {}
+  public void onEvent(CacheEvent event, long sequence, boolean endOfBatch) throws IOException {
+    format.appendTo(writer, event.cacheId, event.action.name(), event.hash, event.timestamp);
+    if (endOfBatch) {
+      writer.flush();
+    }
+  }
 }

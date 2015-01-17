@@ -1,0 +1,20 @@
+/** Cache tracing async implementation */
+dependencies {
+  compile project(':tracing:api')
+  compile project(':caffeine')
+  compile libraries.disruptor
+
+  testCompile libraries.guava
+  testCompile test_libraries.jimfs
+  testCompile test_libraries.testng
+  testCompile test_libraries.awaitility
+  testCompile project(path: ":caffeine", configuration: "testArtifacts")
+}
+
+test {
+  useTestNG()
+}
+
+bundle {
+  instruction 'Export-Package', 'com.github.benmanes.caffeine.tracing.async.*'
+}

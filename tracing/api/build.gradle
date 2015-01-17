@@ -1,0 +1,12 @@
+/** Cache tracing API */
+dependencies {
+  compile libraries.jsr305
+}
+
+test {
+  useTestNG()
+}
+
+bundle {
+  instruction 'Export-Package', 'com.github.benmanes.caffeine.tracing.api.*'
+}

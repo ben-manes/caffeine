@@ -1,6 +1,7 @@
 apply from: "${projectDir}/testing.gradle"
 
 dependencies {
+  compile project(':tracing:api')
   compile libraries.jsr305
 
   testCompile project(':simulator')

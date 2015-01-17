@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.tracing;
+package com.github.benmanes.caffeine.cache.tracing.async;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -22,5 +22,8 @@ final class CacheEvent {
   enum Action { CREATE, READ, UPDATE, DELETE, EVICT }
 
   Action action;
-  int hashCode;
+
+  long timestamp;
+  int cacheId;
+  int hash;
 }
