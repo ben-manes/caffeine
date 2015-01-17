@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.tracing.async;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -36,12 +37,19 @@ import com.lmax.disruptor.util.DaemonThreadFactory;
  */
 @ThreadSafe
 public final class AsyncTracer implements Tracer {
+  public static final String TRACING_FILE_PROPERTY = "cache.tracing.file";
+
   final EventTranslatorTwoArg<CacheEvent, Action, Object> translator;
   final Disruptor<CacheEvent> disruptor;
 
   public AsyncTracer() {
-    this(new TextLogEventHandler(Paths.get("caffeine.log")), 64,
+    this(new TextLogEventHandler(filePath()), 64,
         Executors.newSingleThreadExecutor(DaemonThreadFactory.INSTANCE));
+  }
+
+  private static Path filePath() {
+    String property = System.getProperty(TRACING_FILE_PROPERTY, "caffeine.log");
+    return Paths.get(property);
   }
 
   @SuppressWarnings("unchecked")

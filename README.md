@@ -51,15 +51,15 @@ too large due to over sizing to increase the hit rate. Running the simulator on 
 adjusting the cache size based on both the hit rate and active content ratio.
 
 The tracing package is enabled if a Java [ServiceLoader](http://docs.oracle.com/javase/8/docs/api/java/util/ServiceLoader.html)
-implementation is registered with the application through one of its JAR's `META-INF/services`
-resource file. [AsyncTracer](tracing/async/src/main/java/com/github/benmanes/caffeine/cache/tracing/async/AsyncTracer.java)
+service is registered with the application in a resource file located at `META-INF/services` in one
+of its jars. [AsyncTracer](tracing/async/src/main/java/com/github/benmanes/caffeine/cache/tracing/async/AsyncTracer.java)
 is a lightweight implementation based on the [LMAX Disruptor](https://lmax-exchange.github.io/disruptor/)
 library that logs the events to a local file.
 
 #### Simulator
 The simulator includes a family of eviction policies and distribution generators. As each policy is
-a decision of trade-offs, the simulator allows developers to determine which policies are best for
-their usage scenarios. A general purpose cache, like the one provided by this project, should
+a decision of trade-offs, the simulator allows developers to determine which policy is best for
+their usage scenario. A general purpose cache, like the one provided by this project, should
 evaluate policies that improve upon LRU. Specialized application-specific caches, such as off-heap,
 can utilize this infrastructure as well.
 

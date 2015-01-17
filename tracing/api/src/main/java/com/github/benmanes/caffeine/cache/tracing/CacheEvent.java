@@ -18,18 +18,28 @@ package com.github.benmanes.caffeine.cache.tracing;
 import java.io.IOException;
 
 /**
+ * An event created as a side-effect of an operation on a cache.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheEvent {
-  public enum Action { CREATE, READ, UPDATE, DELETE, EVICT }
+  public enum Action { CREATE, READ, READ_OR_CREATE, UPDATE, DELETE, EVICT }
 
-  Action action;
+  private Action action;
+  private long timestamp;
+  private int cacheId;
+  private int hash;
 
-  long timestamp;
-  int cacheId;
-  int hash;
+  public CacheEvent() {}
 
-  public Action getAction() {
+  public CacheEvent(int cacheId, Action action, int hash, long timestamp) {
+    this.timestamp = timestamp;
+    this.cacheId = cacheId;
+    this.action = action;
+    this.hash = hash;
+  }
+
+  public Action action() {
     return action;
   }
 
@@ -37,7 +47,7 @@ public final class CacheEvent {
     this.action = action;
   }
 
-  public long getTimestamp() {
+  public long timestamp() {
     return timestamp;
   }
 
@@ -45,7 +55,7 @@ public final class CacheEvent {
     this.timestamp = timestamp;
   }
 
-  public int getCacheId() {
+  public int cacheId() {
     return cacheId;
   }
 
@@ -53,7 +63,7 @@ public final class CacheEvent {
     this.cacheId = cacheId;
   }
 
-  public int getHash() {
+  public int hash() {
     return hash;
   }
 
@@ -92,7 +102,7 @@ public final class CacheEvent {
 
   @Override
   public String toString() {
-    return String.format("action=%s, cacheId=%d, hash=%d, timestamp=%d",
+    return String.format("cacheId=%d, action=%s, hash=%d, timestamp=%d",
         action, cacheId, hash, timestamp);
   }
 }

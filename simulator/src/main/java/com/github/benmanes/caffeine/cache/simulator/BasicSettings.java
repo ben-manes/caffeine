@@ -13,14 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.classic;
+package com.github.benmanes.caffeine.cache.simulator;
+
+import java.util.List;
+
+import akka.actor.UntypedActor;
+
+import com.typesafe.config.Config;
 
 /**
+ * The simulator's configuration. A policy can extend this class as a convenient way to extract
+ * its own settings.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class Lru extends AbstractLinkedPolicy {
+public class BasicSettings {
+  public final List<String> policies;
+  public final int maximumSize;
 
-  public Lru(String name) {
-    super(name, true);
+  private final Config config;
+
+  public BasicSettings(UntypedActor actor) {
+    config = actor.getContext().system().settings().config();
+    maximumSize = config.getInt("simulator.maximumSize");
+    policies = config.getStringList("simulator.policies");
+  }
+
+  public Config config() {
+    return config;
   }
 }

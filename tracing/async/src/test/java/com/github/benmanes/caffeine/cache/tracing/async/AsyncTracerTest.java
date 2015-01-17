@@ -19,6 +19,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.Executor;
@@ -41,9 +42,11 @@ public final class AsyncTracerTest {
   Path filePath;
 
   @BeforeClass
-  public void beforeClqss() {
+  public void beforeClqss() throws IOException {
     executor = Executors.newSingleThreadExecutor(DaemonThreadFactory.INSTANCE);
     filePath = Jimfs.newFileSystem().getPath("caffeine.log");
+    System.setProperty(AsyncTracer.TRACING_FILE_PROPERTY,
+        Files.createTempFile("caffiene", ".log").toString());
   }
 
   @Test

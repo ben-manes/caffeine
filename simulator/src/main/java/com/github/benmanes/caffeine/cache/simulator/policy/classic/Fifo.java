@@ -18,9 +18,9 @@ package com.github.benmanes.caffeine.cache.simulator.policy.classic;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class Lru extends AbstractLinkedPolicy {
+public class Fifo extends AbstractLinkedPolicy {
 
-  public Lru(String name) {
-    super(name, true);
+  public Fifo(String name) {
+    super(name, false);
   }
 }

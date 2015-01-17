@@ -15,8 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import org.joor.Reflect;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
@@ -26,26 +28,25 @@ import akka.routing.BroadcastRoutingLogic;
 import akka.routing.Routee;
 import akka.routing.Router;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.classic.Lru;
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 
 /**
+ * The simulator broadcasts the recorded cache events to each policy actor and generates an
+ * aggregated report.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Simulator extends UntypedActor {
   public enum Message { DONE, START }
 
-  Router router;
-  int remaining;
+  private final BasicSettings settings;
+  private final Router router;
+  private int remaining;
 
-  @Override
-  public void preStart() {
-    List<Routee> routes = new ArrayList<>();
-    ActorRef ref = getContext().actorOf(Props.create(Lru.class), "lru");
-    getContext().watch(ref);
-    routes.add(new ActorRefRoutee(ref));
-    router = new Router(new BroadcastRoutingLogic(), routes);
-    remaining++;
+  public Simulator() {
+    settings = new BasicSettings(this);
+    remaining = settings.policies.size();
+    router = makeBroadcastingRouter();
 
     getSelf().tell(Message.START, ActorRef.noSender());
   }
@@ -53,11 +54,28 @@ public final class Simulator extends UntypedActor {
   @Override
   public void onReceive(Object msg) throws Exception {
     if (msg == Message.START) {
-      router.route(new CacheEvent(), getSelf());
+      Synthetic.scrambledZipfian(1_000_000)
+          .forEach(event -> router.route(event, getSelf()));
       router.route(Message.DONE, getSelf());
-    } else if ((msg == Message.DONE) && (--remaining == 0)) {
-      getContext().stop(getSelf());
+    } else if (msg instanceof PolicyStats) {
+      PolicyStats result = (PolicyStats) msg;
+      System.out.printf("Policy: %s, hit rate: %.2f%%, evictions: %,d%n",
+          result.name(), 100 * result.hitRate(), result.evictionCount());
+      if (--remaining == 0) {
+        getContext().stop(getSelf());
+      }
     }
+  }
+
+  private Router makeBroadcastingRouter() {
+    String packageName = getClass().getPackage().getName();
+    List<Routee> routes = settings.policies.stream().map(policy -> {
+      Class<?> actorClass = Reflect.on(packageName + ".policy." + policy).type();
+      ActorRef actorRef = getContext().actorOf(Props.create(actorClass, policy), policy);
+      getContext().watch(actorRef);
+      return new ActorRefRoutee(actorRef);
+    }).collect(Collectors.toList());
+    return new Router(new BroadcastRoutingLogic(), routes);
   }
 
   public static void main(String[] args) {
