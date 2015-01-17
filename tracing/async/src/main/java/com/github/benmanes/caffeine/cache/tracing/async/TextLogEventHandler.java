@@ -23,22 +23,21 @@ import java.nio.file.Path;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 import com.lmax.disruptor.EventHandler;
 
 /**
- * A cache event consumer that records to a log file.
+ * A cache event consumer that records to a log file in the text format.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
-final class LogEventHandler implements EventHandler<CacheEvent> {
+final class TextLogEventHandler implements EventHandler<CacheEvent> {
   final BufferedWriter writer;
-  final LogFormat format;
 
-  LogEventHandler(Path filePath, LogFormat format) {
+  TextLogEventHandler(Path filePath) {
     try {
       this.writer = Files.newBufferedWriter(filePath);
-      this.format = format;
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -46,7 +45,7 @@ final class LogEventHandler implements EventHandler<CacheEvent> {
 
   @Override
   public void onEvent(CacheEvent event, long sequence, boolean endOfBatch) throws IOException {
-    format.appendTo(writer, event.cacheId, event.action.name(), event.hash, event.timestamp);
+    event.appendTextRecord(writer);
     if (endOfBatch) {
       writer.flush();
     }

@@ -8,5 +8,5 @@ test {
 }
 
 bundle {
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.tracing.api.*'
+  instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.tracing.api.*'
 }

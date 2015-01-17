@@ -44,17 +44,32 @@ a Guava compatible adapter is available (see [migration guide](MIGRATING.md)).
 | [Policy](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Policy.java) | Access to inspect and perform low-level cache operations based on its constructed configuration |
 | [CaffeinatedGuava](guava/src/main/java/com/github/benmanes/caffeine/guava/CaffeinatedGuava.java) | An adapter that exposes a Caffeine cache through Guava facades |
 
-#### Tracing and Simulator
-A lightweight cache tracing API can be enabled to capture information on how well an application
+#### Tracing
+A cache tracing API can be enabled to capture information on how well an application
 utilizes its caches. Typically caches are either too small due to statistics not being monitored, or
-too large due to oversizing to increase the hit rate. Running the simulator on traced data enables
+too large due to over sizing to increase the hit rate. Running the simulator on traced data enables
 adjusting the cache size based on both the hit rate and active content ratio.
 
+The tracing package is enabled if a Java [ServiceLoader](http://docs.oracle.com/javase/8/docs/api/java/util/ServiceLoader.html)
+implementation is registered with the application through one of its JAR's `META-INF/services`
+resource file. [AsyncTracer](tracing/async/src/main/java/com/github/benmanes/caffeine/cache/tracing/async/AsyncTracer.java)
+is a lightweight implementation based on the [LMAX Disruptor](https://lmax-exchange.github.io/disruptor/)
+library that logs the events to a local file.
+
+#### Simulator
 The simulator includes a family of eviction policies and distribution generators. As each policy is
 a decision of trade-offs, the simulator allows developers to determine which policies are best for
 their usage scenarios. A general purpose cache, like the one provided by this project, should
 evaluate policies that improve upon LRU. Specialized application-specific caches, such as off-heap,
 can utilize this infrastructure as well.
+
+The simulator is implemented using [Akka](http://akka.io/) where each policy is an actor. The
+default [configuration](simulator/src/main/resources/reference.conf) can be overridden by system
+properties or an `application.conf` file. It can be run locally using
+
+```gradle
+gradlew simulate [trace-file]
+```
 
 ## Development Notes
 To get started, [sign the Contributor License Agreement](https://www.clahub.com/agreements/ben-manes/caffeine).

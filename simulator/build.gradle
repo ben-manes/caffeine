@@ -1,4 +1,16 @@
 /** Cache simulator using tracing data and a family of eviction policy options. */
+dependencies {
+  compile project(':tracing:api')
+  
+  compile libraries.akka
+  compile libraries.univocity_parsers
+}
+
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+task simulate(type: JavaExec, group: 'Simulator', description: 'Executes a cache simulation') {
+  classpath sourceSets.main.runtimeClasspath
+  main = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
 }

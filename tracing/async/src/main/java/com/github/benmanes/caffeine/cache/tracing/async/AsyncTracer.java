@@ -21,8 +21,9 @@ import java.util.concurrent.Executors;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
 import com.github.benmanes.caffeine.cache.tracing.Tracer;
-import com.github.benmanes.caffeine.cache.tracing.async.CacheEvent.Action;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslatorTwoArg;
 import com.lmax.disruptor.dsl.Disruptor;
@@ -39,16 +40,16 @@ public final class AsyncTracer implements Tracer {
   final Disruptor<CacheEvent> disruptor;
 
   public AsyncTracer() {
-    this(new LogEventHandler(Paths.get("caffeine.log"), LogFormat.TEXT), 64,
+    this(new TextLogEventHandler(Paths.get("caffeine.log")), 64,
         Executors.newSingleThreadExecutor(DaemonThreadFactory.INSTANCE));
   }
 
   @SuppressWarnings("unchecked")
   public AsyncTracer(EventHandler<CacheEvent> handler, int ringBufferSize, Executor executor) {
     translator = (event, seq, action, object) -> {
-      event.timestamp = System.nanoTime();
-      event.hash = object.hashCode();
-      event.action = action;
+      event.setTimestamp(System.nanoTime());
+      event.setHash(object.hashCode());
+      event.setAction(action);
     };
     disruptor = new Disruptor<>(CacheEvent::new, ringBufferSize, executor);
     disruptor.handleEventsWith(handler);

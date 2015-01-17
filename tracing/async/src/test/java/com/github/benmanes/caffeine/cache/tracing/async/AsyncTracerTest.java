@@ -65,8 +65,7 @@ public final class AsyncTracerTest {
 
   @DataProvider(name = "tracer")
   public Object[][] providerTracer() {
-    LogEventHandler handler = new LogEventHandler(filePath, LogFormat.TEXT);
-    AsyncTracer tracer = new AsyncTracer(handler, 64, executor);
+    AsyncTracer tracer = new AsyncTracer(new TextLogEventHandler(filePath), 64, executor);
     return new Object[][] {{ tracer }};
   }
 }

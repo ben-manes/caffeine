@@ -81,6 +81,6 @@ tasks.withType(Test) {
 }
 
 task stress(type: JavaExec, group: 'Cache tests', description: 'Executes a stress test') {
-  classpath sourceSets.jmh.runtimeClasspath
+  classpath sourceSets.test.runtimeClasspath
   main = 'com.github.benmanes.caffeine.cache.Stresser'
 }

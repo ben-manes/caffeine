@@ -16,5 +16,5 @@ test {
 }
 
 bundle {
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.tracing.async.*'
+  instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.tracing.async.*'
 }
