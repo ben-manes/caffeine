@@ -40,7 +40,7 @@ public interface AsyncLoadingCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
-   * {@link CacheLoader#asyncLoad} if necessary. This method provides a simple substitute for the
+   * {@code mappingFunction} if necessary. This method provides a simple substitute for the
    * conventional "if cached, return; otherwise create, cache and return" pattern.
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
@@ -59,7 +59,7 @@ public interface AsyncLoadingCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
-   * {@link CacheLoader#asyncLoad} if necessary. This method provides a simple substitute for the
+   * {@code mappingFunction} if necessary. This method provides a simple substitute for the
    * conventional "if cached, return; otherwise create, cache and return" pattern.
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
