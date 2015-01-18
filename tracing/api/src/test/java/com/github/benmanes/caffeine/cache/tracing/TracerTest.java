@@ -13,16 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.classic;
+package com.github.benmanes.caffeine.cache.tracing;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+
+import org.testng.annotations.Test;
 
 /**
- * Implements a first-in/first-out cache based on linked nodes.
- *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Fifo extends AbstractLinkedPolicy {
+public final class TracerTest {
 
-  public Fifo(String name) {
-    super(name, EvictionPolicy.FIFO);
+  @Test
+  public void serviceLoader() {
+    Tracer defaultTracer = Tracer.getDefault();
+    assertThat(defaultTracer, is(Tracer.disabled()));
+  }
+
+  @Test
+  public void disabledTracer() {
+    Tracer tracer = Tracer.disabled();
+    tracer.recordCreate(new Object());
+    tracer.recordRead(new Object());
+    tracer.recordUpdate(new Object());
+    tracer.recordDelete(new Object());
   }
 }

@@ -33,6 +33,7 @@ import akka.routing.Router;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 
 /**
@@ -45,6 +46,7 @@ public final class Simulator extends UntypedActor {
   public enum Message { DONE, START }
 
   private final BasicSettings settings;
+  private final TextReport report;
   private final Router router;
   private int remaining;
 
@@ -52,6 +54,7 @@ public final class Simulator extends UntypedActor {
     settings = new BasicSettings(this);
     remaining = settings.policies().size();
     router = makeBroadcastingRouter();
+    report = new TextReport();
 
     getSelf().tell(Message.START, ActorRef.noSender());
   }
@@ -62,10 +65,9 @@ public final class Simulator extends UntypedActor {
       getEvents().forEach(event -> router.route(event, getSelf()));
       router.route(Message.DONE, getSelf());
     } else if (msg instanceof PolicyStats) {
-      PolicyStats result = (PolicyStats) msg;
-      System.out.printf("Policy: %s, hit rate: %.2f%%, evictions: %,d%n",
-          result.name(), 100 * result.hitRate(), result.evictionCount());
+      report.add((PolicyStats) msg);
       if (--remaining == 0) {
+        report.writeTo(System.out);
         getContext().stop(getSelf());
       }
     }

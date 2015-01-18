@@ -59,11 +59,14 @@ public final class AsyncTracerTest {
   public void publishEvents(AsyncTracer tracer) throws Exception {
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 100; i++) {
-        tracer.recordCreate(new Object());
+        tracer.recordCreate(i);
+        tracer.recordRead(i);
+        tracer.recordUpdate(i);
+        tracer.recordDelete(i);
       }
     });
     tracer.shutdown();
-    assertThat(Files.lines(filePath).count(), is(1000L));
+    assertThat(Files.lines(filePath).count(), is(4000L));
   }
 
   @DataProvider(name = "tracer")

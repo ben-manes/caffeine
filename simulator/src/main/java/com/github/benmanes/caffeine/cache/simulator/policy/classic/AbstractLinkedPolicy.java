@@ -15,10 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.classic;
 
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
-
-import javax.annotation.Nullable;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
@@ -29,7 +27,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
+import com.google.common.base.MoreObjects;
 
 /**
  * A skeletal implementation of a caching policy implemented a linked list maintained in either
@@ -39,21 +37,26 @@ import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
  */
 abstract class AbstractLinkedPolicy extends UntypedActor
     implements RequiresMessageQueue<BoundedMessageQueueSemantics> {
-  private static final Object VALUE = new Object();
 
-  private final BoundedLinkedHashMap cache;
+  private final Map<Integer, Node> data;
   private final PolicyStats policyStats;
+  private final EvictionPolicy policy;
+  private final int maximumSize;
+  private final Node sentinel;
 
   /**
-   * Creates an actor that delegates to an LRU or FIFO based cache.
+   * Creates an actor that delegates to an LRU, FIFO, or CLOCK based cache.
    *
    * @param name the name of this policy
-   * @param accessOrder the ordering mode
+   * @param policy the eviction policy to apply
    */
-  protected AbstractLinkedPolicy(String name, boolean accessOrder) {
-    this.policyStats = new PolicyStats(name);
+  protected AbstractLinkedPolicy(String name, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(this);
-    this.cache = new BoundedLinkedHashMap(accessOrder, settings.maximumSize());
+    this.maximumSize = settings.maximumSize();
+    this.policyStats = new PolicyStats(name);
+    this.data = new HashMap<>();
+    this.sentinel = new Node();
+    this.policy = policy;
   }
 
   @Override
@@ -67,46 +70,195 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   }
 
   private void handleEvent(CacheEvent event) {
-    if (event.action() == Action.CREATE) {
-      cache.put(event.hash(), VALUE);
-    } else if (event.action() == Action.READ) {
-      recordHitOrMiss(cache.get(event.hash()) != null);
-    } else if (event.action() == Action.UPDATE) {
-      cache.replace(event.hash(), VALUE);
-    } else if (event.action() == Action.UPDATE) {
-      cache.remove(event.hash());
-    } else if (event.action() == Action.READ_OR_CREATE) {
-      recordHitOrMiss(cache.putIfAbsent(event.hash(), VALUE));
-    } else {
-      throw new UnsupportedOperationException();
+    switch (event.action()) {
+      case CREATE:
+      case UPDATE:
+        onCreateOrUpdate(event, false);
+        break;
+      case READ:
+        onRead(event);
+        break;
+      case READ_OR_CREATE:
+        if (data.containsKey(event.hash())) {
+          onRead(event);
+        } else {
+          onCreateOrUpdate(event, true);
+        }
+        break;
+      case DELETE:
+        data.remove(event.hash());
+        break;
+      default:
+        throw new UnsupportedOperationException();
     }
   }
 
-  private void recordHitOrMiss(@Nullable Object o) {
-    if (o == null) {
+  private void onCreateOrUpdate(CacheEvent event, boolean recordStats) {
+    Node node = new Node(event.hash(), sentinel);
+    Node old = data.putIfAbsent(node.key, node);
+    if (old == null) {
+      if (recordStats) {
+        policyStats.recordMiss();
+      }
+      node.appendToTail();
+      evict();
+    } else {
+      if (recordStats) {
+        policyStats.recordHit();
+      }
+      policy.onAccess(old);
+    }
+  }
+
+  private void onRead(CacheEvent event) {
+    Node node = data.get(event.hash());
+    if (node == null) {
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();
+      policy.onAccess(node);
     }
   }
 
-  final class BoundedLinkedHashMap extends LinkedHashMap<Integer, Object> {
-    private static final long serialVersionUID = 1L;
+  /** Evicts while the map exceeds the maximum capacity. */
+  private void evict() {
+    while (data.size() > maximumSize) {
+      Node node = sentinel.next;
+      if (node == sentinel) {
+        return;
+      } else if (policy.onEvict(node)) {
+        policyStats.recordEviction();
+        data.remove(node.key);
+        node.remove();
+      }
+    }
+  }
 
-    private final int maximumSize;
+  /** The replacement policy. */
+  protected enum EvictionPolicy {
 
-    private BoundedLinkedHashMap(boolean accessOrder, int maximumSize) {
-      super(maximumSize, 0.75f, accessOrder);
-      this.maximumSize = maximumSize;
+    /** Evicts entries based on insertion order. */
+    FIFO() {
+      @Override void onAccess(Node node) {
+        // do nothing
+      }
+      @Override boolean onEvict(Node node) {
+        return true;
+      }
+    },
+
+    /**
+     * Evicts entries based on insertion order, but gives an entry a "second chance" if it has been
+     * requested recently.
+     */
+    CLOCK() {
+      @Override void onAccess(Node node) {
+        node.marked = true;
+      }
+      @Override boolean onEvict(Node node) {
+        if (node.marked) {
+          node.moveToTail();
+          node.marked = false;
+          return false;
+        }
+        return true;
+      }
+    },
+
+    /** Evicts entries based on how recently they are used, with the least recent evicted first. */
+    LRU() {
+      @Override void onAccess(Node node) {
+        node.moveToTail();
+      }
+      @Override boolean onEvict(Node node) {
+        return true;
+      }
+    };
+
+    /** Performs any operations required by the policy after a node was successfully retrieved. */
+    abstract void onAccess(Node node);
+
+    /** Determines whether to evict the node at the head of the list. */
+    abstract boolean onEvict(Node node);
+  }
+
+  /** A node on the double-linked list. */
+  static final class Node {
+    private static final Node UNLINKED = new Node();
+
+    private final Node sentinel;
+    private final Integer key;
+
+    private boolean marked;
+    private Node prev;
+    private Node next;
+
+    /** Creates a new sentinel node. */
+    public Node() {
+      this.sentinel = this;
+      this.prev = this;
+      this.next = this;
+      this.key = null;
+    }
+
+    /** Creates a new, unlinked node. */
+    public Node(Integer key, Node sentinel) {
+      this.next = UNLINKED;
+      this.prev = UNLINKED;
+      this.sentinel = sentinel;
+      this.key = key;
+    }
+
+    /** Appends the node to the tail of the list. */
+    public void appendToTail() {
+      // Allow moveToTail() to no-op
+      next = sentinel;
+
+      // Read the tail on the stack to avoid unnecessary volatile reads
+      final Node tail = sentinel.prev;
+      sentinel.prev = this;
+      tail.next = this;
+      prev = tail;
+    }
+
+    /** Removes the node from the list. */
+    public void remove() {
+      prev.next = next;
+      next.prev = prev;
+      next = UNLINKED; // mark as unlinked
+    }
+
+    /** Moves the node to the tail. */
+    public void moveToTail() {
+      if (isTail() || isUnlinked()) {
+        return;
+      }
+      // unlink
+      prev.next = next;
+      next.prev = prev;
+
+      // link
+      next = sentinel; // ordered for isTail()
+      prev = sentinel.prev;
+      sentinel.prev = this;
+      prev.next = this;
+    }
+
+    /** Checks whether the node is linked on the list chain. */
+    public boolean isUnlinked() {
+      return (next == UNLINKED);
+    }
+
+    /** Checks whether the node is the last linked on the list chain. */
+    public boolean isTail() {
+      return (next == sentinel);
     }
 
     @Override
-    protected boolean removeEldestEntry(Map.Entry<Integer, Object> eldest) {
-      boolean evict = size() > maximumSize;
-      if (evict) {
-        policyStats.recordEviction();
-      }
-      return evict;
+    public String toString() {
+      return MoreObjects.toStringHelper(this)
+          .add("marked", marked)
+          .toString();
     }
   }
 }

@@ -1,6 +1,9 @@
 /** Cache tracing API */
 dependencies {
   compile libraries.jsr305
+  
+  testCompile test_libraries.testng
+  testCompile test_libraries.hamcrest
 }
 
 test {

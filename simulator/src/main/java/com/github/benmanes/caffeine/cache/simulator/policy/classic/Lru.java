@@ -16,11 +16,13 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.classic;
 
 /**
+ * Implements a least-recently-used cache based on linked nodes.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class Lru extends AbstractLinkedPolicy {
+public final class Lru extends AbstractLinkedPolicy {
 
   public Lru(String name) {
-    super(name, true);
+    super(name, EvictionPolicy.LRU);
   }
 }

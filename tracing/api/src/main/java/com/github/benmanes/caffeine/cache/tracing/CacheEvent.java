@@ -74,7 +74,7 @@ public final class CacheEvent {
   }
 
   public static CacheEvent fromTextRecord(String record) {
-    return fromTextRecord(record.split(" "));
+    return fromTextRecord(record.trim().split(" "));
   }
 
   public static CacheEvent fromTextRecord(String[] record) {
