@@ -16,6 +16,8 @@
 package com.github.benmanes.caffeine.cache.tracing;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Objects;
 
 /**
  * An event created as a side-effect of an operation on a cache.
@@ -72,12 +74,15 @@ public final class CacheEvent {
   }
 
   public static CacheEvent fromTextRecord(String record) {
+    return fromTextRecord(record.split(" "));
+  }
+
+  public static CacheEvent fromTextRecord(String[] record) {
     CacheEvent event = new CacheEvent();
-    String[] column = record.split(" ");
-    event.action = Action.valueOf(column[0]);
-    event.cacheId = Integer.parseInt(column[1]);
-    event.hash = Integer.parseInt(column[2]);
-    event.timestamp = Long.parseLong(column[3]);
+    event.action = Action.valueOf(record[0]);
+    event.cacheId = Integer.parseInt(record[1]);
+    event.hash = Integer.parseInt(record[2]);
+    event.timestamp = Long.parseLong(record[3]);
     return event;
   }
 
@@ -101,8 +106,32 @@ public final class CacheEvent {
   }
 
   @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    } else if (!(o instanceof CacheEvent)) {
+      return false;
+    }
+    CacheEvent event = (CacheEvent) o;
+    return Objects.equals(action, event.action)
+        && Objects.equals(cacheId, event.cacheId)
+        && Objects.equals(timestamp, event.timestamp)
+        && Objects.equals(hash, event.hash);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(action, cacheId, timestamp, hash);
+  }
+
+  @Override
   public String toString() {
-    return String.format("cacheId=%d, action=%s, hash=%d, timestamp=%d",
-        action, cacheId, hash, timestamp);
+    try {
+      StringBuilder output = new StringBuilder();
+      appendTextRecord(output);
+      return output.toString();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 }

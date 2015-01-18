@@ -5,6 +5,14 @@ dependencies {
   compile libraries.akka
   compile libraries.joor
   compile libraries.univocity_parsers
+
+  testCompile test_libraries.jimfs
+  testCompile test_libraries.testng
+  testCompile test_libraries.awaitility
+}
+
+test {
+  useTestNG()
 }
 
 tasks.withType(Javadoc) {

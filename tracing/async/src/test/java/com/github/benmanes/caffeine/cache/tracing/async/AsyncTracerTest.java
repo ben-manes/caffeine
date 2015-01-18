@@ -22,7 +22,7 @@ import static org.hamcrest.Matchers.not;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.testng.annotations.BeforeClass;
@@ -38,14 +38,14 @@ import com.lmax.disruptor.util.DaemonThreadFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class AsyncTracerTest {
-  Executor executor;
+  ExecutorService executor;
   Path filePath;
 
   @BeforeClass
   public void beforeClqss() throws IOException {
     executor = Executors.newSingleThreadExecutor(DaemonThreadFactory.INSTANCE);
     filePath = Jimfs.newFileSystem().getPath("caffeine.log");
-    System.setProperty(AsyncTracer.TRACING_FILE_PROPERTY,
+    System.setProperty(AsyncTracer.TRACING_FILE,
         Files.createTempFile("caffiene", ".log").toString());
   }
 

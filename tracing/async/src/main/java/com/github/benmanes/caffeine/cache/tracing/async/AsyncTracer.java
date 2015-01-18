@@ -15,9 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.tracing.async;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -25,47 +27,66 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
 import com.github.benmanes.caffeine.cache.tracing.Tracer;
-import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslatorTwoArg;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.util.DaemonThreadFactory;
 
 /**
- * A tracing implementation implemented as a Disruptor multi-producer.
+ * A tracing implementation based on a Disruptor multi-producer/single-consumer event processor.
+ * The events are written to a ringbuffer and a background thread writes them in batches to a log
+ * file.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
 public final class AsyncTracer implements Tracer {
-  public static final String TRACING_FILE_PROPERTY = "cache.tracing.file";
+  public static final String TRACING_FILE = "caffeine.tracing.file";
+  public static final String TRACING_BUFFER_SIZE = "caffeine.tracing.ringBuffer";
 
-  final EventTranslatorTwoArg<CacheEvent, Action, Object> translator;
-  final Disruptor<CacheEvent> disruptor;
+  private final EventTranslatorTwoArg<CacheEvent, Action, Object> translator;
+  private final Disruptor<CacheEvent> disruptor;
+  private final ExecutorService executor;
+  private final LogEventHandler handler;
 
+  /**
+   * Creates a tracer using the default configuration with optional system property overrides. This
+   * constructor is typically called through a {@link java.util.ServiceLoader}.
+   */
   public AsyncTracer() {
-    this(new TextLogEventHandler(filePath()), 64,
+    this(eventHandler(), ringBufferSize(),
         Executors.newSingleThreadExecutor(DaemonThreadFactory.INSTANCE));
   }
 
-  private static Path filePath() {
-    String property = System.getProperty(TRACING_FILE_PROPERTY, "caffeine.log");
-    return Paths.get(property);
-  }
-
+  /**
+   * Creates a tracer using the supplied parameters. This constructor is typically called through
+   * tests that supply the dependencies.
+   *
+   * @param handler the event handler that writes to a log
+   * @param ringBufferSize the size of the ring buffer
+   * @param executor an {@link Executor} to asynchronously processor events
+   */
   @SuppressWarnings("unchecked")
-  public AsyncTracer(EventHandler<CacheEvent> handler, int ringBufferSize, Executor executor) {
-    translator = (event, seq, action, object) -> {
+  public AsyncTracer(LogEventHandler handler, int ringBufferSize, ExecutorService executor) {
+    this.translator = (event, seq, action, object) -> {
       event.setTimestamp(System.nanoTime());
       event.setHash(object.hashCode());
       event.setAction(action);
     };
-    disruptor = new Disruptor<>(CacheEvent::new, ringBufferSize, executor);
-    disruptor.handleEventsWith(handler);
-    disruptor.start();
+    this.handler = handler;
+    this.executor = executor;
+    this.disruptor = new Disruptor<>(CacheEvent::new, ringBufferSize, executor);
+    this.disruptor.handleEventsWith(handler);
+    this.disruptor.start();
   }
 
-  public void shutdown() {
+  /**
+   * Initiates an orderly shutdown in which previously submitted tasks are executed, but no new
+   * tasks will be accepted. Invocation has no additional effect if already shut down.
+   */
+  public void shutdown() throws IOException {
     disruptor.shutdown();
+    executor.shutdown();
+    handler.close();
   }
 
   @Override
@@ -88,7 +109,21 @@ public final class AsyncTracer implements Tracer {
     publish(Action.DELETE, o);
   }
 
-  void publish(Action action, Object o) {
+  private void publish(Action action, Object o) {
     disruptor.getRingBuffer().publishEvent(translator, action, o);
+  }
+
+  private static LogEventHandler eventHandler() {
+    return new TextLogEventHandler(filePath());
+  }
+
+  private static Path filePath() {
+    String property = System.getProperty(TRACING_FILE, "caffeine.log");
+    return Paths.get(property);
+  }
+
+  private static int ringBufferSize() {
+    String property = System.getProperty(TRACING_BUFFER_SIZE, "256");
+    return Integer.parseInt(property);
   }
 }

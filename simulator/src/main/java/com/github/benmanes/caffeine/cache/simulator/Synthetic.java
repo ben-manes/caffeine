@@ -26,7 +26,7 @@ import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
 
 /**
- * A generator of synthetic working sets to simulate different caching patterns.
+ * A generator of synthetic cache events to simulate different caching patterns.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -46,11 +46,21 @@ public final class Synthetic {
     return generate(new ScrambledZipfianGenerator(items), items);
   }
 
+  /**
+   * Returns a sequence of events where some items are more popular than others, according to a
+   * zipfian distribution.
+   *
+   * @param items the number of items in the distribution
+   */
   public static Stream<CacheEvent> zipfian(int items) {
     return generate(new ZipfianGenerator(items), items);
   }
 
-  /** Generates a sequence of unique integers. */
+  /**
+   * Returns a sequence of unique integers.
+   *
+   * @param items the number of items in the distribution
+   */
   public static Stream<CacheEvent> counter(int items) {
     return generate(new CounterGenerator(items), items);
   }

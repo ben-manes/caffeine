@@ -34,17 +34,18 @@ public interface Tracer {
 
   void recordDelete(@Nonnull Object o);
 
-  /** Returns a weigher where an entry has a weight of <tt>1</tt>. */
+  /** Returns a tracer implementation that does not record any events. */
   public static Tracer disabled() {
     return DisabledTracer.INSTANCE;
   }
 
-  /** Returns the tracer implementation or a disabled instance if not found. */
+  /**
+   * Returns the tracer implementation loaded from a {@link ServiceLoader} or a disabled instance
+   * if either not found or the system property <tt>caffeine.tracing.enabled</tt> is set to
+   * <tt>false</tt>.
+   */
   public static Tracer getDefault() {
-    for (Tracer tracer : ServiceLoader.load(Tracer.class)) {
-      return tracer;
-    };
-    return disabled();
+    return TracerHolder.INSTANCE;
   }
 }
 
@@ -55,4 +56,18 @@ enum DisabledTracer implements Tracer {
   @Override public void recordRead(Object o) {}
   @Override public void recordUpdate(Object o) {}
   @Override public void recordDelete(Object o) {}
+}
+
+final class TracerHolder {
+  static final Tracer INSTANCE = load();
+
+  private static Tracer load() {
+    String property = System.getProperty("caffeine.tracing.enabled");
+    if ((property == null) || Boolean.valueOf(property)) {
+      for (Tracer tracer : ServiceLoader.load(Tracer.class)) {
+        return tracer;
+      };
+    }
+    return DisabledTracer.INSTANCE;
+  }
 }

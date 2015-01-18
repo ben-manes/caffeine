@@ -24,15 +24,14 @@ import java.nio.file.Path;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
-import com.lmax.disruptor.EventHandler;
 
 /**
- * A cache event consumer that records to a log file in the text format.
+ * A handler that records events to a log file in the plain text format.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
-final class TextLogEventHandler implements EventHandler<CacheEvent> {
+final class TextLogEventHandler implements LogEventHandler {
   final BufferedWriter writer;
 
   TextLogEventHandler(Path filePath) {
@@ -49,5 +48,10 @@ final class TextLogEventHandler implements EventHandler<CacheEvent> {
     if (endOfBatch) {
       writer.flush();
     }
+  }
+
+  @Override
+  public void close() throws IOException {
+    writer.close();
   }
 }
