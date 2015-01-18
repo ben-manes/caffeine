@@ -15,8 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.joor.Reflect;
 
@@ -28,7 +31,9 @@ import akka.routing.BroadcastRoutingLogic;
 import akka.routing.Routee;
 import akka.routing.Router;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 
 /**
  * The simulator broadcasts the recorded cache events to each policy actor and generates an
@@ -45,17 +50,16 @@ public final class Simulator extends UntypedActor {
 
   public Simulator() {
     settings = new BasicSettings(this);
-    remaining = settings.policies.size();
+    remaining = settings.policies().size();
     router = makeBroadcastingRouter();
 
     getSelf().tell(Message.START, ActorRef.noSender());
   }
 
   @Override
-  public void onReceive(Object msg) throws Exception {
+  public void onReceive(Object msg) throws IOException {
     if (msg == Message.START) {
-      Synthetic.scrambledZipfian(1_000_000)
-          .forEach(event -> router.route(event, getSelf()));
+      getEvents().forEach(event -> router.route(event, getSelf()));
       router.route(Message.DONE, getSelf());
     } else if (msg instanceof PolicyStats) {
       PolicyStats result = (PolicyStats) msg;
@@ -67,9 +71,28 @@ public final class Simulator extends UntypedActor {
     }
   }
 
+  private Stream<CacheEvent> getEvents() throws IOException {
+    if (settings.isFile()) {
+      return LogReader.textLogStream(Files.newBufferedReader(settings.fileSource().path()));
+    }
+
+    int items = settings.synthetic().items();
+    switch (settings.synthetic().distribution()) {
+      case "counter":
+        return Synthetic.counter(items);
+      case "zipfian":
+        return Synthetic.zipfian(items);
+      case "scrambledZipfian":
+        return Synthetic.scrambledZipfian(items);
+      default:
+        throw new IllegalStateException("Unknown distribution: " +
+            settings.synthetic().distribution());
+    }
+  }
+
   private Router makeBroadcastingRouter() {
     String packageName = getClass().getPackage().getName();
-    List<Routee> routes = settings.policies.stream().map(policy -> {
+    List<Routee> routes = settings.policies().stream().map(policy -> {
       Class<?> actorClass = Reflect.on(packageName + ".policy." + policy).type();
       ActorRef actorRef = getContext().actorOf(Props.create(actorClass, policy), policy);
       getContext().watch(actorRef);

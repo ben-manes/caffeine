@@ -53,7 +53,7 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   protected AbstractLinkedPolicy(String name, boolean accessOrder) {
     this.policyStats = new PolicyStats(name);
     BasicSettings settings = new BasicSettings(this);
-    this.cache = new BoundedLinkedHashMap(accessOrder, settings.maximumSize);
+    this.cache = new BoundedLinkedHashMap(accessOrder, settings.maximumSize());
   }
 
   @Override

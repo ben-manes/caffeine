@@ -68,7 +68,11 @@ default [configuration](simulator/src/main/resources/reference.conf) can be over
 properties or an `application.conf` file. It can be run locally using
 
 ```gradle
-gradlew simulate [trace-file]
+# Run a simulation against a local trace file
+gradlew simulate -Dsimulator.source=file -Dsimulator.file.path=trace.log
+
+# Run a simulation against a generated data set
+gradlew simulate -Dsimulator.source=synthetic -Dsimulator.synthetic.size=1000
 ```
 
 ## Development Notes

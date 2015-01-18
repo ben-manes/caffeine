@@ -15,6 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
+import static com.google.common.base.Preconditions.checkState;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import akka.actor.UntypedActor;
@@ -28,18 +32,53 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class BasicSettings {
-  public final List<String> policies;
-  public final int maximumSize;
-
   private final Config config;
 
   public BasicSettings(UntypedActor actor) {
     config = actor.getContext().system().settings().config();
-    maximumSize = config.getInt("simulator.maximumSize");
-    policies = config.getStringList("simulator.policies");
   }
 
-  public Config config() {
+  public List<String> policies() {
+    return config().getStringList("simulator.policies");
+  }
+
+  public int maximumSize() {
+    return config().getInt("simulator.maximumSize");
+  }
+
+  public boolean isFile() {
+    return config().getString("simulator.source").equals("file");
+  }
+
+  public FileSource fileSource() {
+    checkState(isFile());
+    return new FileSource();
+  }
+
+  public SyntheticSource synthetic() {
+    checkState(!isFile());
+    return new SyntheticSource();
+  }
+
+  protected Config config() {
     return config;
+  }
+
+  final class FileSource {
+    public Path path() {
+      return Paths.get(config().getString("simulator.file.path"));
+    }
+    public String format() {
+      return config().getString("simulator.file.format");
+    }
+  }
+
+  final class SyntheticSource {
+    public String distribution() {
+      return config().getString("simulator.synthetic.distribution");
+    }
+    public int items() {
+      return config().getInt("simulator.synthetic.items");
+    }
   }
 }

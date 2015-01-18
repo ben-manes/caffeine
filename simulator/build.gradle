@@ -4,6 +4,7 @@ dependencies {
 
   compile libraries.akka
   compile libraries.joor
+  compile libraries.guava
   compile libraries.univocity_parsers
 
   testCompile test_libraries.jimfs
@@ -22,4 +23,5 @@ tasks.withType(Javadoc) {
 task simulate(type: JavaExec, group: 'Simulator', description: 'Executes a cache simulation') {
   classpath sourceSets.main.runtimeClasspath
   main = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
+  systemProperties System.properties.findAll { it.getKey().startsWith("simulator") }
 }
