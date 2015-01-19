@@ -22,8 +22,6 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.AbstractCollection;
-import java.util.AbstractMap;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,7 +31,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
@@ -52,6 +49,8 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.Shared.AsMapView;
+import com.github.benmanes.caffeine.cache.Shared.StatsAwareConcurrentMap;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
@@ -61,7 +60,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
+final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
   @Nullable final RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> data;
   final Executor executor;
@@ -250,8 +249,8 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     return compute(key, remappingFunction, false, false);
   }
 
-  V compute(K key,
-      BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+  @Override
+  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       boolean recordMiss, boolean isAsync) {
     if (!hasRemovalListener()) {
       return data.compute(key, statsAware(remappingFunction, recordMiss, isAsync));
@@ -297,7 +296,6 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     }
     return nv;
   }
-
 
   /** Decorates the remapping function to record statistics if enabled. */
   Function<? super K, ? extends V> statsAware(
@@ -731,7 +729,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
     @Override
     public Entry<K, V> next() {
       entry = iterator.next();
-      return new WriteThroughEntry<K, V>(local, entry);
+      return new Shared.WriteThroughEntry<K, V>(local, entry.getKey(), entry.getValue());
     }
 
     @Override
@@ -739,34 +737,6 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       Caffeine.requireState(entry != null);
       local.remove(entry.getKey());
       entry = null;
-    }
-  }
-
-  /** An entry that allows updates to write through to the cache. */
-  static final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
-    static final long serialVersionUID = 1;
-
-    transient final UnboundedLocalCache<K, V> local;
-
-    WriteThroughEntry(UnboundedLocalCache<K, V> local, Entry<K, V> entry) {
-      super(entry.getKey(), entry.getValue());
-      this.local = requireNonNull(local);
-    }
-
-    @Override
-    public V setValue(V value) {
-      local.put(getKey(), value);
-      return super.setValue(value);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      // suppress Findbugs warning
-      return super.equals(o);
-    }
-
-    Object writeReplace() {
-      return new SimpleEntry<K, V>(this);
     }
   }
 
@@ -1315,9 +1285,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
       @Override
       public V getIfPresent(Object key) {
         CompletableFuture<V> future = cache.getIfPresent(key, true);
-        return (future != null) && future.isDone() && !future.isCompletedExceptionally()
-            ? future.getNow(null)
-            : null;
+        return Shared.getIfReady(future);
       }
 
       @Override
@@ -1327,7 +1295,7 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
         Map<K, V> result = new LinkedHashMap<>();
         for (Object key : keys) {
           CompletableFuture<V> future = cache.get(key);
-          V value = (future == null) ? null : future.getNow(null);
+          V value = Shared.getIfReady(future);
           if (value == null) {
             misses++;
           } else {
@@ -1467,358 +1435,10 @@ final class UnboundedLocalCache<K, V> implements ConcurrentMap<K, V> {
 
       @Override
       public ConcurrentMap<K, V> asMap() {
-        return (asMapView == null) ? (asMapView = new AsMapView<K, V>(cache)) : asMapView;
-      }
-    }
-  }
-
-  static final class AsMapView<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
-    final UnboundedLocalCache<K, CompletableFuture<V>> delegate;
-
-    transient Collection<V> values;
-    transient Set<Entry<K, V>> entries;
-
-    AsMapView(UnboundedLocalCache<K, CompletableFuture<V>> delegate) {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public boolean isEmpty() {
-      return delegate.isEmpty();
-    }
-
-    @Override
-    public int size() {
-      return delegate.size();
-    }
-
-    @Override
-    public boolean containsKey(Object key) {
-      return delegate.containsKey(key);
-    }
-
-    @Override
-    public boolean containsValue(Object value) {
-      requireNonNull(value);
-
-      for (CompletableFuture<V> valueFuture : delegate.values()) {
-        if (value.equals(getIfReady(valueFuture))) {
-          return true;
+        if (asMapView == null) {
+          asMapView = new Shared.AsMapView<K, V>(cache, cache.statsCounter, cache.ticker);
         }
-      }
-      return false;
-    }
-
-    @Override
-    public V get(Object key) {
-      return getIfReady(delegate.get(key));
-    }
-
-    @Override
-    public V putIfAbsent(K key, V value) {
-      requireNonNull(value);
-      CompletableFuture<V> valueFuture =
-          delegate.putIfAbsent(key, CompletableFuture.completedFuture(value));
-      return getWhenSuccessful(valueFuture);
-    }
-
-    @Override
-    public V put(K key, V value) {
-      requireNonNull(value);
-      CompletableFuture<V> oldValueFuture =
-          delegate.put(key, CompletableFuture.completedFuture(value));
-      return getWhenSuccessful(oldValueFuture);
-    }
-
-    @Override
-    public V remove(Object key) {
-      CompletableFuture<V> oldValueFuture = delegate.remove(key);
-      return getWhenSuccessful(oldValueFuture);
-    }
-
-    @Override
-    public V replace(K key, V value) {
-      requireNonNull(value);
-      CompletableFuture<V> oldValueFuture =
-          delegate.replace(key, CompletableFuture.completedFuture(value));
-      return getWhenSuccessful(oldValueFuture);
-    }
-
-    @Override
-    public boolean replace(K key, V oldValue, V newValue) {
-      requireNonNull(oldValue);
-      requireNonNull(newValue);
-      CompletableFuture<V> oldValueFuture = delegate.get(key);
-      return oldValue.equals(getIfReady(oldValueFuture))
-          ? delegate.replace(key, oldValueFuture, CompletableFuture.completedFuture(newValue))
-          : false;
-    }
-
-    @Override
-    public boolean remove(Object key, Object value) {
-      requireNonNull(key);
-      if (value == null) {
-        return false;
-      }
-      CompletableFuture<V> oldValueFuture = delegate.get(key);
-      return value.equals(getIfReady(oldValueFuture))
-          ? delegate.remove(key, oldValueFuture)
-          : false;
-    }
-
-    @Override
-    public void clear() {
-      delegate.clear();
-    }
-
-    @Override
-    public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-      requireNonNull(mappingFunction);
-      CompletableFuture<V> valueFuture = delegate.computeIfAbsent(key, k -> {
-        V newValue = mappingFunction.apply(key);
-        return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
-      });
-      return getWhenSuccessful(valueFuture);
-    }
-
-    @Override
-    public V computeIfPresent(K key,
-        BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-      requireNonNull(remappingFunction);
-      CompletableFuture<V> valueFuture = delegate.computeIfPresent(key, (k, oldValueFuture) -> {
-        V oldValue = getWhenSuccessful(oldValueFuture);
-        if (oldValue == null) {
-          return null;
-        }
-        V newValue = remappingFunction.apply(key, oldValue);
-        return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
-      });
-      return getWhenSuccessful(valueFuture);
-    }
-
-    @Override
-    public V compute(K key,
-        BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-      requireNonNull(remappingFunction);
-      long now = delegate.ticker.read();
-      CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
-        V oldValue = getWhenSuccessful(oldValueFuture);
-        V newValue = remappingFunction.apply(key, oldValue);
-        long loadTime = delegate.ticker.read()- now;
-        if (newValue == null) {
-          delegate.statsCounter.recordLoadFailure(loadTime);
-          return null;
-        }
-        delegate.statsCounter.recordLoadSuccess(loadTime);
-        return CompletableFuture.completedFuture(newValue);
-      }, false, true);
-      return getWhenSuccessful(valueFuture);
-    }
-
-    @Override
-    public V merge(K key, V value,
-        BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-      requireNonNull(value);
-      requireNonNull(remappingFunction);
-      CompletableFuture<V> mergedValueFuture = delegate.merge(
-          key, CompletableFuture.completedFuture(value), (oldValueFuture, valueFuture) -> {
-        V oldValue = getWhenSuccessful(oldValueFuture);
-        if (oldValue == null) {
-          return valueFuture;
-        }
-        V newValue = remappingFunction.apply(oldValue, value);
-        return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
-      });
-      return getWhenSuccessful(mergedValueFuture);
-    }
-
-    @Override
-    public Set<K> keySet() {
-      return delegate.keySet();
-    }
-
-    @Override
-    public Collection<V> values() {
-      return (values == null) ? (values = new Values()) : values;
-    }
-
-    @Override
-    public Set<Entry<K, V>> entrySet() {
-      return (entries == null) ? (entries = new EntrySet()) : entries;
-    }
-
-    /** Retrieves the current value or null if either not done or failed. */
-    static <V> V getIfReady(CompletableFuture<V> future) {
-      boolean hasValue = (future != null) && future.isDone() && !future.isCompletedExceptionally();
-      return hasValue ? future.getNow(null) : null;
-    }
-
-    /** Retrieves the value when done successfully or null if failed. */
-    static <V> V getWhenSuccessful(CompletableFuture<V> future) {
-      try {
-        return (future == null) ? null : future.get();
-      } catch (InterruptedException | ExecutionException e) {
-        return null;
-      }
-    }
-
-    final class Values extends AbstractCollection<V> {
-
-      @Override
-      public boolean isEmpty() {
-        return AsMapView.this.isEmpty();
-      }
-
-      @Override
-      public int size() {
-        return AsMapView.this.size();
-      }
-
-      @Override
-      public boolean contains(Object o) {
-        return AsMapView.this.containsValue(o);
-      }
-
-      @Override
-      public void clear() {
-        AsMapView.this.clear();
-      }
-
-      @Override
-      public Iterator<V> iterator() {
-        return new Iterator<V>() {
-          Iterator<CompletableFuture<V>> iterator = delegate.values().iterator();
-          V cursor;
-
-          @Override
-          public boolean hasNext() {
-            while ((cursor == null) && iterator.hasNext()) {
-              CompletableFuture<V> future = iterator.next();
-              cursor = getIfReady(future);
-            }
-            return (cursor != null);
-          }
-
-          @Override
-          public V next() {
-            if (!hasNext()) {
-              throw new NoSuchElementException();
-            }
-            V value = cursor;
-            cursor = null;
-            return value;
-          }
-
-          @Override
-          public void remove() {
-            iterator.remove();
-          }
-        };
-      }
-    }
-
-    final class EntrySet extends AbstractSet<Entry<K, V>> {
-
-      @Override
-      public boolean isEmpty() {
-        return AsMapView.this.isEmpty();
-      }
-
-      @Override
-      public int size() {
-        return AsMapView.this.size();
-      }
-
-      @Override
-      public boolean contains(Object o) {
-        if (!(o instanceof Entry<?, ?>)) {
-          return false;
-        }
-        Entry<?, ?> entry = (Entry<?, ?>) o;
-        V value = AsMapView.this.get(entry.getKey());
-        return (value != null) && value.equals(entry.getValue());
-      }
-
-      @Override
-      public boolean add(Entry<K, V> entry) {
-        return (AsMapView.this.putIfAbsent(entry.getKey(), entry.getValue()) == null);
-      }
-
-      @Override
-      public boolean remove(Object obj) {
-        if (!(obj instanceof Entry<?, ?>)) {
-          return false;
-        }
-        Entry<?, ?> entry = (Entry<?, ?>) obj;
-        return AsMapView.this.remove(entry.getKey(), entry.getValue());
-      }
-
-      @Override
-      public void clear() {
-        AsMapView.this.clear();
-      }
-
-      @Override
-      public Iterator<Entry<K, V>> iterator() {
-        return new Iterator<Entry<K, V>>() {
-          Iterator<Entry<K, CompletableFuture<V>>> iterator = delegate.entrySet().iterator();
-          Entry<K, V> cursor;
-
-          @Override
-          public boolean hasNext() {
-            while ((cursor == null) && iterator.hasNext()) {
-              Entry<K, CompletableFuture<V>> entry = iterator.next();
-              V value = getIfReady(entry.getValue());
-              if (value != null) {
-                cursor = new WriteThroughAsMapEntry<>(AsMapView.this, entry.getKey(), value);
-              }
-            }
-            return (cursor != null);
-          }
-
-          @Override
-          public Entry<K, V> next() {
-            if (!hasNext()) {
-              throw new NoSuchElementException();
-            }
-            Entry<K, V> entry = cursor;
-            cursor = null;
-            return entry;
-          }
-
-          @Override
-          public void remove() {
-            iterator.remove();
-          }
-        };
-      }
-    }
-
-    /** An entry that allows updates to write through to the asMap view. */
-    static final class WriteThroughAsMapEntry<K, V> extends SimpleEntry<K, V> {
-      static final long serialVersionUID = 1;
-
-      transient final ConcurrentMap<K, V> map;
-
-      WriteThroughAsMapEntry(ConcurrentMap<K, V> map, K key, V value) {
-        super(key, value);
-        this.map = requireNonNull(map);
-      }
-
-      @Override
-      public V setValue(V value) {
-        map.put(getKey(), value);
-        return super.setValue(value);
-      }
-
-      @Override
-      public boolean equals(Object o) {
-        // suppress Findbugs warning
-        return super.equals(o);
-      }
-
-      Object writeReplace() {
-        return new SimpleEntry<K, V>(this);
+        return asMapView;
       }
     }
   }

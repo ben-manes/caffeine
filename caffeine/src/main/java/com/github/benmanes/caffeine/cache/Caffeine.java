@@ -602,7 +602,7 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @Nonnull <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
+  <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
     @SuppressWarnings("unchecked")
     RemovalListener<K1, V1> castedListener = (RemovalListener<K1, V1>) removalListener;
     if (async && (castedListener != null)) {

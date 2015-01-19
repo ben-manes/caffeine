@@ -45,19 +45,18 @@ public final class IsValidMapView<K, V> extends TypeSafeDiagnosingMatcher<Map<K,
     if (map instanceof BoundedLocalCache<?, ?>) {
       BoundedLocalCache<K, V> cache = (BoundedLocalCache<K, V>) map;
       return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(cache, description);
-    } else if (map instanceof BoundedLocalCache.AsMapView<?, ?>) {
-      BoundedLocalCache.AsMapView<K, V> cache = (BoundedLocalCache.AsMapView<K, V>) map;
-      return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-          cache.delegate, description);
-    }
-
-    if (map instanceof UnboundedLocalCache<?, ?>) {
+    } else if (map instanceof UnboundedLocalCache<?, ?>) {
       UnboundedLocalCache<K, V> cache = (UnboundedLocalCache<K, V>) map;
       return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(cache, description);
-    } else if (map instanceof UnboundedLocalCache.AsMapView<?, ?>) {
-      UnboundedLocalCache.AsMapView<K, V> cache = (UnboundedLocalCache.AsMapView<K, V>) map;
-      return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-          cache.delegate, description);
+    } else if (map instanceof Shared.AsMapView<?, ?>) {
+      Shared.AsMapView<K, V> asMap = (Shared.AsMapView<K, V>) map;
+      if (asMap.delegate instanceof BoundedLocalCache<?, ?>) {
+        return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+            (BoundedLocalCache<K, CompletableFuture<V>>) asMap.delegate, description);
+      } else if (asMap.delegate instanceof UnboundedLocalCache<?, ?>) {
+        return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+            (UnboundedLocalCache<K, CompletableFuture<V>>) asMap.delegate, description);
+      }
     }
 
     return true;
