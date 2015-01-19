@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2011 Yahoo! Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -25,7 +25,7 @@ package com.github.benmanes.caffeine.cache.simulator.generator;
  * which corresponds to the rate at which events occur.
  * Alternatively, 1/gamma is the average length of an interval.
  *
- * @see https://github.com/brianfrankcooper/YCSB
+ * https://github.com/brianfrankcooper/YCSB
  */
 public class ExponentialGenerator extends IntegerGenerator
 {

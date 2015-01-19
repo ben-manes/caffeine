@@ -1,14 +1,13 @@
 /** Cache tracing async implementation */
 dependencies {
   compile project(':tracing:api')
-  compile project(':caffeine')
   compile libraries.disruptor
 
   testCompile libraries.guava
   testCompile test_libraries.jimfs
   testCompile test_libraries.testng
   testCompile test_libraries.awaitility
-  testCompile project(path: ":caffeine", configuration: "testArtifacts")
+  testCompile project(path: ':tracing:api', configuration: 'testArtifacts')
 }
 
 test {

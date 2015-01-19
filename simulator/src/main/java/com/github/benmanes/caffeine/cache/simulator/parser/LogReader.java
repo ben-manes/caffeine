@@ -15,7 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.IOException;
 import java.io.Reader;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
@@ -38,19 +46,71 @@ public final class LogReader {
   private LogReader() {}
 
   /**
+   * Creates a {@link Stream} that lazily reads the log file in the binary format.
+   *
+   * @param reader the input source to read the log file
+   * @return a lazy stream of cache events
+   */
+  public static Stream<CacheEvent> binaryLogStream(Path filePath) throws IOException {
+    DataInputStream input = new DataInputStream(
+        new BufferedInputStream(Files.newInputStream(filePath)));
+    Spliterator<CacheEvent> spliterator = Spliterators.spliteratorUnknownSize(
+        new BinaryLogIterator(input), Spliterator.NONNULL);
+    return StreamSupport.stream(spliterator, false);
+  }
+
+  /**
    * Creates a {@link Stream} that lazily reads the log file in the text format.
    *
    * @param reader the input source to read the log file
    * @return a lazy stream of cache events
    */
-  public static Stream<CacheEvent> textLogStream(Reader reader) {
+  public static Stream<CacheEvent> textLogStream(Path filePath) throws IOException {
+    BufferedReader reader = Files.newBufferedReader(filePath);
     Spliterator<CacheEvent> spliterator = Spliterators.spliteratorUnknownSize(
         new TextLogIterator(reader), Spliterator.NONNULL);
     return StreamSupport.stream(spliterator, false);
   }
 
+  private static final class BinaryLogIterator implements Iterator<CacheEvent> {
+    final DataInputStream input;
+
+    BinaryLogIterator(DataInputStream input) {
+      this.input = input;
+    }
+
+    @Override
+    public boolean hasNext() {
+      try {
+        input.mark(1);
+        if (input.readByte() < 0) {
+          input.close();
+          return false;
+        }
+        input.reset();
+        return true;
+      } catch (EOFException e) {
+        return false;
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+
+    @Override
+    public CacheEvent next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      try {
+        return CacheEvent.fromBinaryRecord(input);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+  }
+
   private static final class TextLogIterator implements Iterator<CacheEvent> {
-    CsvParser parser;
+    final CsvParser parser;
     CacheEvent next;
 
     TextLogIterator(Reader reader) {

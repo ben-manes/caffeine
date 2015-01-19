@@ -56,7 +56,7 @@ public final class AsyncTracerTest {
   }
 
   @Test(dataProvider = "tracer")
-  public void publishEvents(AsyncTracer tracer) throws Exception {
+  public void publishEvents(AsyncTracer tracer, boolean plainText) throws Exception {
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 100; i++) {
         tracer.recordCreate(i);
@@ -66,12 +66,16 @@ public final class AsyncTracerTest {
       }
     });
     tracer.shutdown();
-    assertThat(Files.lines(filePath).count(), is(4000L));
+    if (plainText) {
+      assertThat(Files.lines(filePath).count(), is(4000L));
+    }
   }
 
   @DataProvider(name = "tracer")
   public Object[][] providerTracer() {
-    AsyncTracer tracer = new AsyncTracer(new TextLogEventHandler(filePath), 64, executor);
-    return new Object[][] {{ tracer }};
+    return new Object[][] {
+        { new AsyncTracer(new TextLogEventHandler(filePath), 64, executor), true },
+        { new AsyncTracer(new BinaryLogEventHandler(filePath), 64, executor), false },
+    };
   }
 }

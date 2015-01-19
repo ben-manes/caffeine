@@ -7,6 +7,7 @@ dependencies {
   compile libraries.guava
   compile libraries.univocity_parsers
 
+  compile project(':tracing:async')
   testCompile test_libraries.jimfs
   testCompile test_libraries.testng
   testCompile test_libraries.awaitility

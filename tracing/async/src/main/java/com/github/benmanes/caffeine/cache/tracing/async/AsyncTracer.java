@@ -27,7 +27,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
 import com.github.benmanes.caffeine.cache.tracing.Tracer;
-import com.lmax.disruptor.EventTranslatorTwoArg;
+import com.lmax.disruptor.EventTranslatorThreeArg;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.util.DaemonThreadFactory;
 
@@ -41,9 +41,10 @@ import com.lmax.disruptor.util.DaemonThreadFactory;
 @ThreadSafe
 public final class AsyncTracer implements Tracer {
   public static final String TRACING_FILE = "caffeine.tracing.file";
+  public static final String TRACING_FORMAT = "caffeine.tracing.format";
   public static final String TRACING_BUFFER_SIZE = "caffeine.tracing.ringBuffer";
 
-  private final EventTranslatorTwoArg<CacheEvent, Action, Object> translator;
+  private final EventTranslatorThreeArg<CacheEvent, Integer, Action, Object> translator;
   private final Disruptor<CacheEvent> disruptor;
   private final ExecutorService executor;
   private final LogEventHandler handler;
@@ -67,10 +68,11 @@ public final class AsyncTracer implements Tracer {
    */
   @SuppressWarnings("unchecked")
   public AsyncTracer(LogEventHandler handler, int ringBufferSize, ExecutorService executor) {
-    this.translator = (event, seq, action, object) -> {
+    this.translator = (event, seq, id, action, object) -> {
       event.setTimestamp(System.nanoTime());
       event.setHash(object.hashCode());
       event.setAction(action);
+      event.setCacheId(id);
     };
     this.handler = handler;
     this.executor = executor;
@@ -91,30 +93,36 @@ public final class AsyncTracer implements Tracer {
 
   @Override
   public void recordCreate(Object o) {
-    publish(Action.CREATE, o);
+    publish(0, Action.CREATE, o);
   }
 
   @Override
   public void recordRead(Object o) {
-    publish(Action.READ, o);
+    publish(0, Action.READ, o);
   }
 
   @Override
   public void recordUpdate(Object o) {
-    publish(Action.UPDATE, o);
+    publish(0, Action.UPDATE, o);
   }
 
   @Override
   public void recordDelete(Object o) {
-    publish(Action.DELETE, o);
+    publish(0, Action.DELETE, o);
   }
 
-  private void publish(Action action, Object o) {
-    disruptor.getRingBuffer().publishEvent(translator, action, o);
+  private void publish(int id, Action action, Object o) {
+    disruptor.getRingBuffer().publishEvent(translator, id, action, o);
   }
 
   private static LogEventHandler eventHandler() {
-    return new TextLogEventHandler(filePath());
+    String property = System.getProperty(TRACING_FORMAT, "text").toLowerCase();
+    if (property.equals("text")) {
+      return new TextLogEventHandler(filePath());
+    } else if (property.equals("binary")) {
+      return new BinaryLogEventHandler(filePath());
+    }
+    throw new IllegalStateException("Unknown format:" + property);
   }
 
   private static Path filePath() {

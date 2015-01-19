@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,6 +30,7 @@ import akka.routing.BroadcastRoutingLogic;
 import akka.routing.Routee;
 import akka.routing.Router;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.FileFormat;
 import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
@@ -74,9 +74,12 @@ public final class Simulator extends UntypedActor {
   }
 
   private Stream<CacheEvent> events() throws IOException {
-    return settings.isSynthetic()
-        ? Synthetic.generate(settings)
-        : LogReader.textLogStream(Files.newBufferedReader(settings.fileSource().path()));
+    if (settings.isSynthetic()) {
+      return Synthetic.generate(settings);
+    }
+    return (settings.fileSource().format() == FileFormat.TEXT)
+        ? LogReader.textLogStream(settings.fileSource().path())
+        : LogReader.binaryLogStream(settings.fileSource().path());
   }
 
   private Router makeBroadcastingRouter() {

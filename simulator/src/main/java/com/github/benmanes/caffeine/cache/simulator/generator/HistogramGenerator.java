@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2010 Yahoo! Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -33,7 +33,7 @@ import java.util.ArrayList;
  * Modified Nov 19 2010 by sears
  *
  * @author snjones
- * @see https://github.com/brianfrankcooper/YCSB
+ * https://github.com/brianfrankcooper/YCSB
  */
 public class HistogramGenerator extends IntegerGenerator {
 

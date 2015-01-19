@@ -15,7 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.tracing.async;
 
-import java.io.BufferedWriter;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -26,17 +27,17 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 
 /**
- * A handler that records events to a log file in the plain text format.
+ * A handler that records events to a log file in the binary format.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
-public final class TextLogEventHandler implements LogEventHandler {
-  final BufferedWriter writer;
+public final class BinaryLogEventHandler implements LogEventHandler {
+  final DataOutputStream output;
 
-  public TextLogEventHandler(Path filePath) {
+  public BinaryLogEventHandler(Path filePath) {
     try {
-      this.writer = Files.newBufferedWriter(filePath);
+      output = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(filePath)));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -44,15 +45,14 @@ public final class TextLogEventHandler implements LogEventHandler {
 
   @Override
   public void onEvent(CacheEvent event, long sequence, boolean endOfBatch) throws IOException {
-    event.appendTextRecord(writer);
-    writer.write(System.lineSeparator());
+    event.appendBinaryRecord(output);
     if (endOfBatch) {
-      writer.flush();
+      output.flush();
     }
   }
 
   @Override
   public void close() throws IOException {
-    writer.close();
+    output.close();
   }
 }

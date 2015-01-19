@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.tracing;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
@@ -94,15 +96,22 @@ public final class CacheEvent {
     output.append(Integer.toString(hash));
     output.append(' ');
     output.append(Long.toString(timestamp));
-    output.append(System.lineSeparator());
   }
 
-  public static CacheEvent fromBinaryRecord(byte[] record) {
-    throw new UnsupportedOperationException();
+  public static CacheEvent fromBinaryRecord(DataInputStream input) throws IOException {
+    CacheEvent event = new CacheEvent();
+    event.action = Action.values()[input.readShort()];
+    event.cacheId = input.readInt();
+    event.hash = input.readInt();
+    event.timestamp = input.readLong();
+    return event;
   }
 
-  public byte[] toBinaryRecord() {
-    throw new UnsupportedOperationException();
+  public void appendBinaryRecord(DataOutputStream output) throws IOException {
+    output.writeShort(action.ordinal());
+    output.writeInt(cacheId);
+    output.writeInt(hash);
+    output.writeLong(timestamp);
   }
 
   @Override

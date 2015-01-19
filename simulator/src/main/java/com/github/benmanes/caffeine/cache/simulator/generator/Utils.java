@@ -21,7 +21,7 @@ import java.util.Random;
 /**
  * Utility functions.
  *
- * @see https://github.com/brianfrankcooper/YCSB
+ * https://github.com/brianfrankcooper/YCSB
  */
 class Utils
 {

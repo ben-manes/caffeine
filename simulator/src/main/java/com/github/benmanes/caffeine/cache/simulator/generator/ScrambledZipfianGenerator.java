@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2010 Yahoo! Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -25,7 +25,7 @@ package com.github.benmanes.caffeine.cache.simulator.generator;
  * Unlike @ZipfianGenerator, this class scatters the "popular" items across the itemspace. Use this, instead of @ZipfianGenerator, if you
  * don't want the head of the distribution (the popular items) clustered together.
  *
- * @see https://github.com/brianfrankcooper/YCSB
+ * https://github.com/brianfrankcooper/YCSB
  */
 public class ScrambledZipfianGenerator extends IntegerGenerator
 {

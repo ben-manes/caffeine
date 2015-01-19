@@ -20,7 +20,7 @@ package com.github.benmanes.caffeine.cache.simulator.generator;
  * A trivial integer generator that always returns the same value.
  *
  * @author sears
- * @see https://github.com/brianfrankcooper/YCSB
+ * https://github.com/brianfrankcooper/YCSB
  */
 public class ConstantIntegerGenerator extends IntegerGenerator {
 	private final int i;

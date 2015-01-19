@@ -19,38 +19,54 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.Synthetic;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.tracing.async.BinaryLogEventHandler;
+import com.github.benmanes.caffeine.cache.tracing.async.LogEventHandler;
+import com.github.benmanes.caffeine.cache.tracing.async.TextLogEventHandler;
 import com.google.common.jimfs.Jimfs;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LogReaderTest {
-  static final int FILE_SIZE = 1000;
+  static final int FILE_SIZE = 1_000;
 
-  @Test(dataProvider = "events")
-  public void readTextLog(BufferedReader reader, List<CacheEvent> written) {
-    List<CacheEvent> read = LogReader.textLogStream(reader).collect(Collectors.toList());
-    assertThat(read, is(equalTo(written)));
+  @Test
+  public void readTextLog() throws Exception {
+    List<CacheEvent> events = makeEvents();
+    Path filePath = eventsAsLogFile(events, path -> new TextLogEventHandler(path));
+    List<CacheEvent> read = LogReader.textLogStream(filePath).collect(Collectors.toList());
+    assertThat(read, is(equalTo(events)));
   }
 
-  @DataProvider(name = "events")
-  Object[][] generateFile() throws IOException {
+  @Test
+  public void readBinaryLog() throws Exception {
+    List<CacheEvent> events = makeEvents();
+    Path filePath = eventsAsLogFile(events, path -> new BinaryLogEventHandler(path));
+    List<CacheEvent> read = LogReader.binaryLogStream(filePath).collect(Collectors.toList());
+    assertThat(read, is(equalTo(events)));
+  }
+
+  private List<CacheEvent> makeEvents() {
+    return Synthetic.counter(0, FILE_SIZE).collect(Collectors.toList());
+  }
+
+  private Path eventsAsLogFile(List<CacheEvent> events, Function<Path, LogEventHandler> handlerFun)
+      throws Exception {
     Path path = Jimfs.newFileSystem().getPath("caffeine.log");
-    List<CacheEvent> events = Synthetic.scrambledZipfian(FILE_SIZE).collect(Collectors.toList());
-    Iterable<String> lines = () -> events.stream().map(event -> event.toString()).iterator();
-    Files.write(path, lines);
-    return new Object[][] {{ Files.newBufferedReader(path), events }};
+    LogEventHandler handler = handlerFun.apply(path);
+    for (CacheEvent event : events) {
+      handler.onEvent(event, 1, true);
+    }
+    handler.close();
+    return path;
   }
 }

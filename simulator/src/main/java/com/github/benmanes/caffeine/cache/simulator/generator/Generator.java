@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2010 Yahoo! Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -19,7 +19,7 @@ package com.github.benmanes.caffeine.cache.simulator.generator;
 /**
  * An expression that generates a sequence of string values, following some distribution (Uniform, Zipfian, Sequential, etc.)
  *
- * @see https://github.com/brianfrankcooper/YCSB
+ * https://github.com/brianfrankcooper/YCSB
  */
 public abstract class Generator
 {

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2010 Yahoo! Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -27,7 +27,7 @@ import java.util.Random;
  * the cold set are chose using a uniform distribution.
  *
  * @author sudipto
- * @see https://github.com/brianfrankcooper/YCSB
+ * https://github.com/brianfrankcooper/YCSB
  */
 public class HotspotIntegerGenerator extends IntegerGenerator {
 

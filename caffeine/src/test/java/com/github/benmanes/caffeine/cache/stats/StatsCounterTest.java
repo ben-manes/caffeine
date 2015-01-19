@@ -40,7 +40,6 @@ public final class StatsCounterTest {
     for (DisabledStatsCounter type : DisabledStatsCounter.values()) {
       assertThat(DisabledStatsCounter.valueOf(type.name()), is(counter));
     }
-
   }
 
   @Test

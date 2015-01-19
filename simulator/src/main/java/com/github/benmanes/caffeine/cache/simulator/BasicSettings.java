@@ -32,6 +32,8 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class BasicSettings {
+  public enum FileFormat { TEXT, BINARY }
+
   private final Config config;
 
   public BasicSettings(UntypedActor actor) {
@@ -72,8 +74,8 @@ public class BasicSettings {
     public Path path() {
       return Paths.get(config().getString("simulator.file.path"));
     }
-    public String format() {
-      return config().getString("simulator.file.format");
+    public FileFormat format() {
+      return FileFormat.valueOf(config().getString("simulator.file.format").toUpperCase());
     }
   }
 
