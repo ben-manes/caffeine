@@ -50,13 +50,17 @@ public class BasicSettings {
     return config().getString("simulator.source").equals("file");
   }
 
+  public boolean isSynthetic() {
+    return config().getString("simulator.source").equals("synthetic");
+  }
+
   public FileSource fileSource() {
     checkState(isFile());
     return new FileSource();
   }
 
   public SyntheticSource synthetic() {
-    checkState(!isFile());
+    checkState(isSynthetic());
     return new SyntheticSource();
   }
 
@@ -77,8 +81,53 @@ public class BasicSettings {
     public String distribution() {
       return config().getString("simulator.synthetic.distribution");
     }
-    public int items() {
-      return config().getInt("simulator.synthetic.items");
+    public int events() {
+      return config().getInt("simulator.synthetic.events");
+    }
+    public Counter counter() {
+      return new Counter();
+    }
+    public Exponential exponential() {
+      return new Exponential();
+    }
+    public Hotspot hotspot() {
+      return new Hotspot();
+    }
+    public Uniform uniform() {
+      return new Uniform();
+    }
+
+    final class Counter {
+      public int start() {
+        return config().getInt("simulator.synthetic.counter.start");
+      }
+    }
+    final class Exponential {
+      public double mean() {
+        return config().getDouble("simulator.synthetic.exponential.mean");
+      }
+    }
+    final class Hotspot {
+      public int lowerBound() {
+        return config().getInt("simulator.synthetic.hotspot.lowerBound");
+      }
+      public int upperBound() {
+        return config().getInt("simulator.synthetic.hotspot.upperBound");
+      }
+      public double hotsetFraction() {
+        return config().getDouble("simulator.synthetic.hotspot.hotsetFraction");
+      }
+      public double hotOpnFraction() {
+        return config().getDouble("simulator.synthetic.hotspot.hotOpnFraction");
+      }
+    }
+    final class Uniform {
+      public int lowerBound() {
+        return config().getInt("simulator.synthetic.uniform.lowerBound");
+      }
+      public int upperBound() {
+        return config().getInt("simulator.synthetic.uniform.upperBound");
+      }
     }
   }
 }

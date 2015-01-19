@@ -21,7 +21,9 @@ tasks.withType(Javadoc) {
 }
 
 task simulate(type: JavaExec, group: 'Simulator', description: 'Executes a cache simulation') {
-  classpath sourceSets.main.runtimeClasspath
   main = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
-  systemProperties System.properties.findAll { it.getKey().startsWith("simulator") }
+  classpath sourceSets.main.runtimeClasspath
+  systemProperties System.properties.findAll { 
+    it.getKey().startsWith("akka") || it.getKey().startsWith("simulator")
+  }
 }

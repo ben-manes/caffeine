@@ -18,9 +18,15 @@ package com.github.benmanes.caffeine.cache.simulator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSource.Hotspot;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSource.Uniform;
 import com.github.benmanes.caffeine.cache.simulator.generator.CounterGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.ExponentialGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.Generator;
+import com.github.benmanes.caffeine.cache.simulator.generator.HotspotIntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.SkewedLatestGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.UniformIntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ZipfianGenerator;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
@@ -33,6 +39,73 @@ import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
 public final class Synthetic {
 
   private Synthetic() {}
+
+  /** Returns a sequence of events based on the setting's distribution. */
+  public static Stream<CacheEvent> generate(BasicSettings settings) {
+    int items = settings.synthetic().events();
+    switch (settings.synthetic().distribution().toLowerCase()) {
+      case "counter":
+        return counter(settings.synthetic().counter().start(), items);
+      case "exponential":
+        return exponential(settings.synthetic().exponential().mean(), items);
+      case "hotpot":
+        Hotspot hotspot = settings.synthetic().hotspot();
+        return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
+            hotspot.hotOpnFraction(), hotspot.hotsetFraction(), items);
+      case "zipfian":
+        return zipfian(items);
+      case "scrambledzipfian":
+        return scrambledZipfian(items);
+      case "skewedZipfianLatest":
+        return skewedZipfianLatest(items);
+      case "uniform":
+        Uniform uniform = settings.synthetic().uniform();
+        return uniform(uniform.lowerBound(), uniform.upperBound(), items);
+      default:
+        throw new IllegalStateException("Unknown distribution: "
+            + settings.synthetic().distribution());
+    }
+  }
+
+  /**
+   * Returns a sequence of unique integers.
+   *
+   * @param start the number that the counter starts from
+   * @param items the number of items in the distribution
+   */
+  public static Stream<CacheEvent> counter(int start, int items) {
+    return generate(new CounterGenerator(start), items);
+  }
+
+  /**
+   * Returns a sequence of events based on an exponential distribution. Smaller intervals are more
+   * frequent than larger ones, and there is no bound on the length of an interval.
+   *
+   * @param mean mean arrival rate of gamma (a half life of 1/gamma)
+   * @param items the number of items in the distribution
+   */
+  public static Stream<CacheEvent> exponential(double mean, int items) {
+    return generate(new ExponentialGenerator(mean), items);
+  }
+
+  /**
+   * Returns a sequence of events resembling a hotspot distribution where x% of operations access y%
+   * of data items. The parameters specify the bounds for the numbers, the percentage of the of the
+   * interval which comprises the hot set and the percentage of operations that access the hot set.
+   * Numbers of the hot set are always smaller than any number in the cold set. Elements from the
+   * hot set and the cold set are chose using a uniform distribution.
+   *
+   * @param lowerBound lower bound of the distribution
+   * @param upperBound upper bound of the distribution
+   * @param hotsetFraction percentage of data item
+   * @param hotOpnFraction percentage of operations accessing the hot set
+   * @param items the number of items in the distribution
+   */
+  public static Stream<CacheEvent> hotspot(int lowerBound, int upperBound,
+      double hotsetFraction, double hotOpnFraction, int items) {
+    return generate(new HotspotIntegerGenerator(lowerBound,
+        upperBound, hotsetFraction, hotOpnFraction), items);
+  }
 
   /**
    * Returns a sequence of events where some items are more popular than others, according to a
@@ -47,6 +120,16 @@ public final class Synthetic {
   }
 
   /**
+   * Returns a zipfian sequence with a popularity distribution of items, skewed to favor recent
+   * items significantly more than older items
+   *
+   * @param items the number of items in the distribution
+   */
+  public static Stream<CacheEvent> skewedZipfianLatest(int items) {
+    return generate(new SkewedLatestGenerator(new CounterGenerator(items)), items);
+  }
+
+  /**
    * Returns a sequence of events where some items are more popular than others, according to a
    * zipfian distribution.
    *
@@ -57,14 +140,19 @@ public final class Synthetic {
   }
 
   /**
-   * Returns a sequence of unique integers.
+   * Returns a sequence of events where items are selected uniformly randomly from the interval
+   * inclusively.
    *
+   * @param lowerBound lower bound of the distribution
+   * @param upperBound upper bound of the distribution
    * @param items the number of items in the distribution
+   * @return
    */
-  public static Stream<CacheEvent> counter(int items) {
-    return generate(new CounterGenerator(items), items);
+  public static Stream<CacheEvent> uniform(int lowerBound, int upperBound, int items) {
+    return generate(new UniformIntegerGenerator(lowerBound, upperBound), items);
   }
 
+  /** Returns a sequence of items constructed by the generator. */
   private static Stream<CacheEvent> generate(Generator generator, int items) {
     return IntStream.range(0, items).mapToObj(ignored ->
       new CacheEvent(0, Action.READ_OR_CREATE, generator.nextString().hashCode(), 0L));

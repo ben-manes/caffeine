@@ -149,7 +149,9 @@ abstract class AbstractSamplingPolicy extends UntypedActor
   /** Evicts while the map exceeds the maximum capacity. */
   private void evict() {
     if (free.isEmpty()) {
-      List<Node> sample = sampleStrategy.sample(table, sampleSize);
+      List<Node> sample = (policy == EvictionPolicy.RANDOM)
+          ? Arrays.asList(table)
+          : sampleStrategy.sample(table, sampleSize);
       Node victim = policy.select(sample);
       policyStats.recordEviction();
       removeFromTable(victim);
@@ -204,7 +206,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     SHUFFLE {
       @Override public <E> List<E> sample(E[] elements, int sampleSize) {
         List<E> sample = new ArrayList<>(Arrays.asList(elements));
-        Collections.shuffle(sample);
+        Collections.shuffle(sample, ThreadLocalRandom.current());
         return sample.subList(0, sampleSize);
       }
     };

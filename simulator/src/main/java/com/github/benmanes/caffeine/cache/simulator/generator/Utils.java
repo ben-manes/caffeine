@@ -23,7 +23,7 @@ import java.util.Random;
  *
  * @see https://github.com/brianfrankcooper/YCSB
  */
-public class Utils
+class Utils
 {
   private static final Random rand = new Random();
   private static final ThreadLocal<Random> rng = new ThreadLocal<Random>();

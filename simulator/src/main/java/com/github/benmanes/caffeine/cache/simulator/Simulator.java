@@ -62,7 +62,7 @@ public final class Simulator extends UntypedActor {
   @Override
   public void onReceive(Object msg) throws IOException {
     if (msg == Message.START) {
-      getEvents().forEach(event -> router.route(event, getSelf()));
+      events().forEach(event -> router.route(event, getSelf()));
       router.route(Message.DONE, getSelf());
     } else if (msg instanceof PolicyStats) {
       report.add((PolicyStats) msg);
@@ -73,23 +73,10 @@ public final class Simulator extends UntypedActor {
     }
   }
 
-  private Stream<CacheEvent> getEvents() throws IOException {
-    if (settings.isFile()) {
-      return LogReader.textLogStream(Files.newBufferedReader(settings.fileSource().path()));
-    }
-
-    int items = settings.synthetic().items();
-    switch (settings.synthetic().distribution()) {
-      case "counter":
-        return Synthetic.counter(items);
-      case "zipfian":
-        return Synthetic.zipfian(items);
-      case "scrambledZipfian":
-        return Synthetic.scrambledZipfian(items);
-      default:
-        throw new IllegalStateException("Unknown distribution: " +
-            settings.synthetic().distribution());
-    }
+  private Stream<CacheEvent> events() throws IOException {
+    return settings.isSynthetic()
+        ? Synthetic.generate(settings)
+        : LogReader.textLogStream(Files.newBufferedReader(settings.fileSource().path()));
   }
 
   private Router makeBroadcastingRouter() {
