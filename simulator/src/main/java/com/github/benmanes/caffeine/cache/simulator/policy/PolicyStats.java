@@ -15,8 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import com.google.common.base.Stopwatch;
 
 /**
+ * Statistics gathered by a policy execution.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class PolicyStats {
@@ -26,8 +29,15 @@ public final class PolicyStats {
   private int missCount;
   private int evictionCount;
 
+  private Stopwatch stopwatch;
+
   public PolicyStats(String name) {
+    this.stopwatch = Stopwatch.createUnstarted();
     this.name = name;
+  }
+
+  public Stopwatch stopwatch() {
+    return stopwatch;
   }
 
   public String name() {

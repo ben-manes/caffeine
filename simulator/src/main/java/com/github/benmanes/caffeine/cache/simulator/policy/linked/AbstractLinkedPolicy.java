@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.classic;
+package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -62,7 +62,9 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   @Override
   public void onReceive(Object msg) throws Exception {
     if (msg instanceof CacheEvent) {
+      policyStats.stopwatch().start();
       handleEvent((CacheEvent) msg);
+      policyStats.stopwatch().stop();
     } else if (msg == Message.DONE) {
       getSender().tell(policyStats, ActorRef.noSender());
       getContext().stop(getSelf());
@@ -165,6 +167,16 @@ abstract class AbstractLinkedPolicy extends UntypedActor
       }
     },
 
+    /** Evicts entries based on how recently they are used, with the most recent evicted first. */
+    MRU() {
+      @Override void onAccess(Node node) {
+        node.moveToHead();
+      }
+      @Override boolean onEvict(Node node) {
+        return true;
+      }
+    },
+
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     LRU() {
       @Override void onAccess(Node node) {
@@ -229,6 +241,22 @@ abstract class AbstractLinkedPolicy extends UntypedActor
     }
 
     /** Moves the node to the tail. */
+    public void moveToHead() {
+      if (isHead() || isUnlinked()) {
+        return;
+      }
+      // unlink
+      prev.next = next;
+      next.prev = prev;
+
+      // link
+      next = sentinel.next; // ordered for isHead()
+      prev = sentinel;
+      sentinel.next = this;
+      next.prev = this;
+    }
+
+    /** Moves the node to the tail. */
     public void moveToTail() {
       if (isTail() || isUnlinked()) {
         return;
@@ -247,6 +275,11 @@ abstract class AbstractLinkedPolicy extends UntypedActor
     /** Checks whether the node is linked on the list chain. */
     public boolean isUnlinked() {
       return (next == UNLINKED);
+    }
+
+    /** Checks whether the node is the first linked on the list chain. */
+    public boolean isHead() {
+      return (prev == sentinel);
     }
 
     /** Checks whether the node is the last linked on the list chain. */

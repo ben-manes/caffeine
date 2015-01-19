@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.classic;
+package com.github.benmanes.caffeine.cache.simulator.policy.sampling;
 
 /**
- * Implements a clock (fifo with second chance) cache based on linked nodes.
+ * Implements a most-frequently-used cache based on sampling the entries.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Clock extends AbstractLinkedPolicy {
+public final class Mfu extends AbstractSamplingPolicy {
 
-  public Clock(String name) {
-    super(name, EvictionPolicy.CLOCK);
+  public Mfu(String name) {
+    super(name, EvictionPolicy.MFU);
   }
 }

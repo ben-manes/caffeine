@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.report;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 
@@ -42,8 +43,9 @@ public final class TextReport {
   public void writeTo(PrintStream ps) {
     results.sort((first, second) -> first.name().compareTo(second.name()));
     for (PolicyStats policyStats : results) {
-      ps.printf("Policy: %s, hit rate: %.2f%%, evictions: %,d%n",
-          policyStats.name(), 100 * policyStats.hitRate(), policyStats.evictionCount());
+      ps.printf("Policy: %s, hit rate: %.2f%%, evictions: %,d, executionTime=%,dms%n",
+          policyStats.name(), 100 * policyStats.hitRate(), policyStats.evictionCount(),
+          policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS));
     }
   }
 }

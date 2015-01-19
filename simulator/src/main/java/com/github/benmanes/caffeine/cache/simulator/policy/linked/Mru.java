@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.classic;
+package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 /**
- * Implements a least-recently-used cache based on linked nodes.
+ * Implements a most-recently-used cache based on linked nodes.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Lru extends AbstractLinkedPolicy {
+public final class Mru extends AbstractLinkedPolicy {
 
-  public Lru(String name) {
-    super(name, EvictionPolicy.LRU);
+  public Mru(String name) {
+    super(name, EvictionPolicy.MRU);
   }
 }
