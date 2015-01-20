@@ -28,7 +28,6 @@ import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Method;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -45,21 +44,16 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
@@ -69,12 +63,11 @@ import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.github.benmanes.caffeine.cache.Caffeine.AsyncRemovalListener;
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
-import com.github.benmanes.caffeine.cache.Shared.AsMapView;
+import com.github.benmanes.caffeine.cache.Shared.AsyncLocalLoadingCache;
 import com.github.benmanes.caffeine.cache.Shared.LocalCache;
 import com.github.benmanes.caffeine.cache.Shared.LocalLoadingCache;
 import com.github.benmanes.caffeine.cache.Shared.LocalManualCache;
 import com.github.benmanes.caffeine.cache.Shared.WriteThroughEntry;
-import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
@@ -1151,7 +1144,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return computeIfAbsent(key, mappingFunction, false);
   }
 
-  V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
+  @Override
+  public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
       boolean isAsync) {
     requireNonNull(key);
     requireNonNull(mappingFunction);
@@ -2393,226 +2387,32 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /* ---------------- Async Loading Cache -------------- */
 
-  static final class LocalAsyncLoadingCache<K, V> implements AsyncLoadingCache<K, V>, Serializable {
-    static final Logger logger = Logger.getLogger(BoundedLocalLoadingCache.class.getName());
-
-    final BoundedLocalCache<K, CompletableFuture<V>> cache;
-    final CacheLoader<K, V> loader;
-    final boolean canBulkLoad;
+  static final class BoundedAsyncLocalLoadingCache<K, V>
+      extends AsyncLocalLoadingCache<BoundedLocalCache<K, CompletableFuture<V>>, K, V>
+      implements Serializable {
     final boolean isWeighted;
 
     transient LoadingCacheView localCacheView;
     transient Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
-    LocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      Caffeine<K, CompletableFuture<V>> futureBuilder = (Caffeine<K, CompletableFuture<V>>) builder;
-      CacheLoader<? super K, CompletableFuture<V>> asyncLoader =
-          key -> loader.asyncLoad(key, builder.getExecutor());
-      this.cache = new BoundedLocalCache<>(futureBuilder, asyncLoader, true);
-      this.loader = (CacheLoader<K, V>) loader;
-      this.canBulkLoad = canBulkLoad(loader);
+    BoundedAsyncLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+      super(new BoundedLocalCache<>((Caffeine<K, CompletableFuture<V>>) builder,
+          key -> loader.asyncLoad(key, builder.getExecutor()), true), loader);
       this.isWeighted = builder.isWeighted();
     }
 
-    static boolean canBulkLoad(CacheLoader<?, ?> loader) {
-      try {
-        Method loadAll = loader.getClass().getMethod(
-            "loadAll", Iterable.class);
-        Method asyncLoadAll = loader.getClass().getMethod(
-            "asyncLoadAll", Iterable.class, Executor.class);
-        return !loadAll.isDefault() || !asyncLoadAll.isDefault();
-      } catch (NoSuchMethodException | SecurityException e) {
-        logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
-        return false;
-      }
-    }
-
     @Override
-    public CompletableFuture<V> get(@Nonnull K key,
-        @Nonnull Function<? super K, ? extends V> mappingFunction) {
-      requireNonNull(mappingFunction);
-      return get(key, (k1, executor) -> CompletableFuture.<V>supplyAsync(
-          () -> mappingFunction.apply(key), executor));
-    }
-
-    @Override
-    public CompletableFuture<V> get(K key,
-        BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction) {
-      long now = cache.ticker.read();
-      @SuppressWarnings("unchecked")
-      CompletableFuture<V>[] result = new CompletableFuture[1];
-      CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
-        result[0] = mappingFunction.apply(key, cache.executor);
-        requireNonNull(result[0]);
-        return result[0];
-      }, true);
-      if (result[0] != null) {
-        result[0].whenComplete((value, error) -> {
-          long loadTime = cache.ticker.read() - now;
-          if (value == null) {
-            cache.statsCounter.recordLoadFailure(loadTime);
-            cache.remove(key, result[0]);
-          } else {
-            // update the weight and expiration timestamps
-            cache.replace(key, result[0], result[0]);
-            cache.statsCounter.recordLoadSuccess(loadTime);
-          }
-        });
+    protected Policy<K, V> policy() {
+      if (policy == null) {
+        @SuppressWarnings("unchecked")
+        BoundedLocalCache<K, V> castedCache = (BoundedLocalCache<K, V>) cache;
+        Function<CompletableFuture<V>, V> transformer = Shared::getIfReady;
+        @SuppressWarnings("unchecked")
+        Function<V, V> castedTransformer = (Function<V, V>) transformer;
+        policy = new BoundedPolicy<K, V>(castedCache, castedTransformer, isWeighted);
       }
-      return future;
-    }
-
-    @Override
-    public CompletableFuture<V> get(K key) {
-      return get(key, (k, executor) -> loader.asyncLoad(key, executor));
-    }
-
-    @Override
-    public CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys) {
-      if (canBulkLoad) {
-        return getAllBulk(keys);
-      }
-
-      Map<K, CompletableFuture<V>> result = new HashMap<>();
-      for (K key : keys) {
-        result.put(key, get(key));
-      }
-      return composeResult(result);
-    }
-
-    /** Computes all of the missing entries in a single {@link CacheLoader#asyncLoadAll} call. */
-    CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
-      Map<K, CompletableFuture<V>> futures = new HashMap<>();
-      Map<K, CompletableFuture<V>> proxies = new HashMap<>();
-      for (K key : keys) {
-        CompletableFuture<V> future = cache.get(key);
-        if (future == null) {
-          CompletableFuture<V> proxy = new CompletableFuture<>();
-          future = cache.putIfAbsent(key, proxy);
-          if (future == null) {
-            future = proxy;
-            proxies.put(key, proxy);
-          }
-        }
-        futures.put(key, future);
-      }
-      cache.statsCounter.recordMisses(proxies.size());
-      cache.statsCounter.recordHits(futures.size() - proxies.size());
-      if (proxies.isEmpty()) {
-        return composeResult(futures);
-      }
-
-      loader.asyncLoadAll(proxies.keySet(), cache.executor)
-          .whenComplete(new AsyncBulkCompleter(proxies));
-      return composeResult(futures);
-    }
-
-    /**
-     * Returns a future that waits for all of the dependent futures to complete and returns the
-     * combined mapping if successful. If any future fails then it is automatically removed from
-     * the cache if still present.
-     */
-    CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
-      if (futures.isEmpty()) {
-        return CompletableFuture.completedFuture(Collections.emptyMap());
-      }
-      CompletableFuture<?>[] array = futures.values().toArray(
-          new CompletableFuture[futures.size()]);
-      return CompletableFuture.allOf(array).thenApply(ignored -> {
-        Map<K, V> result = new HashMap<>(futures.size());
-        for (Entry<K, CompletableFuture<V>> entry : futures.entrySet()) {
-          V value = Shared.getWhenSuccessful(entry.getValue());
-          if (value != null) {
-            result.put(entry.getKey(), value);
-          }
-        }
-        return Collections.unmodifiableMap(result);
-      });
-    }
-
-    @Override
-    public void put(K key, CompletableFuture<V> valueFuture) {
-      if (valueFuture.isCompletedExceptionally()) {
-        cache.statsCounter.recordLoadFailure(0L);
-        cache.remove(key);
-        return;
-      }
-      long now = cache.ticker.read();
-      cache.put(key, valueFuture);
-      valueFuture.whenComplete((value, error) -> {
-        long loadTime = cache.ticker.read() - now;
-        if (value == null) {
-          cache.remove(key, valueFuture);
-          cache.statsCounter.recordLoadFailure(loadTime);
-        } else {
-          // update the weight and expiration timestamps
-          cache.replace(key, valueFuture, valueFuture);
-          cache.statsCounter.recordLoadSuccess(loadTime);
-        }
-      });
-    }
-
-    @Override
-    public LoadingCache<K, V> synchronous() {
-      return (localCacheView == null) ? (localCacheView = new LoadingCacheView()) : localCacheView;
-    }
-
-    /** A function executed asynchronously after a bulk load completes. */
-    final class AsyncBulkCompleter implements BiConsumer<Map<K, V>, Throwable> {
-      final Map<K, CompletableFuture<V>> proxies;
-      final long now;
-
-      AsyncBulkCompleter(Map<K, CompletableFuture<V>> proxies) {
-        this.now = cache.ticker.read();
-        this.proxies = proxies;
-      }
-
-      @Override
-      public void accept(Map<K, V> result, Throwable error) {
-        long loadTime = cache.ticker.read() - now;
-
-        if (result == null) {
-          if (error == null) {
-            error = new CompletionException("null map", null);
-          }
-          for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
-            cache.remove(entry.getKey(), entry.getValue());
-            entry.getValue().obtrudeException(error);
-          }
-          cache.statsCounter.recordLoadFailure(loadTime);
-        } else {
-          fillProxies(result);
-          addNewEntries(result);
-          cache.statsCounter.recordLoadSuccess(result.size());
-        }
-      }
-
-      /** Populates the proxies with the computed result. */
-      private void fillProxies(Map<K, V> result) {
-        for (Entry<K, CompletableFuture<V>> proxy : proxies.entrySet()) {
-          V value = result.get(proxy.getKey());
-          proxy.getValue().obtrudeValue(value);
-          if (value == null) {
-            cache.remove(proxy.getKey(), proxy.getValue());
-          } else {
-            // update the weight and expiration timestamps
-            cache.replace(proxy.getKey(), proxy.getValue(), proxy.getValue());
-          }
-        }
-      }
-
-      /** Adds to the cache any extra entries computed that were not requested. */
-      private void addNewEntries(Map<K, V> result) {
-        if (proxies.size() == result.size()) {
-          return;
-        }
-        for (Entry<K, V> entry : result.entrySet()) {
-          if (!proxies.containsKey(entry.getKey())) {
-            cache.put(entry.getKey(), CompletableFuture.completedFuture(entry.getValue()));
-          }
-        }
-      }
+      return policy;
     }
 
     /* ---------------- Serialization Support -------------- */
@@ -2647,7 +2447,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       final Ticker ticker;
 
       @SuppressWarnings("unchecked")
-      AsyncLoadingSerializationProxy(LocalAsyncLoadingCache<K, V> async) {
+      AsyncLoadingSerializationProxy(BoundedAsyncLocalLoadingCache<K, V> async) {
         weigher = (Weigher<K, V>) async.cache.weigher;
         keyStrategy = async.cache.keyStrategy;
         valueStrategy = async.cache.valueStrategy;
@@ -2702,194 +2502,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
       Object readResolve() {
         return recreateCaffeine().buildAsync(loader);
-      }
-    }
-
-    /* ---------------- Synchronous views -------------- */
-
-    final class LoadingCacheView implements LoadingCache<K, V>, Serializable {
-      private static final long serialVersionUID = 1L;
-
-      transient AsMapView<K, V> asMapView;
-
-      /** A test-only method for validation. */
-      LocalAsyncLoadingCache<K, V> getOuter() {
-        return LocalAsyncLoadingCache.this;
-      }
-
-      @Override
-      public V getIfPresent(Object key) {
-        CompletableFuture<V> future = cache.getIfPresent(key, false);
-        V value = Shared.getIfReady(future);
-        if (value == null) {
-          cache.statsCounter.recordMisses(1);
-        } else {
-          cache.statsCounter.recordHits(1);
-        }
-        return value;
-      }
-
-      @Override
-      public Map<K, V> getAllPresent(Iterable<?> keys) {
-        int hits = 0;
-        int misses = 0;
-        Map<K, V> result = new LinkedHashMap<>();
-        for (Object key : keys) {
-          CompletableFuture<V> future = cache.get(key);
-          V value = Shared.getIfReady(future);
-          if (value == null) {
-            misses++;
-          } else {
-            hits++;
-            @SuppressWarnings("unchecked")
-            K castKey = (K) key;
-            result.put(castKey, value);
-          }
-        }
-        cache.statsCounter.recordHits(hits);
-        cache.statsCounter.recordMisses(misses);
-        return Collections.unmodifiableMap(result);
-      }
-
-      @Override
-      public V get(K key, Function<? super K, ? extends V> mappingFunction) {
-        requireNonNull(mappingFunction);
-        CompletableFuture<V> future = LocalAsyncLoadingCache.this.get(key, (k, executor) ->
-            CompletableFuture.supplyAsync(() -> mappingFunction.apply(key), executor));
-        try {
-          return future.get();
-        } catch (ExecutionException e) {
-          if (e.getCause() instanceof RuntimeException) {
-            throw (RuntimeException) e.getCause();
-          } else if (e.getCause() instanceof Error) {
-            throw (Error) e.getCause();
-          }
-          throw new CompletionException(e.getCause());
-        } catch (InterruptedException e) {
-          throw new CompletionException(e);
-        }
-      }
-
-      @Override
-      public V get(K key) {
-        try {
-          return LocalAsyncLoadingCache.this.get(key).get();
-        } catch (ExecutionException e) {
-          if (e.getCause() instanceof RuntimeException) {
-            throw (RuntimeException) e.getCause();
-          } else if (e.getCause() instanceof Error) {
-            throw (Error) e.getCause();
-          }
-          throw new CompletionException(e.getCause());
-        } catch (InterruptedException e) {
-          throw new CompletionException(e);
-        }
-      }
-
-      @Override
-      public Map<K, V> getAll(Iterable<? extends K> keys) {
-        try {
-          return LocalAsyncLoadingCache.this.getAll(keys).get();
-        } catch (ExecutionException e) {
-          if (e.getCause() instanceof RuntimeException) {
-            throw (RuntimeException) e.getCause();
-          } else if (e.getCause() instanceof Error) {
-            throw (Error) e.getCause();
-          }
-          throw new CompletionException(e.getCause());
-        } catch (InterruptedException e) {
-          throw new CompletionException(e);
-        }
-      }
-
-      @Override
-      public void put(K key, V value) {
-        requireNonNull(value);
-        cache.put(key, CompletableFuture.completedFuture(value));
-      }
-
-      @Override
-      public void putAll(Map<? extends K, ? extends V> map) {
-        for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
-          put(entry.getKey(), entry.getValue());
-        }
-      }
-
-      @Override
-      public void invalidate(Object key) {
-        cache.remove(key);
-      }
-
-      @Override
-      public void invalidateAll(Iterable<?> keys) {
-        for (Object key : keys) {
-          cache.remove(key);
-        }
-      }
-
-      @Override
-      public void invalidateAll() {
-        cache.clear();
-      }
-
-      @Override
-      public long estimatedSize() {
-        return cache.size();
-      }
-
-      @Override
-      public CacheStats stats() {
-        return cache.statsCounter.snapshot();
-      }
-
-      @Override
-      public void cleanUp() {
-        cache.cleanUp();
-      }
-
-      @Override
-      public void refresh(K key) {
-        requireNonNull(key);
-
-        BiFunction<K, CompletableFuture<V>, CompletableFuture<V>> refreshFunction =
-            (k, oldValueFuture) -> {
-              V oldValue = null;
-              try {
-                oldValue = (oldValueFuture == null) ? null : oldValueFuture.get();
-              } catch (InterruptedException e) {
-                throw new CompletionException(e);
-              } catch (ExecutionException e) {}
-              V newValue = (oldValue == null) ? loader.load(key) : loader.reload(key, oldValue);
-              return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
-            };
-        cache.executor.execute(() -> {
-          try {
-            cache.compute(key, refreshFunction, false, false);
-          } catch (Throwable t) {
-            logger.log(Level.WARNING, "Exception thrown during refresh", t);
-          }
-        });
-      }
-
-      @Override
-      public Policy<K, V> policy() {
-        if (policy == null) {
-          @SuppressWarnings("unchecked")
-          BoundedLocalCache<K, V> castedCache = (BoundedLocalCache<K, V>) cache;
-          Function<CompletableFuture<V>, V> transformer = Shared::getIfReady;
-          @SuppressWarnings("unchecked")
-          Function<V, V> castedTransformer = (Function<V, V>) transformer;
-          policy = new BoundedPolicy<K, V>(castedCache, castedTransformer, isWeighted);
-        }
-        return policy;
-      }
-
-      @Override
-      public ConcurrentMap<K, V> asMap() {
-        if (asMapView == null) {
-          asMapView = new Shared.AsMapView<K, V>(cache, cache.statsCounter, cache.ticker);
-        }
-        return asMapView;
       }
     }
   }
