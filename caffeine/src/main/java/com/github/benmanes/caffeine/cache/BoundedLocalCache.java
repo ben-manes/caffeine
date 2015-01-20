@@ -63,11 +63,6 @@ import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.github.benmanes.caffeine.cache.Caffeine.AsyncRemovalListener;
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
-import com.github.benmanes.caffeine.cache.Shared.AsyncLocalLoadingCache;
-import com.github.benmanes.caffeine.cache.Shared.LocalCache;
-import com.github.benmanes.caffeine.cache.Shared.LocalLoadingCache;
-import com.github.benmanes.caffeine.cache.Shared.LocalManualCache;
-import com.github.benmanes.caffeine.cache.Shared.WriteThroughEntry;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
@@ -1140,11 +1135,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   @Override
-  public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-    return computeIfAbsent(key, mappingFunction, false);
-  }
-
-  @Override
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
       boolean isAsync) {
     requireNonNull(key);
@@ -1244,11 +1234,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       afterWrite(node, task[0]);
     }
     return (weightedValue[0] == null) ? null : weightedValue[0].getValue(valueStrategy);
-  }
-
-  @Override
-  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-    return compute(key, remappingFunction, false, false);
   }
 
   @Override
@@ -2407,7 +2392,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       if (policy == null) {
         @SuppressWarnings("unchecked")
         BoundedLocalCache<K, V> castedCache = (BoundedLocalCache<K, V>) cache;
-        Function<CompletableFuture<V>, V> transformer = Shared::getIfReady;
+        Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         Function<V, V> castedTransformer = (Function<V, V>) transformer;
         policy = new BoundedPolicy<K, V>(castedCache, castedTransformer, isWeighted);

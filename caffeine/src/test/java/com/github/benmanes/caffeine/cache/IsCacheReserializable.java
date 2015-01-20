@@ -26,7 +26,6 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.Caffeine.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.Caffeine.BoundedWeigher;
-import com.github.benmanes.caffeine.cache.Shared.AsyncLocalLoadingCache;
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 import com.google.common.testing.SerializableTester;
 
@@ -148,7 +147,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
 
   private static <K, V> void checkUnboundedLocalCache(UnboundedLocalCache<K, V> original,
       UnboundedLocalCache<K, V> copy, DescriptionBuilder desc) {
-    desc.expectThat("estimated empty", copy.mappingCount(), is(0L));
+    desc.expectThat("estimated empty", copy.estimatedSize(), is(0L));
     desc.expectThat("same ticker", copy.ticker, is(original.ticker));
     desc.expectThat("same isRecordingStats",
         copy.isRecordingStats, is(original.isRecordingStats));

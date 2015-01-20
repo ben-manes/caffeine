@@ -22,7 +22,6 @@ import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedAsyncLocalLoadingCache;
-import com.github.benmanes.caffeine.cache.Shared.AsyncLocalLoadingCache;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedAsyncLocalLoadingCache;
 
 /**

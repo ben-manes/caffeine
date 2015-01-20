@@ -39,10 +39,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.github.benmanes.caffeine.cache.Shared.AsyncLocalLoadingCache;
-import com.github.benmanes.caffeine.cache.Shared.LocalCache;
-import com.github.benmanes.caffeine.cache.Shared.LocalLoadingCache;
-import com.github.benmanes.caffeine.cache.Shared.LocalManualCache;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
@@ -90,7 +86,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public long mappingCount() {
+  public long estimatedSize() {
     return data.mappingCount();
   }
 
@@ -200,11 +196,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-    return computeIfAbsent(key, mappingFunction, false);
-  }
-
-  @Override
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
       boolean isAsync) {
     requireNonNull(mappingFunction);
@@ -260,11 +251,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       notifyRemoval(notification[0]);
     }
     return nv;
-  }
-
-  @Override
-  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-    return compute(key, remappingFunction, false, false);
   }
 
   @Override
@@ -747,7 +733,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public Entry<K, V> next() {
       entry = iterator.next();
-      return new Shared.WriteThroughEntry<K, V>(local, entry.getKey(), entry.getValue());
+      return new WriteThroughEntry<K, V>(local, entry.getKey(), entry.getValue());
     }
 
     @Override

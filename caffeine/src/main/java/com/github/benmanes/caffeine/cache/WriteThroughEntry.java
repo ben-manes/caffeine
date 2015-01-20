@@ -1,0 +1,53 @@
+/*
+ * Copyright 2015 Ben Manes. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.github.benmanes.caffeine.cache;
+
+import static java.util.Objects.requireNonNull;
+
+import java.util.AbstractMap.SimpleEntry;
+import java.util.concurrent.ConcurrentMap;
+
+/**
+ * An entry that allows updates to write through to the backing map.
+ *
+ * @author ben.manes@gmail.com (Ben Manes)
+ */
+final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
+  static final long serialVersionUID = 1;
+
+  final ConcurrentMap<K, V> map;
+
+  WriteThroughEntry(ConcurrentMap<K, V> map, K key, V value) {
+    super(key, value);
+    this.map = requireNonNull(map);
+  }
+
+  @Override
+  public V setValue(V value) {
+    map.put(getKey(), value);
+    return super.setValue(value);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    // suppress Findbugs warning
+    return super.equals(o);
+  }
+
+  Object writeReplace() {
+    return new SimpleEntry<K, V>(this);
+  }
+}
