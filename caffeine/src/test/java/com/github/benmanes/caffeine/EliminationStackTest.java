@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine;
 
 import static com.google.common.collect.Iterators.elementsEqual;
-import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
@@ -229,11 +228,11 @@ public final class EliminationStackTest {
         }
       }
     }).start();
-    await().untilTrue(started);
+    Awaits.await().untilTrue(started);
 
     try {
       final AtomicReference<String> found = new AtomicReference<>();
-      await().until(() -> {
+      Awaits.await().until(() -> {
         found.set(stack.awaitMatch(startIndex));
         return (found.get() != null);
       });
@@ -257,11 +256,11 @@ public final class EliminationStackTest {
         }
       }
     }).start();
-    await().untilTrue(started);
+    Awaits.await().untilTrue(started);
 
     try {
       final AtomicReference<String> found = new AtomicReference<>();
-      await().until(() -> {
+      Awaits.await().until(() -> {
         found.set(stack.awaitMatch(startIndex));
         return (found.get() != null);
       });
@@ -285,11 +284,11 @@ public final class EliminationStackTest {
         }
       }
     }).start();
-    await().untilTrue(started);
+    Awaits.await().untilTrue(started);
 
     try {
       final AtomicReference<String> found = new AtomicReference<>();
-      await().until(() -> {
+      Awaits.await().until(() -> {
         found.set(stack.scanAndMatch(startIndex));
         return (found.get() != null);
       });

@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.locks;
 
-import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
@@ -29,6 +28,7 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.Awaits;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -73,14 +73,14 @@ public final class NonReentrantLockTest {
     Thread testThread = Thread.currentThread();
     Thread thread = new Thread(() -> {
       lock.lock();
-      await().until(() -> lock.hasQueuedThreads());
+      Awaits.await().until(() -> lock.hasQueuedThreads());
       assertThat(lock.getQueueLength(), is(1));
       assertThat(lock.getQueuedThreads(), contains(testThread));
       assertThat(lock.hasQueuedThread(testThread), is(true));
       lock.unlock();
     });
     thread.start();
-    await().until(() -> lock.isLocked());
+    Awaits.await().until(() -> lock.isLocked());
     assertThat(lock.tryLock(), is(false));
     lock.lock();
     lock.unlock();
@@ -121,7 +121,7 @@ public final class NonReentrantLockTest {
       condition.awaitUninterruptibly();
     });
     thread.start();
-    await().untilTrue(ready);
+    Awaits.await().untilTrue(ready);
     lock.lock();
 
     assertThat(lock.hasWaiters(condition), is(true));

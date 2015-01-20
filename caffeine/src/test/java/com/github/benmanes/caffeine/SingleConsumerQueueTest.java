@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine;
 import static com.github.benmanes.caffeine.IsValidSingleConsumerQueue.validate;
 import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
 import static com.google.common.collect.Iterators.elementsEqual;
-import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.emptyArray;
@@ -420,7 +419,7 @@ public class SingleConsumerQueueTest {
 
     Thread producer = new Thread(() -> {
       started.incrementAndGet();
-      await().untilAtomic(started, is(2));
+      Awaits.await().untilAtomic(started, is(2));
       for (int i = 0; i < POPULATED_SIZE; i++) {
         queue.add(i);
       }
@@ -428,7 +427,7 @@ public class SingleConsumerQueueTest {
     });
     Thread consumer = new Thread(() -> {
       started.incrementAndGet();
-      await().untilAtomic(started, is(2));
+      Awaits.await().untilAtomic(started, is(2));
       for (int i = 0; i < POPULATED_SIZE; i++) {
         while (queue.poll() == null) {}
       }
@@ -437,7 +436,7 @@ public class SingleConsumerQueueTest {
 
     producer.start();
     consumer.start();
-    await().untilAtomic(finished, is(2));
+    Awaits.await().untilAtomic(finished, is(2));
     assertThat(queue, is(deeplyEmpty()));
   }
 
@@ -459,7 +458,7 @@ public class SingleConsumerQueueTest {
 
     Thread consumer = new Thread(() -> {
       started.incrementAndGet();
-      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
+      Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < (NUM_PRODUCERS * POPULATED_SIZE); i++) {
         while (queue.poll() == null) {}
       }
@@ -469,14 +468,14 @@ public class SingleConsumerQueueTest {
 
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       started.incrementAndGet();
-      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
+      Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < POPULATED_SIZE; i++) {
         queue.add(i);
       }
       finished.incrementAndGet();
     });
 
-    await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
+    Awaits.await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
     assertThat(queue, is(deeplyEmpty()));
   }
 

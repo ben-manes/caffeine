@@ -29,13 +29,13 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.Awaits;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
@@ -51,7 +51,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import com.google.common.collect.Lists;
-import com.jayway.awaitility.Awaitility;
 
 /**
  * The test cases for the implementation details of {@link BoundedLocalCache}.
@@ -103,10 +102,7 @@ public final class BoundedLocalCacheTest {
         localCache.put(newKey, -newKey);
         assertThat(localCache.remove(oldKey), is(-oldKey));
       }).start();
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().until(() -> localCache.containsKey(oldKey), is(false));
+      Awaits.await().until(() -> localCache.containsKey(oldKey), is(false));
       checkStatus(localCache, node, Status.RETIRED);
       localCache.drainBuffers();
 
@@ -351,10 +347,7 @@ public final class BoundedLocalCacheTest {
     localCache.evictionLock.lock();
     try {
       thread.start();
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .untilTrue(done);
+      Awaits.await().untilTrue(done);
     } finally {
       localCache.evictionLock.unlock();
     }
@@ -395,16 +388,10 @@ public final class BoundedLocalCacheTest {
         task.run();
         done.set(true);
       });
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .until(() -> lock.hasQueuedThreads());
+      Awaits.await().until(() -> lock.hasQueuedThreads());
     } finally {
       lock.unlock();
     }
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .untilTrue(done);
+    Awaits.await().untilTrue(done);
   }
 }

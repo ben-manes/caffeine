@@ -31,13 +31,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.Awaits;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
@@ -55,7 +55,6 @@ import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemo
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.jayway.awaitility.Awaitility;
 
 /**
  * The test cases for caches with a page replacement algorithm.
@@ -187,10 +186,7 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = CompletableFuture.supplyAsync(() -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(ready);
+      Awaits.await().untilTrue(ready);
       return 6;
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
@@ -202,10 +198,7 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(3L));
 
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
     assertThat(eviction.weightedSize().get(), is(10L));
     assertThat(cache.synchronous().estimatedSize(), is(2L));
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
@@ -220,10 +213,7 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<List<Integer>> valueFuture = CompletableFuture.supplyAsync(() -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(ready);
+      Awaits.await().untilTrue(ready);
       return ImmutableList.of(1, 2, 3, 4, 5);
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
@@ -233,10 +223,7 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
     assertThat(eviction.weightedSize().get(), is(0L));
     assertThat(cache.synchronous().estimatedSize(), is(0L));
   }
@@ -301,10 +288,7 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<List<Integer>> valueFuture = CompletableFuture.supplyAsync(() -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(ready);
+      Awaits.await().untilTrue(ready);
       return ImmutableList.of(1, 2, 3, 4, 5);
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
@@ -314,10 +298,7 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
     assertThat(eviction.weightedSize().get(), is(5L));
     assertThat(cache.synchronous().estimatedSize(), is(1L));
   }

@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -43,6 +42,7 @@ import java.util.function.Function;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.Awaits;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -54,7 +54,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.jayway.awaitility.Awaitility;
 
 /**
  * The test cases for the {@link AsyncLoadingCache} interface that simulate the most generic usages.
@@ -122,19 +121,13 @@ public final class AsyncLoadingCacheTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(ready);
+      Awaits.await().untilTrue(ready);
       return null;
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -166,19 +159,13 @@ public final class AsyncLoadingCacheTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(ready);
+      Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -194,19 +181,13 @@ public final class AsyncLoadingCacheTest {
     Integer key = context.absentKey();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().until(() -> done.get());
+      Awaits.await().until(() -> done.get());
       return null;
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
     valueFuture.cancel(true);
 
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -316,10 +297,7 @@ public final class AsyncLoadingCacheTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(ready);
+      Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
     failedFuture.whenComplete((r, e) -> done.set(true));
@@ -327,10 +305,7 @@ public final class AsyncLoadingCacheTest {
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -345,10 +320,7 @@ public final class AsyncLoadingCacheTest {
       CacheContext context) {
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(done);
+      Awaits.await().untilTrue(done);
       return null;
     });
     failedFuture.whenComplete((r, e) -> done.set(true));
@@ -356,10 +328,7 @@ public final class AsyncLoadingCacheTest {
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
     valueFuture.cancel(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -428,10 +397,7 @@ public final class AsyncLoadingCacheTest {
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -602,10 +568,7 @@ public final class AsyncLoadingCacheTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(ready);
+      Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
     failedFuture.whenComplete((r, e) -> done.set(true));
@@ -613,10 +576,7 @@ public final class AsyncLoadingCacheTest {
     Integer key = context.absentKey();
     cache.put(key, failedFuture);
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -642,10 +602,7 @@ public final class AsyncLoadingCacheTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
-      Awaitility.with()
-          .pollDelay(1, TimeUnit.MILLISECONDS).and()
-          .pollInterval(1, TimeUnit.MILLISECONDS)
-          .await().untilTrue(ready);
+      Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
     failedFuture.whenComplete((r, e) -> done.set(true));
@@ -658,10 +615,7 @@ public final class AsyncLoadingCacheTest {
 
     cache.put(key, successFuture);
     ready.set(true);
-    Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .await().untilTrue(done);
+    Awaits.await().untilTrue(done);
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(1)));
