@@ -815,7 +815,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    * @return the number of mappings
    */
   @Override
-  public long mappingCount() {
+  public long estimatedSize() {
     return data.mappingCount();
   }
 

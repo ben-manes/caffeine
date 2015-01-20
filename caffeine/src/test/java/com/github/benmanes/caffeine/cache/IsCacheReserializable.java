@@ -208,7 +208,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
 
   private static <K, V> void checkBoundedLocalCache(BoundedLocalCache<K, V> original,
       BoundedLocalCache<K, V> copy, DescriptionBuilder desc) {
-    desc.expectThat("empty", copy.mappingCount(), is(0L));
+    desc.expectThat("empty", copy.estimatedSize(), is(0L));
     desc.expectThat("same weigher",
         unwrapWeigher(copy.weigher).getClass(), is(equalTo(
         unwrapWeigher(original.weigher).getClass())));

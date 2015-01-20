@@ -21,6 +21,8 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -34,46 +36,75 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  */
 interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
-  RemovalListener<K, V> removalListener();
-  StatsCounter statsCounter();
+  /** Returns whether this cache has statistics enabled. */
   boolean isRecordingStats();
+
+  /** Returns the {@link StatsCounter} used by this cache. */
+  @Nonnull
+  StatsCounter statsCounter();
+
+  /** Returns the {@link RemovalListener} used by this cache or <tt>null</tt> if not used. */
+  @Nullable
+  RemovalListener<K, V> removalListener();
+
+  /** Returns the {@link Executor} used by this cache. */
+  @Nonnull
   Executor executor();
+
+  /** Returns the {@link Ticker} used by this cache. */
+  @Nonnull
   Ticker ticker();
 
-  /**
-   * Returns the approximate number of entries in this cache. The value returned is an estimate; the
-   * actual count may differ if there are concurrent insertions or removals, or if some entries are
-   * pending removal due to expiration or soft/weak reference collection.
-   *
-   * @return the estimated number of mappings
-   */
+  /** See {@link Cache#estimatedSize()}. */
+  @Nonnegative
   long estimatedSize();
 
-  @Nullable V getIfPresent(Object key, boolean recordStats);
+  /**
+   * See {@link Cache#getIfPresent(Object)}. This method differs by accepting a parameter of whether
+   * to record the hit and miss statistics based on the success of this operation.
+   */
+  @Nullable
+  V getIfPresent(@Nonnull Object key, boolean recordStats);
 
-  Map<K, V> getAllPresent(Iterable<?> keys);
+  /** See {@link Cache#getAllPresent}. */
+  @Nonnull
+  Map<K, V> getAllPresent(@Nonnull Iterable<?> keys);
 
+  /** See {@link ConcurrentMap#compute}. */
   @Override
   default V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     return compute(key, remappingFunction, false, false);
   }
 
+  /**
+   * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
+   * whether to record a miss statistic based on the success of this operation, and further
+   * qualified by whether the operation was called by an asynchronous cache.
+   */
   V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       boolean recordMiss, boolean isAsync);
 
+  /** See {@link ConcurrentMap#computeIfAbsent}. */
   @Override
   default V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
     return computeIfAbsent(key, mappingFunction, false);
   }
 
+  /**
+   * See {@link ConcurrentMap#computeIfAbsent}. This method differs by accepting parameters
+   * indicating whether to record a miss statistic based on the success of this operation, and
+   * further qualified by whether the operation was called by an asynchronous cache.
+   */
   V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
       boolean isAsync);
 
-  void cleanUp();
-
+  /** See {@link Cache#invalidateAll(Iterable)}. */
   default void invalidateAll(Iterable<?> keys) {
     for (Object key : keys) {
       remove(key);
     }
   }
+
+  /** See {@link Cache#cleanUp}. */
+  void cleanUp();
 }

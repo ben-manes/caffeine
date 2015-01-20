@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -143,6 +144,7 @@ public interface Cache<K, V> {
    *
    * @return the estimated number of mappings
    */
+  @Nonnegative
   long estimatedSize();
 
   /**

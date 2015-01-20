@@ -42,7 +42,7 @@ import com.lmax.disruptor.util.DaemonThreadFactory;
 public final class AsyncTracer implements Tracer {
   public static final String TRACING_FILE = "caffeine.tracing.file";
   public static final String TRACING_FORMAT = "caffeine.tracing.format";
-  public static final String TRACING_BUFFER_SIZE = "caffeine.tracing.ringBuffer";
+  public static final String TRACING_BUFFER_SIZE = "caffeine.tracing.bufferSize";
 
   private final EventTranslatorThreeArg<CacheEvent, Integer, Action, Object> translator;
   private final Disruptor<CacheEvent> disruptor;
@@ -111,10 +111,12 @@ public final class AsyncTracer implements Tracer {
     publish(0, Action.DELETE, o);
   }
 
+  /** Publishes the event onto the ringbuffer for asynchronous handling. */
   private void publish(int id, Action action, Object o) {
     disruptor.getRingBuffer().publishEvent(translator, id, action, o);
   }
 
+  /** Returns the event handler, either the default or specified by a system property. */
   private static LogEventHandler eventHandler() {
     String property = System.getProperty(TRACING_FORMAT, "text").toLowerCase();
     if (property.equals("text")) {
@@ -125,11 +127,13 @@ public final class AsyncTracer implements Tracer {
     throw new IllegalStateException("Unknown format:" + property);
   }
 
+  /** Returns the log file path, either the default or specified by a system property. */
   private static Path filePath() {
     String property = System.getProperty(TRACING_FILE, "caffeine.log");
     return Paths.get(property);
   }
 
+  /** Returns the ring buffer size, either the default or specified by a system property. */
   private static int ringBufferSize() {
     String property = System.getProperty(TRACING_BUFFER_SIZE, "256");
     return Integer.parseInt(property);

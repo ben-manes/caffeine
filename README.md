@@ -7,8 +7,9 @@
 
 Concurrent data-structures for Java 8.
 
-This project is in **early development** and released under the
-[Apache License](http://www.apache.org/licenses/LICENSE-2.0).
+This project is in stable, feature complete, and well tested. There is no release yet as focus
+shifts to performance, code readability, and iterations based on external reviews. Feedback on
+API design, missing features, or implementation code is welcome and appreciated.
 
 ## Collections
 
@@ -19,7 +20,7 @@ semantics.
 #### [SingleConsumerQueue](caffeine/src/main/java/com/github/benmanes/caffeine/SingleConsumerQueue.java)
 A lock-free queue that supports concurrent producers and is restricted to a single consumer. This
 implementation employs a combining backoff arena, the inverse of elimination, to reduce contention
-caused by multiple producers.
+caused by multiple producers. (TBD: combining arena not yet implemented)
 
 ## Caching
 
