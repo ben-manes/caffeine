@@ -64,6 +64,9 @@ public final class CacheEventTest {
     assertThat(first.action(), is(second.action()));
     assertThat(first.hash(), is(second.hash()));
     assertThat(first, is(equalTo(second)));
+    assertThat(first.toString(), is(second.toString()));
     assertThat(first.hashCode(), is(second.hashCode()));
+    assertThat(first.equals(new Object()), is(false));
+    assertThat(first.equals(first), is(true));
   }
 }

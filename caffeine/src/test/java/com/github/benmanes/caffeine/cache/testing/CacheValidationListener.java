@@ -27,6 +27,7 @@ import static org.hamcrest.Matchers.is;
 
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Objects;
 
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
@@ -40,7 +41,7 @@ import com.github.benmanes.caffeine.cache.Cache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class CacheValidationListener implements IInvokedMethodListener {
+public final class CacheValidationListener implements IInvokedMethodListener {
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
@@ -82,7 +83,7 @@ public class CacheValidationListener implements IInvokedMethodListener {
   /** Free memory by clearing unused resources after test execution. */
   private void cleanUp(ITestResult testResult) {
     for (int i = 0; i < testResult.getParameters().length; i++) {
-      testResult.getParameters()[i] = testResult.getParameters()[i].toString();
+      testResult.getParameters()[i] = Objects.toString(testResult.getParameters()[i]);
     }
     CacheSpec.interner.remove();
   }
