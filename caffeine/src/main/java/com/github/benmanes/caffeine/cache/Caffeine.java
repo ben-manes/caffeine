@@ -665,8 +665,8 @@ public final class Caffeine<K, V> {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
     return isBounded() || refreshes()
-        ? new BoundedLocalCache.LocalManualCache<K1, V1>(self)
-        : new UnboundedLocalCache.LocalManualCache<K1, V1>(self);
+        ? new BoundedLocalCache.BoundedLocalManualCache<K1, V1>(self)
+        : new UnboundedLocalCache.UnboundedLocalManualCache<K1, V1>(self);
   }
 
   /**

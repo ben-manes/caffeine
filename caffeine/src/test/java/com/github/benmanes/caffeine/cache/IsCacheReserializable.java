@@ -102,9 +102,9 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
 
   private static <K, V> void checkIfUnbounded(
       Cache<K, V> original, Cache<K, V> copy, DescriptionBuilder desc) {
-    if (original instanceof UnboundedLocalCache.LocalManualCache<?, ?>) {
-      checkUnoundedLocalManualCache((UnboundedLocalCache.LocalManualCache<K, V>) original,
-          (UnboundedLocalCache.LocalManualCache<K, V>) copy, desc);
+    if (original instanceof UnboundedLocalCache.UnboundedLocalManualCache<?, ?>) {
+      checkUnoundedLocalManualCache((UnboundedLocalCache.UnboundedLocalManualCache<K, V>) original,
+          (UnboundedLocalCache.UnboundedLocalManualCache<K, V>) copy, desc);
     }
     if (original instanceof UnboundedLocalCache.LocalLoadingCache<?, ?>) {
       checkUnboundedLocalLoadingCache((UnboundedLocalCache.LocalLoadingCache<K, V>) original,
@@ -119,8 +119,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
   }
 
   private static <K, V> void checkUnoundedLocalManualCache(
-      UnboundedLocalCache.LocalManualCache<K, V> original,
-      UnboundedLocalCache.LocalManualCache<K, V> copy, DescriptionBuilder desc) {
+      UnboundedLocalCache.UnboundedLocalManualCache<K, V> original,
+      UnboundedLocalCache.UnboundedLocalManualCache<K, V> copy, DescriptionBuilder desc) {
     checkUnboundedLocalCache(original.cache, copy.cache, desc);
   }
 
@@ -156,9 +156,9 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
 
   private static <K, V> void checkIfBounded(
       Cache<K, V> original, Cache<K, V> copy, DescriptionBuilder desc) {
-    if (original instanceof BoundedLocalCache.LocalManualCache<?, ?>) {
-      checkBoundedLocalManualCache((BoundedLocalCache.LocalManualCache<K, V>) original,
-          (BoundedLocalCache.LocalManualCache<K, V>) copy, desc);
+    if (original instanceof BoundedLocalCache.BoundedLocalManualCache<?, ?>) {
+      checkBoundedLocalManualCache((BoundedLocalCache.BoundedLocalManualCache<K, V>) original,
+          (BoundedLocalCache.BoundedLocalManualCache<K, V>) copy, desc);
     }
     if (original instanceof BoundedLocalCache.LocalLoadingCache<?, ?>) {
       checkBoundedLocalLoadingCache((BoundedLocalCache.LocalLoadingCache<K, V>) original,
@@ -173,8 +173,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
   }
 
   private static <K, V> void checkBoundedLocalManualCache(
-      BoundedLocalCache.LocalManualCache<K, V> original,
-      BoundedLocalCache.LocalManualCache<K, V> copy, DescriptionBuilder desc) {
+      BoundedLocalCache.BoundedLocalManualCache<K, V> original,
+      BoundedLocalCache.BoundedLocalManualCache<K, V> copy, DescriptionBuilder desc) {
     checkBoundedLocalCache(original.cache, copy.cache, desc);
   }
 

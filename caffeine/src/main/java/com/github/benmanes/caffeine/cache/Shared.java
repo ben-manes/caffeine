@@ -23,16 +23,19 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
@@ -44,16 +47,17 @@ final class Shared {
 
   private Shared() {}
 
+  /** Returns if the future has successfully completed. */
   static boolean isReady(@Nullable CompletableFuture<?> future) {
     return (future != null) && future.isDone() && !future.isCompletedExceptionally();
   }
 
-  /** Retrieves the current value or null if either not done or failed. */
+  /** Returns the current value or null if either not done or failed. */
   static <V> V getIfReady(@Nullable CompletableFuture<V> future) {
     return isReady(future) ? future.join() : null;
   }
 
-  /** Retrieves the value when done successfully or null if failed. */
+  /** Returns the value when done successfully or null if failed. */
   static <V> V getWhenSuccessful(@Nullable CompletableFuture<V> future) {
     try {
       return (future == null) ? null : future.get();
@@ -62,49 +66,109 @@ final class Shared {
     }
   }
 
-  /** An entry that allows updates to write through to the cache. */
-  static final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
-    static final long serialVersionUID = 1;
+  interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
-    transient final ConcurrentMap<K, V> map;
+    long mappingCount();
 
-    WriteThroughEntry(ConcurrentMap<K, V> map, K key, V value) {
-      super(key, value);
-      this.map = requireNonNull(map);
-    }
-
-    @Override
-    public V setValue(V value) {
-      map.put(getKey(), value);
-      return super.setValue(value);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      // suppress Findbugs warning
-      return super.equals(o);
-    }
-
-    Object writeReplace() {
-      return new SimpleEntry<K, V>(this);
-    }
-  }
-
-  interface StatsAwareConcurrentMap<K, V> extends ConcurrentMap<K, V> {
     V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
         boolean recordMiss, boolean isAsync);
+
+    void cleanUp();
+
+    @Nullable V getIfPresent(Object key, boolean recordStats);
+
+    Map<K, V> getAllPresent(Iterable<?> keys);
+
+    RemovalListener<K, V> removalListener();
+    StatsCounter statsCounter();
+    boolean isRecordingStats();
+    Ticker ticker();
+
+    Executor executor();
   }
 
-  /** A synchronous map view for an asynchronous cache. */
+  /* ---------------- Manual Cache -------------- */
+
+  interface LocalManualCache<C extends LocalCache<K, V>, K, V>
+      extends Cache<K, V> {
+
+    @Override
+    default long estimatedSize() {
+      return cache().mappingCount();
+    }
+
+    @Override
+    default void cleanUp() {
+      cache().cleanUp();
+    }
+
+    @Override
+    default @Nullable V getIfPresent(Object key) {
+      return cache().getIfPresent(key, true);
+    }
+
+    @Override
+    default V get(K key, Function<? super K, ? extends V> mappingFunction) {
+      return cache().computeIfAbsent(key, mappingFunction);
+    }
+
+    @Override
+    default Map<K, V> getAllPresent(Iterable<?> keys) {
+      return cache().getAllPresent(keys);
+    }
+
+    @Override
+    default void put(K key, V value) {
+      cache().put(key, value);
+    }
+
+    @Override
+    default void putAll(Map<? extends K, ? extends V> map) {
+      cache().putAll(map);
+    }
+
+    @Override
+    default void invalidate(Object key) {
+      requireNonNull(key);
+      cache().remove(key);
+    }
+
+    @Override
+    default void invalidateAll() {
+      cache().clear();
+    }
+
+    @Override
+    default void invalidateAll(Iterable<?> keys) {
+      for (Object key : keys) {
+        cache().remove(key);
+      }
+    }
+
+    @Override
+    default CacheStats stats() {
+      return cache().statsCounter().snapshot();
+    }
+
+    @Override
+    default ConcurrentMap<K, V> asMap() {
+      return cache();
+    }
+
+    C cache();
+  }
+
+  /* ---------------- asynchronous AsMap view -------------- */
+
   static final class AsMapView<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
-    final StatsAwareConcurrentMap<K, CompletableFuture<V>> delegate;
+    final LocalCache<K, CompletableFuture<V>> delegate;
     final StatsCounter statsCounter;
     final Ticker ticker;
 
     Collection<V> values;
     Set<Entry<K, V>> entries;
 
-    AsMapView(StatsAwareConcurrentMap<K, CompletableFuture<V>> delegate,
+    AsMapView(LocalCache<K, CompletableFuture<V>> delegate,
         StatsCounter statsCounter, Ticker ticker) {
       this.statsCounter = statsCounter;
       this.delegate = delegate;
@@ -406,6 +470,34 @@ final class Shared {
           }
         };
       }
+    }
+  }
+
+  /** An entry that allows updates to write through to the cache. */
+  static final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
+    static final long serialVersionUID = 1;
+
+    transient final ConcurrentMap<K, V> map;
+
+    WriteThroughEntry(ConcurrentMap<K, V> map, K key, V value) {
+      super(key, value);
+      this.map = requireNonNull(map);
+    }
+
+    @Override
+    public V setValue(V value) {
+      map.put(getKey(), value);
+      return super.setValue(value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      // suppress Findbugs warning
+      return super.equals(o);
+    }
+
+    Object writeReplace() {
+      return new SimpleEntry<K, V>(this);
     }
   }
 }

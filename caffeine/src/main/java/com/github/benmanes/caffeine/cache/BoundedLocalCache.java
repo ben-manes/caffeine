@@ -69,8 +69,9 @@ import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.github.benmanes.caffeine.cache.Caffeine.AsyncRemovalListener;
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
+import com.github.benmanes.caffeine.cache.Shared.LocalManualCache;
 import com.github.benmanes.caffeine.cache.Shared.AsMapView;
-import com.github.benmanes.caffeine.cache.Shared.StatsAwareConcurrentMap;
+import com.github.benmanes.caffeine.cache.Shared.LocalCache;
 import com.github.benmanes.caffeine.cache.Shared.WriteThroughEntry;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -119,7 +120,7 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  */
 @ThreadSafe
 final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
-    implements StatsAwareConcurrentMap<K, V> {
+    implements LocalCache<K, V> {
 
   /*
    * This class performs a best-effort bounding of a ConcurrentHashMap using a page-replacement
@@ -824,6 +825,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    *
    * @return the number of mappings
    */
+  @Override
   public long mappingCount() {
     return data.mappingCount();
   }
@@ -917,6 +919,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return getIfPresent(key, false);
   }
 
+  @Override
   public V getIfPresent(Object key, boolean recordStats) {
     final Node<K, V> node = data.get(keyStrategy.getKeyRef(key));
     if (node == null) {
@@ -936,6 +939,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   // TODO(ben): JavaDoc
+  @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
     int misses = 0;
     long now = ticker.read();
@@ -1433,7 +1437,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     };
   }
 
-  void cleanUp() {
+  @Override
+  public void cleanUp() {
     evictionLock.lock();
     try {
       drainBuffers();
@@ -1444,6 +1449,31 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   void asyncCleanup() {
     executor.execute(this::cleanUp);
+  }
+
+  @Override
+  public RemovalListener<K, V> removalListener() {
+    return removalListener;
+  }
+
+  @Override
+  public StatsCounter statsCounter() {
+    return statsCounter;
+  }
+
+  @Override
+  public boolean isRecordingStats() {
+    return isRecordingStats;
+  }
+
+  @Override
+  public Ticker ticker() {
+    return ticker;
+  }
+
+  @Override
+  public Executor executor() {
+    return executor;
   }
 
   @Override
@@ -2076,81 +2106,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /* ---------------- Manual Cache -------------- */
 
-  static class LocalManualCache<K, V> implements Cache<K, V>, Serializable {
+  static class BoundedLocalManualCache<K, V> implements
+      LocalManualCache<BoundedLocalCache<K, V>, K, V>, Serializable {
     final BoundedLocalCache<K, V> cache;
     final boolean isWeighted;
+    Policy<K, V> policy;
 
-    transient Policy<K, V> policy;
-
-    LocalManualCache(Caffeine<K, V> builder) {
+    BoundedLocalManualCache(Caffeine<K, V> builder) {
       this(builder, null);
     }
 
-    LocalManualCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      this.cache = new BoundedLocalCache<>(builder, loader, false);
-      this.isWeighted = (builder.weigher != null);
+    BoundedLocalManualCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+      cache = new BoundedLocalCache<>(builder, loader, false);
+      isWeighted = (builder.weigher != null);
     }
 
     @Override
-    public V getIfPresent(Object key) {
-      return cache.getIfPresent(key, true);
-    }
-
-    @Override
-    public V get(K key, Function<? super K, ? extends V> mappingFunction) {
-      return cache.computeIfAbsent(key, mappingFunction);
-    }
-
-    @Override
-    public Map<K, V> getAllPresent(Iterable<?> keys) {
-      return cache.getAllPresent(keys);
-    }
-
-    @Override
-    public void put(K key, V value) {
-      cache.put(key, value);
-    }
-
-    @Override
-    public void putAll(Map<? extends K, ? extends V> map) {
-      cache.putAll(map);
-    }
-
-    @Override
-    public void invalidate(Object key) {
-      cache.remove(key);
-    }
-
-    @Override
-    public void invalidateAll(Iterable<?> keys) {
-      for (Object key : keys) {
-        cache.remove(key);
-      }
-    }
-
-    @Override
-    public void invalidateAll() {
-      cache.clear();
-    }
-
-    @Override
-    public long estimatedSize() {
-      return cache.mappingCount();
-    }
-
-    @Override
-    public CacheStats stats() {
-      return cache.statsCounter.snapshot();
-    }
-
-    @Override
-    public ConcurrentMap<K, V> asMap() {
+    public BoundedLocalCache<K, V> cache() {
       return cache;
-    }
-
-    @Override
-    public void cleanUp() {
-      cache.cleanUp();
     }
 
     @Override
@@ -2190,7 +2163,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       final Weigher<? super K, ? super V> weigher;
       final Ticker ticker;
 
-      ManualSerializationProxy(LocalManualCache<K, V> manual) {
+      ManualSerializationProxy(BoundedLocalManualCache<K, V> manual) {
         weigher = manual.cache.weigher;
         keyStrategy = manual.cache.keyStrategy;
         valueStrategy = manual.cache.valueStrategy;
@@ -2363,7 +2336,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /* ---------------- Loading Cache -------------- */
 
-  static final class LocalLoadingCache<K, V> extends LocalManualCache<K, V>
+  static final class LocalLoadingCache<K, V> extends BoundedLocalManualCache<K, V>
       implements LoadingCache<K, V>, Serializable {
 
     static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());

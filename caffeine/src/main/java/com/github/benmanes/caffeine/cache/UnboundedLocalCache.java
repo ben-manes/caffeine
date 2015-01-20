@@ -49,8 +49,9 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.Shared.LocalManualCache;
 import com.github.benmanes.caffeine.cache.Shared.AsMapView;
-import com.github.benmanes.caffeine.cache.Shared.StatsAwareConcurrentMap;
+import com.github.benmanes.caffeine.cache.Shared.LocalCache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
@@ -60,7 +61,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
+final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Nullable final RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> data;
   final Executor executor;
@@ -84,7 +85,8 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
 
   /* ---------------- Cache -------------- */
 
-  V getIfPresent(Object key, boolean recordStats) {
+  @Override
+  public V getIfPresent(Object key, boolean recordStats) {
     V value = data.get(key);
 
     if (recordStats) {
@@ -97,14 +99,12 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
     return value;
   }
 
+  @Override
   public long mappingCount() {
     return data.mappingCount();
   }
 
-  public V get(K key, Function<? super K, ? extends V> mappingFunction) {
-    return computeIfAbsent(key, mappingFunction);
-  }
-
+  @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
     int hits = 0;
     int misses = 0;
@@ -135,7 +135,13 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
     }
   }
 
+  @Override
   public void cleanUp() {}
+
+  @Override
+  public StatsCounter statsCounter() {
+    return statsCounter;
+  }
 
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
     notifyRemoval(new RemovalNotification<K, V>(key, value, cause));
@@ -148,6 +154,26 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
 
   boolean hasRemovalListener() {
     return (removalListener != null);
+  }
+
+  @Override
+  public RemovalListener<K, V> removalListener() {
+    return removalListener;
+  }
+
+  @Override
+  public boolean isRecordingStats() {
+    return isRecordingStats;
+  }
+
+  @Override
+  public Ticker ticker() {
+    return ticker;
+  }
+
+  @Override
+  public Executor executor() {
+    return executor;
   }
 
   /* ---------------- JDK8+ Map extensions -------------- */
@@ -742,72 +768,17 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
 
   /* ---------------- Manual Cache -------------- */
 
-  static class LocalManualCache<K, V> implements Cache<K, V>, Serializable {
+  static class UnboundedLocalManualCache<K, V>
+      implements LocalManualCache<UnboundedLocalCache<K, V>, K, V>, Serializable {
     final UnboundedLocalCache<K, V> cache;
-    transient Policy<K, V> policy;
+    Policy<K, V> policy;
 
-    LocalManualCache(Caffeine<K, V> builder) {
-      this.cache = new UnboundedLocalCache<>(builder, false);
+    UnboundedLocalManualCache(Caffeine<K, V> builder) {
+      cache = new UnboundedLocalCache<>(builder, false);
     }
 
     @Override
-    public long estimatedSize() {
-      return cache.mappingCount();
-    }
-
-    @Override
-    public void cleanUp() {
-      cache.cleanUp();
-    }
-
-    @Override
-    public @Nullable V getIfPresent(Object key) {
-      return cache.getIfPresent(key, true);
-    }
-
-    @Override
-    public V get(K key, Function<? super K, ? extends V> mappingFunction) {
-      return cache.get(key, mappingFunction);
-    }
-
-    @Override
-    public Map<K, V> getAllPresent(Iterable<?> keys) {
-      return cache.getAllPresent(keys);
-    }
-
-    @Override
-    public void put(K key, V value) {
-      cache.put(key, value);
-    }
-
-    @Override
-    public void putAll(Map<? extends K, ? extends V> map) {
-      cache.putAll(map);
-    }
-
-    @Override
-    public void invalidate(Object key) {
-      requireNonNull(key);
-      cache.remove(key);
-    }
-
-    @Override
-    public void invalidateAll() {
-      cache.invalidateAll();
-    }
-
-    @Override
-    public void invalidateAll(Iterable<?> keys) {
-      cache.invalidateAll(keys);
-    }
-
-    @Override
-    public CacheStats stats() {
-      return cache.statsCounter.snapshot();
-    }
-
-    @Override
-    public ConcurrentMap<K, V> asMap() {
+    public UnboundedLocalCache<K, V> cache() {
       return cache;
     }
 
@@ -839,12 +810,12 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
       final boolean isRecordingStats;
       final RemovalListener<K, V> removalListener;
 
-      ManualSerializationProxy(LocalManualCache<K, V> manual) {
-        isRecordingStats = manual.cache.isRecordingStats;
-        removalListener = manual.cache.removalListener;
-        ticker = (manual.cache.ticker == Caffeine.DISABLED_TICKER)
+      ManualSerializationProxy(UnboundedLocalManualCache<K, V> manual) {
+        isRecordingStats = manual.cache.isRecordingStats();
+        removalListener = manual.cache.removalListener();
+        ticker = (manual.cache.ticker() == Caffeine.DISABLED_TICKER)
             ? null
-            : manual.cache.ticker;
+            : manual.cache.ticker();
       }
 
       Caffeine<Object, Object> recreateCaffeine() {
@@ -881,7 +852,7 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
 
   /* ---------------- Loading Cache -------------- */
 
-  static final class LocalLoadingCache<K, V> extends LocalManualCache<K, V>
+  static final class LocalLoadingCache<K, V> extends UnboundedLocalManualCache<K, V>
       implements LoadingCache<K, V> {
     static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
@@ -913,14 +884,14 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
       List<K> keysToLoad = new ArrayList<>();
       Map<K, V> result = new HashMap<>();
       for (K key : keys) {
-        V value = cache.data.get(key);
+        V value = cache.getIfPresent(key, false);
         if (value == null) {
           keysToLoad.add(key);
         } else {
           result.put(key, value);
         }
       }
-      cache.statsCounter.recordHits(result.size());
+      cache.statsCounter().recordHits(result.size());
       if (keysToLoad.isEmpty()) {
         return result;
       }
@@ -929,7 +900,7 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
     }
 
     private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
-      cache.statsCounter.recordMisses(keysToLoad.size());
+      cache.statsCounter().recordMisses(keysToLoad.size());
       if (!hasBulkLoader) {
         for (K key : keysToLoad) {
           V value = cache.compute(key, (k, v) -> loader.load(key), false, false);
@@ -941,7 +912,7 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
       }
 
       boolean success = false;
-      long startTime = cache.ticker.read();
+      long startTime = cache.ticker().read();
       try {
         @SuppressWarnings("unchecked")
         Map<K, V> loaded = (Map<K, V>) loader.loadAll(keysToLoad);
@@ -954,11 +925,11 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
         }
         success = !loaded.isEmpty();
       } finally {
-        long loadTime = cache.ticker.read() - startTime;
+        long loadTime = cache.ticker().read() - startTime;
         if (success) {
-          cache.statsCounter.recordLoadSuccess(loadTime);
+          cache.statsCounter().recordLoadSuccess(loadTime);
         } else {
-          cache.statsCounter.recordLoadFailure(loadTime);
+          cache.statsCounter().recordLoadFailure(loadTime);
         }
       }
     }
@@ -966,7 +937,7 @@ final class UnboundedLocalCache<K, V> implements StatsAwareConcurrentMap<K, V> {
     @Override
     public void refresh(K key) {
       requireNonNull(key);
-      cache.executor.execute(() -> {
+      cache.executor().execute(() -> {
         try {
           BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
               (oldValue == null)  ? loader.load(key) : loader.reload(key, oldValue);

@@ -42,9 +42,9 @@ public final class IsValidCache<K, V>
   protected boolean matchesSafely(Cache<K, V> cache, Description description) {
     this.description = description;
 
-    if (cache instanceof BoundedLocalCache.LocalManualCache<?, ?>) {
-      BoundedLocalCache.LocalManualCache<K, V> local =
-          (BoundedLocalCache.LocalManualCache<K, V>) cache;
+    if (cache instanceof BoundedLocalCache.BoundedLocalManualCache<?, ?>) {
+      BoundedLocalCache.BoundedLocalManualCache<K, V> local =
+          (BoundedLocalCache.BoundedLocalManualCache<K, V>) cache;
       return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
     } else if (cache instanceof BoundedLocalCache.LocalAsyncLoadingCache<?, ?>.LoadingCacheView) {
       BoundedLocalCache.LocalAsyncLoadingCache<K, V>.LoadingCacheView local =
@@ -53,9 +53,9 @@ public final class IsValidCache<K, V>
           local.getOuter().cache, description);
     }
 
-    if (cache instanceof UnboundedLocalCache.LocalManualCache<?, ?>) {
-      UnboundedLocalCache.LocalManualCache<K, V> local =
-          (UnboundedLocalCache.LocalManualCache<K, V>) cache;
+    if (cache instanceof UnboundedLocalCache.UnboundedLocalManualCache<?, ?>) {
+      UnboundedLocalCache.UnboundedLocalManualCache<K, V> local =
+          (UnboundedLocalCache.UnboundedLocalManualCache<K, V>) cache;
       return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
     } else if (cache instanceof UnboundedLocalCache.LocalAsyncLoadingCache<?, ?>.LoadingCacheView) {
       UnboundedLocalCache.LocalAsyncLoadingCache<K, V>.LoadingCacheView local =
