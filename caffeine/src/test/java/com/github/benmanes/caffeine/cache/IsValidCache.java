@@ -21,8 +21,8 @@ import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedAsyncLocalLoadingCache;
-import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedAsyncLocalLoadingCache;
+import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncLoadingCache;
 
 /**
  * A matcher that evaluates a {@link Cache} to determine if it is in a valid state.
@@ -50,12 +50,12 @@ public final class IsValidCache<K, V>
       BoundedLocalCache.BoundedLocalManualCache<K, V> local =
           (BoundedLocalCache.BoundedLocalManualCache<K, V>) cache;
       return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
-    } else if (cache instanceof AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) {
-      AsyncLocalLoadingCache<?, ?, ?> async =
-          ((AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) cache).getOuter();
-      if (async instanceof BoundedAsyncLocalLoadingCache<?, ?>) {
+    } else if (cache instanceof LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) {
+      LocalAsyncLoadingCache<?, ?, ?> async =
+          ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) cache).getOuter();
+      if (async instanceof BoundedLocalAsyncLoadingCache<?, ?>) {
         return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-            ((BoundedAsyncLocalLoadingCache<K, V>) async).cache, description);
+            ((BoundedLocalAsyncLoadingCache<K, V>) async).cache, description);
       }
     }
 
@@ -63,16 +63,16 @@ public final class IsValidCache<K, V>
       UnboundedLocalCache.UnboundedLocalManualCache<K, V> local =
           (UnboundedLocalCache.UnboundedLocalManualCache<K, V>) cache;
       return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
-    } else if (cache instanceof AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) {
-      AsyncLocalLoadingCache<?, ?, ?> async =
-          ((AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) cache).getOuter();
-      if (async instanceof UnboundedAsyncLocalLoadingCache<?, ?>) {
+    } else if (cache instanceof LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) {
+      LocalAsyncLoadingCache<?, ?, ?> async =
+          ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) cache).getOuter();
+      if (async instanceof UnboundedLocalAsyncLoadingCache<?, ?>) {
         return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-            ((UnboundedAsyncLocalLoadingCache<K, V>) async).cache, description);
+            ((UnboundedLocalAsyncLoadingCache<K, V>) async).cache, description);
       }
 
-      UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V>.LoadingCacheView local =
-          (UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V>.LoadingCacheView) cache;
+      UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>.LoadingCacheView local =
+          (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>.LoadingCacheView) cache;
       return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
           local.getOuter().cache, description);
     }

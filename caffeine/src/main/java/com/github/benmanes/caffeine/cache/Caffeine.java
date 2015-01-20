@@ -719,8 +719,8 @@ public final class Caffeine<K, V> {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
     return isBounded() || refreshes()
-        ? new BoundedLocalCache.BoundedAsyncLocalLoadingCache<K1, V1>(self, loader)
-        : new UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K1, V1>(self, loader);
+        ? new BoundedLocalCache.BoundedLocalAsyncLoadingCache<K1, V1>(self, loader)
+        : new UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K1, V1>(self, loader);
   }
 
   private void requireNonLoadingCache() {

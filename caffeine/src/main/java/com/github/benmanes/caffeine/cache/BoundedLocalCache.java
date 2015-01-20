@@ -2372,16 +2372,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   /* ---------------- Async Loading Cache -------------- */
 
-  static final class BoundedAsyncLocalLoadingCache<K, V>
-      extends AsyncLocalLoadingCache<BoundedLocalCache<K, CompletableFuture<V>>, K, V>
+  static final class BoundedLocalAsyncLoadingCache<K, V>
+      extends LocalAsyncLoadingCache<BoundedLocalCache<K, CompletableFuture<V>>, K, V>
       implements Serializable {
-    final boolean isWeighted;
 
-    transient LoadingCacheView localCacheView;
+    final boolean isWeighted;
     transient Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
-    BoundedAsyncLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+    BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(new BoundedLocalCache<>((Caffeine<K, CompletableFuture<V>>) builder,
           key -> loader.asyncLoad(key, builder.getExecutor()), true), loader);
       this.isWeighted = builder.isWeighted();
@@ -2432,7 +2431,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       final Ticker ticker;
 
       @SuppressWarnings("unchecked")
-      AsyncLoadingSerializationProxy(BoundedAsyncLocalLoadingCache<K, V> async) {
+      AsyncLoadingSerializationProxy(BoundedLocalAsyncLoadingCache<K, V> async) {
         weigher = (Weigher<K, V>) async.cache.weigher;
         keyStrategy = async.cache.keyStrategy;
         valueStrategy = async.cache.valueStrategy;

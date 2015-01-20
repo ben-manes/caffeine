@@ -27,12 +27,22 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * This class provides a skeletal implementation of the {@link LoadingCache} interface to minimize
+ * the effort required to implement a {@link LocalCache}.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
     extends LocalManualCache<C, K, V>, LoadingCache<K, V> {
   static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
+  /** Returns the {@link CacheLoader} used by this cache. */
+  CacheLoader<? super K, V> loader();
+
+  /** Returns whether the cache loader supports bulk loading. */
+  boolean hasBulkLoader();
+
+  /** Returns whether the supplied cache loader has bulk load functionality. */
   default boolean hasLoadAll(CacheLoader<? super K, V> loader) {
     try {
       return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
@@ -41,9 +51,6 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
       return false;
     }
   }
-
-  CacheLoader<? super K, V> loader();
-  boolean hasBulkLoader();
 
   @Override
   default V get(K key) {
@@ -66,11 +73,12 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
     if (keysToLoad.isEmpty()) {
       return result;
     }
-    bulkLoad(keysToLoad, result);
+    batchLoad(keysToLoad, result);
     return Collections.unmodifiableMap(result);
   }
 
-  default void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
+  /** Performs a batch load, either sequentially or in bulk depending on the loader. */
+  default void batchLoad(List<K> keysToLoad, Map<K, V> result) {
     cache().statsCounter().recordMisses(keysToLoad.size());
 
     if (!hasBulkLoader()) {

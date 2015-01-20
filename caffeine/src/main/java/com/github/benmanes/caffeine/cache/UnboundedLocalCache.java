@@ -887,14 +887,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   /* ---------------- Async Loading Cache -------------- */
 
-  static final class UnboundedAsyncLocalLoadingCache<K, V>
-      extends AsyncLocalLoadingCache<UnboundedLocalCache<K, CompletableFuture<V>>, K, V>
+  static final class UnboundedLocalAsyncLoadingCache<K, V>
+      extends LocalAsyncLoadingCache<UnboundedLocalCache<K, CompletableFuture<V>>, K, V>
       implements Serializable {
     transient Policy<K, V> policy;
 
+    UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+      super(makeCache(builder), loader);
+    }
+
     @SuppressWarnings("unchecked")
-    UnboundedAsyncLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      super(new UnboundedLocalCache<K, CompletableFuture<V>>((Caffeine<K, CompletableFuture<V>>) builder, true), loader);
+    static <K, V> UnboundedLocalCache<K, CompletableFuture<V>> makeCache(Caffeine<K, V> builder) {
+      return new UnboundedLocalCache<K, CompletableFuture<V>>(
+          (Caffeine<K, CompletableFuture<V>>) builder, true);
     }
 
     @Override
@@ -926,7 +931,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       final CacheLoader<? super K, V> loader;
       final RemovalListener<K, CompletableFuture<V>> removalListener;
 
-      AsyncLoadingSerializationProxy(UnboundedAsyncLocalLoadingCache<K, V> async) {
+      AsyncLoadingSerializationProxy(UnboundedLocalAsyncLoadingCache<K, V> async) {
         isRecordingStats = async.cache.isRecordingStats;
         removalListener = async.cache.removalListener;
         ticker = (async.cache.ticker == Caffeine.DISABLED_TICKER)

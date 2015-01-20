@@ -48,30 +48,32 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
- * A skeletal implementation of an in-memory asynchronous cache.
+ * This class provides a skeletal implementation of the {@link AsyncLoadingCache} interface to
+ * minimize the effort required to implement a {@link LocalCache}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<V>>, K, V>
+abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<V>>, K, V>
     implements AsyncLoadingCache<K, V> {
-  static final Logger logger = Logger.getLogger(AsyncLocalLoadingCache.class.getName());
+  static final Logger logger = Logger.getLogger(LocalAsyncLoadingCache.class.getName());
 
   final C cache;
-  final CacheLoader<K, V> loader;
   final boolean canBulkLoad;
-
+  final CacheLoader<K, V> loader;
   LoadingCacheView localCacheView;
 
   @SuppressWarnings("unchecked")
-  AsyncLocalLoadingCache(C cache, CacheLoader<? super K, V> loader) {
+  LocalAsyncLoadingCache(C cache, CacheLoader<? super K, V> loader) {
     this.loader = (CacheLoader<K, V>) loader;
     this.canBulkLoad = canBulkLoad(loader);
     this.cache = cache;
   }
 
+  /** Returns the policy supported by this implementation and its configuration. */
   protected abstract Policy<K, V> policy();
 
-  static boolean canBulkLoad(CacheLoader<?, ?> loader) {
+  /** Returns whether the supplied cache loader has bulk load functionality. */
+  private static boolean canBulkLoad(CacheLoader<?, ?> loader) {
     try {
       Method loadAll = loader.getClass().getMethod(
           "loadAll", Iterable.class);
@@ -138,7 +140,7 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
   }
 
   /** Computes all of the missing entries in a single {@link CacheLoader#asyncLoadAll} call. */
-  CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
+  private CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
     Map<K, CompletableFuture<V>> futures = new HashMap<>();
     Map<K, CompletableFuture<V>> proxies = new HashMap<>();
     for (K key : keys) {
@@ -169,7 +171,7 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
    * combined mapping if successful. If any future fails then it is automatically removed from
    * the cache if still present.
    */
-  CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
+  private CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
     if (futures.isEmpty()) {
       return CompletableFuture.completedFuture(Collections.emptyMap());
     }
@@ -215,9 +217,9 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
   }
 
   /** A function executed asynchronously after a bulk load completes. */
-  final class AsyncBulkCompleter implements BiConsumer<Map<K, V>, Throwable> {
-    final Map<K, CompletableFuture<V>> proxies;
-    final long now;
+  private final class AsyncBulkCompleter implements BiConsumer<Map<K, V>, Throwable> {
+    private final Map<K, CompletableFuture<V>> proxies;
+    private final long now;
 
     AsyncBulkCompleter(Map<K, CompletableFuture<V>> proxies) {
       this.now = cache.ticker().read();
@@ -279,8 +281,8 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
     transient AsMapView<K, V> asMapView;
 
     /** A test-only method for validation. */
-    AsyncLocalLoadingCache<C, K, V> getOuter() {
-      return AsyncLocalLoadingCache.this;
+    LocalAsyncLoadingCache<C, K, V> getOuter() {
+      return LocalAsyncLoadingCache.this;
     }
 
     @Override
@@ -314,7 +316,7 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
     @Override
     public V get(K key, Function<? super K, ? extends V> mappingFunction) {
       requireNonNull(mappingFunction);
-      CompletableFuture<V> future = AsyncLocalLoadingCache.this.get(key, (k, executor) ->
+      CompletableFuture<V> future = LocalAsyncLoadingCache.this.get(key, (k, executor) ->
           CompletableFuture.supplyAsync(() -> mappingFunction.apply(key), executor));
       try {
         return future.get();
@@ -333,7 +335,7 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
     @Override
     public V get(K key) {
       try {
-        return AsyncLocalLoadingCache.this.get(key).get();
+        return LocalAsyncLoadingCache.this.get(key).get();
       } catch (ExecutionException e) {
         if (e.getCause() instanceof RuntimeException) {
           throw (RuntimeException) e.getCause();
@@ -349,7 +351,7 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
     @Override
     public Map<K, V> getAll(Iterable<? extends K> keys) {
       try {
-        return AsyncLocalLoadingCache.this.getAll(keys).get();
+        return LocalAsyncLoadingCache.this.getAll(keys).get();
       } catch (ExecutionException e) {
         if (e.getCause() instanceof RuntimeException) {
           throw (RuntimeException) e.getCause();
@@ -442,7 +444,6 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
       return asMapView;
     }
   }
-
 
   static final class AsMapView<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
     final LocalCache<K, CompletableFuture<V>> delegate;
@@ -624,7 +625,7 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
       return (entries == null) ? (entries = new EntrySet()) : entries;
     }
 
-    final class Values extends AbstractCollection<V> {
+    private final class Values extends AbstractCollection<V> {
 
       @Override
       public boolean isEmpty() {
@@ -679,7 +680,7 @@ abstract class AsyncLocalLoadingCache<C extends LocalCache<K, CompletableFuture<
       }
     }
 
-    final class EntrySet extends AbstractSet<Entry<K, V>> {
+    private final class EntrySet extends AbstractSet<Entry<K, V>> {
 
       @Override
       public boolean isEmpty() {

@@ -76,14 +76,14 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
       AsyncLoadingCache<K, V> copy, DescriptionBuilder desc) {
     if (!IsValidAsyncCache.<K, V>validAsyncCache().matchesSafely(copy, desc.getDescription())) {
       desc.expected("valid async cache");
-    } else if (original instanceof UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<?, ?>) {
+    } else if (original instanceof UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<?, ?>) {
       checkUnboundedAsyncLocalLoadingCache(
-          (UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V>) original,
-          (UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V>) copy, desc);
-    } else if (original instanceof BoundedLocalCache.BoundedAsyncLocalLoadingCache<?, ?>) {
+          (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>) original,
+          (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>) copy, desc);
+    } else if (original instanceof BoundedLocalCache.BoundedLocalAsyncLoadingCache<?, ?>) {
       checkBoundedAsyncLocalLoadingCache(
-          (BoundedLocalCache.BoundedAsyncLocalLoadingCache<K, V>) original,
-          (BoundedLocalCache.BoundedAsyncLocalLoadingCache<K, V>) copy, desc);
+          (BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V>) original,
+          (BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V>) copy, desc);
     }
   }
 
@@ -112,15 +112,15 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
           (UnboundedLocalCache.UnboundedLocalLoadingCache<K, V>) original,
           (UnboundedLocalCache.UnboundedLocalLoadingCache<K, V>) copy, desc);
     }
-    if (original instanceof AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) {
-      AsyncLocalLoadingCache<?, ?, ?> originalOuter =
-          ((AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) original).getOuter();
-      AsyncLocalLoadingCache<?, ?, ?> copyOuter =
-          ((AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) copy).getOuter();
-      if (originalOuter instanceof UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<?, ?>) {
+    if (original instanceof LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) {
+      LocalAsyncLoadingCache<?, ?, ?> originalOuter =
+          ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) original).getOuter();
+      LocalAsyncLoadingCache<?, ?, ?> copyOuter =
+          ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) copy).getOuter();
+      if (originalOuter instanceof UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<?, ?>) {
         checkUnboundedAsyncLocalLoadingCache(
-            (UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V>) originalOuter,
-            (UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V>) copyOuter,
+            (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>) originalOuter,
+            (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>) copyOuter,
             desc);
       }
     }
@@ -139,8 +139,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
   }
 
   private static <K, V> void checkUnboundedAsyncLocalLoadingCache(
-      UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V> original,
-      UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V> copy, DescriptionBuilder desc) {
+      UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V> original,
+      UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V> copy, DescriptionBuilder desc) {
     checkUnboundedLocalCache(original.cache, copy.cache, desc);
     desc.expectThat("same cacheLoader", copy.loader, is(original.loader));
   }
@@ -173,15 +173,15 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
       checkBoundedLocalLoadingCache((BoundedLocalCache.BoundedLocalLoadingCache<K, V>) original,
           (BoundedLocalCache.BoundedLocalLoadingCache<K, V>) copy, desc);
     }
-    if (original instanceof AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) {
-      AsyncLocalLoadingCache<?, ?, ?> originalOuter =
-          ((AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) original).getOuter();
-      AsyncLocalLoadingCache<?, ?, ?> copyOuter =
-          ((AsyncLocalLoadingCache<?, ?, ?>.LoadingCacheView) copy).getOuter();
-      if (originalOuter instanceof BoundedLocalCache.BoundedAsyncLocalLoadingCache<?, ?>) {
+    if (original instanceof LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) {
+      LocalAsyncLoadingCache<?, ?, ?> originalOuter =
+          ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) original).getOuter();
+      LocalAsyncLoadingCache<?, ?, ?> copyOuter =
+          ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) copy).getOuter();
+      if (originalOuter instanceof BoundedLocalCache.BoundedLocalAsyncLoadingCache<?, ?>) {
         checkBoundedAsyncLocalLoadingCache(
-            (BoundedLocalCache.BoundedAsyncLocalLoadingCache<K, V>) originalOuter,
-            (BoundedLocalCache.BoundedAsyncLocalLoadingCache<K, V>) copyOuter,
+            (BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V>) originalOuter,
+            (BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V>) copyOuter,
             desc);
       }
     }
@@ -200,8 +200,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
   }
 
   private static <K, V> void checkBoundedAsyncLocalLoadingCache(
-      BoundedLocalCache.BoundedAsyncLocalLoadingCache<K, V> original,
-      BoundedLocalCache.BoundedAsyncLocalLoadingCache<K, V> copy, DescriptionBuilder desc) {
+      BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V> original,
+      BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V> copy, DescriptionBuilder desc) {
     checkBoundedLocalCache(original.cache, copy.cache, desc);
     desc.expectThat("same cacheLoader", copy.loader, is(original.loader));
   }

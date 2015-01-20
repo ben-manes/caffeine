@@ -26,10 +26,15 @@ import javax.annotation.Nullable;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
 /**
+ * This class provides a skeletal implementation of the {@link Cache} interface to minimize the
+ * effort required to implement a {@link LocalCache}.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-interface LocalManualCache<C extends LocalCache<K, V>, K, V>
-    extends Cache<K, V> {
+interface LocalManualCache<C extends LocalCache<K, V>, K, V> extends Cache<K, V> {
+
+  /** Returns the backing {@link LocalCache} data store. */
+  C cache();
 
   @Override
   default long estimatedSize() {
@@ -91,6 +96,4 @@ interface LocalManualCache<C extends LocalCache<K, V>, K, V>
   default ConcurrentMap<K, V> asMap() {
     return cache();
   }
-
-  C cache();
 }

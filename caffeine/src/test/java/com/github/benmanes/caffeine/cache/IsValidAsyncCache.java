@@ -42,16 +42,16 @@ public final class IsValidAsyncCache<K, V>
   protected boolean matchesSafely(AsyncLoadingCache<K, V> cache, Description description) {
     this.description = description;
 
-    if (cache instanceof BoundedLocalCache.BoundedAsyncLocalLoadingCache<?, ?>) {
-      BoundedLocalCache.BoundedAsyncLocalLoadingCache<K, V> local =
-          (BoundedLocalCache.BoundedAsyncLocalLoadingCache<K, V>) cache;
+    if (cache instanceof BoundedLocalCache.BoundedLocalAsyncLoadingCache<?, ?>) {
+      BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V> local =
+          (BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V>) cache;
       return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid()
           .matchesSafely(local.cache, description);
     }
 
-    if (cache instanceof UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<?, ?>) {
-      UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V> local =
-          (UnboundedLocalCache.UnboundedAsyncLocalLoadingCache<K, V>) cache;
+    if (cache instanceof UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<?, ?>) {
+      UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V> local =
+          (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>) cache;
       return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid()
           .matchesSafely(local.cache, description);
     }
