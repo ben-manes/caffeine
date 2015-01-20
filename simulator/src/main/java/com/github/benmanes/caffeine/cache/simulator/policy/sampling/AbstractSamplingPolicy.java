@@ -79,7 +79,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
       policyStats.stopwatch().start();
       handleEvent((CacheEvent) msg);
       policyStats.stopwatch().stop();
-    } else if (msg == Message.DONE) {
+    } else if (msg == Message.END) {
       getSender().tell(policyStats, ActorRef.noSender());
       getContext().stop(getSelf());
     }

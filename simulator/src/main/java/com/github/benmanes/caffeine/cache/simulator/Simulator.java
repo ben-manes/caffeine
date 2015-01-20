@@ -43,7 +43,7 @@ import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Simulator extends UntypedActor {
-  public enum Message { DONE, START }
+  public enum Message { START, END }
 
   private final BasicSettings settings;
   private final TextReport report;
@@ -63,7 +63,7 @@ public final class Simulator extends UntypedActor {
   public void onReceive(Object msg) throws IOException {
     if (msg == Message.START) {
       events().forEach(event -> router.route(event, getSelf()));
-      router.route(Message.DONE, getSelf());
+      router.route(Message.END, getSelf());
     } else if (msg instanceof PolicyStats) {
       report.add((PolicyStats) msg);
       if (--remaining == 0) {

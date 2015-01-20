@@ -23,13 +23,11 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -49,9 +47,10 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.github.benmanes.caffeine.cache.Shared.LocalManualCache;
 import com.github.benmanes.caffeine.cache.Shared.AsMapView;
 import com.github.benmanes.caffeine.cache.Shared.LocalCache;
+import com.github.benmanes.caffeine.cache.Shared.LocalLoadingCache;
+import com.github.benmanes.caffeine.cache.Shared.LocalManualCache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
@@ -852,100 +851,25 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   /* ---------------- Loading Cache -------------- */
 
-  static final class LocalLoadingCache<K, V> extends UnboundedLocalManualCache<K, V>
-      implements LoadingCache<K, V> {
-    static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
-
+  static final class UnboundedLocalLoadingCache<K, V> extends UnboundedLocalManualCache<K, V>
+      implements LocalLoadingCache<UnboundedLocalCache<K, V>, K, V> {
     final CacheLoader<? super K, V> loader;
     final boolean hasBulkLoader;
 
-    LocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+    UnboundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder);
       this.loader = loader;
       this.hasBulkLoader = hasLoadAll(loader);
     }
 
-    static boolean hasLoadAll(CacheLoader<?, ?> loader) {
-      try {
-        return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
-      } catch (NoSuchMethodException | SecurityException e) {
-        logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
-        return false;
-      }
+    @Override
+    public CacheLoader<? super K, V> loader() {
+      return loader;
     }
 
     @Override
-    public V get(K key) {
-      return cache.computeIfAbsent(key, loader::load);
-    }
-
-    @Override
-    public Map<K, V> getAll(Iterable<? extends K> keys) {
-      List<K> keysToLoad = new ArrayList<>();
-      Map<K, V> result = new HashMap<>();
-      for (K key : keys) {
-        V value = cache.getIfPresent(key, false);
-        if (value == null) {
-          keysToLoad.add(key);
-        } else {
-          result.put(key, value);
-        }
-      }
-      cache.statsCounter().recordHits(result.size());
-      if (keysToLoad.isEmpty()) {
-        return result;
-      }
-      bulkLoad(keysToLoad, result);
-      return Collections.unmodifiableMap(result);
-    }
-
-    private void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
-      cache.statsCounter().recordMisses(keysToLoad.size());
-      if (!hasBulkLoader) {
-        for (K key : keysToLoad) {
-          V value = cache.compute(key, (k, v) -> loader.load(key), false, false);
-          if (value != null) {
-            result.put(key, value);
-          }
-        }
-        return;
-      }
-
-      boolean success = false;
-      long startTime = cache.ticker().read();
-      try {
-        @SuppressWarnings("unchecked")
-        Map<K, V> loaded = (Map<K, V>) loader.loadAll(keysToLoad);
-        cache.putAll(loaded);
-        for (K key : keysToLoad) {
-          V value = loaded.get(key);
-          if (value != null) {
-            result.put(key, value);
-          }
-        }
-        success = !loaded.isEmpty();
-      } finally {
-        long loadTime = cache.ticker().read() - startTime;
-        if (success) {
-          cache.statsCounter().recordLoadSuccess(loadTime);
-        } else {
-          cache.statsCounter().recordLoadFailure(loadTime);
-        }
-      }
-    }
-
-    @Override
-    public void refresh(K key) {
-      requireNonNull(key);
-      cache.executor().execute(() -> {
-        try {
-          BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
-              (oldValue == null)  ? loader.load(key) : loader.reload(key, oldValue);
-          cache.compute(key, refreshFunction, false, false);
-        } catch (Throwable t) {
-          logger.log(Level.WARNING, "Exception thrown during refresh", t);
-        }
-      });
+    public boolean hasBulkLoader() {
+      return hasBulkLoader;
     }
 
     /* ---------------- Serialization Support -------------- */
@@ -970,7 +894,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
       final CacheLoader<? super K, V> loader;
 
-      LoadingSerializationProxy(LocalLoadingCache<K, V> loading) {
+      LoadingSerializationProxy(UnboundedLocalLoadingCache<K, V> loading) {
         super(loading);
         loader = loading.loader;
       }
@@ -985,7 +909,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   /* ---------------- Async Loading Cache -------------- */
 
   static final class LocalAsyncLoadingCache<K, V> implements AsyncLoadingCache<K, V>, Serializable {
-    static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
+    static final Logger logger = Logger.getLogger(UnboundedLocalLoadingCache.class.getName());
 
     final UnboundedLocalCache<K, CompletableFuture<V>> cache;
     final CacheLoader<K, V> loader;
