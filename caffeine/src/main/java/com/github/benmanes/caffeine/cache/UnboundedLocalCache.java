@@ -748,6 +748,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   static class UnboundedLocalManualCache<K, V>
       implements LocalManualCache<UnboundedLocalCache<K, V>, K, V>, Serializable {
+    private static final long serialVersionUID = 1;
+
     final UnboundedLocalCache<K, V> cache;
     Policy<K, V> policy;
 
@@ -765,54 +767,16 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return (policy == null) ? (policy = new UnboundedPolicy<K, V>()) : policy;
     }
 
-    /* ---------------- Serialization Support -------------- */
-
-    static final long serialVersionUID = 1;
-
-    Object writeReplace() {
-      return new ManualSerializationProxy<K, V>(this);
-    }
-
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
 
-    /**
-     * Serializes the configuration of the cache, reconsitituting it as a Cache using
-     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
-     */
-    static class ManualSerializationProxy<K, V> implements Serializable {
-      private static final long serialVersionUID = 1;
-
-      final Ticker ticker;
-      final boolean isRecordingStats;
-      final RemovalListener<K, V> removalListener;
-
-      ManualSerializationProxy(UnboundedLocalManualCache<K, V> manual) {
-        isRecordingStats = manual.cache.isRecordingStats();
-        removalListener = manual.cache.removalListener();
-        ticker = (manual.cache.ticker() == Caffeine.DISABLED_TICKER)
-            ? null
-            : manual.cache.ticker();
-      }
-
-      Caffeine<Object, Object> recreateCaffeine() {
-        Caffeine<Object, Object> builder = Caffeine.newBuilder();
-        if (ticker != null) {
-          builder.ticker(ticker);
-        }
-        if (removalListener != null) {
-          builder.removalListener(removalListener);
-        }
-        if (isRecordingStats) {
-          builder.recordStats();
-        }
-        return builder;
-      }
-
-      Object readResolve() {
-        return recreateCaffeine().build();
-      }
+    Object writeReplace() {
+      SerializationProxy<K, V> proxy = new SerializationProxy<>();
+      proxy.isRecordingStats = cache.isRecordingStats;
+      proxy.removalListener = cache.removalListener;
+      proxy.ticker = cache.ticker;
+      return proxy;
     }
   }
 
@@ -832,6 +796,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   static final class UnboundedLocalLoadingCache<K, V> extends UnboundedLocalManualCache<K, V>
       implements LocalLoadingCache<UnboundedLocalCache<K, V>, K, V> {
+    private static final long serialVersionUID = 1;
+
     final CacheLoader<? super K, V> loader;
     final boolean hasBulkLoader;
 
@@ -851,37 +817,16 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return hasBulkLoader;
     }
 
-    /* ---------------- Serialization Support -------------- */
-
-    static final long serialVersionUID = 1;
-
     @Override
     Object writeReplace() {
-      return new LoadingSerializationProxy<K, V>(this);
+      @SuppressWarnings("unchecked")
+      SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
+      proxy.loader = loader;
+      return proxy;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
-    }
-
-    /**
-     * Serializes the configuration of the cache, reconsitituting it as a Cache using
-     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
-     */
-    static final class LoadingSerializationProxy<K, V> extends ManualSerializationProxy<K, V> {
-      private static final long serialVersionUID = 1;
-
-      final CacheLoader<? super K, V> loader;
-
-      LoadingSerializationProxy(UnboundedLocalLoadingCache<K, V> loading) {
-        super(loading);
-        loader = loading.loader;
-      }
-
-      @Override
-      Object readResolve() {
-        return recreateCaffeine().build(loader);
-      }
     }
   }
 
@@ -890,7 +835,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   static final class UnboundedLocalAsyncLoadingCache<K, V>
       extends LocalAsyncLoadingCache<UnboundedLocalCache<K, CompletableFuture<V>>, K, V>
       implements Serializable {
-    transient Policy<K, V> policy;
+    private static final long serialVersionUID = 1;
+
+    Policy<K, V> policy;
 
     UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(makeCache(builder), loader);
@@ -907,56 +854,18 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return (policy == null) ? (policy = new UnboundedPolicy<K, V>()) : policy;
     }
 
-    /* ---------------- Serialization Support -------------- */
-
-    static final long serialVersionUID = 1;
-
-    Object writeReplace() {
-      return new AsyncLoadingSerializationProxy<K, V>(this);
-    }
-
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
 
-    /**
-     * Serializes the configuration of the cache, reconsitituting it as a Cache using
-     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
-     */
-    static final class AsyncLoadingSerializationProxy<K, V> implements Serializable {
-      private static final long serialVersionUID = 1;
-
-      final Ticker ticker;
-      final boolean isRecordingStats;
-      final CacheLoader<? super K, V> loader;
-      final RemovalListener<K, CompletableFuture<V>> removalListener;
-
-      AsyncLoadingSerializationProxy(UnboundedLocalAsyncLoadingCache<K, V> async) {
-        isRecordingStats = async.cache.isRecordingStats;
-        removalListener = async.cache.removalListener;
-        ticker = (async.cache.ticker == Caffeine.DISABLED_TICKER)
-            ? null
-            : async.cache.ticker;
-        loader = async.loader;
-      }
-
-      Caffeine<Object, Object> recreateCaffeine() {
-        Caffeine<Object, Object> builder = Caffeine.newBuilder();
-        if (ticker != null) {
-          builder.ticker(ticker);
-        }
-        if (removalListener != null) {
-          builder.removalListener(removalListener);
-        }
-        if (isRecordingStats) {
-          builder.recordStats();
-        }
-        return builder;
-      }
-
-      Object readResolve() {
-        return recreateCaffeine().buildAsync(loader);
-      }
+    Object writeReplace() {
+      SerializationProxy<K, V> proxy = new SerializationProxy<>();
+      proxy.isRecordingStats = cache.isRecordingStats;
+      proxy.removalListener = cache.removalListener;
+      proxy.ticker = cache.ticker;
+      proxy.loader = loader;
+      proxy.async = true;
+      return proxy;
     }
   }
 }

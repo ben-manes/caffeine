@@ -61,7 +61,6 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
-import com.github.benmanes.caffeine.cache.Caffeine.AsyncRemovalListener;
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
@@ -927,7 +926,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     return node.getValue(valueStrategy);
   }
 
-  // TODO(ben): JavaDoc
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
     int misses = 0;
@@ -2084,10 +2082,34 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
   }
 
+  /** Creates a serialization proxy based on the common configuration shared by all cache types. */
+  static <K, V> SerializationProxy<K, V> makeSerializationProxy(BoundedLocalCache<?, ?> cache) {
+    SerializationProxy<K, V> proxy = new SerializationProxy<>();
+    proxy.weakKeys = (cache.keyStrategy == ReferenceStrategy.WEAK);
+    proxy.weakValues = (cache.valueStrategy == ReferenceStrategy.WEAK);
+    proxy.softValues = (cache.valueStrategy == ReferenceStrategy.SOFT);
+    proxy.expireAfterAccessNanos = cache.expireAfterAccessNanos;
+    proxy.expireAfterWriteNanos = cache.expireAfterWriteNanos;
+    proxy.isRecordingStats = cache.isRecordingStats;
+    proxy.removalListener = cache.removalListener;
+    proxy.ticker = cache.ticker;
+    if (cache.evicts()) {
+      if (cache.weigher == Weigher.singleton()) {
+        proxy.maximumSize = cache.capacity();
+      } else {
+        proxy.weigher = cache.weigher;
+        proxy.maximumWeight = cache.capacity();
+      }
+    }
+    return proxy;
+  }
+
   /* ---------------- Manual Cache -------------- */
 
   static class BoundedLocalManualCache<K, V> implements
       LocalManualCache<BoundedLocalCache<K, V>, K, V>, Serializable {
+    private static final long serialVersionUID = 1;
+
     final BoundedLocalCache<K, V> cache;
     final boolean isWeighted;
     Policy<K, V> policy;
@@ -2113,89 +2135,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
           : policy;
     }
 
-    /* ---------------- Serialization Support -------------- */
-
-    static final long serialVersionUID = 1;
-
-    Object writeReplace() {
-      return new ManualSerializationProxy<K, V>(this);
-    }
-
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
 
-    /**
-     * Serializes the configuration of the cache, reconsitituting it as a Cache using
-     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
-     */
-    static class ManualSerializationProxy<K, V> implements Serializable {
-      private static final long serialVersionUID = 1;
-
-      final long maximumWeight;
-      final boolean isRecordingStats;
-      final long expireAfterWriteNanos;
-      final long expireAfterAccessNanos;
-      final ReferenceStrategy keyStrategy;
-      final ReferenceStrategy valueStrategy;
-
-      final RemovalListener<? super K, ? super V> removalListener;
-      final Weigher<? super K, ? super V> weigher;
-      final Ticker ticker;
-
-      ManualSerializationProxy(BoundedLocalManualCache<K, V> manual) {
-        weigher = manual.cache.weigher;
-        keyStrategy = manual.cache.keyStrategy;
-        valueStrategy = manual.cache.valueStrategy;
-        removalListener = manual.cache.removalListener;
-        isRecordingStats = manual.cache.isRecordingStats;
-        expireAfterWriteNanos = manual.cache.expireAfterWriteNanos;
-        expireAfterAccessNanos = manual.cache.expireAfterAccessNanos;
-        maximumWeight = (manual.cache.maximumWeightedSize == null)
-            ? Caffeine.UNSET_INT
-            : manual.cache.maximumWeightedSize.get();
-        ticker = (manual.cache.ticker == Caffeine.DISABLED_TICKER)
-            ? null
-            : manual.cache.ticker;
-      }
-
-      Caffeine<Object, Object> recreateCaffeine() {
-        Caffeine<Object, Object> builder = Caffeine.newBuilder();
-        if (ticker != null) {
-          builder.ticker(ticker);
-        }
-        if (isRecordingStats) {
-          builder.recordStats();
-        }
-        if (weigher != Weigher.singleton()) {
-          builder.weigher(weigher);
-          builder.maximumWeight(maximumWeight);
-        } else if (maximumWeight != Caffeine.UNSET_INT) {
-          builder.maximumSize(maximumWeight);
-        }
-        if (expireAfterWriteNanos > 0) {
-          builder.expireAfterWrite(expireAfterWriteNanos, TimeUnit.NANOSECONDS);
-        }
-        if (expireAfterAccessNanos > 0) {
-          builder.expireAfterAccess(expireAfterAccessNanos, TimeUnit.NANOSECONDS);
-        }
-        if (keyStrategy == ReferenceStrategy.WEAK) {
-          builder.weakKeys();
-        }
-        if (valueStrategy == ReferenceStrategy.WEAK) {
-          builder.weakValues();
-        } else if (valueStrategy == ReferenceStrategy.SOFT) {
-          builder.softValues();
-        }
-        if (removalListener != null) {
-          builder.removalListener(removalListener);
-        }
-        return builder;
-      }
-
-      Object readResolve() {
-        return recreateCaffeine().build();
-      }
+    Object writeReplace() {
+      return makeSerializationProxy(cache);
     }
   }
 
@@ -2318,6 +2263,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
   static final class BoundedLocalLoadingCache<K, V> extends BoundedLocalManualCache<K, V>
       implements LocalLoadingCache<BoundedLocalCache<K, V>, K, V> {
+    private static final long serialVersionUID = 1;
+
     final boolean hasBulkLoader;
 
     BoundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
@@ -2336,37 +2283,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return hasBulkLoader;
     }
 
-    /* ---------------- Serialization Support -------------- */
-
-    static final long serialVersionUID = 1;
-
-    @Override
-    Object writeReplace() {
-      return new LoadingSerializationProxy<K, V>(this);
-    }
-
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
 
-    /**
-     * Serializes the configuration of the cache, reconsitituting it as a Cache using
-     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
-     */
-    static final class LoadingSerializationProxy<K, V> extends ManualSerializationProxy<K, V> {
-      private static final long serialVersionUID = 1;
-
-      final CacheLoader<? super K, V> loader;
-
-      LoadingSerializationProxy(BoundedLocalLoadingCache<K, V> loading) {
-        super(loading);
-        loader = loading.cache.loader;
-      }
-
-      @Override
-      Object readResolve() {
-        return recreateCaffeine().build(loader);
-      }
+    @Override
+    Object writeReplace() {
+      @SuppressWarnings("unchecked")
+      SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
+      proxy.loader = cache.loader;
+      return proxy;
     }
   }
 
@@ -2375,6 +2301,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   static final class BoundedLocalAsyncLoadingCache<K, V>
       extends LocalAsyncLoadingCache<BoundedLocalCache<K, CompletableFuture<V>>, K, V>
       implements Serializable {
+    private static final long serialVersionUID = 1;
 
     final boolean isWeighted;
     transient Policy<K, V> policy;
@@ -2399,94 +2326,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       return policy;
     }
 
-    /* ---------------- Serialization Support -------------- */
-
-    static final long serialVersionUID = 1;
-
-    Object writeReplace() {
-      return new AsyncLoadingSerializationProxy<K, V>(this);
-    }
-
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
 
-    /**
-     * Serializes the configuration of the cache, reconsitituting it as a Cache using
-     * {@link Caffeine} upon deserialization. The data held by the cache is not retained.
-     */
-    static final class AsyncLoadingSerializationProxy<K, V> implements Serializable {
-      private static final long serialVersionUID = 1;
-
-      final long maximumWeight;
-      final boolean isRecordingStats;
-      final long expireAfterWriteNanos;
-      final long expireAfterAccessNanos;
-      final ReferenceStrategy keyStrategy;
-      final ReferenceStrategy valueStrategy;
-      final CacheLoader<? super K, V> loader;
-
-      final RemovalListener<? super K, ? super V> removalListener;
-      final Weigher<? super K, ? super V> weigher;
-      final Ticker ticker;
-
-      @SuppressWarnings("unchecked")
-      AsyncLoadingSerializationProxy(BoundedLocalAsyncLoadingCache<K, V> async) {
-        weigher = (Weigher<K, V>) async.cache.weigher;
-        keyStrategy = async.cache.keyStrategy;
-        valueStrategy = async.cache.valueStrategy;
-        removalListener = async.cache.hasRemovalListener()
-            ? ((AsyncRemovalListener<K, V>) async.cache.removalListener).delegate
-            : null;
-        isRecordingStats = async.cache.isRecordingStats;
-        expireAfterWriteNanos = async.cache.expireAfterWriteNanos;
-        expireAfterAccessNanos = async.cache.expireAfterAccessNanos;
-        maximumWeight = (async.cache.maximumWeightedSize == null)
-            ? Caffeine.UNSET_INT
-            : async.cache.maximumWeightedSize.get();
-        ticker = (async.cache.ticker == Caffeine.DISABLED_TICKER)
-            ? null
-            : async.cache.ticker;
-        loader = async.loader;
-      }
-
-      Caffeine<Object, Object> recreateCaffeine() {
-        Caffeine<Object, Object> builder = Caffeine.newBuilder();
-        if (ticker != null) {
-          builder.ticker(ticker);
-        }
-        if (isRecordingStats) {
-          builder.recordStats();
-        }
-        if (weigher != Weigher.singleton()) {
-          builder.weigher(weigher);
-          builder.maximumWeight(maximumWeight);
-        } else if (maximumWeight != Caffeine.UNSET_INT) {
-          builder.maximumSize(maximumWeight);
-        }
-        if (expireAfterWriteNanos > 0) {
-          builder.expireAfterWrite(expireAfterWriteNanos, TimeUnit.NANOSECONDS);
-        }
-        if (expireAfterAccessNanos > 0) {
-          builder.expireAfterAccess(expireAfterAccessNanos, TimeUnit.NANOSECONDS);
-        }
-        if (keyStrategy == ReferenceStrategy.WEAK) {
-          builder.weakKeys();
-        }
-        if (valueStrategy == ReferenceStrategy.WEAK) {
-          builder.weakValues();
-        } else if (valueStrategy == ReferenceStrategy.SOFT) {
-          builder.softValues();
-        }
-        if (removalListener != null) {
-          builder.removalListener(removalListener);
-        }
-        return builder;
-      }
-
-      Object readResolve() {
-        return recreateCaffeine().buildAsync(loader);
-      }
+    Object writeReplace() {
+      SerializationProxy<K, V> proxy = makeSerializationProxy(cache);
+      proxy.loader = loader;
+      proxy.async = true;
+      return proxy;
     }
   }
 }

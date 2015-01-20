@@ -123,7 +123,6 @@ public final class Caffeine<K, V> {
       () -> DisabledStatsCounter.INSTANCE;
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
       () -> new ConcurrentStatsCounter();
-  static final Ticker DISABLED_TICKER = () -> 0;
   enum Strength { STRONG, WEAK, SOFT }
 
   static final int UNSET_INT = -1;
@@ -566,7 +565,7 @@ public final class Caffeine<K, V> {
   @Nonnull
   Ticker getTicker() {
     return (ticker == null)
-        ? (isExpirable() || isRecordingStats() ? Ticker.systemTicker() : DISABLED_TICKER)
+        ? (isExpirable() || isRecordingStats() ? Ticker.systemTicker() : DisabledTicker.INSTANCE)
         : ticker;
   }
 
