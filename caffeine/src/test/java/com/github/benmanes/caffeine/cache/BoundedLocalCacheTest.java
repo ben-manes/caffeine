@@ -30,13 +30,13 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.Awaits;
-import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
@@ -195,7 +195,7 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onGetQuietly(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     int index = BoundedLocalCache.readBufferIndex();
-    PaddedAtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
+    AtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
 
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
     Node<Integer, Integer> last = localCache.accessOrderDeque.peekLast();
@@ -269,7 +269,7 @@ public final class BoundedLocalCacheTest {
     Node<Integer, Integer> dummy = new Node<>(null, null, 0);
 
     int index = BoundedLocalCache.readBufferIndex();
-    PaddedAtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
+    AtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
     localCache.readBufferWriteCount[index].set(BoundedLocalCache.READ_BUFFER_THRESHOLD - 1);
 
     localCache.afterRead(dummy, true);
@@ -301,7 +301,7 @@ public final class BoundedLocalCacheTest {
 
     int index = BoundedLocalCache.readBufferIndex();
     AtomicReference<Node<Integer, Integer>>[] buffer = localCache.readBuffers[index];
-    PaddedAtomicLong writeCounter = localCache.readBufferWriteCount[index];
+    AtomicLong writeCounter = localCache.readBufferWriteCount[index];
 
     for (int i = 0; i < BoundedLocalCache.READ_BUFFER_THRESHOLD; i++) {
       localCache.get(context.firstKey());

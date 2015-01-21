@@ -44,7 +44,6 @@ import com.google.common.util.concurrent.MoreExecutors;
  *
  * @author mike nonemacher
  */
-@SuppressWarnings("deprecation") // tests of deprecated method
 public class CacheExpirationTest extends TestCase {
 
   private static final long EXPIRING_TIME = 1000;
@@ -470,10 +469,6 @@ public class CacheExpirationTest extends TestCase {
 
     public boolean wasCalled() {
       return wasCalled;
-    }
-
-    public void setKeyPrefix(String keyPrefix) {
-      this.keyPrefix = keyPrefix;
     }
 
     public void setValuePrefix(int valuePrefix) {

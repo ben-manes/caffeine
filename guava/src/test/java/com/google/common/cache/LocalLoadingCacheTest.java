@@ -59,7 +59,7 @@ public class LocalLoadingCacheTest extends TestCase {
         return new Object();
       }
     };
-    LoadingCache<Object, Object> cache = makeCache(createCacheBuilder(), loader);
+    makeCache(createCacheBuilder(), loader);
   }
 
   // null parameters test

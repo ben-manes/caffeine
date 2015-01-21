@@ -111,7 +111,7 @@ public final class EvictionTest {
       Eviction<Integer, Integer> eviction) {
     cache.putAll(context.absent());
     if (eviction.isWeighted()) {
-      assertThat(eviction.weightedSize().get(), is(context.maximumWeight()));
+      assertThat(eviction.weightedSize().getAsLong(), is(context.maximumWeight()));
     } else {
       assertThat(cache.estimatedSize(), is(context.maximumSize()));
     }
@@ -163,18 +163,18 @@ public final class EvictionTest {
     cache.put(2, asList(3, 4, 5, 6, 7));
     cache.put(3, asList(8, 9, 10));
     assertThat(cache.estimatedSize(), is(4L));
-    assertThat(eviction.weightedSize().get(), is(10L));
+    assertThat(eviction.weightedSize().getAsLong(), is(10L));
 
     // evict (1)
     cache.put(4, asList(11));
     assertThat(cache.asMap().containsKey(1), is(false));
     assertThat(cache.estimatedSize(), is(4L));
-    assertThat(eviction.weightedSize().get(), is(9L));
+    assertThat(eviction.weightedSize().getAsLong(), is(9L));
 
     // evict (2, 3)
     cache.put(5, asList(12, 13, 14, 15, 16, 17, 18, 19, 20));
     assertThat(cache.estimatedSize(), is(3L));
-    assertThat(eviction.weightedSize().get(), is(10L));
+    assertThat(eviction.weightedSize().getAsLong(), is(10L));
   }
 
   @Test(dataProvider = "caches")
@@ -194,12 +194,12 @@ public final class EvictionTest {
     cache.put(5, CompletableFuture.completedFuture(5));
     cache.put(4, CompletableFuture.completedFuture(4));
     cache.put(6, valueFuture);
-    assertThat(eviction.weightedSize().get(), is(9L));
+    assertThat(eviction.weightedSize().getAsLong(), is(9L));
     assertThat(cache.synchronous().estimatedSize(), is(3L));
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    assertThat(eviction.weightedSize().get(), is(10L));
+    assertThat(eviction.weightedSize().getAsLong(), is(10L));
     assertThat(cache.synchronous().estimatedSize(), is(2L));
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
   }
@@ -219,12 +219,12 @@ public final class EvictionTest {
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     cache.put(context.absentKey(), valueFuture);
-    assertThat(eviction.weightedSize().get(), is(0L));
+    assertThat(eviction.weightedSize().getAsLong(), is(0L));
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    assertThat(eviction.weightedSize().get(), is(0L));
+    assertThat(eviction.weightedSize().getAsLong(), is(0L));
     assertThat(cache.synchronous().estimatedSize(), is(0L));
   }
 
@@ -252,7 +252,7 @@ public final class EvictionTest {
   public void put(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
     cache.put("a", asList(1, 2, 3));
     assertThat(cache.estimatedSize(), is(1L));
-    assertThat(eviction.weightedSize().get(), is(3L));
+    assertThat(eviction.weightedSize().getAsLong(), is(3L));
   }
 
   @Test(dataProvider = "caches")
@@ -264,7 +264,7 @@ public final class EvictionTest {
 
     cache.put("a", asList(-1, -2, -3));
     assertThat(cache.estimatedSize(), is(2L));
-    assertThat(eviction.weightedSize().get(), is(4L));
+    assertThat(eviction.weightedSize().getAsLong(), is(4L));
   }
 
   @Test(dataProvider = "caches")
@@ -276,7 +276,7 @@ public final class EvictionTest {
 
     cache.put("a", asList(-1, -2, -3, -4));
     assertThat(cache.estimatedSize(), is(2L));
-    assertThat(eviction.weightedSize().get(), is(5L));
+    assertThat(eviction.weightedSize().getAsLong(), is(5L));
   }
 
   @Test(dataProvider = "caches")
@@ -294,12 +294,12 @@ public final class EvictionTest {
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     cache.put(context.absentKey(), valueFuture);
-    assertThat(eviction.weightedSize().get(), is(0L));
+    assertThat(eviction.weightedSize().getAsLong(), is(0L));
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    assertThat(eviction.weightedSize().get(), is(5L));
+    assertThat(eviction.weightedSize().getAsLong(), is(5L));
     assertThat(cache.synchronous().estimatedSize(), is(1L));
   }
 
@@ -312,7 +312,7 @@ public final class EvictionTest {
 
     cache.asMap().replace("a", asList(-1, -2, -3));
     assertThat(cache.estimatedSize(), is(2L));
-    assertThat(eviction.weightedSize().get(), is(4L));
+    assertThat(eviction.weightedSize().getAsLong(), is(4L));
   }
 
   @Test(dataProvider = "caches")
@@ -324,7 +324,7 @@ public final class EvictionTest {
 
     cache.asMap().replace("a", asList(-1, -2, -3, -4));
     assertThat(cache.estimatedSize(), is(2L));
-    assertThat(eviction.weightedSize().get(), is(5L));
+    assertThat(eviction.weightedSize().getAsLong(), is(5L));
   }
 
   @Test(dataProvider = "caches")
@@ -337,7 +337,7 @@ public final class EvictionTest {
 
     assertThat(cache.asMap().replace("a", asList(1, 2, 3), asList(4, 5, 6)), is(true));
     assertThat(cache.estimatedSize(), is(2L));
-    assertThat(eviction.weightedSize().get(), is(4L));
+    assertThat(eviction.weightedSize().getAsLong(), is(4L));
   }
 
   @Test(dataProvider = "caches")
@@ -350,7 +350,7 @@ public final class EvictionTest {
 
     cache.asMap().replace("a", asList(1, 2, 3), asList(-1, -2, -3, -4));
     assertThat(cache.estimatedSize(), is(2L));
-    assertThat(eviction.weightedSize().get(), is(5L));
+    assertThat(eviction.weightedSize().getAsLong(), is(5L));
   }
 
   @Test(dataProvider = "caches")
@@ -363,7 +363,7 @@ public final class EvictionTest {
 
     assertThat(cache.asMap().replace("a", asList(1), asList(4, 5)), is(false));
     assertThat(cache.estimatedSize(), is(2L));
-    assertThat(eviction.weightedSize().get(), is(4L));
+    assertThat(eviction.weightedSize().getAsLong(), is(4L));
   }
 
   @Test(dataProvider = "caches")
@@ -375,7 +375,7 @@ public final class EvictionTest {
 
     assertThat(cache.asMap().remove("a"), is(asList(1, 2, 3)));
     assertThat(cache.estimatedSize(), is(1L));
-    assertThat(eviction.weightedSize().get(), is(1L));
+    assertThat(eviction.weightedSize().getAsLong(), is(1L));
   }
 
   @Test(dataProvider = "caches")
@@ -387,7 +387,7 @@ public final class EvictionTest {
 
     assertThat(cache.asMap().remove("a", asList(1, 2, 3)), is(true));
     assertThat(cache.estimatedSize(), is(1L));
-    assertThat(eviction.weightedSize().get(), is(1L));
+    assertThat(eviction.weightedSize().getAsLong(), is(1L));
   }
 
   @Test(dataProvider = "caches")
@@ -400,7 +400,7 @@ public final class EvictionTest {
 
     assertThat(cache.asMap().remove("a", asList(-1, -2, -3)), is(false));
     assertThat(cache.estimatedSize(), is(2L));
-    assertThat(eviction.weightedSize().get(), is(4L));
+    assertThat(eviction.weightedSize().getAsLong(), is(4L));
   }
 
   @Test(dataProvider = "caches")
@@ -412,7 +412,7 @@ public final class EvictionTest {
 
     cache.invalidateAll();
     assertThat(cache.estimatedSize(), is(0L));
-    assertThat(eviction.weightedSize().get(), is(0L));
+    assertThat(eviction.weightedSize().getAsLong(), is(0L));
   }
 
   /* ---------------- Policy: IsWeighted -------------- */
@@ -430,7 +430,7 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine,
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.TEN)
   public void weightedSize(Cache<Integer, Integer> cache, Eviction<Integer, Integer> eviction) {
-    assertThat(eviction.weightedSize().get(), is(10 * cache.estimatedSize()));
+    assertThat(eviction.weightedSize().getAsLong(), is(10 * cache.estimatedSize()));
   }
 
   /* ---------------- Policy: MaximumSize -------------- */

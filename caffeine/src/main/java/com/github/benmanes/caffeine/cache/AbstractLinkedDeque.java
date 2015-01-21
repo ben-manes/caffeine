@@ -43,14 +43,14 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
    * Invariant: (first == null && last == null) ||
    *            (first.prev == null)
    */
-  protected E first;
+  E first;
 
   /**
    * Pointer to last node.
    * Invariant: (first == null && last == null) ||
    *            (last.next == null)
    */
-  protected E last;
+  E last;
 
   /**
    * Links the element to the front of the deque so that it becomes the first element.

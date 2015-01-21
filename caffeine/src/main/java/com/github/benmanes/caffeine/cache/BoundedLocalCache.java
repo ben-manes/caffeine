@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -48,6 +49,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -59,8 +61,6 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 
-import com.github.benmanes.caffeine.atomic.PaddedAtomicLong;
-import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
@@ -204,18 +204,18 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   // These fields provide support to bound the map by a maximum capacity
   final Weigher<? super K, ? super V> weigher;
   @GuardedBy("evictionLock") // must write under lock
-  final PaddedAtomicLong weightedSize;
+  final AtomicLong weightedSize;
   @GuardedBy("evictionLock") // must write under lock
-  final PaddedAtomicLong maximumWeightedSize;
+  final AtomicLong maximumWeightedSize;
 
   final Queue<Runnable> writeBuffer;
   final NonReentrantLock evictionLock;
-  final PaddedAtomicReference<DrainStatus> drainStatus;
+  final AtomicReference<DrainStatus> drainStatus;
 
   @GuardedBy("evictionLock")
   final long[] readBufferReadCount;
-  final PaddedAtomicLong[] readBufferWriteCount;
-  final PaddedAtomicLong[] readBufferDrainAtWriteCount;
+  final AtomicLong[] readBufferWriteCount;
+  final AtomicLong[] readBufferDrainAtWriteCount;
   final AtomicReference<Node<K, V>>[][] readBuffers;
 
   // These fields provide support for notifying a listener.
@@ -250,15 +250,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
 
     boolean evicts = (builder.getMaximumWeight() != Caffeine.UNSET_INT);
     maximumWeightedSize = evicts
-        ? new PaddedAtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY))
+        ? new AtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY))
         : null;
     readBufferReadCount = new long[NUMBER_OF_READ_BUFFERS];
-    readBufferWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
-    readBufferDrainAtWriteCount = new PaddedAtomicLong[NUMBER_OF_READ_BUFFERS];
+    readBufferWriteCount = new AtomicLong[NUMBER_OF_READ_BUFFERS];
+    readBufferDrainAtWriteCount = new AtomicLong[NUMBER_OF_READ_BUFFERS];
     readBuffers = new AtomicReference[NUMBER_OF_READ_BUFFERS][READ_BUFFER_SIZE];
     for (int i = 0; i < NUMBER_OF_READ_BUFFERS; i++) {
-      readBufferWriteCount[i] = new PaddedAtomicLong();
-      readBufferDrainAtWriteCount[i] = new PaddedAtomicLong();
+      readBufferWriteCount[i] = new AtomicLong();
+      readBufferDrainAtWriteCount[i] = new AtomicLong();
       readBuffers[i] = new AtomicReference[READ_BUFFER_SIZE];
       for (int j = 0; j < READ_BUFFER_SIZE; j++) {
         readBuffers[i][j] = new AtomicReference<Node<K, V>>();
@@ -269,8 +269,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     // The eviction support
     evictionLock = new NonReentrantLock();
     weigher = builder.getWeigher(isAsync);
-    weightedSize = new PaddedAtomicLong();
-    drainStatus = new PaddedAtomicReference<DrainStatus>(IDLE);
+    weightedSize = new AtomicLong();
+    drainStatus = new AtomicReference<DrainStatus>(IDLE);
 
     // The reference eviction support
     keyStrategy = ReferenceStrategy.forStength(builder.getKeyStrength());
@@ -294,7 +294,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
   }
 
   /** Asynchronously sends a removal notification to the listener. */
-  protected void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
+  void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
     requireNonNull(removalListener, "Notification should be guarded with a check");
     executor.execute(() -> {
       try {
@@ -505,7 +505,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     // The location in the buffer is chosen in a racy fashion as the increment is not atomic with
     // the insertion. This means that concurrent reads can overlap and overwrite one another,
     // resulting in a lossy buffer.
-    final PaddedAtomicLong counter = readBufferWriteCount[bufferIndex];
+    final AtomicLong counter = readBufferWriteCount[bufferIndex];
     final long writeCount = counter.get();
     counter.lazySet(writeCount + 1);
 
@@ -1321,11 +1321,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
    *     map.put(key, newValue);
    */
   @Override
+  @SuppressWarnings("unused")
   public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
     requireNonNull(key);
     requireNonNull(value);
     requireNonNull(remappingFunction);
 
+    // FIXME(ben): Flush out an atomic implementation instead of using the default version
     if (true) {
       return super.merge(key, value, statsAware(remappingFunction));
     }
@@ -2121,8 +2123,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
       @Override public boolean isWeighted() {
         return isWeighted;
       }
-      @Override public Optional<Long> weightedSize() {
-        return isWeighted() ? Optional.of(cache.weightedSize()) : Optional.empty();
+      @Override public OptionalLong weightedSize() {
+        return isWeighted() ? OptionalLong.of(cache.weightedSize()) : OptionalLong.empty();
       }
       @Override public long getMaximumSize() {
         return cache.capacity();
@@ -2139,16 +2141,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     final class BoundedExpireAfterAccess implements Expiration<K, V> {
-      @Override public Optional<Long> ageOf(K key, TimeUnit unit) {
+      @Override public OptionalLong ageOf(K key, TimeUnit unit) {
         Object keyRef = cache.keyStrategy.getKeyRef(key);
         Node<?, ?> node = cache.data.get(keyRef);
         if (node == null) {
-          return Optional.empty();
+          return OptionalLong.empty();
         }
         long age = cache.ticker.read() - node.getAccessTime();
         return (age > cache.expireAfterAccessNanos)
-            ? Optional.empty()
-            : Optional.of(unit.convert(age, TimeUnit.NANOSECONDS));
+            ? OptionalLong.empty()
+            : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
         return unit.convert(cache.expireAfterAccessNanos, TimeUnit.NANOSECONDS);
@@ -2167,16 +2169,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
     }
 
     final class BoundedExpireAfterWrite implements Expiration<K, V> {
-      @Override public Optional<Long> ageOf(K key, TimeUnit unit) {
+      @Override public OptionalLong ageOf(K key, TimeUnit unit) {
         Object keyRef = cache.keyStrategy.getKeyRef(key);
         Node<?, ?> node = cache.data.get(keyRef);
         if (node == null) {
-          return Optional.empty();
+          return OptionalLong.empty();
         }
         long age = cache.ticker.read() - node.getWriteTime();
         return (age > cache.expireAfterWriteNanos)
-            ? Optional.empty()
-            : Optional.of(unit.convert(age, TimeUnit.NANOSECONDS));
+            ? OptionalLong.empty()
+            : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
         return unit.convert(cache.expireAfterWriteNanos, TimeUnit.NANOSECONDS);

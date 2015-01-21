@@ -53,7 +53,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.github.benmanes.caffeine.UnsafeAccess;
+import com.github.benmanes.caffeine.base.UnsafeAccess;
 
 /**
  * A hash table supporting full concurrency of retrievals and

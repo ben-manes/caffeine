@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
-import com.github.benmanes.caffeine.UnsafeAccess;
+import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
 import com.google.common.collect.Maps;

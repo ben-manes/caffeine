@@ -164,13 +164,13 @@ public class CacheBuilderTest extends TestCase {
   @GwtIncompatible("weigher")
   public void testWeigher_withMaximumSize() {
     try {
-      Caffeine<Object, Object> builder = Caffeine.newBuilder()
+      Caffeine.newBuilder()
           .weigher(constantWeigher(42))
           .maximumSize(1);
       fail();
     } catch (IllegalStateException expected) {}
     try {
-      Caffeine<Object, Object> builder = Caffeine.newBuilder()
+      Caffeine.newBuilder()
           .maximumSize(1)
           .weigher(constantWeigher(42));
       fail();

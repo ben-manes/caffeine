@@ -25,6 +25,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
+import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**

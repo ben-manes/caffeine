@@ -34,8 +34,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
-import com.github.benmanes.caffeine.atomic.PaddedAtomicReference;
-
 /**
  * An unbounded thread-safe stack based on linked nodes. This stack orders elements LIFO
  * (last-in-first-out). The <em>top</em> of the stack is that element that has been on the stack
@@ -131,18 +129,18 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
   }
 
   /** The top of the stack. */
-  final PaddedAtomicReference<Node<E>> top;
+  final AtomicReference<Node<E>> top;
 
   /** The arena where slots can be used to perform an exchange. */
-  final PaddedAtomicReference<Object>[] arena;
+  final AtomicReference<Object>[] arena;
 
   /** Creates a {@code EliminationStack} that is initially empty. */
   @SuppressWarnings("unchecked")
   public EliminationStack() {
-    top = new PaddedAtomicReference<>();
-    arena = new PaddedAtomicReference[ARENA_LENGTH];
+    top = new AtomicReference<>();
+    arena = new AtomicReference[ARENA_LENGTH];
     for (int i = 0; i < ARENA_LENGTH; i++) {
-      arena[i] = new PaddedAtomicReference<Object>();
+      arena[i] = new AtomicReference<Object>();
     }
   }
 

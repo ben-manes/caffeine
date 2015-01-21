@@ -58,6 +58,7 @@ public class PopulatedCachesTest extends TestCase {
   public void testSize_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
+      @SuppressWarnings("unused")
       List<Entry<Object, Object>> warmed = warmUp(cache);
       assertEquals(WARMUP_SIZE, cache.size());
       assertMapSize(cache.asMap(), WARMUP_SIZE);
@@ -128,6 +129,7 @@ public class PopulatedCachesTest extends TestCase {
   public void testPutAll_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
+      @SuppressWarnings("unused")
       List<Entry<Object, Object>> warmed = warmUp(cache);
       Object newKey = new Object();
       Object newValue = new Object();
@@ -240,8 +242,6 @@ public class PopulatedCachesTest extends TestCase {
       checkEmpty(cache);
     }
   }
-
-  @SuppressWarnings("unchecked") // generic array creation
 
   public void testEntrySet_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {

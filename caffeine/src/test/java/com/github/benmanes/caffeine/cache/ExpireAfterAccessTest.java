@@ -231,9 +231,9 @@ public final class ExpireAfterAccessTest {
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void ageOf_access(CacheContext context,
       @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
-    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(0L));
+    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(0L));
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(30L));
+    assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
     Assert.assertFalse(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent());
   }

@@ -58,6 +58,7 @@ class TestingRemovalListeners {
   @GwtIncompatible("ConcurrentLinkedQueue")
   static class QueuingRemovalListener<K, V>
       extends ConcurrentLinkedQueue<RemovalNotification<K, V>> implements RemovalListener<K, V> {
+    private static final long serialVersionUID = 1L;
 
     @Override
     public void onRemoval(RemovalNotification<K, V> notification) {

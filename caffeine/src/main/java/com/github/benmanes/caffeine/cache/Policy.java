@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnegative;
@@ -89,7 +90,7 @@ public interface Policy<K, V> {
      * @return the combined weight of the values in this cache
      */
     @Nonnull
-    Optional<Long> weightedSize();
+    OptionalLong weightedSize();
 
     /**
      * Returns the maximum total weighted or unweighted size of this cache, depending on how the
@@ -165,7 +166,7 @@ public interface Policy<K, V> {
      * @return the age if the entry is present in the cache
      */
     @Nonnull
-    Optional<Long> ageOf(@Nonnull K key, @Nonnull TimeUnit unit);
+    OptionalLong ageOf(@Nonnull K key, @Nonnull TimeUnit unit);
 
     /**
      * Returns the fixed duration used to determine if an entry should be automatically removed due

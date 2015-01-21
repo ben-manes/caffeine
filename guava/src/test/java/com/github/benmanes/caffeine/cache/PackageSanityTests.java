@@ -24,16 +24,14 @@ import com.google.common.testing.AbstractPackageSanityTests;
  * @author Ben Yu
  */
 public class PackageSanityTests extends AbstractPackageSanityTests {
+  // FIXME(ben): Enable these tests
+
   public PackageSanityTests() {
     setDefault(CacheLoader.class, new CacheLoader<Object, Object>() {
       @Override public Object load(Object key) {
         return key;
       }});
     setDefault(Caffeine.class, Caffeine.newBuilder());
-    ignoreClasses(clazz -> {
-      return true
-          || LinkedDeque.class.isAssignableFrom(clazz)
-          || AsyncLoadingCache.class.isAssignableFrom(clazz); // FIXME
-    });
+    ignoreClasses(clazz -> true);
   }
 }

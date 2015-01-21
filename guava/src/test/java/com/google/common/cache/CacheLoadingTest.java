@@ -21,7 +21,6 @@ import static com.google.common.cache.TestingCacheLoaders.exceptionLoader;
 import static com.google.common.cache.TestingCacheLoaders.identityLoader;
 import static com.google.common.cache.TestingRemovalListeners.countingRemovalListener;
 import static com.google.common.truth.Truth.assertThat;
-import static java.lang.Thread.currentThread;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -35,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 import junit.framework.TestCase;
@@ -79,16 +77,8 @@ public class CacheLoadingTest extends TestCase {
   public void tearDown() throws Exception {
     super.tearDown();
     // TODO(cpovirk): run tests in other thread instead of messing with main thread interrupt status
-    currentThread().interrupted();
+    Thread.interrupted();
     logger.removeHandler(logHandler);
-  }
-
-  private Throwable popLoggedThrowable() {
-    List<LogRecord> logRecords = logHandler.getStoredLogRecords();
-    assertEquals(1, logRecords.size());
-    LogRecord logRecord = logRecords.get(0);
-    logHandler.clear();
-    return logRecord.getThrown();
   }
 
   private void checkNothingLogged() {
@@ -1195,7 +1185,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(0, stats.hitCount());
 
     // Sanity check:
-    assertFalse(currentThread().interrupted());
+    assertFalse(Thread.interrupted());
 
     try {
       cache.get(new Object());
@@ -1203,7 +1193,7 @@ public class CacheLoadingTest extends TestCase {
     } catch (ExecutionException expected) {
       assertSame(e, expected.getCause());
     }
-    assertTrue(currentThread().interrupted());
+    assertTrue(Thread.interrupted());
     stats = cache.stats();
     assertEquals(1, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -1216,7 +1206,7 @@ public class CacheLoadingTest extends TestCase {
     } catch (UncheckedExecutionException expected) {
       assertSame(e, expected.getCause());
     }
-    assertTrue(currentThread().interrupted());
+    assertTrue(Thread.interrupted());
     stats = cache.stats();
     assertEquals(2, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -1224,7 +1214,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(0, stats.hitCount());
 
     cache.refresh(new Object());
-    assertTrue(currentThread().interrupted());
+    assertTrue(Thread.interrupted());
     checkLoggedCause(e);
     stats = cache.stats();
     assertEquals(2, stats.missCount());
@@ -1239,7 +1229,7 @@ public class CacheLoadingTest extends TestCase {
     } catch (ExecutionException expected) {
       assertSame(callableException, expected.getCause());
     }
-    assertTrue(currentThread().interrupted());
+    assertTrue(Thread.interrupted());
     stats = cache.stats();
     assertEquals(3, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -1252,7 +1242,7 @@ public class CacheLoadingTest extends TestCase {
     } catch (ExecutionException expected) {
       assertSame(e, expected.getCause());
     }
-    assertTrue(currentThread().interrupted());
+    assertTrue(Thread.interrupted());
     stats = cache.stats();
     assertEquals(4, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -1457,7 +1447,7 @@ public class CacheLoadingTest extends TestCase {
     } catch (ExecutionException expected) {
       assertSame(e, expected.getCause());
     }
-    assertTrue(currentThread().interrupted());
+    assertTrue(Thread.interrupted());
     stats = cache.stats();
     assertEquals(1, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());

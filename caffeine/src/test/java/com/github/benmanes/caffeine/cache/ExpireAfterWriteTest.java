@@ -218,9 +218,9 @@ public final class ExpireAfterWriteTest {
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void ageOf_write(CacheContext context,
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
-    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(0L));
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(0L));
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).get(), is(30L));
+    assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
   }

@@ -28,6 +28,8 @@ import java.util.Queue;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.base.UnsafeAccess;
+
 /**
  * A lock-free unbounded queue based on linked nodes that supports concurrent producers and is
  * restricted to a single consumer. This queue orders elements FIFO (first-in-first-out). The

@@ -27,6 +27,8 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
+import com.github.benmanes.caffeine.base.UnsafeAccess;
+
 /**
  * A comparison of different lookup approaches for indexes for a slot in a fixed-sized shared array.
  * This approach is used for elimination (threads backoff and rendezvous) and striping (reduced

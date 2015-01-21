@@ -91,7 +91,6 @@ class CacheBuilderFactory {
   }
 
   Iterable<Caffeine<Object, Object>> buildAllPermutations() {
-    @SuppressWarnings("unchecked")
     Iterable<List<Object>> combinations = buildCartesianProduct(concurrencyLevels,
         initialCapacities, maximumSizes, expireAfterWrites, expireAfterAccesses, refreshes,
         keyStrengths, valueStrengths);

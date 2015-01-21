@@ -109,6 +109,7 @@ public class CacheBuilderGwtTest extends TestCase {
     assertEquals(null, cache.getIfPresent(2));
   }
 
+  @SuppressWarnings("deprecation")
   public void testLoadingCache() throws ExecutionException {
     CacheLoader<Integer, Integer> loader = new CacheLoader<Integer, Integer>() {
       int i = 0;

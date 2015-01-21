@@ -15,13 +15,13 @@
 package com.google.common.cache;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.assertNotSame;
-import static junit.framework.Assert.assertNull;
-import static junit.framework.Assert.assertSame;
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.lang.ref.Reference;
 import java.util.Collection;
@@ -80,7 +80,6 @@ class CacheTesting {
    * that the given entry is a weak or soft reference, and throws an IllegalStateException if that
    * assumption does not hold.
    */
-  @SuppressWarnings("unchecked")  // the instanceof check and the cast generate this warning
   static <K, V> void simulateKeyReclamation(Cache<K, V> cache, K key) {
     ReferenceEntry<K, V> entry = getReferenceEntry(cache, key);
 
@@ -385,7 +384,7 @@ class CacheTesting {
 
       ReferenceEntry<?, ?> originalHead = segment.accessQueue.peek();
       @SuppressWarnings("unchecked")
-      ReferenceEntry<Integer, Integer> entry = (ReferenceEntry) originalHead;
+      ReferenceEntry<Integer, Integer> entry = (ReferenceEntry<Integer, Integer>) originalHead;
       operation.accept(entry);
       drainRecencyQueue(segment);
 
