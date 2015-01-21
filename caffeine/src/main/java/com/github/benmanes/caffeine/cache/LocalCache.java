@@ -107,4 +107,69 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   /** See {@link Cache#cleanUp}. */
   void cleanUp();
+
+  /** Decorates the remapping function to record statistics if enabled. */
+  default Function<? super K, ? extends V> statsAware(
+      Function<? super K, ? extends V> mappingFunction, boolean isAsync) {
+    if (!isRecordingStats()) {
+      return mappingFunction;
+    }
+    return key -> {
+      V value;
+      statsCounter().recordMisses(1);
+      long startTime = ticker().read();
+      try {
+        value = mappingFunction.apply(key);
+      } catch (RuntimeException | Error e) {
+        statsCounter().recordLoadFailure(ticker().read() - startTime);
+        throw e;
+      }
+      long loadTime = ticker().read() - startTime;
+      if (!isAsync) {
+        if (value == null) {
+          statsCounter().recordLoadFailure(loadTime);
+        } else {
+          statsCounter().recordLoadSuccess(loadTime);
+        }
+      }
+      return value;
+    };
+  }
+
+  /** Decorates the remapping function to record statistics if enabled. */
+  default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
+      BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
+    return statsAware(remappingFunction, true, false);
+  }
+
+  /** Decorates the remapping function to record statistics if enabled. */
+  default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
+      BiFunction<? super T, ? super U, ? extends R> remappingFunction,
+      boolean recordMiss, boolean isAsync) {
+    if (!isRecordingStats()) {
+      return remappingFunction;
+    }
+    return (t, u) -> {
+      R result;
+      if ((u == null) && recordMiss) {
+        statsCounter().recordMisses(1);
+      }
+      long startTime = ticker().read();
+      try {
+        result = remappingFunction.apply(t, u);
+      } catch (RuntimeException | Error e) {
+        statsCounter().recordLoadFailure(ticker().read() - startTime);
+        throw e;
+      }
+      long loadTime = ticker().read() - startTime;
+      if (!isAsync) {
+        if (result == null) {
+          statsCounter().recordLoadFailure(loadTime);
+        } else {
+          statsCounter().recordLoadSuccess(loadTime);
+        }
+      }
+      return result;
+    };
+  }
 }

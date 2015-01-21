@@ -111,17 +111,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     return Collections.unmodifiableMap(result);
   }
 
-  public void invalidateAll() {
-    clear();
-  }
-
-  @Override
-  public void invalidateAll(Iterable<?> keys) {
-    for (Object key : keys) {
-      remove(key);
-    }
-  }
-
   @Override
   public void cleanUp() {}
 
@@ -301,70 +290,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     return nv;
   }
 
-  /** Decorates the remapping function to record statistics if enabled. */
-  Function<? super K, ? extends V> statsAware(
-      Function<? super K, ? extends V> mappingFunction, boolean isAsync) {
-    if (!isRecordingStats) {
-      return mappingFunction;
-    }
-    return key -> {
-      V value;
-      statsCounter.recordMisses(1);
-      long startTime = ticker.read();
-      try {
-        value = mappingFunction.apply(key);
-      } catch (RuntimeException | Error e) {
-        statsCounter.recordLoadFailure(ticker.read() - startTime);
-        throw e;
-      }
-      long loadTime = ticker.read() - startTime;
-      if (!isAsync) {
-        if (value == null) {
-          statsCounter.recordLoadFailure(loadTime);
-        } else {
-          statsCounter.recordLoadSuccess(loadTime);
-        }
-      }
-      return value;
-    };
-  }
-
-  <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
-      BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
-    return statsAware(remappingFunction, true, false);
-  }
-
-  /** Decorates the remapping function to record statistics if enabled. */
-  <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
-      BiFunction<? super T, ? super U, ? extends R> remappingFunction,
-      boolean recordMiss, boolean isAsync) {
-    if (!isRecordingStats) {
-      return remappingFunction;
-    }
-    return (t, u) -> {
-      R result;
-      if ((u == null) && recordMiss) {
-        statsCounter.recordMisses(1);
-      }
-      long startTime = ticker.read();
-      try {
-        result = remappingFunction.apply(t, u);
-      } catch (RuntimeException | Error e) {
-        statsCounter.recordLoadFailure(ticker.read() - startTime);
-        throw e;
-      }
-      long loadTime = ticker.read() - startTime;
-      if (!isAsync) {
-        if (result == null) {
-          statsCounter.recordLoadFailure(loadTime);
-        } else {
-          statsCounter.recordLoadSuccess(loadTime);
-        }
-      }
-      return result;
-    };
-  }
-
   /* ---------------- Concurrent Map -------------- */
 
   @Override
@@ -379,8 +304,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return;
     }
     for (K key : data.keySet()) {
-      V value = data.remove(key);
-      notifyRemoval(key, value, RemovalCause.EXPLICIT);
+      remove(key);
     }
   }
 
@@ -425,10 +349,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return;
     }
     for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      V oldValue = data.put(entry.getKey(), entry.getValue());
-      if ((oldValue != null) && (oldValue != entry.getValue())) {
-        notifyRemoval(entry.getKey(), oldValue, RemovalCause.REPLACED);
-      }
+      put(entry.getKey(), entry.getValue());
     }
   }
 
@@ -459,7 +380,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public V replace(K key, V value) {
     V prev = data.replace(key, value);
-    if ((hasRemovalListener()) && (prev != null) && (prev != value)) {
+    if (hasRemovalListener() && (prev != null) && (prev != value)) {
       notifyRemoval(key, value, RemovalCause.REPLACED);
     }
     return prev;
@@ -508,7 +429,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the keys. */
-  static class KeySetView<K> extends AbstractSet<K> {
+  static final class KeySetView<K> extends AbstractSet<K> {
     final UnboundedLocalCache<K, ?> local;
 
     KeySetView(UnboundedLocalCache<K, ?> local) {
@@ -553,13 +474,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   /** An adapter to safely externalize the key iterator. */
   static final class KeyIterator<K> implements Iterator<K> {
-    final UnboundedLocalCache<K, ?> local;
+    final UnboundedLocalCache<K, ?> cache;
     final Iterator<K> iterator;
-    K key;
+    K current;
 
-    KeyIterator(UnboundedLocalCache<K, ?> local) {
-      this.local = requireNonNull(local);
-      this.iterator = local.data.keySet().iterator();
+    KeyIterator(UnboundedLocalCache<K, ?> cache) {
+      this.cache = requireNonNull(cache);
+      this.iterator = cache.data.keySet().iterator();
     }
 
     @Override
@@ -569,44 +490,44 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public K next() {
-      key = iterator.next();
-      return key;
+      current = iterator.next();
+      return current;
     }
 
     @Override
     public void remove() {
-      Caffeine.requireState(key != null);
-      local.remove(key);
-      key = null;
+      Caffeine.requireState(current != null);
+      cache.remove(current);
+      current = null;
     }
   }
 
   /** An adapter to safely externalize the values. */
   final class ValuesView extends AbstractCollection<V> {
-    final UnboundedLocalCache<K, V> local;
+    final UnboundedLocalCache<K, V> cache;
 
-    ValuesView(UnboundedLocalCache<K, V> local) {
-      this.local = requireNonNull(local);
+    ValuesView(UnboundedLocalCache<K, V> cache) {
+      this.cache = requireNonNull(cache);
     }
 
     @Override
     public boolean isEmpty() {
-      return local.isEmpty();
+      return cache.isEmpty();
     }
 
     @Override
     public int size() {
-      return local.size();
+      return cache.size();
     }
 
     @Override
     public void clear() {
-      local.clear();
+      cache.clear();
     }
 
     @Override
     public boolean contains(Object o) {
-      return local.containsValue(o);
+      return cache.containsValue(o);
     }
 
     @Override
@@ -617,24 +538,24 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Iterator<V> iterator() {
-      return new ValuesIterator<K, V>(local);
+      return new ValuesIterator<K, V>(cache);
     }
 
     @Override
     public Spliterator<V> spliterator() {
-      return local.data.values().spliterator();
+      return cache.data.values().spliterator();
     }
   }
 
   /** An adapter to safely externalize the value iterator. */
   static final class ValuesIterator<K, V> implements Iterator<V> {
-    final UnboundedLocalCache<K, V> local;
+    final UnboundedLocalCache<K, V> cache;
     final Iterator<Entry<K, V>> iterator;
     Entry<K, V> entry;
 
-    ValuesIterator(UnboundedLocalCache<K, V> local) {
-      this.local = requireNonNull(local);
-      this.iterator = local.data.entrySet().iterator();
+    ValuesIterator(UnboundedLocalCache<K, V> cache) {
+      this.cache = requireNonNull(cache);
+      this.iterator = cache.data.entrySet().iterator();
     }
 
     @Override
@@ -651,32 +572,32 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public void remove() {
       Caffeine.requireState(entry != null);
-      local.remove(entry.getKey());
+      cache.remove(entry.getKey());
       entry = null;
     }
   }
 
   /** An adapter to safely externalize the entries. */
   final class EntrySetView extends AbstractSet<Entry<K, V>> {
-    final UnboundedLocalCache<K, V> local;
+    final UnboundedLocalCache<K, V> cache;
 
-    EntrySetView(UnboundedLocalCache<K, V> local) {
-      this.local = requireNonNull(local);
+    EntrySetView(UnboundedLocalCache<K, V> cache) {
+      this.cache = requireNonNull(cache);
     }
 
     @Override
     public boolean isEmpty() {
-      return local.isEmpty();
+      return cache.isEmpty();
     }
 
     @Override
     public int size() {
-      return local.size();
+      return cache.size();
     }
 
     @Override
     public void clear() {
-      local.clear();
+      cache.clear();
     }
 
     @Override
@@ -685,13 +606,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         return false;
       }
       Entry<?, ?> entry = (Entry<?, ?>) o;
-      V value = local.get(entry.getKey());
+      V value = cache.get(entry.getKey());
       return (value != null) && value.equals(entry.getValue());
     }
 
     @Override
     public boolean add(Entry<K, V> entry) {
-      return (local.putIfAbsent(entry.getKey(), entry.getValue()) == null);
+      return (cache.putIfAbsent(entry.getKey(), entry.getValue()) == null);
     }
 
     @Override
@@ -700,29 +621,29 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         return false;
       }
       Entry<?, ?> entry = (Entry<?, ?>) obj;
-      return local.remove(entry.getKey(), entry.getValue());
+      return cache.remove(entry.getKey(), entry.getValue());
     }
 
     @Override
     public Iterator<Entry<K, V>> iterator() {
-      return new EntryIterator<K, V>(local);
+      return new EntryIterator<K, V>(cache);
     }
 
     @Override
     public Spliterator<Entry<K, V>> spliterator() {
-      return local.data.entrySet().spliterator();
+      return cache.data.entrySet().spliterator();
     }
   }
 
   /** An adapter to safely externalize the entry iterator. */
   static final class EntryIterator<K, V> implements Iterator<Entry<K, V>> {
-    final UnboundedLocalCache<K, V> local;
+    final UnboundedLocalCache<K, V> cache;
     final Iterator<Entry<K, V>> iterator;
     Entry<K, V> entry;
 
-    EntryIterator(UnboundedLocalCache<K, V> local) {
-      this.local = requireNonNull(local);
-      this.iterator = local.data.entrySet().iterator();
+    EntryIterator(UnboundedLocalCache<K, V> cache) {
+      this.cache = requireNonNull(cache);
+      this.iterator = cache.data.entrySet().iterator();
     }
 
     @Override
@@ -733,13 +654,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public Entry<K, V> next() {
       entry = iterator.next();
-      return new WriteThroughEntry<K, V>(local, entry.getKey(), entry.getValue());
+      return new WriteThroughEntry<K, V>(cache, entry.getKey(), entry.getValue());
     }
 
     @Override
     public void remove() {
       Caffeine.requireState(entry != null);
-      local.remove(entry.getKey());
+      cache.remove(entry.getKey());
       entry = null;
     }
   }
@@ -764,7 +685,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<K, V>()) : policy;
+      return (policy == null) ? (policy = new UnboundedPolicy<>()) : policy;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -780,6 +701,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
   }
 
+  /** An eviction policy that supports no boundings. */
   static final class UnboundedPolicy<K, V> implements Policy<K, V> {
     @Override public Optional<Eviction<K, V>> eviction() {
       return Optional.empty();
@@ -851,7 +773,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     protected Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<K, V>()) : policy;
+      return (policy == null) ? (policy = new UnboundedPolicy<>()) : policy;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
