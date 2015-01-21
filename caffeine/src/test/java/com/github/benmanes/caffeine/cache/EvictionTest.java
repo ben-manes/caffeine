@@ -64,7 +64,6 @@ import com.google.common.collect.Iterables;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class EvictionTest {
-  // FIXME: Add async weighted size support
 
   /* ---------------- RemovalListener -------------- */
 

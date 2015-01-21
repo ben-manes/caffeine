@@ -15,6 +15,9 @@ dependencies {
   jmh benchmark_libraries.koloboke
   jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.concurrentlinkedhashmap
+  
+  // TODO(ben): Add a special generated source sourceset
+  testCompile libraries.javapoet
 }
 
 bundle {
