@@ -22,7 +22,7 @@ import static org.hamcrest.Matchers.is;
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -50,10 +50,8 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.EMPTY)
   public void evict_weakKeys(Cache<Integer, Integer> cache, CacheContext context) {
-    context.original().clear();
-    cache.put(new Random().nextInt(), 0);
-    GcFinalization.awaitFullGc();
-    cleanUp(cache, context, 0);
+    cache.put(Integer.MIN_VALUE + ThreadLocalRandom.current().nextInt(), 0);
+    cleanUpUntilEmpty(cache, context);
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.COLLECTED));
   }
 
@@ -61,8 +59,7 @@ public final class ReferenceTest {
   @CacheSpec(values = ReferenceType.WEAK, population = Population.FULL)
   public void evict_weakValues(Cache<Integer, Integer> cache, CacheContext context) {
     context.original().clear();
-    GcFinalization.awaitFullGc();
-    cleanUp(cache, context, 0);
+    cleanUpUntilEmpty(cache, context);
     assertThat(cache, hasRemovalNotifications(
         context, context.initialSize(), RemovalCause.COLLECTED));
   }
@@ -72,21 +69,21 @@ public final class ReferenceTest {
   public void evict_softValues(Cache<Integer, Integer> cache, CacheContext context) {
     context.clear();
     awaitSoftRefGc();
-    cleanUp(cache, context, 0);
+    cleanUpUntilEmpty(cache, context);
     assertThat(cache, hasRemovalNotifications(
         context, context.initialSize(), RemovalCause.COLLECTED));
   }
 
-  static void cleanUp(Cache<Integer, Integer> cache, CacheContext context, long finalSize) {
+  static void cleanUpUntilEmpty(Cache<Integer, Integer> cache, CacheContext context) {
     // As clean-up is amortized, pretend that the increment count may be as low as per entry
-    for (int i = 0; i < context.population().size(); i++) {
+    int i = 0;
+    do {
+      GcFinalization.awaitFullGc();
       cache.cleanUp();
-      if (cache.estimatedSize() == finalSize) {
+      if (cache.asMap().isEmpty()) {
         return; // passed
       }
-    }
-    GcFinalization.awaitFullGc();
-    cache.cleanUp();
+    } while (i++ < context.population().size());
     assertThat(cache.estimatedSize(), is(0L));
   }
 
