@@ -13,13 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.playground;
+package com.github.benmanes.caffeine.cache;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,23 +52,27 @@ import com.squareup.javapoet.Types;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class NodeGenerator {
+  static final String PACKAGE_NAME = NodeGenerator.class.getPackage().getName();
+
   enum Strength { STRONG, WEAK, SOFT }
 
   final TypeVariable<?> kTypeVar = Types.typeVariable("K");
   final TypeVariable<?> vTypeVar = Types.typeVariable("V");
-  final Type kType = ClassName.get(getClass().getPackage().getName(), "K");
-  final Type vType = ClassName.get(getClass().getPackage().getName(), "V");
+  final Type kType = ClassName.get(PACKAGE_NAME, "K");
+  final Type vType = ClassName.get(PACKAGE_NAME, "V");
+  final Type nodeType = ClassName.get(PACKAGE_NAME, "Node");
   final ParameterSpec keySpec = ParameterSpec.builder(kType, "key")
       .addAnnotation(Nonnull.class).build();
   final ParameterSpec valueSpec = ParameterSpec.builder(vType, "value")
       .addAnnotation(Nonnull.class).build();
   final ParameterSpec weightSpec = ParameterSpec.builder(int.class, "weight")
       .addAnnotation(Nonnegative.class).build();
+  final Type node = Types.parameterizedType(nodeType, kType, vType);
 
-  void generate() throws IOException {
+  void generate(Appendable writer) throws IOException {
     TypeSpec.Builder nodeFactoryBuilder = newNodeFactoryBuilder();
     generatedNodes(nodeFactoryBuilder);
-    makeJavaFile(nodeFactoryBuilder).emit(System.out);
+    makeJavaFile(nodeFactoryBuilder).emit(writer);
   }
 
   void generatedNodes(TypeSpec.Builder nodeFactoryBuilder) {
@@ -92,47 +101,62 @@ public final class NodeGenerator {
 
     MethodSpec newNodeSpec = newNode()
         .addAnnotation(Override.class)
-        .addCode("return new " + className + "<K, V>(key, value);\n")
+        .addCode("return new $N<>(key, value);\n", className)
         .build();
     TypeSpec typeSpec = TypeSpec.anonymousClassBuilder("")
         .addMethod(newNodeSpec)
         .build();
     nodeFactoryBuilder.addEnumConstant(enumName, typeSpec);
 
-    TypeSpec.Builder nodeType = TypeSpec.classBuilder(className)
-        .addSuperinterface(Types.parameterizedType(Node.class, kType, vType))
+    TypeSpec.Builder nodeSubtype = TypeSpec.classBuilder(className)
+        .addSuperinterface(Types.parameterizedType(nodeType, kType, vType))
         .addModifiers(Modifier.STATIC, Modifier.FINAL)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
         .addMethod(newGetter(keyStrength, kType, "key"))
+        .addMethod(newGetterRef("key"))
         .addMethod(newGetter(valueStrength, vType, "value"))
         .addMethod(newSetter(valueStrength, vType, "value"));
     MethodSpec.Builder constructor = MethodSpec.constructorBuilder()
         .addParameter(keySpec).addParameter(valueSpec);
-    addConstructorAssignment(nodeType, constructor, keyStrength, kType, "key", Modifier.FINAL);
-    addConstructorAssignment(nodeType, constructor,
+    addConstructorAssignment(nodeSubtype, constructor, keyStrength, kType, "key", Modifier.FINAL);
+    addConstructorAssignment(nodeSubtype, constructor,
         valueStrength, vType, "value", Modifier.VOLATILE);
 
     if(weighed) {
-      nodeType.addField(int.class, "weight", Modifier.PRIVATE)
-        .addMethod(newGetter(Strength.STRONG, int.class, "weight"))
-        .addMethod(newSetter(Strength.STRONG, int.class, "weight"));
+      nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
+          .addMethod(newGetter(Strength.STRONG, int.class, "weight"))
+          .addMethod(newSetter(Strength.STRONG, int.class, "weight"));
     }
     if (expireAfterAccess) {
-      nodeType.addField(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
-      .addMethod(newGetter(Strength.STRONG, long.class, "accessTime"))
-      .addMethod(newSetter(Strength.STRONG, long.class, "accessTime"));
+      nodeSubtype.addField(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
+          .addMethod(newGetter(Strength.STRONG, long.class, "accessTime"))
+          .addMethod(newSetter(Strength.STRONG, long.class, "accessTime"));
     }
     if (expireAfterWrite) {
-      nodeType.addField(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
-      .addMethod(newGetter(Strength.STRONG, long.class, "writeTime"))
-      .addMethod(newSetter(Strength.STRONG, long.class, "writeTime"));
+      nodeSubtype.addField(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
+          .addMethod(newGetter(Strength.STRONG, long.class, "writeTime"))
+          .addMethod(newSetter(Strength.STRONG, long.class, "writeTime"));
     }
 
+    if (maximum || expireAfterAccess) {
+      addFieldAndGetter(nodeSubtype, node, "previousInAccessOrder");
+      addFieldAndGetter(nodeSubtype, node, "nextInAccessOrder");
+    }
+    if (expireAfterWrite) {
+      addFieldAndGetter(nodeSubtype, node, "previousInWriteOrder");
+      addFieldAndGetter(nodeSubtype, node, "nextInWriteOrder");
+    }
 
-    nodeFactoryBuilder.addType(nodeType
+    nodeFactoryBuilder.addType(nodeSubtype
         .addMethod(constructor.build())
         .build());
+  }
+
+  private void addFieldAndGetter(TypeSpec.Builder typeSpec, Type varType, String varName) {
+    typeSpec.addField(varType, varName, Modifier.PRIVATE)
+        .addMethod(newGetter(Strength.STRONG, varType, varName))
+        .addMethod(newSetter(Strength.STRONG, varType, varName));
   }
 
   private String makeEnumName(Strength keyStrength, Strength valueStrength,
@@ -153,6 +177,18 @@ public final class NodeGenerator {
       }
     }
     return name.toString();
+  }
+
+  private MethodSpec newGetterRef(String varName) {
+    String methodName = String.format("get%sRef",
+        Character.toUpperCase(varName.charAt(0)) + varName.substring(1));
+    MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
+        .addAnnotation(Override.class)
+        .addModifiers(Modifier.PUBLIC)
+        .returns(Object.class);
+    getter.addAnnotation(Nonnull.class);
+    getter.addStatement("return $N", varName);
+    return getter.build();
   }
 
   private MethodSpec newGetter(Strength strength, Type varType, String varName) {
@@ -178,7 +214,7 @@ public final class NodeGenerator {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     Type annotation = (varType == int.class) || (varType == long.class)
         ? Nonnegative.class
-        : Nonnull.class;
+        : Nullable.class;
     MethodSpec.Builder setter = MethodSpec.methodBuilder(methodName)
         .addParameter(ParameterSpec.builder(varType, varName).addAnnotation(annotation).build())
         .addAnnotation(Override.class)
@@ -247,10 +283,19 @@ public final class NodeGenerator {
         .addTypeVariable(vTypeVar)
         .addParameter(keySpec)
         .addParameter(valueSpec)
-        .returns(Types.parameterizedType(Node.class, kType, vType));
+        .returns(node);
   }
 
   public static void main(String[] args) throws IOException {
-    new NodeGenerator().generate();
+    if (args.length == 0) {
+      new NodeGenerator().generate(System.out);
+      return;
+    }
+    String directory = args[0] + PACKAGE_NAME.replace('.', '/');
+    new File(directory).mkdirs();
+    Path path = Paths.get(directory, "/NodeFactory.java");
+    try (BufferedWriter writer = Files.newBufferedWriter(path)) {
+      new NodeGenerator().generate(writer);
+    }
   }
 }

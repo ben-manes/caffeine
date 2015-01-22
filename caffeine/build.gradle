@@ -1,5 +1,18 @@
 apply from: "${projectDir}/testing.gradle"
 
+sourceSets {
+  javaPoet {
+    java.srcDir 'src/javaPoet/java'
+  }
+  main {
+    java.srcDir "${buildDir}/generated-sources/"
+  }
+}
+
+plugins.withType(EclipsePlugin) {
+  project.eclipse.classpath.plusConfigurations += [ configurations.javaPoetCompile ]
+}
+
 dependencies {
   compile project(':tracing:api')
   compile libraries.jsr305
@@ -16,11 +29,19 @@ dependencies {
   jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.concurrentlinkedhashmap
   
-  // TODO(ben): Add a special generated source sourceset
-  testCompile libraries.javapoet
+  javaPoetCompile libraries.jsr305
+  javaPoetCompile libraries.javapoet
 }
 
 bundle {
   instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
   instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
 }
+
+task generateJavaPoet(type: JavaExec) {
+  main = 'com.github.benmanes.caffeine.cache.NodeGenerator'
+  classpath = sourceSets.javaPoet.runtimeClasspath
+  args "${buildDir}/generated-sources/"
+}
+
+compileJava.dependsOn(generateJavaPoet)

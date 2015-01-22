@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.playground;
+package com.github.benmanes.caffeine.cache;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
@@ -21,29 +21,46 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /**
- * An entry in the cache containing the key, value, weight, access, and write metadata.
+ * An entry in the cache containing the key, value, weight, access, and write metadata. The key
+ * or value may be held weakly or softly requiring identity comparison.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-interface Node<K, V> /* implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> */{
+interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
   @Nullable
   K getKey();
 
+  /**
+   * Returns the reference that the cache is holding the entry by. This is either the key if
+   * strongly held or a {@link java.lang.ref.WeakReference} to that key.
+   */
+  @Nonnull
+  Object getKeyRef();
+
   /** Return the value or {@code null} if it has been reclaimed by the garbage collector. */
   @Nullable
   V getValue();
 
+  /** Sets the value, which may be held strongly, weakly, or softly. */
   void setValue(@Nonnull V value);
 
+  /** Returns the weight of this entry. */
   @Nonnegative
-  default int weight() {
+  default int getWeight() {
+    throw new UnsupportedOperationException();
+  }
+
+  /** Sets the weight. */
+  @Nonnegative
+  default void setWeight(int weight) {
     throw new UnsupportedOperationException();
   }
 
   /* ---------------- Access order -------------- */
 
+  /** Returns the time that this entry was last accessed, in ns. */
   default long getAccessTime() {
     throw new UnsupportedOperationException();
   }
@@ -53,21 +70,25 @@ interface Node<K, V> /* implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V
     throw new UnsupportedOperationException();
   }
 
+  @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getPreviousInAccessOrder() {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   @GuardedBy("evictionLock")
   default void setPreviousInAccessOrder(Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getNextInAccessOrder() {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   @GuardedBy("evictionLock")
   default void setNextInAccessOrder(Node<K, V> next) {
     throw new UnsupportedOperationException();
@@ -75,6 +96,7 @@ interface Node<K, V> /* implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V
 
   /* ---------------- Write order -------------- */
 
+  /** Returns the time that this entry was last written, in ns. */
   @Nonnegative
   default long getWriteTime() {
     throw new UnsupportedOperationException();
@@ -85,21 +107,25 @@ interface Node<K, V> /* implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V
     throw new UnsupportedOperationException();
   }
 
+  @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getPreviousInWriteOrder() {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   @GuardedBy("evictionLock")
   default void setPreviousInWriteOrder(Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getNextInWriteOrder() {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   @GuardedBy("evictionLock")
   default void setNextInWriteOrder(Node<K, V> next) {
     throw new UnsupportedOperationException();

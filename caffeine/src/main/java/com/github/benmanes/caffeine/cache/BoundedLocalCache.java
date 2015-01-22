@@ -107,8 +107,7 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  * @param <V> the type of mapped values
  */
 @ThreadSafe
-final class BoundedLocalCache<K, V> extends AbstractMap<K, V>
-    implements LocalCache<K, V> {
+final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K, V> {
 
   /*
    * This class performs a best-effort bounding of a ConcurrentHashMap using a page-replacement
