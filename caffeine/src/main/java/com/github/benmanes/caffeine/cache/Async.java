@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
  */
 final class Async {
 
-  private Async() {}
+  Async() {}
 
   /** Returns if the future has successfully completed. */
   static boolean isReady(@Nullable CompletableFuture<?> future) {

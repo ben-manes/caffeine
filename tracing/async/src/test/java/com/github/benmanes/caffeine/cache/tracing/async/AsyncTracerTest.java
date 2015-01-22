@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
@@ -38,6 +39,7 @@ import com.lmax.disruptor.util.DaemonThreadFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class AsyncTracerTest {
+  Path badPath = Jimfs.newFileSystem().getPath("\\a/b");
   ExecutorService executor;
   Path filePath;
 
@@ -69,6 +71,16 @@ public final class AsyncTracerTest {
     if (plainText) {
       assertThat(Files.lines(filePath).count(), is(4000L));
     }
+  }
+
+  @Test(expectedExceptions = UncheckedIOException.class)
+  public void badFilePath_text() throws IOException {
+    try (LogEventHandler handler = new TextLogEventHandler(badPath)) {}
+  }
+
+  @Test(expectedExceptions = UncheckedIOException.class)
+  public void badFilePath_binary() throws IOException {
+    try (LogEventHandler handler = new BinaryLogEventHandler(badPath)) {}
   }
 
   @DataProvider(name = "tracer")
