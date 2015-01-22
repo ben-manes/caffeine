@@ -66,9 +66,10 @@ public final class NodeImplGenerator {
         .addMethod(newSetter(valueStrength, vType, "value", true));
     MethodSpec.Builder constructor = MethodSpec.constructorBuilder()
         .addParameter(keySpec).addParameter(valueSpec);
-    addConstructorAssignment(nodeSubtype, constructor, keyStrength, kType, "key", Modifier.FINAL);
-    addConstructorAssignment(nodeSubtype, constructor,
-        valueStrength, vType, "value", Modifier.VOLATILE);
+    addConstructorAssignment(nodeSubtype, constructor, keyStrength,
+        kType, "key", Modifier.FINAL, false);
+    addConstructorAssignment(nodeSubtype, constructor, valueStrength,
+        vType, "value", Modifier.VOLATILE, true);
 
     if(weighed) {
       nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
@@ -178,19 +179,34 @@ public final class NodeImplGenerator {
   }
 
   private void addConstructorAssignment(TypeSpec.Builder type, MethodSpec.Builder constructor,
-      Strength strength, Type varType, String varName, Modifier modifier) {
+      Strength strength, Type varType, String varName, Modifier modifier, boolean lazy) {
     Modifier[] modifiers = { Modifier.PRIVATE, modifier };
     if (strength == Strength.STRONG) {
       type.addField(FieldSpec.builder(varType, varName, modifiers).build());
-      constructor.addStatement("this.$N = $N", varName, varName);
+      if (lazy) {
+        constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName(varName), varName);
+      } else {
+        constructor.addStatement("this.$N = $N", varName, varName);
+      }
     } else if (strength == Strength.WEAK) {
       type.addField(FieldSpec.builder(Types.parameterizedType(
           ClassName.get(WeakReference.class), varType), varName, modifiers).build());
-      constructor.addStatement("this.$N = new WeakReference<>($N)", varName, varName);
+      if (lazy) {
+        constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new WeakReference<>($N))",
+            UNSAFE_ACCESS, offsetName(varName), varName);
+      } else {
+        constructor.addStatement("this.$N = new WeakReference<>($N)", varName, varName);
+      }
     } else {
       type.addField(FieldSpec.builder(Types.parameterizedType(
           ClassName.get(SoftReference.class), varType), varName, modifiers).build());
-      constructor.addStatement("this.$N = new SoftReference<>($N)", varName, varName);
+      if (lazy) {
+        constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new SoftReference<>($N))",
+            UNSAFE_ACCESS, offsetName(varName), varName);
+      } else {
+        constructor.addStatement("this.$N = new SoftReference<>($N)", varName, varName);
+      }
     }
   }
 

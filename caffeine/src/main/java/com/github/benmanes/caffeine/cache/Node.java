@@ -104,16 +104,16 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /* ---------------- Write order -------------- */
 
-  /**
-   * Returns the time that this entry was last written, in ns. This update may be set lazily and
-   * rely on the memory fence when the lock is released.
-   */
+  /** Returns the time that this entry was last written, in ns. */
   @Nonnegative
   default long getWriteTime() {
     throw new UnsupportedOperationException();
   }
 
-  /** Sets the write time in nanoseconds. */
+  /**
+   * Sets the write time in nanoseconds. This update may be set lazily and rely on the memory fence
+   * when the lock is released.
+   */
   @GuardedBy("this")
   default void setWriteTime(@Nonnegative long time) {
     throw new UnsupportedOperationException();
