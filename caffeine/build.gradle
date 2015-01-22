@@ -40,7 +40,7 @@ bundle {
 }
 
 task generateJavaPoet(type: JavaExec) {
-  main = 'com.github.benmanes.caffeine.cache.NodeGenerator'
+  main = 'com.github.benmanes.caffeine.cache.NodeFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
   args "${buildDir}/generated-sources/"
 }
