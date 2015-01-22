@@ -80,18 +80,23 @@ public final class NodeFactoryGenerator {
         .addJavadoc("<em>WARNING: GENERATED CODE</em>\n\n")
         .addJavadoc("A factory for cache nodes optimized for a particular configuration.\n")
         .addJavadoc("\n@author ben.manes@gmail.com (Ben Manes)\n")
-        .addMethod(newNode().addModifiers(Modifier.ABSTRACT).build());
+        .addMethod(newNode().addModifiers(Modifier.ABSTRACT)
+            .addJavadoc("Returns a node optimized for the specified features.\n").build());
 
     List<String> params = ImmutableList.of("strongKeys", "weakKeys", "strongValues", "weakValues",
         "softValues", "expireAfterAccess", "expireAfterWrite", "maximumSize", "weighed");
     MethodSpec.Builder getFactory = MethodSpec.methodBuilder("getFactory")
+        .addJavadoc("Returns a factory optimized for the specified features.\n")
         .returns(ClassName.bestGuess("NodeFactory")).addAnnotation(Nonnull.class);
     StringBuilder condition = new StringBuilder("if (");
     for (String param : params) {
-      getFactory.addParameter(boolean.class, param);
+      String property = CaseFormat.UPPER_CAMEL.to(
+          CaseFormat.LOWER_UNDERSCORE, param).replace('_', ' ');
       nodeFactory.addMethod(MethodSpec.methodBuilder(param)
+          .addJavadoc("Returns whether this factory supports the " + property + " feature.\n")
           .addModifiers(Modifier.ABSTRACT)
           .returns(boolean.class).build());
+      getFactory.addParameter(boolean.class, param);
       condition.append("(").append(param).append(" == factory.").append(param).append("())");
       condition.append("\n    && ");
     }
