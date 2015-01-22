@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.squareup.javapoet.ClassName;
@@ -46,8 +47,19 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.Types;
 
 /**
- * Experiments with JavaPoet to generate the different cache entry types. If successful, this
- * code will be moved into its own sourceSet for build time generation.
+ * Generates the cache entry factory and specialized types. These entries are optimized for the
+ * configuration to minimize memory use. An entry may have any of the following properties:
+ * <ul>
+ *   <li>strong or weak keys
+ *   <li>strong, weak, or soft values
+ *   <li>access timestamp
+ *   <li>write timestamp
+ *   <li>weight
+ * </ul>
+ * <p>
+ * If the cache has either a maximum size or expires after access, then the entry will also contain
+ * prev/next references on a access ordered queue. If the cache expires after write, then the entry
+ * will also contain prev/next on a write ordered queue.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -105,6 +117,15 @@ public final class NodeGenerator {
         .build();
     TypeSpec typeSpec = TypeSpec.anonymousClassBuilder("")
         .addMethod(newNodeSpec)
+        .addMethod(isMethod("strongKeys", keyStrength == Strength.STRONG))
+        .addMethod(isMethod("weakKeys", keyStrength == Strength.WEAK))
+        .addMethod(isMethod("strongValues", valueStrength == Strength.STRONG))
+        .addMethod(isMethod("weakValues", valueStrength == Strength.WEAK))
+        .addMethod(isMethod("softValues", valueStrength == Strength.SOFT))
+        .addMethod(isMethod("expireAfterAccess", expireAfterAccess))
+        .addMethod(isMethod("expireAfterWrite", expireAfterWrite))
+        .addMethod(isMethod("maximumSize", maximum))
+        .addMethod(isMethod("weighed", weighed))
         .build();
     nodeFactoryBuilder.addEnumConstant(enumName, typeSpec);
 
@@ -151,6 +172,12 @@ public final class NodeGenerator {
     nodeFactoryBuilder.addType(nodeSubtype
         .addMethod(constructor.build())
         .build());
+  }
+
+  private MethodSpec isMethod(String varName, boolean value) {
+    return MethodSpec.methodBuilder(varName)
+        .addStatement("return " + value)
+        .returns(boolean.class).build();
   }
 
   private void addFieldAndGetter(TypeSpec.Builder typeSpec, Type varType, String varName) {
@@ -267,13 +294,37 @@ public final class NodeGenerator {
   }
 
   TypeSpec.Builder newNodeFactoryBuilder() {
-    return TypeSpec.enumBuilder("NodeFactory")
+    TypeSpec.Builder nodeFactory = TypeSpec.enumBuilder("NodeFactory")
         .addJavadoc("<em>WARNING: GENERATED CODE</em>\n\n")
         .addJavadoc("A factory for cache nodes optimized for a particular configuration.\n")
         .addJavadoc("\n@author ben.manes@gmail.com (Ben Manes)\n")
-        .addMethod(newNode()
-        .addModifiers(Modifier.ABSTRACT)
-        .build());
+        .addMethod(newNode().addModifiers(Modifier.ABSTRACT).build());
+
+    List<String> params = ImmutableList.of("strongKeys", "weakKeys", "strongValues", "weakValues",
+        "softValues", "expireAfterAccess", "expireAfterWrite", "maximumSize", "weighed");
+    MethodSpec.Builder getFactory = MethodSpec.methodBuilder("getFactory")
+        .returns(ClassName.bestGuess("NodeFactory")).addAnnotation(Nonnull.class);
+    StringBuilder condition = new StringBuilder("if (");
+    for (String param : params) {
+      getFactory.addParameter(boolean.class, param);
+      nodeFactory.addMethod(MethodSpec.methodBuilder(param)
+          .addModifiers(Modifier.ABSTRACT)
+          .returns(boolean.class).build());
+      condition.append("(").append(param).append(" == factory.").append(param).append("())");
+      condition.append("\n    && ");
+    }
+    condition.delete(condition.length() - 8, condition.length());
+    condition.append(")");
+
+    getFactory.beginControlFlow("for (NodeFactory factory : values())")
+        .beginControlFlow(condition.toString())
+        .addStatement("return factory")
+        .endControlFlow()
+        .endControlFlow()
+        .addStatement("throw new $T()", IllegalArgumentException.class)
+        .addModifiers(Modifier.STATIC)
+        .build();
+    return nodeFactory.addMethod(getFactory.build());
   }
 
   MethodSpec.Builder newNode() {

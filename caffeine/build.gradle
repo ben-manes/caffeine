@@ -29,6 +29,7 @@ dependencies {
   jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.concurrentlinkedhashmap
   
+  javaPoetCompile libraries.guava
   javaPoetCompile libraries.jsr305
   javaPoetCompile libraries.javapoet
 }
