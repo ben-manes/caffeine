@@ -43,7 +43,11 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   @Nullable
   V getValue();
 
-  /** Sets the value, which may be held strongly, weakly, or softly. */
+  /**
+   * Sets the value, which may be held strongly, weakly, or softly. This update may be set lazily
+   * and rely on the memory fence when the lock is released.
+   */
+  @GuardedBy("this")
   void setValue(@Nonnull V value);
 
   /** Returns the weight of this entry. */
@@ -65,7 +69,11 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
     throw new UnsupportedOperationException();
   }
 
-  /** Sets the access time in nanoseconds. */
+  /**
+   * Sets the access time in nanoseconds. This update may be set lazily and rely on the memory fence
+   * when the lock is released.
+   */
+  @GuardedBy("this")
   default void setAccessTime(@Nonnegative long time) {
     throw new UnsupportedOperationException();
   }
@@ -96,13 +104,17 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /* ---------------- Write order -------------- */
 
-  /** Returns the time that this entry was last written, in ns. */
+  /**
+   * Returns the time that this entry was last written, in ns. This update may be set lazily and
+   * rely on the memory fence when the lock is released.
+   */
   @Nonnegative
   default long getWriteTime() {
     throw new UnsupportedOperationException();
   }
 
   /** Sets the write time in nanoseconds. */
+  @GuardedBy("this")
   default void setWriteTime(@Nonnegative long time) {
     throw new UnsupportedOperationException();
   }

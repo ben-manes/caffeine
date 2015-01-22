@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.NodeSpec.Strength;
+import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -47,6 +48,8 @@ import com.squareup.javapoet.Types;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class NodeImplGenerator {
+  private static final Type UNSAFE_ACCESS =
+      ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
 
   public TypeSpec createNodeType(String className, String enumName, Strength keyStrength,
       Strength valueStrength, boolean expireAfterAccess, boolean expireAfterWrite, boolean maximum,
@@ -56,10 +59,11 @@ public final class NodeImplGenerator {
         .addModifiers(Modifier.STATIC, Modifier.FINAL)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
+        .addField(newFieldOffset(className, "value"))
         .addMethod(newGetter(keyStrength, kType, "key"))
         .addMethod(newGetterRef("key"))
         .addMethod(newGetter(valueStrength, vType, "value"))
-        .addMethod(newSetter(valueStrength, vType, "value"));
+        .addMethod(newSetter(valueStrength, vType, "value", true));
     MethodSpec.Builder constructor = MethodSpec.constructorBuilder()
         .addParameter(keySpec).addParameter(valueSpec);
     addConstructorAssignment(nodeSubtype, constructor, keyStrength, kType, "key", Modifier.FINAL);
@@ -69,17 +73,19 @@ public final class NodeImplGenerator {
     if(weighed) {
       nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
           .addMethod(newGetter(Strength.STRONG, int.class, "weight"))
-          .addMethod(newSetter(Strength.STRONG, int.class, "weight"));
+          .addMethod(newSetter(Strength.STRONG, int.class, "weight", false));
     }
     if (expireAfterAccess) {
-      nodeSubtype.addField(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
+      nodeSubtype.addField(newFieldOffset(className, "accessTime"))
+          .addField(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, long.class, "accessTime"))
-          .addMethod(newSetter(Strength.STRONG, long.class, "accessTime"));
+          .addMethod(newSetter(Strength.STRONG, long.class, "accessTime", true));
     }
     if (expireAfterWrite) {
-      nodeSubtype.addField(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
+      nodeSubtype.addField(newFieldOffset(className, "writeTime"))
+          .addField(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, long.class, "writeTime"))
-          .addMethod(newSetter(Strength.STRONG, long.class, "writeTime"));
+          .addMethod(newSetter(Strength.STRONG, long.class, "writeTime", true));
     }
     if (maximum || expireAfterAccess) {
       addFieldAndGetter(nodeSubtype, NODE, "previousInAccessOrder");
@@ -91,6 +97,19 @@ public final class NodeImplGenerator {
     }
 
     return nodeSubtype.addMethod(constructor.build()).build();
+  }
+
+  /** Creates a static field with an Unsafe address offset. */
+  private FieldSpec newFieldOffset(String className, String varName) {
+    String name = offsetName(varName);
+    return FieldSpec
+        .builder(long.class, name, Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
+        .initializer("$T.objectFieldOffset($T.class, $S)", UNSAFE_ACCESS,
+            ClassName.bestGuess(className), varName).build();
+  }
+
+  private static String offsetName(String varName) {
+    return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName) + "_OFFSET";
   }
 
   private MethodSpec newGetterRef(String varName) {
@@ -124,7 +143,7 @@ public final class NodeImplGenerator {
     return getter.build();
   }
 
-  private MethodSpec newSetter(Strength strength, Type varType, String varName) {
+  private MethodSpec newSetter(Strength strength, Type varType, String varName, boolean lazy) {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     Type annotation = (varType == int.class) || (varType == long.class)
         ? Nonnegative.class
@@ -134,11 +153,26 @@ public final class NodeImplGenerator {
         .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC);
     if (strength == Strength.STRONG) {
-      setter.addStatement("this.$N = $N", varName, varName);
+      if (lazy) {
+        setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName(varName), varName);
+      } else {
+        setter.addStatement("this.$N = $N", varName, varName);
+      }
     } else if (strength == Strength.WEAK) {
-      setter.addStatement("this.$N = new WeakReference<>($N)", varName, varName);
+      if (lazy) {
+        setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new WeakReference<>($N))",
+            UNSAFE_ACCESS, offsetName(varName), varName);
+      } else {
+        setter.addStatement("this.$N = new WeakReference<>($N)", varName, varName);
+      }
     } else {
-      setter.addStatement("this.$N = new SoftReference<>($N)", varName, varName);
+      if (lazy) {
+        setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new SoftReference<>($N))",
+            UNSAFE_ACCESS, offsetName(varName), varName);
+      } else {
+        setter.addStatement("this.$N = new SoftReference<>($N)", varName, varName);
+      }
     }
     return setter.build();
   }
@@ -163,6 +197,6 @@ public final class NodeImplGenerator {
   private void addFieldAndGetter(TypeSpec.Builder typeSpec, Type varType, String varName) {
     typeSpec.addField(varType, varName, Modifier.PRIVATE)
         .addMethod(newGetter(Strength.STRONG, varType, varName))
-        .addMethod(newSetter(Strength.STRONG, varType, varName));
+        .addMethod(newSetter(Strength.STRONG, varType, varName, false));
   }
 }
