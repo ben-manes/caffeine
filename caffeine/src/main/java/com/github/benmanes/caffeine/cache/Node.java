@@ -50,6 +50,14 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   @GuardedBy("this")
   void setValue(@Nonnull V value);
 
+  /* ---------------- Access order -------------- */
+
+  // FIXME: Reading and writing weights may be unsafe if the node is not synchronized on by both
+  // update operations and when evicting. However, synchronizing when evicting may not be ideal
+  // because a computation may be in progress, blocking the eviction from progressing. Instead
+  // the weight could be updated by a CAS to emulate the old state machine. That puts the penalty
+  // on all writes, but at least is non-blocking on eviction. Flush out ideas for optimal handling.
+
   /** Returns the weight of this entry. */
   @Nonnegative
   default int getWeight() {
