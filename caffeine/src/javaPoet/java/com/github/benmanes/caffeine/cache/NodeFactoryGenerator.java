@@ -103,10 +103,11 @@ public final class NodeFactoryGenerator {
     condition.delete(condition.length() - 8, condition.length());
     condition.append(")");
 
-    getFactory.beginControlFlow("for (NodeFactory factory : values())")
-        .beginControlFlow(condition.toString())
-        .addStatement("return factory")
-        .endControlFlow()
+    getFactory
+        .beginControlFlow("for (NodeFactory factory : values())")
+            .beginControlFlow(condition.toString())
+                .addStatement("return factory")
+            .endControlFlow()
         .endControlFlow()
         .addStatement("throw new $T()", IllegalArgumentException.class)
         .addModifiers(Modifier.STATIC)

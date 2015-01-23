@@ -56,7 +56,7 @@ final class CacheGenerator {
     this.cacheSpec = cacheSpec;
   }
 
-  /** Returns a lazy stream so that the test case (GC-able after use). */
+  /** Returns a lazy stream so that the test case is GC-able after use. */
   public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate(
       Optional<Compute> compute, Optional<Implementation> implementation,
       Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {

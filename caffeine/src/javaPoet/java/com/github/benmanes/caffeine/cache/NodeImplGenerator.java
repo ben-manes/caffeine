@@ -25,8 +25,6 @@ import static com.github.benmanes.caffeine.cache.NodeSpec.vTypeVar;
 import static com.github.benmanes.caffeine.cache.NodeSpec.valueSpec;
 
 import java.lang.ref.Reference;
-import java.lang.ref.SoftReference;
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Type;
 
 import javax.annotation.Nonnegative;
@@ -55,6 +53,7 @@ public final class NodeImplGenerator {
   private static final AnnotationSpec UNUSED = AnnotationSpec.builder(SuppressWarnings.class)
       .addMember("value", "$S", "unused").build();
 
+  /** Returns an node class implementation optimized for the provided configuration. */
   public TypeSpec createNodeType(String className, String enumName, Strength keyStrength,
       Strength valueStrength, boolean expireAfterAccess, boolean expireAfterWrite, boolean maximum,
       boolean weighed) {
@@ -68,18 +67,57 @@ public final class NodeImplGenerator {
         .addMethod(newGetterRef("key"))
         .addMethod(newGetter(valueStrength, vType, "value", true))
         .addMethod(newSetter(valueStrength, vType, "value", true));
+    addConstructor(nodeSubtype, keyStrength, valueStrength);
+    addWeight(nodeSubtype, weighed);
+    addExpiration(nodeSubtype, className, expireAfterAccess, expireAfterWrite);
+    addDeques(nodeSubtype, maximum, expireAfterAccess, expireAfterWrite);
+    return nodeSubtype.build();
+  }
+
+  /** Adds the constructor to the node type. */
+  private void addConstructor(TypeSpec.Builder nodeSubtype,
+      Strength keyStrength, Strength valueStrength) {
     MethodSpec.Builder constructor = MethodSpec.constructorBuilder()
         .addParameter(keySpec).addParameter(valueSpec);
     addConstructorAssignment(nodeSubtype, constructor, keyStrength,
         kType, "key", Modifier.FINAL, false);
     addConstructorAssignment(nodeSubtype, constructor, valueStrength,
         vType, "value", Modifier.VOLATILE, true);
+    nodeSubtype.addMethod(constructor.build());
+  }
 
+  /** Adds a constructor assignment. */
+  private void addConstructorAssignment(TypeSpec.Builder type, MethodSpec.Builder constructor,
+      Strength strength, Type varType, String varName, Modifier modifier, boolean relaxed) {
+    Modifier[] modifiers = { Modifier.PRIVATE, modifier };
+    FieldSpec.Builder fieldSpec = (strength == Strength.STRONG)
+        ? FieldSpec.builder(varType, varName, modifiers)
+        : FieldSpec.builder(Types.parameterizedType(
+            ClassName.get(strength.referenceClass), varType), varName, modifiers);
+    String prefix = (strength == Strength.STRONG) ? "" : "new ";
+    if (relaxed) {
+      fieldSpec.addAnnotation(UNUSED);
+      constructor.addStatement(
+          "$T.UNSAFE.putOrderedObject(this, $N, " + prefix + strength.statementPattern + ")",
+          UNSAFE_ACCESS, offsetName(varName), varName);
+    } else {
+      constructor.addStatement("this.$N = " + prefix + strength.statementPattern, varName, varName);
+    }
+    type.addField(fieldSpec.build());
+  }
+
+  /** Adds weight support, if enabled, to the node type. */
+  private void addWeight(TypeSpec.Builder nodeSubtype, boolean weighed) {
     if(weighed) {
       nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
           .addMethod(newGetter(Strength.STRONG, int.class, "weight", false))
           .addMethod(newSetter(Strength.STRONG, int.class, "weight", false));
     }
+  }
+
+  /** Adds the expiration support, if enabled, to the node type. */
+  private void addExpiration(TypeSpec.Builder nodeSubtype, String className,
+      boolean expireAfterAccess, boolean expireAfterWrite) {
     if (expireAfterAccess) {
       nodeSubtype.addField(newFieldOffset(className, "accessTime"))
           .addField(FieldSpec.builder(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
@@ -94,6 +132,11 @@ public final class NodeImplGenerator {
           .addMethod(newGetter(Strength.STRONG, long.class, "writeTime", true))
           .addMethod(newSetter(Strength.STRONG, long.class, "writeTime", true));
     }
+  }
+
+  /** Adds the access and write deques, if needed, to the type. */
+  private void addDeques(TypeSpec.Builder nodeSubtype,
+      boolean maximum, boolean expireAfterAccess, boolean expireAfterWrite) {
     if (maximum || expireAfterAccess) {
       addFieldAndGetter(nodeSubtype, NODE, "previousInAccessOrder");
       addFieldAndGetter(nodeSubtype, NODE, "nextInAccessOrder");
@@ -102,8 +145,13 @@ public final class NodeImplGenerator {
       addFieldAndGetter(nodeSubtype, NODE, "previousInWriteOrder");
       addFieldAndGetter(nodeSubtype, NODE, "nextInWriteOrder");
     }
+  }
 
-    return nodeSubtype.addMethod(constructor.build()).build();
+  /** Adds a simple field, accessor, and mutator for the variable. */
+  private void addFieldAndGetter(TypeSpec.Builder typeSpec, Type varType, String varName) {
+    typeSpec.addField(varType, varName, Modifier.PRIVATE)
+        .addMethod(newGetter(Strength.STRONG, varType, varName, false))
+        .addMethod(newSetter(Strength.STRONG, varType, varName, false));
   }
 
   /** Creates a static field with an Unsafe address offset. */
@@ -115,10 +163,12 @@ public final class NodeImplGenerator {
             ClassName.bestGuess(className), varName).build();
   }
 
+  /** Returns the offset constant to this variable. */
   private static String offsetName(String varName) {
     return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName) + "_OFFSET";
   }
 
+  /** Creates an accessor that returns the reference holding the variable. */
   private MethodSpec newGetterRef(String varName) {
     String methodName = String.format("get%sRef",
         Character.toUpperCase(varName.charAt(0)) + varName.substring(1));
@@ -131,6 +181,7 @@ public final class NodeImplGenerator {
     return getter.build();
   }
 
+  /** Creates an accessor that returns the unwrapped variable. */
   private MethodSpec newGetter(Strength strength, Type varType, String varName, boolean relaxed) {
     String methodName = "get" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
@@ -138,7 +189,9 @@ public final class NodeImplGenerator {
         .addModifiers(Modifier.PUBLIC)
         .returns(varType);
     String type;
+    boolean primitive = false;
     if ((varType == int.class) || (varType == long.class)) {
+      primitive = true;
       getter.addAnnotation(Nonnegative.class);
       type = (varType == int.class) ? "Int" : "Long";
     } else {
@@ -147,8 +200,13 @@ public final class NodeImplGenerator {
     }
     if (strength == Strength.STRONG) {
       if (relaxed) {
-        getter.addStatement("return ($T) $T.UNSAFE.get$N(this, $N)",
-            varType, UNSAFE_ACCESS, type, offsetName(varName));
+        if (primitive) {
+          getter.addStatement("return $T.UNSAFE.get$N(this, $N)",
+              UNSAFE_ACCESS, type, offsetName(varName));
+        } else {
+          getter.addStatement("return ($T) $T.UNSAFE.get$N(this, $N)",
+              varType, UNSAFE_ACCESS, type, offsetName(varName));
+        }
       } else {
         getter.addStatement("return $N", varName);
       }
@@ -167,6 +225,7 @@ public final class NodeImplGenerator {
     return getter.build();
   }
 
+  /** Creates a mutator to the variable. */
   private MethodSpec newSetter(Strength strength, Type varType, String varName, boolean relaxed) {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     Type annotation = (varType == int.class) || (varType == long.class)
@@ -176,72 +235,15 @@ public final class NodeImplGenerator {
         .addParameter(ParameterSpec.builder(varType, varName).addAnnotation(annotation).build())
         .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC);
-    if (strength == Strength.STRONG) {
-      if (relaxed) {
-        setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName(varName), varName);
-      } else {
-        setter.addStatement("this.$N = $N", varName, varName);
-      }
-    } else if (strength == Strength.WEAK) {
-      if (relaxed) {
-        setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new WeakReference<>($N))",
-            UNSAFE_ACCESS, offsetName(varName), varName);
-      } else {
-        setter.addStatement("this.$N = new WeakReference<>($N)", varName, varName);
-      }
+
+    String prefix = (strength == Strength.STRONG) ? "" : "new ";
+    if (relaxed) {
+      setter.addStatement(
+          "$T.UNSAFE.putOrderedObject(this, $N, " + prefix + strength.statementPattern + ")",
+          UNSAFE_ACCESS, offsetName(varName), varName);
     } else {
-      if (relaxed) {
-        setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new SoftReference<>($N))",
-            UNSAFE_ACCESS, offsetName(varName), varName);
-      } else {
-        setter.addStatement("this.$N = new SoftReference<>($N)", varName, varName);
-      }
+      setter.addStatement("this.$N = " + prefix + strength.statementPattern, varName, varName);
     }
     return setter.build();
-  }
-
-  private void addConstructorAssignment(TypeSpec.Builder type, MethodSpec.Builder constructor,
-      Strength strength, Type varType, String varName, Modifier modifier, boolean relaxed) {
-    Modifier[] modifiers = { Modifier.PRIVATE, modifier };
-    if (strength == Strength.STRONG) {
-      FieldSpec.Builder fieldSpec = FieldSpec.builder(varType, varName, modifiers);
-      if (relaxed) {
-        fieldSpec.addAnnotation(UNUSED);
-        constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName(varName), varName);
-      } else {
-        constructor.addStatement("this.$N = $N", varName, varName);
-      }
-      type.addField(fieldSpec.build());
-    } else if (strength == Strength.WEAK) {
-      FieldSpec.Builder fieldSpec = FieldSpec.builder(Types.parameterizedType(
-          ClassName.get(WeakReference.class), varType), varName, modifiers);
-      if (relaxed) {
-        fieldSpec.addAnnotation(UNUSED);
-        constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new WeakReference<>($N))",
-            UNSAFE_ACCESS, offsetName(varName), varName);
-      } else {
-        constructor.addStatement("this.$N = new WeakReference<>($N)", varName, varName);
-      }
-      type.addField(fieldSpec.build());
-    } else {
-      FieldSpec.Builder fieldSpec = FieldSpec.builder(Types.parameterizedType(
-          ClassName.get(SoftReference.class), varType), varName, modifiers);
-      if (relaxed) {
-        fieldSpec.addAnnotation(UNUSED);
-        constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new SoftReference<>($N))",
-            UNSAFE_ACCESS, offsetName(varName), varName);
-      } else {
-        constructor.addStatement("this.$N = new SoftReference<>($N)", varName, varName);
-      }
-      type.addField(fieldSpec.build());
-    }
-  }
-
-  private void addFieldAndGetter(TypeSpec.Builder typeSpec, Type varType, String varName) {
-    typeSpec.addField(varType, varName, Modifier.PRIVATE)
-        .addMethod(newGetter(Strength.STRONG, varType, varName, false))
-        .addMethod(newSetter(Strength.STRONG, varType, varName, false));
   }
 }

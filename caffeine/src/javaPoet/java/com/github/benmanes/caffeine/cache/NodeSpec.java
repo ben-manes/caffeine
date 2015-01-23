@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 
@@ -46,7 +48,19 @@ public final class NodeSpec {
       .addAnnotation(Nonnegative.class).build();
   static final Type NODE = Types.parameterizedType(nodeType, kType, vType);
 
-  enum Strength { STRONG, WEAK, SOFT }
+  enum Strength {
+    STRONG("$N", null),
+    WEAK("WeakReference<>($N)", WeakReference.class),
+    SOFT("SoftReference<>($N)", SoftReference.class);
+
+    public final String statementPattern;
+    public final Class<?> referenceClass;
+
+    private Strength(String statementPattern, Class<?> referenceClass) {
+      this.statementPattern = statementPattern;
+      this.referenceClass = referenceClass;
+    }
+  }
 
   private NodeSpec() {}
 }
