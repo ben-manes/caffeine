@@ -8,7 +8,7 @@ env:
  - TERM=dumb
 
 script:
- - ./gradlew check
+ - ./gradlew check -s
 
 after_success:
 - ./gradlew coveralls

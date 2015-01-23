@@ -25,7 +25,7 @@
  */
 ext {
   versions = [
-    akka: '2.3.8',
+    akka: '2.3.9',
     disruptor: '3.3.0',
     guava: '18.0',
     javapoet: '1.0.0-SNAPSHOT',
@@ -46,7 +46,7 @@ ext {
   benchmark_versions = [
     concurrentlinkedhashmap: '1.4.1',
     high_scale_lib: '1.0.6',
-    jmh: '1.4.1',
+    jmh: '1.4.2',
     java_object_layout: '0.2',
     koloboke: '0.6.5',
   ]
