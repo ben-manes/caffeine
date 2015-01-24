@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.lang.model.element.Modifier;
 
@@ -41,6 +42,7 @@ import com.google.common.collect.Sets;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec;
 
 /**
@@ -151,7 +153,7 @@ public final class NodeFactoryGenerator {
       boolean expireAfterWrite, boolean maximum, boolean weighed) {
     MethodSpec newNodeSpec = newNode()
         .addAnnotation(Override.class)
-        .addCode("return new $N<>(key, value);\n", className)
+        .addCode("return new $N<>(key, value, weight, now);\n", className)
         .build();
     TypeSpec typeSpec = TypeSpec.anonymousClassBuilder("")
         .addMethod(newNodeSpec)
@@ -215,6 +217,10 @@ public final class NodeFactoryGenerator {
         .addTypeVariable(vTypeVar)
         .addParameter(keySpec)
         .addParameter(valueSpec)
+        .addParameter(ParameterSpec.builder(int.class, "weight")
+            .addAnnotation(Nonnegative.class).build())
+        .addParameter(ParameterSpec.builder(long.class, "now")
+            .addAnnotation(Nonnegative.class).build())
         .returns(NodeSpec.NODE);
   }
 

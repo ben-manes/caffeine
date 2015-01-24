@@ -376,7 +376,15 @@ public final class Caffeine<K, V> {
   }
 
   Strength getKeyStrength() {
-    return (keyStrength == null) ? Strength.STRONG : keyStrength;
+    return isStrongKeys() ? Strength.STRONG : keyStrength;
+  }
+
+  boolean isStrongKeys() {
+    return (keyStrength == null);
+  }
+
+  boolean isWeakKeys() {
+    return (keyStrength == Strength.WEAK);
   }
 
   /**
@@ -406,6 +414,18 @@ public final class Caffeine<K, V> {
 
   Strength getValueStrength() {
     return (valueStrength == null) ? Strength.STRONG : valueStrength;
+  }
+
+  boolean isStrongValues() {
+    return (valueStrength == null);
+  }
+
+  boolean isWeakValues() {
+    return (valueStrength == Strength.WEAK);
+  }
+
+  boolean isSoftValues() {
+    return (valueStrength == Strength.SOFT);
   }
 
   /**

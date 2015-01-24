@@ -179,6 +179,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   // The backing data store holding the key-value associations
   final ConcurrentHashMap<Object, Node<K, V>> data;
 
+  // The factory for creating cache entries
+  final NodeFactory nodeFactory;
+
   // How long after the last access to an entry the map will retain that entry
   volatile long expireAfterAccessNanos;
   @GuardedBy("evictionLock")
@@ -284,6 +287,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     statsCounter = builder.getStatsCounterSupplier().get();
     isRecordingStats = builder.isRecordingStats();
     ticker = builder.getTicker();
+
+    nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
+        builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
+        expiresAfterAccess(), expiresAfterWrite(), evicts(), builder.isWeighted());
   }
 
   /** Returns whether this cache notifies when an entry is removed. */

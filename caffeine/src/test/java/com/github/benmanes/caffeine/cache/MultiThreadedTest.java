@@ -60,6 +60,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.testing.SerializableTester;
 
 /**
  * A test to assert basic concurrency characteristics by validating the internal state after load.
@@ -197,7 +198,12 @@ public final class MultiThreadedTest{
       (cache, key, value) -> cache.hashCode(),
       (cache, key, value) -> cache.equals(cache),
       (cache, key, value) -> cache.toString(),
-      //(cache, key, value) -> SerializableTester.reserialize(cache),
+      (cache, key, value) -> { // expensive so do it less frequently
+        int random = ThreadLocalRandom.current().nextInt();
+        if ((random & 255) == 0) {
+          SerializableTester.reserialize(cache);
+        }
+      },
   };
 
   /* ---------------- Utilities -------------- */
