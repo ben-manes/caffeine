@@ -118,16 +118,13 @@ public final class BoundedLocalCacheTest {
 
   static void checkStatus(BoundedLocalCache<Integer, Integer> localCache,
       Node<Integer, Integer> node, Status expected) {
-    assertThat(node.get().isAlive(), is(expected == Status.ALIVE));
-    assertThat(node.get().isRetired(), is(expected == Status.RETIRED));
-    assertThat(node.get().isDead(), is(expected == Status.DEAD));
+    assertThat(node.isAlive(), is(expected == Status.ALIVE));
+    assertThat(node.isRetired(), is(expected == Status.RETIRED));
+    assertThat(node.isDead(), is(expected == Status.DEAD));
 
-    if (node.get().isRetired() || node.get().isDead()) {
-      assertThat(localCache.tryToRetire(node, node.get()), is(false));
-    }
-    if (node.get().isDead()) {
+    if (node.isDead()) {
       localCache.makeRetired(node);
-      assertThat(node.get().isRetired(), is(false));
+      assertThat(node.isRetired(), is(false));
     }
   }
 
@@ -266,7 +263,7 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onRead(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> dummy = new Node<>(null, null, 0);
+    Node<Integer, Integer> dummy = new Node<>(null, null, 1, 0);
 
     int index = BoundedLocalCache.readBufferIndex();
     AtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
@@ -284,7 +281,7 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> dummy = new Node<>(null, null, 0);
+    Node<Integer, Integer> dummy = new Node<>(null, null, 1, 0);
 
     boolean[] ran = new boolean[1];
     localCache.afterWrite(dummy, () -> ran[0] = true);

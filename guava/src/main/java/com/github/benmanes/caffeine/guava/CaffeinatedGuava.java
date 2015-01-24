@@ -33,26 +33,43 @@ public final class CaffeinatedGuava {
 
   private CaffeinatedGuava() {}
 
-  /** Returns a Caffeine cache wrapped in a Guava {@link Cache} facade. */
+  /**
+   * Returns a Caffeine cache wrapped in a Guava {@link Cache} facade.
+   *
+   * @param builder the configured cache builder
+   * @return a cache exposed under the Guava APIs
+   */
   public static <K1 extends K, K, V1 extends V, V>Cache<K1, V1> build(Caffeine<K, V> builder) {
     return new CaffeinatedGuavaCache<K1, V1>(builder.build());
   }
 
-  /** Returns a Caffeine cache wrapped in a Guava {@link LoadingCache} facade. */
+  /**
+   * Returns a Caffeine cache wrapped in a Guava {@link LoadingCache} facade.
+   *
+   * @param builder the configured cache builder
+   * @param loader the cache loader used to obtain new values
+   * @return a cache exposed under the Guava APIs
+   */
   public static <K1 extends K, K, V1 extends V, V> LoadingCache<K1, V1> build(
-      Caffeine<K, V> builder, CacheLoader<? super K1, V1> cacheLoader) {
+      Caffeine<K, V> builder, CacheLoader<? super K1, V1> loader) {
     @SuppressWarnings("unchecked")
-    CacheLoader<K1, V1> loader = (CacheLoader<K1, V1>) cacheLoader;
-    return build(builder, hasLoadAll(cacheLoader)
-        ? new BulkLoader<>(loader)
-        : new SingleLoader<>(loader));
+    CacheLoader<K1, V1> castedLoader = (CacheLoader<K1, V1>) loader;
+    return build(builder, hasLoadAll(castedLoader)
+        ? new BulkLoader<>(castedLoader)
+        : new SingleLoader<>(castedLoader));
   }
 
-  /** Returns a Caffeine cache wrapped in a Guava {@link LoadingCache} facade. */
+  /**
+   * Returns a Caffeine cache wrapped in a Guava {@link LoadingCache} facade.
+   *
+   * @param builder the configured cache builder
+   * @param loader the cache loader used to obtain new values
+   * @return a cache exposed under the Guava APIs
+   */
   public static <K1 extends K, K, V1 extends V, V> LoadingCache<K1, V1> build(
       Caffeine<K, V> builder,
-      com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> cacheLoader) {
-    return new CaffeinatedGuavaLoadingCache<K1, V1>(builder.build(cacheLoader));
+      com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> loader) {
+    return new CaffeinatedGuavaLoadingCache<K1, V1>(builder.build(loader));
   }
 
   static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {

@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
-import static com.google.common.base.Preconditions.checkState;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.testng.Assert.fail;
@@ -48,14 +47,17 @@ import org.testng.log4testng.Logger;
 import scala.concurrent.forkjoin.ThreadLocalRandom;
 
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -83,13 +85,14 @@ public final class MultiThreadedTest{
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL, stats = Stats.ENABLED,
+  @CacheSpec(keys = ReferenceType.WEAK, maximumSize = MaximumSize.FULL, stats = Stats.ENABLED,
       expireAfterAccess = Expire.FOREVER, expireAfterWrite = Expire.FOREVER,
       population = Population.EMPTY, removalListener = Listener.DEFAULT)
-  public void concurrent(LoadingCache<Integer, Integer> cache) {
+  public void concurrent(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Queue<String> failures = new ConcurrentLinkedQueue<>();
     Thrasher thrasher = new Thrasher(cache, workingSets, failures);
     executeWithTimeOut(cache, failures, () -> ConcurrentTestHarness.timeTasks(NTHREADS, thrasher));
+    assertThat(failures.isEmpty(), is(true));
   }
 
   /**
@@ -131,11 +134,9 @@ public final class MultiThreadedTest{
         CacheOperation<Integer, Integer> operation = operations[random.nextInt(operations.length)];
         try {
           operation.execute(cache, key, key);
-        } catch (RuntimeException e) {
-          failures.add(String.format("Failed: key %s on operation %s", key, operation));
-          throw e;
         } catch (Throwable t) {
           failures.add(String.format("Failed: key %s on operation %s", key, operation));
+          throw t;
         }
       }
     }
@@ -167,7 +168,7 @@ public final class MultiThreadedTest{
           cache.invalidateAll();
         }
       },
-      (cache, key, value) -> checkState(cache.estimatedSize() >= 0),
+      (cache, key, value) -> Preconditions.checkState(cache.estimatedSize() >= 0),
       (cache, key, value) -> cache.stats(),
       (cache, key, value) -> cache.cleanUp(),
 
@@ -175,7 +176,7 @@ public final class MultiThreadedTest{
       (cache, key, value) -> cache.asMap().containsKey(key),
       (cache, key, value) -> cache.asMap().containsValue(value),
       (cache, key, value) -> cache.asMap().isEmpty(),
-      (cache, key, value) -> checkState(cache.asMap().size() >= 0),
+      (cache, key, value) -> Preconditions.checkState(cache.asMap().size() >= 0),
       (cache, key, value) -> cache.asMap().get(key),
       (cache, key, value) -> cache.asMap().put(key, value),
       (cache, key, value) -> cache.asMap().putAll(ImmutableMap.of(key, value)),

@@ -68,7 +68,6 @@ tasks.withType(Test) {
   useTestNG()
   if (name.startsWith('slow')) {
     maxHeapSize = '128m'
-    testLogging.info.events 'passed'
     options.includeGroups = ['slow']
   } else {
     maxHeapSize = '384m'

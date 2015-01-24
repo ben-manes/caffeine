@@ -58,7 +58,6 @@ import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
-import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
@@ -393,7 +392,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       }
 
       Node<K, V> next = node.getNextInAccessOrder();
-      if (node.get().weight != 0) {
+      if (node.weight != 0) {
         evict(node, RemovalCause.SIZE);
       }
       node = next;
@@ -475,8 +474,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         K key = node.getKey(keyStrategy);
         if (key != null) {
           try {
-            computeIfPresent(node.getKey(keyStrategy),
-                (k, oldValue) -> loader.reload(key, oldValue));
+            computeIfPresent(key, (k, oldValue) -> loader.reload(key, oldValue));
           } catch (Throwable t) {
             logger.log(Level.WARNING, "Exception thrown during reload", t);
           }
@@ -662,43 +660,19 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   }
 
   /**
-   * Attempts to transition the node from the <tt>alive</tt> state to the <tt>retired</tt> state.
-   *
-   * @param node the entry in the page replacement policy
-   * @param expect the expected weighted value
-   * @return if successful
-   */
-  boolean tryToRetire(Node<K, V> node, WeightedValue<V> expect) {
-    if (expect.isAlive()) {
-      final WeightedValue<V> retired = new WeightedValue<V>(
-          expect.getValueRef(), -expect.weight);
-      synchronized (node) {
-        if (node.get() == expect) {
-          node.lazySet(retired);
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
    * Atomically transitions the node from the <tt>alive</tt> state to the <tt>retired</tt> state, if
    * a valid transition.
    *
    * @param node the entry in the page replacement policy
    * @return the retired weighted value if the transition was successful or null otherwise
    */
-  @Nullable WeightedValue<V> makeRetired(Node<K, V> node) {
+  @Nullable V makeRetired(Node<K, V> node) {
     synchronized (node) {
-      final WeightedValue<V> current = node.get();
-      if (!current.isAlive()) {
+      if (!node.isAlive()) {
         return null;
       }
-      final WeightedValue<V> retired = new WeightedValue<V>(
-          current.getValueRef(), -current.weight);
-      node.lazySet(retired);
-      return retired;
+      node.weight = -node.weight;
+      return node.getValue(valueStrategy);
     }
   }
 
@@ -711,15 +685,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   @GuardedBy("evictionLock")
   void makeDead(Node<K, V> node) {
     synchronized (node) {
-      WeightedValue<V> current = node.get();
-      if (current.isDead()) {
+      if (node.isDead()) {
         return;
       }
-      WeightedValue<V> dead = new WeightedValue<V>(current.getValueRef(), Integer.MIN_VALUE);
-      if (node.compareAndSet(current, dead)) {
-        weightedSize.lazySet(weightedSize.get() - Math.abs(current.weight));
-        return;
-      }
+      weightedSize.lazySet(weightedSize.get() - Math.abs(node.weight));
+      node.weight = Integer.MIN_VALUE;
     }
   }
 
@@ -739,7 +709,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       weightedSize.lazySet(weightedSize.get() + weight);
 
       // ignore out-of-order write operations
-      if (node.get().isAlive()) {
+      if (node.isAlive()) {
         node.setWriteTime(ticker.read());
         if (expiresAfterWrite()) {
           writeOrderDeque.add(node);
@@ -834,10 +804,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       if (evicts() || expiresAfterAccess()) {
         Node<K, V> node;
         while ((node = accessOrderDeque.poll()) != null) {
-          // FIXME(ben): Handle case when key is null (weak reference)
           if (data.remove(node.keyRef, node) && hasRemovalListener()) {
             K key = node.getKey(keyStrategy);
-            notifyRemoval(key, node.getValue(valueStrategy), RemovalCause.EXPLICIT);
+            V value = node.getValue(valueStrategy);
+            if ((key == null) || (value == null)) {
+              notifyRemoval(key, value, RemovalCause.COLLECTED);
+            } else {
+              notifyRemoval(key, value, RemovalCause.EXPLICIT);
+            }
           }
           makeDead(node);
         }
@@ -872,7 +846,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
           Node<K, V> node = entry.getValue();
           if (data.remove(node.keyRef, node) && hasRemovalListener()) {
             K key = node.getKey(keyStrategy);
-            notifyRemoval(key, node.getValue(valueStrategy), RemovalCause.EXPLICIT);
+            V value = node.getValue(valueStrategy);
+            if ((key == null) || (value == null)) {
+              notifyRemoval(key, value, RemovalCause.COLLECTED);
+            } else {
+              notifyRemoval(key, value, RemovalCause.EXPLICIT);
+            }
           }
           makeDead(node);
         }
@@ -975,8 +954,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     final int weight = weigher.weigh(key, value);
     final Object keyRef = keyStrategy.referenceKey(key, keyReferenceQueue);
     final Object valueRef = valueStrategy.referenceValue(keyRef, value, valueReferenceQueue);
-    final WeightedValue<V> weightedValue = new WeightedValue<V>(valueRef, weight);
-    final Node<K, V> node = new Node<K, V>(keyRef, weightedValue, now);
+    final Node<K, V> node = new Node<>(keyRef, valueRef, weight, now);
 
     for (;;) {
       final Node<K, V> prior = data.putIfAbsent(keyRef, node);
@@ -987,22 +965,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         afterRead(prior, false);
         return prior.getValue(valueStrategy);
       }
-      WeightedValue<V> oldWeightedValue;
+      V oldValue;
+      int oldWeight;
       synchronized (prior) {
-        oldWeightedValue = prior.get();
-        if (!oldWeightedValue.isAlive()) {
+        if (!prior.isAlive()) {
           continue;
         }
-        prior.lazySet(weightedValue);
+        oldValue = prior.getValue(valueStrategy);
+        oldWeight = prior.weight;
+        prior.valueRef = valueRef;
+        prior.weight = weight;
       }
 
-      final int weightedDifference = weight - oldWeightedValue.weight;
+      final int weightedDifference = weight - oldWeight;
       if (!expiresAfterWrite() && (weightedDifference == 0)) {
         afterRead(prior, false);
       } else {
         afterWrite(prior, new UpdateTask(prior, weightedDifference));
       }
-      V oldValue = oldWeightedValue.getValue(valueStrategy);
       if (hasRemovalListener() && (value != oldValue)) {
         notifyRemoval(key, value, RemovalCause.REPLACED);
       }
@@ -1017,15 +997,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       return null;
     }
 
-    WeightedValue<V> retired = makeRetired(node);
-    afterWrite(node, new RemovalTask(node));
-
-    if (hasRemovalListener() && (retired != null)) {
-      @SuppressWarnings("unchecked")
-      K castKey = (K) key;
-      notifyRemoval(castKey, retired.getValue(valueStrategy), RemovalCause.EXPLICIT);
+    V oldValue = makeRetired(node);
+    if (oldValue != null) {
+      afterWrite(node, new RemovalTask(node));
+      if (hasRemovalListener()) {
+        @SuppressWarnings("unchecked")
+        K castKey = (K) key;
+        notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);
+      }
     }
-    return node.getValue(valueStrategy);
+    return oldValue;
   }
 
   @Override
@@ -1035,31 +1016,23 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     if ((node == null) || (value == null)) {
       return false;
     }
-
-    WeightedValue<V> weightedValue = node.get();
-    for (;;) {
-      if (weightedValue.contains(value, valueStrategy)) {
-        if (tryToRetire(node, weightedValue)) {
-          if (data.remove(keyRef, node)) {
-            if (hasRemovalListener()) {
-              @SuppressWarnings("unchecked")
-              K castKey = (K) key;
-              notifyRemoval(castKey, node.getValue(valueStrategy), RemovalCause.EXPLICIT);
-            }
-            afterWrite(node, new RemovalTask(node));
-            return true;
-          }
-        } else {
-          weightedValue = node.get();
-          if (weightedValue.isAlive()) {
-            // retry as an intermediate update may have replaced the value with an equal instance
-            // that has a different reference identity
-            continue;
-          }
-        }
+    V oldValue;
+    synchronized (node) {
+      oldValue = node.getValue(valueStrategy);
+      if (node.isAlive() && node.contains(value, valueStrategy)) {
+        node.weight = -node.weight; // retire
+      } else {
+        return false;
       }
-      return false;
     }
+    data.remove(keyRef, node);
+    if (hasRemovalListener()) {
+      @SuppressWarnings("unchecked")
+      K castKey = (K) key;
+      notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);
+    }
+    afterWrite(node, new RemovalTask(node));
+    return true;
   }
 
   @Override
@@ -1072,24 +1045,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     if (node == null) {
       return null;
     }
-    WeightedValue<V> oldWeightedValue;
+    V oldValue;
+    int oldWeight;
     synchronized (node) {
-      oldWeightedValue = node.get();
-      if (!oldWeightedValue.isAlive()) {
+      if (!node.isAlive()) {
         return null;
       }
-      final WeightedValue<V> weightedValue = new WeightedValue<V>(
-          valueStrategy.referenceValue(node.keyRef, value, valueReferenceQueue), weight);
-      node.lazySet(weightedValue);
+      oldWeight = node.weight;
+      oldValue = node.getValue(valueStrategy);
+      node.valueRef = valueStrategy.referenceValue(node.keyRef, value, valueReferenceQueue);
+      node.weight = weight;
     }
-    final int weightedDifference = weight - oldWeightedValue.weight;
+    final int weightedDifference = (weight - oldWeight);
     if (weightedDifference == 0) {
       node.setWriteTime(ticker.read());
       afterRead(node, false);
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
-    V oldValue = oldWeightedValue.getValue(valueStrategy);
     if (hasRemovalListener() && (value != oldValue)) {
       notifyRemoval(key, value, RemovalCause.REPLACED);
     }
@@ -1103,22 +1076,20 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     requireNonNull(newValue);
 
     final int weight = weigher.weigh(key, newValue);
-
     final Node<K, V> node = data.get(keyStrategy.getKeyRef(key));
     if (node == null) {
       return false;
     }
-    WeightedValue<V> oldWeightedValue;
+    int oldWeight;
     synchronized (node) {
-      oldWeightedValue = node.get();
-      if (!oldWeightedValue.isAlive() || !oldWeightedValue.contains(oldValue, valueStrategy)) {
+      if (!node.isAlive() || !node.contains(oldValue, valueStrategy)) {
         return false;
       }
-      final WeightedValue<V> newWeightedValue = new WeightedValue<V>(
-          valueStrategy.referenceValue(node.keyRef, newValue, valueReferenceQueue), weight);
-      node.lazySet(newWeightedValue);
+      oldWeight = node.weight;
+      node.valueRef = valueStrategy.referenceValue(node.keyRef, newValue, valueReferenceQueue);
+      node.weight = weight;
     }
-    final int weightedDifference = weight - oldWeightedValue.weight;
+    final int weightedDifference = (weight - oldWeight);
     if (weightedDifference == 0) {
       node.setWriteTime(ticker.read());
       afterRead(node, false);
@@ -1156,29 +1127,28 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       }
     }
 
+    int[] weight = new int[1];
     @SuppressWarnings("unchecked")
-    WeightedValue<V>[] weightedValue = new WeightedValue[1];
+    V[] value = (V[]) new Object[1];
     Object keyRef = keyStrategy.referenceKey(key, keyReferenceQueue);
     node = data.computeIfAbsent(keyRef, k -> {
-      V value;
-      value = statsAware(mappingFunction, isAsync).apply(key);
-      if (value == null) {
+      value[0] = statsAware(mappingFunction, isAsync).apply(key);
+      if (value[0] == null) {
         return null;
       }
-      int weight = weigher.weigh(key, value);
-      Object valueRef = valueStrategy.referenceValue(keyRef, value, valueReferenceQueue);
-      weightedValue[0] = new WeightedValue<V>(valueRef, weight);
-      return new Node<K, V>(keyRef, weightedValue[0], now);
+      weight[0] = weigher.weigh(key, value[0]);
+      Object valueRef = valueStrategy.referenceValue(keyRef, value[0], valueReferenceQueue);
+      return new Node<>(keyRef, valueRef, weight[0], now);
     });
     if (node == null) {
       return null;
     }
-    if (weightedValue[0] == null) {
+    if (value[0] == null) {
       afterRead(node, true);
       return node.getValue(valueStrategy);
     } else {
-      afterWrite(node, new AddTask(node, weightedValue[0].weight));
-      return weightedValue[0].getValue(valueStrategy);
+      afterWrite(node, new AddTask(node, weight[0]));
+      return value[0];
     }
   }
 
@@ -1194,32 +1164,30 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     }
 
     @SuppressWarnings("unchecked")
-    WeightedValue<V>[] weightedValue = new WeightedValue[1];
+    V[] newValue = (V[]) new Object[1];
     Runnable[] task = new Runnable[1];
     Node<K, V> node = data.computeIfPresent(ref, (keyRef, prior) -> {
       synchronized (prior) {
-        WeightedValue<V> oldWeightedValue = prior.get();
-        V newValue = statsAware(remappingFunction, false, false).apply(
-            key, oldWeightedValue.getValue(valueStrategy));
-        if (newValue == null) {
+        V oldValue = prior.getValue(valueStrategy);
+        newValue[0] = statsAware(remappingFunction, false, false).apply(key, oldValue);
+        if (newValue[0] == null) {
           makeRetired(prior);
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
-            notifyRemoval(key, prior.getValue(valueStrategy), RemovalCause.EXPLICIT);
+            notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
           }
           return null;
         }
-        int weight = weigher.weigh(key, newValue);
-        Object newValueRef = valueStrategy.referenceValue(keyRef, newValue, valueReferenceQueue);
-        WeightedValue<V> newWeightedValue = new WeightedValue<V>(newValueRef, weight);
-        prior.lazySet(newWeightedValue);
-        weightedValue[0] = newWeightedValue;
-        final int weightedDifference = weight - oldWeightedValue.weight;
+        prior.valueRef = valueStrategy.referenceValue(keyRef, newValue[0], valueReferenceQueue);
+        int oldWeight = prior.weight;
+        int newWeight = weigher.weigh(key, newValue[0]);
+        prior.weight = newWeight;
+
+        final int weightedDifference = newWeight - oldWeight;
         if (weightedDifference != 0) {
           task[0] = new UpdateTask(prior, weightedDifference);
         }
-        V oldValue = prior.getValue(valueStrategy);
-        if (hasRemovalListener() && (newValue != oldValue)) {
+        if (hasRemovalListener() && (newValue[0] != oldValue)) {
           notifyRemoval(key, oldValue, RemovalCause.REPLACED);
         }
         return prior;
@@ -1230,7 +1198,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     } else {
       afterWrite(node, task[0]);
     }
-    return (weightedValue[0] == null) ? null : weightedValue[0].getValue(valueStrategy);
+    return newValue[0];
   }
 
   @Override
@@ -1251,54 +1219,52 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         }
         final long now = ticker.read();
         final int weight = weigher.weigh(key, newValue[0]);
-        final WeightedValue<V> weightedValue = new WeightedValue<V>(
-            valueStrategy.referenceValue(keyRef, newValue[0], valueReferenceQueue), weight);
-        final Node<K, V> newNode = new Node<K, V>(keyRef, weightedValue, now);
+        Object valueRef = valueStrategy.referenceValue(keyRef, newValue[0], valueReferenceQueue);
+        final Node<K, V> newNode = new Node<>(keyRef, valueRef, weight, now);
         task[0] = new AddTask(newNode, weight);
         return newNode;
       }
       synchronized (prior) {
-        WeightedValue<V> oldWeightedValue = prior.get();
-        V oldValue;
-        if (oldWeightedValue.isAlive()) {
-          oldValue = oldWeightedValue.getValue(valueStrategy);
+        V oldValue = null;
+        if (prior.isAlive()) {
+          oldValue = prior.getValue(valueStrategy);
         } else {
           // conditionally removed won, but we got the entry lock first
           // so help out and pretend like we are inserting a fresh entry
           task[1] = new RemovalTask(prior);
           if (hasRemovalListener()) {
-            notifyRemoval(key, oldWeightedValue.getValue(valueStrategy), RemovalCause.EXPLICIT);
+            notifyRemoval(key, prior.getValue(valueStrategy), RemovalCause.EXPLICIT);
           }
-          oldValue = null;
         }
         newValue[0] = statsAware(remappingFunction, recordMiss, isAsync).apply(key, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
-            notifyRemoval(key, oldWeightedValue.getValue(valueStrategy), RemovalCause.EXPLICIT);
+            notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
           }
           return null;
         }
-        final int weight = weigher.weigh(key, newValue[0]);
-        final WeightedValue<V> weightedValue = new WeightedValue<V>(
-            valueStrategy.referenceValue(prior.keyRef, newValue[0], valueReferenceQueue), weight);
-        Node<K, V> newNode;
+        final int oldWeight = prior.weight;
+        final int newWeight = weigher.weigh(key, newValue[0]);
+        Object newValueRef = valueStrategy.referenceValue(
+            prior.keyRef, newValue[0], valueReferenceQueue);
         if (task[1] == null) {
-          newNode = prior;
-          prior.lazySet(weightedValue);
-          final int weightedDifference = weight - oldWeightedValue.weight;
+          prior.weight = newWeight;
+          prior.valueRef = newValueRef;
+          final int weightedDifference = newWeight - oldWeight;
           if (weightedDifference != 0) {
             task[0] = new UpdateTask(prior, weightedDifference);
           }
           if (hasRemovalListener() && (newValue[0] != oldValue)) {
             notifyRemoval(key, oldValue, RemovalCause.REPLACED);
           }
+          return prior;
         } else {
           final long now = ticker.read();
-          newNode = new Node<>(key, weightedValue, now);
-          task[0] = new AddTask(newNode, weight);
+          Node<K, V> newNode = new Node<>(keyRef, newValueRef, newWeight, now);
+          task[0] = new AddTask(newNode, newWeight);
+          return newNode;
         }
-        return prior;
       }
     });
     if (task[0] != null) {
@@ -1310,46 +1276,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     return newValue[0];
   }
 
-  /**
-   * V oldValue = map.get(key);
-   * V newValue = (oldValue == null) ? value :
-   *              remappingFunction.apply(oldValue, value);
-   * if (newValue == null)
-   *     map.remove(key);
-   * else
-   *     map.put(key, newValue);
-   */
   @Override
-  @SuppressWarnings("unused")
   public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
     requireNonNull(key);
     requireNonNull(value);
     requireNonNull(remappingFunction);
 
     // FIXME(ben): Flush out an atomic implementation instead of using the default version
-    if (true) {
-      return super.merge(key, value, statsAware(remappingFunction));
-    }
-
-    final long now = ticker.read();
-    final int weight = weigher.weigh(key, value);
-    final WeightedValue<V> weightedValue = new WeightedValue<V>(value, weight);
-    final Object keyRef = keyStrategy.referenceKey(key, keyReferenceQueue);
-    final Node<K, V> node = new Node<K, V>(keyRef, weightedValue, now);
-    data.merge(key, node, (k, prior) -> {
-      synchronized (prior) {
-        WeightedValue<V> oldWeightedValue = prior.get();
-        if (!oldWeightedValue.isAlive()) {
-          // conditionally removed won, but we got the entry lock first
-          // so help out and pretend like we are inserting a fresh entry
-          // ...
-        }
-        remappingFunction.apply(oldWeightedValue.getValue(valueStrategy), value);
-      }
-      return null;
-    });
-
-    return null;
+    return super.merge(key, value, statsAware(remappingFunction));
   }
 
   @Override
@@ -1470,15 +1404,39 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     abstract boolean shouldDrainBuffers(boolean delayable);
   }
 
-  /** A value, its weight, and the entry's status. */
-  @Immutable
-  static final class WeightedValue<V> {
-    final int weight;
-    final Object valueRef;
+  /**
+   * A node contains the key, the weighted value, and the linkage pointers on the page-replacement
+   * algorithm's data structures.
+   */
+  static final class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
+    volatile long accessTime;
+    @GuardedBy("evictionLock")
+    Node<K, V> prevAccessOrder;
+    @GuardedBy("evictionLock")
+    Node<K, V> nextAccessOrder;
 
-    WeightedValue(Object value, int weight) {
+    volatile long writeTime;
+    @GuardedBy("evictionLock")
+    Node<K, V> prevWriteOrder;
+    @GuardedBy("evictionLock")
+    Node<K, V> nextWriteOrder;
+
+    final Object keyRef;
+
+    volatile int weight;
+    volatile Object valueRef;
+
+    /** Creates a new, unlinked node. */
+    Node(Object keyRef, Object valueRef, int weight, long now) {
+      this.accessTime = now;
+      this.writeTime = now;
+      this.keyRef = keyRef;
       this.weight = weight;
-      this.valueRef = value;
+      this.valueRef = valueRef;
+    }
+
+    K getKey(ReferenceStrategy keyStrategy) {
+      return keyStrategy.dereferenceKey(keyRef);
     }
 
     boolean contains(Object o, ReferenceStrategy valueStrategy) {
@@ -1489,6 +1447,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       return valueRef;
     }
 
+    /** Retrieves the value held by the current valueRef. */
     V getValue(ReferenceStrategy valueStrategy) {
       @SuppressWarnings("unchecked")
       V value = (V) valueStrategy.dereferenceValue(valueRef);
@@ -1511,45 +1470,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     /** If the entry was removed from the hash-table and the page replacement policy. */
     boolean isDead() {
       return weight == Integer.MIN_VALUE;
-    }
-  }
-
-  /**
-   * A node contains the key, the weighted value, and the linkage pointers on the page-replacement
-   * algorithm's data structures.
-   */
-  @SuppressWarnings("serial")
-  static final class Node<K, V> extends AtomicReference<WeightedValue<V>>
-      implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
-    volatile long accessTime;
-    @GuardedBy("evictionLock")
-    Node<K, V> prevAccessOrder;
-    @GuardedBy("evictionLock")
-    Node<K, V> nextAccessOrder;
-
-    volatile long writeTime;
-    @GuardedBy("evictionLock")
-    Node<K, V> prevWriteOrder;
-    @GuardedBy("evictionLock")
-    Node<K, V> nextWriteOrder;
-
-    final Object keyRef;
-
-    /** Creates a new, unlinked node. */
-    Node(Object keyRef, WeightedValue<V> weightedValue, long now) {
-      super(weightedValue);
-      this.accessTime = now;
-      this.writeTime = now;
-      this.keyRef = keyRef;
-    }
-
-    K getKey(ReferenceStrategy keyStrategy) {
-      return keyStrategy.dereferenceKey(keyRef);
-    }
-
-    /** Retrieves the value held by the current <tt>WeightedValue</tt>. */
-    V getValue(ReferenceStrategy valueStrategy) {
-      return get().getValue(valueStrategy);
     }
 
     /* ---------------- Access order -------------- */

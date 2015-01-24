@@ -127,7 +127,7 @@ public final class IsValidBoundedLocalCache<K, V>
       Supplier<String> errorMsg = () -> String.format(
           "Loop detected: %s, saw %s in %s", node, seen, map);
       desc.expectThat(errorMsg, seen.add(node), is(true));
-      weightedSize += node.get().weight;
+      weightedSize += node.weight;
     }
 
     final long weighted = weightedSize;
@@ -135,6 +135,7 @@ public final class IsValidBoundedLocalCache<K, V>
     Supplier<String> error = () -> String.format(
         "WeightedSize != link weights [%d vs %d] {%d vs %d}",
         map.weightedSize(), weighted, seen.size(), map.size());
+    desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
     desc.expectThat(error, map.weightedSize(), is(weightedSize));
   }
 
@@ -143,8 +144,8 @@ public final class IsValidBoundedLocalCache<K, V>
     V value = node.getValue(map.valueStrategy);
     K key = node.getKey(map.keyStrategy);
 
-    desc.expectThat("not null weighted value", node.get(), is(not(nullValue())));
-    desc.expectThat("weight", node.get().weight, is(weigher.weigh(key, value)));
+    desc.expectThat("weight", node.weight, is(greaterThanOrEqualTo(0)));
+    desc.expectThat("weight", node.weight, is(weigher.weigh(key, value)));
 
     if (map.collectKeys()) {
       if ((key != null) && (value != null)) {
