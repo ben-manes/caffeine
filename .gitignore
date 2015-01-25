@@ -6,3 +6,5 @@ test-output
 .settings
 .project
 .gradle
+**/hs_err_pid*.log
+**/replay_pid*.log

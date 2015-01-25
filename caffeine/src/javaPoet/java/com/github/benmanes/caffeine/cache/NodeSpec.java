@@ -15,14 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.lang.ref.SoftReference;
-import java.lang.ref.WeakReference;
+import static com.google.common.base.Preconditions.checkState;
+
+import java.lang.ref.ReferenceQueue;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.Types;
@@ -39,26 +41,56 @@ public final class NodeSpec {
   static final TypeVariable<?> vTypeVar = Types.typeVariable("V");
   static final Type kType = ClassName.get(PACKAGE_NAME, "K");
   static final Type vType = ClassName.get(PACKAGE_NAME, "V");
+  static final Type kRefQueueType = Types.parameterizedType(ReferenceQueue.class, kType);
+  static final Type vRefQueueType = Types.parameterizedType(ReferenceQueue.class, vType);
   static final Type nodeType = ClassName.get(PACKAGE_NAME, "Node");
+  static final Type lookupKeyType = Types.parameterizedType(ClassName.get(
+      PACKAGE_NAME + ".References", "LookupKeyReference"), kType);
+  static final Type referenceKeyType = Types.parameterizedType(ClassName.get(
+      PACKAGE_NAME + ".References", "WeakKeyReference"), kType);
+
   static final ParameterSpec keySpec = ParameterSpec.builder(kType, "key")
       .addAnnotation(Nonnull.class).build();
+  static final ParameterSpec keyRefSpec = ParameterSpec.builder(Object.class, "keyReference")
+      .addAnnotation(Nonnull.class).build();
+  static final ParameterSpec keyRefQueueSpec =
+      ParameterSpec.builder(kRefQueueType, "keyReferenceQueue").build();
+
   static final ParameterSpec valueSpec = ParameterSpec.builder(vType, "value")
       .addAnnotation(Nonnull.class).build();
+  static final ParameterSpec valueRefQueueSpec =
+      ParameterSpec.builder(vRefQueueType, "valueReferenceQueue").build();
+
   static final ParameterSpec weightSpec = ParameterSpec.builder(int.class, "weight")
       .addAnnotation(Nonnegative.class).build();
   static final Type NODE = Types.parameterizedType(nodeType, kType, vType);
+  static final Type UNSAFE_ACCESS =
+      ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
+  static final AnnotationSpec UNUSED =
+      AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "$S", "unused").build();
+
+  enum Visibility {
+    IMMEDIATE(false), LAZY(true);
+
+    final boolean isRelaxed;
+    private Visibility(boolean mode) {
+      this.isRelaxed = mode;
+    }
+  }
 
   enum Strength {
-    STRONG("$N", null),
-    WEAK("WeakReference<>($N)", WeakReference.class),
-    SOFT("SoftReference<>($N)", SoftReference.class);
+    STRONG, WEAK, SOFT;
 
-    public final String statementPattern;
-    public final Class<?> referenceClass;
+    public Type keyReferenceType() {
+      checkState(this == WEAK);
+      return Types.parameterizedType(ClassName.get(PACKAGE_NAME + ".References",
+          "WeakKeyReference"), kType);
+    }
 
-    private Strength(String statementPattern, Class<?> referenceClass) {
-      this.statementPattern = statementPattern;
-      this.referenceClass = referenceClass;
+    public Type valueReferenceType() {
+      checkState(this != STRONG);
+      String clazz = (this == WEAK) ? "WeakValueReference" : "SoftValueReference";
+      return Types.parameterizedType(ClassName.get(PACKAGE_NAME + ".References", clazz), vType);
     }
   }
 

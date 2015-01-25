@@ -15,10 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.NodeSpec.kRefQueueType;
+import static com.github.benmanes.caffeine.cache.NodeSpec.kType;
 import static com.github.benmanes.caffeine.cache.NodeSpec.kTypeVar;
+import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefSpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.keySpec;
+import static com.github.benmanes.caffeine.cache.NodeSpec.lookupKeyType;
+import static com.github.benmanes.caffeine.cache.NodeSpec.referenceKeyType;
 import static com.github.benmanes.caffeine.cache.NodeSpec.vTypeVar;
+import static com.github.benmanes.caffeine.cache.NodeSpec.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.valueSpec;
+import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -65,14 +73,27 @@ import com.squareup.javapoet.TypeSpec;
 public final class NodeFactoryGenerator {
   static final String PACKAGE_NAME = NodeFactoryGenerator.class.getPackage().getName();
 
-  void generate(Appendable writer) throws IOException {
-    TypeSpec.Builder nodeFactoryBuilder = newNodeFactoryBuilder();
-    generatedNodes(nodeFactoryBuilder);
-    makeJavaFile(nodeFactoryBuilder).emit(writer);
+  final String directory;
+
+  public NodeFactoryGenerator(String directory) {
+    this.directory = requireNonNull(directory);
   }
 
-  private JavaFile makeJavaFile(TypeSpec.Builder nodeFactoryBuilder) {
-    return JavaFile.builder(getClass().getPackage().getName(), nodeFactoryBuilder.build())
+  void generate() throws IOException {
+    TypeSpec.Builder nodeFactoryBuilder = newNodeFactoryBuilder();
+    generatedNodes(nodeFactoryBuilder);
+    writeJavaFile(nodeFactoryBuilder, "NodeFactory");
+  }
+
+  private void writeJavaFile(TypeSpec.Builder typeSpec, String name) throws IOException {
+    Path path = Paths.get(directory, name + ".java");
+    try (BufferedWriter writer = Files.newBufferedWriter(path)) {
+      makeJavaFile(typeSpec).emit(writer);
+    }
+  }
+
+  private JavaFile makeJavaFile(TypeSpec.Builder typeSpec) {
+    return JavaFile.builder(getClass().getPackage().getName(), typeSpec.build())
         .addFileComment("Copyright 2015 Ben Manes. All Rights Reserved.")
         .build();
   }
@@ -82,9 +103,37 @@ public final class NodeFactoryGenerator {
         .addJavadoc("<em>WARNING: GENERATED CODE</em>\n\n")
         .addJavadoc("A factory for cache nodes optimized for a particular configuration.\n")
         .addJavadoc("\n@author ben.manes@gmail.com (Ben Manes)\n")
-        .addMethod(newNode().addModifiers(Modifier.ABSTRACT)
-            .addJavadoc("Returns a node optimized for the specified features.\n").build());
+        .addMethod(newNodeByKey().addModifiers(Modifier.ABSTRACT)
+            .addJavadoc("Returns a node optimized for the specified features.\n").build())
+        .addMethod(newNodeByKeyRef().addModifiers(Modifier.ABSTRACT)
+            .addJavadoc("Returns a node optimized for the specified features.\n").build())
+        .addMethod(MethodSpec.methodBuilder("newLookupKey")
+            .addJavadoc("Returns a key suitable for looking up an entry in the cache. If the cache "
+                + "holds keys strongly\nthen the key is returned. If the cache holds keys weakly "
+                + "then a {@link $T}\nholding the key argument is returned.\n", lookupKeyType)
+            .addTypeVariable(kTypeVar)
+            .addParameter(ParameterSpec.builder(kType, "key")
+                .addAnnotation(Nonnull.class).build())
+            .returns(Object.class).addAnnotation(Nonnull.class)
+            .addStatement("return key")
+            .build())
+        .addMethod(MethodSpec.methodBuilder("newReferenceKey")
+            .addJavadoc("Returns a key suitable for inserting into the cache. If the cache holds"
+                + " keys strongly then\nthe key is returned. If the cache holds keys weakly "
+                + "then a {@link $T}\nholding the key argument is returned.\n", referenceKeyType)
+            .addTypeVariable(kTypeVar)
+            .addParameter(ParameterSpec.builder(kType, "key")
+                .addAnnotation(Nonnull.class).build())
+            .addParameter(ParameterSpec.builder(kRefQueueType, "referenceQueue")
+                .addAnnotation(Nonnull.class).build())
+            .returns(Object.class).addAnnotation(Nonnull.class)
+            .addStatement("return $L", "key")
+            .build());
+    addGetFactory(nodeFactory);
+    return nodeFactory;
+  }
 
+  private void addGetFactory(TypeSpec.Builder nodeFactory) {
     List<String> params = ImmutableList.of("strongKeys", "weakKeys", "strongValues", "weakValues",
         "softValues", "expireAfterAccess", "expireAfterWrite", "maximumSize", "weighed");
     MethodSpec.Builder getFactory = MethodSpec.methodBuilder("getFactory")
@@ -114,10 +163,10 @@ public final class NodeFactoryGenerator {
         .addStatement("throw new $T()", IllegalArgumentException.class)
         .addModifiers(Modifier.STATIC)
         .build();
-    return nodeFactory.addMethod(getFactory.build());
+    nodeFactory.addMethod(getFactory.build());
   }
 
-  private void generatedNodes(TypeSpec.Builder nodeFactoryBuilder) {
+  private void generatedNodes(TypeSpec.Builder nodeFactoryBuilder) throws IOException {
     Set<String> seen = new HashSet<>();
     for (List<Object> combination : combinations()) {
       addNodeSpec(nodeFactoryBuilder, seen,
@@ -130,9 +179,9 @@ public final class NodeFactoryGenerator {
     }
   }
 
-  private void addNodeSpec(TypeSpec.Builder nodeFactoryBuilder, Set<String> seen, Strength keyStrength,
-      Strength valueStrength, boolean expireAfterAccess, boolean expireAfterWrite,
-      boolean maximum, boolean weighed) {
+  private void addNodeSpec(TypeSpec.Builder nodeFactoryBuilder, Set<String> seen,
+      Strength keyStrength, Strength valueStrength, boolean expireAfterAccess,
+      boolean expireAfterWrite, boolean maximum, boolean weighed) throws IOException {
     String enumName = makeEnumName(keyStrength, valueStrength,
         expireAfterAccess, expireAfterWrite, maximum, weighed);
     String className = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
@@ -143,20 +192,25 @@ public final class NodeFactoryGenerator {
 
     addEnumConstant(className, enumName, nodeFactoryBuilder, keyStrength, valueStrength,
         expireAfterAccess, expireAfterWrite, maximum, weighed);
-    TypeSpec nodeSubType = new NodeImplGenerator().createNodeType(className, enumName, keyStrength,
+
+    NodeGenerator nodeGenerator = new NodeGenerator(className, keyStrength,
         valueStrength, expireAfterAccess, expireAfterWrite, maximum, weighed);
-    nodeFactoryBuilder.addType(nodeSubType).build();
+    TypeSpec.Builder nodeSubType = nodeGenerator.createNodeType();
+    nodeFactoryBuilder.addType(nodeSubType.build());
   }
 
   private void addEnumConstant(String className, String enumName, TypeSpec.Builder nodeFactoryBuilder,
       Strength keyStrength, Strength valueStrength, boolean expireAfterAccess,
       boolean expireAfterWrite, boolean maximum, boolean weighed) {
-    MethodSpec newNodeSpec = newNode()
-        .addAnnotation(Override.class)
-        .addCode("return new $N<>(key, value, weight, now);\n", className)
-        .build();
-    TypeSpec typeSpec = TypeSpec.anonymousClassBuilder("")
-        .addMethod(newNodeSpec)
+    String statementWithKey = makeFactoryStatementKey(keyStrength, valueStrength,
+        expireAfterAccess, expireAfterWrite, weighed);
+    String statementWithKeyRef = makeFactoryStatementKeyRef(valueStrength,
+        expireAfterAccess, expireAfterWrite, weighed);
+    TypeSpec.Builder typeSpec = TypeSpec.anonymousClassBuilder("")
+        .addMethod(newNodeByKey().addAnnotation(Override.class)
+            .addStatement(statementWithKey, className).build())
+        .addMethod(newNodeByKeyRef().addAnnotation(Override.class)
+            .addStatement(statementWithKeyRef, className).build())
         .addMethod(isMethod("strongKeys", keyStrength == Strength.STRONG))
         .addMethod(isMethod("weakKeys", keyStrength == Strength.WEAK))
         .addMethod(isMethod("strongValues", valueStrength == Strength.STRONG))
@@ -165,15 +219,72 @@ public final class NodeFactoryGenerator {
         .addMethod(isMethod("expireAfterAccess", expireAfterAccess))
         .addMethod(isMethod("expireAfterWrite", expireAfterWrite))
         .addMethod(isMethod("maximumSize", maximum))
-        .addMethod(isMethod("weighed", weighed))
-        .build();
-    nodeFactoryBuilder.addEnumConstant(enumName, typeSpec);
+        .addMethod(isMethod("weighed", weighed));
+    if (keyStrength == Strength.WEAK) {
+      typeSpec.addMethod(makeNewLookupKey());
+      typeSpec.addMethod(makeReferenceKey());
+    }
+    nodeFactoryBuilder.addEnumConstant(enumName, typeSpec.build());
+  }
+
+  private String makeFactoryStatementKey(Strength keyStrength, Strength valueStrength,
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean weighed) {
+    StringBuilder statement = new StringBuilder("return new $N<>(key, keyReferenceQueue");
+    return completeFactoryStatement(statement, valueStrength,
+        expireAfterAccess, expireAfterWrite, weighed);
+  }
+
+  private String makeFactoryStatementKeyRef(Strength valueStrength,
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean weighed) {
+    StringBuilder statement = new StringBuilder("return new $N<>(keyReference");
+    return completeFactoryStatement(statement, valueStrength,
+        expireAfterAccess, expireAfterWrite, weighed);
+  }
+
+  private String completeFactoryStatement(StringBuilder statement, Strength valueStrength,
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean weighed) {
+    statement.append(", value");
+    if (valueStrength != Strength.STRONG) {
+      statement.append(", valueReferenceQueue");
+    }
+    if (weighed) {
+      statement.append(", weight");
+    }
+    if (expireAfterAccess || expireAfterWrite) {
+      statement.append(", now");
+    }
+    statement.append(")");
+    return statement.toString();
   }
 
   private MethodSpec isMethod(String varName, boolean value) {
     return MethodSpec.methodBuilder(varName)
         .addStatement("return " + value)
         .returns(boolean.class).build();
+  }
+
+  private MethodSpec makeNewLookupKey() {
+    return MethodSpec.methodBuilder("newLookupKey")
+        .addTypeVariable(kTypeVar)
+        .addParameter(ParameterSpec.builder(kType, "key")
+            .addAnnotation(Nonnull.class).build())
+        .returns(Object.class).addAnnotation(Nonnull.class)
+        .addAnnotation(Override.class)
+        .addStatement("return new $T(key)", lookupKeyType)
+        .build();
+  }
+
+  private MethodSpec makeReferenceKey() {
+    return MethodSpec.methodBuilder("newReferenceKey")
+        .addTypeVariable(kTypeVar)
+        .addParameter(ParameterSpec.builder(kType, "key")
+            .addAnnotation(Nonnull.class).build())
+        .addParameter(ParameterSpec.builder(kRefQueueType, "referenceQueue")
+            .addAnnotation(Nonnull.class).build())
+        .returns(Object.class).addAnnotation(Nonnull.class)
+        .addAnnotation(Override.class)
+        .addStatement("return new $T($L, $L)", referenceKeyType, "key", "referenceQueue")
+        .build();
   }
 
   private String makeEnumName(Strength keyStrength, Strength valueStrength,
@@ -210,13 +321,23 @@ public final class NodeFactoryGenerator {
     return combinations;
   }
 
-  private MethodSpec.Builder newNode() {
-    return MethodSpec.methodBuilder("newNode")
+  private MethodSpec.Builder newNodeByKey() {
+    return completeNewNode(MethodSpec.methodBuilder("newNode")
+        .addParameter(keySpec)
+        .addParameter(keyRefQueueSpec));
+  }
+
+  private MethodSpec.Builder newNodeByKeyRef() {
+    return completeNewNode(MethodSpec.methodBuilder("newNode").addParameter(keyRefSpec));
+  }
+
+  private MethodSpec.Builder completeNewNode(MethodSpec.Builder method) {
+    return method
         .addAnnotation(Nonnull.class)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
-        .addParameter(keySpec)
         .addParameter(valueSpec)
+        .addParameter(valueRefQueueSpec)
         .addParameter(ParameterSpec.builder(int.class, "weight")
             .addAnnotation(Nonnegative.class).build())
         .addParameter(ParameterSpec.builder(long.class, "now")
@@ -225,15 +346,8 @@ public final class NodeFactoryGenerator {
   }
 
   public static void main(String[] args) throws IOException {
-    if (args.length == 0) {
-      new NodeFactoryGenerator().generate(System.out);
-      return;
-    }
     String directory = args[0] + PACKAGE_NAME.replace('.', '/');
     new File(directory).mkdirs();
-    Path path = Paths.get(directory, "/NodeFactory.java");
-    try (BufferedWriter writer = Files.newBufferedWriter(path)) {
-      new NodeFactoryGenerator().generate(writer);
-    }
+    new NodeFactoryGenerator(directory).generate();
   }
 }

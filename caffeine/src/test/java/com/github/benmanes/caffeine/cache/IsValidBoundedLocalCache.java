@@ -30,7 +30,6 @@ import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 import com.google.common.collect.Sets;
 
@@ -127,7 +126,7 @@ public final class IsValidBoundedLocalCache<K, V>
       Supplier<String> errorMsg = () -> String.format(
           "Loop detected: %s, saw %s in %s", node, seen, map);
       desc.expectThat(errorMsg, seen.add(node), is(true));
-      weightedSize += node.weight;
+      weightedSize += node.getWeight();
     }
 
     final long weighted = weightedSize;
@@ -141,11 +140,11 @@ public final class IsValidBoundedLocalCache<K, V>
 
   private void checkNode(BoundedLocalCache<K, V> map, Node<K, V> node, DescriptionBuilder desc) {
     Weigher<? super K, ? super V> weigher = map.weigher;
-    V value = node.getValue(map.valueStrategy);
-    K key = node.getKey(map.keyStrategy);
+    V value = node.getValue();
+    K key = node.getKey();
 
-    desc.expectThat("weight", node.weight, is(greaterThanOrEqualTo(0)));
-    desc.expectThat("weight", node.weight, is(weigher.weigh(key, value)));
+    desc.expectThat("weight", node.getWeight(), is(greaterThanOrEqualTo(0)));
+    desc.expectThat("weight", node.getWeight(), is(weigher.weigh(key, value)));
 
     if (map.collectKeys()) {
       if ((key != null) && (value != null)) {
@@ -154,7 +153,7 @@ public final class IsValidBoundedLocalCache<K, V>
     } else {
       desc.expectThat("not null key", key, is(not(nullValue())));
     }
-    desc.expectThat("found wrong node", map.data.get(node.keyRef), is(node));
+    desc.expectThat("found wrong node", map.data.get(node.getKeyReference()), is(node));
 
     if (!map.collectValues()) {
       desc.expectThat("not null value", value, is(not(nullValue())));

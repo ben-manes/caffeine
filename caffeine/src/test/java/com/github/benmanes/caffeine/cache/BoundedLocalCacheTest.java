@@ -38,7 +38,6 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.Awaits;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.Node;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
@@ -95,7 +94,7 @@ public final class BoundedLocalCacheTest {
     localCache.put(oldKey, -oldKey);
     localCache.evictionLock.lock();
     try {
-      Object keyRef = localCache.keyStrategy.getKeyRef(oldKey);
+      Object keyRef = localCache.nodeFactory.newLookupKey(oldKey);
       Node<Integer, Integer> node = localCache.data.get(keyRef);
       checkStatus(localCache, node, Status.ALIVE);
       new Thread(() -> {
@@ -171,7 +170,7 @@ public final class BoundedLocalCacheTest {
     localCache.drainBuffers();
     List<Integer> evictionList = Lists.newArrayList();
     localCache.accessOrderDeque.forEach(
-        node -> evictionList.add(node.getKey(localCache.keyStrategy)));
+        node -> evictionList.add(node.getKey()));
     assertThat(localCache.size(), is(equalTo(expect.length)));
     assertThat(localCache.keySet(), containsInAnyOrder(expect));
     assertThat(evictionList, is(equalTo(asList(expect))));
@@ -183,7 +182,7 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onGet(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.get(first.getKey(localCache.keyStrategy)));
+    updateRecency(localCache, () -> localCache.get(first.getKey()));
   }
 
   @Test(dataProvider = "caches")
@@ -210,8 +209,7 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.putIfAbsent(
-        first.getKey(localCache.keyStrategy), first.getKey(localCache.keyStrategy)));
+    updateRecency(localCache, () -> localCache.putIfAbsent(first.getKey(), first.getKey()));
   }
 
   @Test(dataProvider = "caches")
@@ -220,8 +218,7 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onPut(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.put(
-        first.getKey(localCache.keyStrategy), first.getKey(localCache.keyStrategy)));
+    updateRecency(localCache, () -> localCache.put(first.getKey(), first.getKey()));
   }
 
   @Test(dataProvider = "caches")
@@ -230,8 +227,7 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onReplace(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    updateRecency(localCache, () -> localCache.replace(
-        first.getKey(localCache.keyStrategy), first.getKey(localCache.keyStrategy)));
+    updateRecency(localCache, () -> localCache.replace(first.getKey(), first.getKey()));
   }
 
   @Test(dataProvider = "caches")
@@ -241,11 +237,10 @@ public final class BoundedLocalCacheTest {
       Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    Integer key = first.getKey(localCache.keyStrategy);
+    Integer key = first.getKey();
     Integer value = context.original().get(key);
 
-    updateRecency(localCache, () -> localCache.replace(
-        first.getKey(localCache.keyStrategy), value, value));
+    updateRecency(localCache, () -> localCache.replace(first.getKey(), value, value));
   }
 
   private void updateRecency(BoundedLocalCache<Integer, Integer> cache, Runnable operation) {
@@ -263,7 +258,7 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onRead(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> dummy = new Node<>(null, null, 1, 0);
+    Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
     int index = BoundedLocalCache.readBufferIndex();
     AtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
@@ -281,7 +276,7 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> dummy = new Node<>(null, null, 1, 0);
+    Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
     boolean[] ran = new boolean[1];
     localCache.afterWrite(dummy, () -> ran[0] = true);
