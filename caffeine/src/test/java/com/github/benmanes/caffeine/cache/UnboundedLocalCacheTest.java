@@ -45,7 +45,8 @@ public final class UnboundedLocalCacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+      refreshAfterWrite = Expire.DISABLED, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG)
   @Test(dataProvider = "caches")
   public void noPolicy(Cache<Integer, Integer> cache) {
     assertThat(cache.policy().eviction(), is(Optional.empty()));
@@ -56,7 +57,8 @@ public final class UnboundedLocalCacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+      refreshAfterWrite = Expire.DISABLED, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG)
   @Test(dataProvider = "caches")
   public void noPolicy_async(AsyncLoadingCache<Integer, Integer> cache) {
     assertThat(cache.synchronous().policy().eviction(), is(Optional.empty()));

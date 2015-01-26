@@ -102,6 +102,7 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.maximumSize()),
         ImmutableSet.copyOf(cacheSpec.expireAfterAccess()),
         ImmutableSet.copyOf(cacheSpec.expireAfterWrite()),
+        ImmutableSet.copyOf(cacheSpec.refreshAfterWrite()),
         ImmutableSet.copyOf(keys),
         ImmutableSet.copyOf(values),
         ImmutableSet.copyOf(cacheSpec.executor()),
@@ -131,6 +132,7 @@ final class CacheGenerator {
         (MaximumSize) combination.get(index++),
         (Expire) combination.get(index++),
         (Expire) combination.get(index++),
+        (Expire) combination.get(index++),
         (ReferenceType) combination.get(index++),
         (ReferenceType) combination.get(index++),
         (CacheExecutor) combination.get(index++),
@@ -144,7 +146,8 @@ final class CacheGenerator {
     boolean asyncIncompatible = (context.implementation() != Implementation.Caffeine)
         || (context.valueStrength() != ReferenceType.STRONG)
         || !context.isLoading();
-    boolean skip = context.isAsync() && asyncIncompatible;
+    boolean refreshIncompatible = context.refreshes() && !context.isLoading();
+    boolean skip = (context.isAsync() && asyncIncompatible) || refreshIncompatible;
 
     return skip ? Optional.empty() : Optional.of(context);
   }

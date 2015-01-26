@@ -84,6 +84,9 @@ public final class GuavaLocalCache {
     if (context.afterWrite != Expire.DISABLED) {
       builder.expireAfterWrite(context.afterWrite.timeNanos(), TimeUnit.NANOSECONDS);
     }
+    if (context.refresh != Expire.DISABLED) {
+      builder.refreshAfterWrite(context.refresh.timeNanos(), TimeUnit.NANOSECONDS);
+    }
     if (context.expires()) {
       builder.ticker(context.ticker());
     }

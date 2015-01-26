@@ -69,6 +69,7 @@ public final class CacheContext {
   final CacheWeigher weigher;
   final Expire afterAccess;
   final Expire afterWrite;
+  final Expire refresh;
   final Executor executor;
   final Loader loader;
   final Stats stats;
@@ -93,16 +94,17 @@ public final class CacheContext {
   Map<Integer, Integer> absent;
 
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
-      MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, ReferenceType keyStrength,
-      ReferenceType valueStrength, CacheExecutor cacheExecutor, Listener removalListenerType,
-      Population population, boolean isLoading, Compute compute, Loader loader,
-      Implementation implementation) {
+      MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, Expire refresh,
+      ReferenceType keyStrength, ReferenceType valueStrength, CacheExecutor cacheExecutor,
+      Listener removalListenerType, Population population, boolean isLoading, Compute compute,
+      Loader loader, Implementation implementation) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = requireNonNull(weigher);
     this.maximumSize = requireNonNull(maximumSize);
     this.afterAccess = requireNonNull(afterAccess);
     this.afterWrite = requireNonNull(afterWrite);
+    this.refresh = requireNonNull(refresh);
     this.keyStrength = requireNonNull(keyStrength);
     this.valueStrength = requireNonNull(valueStrength);
     this.cacheExecutor = requireNonNull(cacheExecutor);
@@ -210,6 +212,10 @@ public final class CacheContext {
     return (maximumSize == MaximumSize.DISABLED) || (maximumSize == MaximumSize.UNREACHABLE);
   }
 
+  public boolean refreshes() {
+    return (refresh != Expire.DISABLED);
+  }
+
   /** The initial entries in the cache, iterable in insertion order. */
   public Map<Integer, Integer> original() {
     initialSize(); // lazy initialize
@@ -282,6 +288,7 @@ public final class CacheContext {
         .add("maximumSize", maximumSize)
         .add("afterAccess", afterAccess)
         .add("afterWrite", afterWrite)
+        .add("refreshAfterWrite", refresh)
         .add("keyStrength", keyStrength)
         .add("valueStrength", valueStrength)
         .add("compute", compute)

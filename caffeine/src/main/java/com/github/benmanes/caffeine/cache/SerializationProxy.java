@@ -37,6 +37,7 @@ final class SerializationProxy<K, V> implements Serializable {
   boolean isRecordingStats;
   long expireAfterWriteNanos;
   long expireAfterAccessNanos;
+  long refreshAfterWriteNanos;
   CacheLoader<? super K, V> loader;
   RemovalListener<?, ?> removalListener;
   long maximumSize = Caffeine.UNSET_INT;
@@ -63,6 +64,9 @@ final class SerializationProxy<K, V> implements Serializable {
     }
     if (expireAfterAccessNanos > 0) {
       builder.expireAfterAccess(expireAfterAccessNanos, TimeUnit.NANOSECONDS);
+    }
+    if (refreshAfterWriteNanos > 0) {
+      builder.refreshAfterWrite(refreshAfterWriteNanos, TimeUnit.NANOSECONDS);
     }
     if (weakKeys) {
       builder.weakKeys();

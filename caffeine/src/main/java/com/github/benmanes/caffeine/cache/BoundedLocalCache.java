@@ -320,22 +320,22 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   /* ---------------- Expiration Support -------------- */
 
-  boolean expiresAfterWrite() {
-    return expireAfterWriteNanos > 0;
+  boolean expiresAfterAccess() {
+    return nodeFactory.expiresAfterAccess();
   }
 
-  boolean expiresAfterAccess() {
-    return expireAfterAccessNanos > 0;
+  boolean expiresAfterWrite() {
+    return nodeFactory.expiresAfterWrite();
   }
 
   boolean refreshes() {
-    return refreshNanos > 0;
+    return nodeFactory.refreshAfterWrite();
   }
 
   /* ---------------- Eviction Support -------------- */
 
   boolean evicts() {
-    return (maximumWeightedSize != null);
+    return nodeFactory.maximumSize();
   }
 
   /**
@@ -849,7 +849,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         }
       }
 
-      if (collects()) {
+      if (collects() || refreshes()) {
         for (Entry<Object, Node<K, V>> entry : data.entrySet()) {
           Node<K, V> node = entry.getValue();
           if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
@@ -1838,6 +1838,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     Object writeReplace() {
       @SuppressWarnings("unchecked")
       SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
+      proxy.refreshAfterWriteNanos = cache.refreshNanos;
       proxy.loader = cache.loader;
       return proxy;
     }
@@ -1879,6 +1880,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     Object writeReplace() {
       SerializationProxy<K, V> proxy = makeSerializationProxy(cache);
+      proxy.refreshAfterWriteNanos = cache.refreshNanos;
       proxy.loader = loader;
       proxy.async = true;
       return proxy;

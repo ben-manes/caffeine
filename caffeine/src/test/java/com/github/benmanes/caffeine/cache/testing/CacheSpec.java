@@ -217,6 +217,12 @@ public @interface CacheSpec {
     Expire.FOREVER
   };
 
+  /** The refresh setting, each resulting in a new combination. */
+  Expire[] refreshAfterWrite() default {
+    Expire.DISABLED,
+    Expire.FOREVER
+  };
+
   enum Expire {
     /** A flag indicating that entries are not evicted due to expiration. */
     DISABLED(Long.MIN_VALUE),
