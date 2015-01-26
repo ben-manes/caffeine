@@ -88,7 +88,7 @@ public final class NodeFactoryGenerator {
   private void writeJavaFile(TypeSpec.Builder typeSpec, String name) throws IOException {
     Path path = Paths.get(directory, name + ".java");
     try (BufferedWriter writer = Files.newBufferedWriter(path)) {
-      makeJavaFile(typeSpec).emit(writer);
+      makeJavaFile(typeSpec).emit(writer, "  ");
     }
   }
 

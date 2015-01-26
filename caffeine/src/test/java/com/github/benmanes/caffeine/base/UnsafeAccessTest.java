@@ -20,9 +20,8 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-
-import com.github.benmanes.caffeine.base.UnsafeAccess;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -44,5 +43,69 @@ public final class UnsafeAccessTest {
   @Test(expectedExceptions = Error.class)
   public void objectFieldOffset_error() {
     UnsafeAccess.objectFieldOffset(getClass(), "foobar");
+  }
+
+  @Test(dataProvider = "relaxedFields")
+  public void relaxed_ivalue(RelaxedFields relaxedFields) {
+    relaxedFields.setRelaxedInt(100);
+    int read = relaxedFields.getRelaxedInt();
+    assertThat(relaxedFields.ivalue, is(100));
+    assertThat(read, is(100));
+  }
+
+  @Test(dataProvider = "relaxedFields")
+  public void relaxed_lvalue(RelaxedFields relaxedFields) {
+    relaxedFields.setRelaxedLong(100L);
+    long read = relaxedFields.getRelaxedLong();
+    assertThat(relaxedFields.lvalue, is(100L));
+    assertThat(read, is(100L));
+  }
+
+  @Test(dataProvider = "relaxedFields")
+  public void relaxed_ovalue(RelaxedFields relaxedFields) {
+    Object o = new Object();
+    relaxedFields.setRelaxedObject(o);
+    Object read = relaxedFields.getRelaxedObject();
+    assertThat(relaxedFields.ovalue, is(o));
+    assertThat(read, is(o));
+  }
+
+  @DataProvider(name = "relaxedFields")
+  public Object[][] providesRelaxedFields() {
+    return new Object[][] {{ new RelaxedFields() }};
+  }
+
+  static final class RelaxedFields {
+    static final long IVALUE_OFFSET = UnsafeAccess.objectFieldOffset(RelaxedFields.class, "ivalue");
+    static final long LVALUE_OFFSET = UnsafeAccess.objectFieldOffset(RelaxedFields.class, "lvalue");
+    static final long OVALUE_OFFSET = UnsafeAccess.objectFieldOffset(RelaxedFields.class, "ovalue");
+
+    private volatile int ivalue;
+    private volatile long lvalue;
+    private volatile Object ovalue;
+
+    void setRelaxedInt(int value) {
+      UnsafeAccess.UNSAFE.putOrderedInt(this, RelaxedFields.IVALUE_OFFSET, value);
+    }
+
+    int getRelaxedInt() {
+      return UnsafeAccess.UNSAFE.getInt(this, RelaxedFields.IVALUE_OFFSET);
+    }
+
+    void setRelaxedLong(long value) {
+      UnsafeAccess.UNSAFE.putOrderedLong(this, RelaxedFields.LVALUE_OFFSET, value);
+    }
+
+    long getRelaxedLong() {
+      return UnsafeAccess.UNSAFE.getInt(this, RelaxedFields.LVALUE_OFFSET);
+    }
+
+    void setRelaxedObject(Object value) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, RelaxedFields.OVALUE_OFFSET, value);
+    }
+
+    Object getRelaxedObject() {
+      return UnsafeAccess.UNSAFE.getObject(this, RelaxedFields.OVALUE_OFFSET);
+    }
   }
 }

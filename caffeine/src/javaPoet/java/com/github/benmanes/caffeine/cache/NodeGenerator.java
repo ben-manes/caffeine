@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.NodeSpec.NODE;
+import static com.github.benmanes.caffeine.cache.NodeSpec.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.NodeSpec.UNUSED;
 import static com.github.benmanes.caffeine.cache.NodeSpec.kType;
 import static com.github.benmanes.caffeine.cache.NodeSpec.kTypeVar;
@@ -29,6 +30,7 @@ import static com.github.benmanes.caffeine.cache.NodeSpec.vTypeVar;
 import static com.github.benmanes.caffeine.cache.NodeSpec.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.valueSpec;
 
+import java.lang.ref.Reference;
 import java.lang.reflect.Type;
 import java.util.Objects;
 
@@ -41,6 +43,7 @@ import com.github.benmanes.caffeine.cache.NodeSpec.Strength;
 import com.github.benmanes.caffeine.cache.NodeSpec.Visibility;
 import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
@@ -95,7 +98,7 @@ public final class NodeGenerator {
 
   private void makeNodeSubtype() {
     nodeSubtype = TypeSpec.classBuilder(className)
-        .addModifiers(Modifier.FINAL)
+        .addModifiers(Modifier.STATIC, Modifier.FINAL)
         .addSuperinterface(Types.parameterizedType(nodeType, kType, vType));
   }
 
@@ -128,15 +131,12 @@ public final class NodeGenerator {
           .addAnnotation(Nonnull.class).build());
 
     if (valueStrength == Strength.STRONG) {
-//      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
-//          UNSAFE_ACCESS, offsetName("value"), "value");
-      setter.addStatement("this.value = value");
+      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+          UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
-//      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($N, $N, referenceQueue))",
-//          UNSAFE_ACCESS, offsetName("value"), valueStrength.valueReferenceType(),
-//          "keyReference", "value");
-      setter.addStatement("this.value = new $T($N, $N, referenceQueue)",
-          valueStrength.valueReferenceType(), "keyReference", "value");
+      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($N, $N, referenceQueue))",
+          UNSAFE_ACCESS, offsetName("value"), valueStrength.valueReferenceType(),
+          "keyReference", "value");
     }
 
     return setter.build();
@@ -223,15 +223,12 @@ public final class NodeGenerator {
   /** Adds a constructor assignment. */
   private void addValueConstructorAssignment(MethodSpec.Builder constructor) {
     if (valueStrength == Strength.STRONG) {
-//      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
-//          UNSAFE_ACCESS, offsetName("value"), "value");
-      constructor.addStatement("this.value = value");
+      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+          UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
-//      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T(this.$N, $N, $N))",
-//          UNSAFE_ACCESS, offsetName("value"), valueStrength.valueReferenceType(),
-//          "key", "value", "valueReferenceQueue");
-      constructor.addStatement("this.value = new $T(this.$N, $N, $N)",
-          valueStrength.valueReferenceType(), "key", "value", "valueReferenceQueue");
+      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T(this.$N, $N, $N))",
+          UNSAFE_ACCESS, offsetName("value"), valueStrength.valueReferenceType(),
+          "key", "value", "valueReferenceQueue");
     }
   }
 
@@ -241,8 +238,8 @@ public final class NodeGenerator {
       nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
           .addMethod(newGetter(Strength.STRONG, int.class, "weight", Visibility.IMMEDIATE))
           .addMethod(newSetter(int.class, "weight", Visibility.IMMEDIATE));
-      addConstructorAssignment(constructorByKey, "weight", "weight", Visibility.IMMEDIATE);
-      addConstructorAssignment(constructorByKeyRef, "weight", "weight", Visibility.IMMEDIATE);
+      addIntConstructorAssignment(constructorByKey, "weight", "weight", Visibility.IMMEDIATE);
+      addIntConstructorAssignment(constructorByKeyRef, "weight", "weight", Visibility.IMMEDIATE);
     }
   }
 
@@ -254,8 +251,8 @@ public final class NodeGenerator {
               .addAnnotation(UNUSED).build())
           .addMethod(newGetter(Strength.STRONG, long.class, "accessTime", Visibility.LAZY))
           .addMethod(newSetter(long.class, "accessTime", Visibility.LAZY));
-      addConstructorAssignment(constructorByKey, "now", "accessTime", Visibility.LAZY);
-      addConstructorAssignment(constructorByKeyRef, "now", "accessTime", Visibility.LAZY);
+      addLongConstructorAssignment(constructorByKey, "now", "accessTime", Visibility.LAZY);
+      addLongConstructorAssignment(constructorByKeyRef, "now", "accessTime", Visibility.LAZY);
     }
     if (expireAfterWrite) {
       nodeSubtype.addField(newFieldOffset("writeTime"))
@@ -263,18 +260,29 @@ public final class NodeGenerator {
               .addAnnotation(UNUSED).build())
           .addMethod(newGetter(Strength.STRONG, long.class, "writeTime", Visibility.LAZY))
           .addMethod(newSetter(long.class, "writeTime", Visibility.LAZY));
-      addConstructorAssignment(constructorByKey, "now", "writeTime", Visibility.LAZY);
-      addConstructorAssignment(constructorByKeyRef, "now", "writeTime", Visibility.LAZY);
+      addLongConstructorAssignment(constructorByKey, "now", "writeTime", Visibility.LAZY);
+      addLongConstructorAssignment(constructorByKeyRef, "now", "writeTime", Visibility.LAZY);
     }
   }
 
-  /** Adds a constructor assignment. */
-  private void addConstructorAssignment(MethodSpec.Builder constructor,
+  /** Adds a integer constructor assignment. */
+  private void addIntConstructorAssignment(MethodSpec.Builder constructor,
       String param, String field, Visibility visibility) {
     if (visibility.isRelaxed) {
-//      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
-//          UNSAFE_ACCESS, offsetName(field), param);
+      constructor.addStatement("$T.UNSAFE.putOrderedInt(this, $N, $N)",
+          UNSAFE_ACCESS, offsetName(field), param);
       constructor.addStatement("this.$N = $N", field, param);
+    } else {
+      constructor.addStatement("this.$N = $N", field, param);
+    }
+  }
+
+  /** Adds a long constructor assignment. */
+  private void addLongConstructorAssignment(MethodSpec.Builder constructor,
+      String param, String field, Visibility visibility) {
+    if (visibility.isRelaxed) {
+      constructor.addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
+          UNSAFE_ACCESS, offsetName(field), param);
     } else {
       constructor.addStatement("this.$N = $N", field, param);
     }
@@ -304,9 +312,8 @@ public final class NodeGenerator {
     String name = offsetName(varName);
     return FieldSpec
         .builder(long.class, name, Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-        .initializer("0L").build();
-//        .initializer("$T.objectFieldOffset($T.class, $S)", UNSAFE_ACCESS,
-//            ClassName.bestGuess(className), varName).build();
+        .initializer("$T.objectFieldOffset($T.class, $S)", UNSAFE_ACCESS,
+            ClassName.bestGuess(className), varName).build();
   }
 
   /** Returns the offset constant to this variable. */
@@ -348,22 +355,19 @@ public final class NodeGenerator {
     if (strength == Strength.STRONG) {
       if (visibility.isRelaxed) {
         if (primitive) {
-//          getter.addStatement("return $T.UNSAFE.get$N(this, $N)",
-//              UNSAFE_ACCESS, type, offsetName(varName));
-          getter.addStatement("return $N", varName);
+          getter.addStatement("return $T.UNSAFE.get$N(this, $N)",
+              UNSAFE_ACCESS, type, offsetName(varName));
         } else {
-//          getter.addStatement("return ($T) $T.UNSAFE.get$N(this, $N)",
-//              varType, UNSAFE_ACCESS, type, offsetName(varName));
-          getter.addStatement("return $N", varName);
+          getter.addStatement("return ($T) $T.UNSAFE.get$N(this, $N)",
+              varType, UNSAFE_ACCESS, type, offsetName(varName));
         }
       } else {
         getter.addStatement("return $N", varName);
       }
     } else {
       if (visibility.isRelaxed) {
-//        getter.addStatement("return (($T<$T>) $T.UNSAFE.get$N(this, $N)).get()",
-//            Reference.class, varType, UNSAFE_ACCESS, type, offsetName(varName));
-        getter.addStatement("return $N.get()", varName);
+        getter.addStatement("return (($T<$T>) $T.UNSAFE.get$N(this, $N)).get()",
+            Reference.class, varType, UNSAFE_ACCESS, type, offsetName(varName));
       } else {
         getter.addStatement("return $N.get()", varName);
       }
@@ -378,16 +382,22 @@ public final class NodeGenerator {
   /** Creates a mutator to the variable. */
   private MethodSpec newSetter(Type varType, String varName, Visibility visibility) {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
-    boolean primitive = (varType == int.class) || (varType == long.class);
+    String type;
+    boolean primitive = false;
+    if ((varType == int.class) || (varType == long.class)) {
+      primitive = true;
+      type = (varType == int.class) ? "Int" : "Long";
+    } else {
+      type = "Object";
+    }
     MethodSpec.Builder setter = MethodSpec.methodBuilder(methodName)
         .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
         .addParameter(ParameterSpec.builder(varType, varName)
             .addAnnotation(primitive ? Nonnegative.class : Nullable.class).build());
     if (visibility.isRelaxed) {
-//      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
-//          UNSAFE_ACCESS, offsetName(varName), varName);
-      setter.addStatement("this.$N = $N", varName, varName);
+      setter.addStatement("$T.UNSAFE.putOrdered$L(this, $N, $N)",
+          UNSAFE_ACCESS, type, offsetName(varName), varName);
     } else {
       setter.addStatement("this.$N = $N", varName, varName);
     }
