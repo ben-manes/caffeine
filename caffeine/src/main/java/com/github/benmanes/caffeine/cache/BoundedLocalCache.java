@@ -285,7 +285,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
-        expiresAfterAccess(), refreshes() || expiresAfterWrite(), true, true/*evicts(), builder.isWeighted()*/);
+        expiresAfterAccess(), expiresAfterWrite(), refreshes(), /*evicts()*/ true,
+        /*builder.isWeighted()*/ true);
   }
 
   /** Returns whether this cache notifies when an entry is removed. */

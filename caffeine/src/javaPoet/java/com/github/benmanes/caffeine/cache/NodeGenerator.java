@@ -61,6 +61,7 @@ public final class NodeGenerator {
   private final Strength valueStrength;
   private final boolean expireAfterAccess;
   private final boolean expireAfterWrite;
+  private final boolean refreshAfterWrite;
   private final boolean maximum;
   private final boolean weighed;
 
@@ -69,12 +70,14 @@ public final class NodeGenerator {
   private MethodSpec.Builder constructorByKeyRef;
 
   public NodeGenerator(String className, Strength keyStrength, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean maximum, boolean weighed) {
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
+      boolean maximum, boolean weighed) {
     this.className = className;
     this.keyStrength = keyStrength;
     this.valueStrength = valueStrength;
     this.expireAfterAccess = expireAfterAccess;
     this.expireAfterWrite = expireAfterWrite;
+    this.refreshAfterWrite = refreshAfterWrite;
     this.maximum = maximum;
     this.weighed = weighed;
   }
@@ -201,7 +204,7 @@ public final class NodeGenerator {
       constructor.addParameter(ParameterSpec.builder(int.class, "weight")
           .addAnnotation(Nonnegative.class).build());
     }
-    if (expireAfterAccess || expireAfterWrite) {
+    if (expireAfterAccess || expireAfterWrite || refreshAfterWrite) {
       constructor.addParameter(ParameterSpec.builder(long.class, "now")
           .addAnnotation(Nonnegative.class).build());
     }
@@ -255,7 +258,7 @@ public final class NodeGenerator {
       addLongConstructorAssignment(constructorByKey, "now", "accessTime", Visibility.LAZY);
       addLongConstructorAssignment(constructorByKeyRef, "now", "accessTime", Visibility.LAZY);
     }
-    if (expireAfterWrite) {
+    if (expireAfterWrite || refreshAfterWrite) {
       nodeSubtype.addField(newFieldOffset("writeTime"))
           .addField(FieldSpec.builder(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
               .addAnnotation(UNUSED).build())
@@ -406,7 +409,8 @@ public final class NodeGenerator {
     return setter.build();
   }
 
-  public MethodSpec newToString() {
+  /** Generates a toString method with the custom fields. */
+  private MethodSpec newToString() {
     StringBuilder start = new StringBuilder();
     StringBuilder end = new StringBuilder();
     start.append("return String.format(\"%s=[key=%s, value=%s");
@@ -419,7 +423,7 @@ public final class NodeGenerator {
       start.append(", accessTimeNS=%,d");
       end.append(", getAccessTime()");
     }
-    if (expireAfterWrite) {
+    if (expireAfterWrite || refreshAfterWrite) {
       start.append(", writeTimeNS=%,d");
       end.append(", getWriteTime()");
     }

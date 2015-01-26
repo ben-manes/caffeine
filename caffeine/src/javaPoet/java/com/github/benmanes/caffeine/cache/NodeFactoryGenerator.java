@@ -135,7 +135,8 @@ public final class NodeFactoryGenerator {
 
   private void addGetFactory(TypeSpec.Builder nodeFactory) {
     List<String> params = ImmutableList.of("strongKeys", "weakKeys", "strongValues", "weakValues",
-        "softValues", "expireAfterAccess", "expireAfterWrite", "maximumSize", "weighed");
+        "softValues", "expiresAfterAccess", "expiresAfterWrite", "refreshAfterWrite",
+        "maximumSize", "weighed");
     MethodSpec.Builder getFactory = MethodSpec.methodBuilder("getFactory")
         .addJavadoc("Returns a factory optimized for the specified features.\n")
         .returns(ClassName.bestGuess("NodeFactory")).addAnnotation(Nonnull.class);
@@ -175,15 +176,17 @@ public final class NodeFactoryGenerator {
           (boolean) combination.get(2),
           (boolean) combination.get(3),
           (boolean) combination.get(4),
-          (boolean) combination.get(5));
+          (boolean) combination.get(5),
+          (boolean) combination.get(6));
     }
   }
 
   private void addNodeSpec(TypeSpec.Builder nodeFactoryBuilder, Set<String> seen,
       Strength keyStrength, Strength valueStrength, boolean expireAfterAccess,
-      boolean expireAfterWrite, boolean maximum, boolean weighed) throws IOException {
+      boolean expireAfterWrite, boolean refreshAfterWrite, boolean maximum, boolean weighed)
+          throws IOException {
     String enumName = makeEnumName(keyStrength, valueStrength,
-        expireAfterAccess, expireAfterWrite, maximum, weighed);
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximum, weighed);
     String className = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
     if (!seen.add(className)) {
       // skip duplicates
@@ -191,21 +194,22 @@ public final class NodeFactoryGenerator {
     }
 
     addEnumConstant(className, enumName, nodeFactoryBuilder, keyStrength, valueStrength,
-        expireAfterAccess, expireAfterWrite, maximum, weighed);
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximum, weighed);
 
-    NodeGenerator nodeGenerator = new NodeGenerator(className, keyStrength,
-        valueStrength, expireAfterAccess, expireAfterWrite, maximum, weighed);
+    NodeGenerator nodeGenerator = new NodeGenerator(className, keyStrength, valueStrength,
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximum, weighed);
     TypeSpec.Builder nodeSubType = nodeGenerator.createNodeType();
     nodeFactoryBuilder.addType(nodeSubType.build());
   }
 
-  private void addEnumConstant(String className, String enumName, TypeSpec.Builder nodeFactoryBuilder,
-      Strength keyStrength, Strength valueStrength, boolean expireAfterAccess,
-      boolean expireAfterWrite, boolean maximum, boolean weighed) {
+  private void addEnumConstant(String className, String enumName,
+      TypeSpec.Builder nodeFactoryBuilder, Strength keyStrength, Strength valueStrength,
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
+      boolean maximum, boolean weighed) {
     String statementWithKey = makeFactoryStatementKey(keyStrength, valueStrength,
-        expireAfterAccess, expireAfterWrite, weighed);
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, weighed);
     String statementWithKeyRef = makeFactoryStatementKeyRef(valueStrength,
-        expireAfterAccess, expireAfterWrite, weighed);
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, weighed);
     TypeSpec.Builder typeSpec = TypeSpec.anonymousClassBuilder("")
         .addMethod(newNodeByKey().addAnnotation(Override.class)
             .addStatement(statementWithKey, className).build())
@@ -216,8 +220,9 @@ public final class NodeFactoryGenerator {
         .addMethod(isMethod("strongValues", valueStrength == Strength.STRONG))
         .addMethod(isMethod("weakValues", valueStrength == Strength.WEAK))
         .addMethod(isMethod("softValues", valueStrength == Strength.SOFT))
-        .addMethod(isMethod("expireAfterAccess", expireAfterAccess))
-        .addMethod(isMethod("expireAfterWrite", expireAfterWrite))
+        .addMethod(isMethod("expiresAfterAccess", expireAfterAccess))
+        .addMethod(isMethod("expiresAfterWrite", expireAfterWrite))
+        .addMethod(isMethod("refreshAfterWrite", refreshAfterWrite))
         .addMethod(isMethod("maximumSize", maximum))
         .addMethod(isMethod("weighed", weighed));
     if (keyStrength == Strength.WEAK) {
@@ -228,21 +233,24 @@ public final class NodeFactoryGenerator {
   }
 
   private String makeFactoryStatementKey(Strength keyStrength, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean weighed) {
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
+      boolean weighed) {
     StringBuilder statement = new StringBuilder("return new $N<>(key, keyReferenceQueue");
     return completeFactoryStatement(statement, valueStrength,
-        expireAfterAccess, expireAfterWrite, weighed);
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, weighed);
   }
 
   private String makeFactoryStatementKeyRef(Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean weighed) {
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
+      boolean weighed) {
     StringBuilder statement = new StringBuilder("return new $N<>(keyReference");
     return completeFactoryStatement(statement, valueStrength,
-        expireAfterAccess, expireAfterWrite, weighed);
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, weighed);
   }
 
   private String completeFactoryStatement(StringBuilder statement, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean weighed) {
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
+      boolean weighed) {
     statement.append(", value");
     if (valueStrength != Strength.STRONG) {
       statement.append(", valueReferenceQueue");
@@ -250,7 +258,7 @@ public final class NodeFactoryGenerator {
     if (weighed) {
       statement.append(", weight");
     }
-    if (expireAfterAccess || expireAfterWrite) {
+    if (expireAfterAccess || expireAfterWrite || refreshAfterWrite) {
       statement.append(", now");
     }
     statement.append(")");
@@ -288,13 +296,17 @@ public final class NodeFactoryGenerator {
   }
 
   private String makeEnumName(Strength keyStrength, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean maximum, boolean weighed) {
+      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
+      boolean maximum, boolean weighed) {
     StringBuilder name = new StringBuilder(keyStrength + "_KEYS_" + valueStrength + "_VALUES");
     if (expireAfterAccess) {
       name.append("_EXPIRE_ACCESS");
     }
     if (expireAfterWrite) {
       name.append("_EXPIRE_WRITE");
+    }
+    if (refreshAfterWrite) {
+      name.append("_REFRESH_WRITE");
     }
     if (maximum) {
       name.append("_MAXIMUM");
@@ -312,12 +324,13 @@ public final class NodeFactoryGenerator {
     Set<Strength> valueStrengths = ImmutableSet.of(Strength.STRONG, Strength.WEAK, Strength.SOFT);
     Set<Boolean> expireAfterAccess = ImmutableSet.of(false, true);
     Set<Boolean> expireAfterWrite = ImmutableSet.of(false, true);
+    Set<Boolean> refreshAfterWrite = ImmutableSet.of(false, true);
     Set<Boolean> maximumSize = ImmutableSet.of(false, true);
     Set<Boolean> weighed = ImmutableSet.of(false, true);
 
     @SuppressWarnings("unchecked")
     Set<List<Object>> combinations = Sets.cartesianProduct(keyStrengths, valueStrengths,
-        expireAfterAccess, expireAfterWrite, maximumSize, weighed);
+        expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximumSize, weighed);
     return combinations;
   }
 
