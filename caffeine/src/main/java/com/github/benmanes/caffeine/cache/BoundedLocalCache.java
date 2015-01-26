@@ -285,8 +285,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
-        expiresAfterAccess(), expiresAfterWrite(), refreshes(), /*evicts()*/ true,
-        /*builder.isWeighted()*/ true);
+        builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
+        /*builder.evicts()*/ true, /*builder.isWeighted()*/ true);
   }
 
   /** Returns whether this cache notifies when an entry is removed. */
@@ -335,7 +335,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   /* ---------------- Eviction Support -------------- */
 
   boolean evicts() {
-    return nodeFactory.maximumSize();
+    // TODO(ben): Use nodeFactory.maximumSize()
+    return (maximumWeightedSize != null);
   }
 
   /**
@@ -425,7 +426,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       long expirationTime = now - expireAfterAccessNanos;
       for (;;) {
         final Node<K, V> node = accessOrderDeque.peekFirst();
-        if ((node == null) || (node.getAccessTime() > expirationTime)) {
+        if ((node == null) || (node.getAccessTime() >= expirationTime)) {
           break;
         }
         accessOrderDeque.pollFirst();
@@ -437,7 +438,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       long expirationTime = now - expireAfterWriteNanos;
       for (;;) {
         final Node<K, V> node = writeOrderDeque.peekFirst();
-        if ((node == null) || (node.getWriteTime() > expirationTime)) {
+        if ((node == null) || (node.getWriteTime() >= expirationTime)) {
           break;
         }
         writeOrderDeque.pollFirst();
@@ -713,7 +714,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
       // ignore out-of-order write operations
       if (node.isAlive()) {
-        node.setWriteTime(ticker.read());
         if (expiresAfterWrite()) {
           writeOrderDeque.add(node);
         }
@@ -803,6 +803,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   public void clear() {
     evictionLock.lock();
     try {
+      // Apply all pending writes
+      Runnable task;
+      while ((task = writeBuffer.poll()) != null) {
+        task.run();
+      }
+
       // Discard all entries
       if (evicts() || expiresAfterAccess()) {
         Node<K, V> node;
@@ -827,12 +833,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         }
       }
 
-      // Apply all pending writes
-      Runnable task;
-      while ((task = writeBuffer.poll()) != null) {
-        task.run();
-      }
-
       if (expiresAfterWrite()) {
         Node<K, V> node;
         while ((node = writeOrderDeque.poll()) != null) {
@@ -849,20 +849,18 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         }
       }
 
-      if (collects() || refreshes()) {
-        for (Entry<Object, Node<K, V>> entry : data.entrySet()) {
-          Node<K, V> node = entry.getValue();
-          if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
-            K key = node.getKey();
-            V value = node.getValue();
-            if ((key == null) || (value == null)) {
-              notifyRemoval(key, value, RemovalCause.COLLECTED);
-            } else {
-              notifyRemoval(key, value, RemovalCause.EXPLICIT);
-            }
+      for (Entry<Object, Node<K, V>> entry : data.entrySet()) {
+        Node<K, V> node = entry.getValue();
+        if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
+          K key = node.getKey();
+          V value = node.getValue();
+          if ((key == null) || (value == null)) {
+            notifyRemoval(key, value, RemovalCause.COLLECTED);
+          } else {
+            notifyRemoval(key, value, RemovalCause.EXPLICIT);
           }
-          makeDead(node);
         }
+        makeDead(node);
       }
     } finally {
       evictionLock.unlock();

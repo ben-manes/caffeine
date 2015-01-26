@@ -113,7 +113,7 @@ public final class CacheContext {
     this.removalListener = removalListenerType.create();
     this.population = requireNonNull(population);
     this.loader = isLoading ? requireNonNull(loader) : null;
-    this.ticker = expires() ? new FakeTicker() : null;
+    this.ticker = new FakeTicker();
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
     this.initialSize = -1;
@@ -274,7 +274,7 @@ public final class CacheContext {
   }
 
   public FakeTicker ticker() {
-    return requireNonNull(ticker);
+    return ticker;
   }
 
   public Implementation implementation() {

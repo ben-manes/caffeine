@@ -485,7 +485,11 @@ public final class Caffeine<K, V> {
 
   @Nonnegative
   long getExpireAfterWriteNanos() {
-    return (expireAfterWriteNanos == UNSET_INT) ? DEFAULT_EXPIRATION_NANOS : expireAfterWriteNanos;
+    return expiresAfterWrite() ? expireAfterWriteNanos : DEFAULT_EXPIRATION_NANOS;
+  }
+
+  boolean expiresAfterWrite() {
+    return (expireAfterWriteNanos != UNSET_INT);
   }
 
   /**
@@ -520,13 +524,11 @@ public final class Caffeine<K, V> {
 
   @Nonnegative
   long getExpireAfterAccessNanos() {
-    return (expireAfterAccessNanos == UNSET_INT)
-        ? DEFAULT_EXPIRATION_NANOS
-        : expireAfterAccessNanos;
+    return expiresAfterAccess() ? expireAfterAccessNanos : DEFAULT_EXPIRATION_NANOS;
   }
 
-  boolean isExpirable() {
-    return (expireAfterAccessNanos != UNSET_INT) && (expireAfterWriteNanos != UNSET_INT);
+  boolean expiresAfterAccess() {
+    return (expireAfterAccessNanos != UNSET_INT);
   }
 
   /**
@@ -558,11 +560,11 @@ public final class Caffeine<K, V> {
 
   @Nonnegative
   long getRefreshNanos() {
-    return (refreshNanos == UNSET_INT) ? DEFAULT_REFRESH_NANOS : refreshNanos;
+    return refreshes() ? refreshNanos : DEFAULT_REFRESH_NANOS;
   }
 
   boolean refreshes() {
-    return refreshNanos > 0;
+    return refreshNanos != UNSET_INT;
   }
 
   /**
@@ -584,9 +586,12 @@ public final class Caffeine<K, V> {
 
   @Nonnull
   Ticker getTicker() {
-    return (ticker == null)
-        ? (isExpirable() || isRecordingStats() ? Ticker.systemTicker() : DisabledTicker.INSTANCE)
-        : ticker;
+    if (ticker != null) {
+      return ticker;
+    }
+    return expiresAfterAccess() || expiresAfterWrite() || refreshes() || isRecordingStats()
+        ? Ticker.systemTicker()
+        : DisabledTicker.INSTANCE;
   }
 
   /**

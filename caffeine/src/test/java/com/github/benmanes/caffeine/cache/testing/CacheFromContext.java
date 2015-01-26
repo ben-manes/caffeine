@@ -83,7 +83,7 @@ public final class CacheFromContext {
     if (context.refresh != Expire.DISABLED) {
       builder.refreshAfterWrite(context.refresh.timeNanos(), TimeUnit.NANOSECONDS);
     }
-    if (context.expires()) {
+    if (context.expires() || context.refreshes()) {
       builder.ticker(context.ticker());
     }
     if (context.keyStrength == ReferenceType.WEAK) {
