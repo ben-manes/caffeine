@@ -93,7 +93,8 @@ public final class NodeGenerator {
 
     return nodeSubtype
         .addMethod(constructorByKey.build())
-        .addMethod(constructorByKeyRef.build());
+        .addMethod(constructorByKeyRef.build())
+        .addMethod(newToString());
   }
 
   private void makeNodeSubtype() {
@@ -403,5 +404,32 @@ public final class NodeGenerator {
     }
 
     return setter.build();
+  }
+
+  public MethodSpec newToString() {
+    StringBuilder start = new StringBuilder();
+    StringBuilder end = new StringBuilder();
+    start.append("return String.format(\"%s=[key=%s, value=%s");
+    end.append("]\",\ngetClass().getSimpleName(), getKey(), getValue()");
+    if (weighed) {
+      start.append(", weight=%d");
+      end.append(", getWeight()");
+    }
+    if (expireAfterAccess) {
+      start.append(", accessTimeNS=%,d");
+      end.append(", getAccessTime()");
+    }
+    if (expireAfterWrite) {
+      start.append(", writeTimeNS=%,d");
+      end.append(", getWriteTime()");
+    }
+    end.append(")");
+
+    return MethodSpec.methodBuilder("toString")
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(String.class)
+        .addStatement(start.toString() + end.toString())
+        .build();
   }
 }
