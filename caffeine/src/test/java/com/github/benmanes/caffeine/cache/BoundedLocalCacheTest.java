@@ -50,6 +50,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The test cases for the implementation details of {@link BoundedLocalCache}.
@@ -59,7 +60,8 @@ import com.google.common.collect.Lists;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class BoundedLocalCacheTest {
-  final Executor executor = Executors.newCachedThreadPool();
+  final Executor executor = Executors.newCachedThreadPool(
+      new ThreadFactoryBuilder().setDaemon(true).build());
 
   static BoundedLocalCache<Integer, Integer> asBoundedLocalCache(Cache<Integer, Integer> cache) {
     return (BoundedLocalCache<Integer, Integer>) cache.asMap();

@@ -61,6 +61,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.SerializableTester;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A test to assert basic concurrency characteristics by validating the internal state after load.
@@ -209,7 +210,8 @@ public final class MultiThreadedTest{
   /* ---------------- Utilities -------------- */
 
   private void executeWithTimeOut(Cache<?, ?> cache, Queue<String> failures, Callable<Long> task) {
-    ExecutorService es = Executors.newSingleThreadExecutor();
+    ExecutorService es = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setDaemon(true).build());
     Future<Long> future = es.submit(task);
     try {
       long timeNS = future.get(TIMEOUT, TimeUnit.SECONDS);

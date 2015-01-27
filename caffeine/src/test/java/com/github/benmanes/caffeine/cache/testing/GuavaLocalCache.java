@@ -382,6 +382,9 @@ public final class GuavaLocalCache {
         @Override public Optional<Expiration<K, V>> expireAfterWrite() {
           return Optional.empty();
         }
+        @Override public Optional<Expiration<K, V>> refreshAfterWrite() {
+          return Optional.empty();
+        }
       };
     }
   }

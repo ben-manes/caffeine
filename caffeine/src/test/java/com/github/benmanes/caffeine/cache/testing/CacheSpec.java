@@ -223,6 +223,11 @@ public @interface CacheSpec {
     Expire.FOREVER
   };
 
+  /** Indicates if the amount of time that should be auto-advance for each entry when populating. */
+  Advance[] advanceOnPopulation() default {
+    Advance.ZERO
+  };
+
   enum Expire {
     /** A flag indicating that entries are not evicted due to expiration. */
     DISABLED(Long.MIN_VALUE),
@@ -236,6 +241,21 @@ public @interface CacheSpec {
     private final long timeNanos;
 
     private Expire(long timeNanos) {
+      this.timeNanos = timeNanos;
+    }
+
+    public long timeNanos() {
+      return timeNanos;
+    }
+  }
+
+  enum Advance {
+    ZERO(0),
+    ONE_MINUTE(TimeUnit.MINUTES.toNanos(1L));
+
+    private final long timeNanos;
+
+    private Advance(long timeNanos) {
       this.timeNanos = timeNanos;
     }
 

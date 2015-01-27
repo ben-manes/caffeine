@@ -36,6 +36,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
@@ -69,6 +70,7 @@ public final class CacheContext {
   final CacheWeigher weigher;
   final Expire afterAccess;
   final Expire afterWrite;
+  final Advance advance;
   final Expire refresh;
   final Executor executor;
   final Loader loader;
@@ -95,9 +97,9 @@ public final class CacheContext {
 
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
       MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, Expire refresh,
-      ReferenceType keyStrength, ReferenceType valueStrength, CacheExecutor cacheExecutor,
-      Listener removalListenerType, Population population, boolean isLoading, Compute compute,
-      Loader loader, Implementation implementation) {
+      Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
+      CacheExecutor cacheExecutor, Listener removalListenerType, Population population,
+      boolean isLoading, Compute compute, Loader loader, Implementation implementation) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = requireNonNull(weigher);
@@ -105,6 +107,7 @@ public final class CacheContext {
     this.afterAccess = requireNonNull(afterAccess);
     this.afterWrite = requireNonNull(afterWrite);
     this.refresh = requireNonNull(refresh);
+    this.advance = requireNonNull(advance);
     this.keyStrength = requireNonNull(keyStrength);
     this.valueStrength = requireNonNull(valueStrength);
     this.cacheExecutor = requireNonNull(cacheExecutor);

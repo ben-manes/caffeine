@@ -124,6 +124,8 @@ public final class CacheProvider {
             params[i] = entry.getValue().policy().expireAfterAccess().get();
           } else if (parameters[i].isAnnotationPresent(ExpireAfterWrite.class)) {
             params[i] = entry.getValue().policy().expireAfterWrite().get();
+          } else if (parameters[i].isAnnotationPresent(RefreshAfterWrite.class)) {
+            params[i] = entry.getValue().policy().refreshAfterWrite().get();
           } else {
             throw new AssertionError("Expiration parameter must have a qualifier annotation");
           }

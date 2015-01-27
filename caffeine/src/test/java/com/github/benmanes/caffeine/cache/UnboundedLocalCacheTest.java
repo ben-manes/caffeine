@@ -52,6 +52,7 @@ public final class UnboundedLocalCacheTest {
     assertThat(cache.policy().eviction(), is(Optional.empty()));
     assertThat(cache.policy().expireAfterWrite(), is(Optional.empty()));
     assertThat(cache.policy().expireAfterAccess(), is(Optional.empty()));
+    assertThat(cache.policy().refreshAfterWrite(), is(Optional.empty()));
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
@@ -64,5 +65,6 @@ public final class UnboundedLocalCacheTest {
     assertThat(cache.synchronous().policy().eviction(), is(Optional.empty()));
     assertThat(cache.synchronous().policy().expireAfterWrite(), is(Optional.empty()));
     assertThat(cache.synchronous().policy().expireAfterAccess(), is(Optional.empty()));
+    assertThat(cache.synchronous().policy().refreshAfterWrite(), is(Optional.empty()));
   }
 }

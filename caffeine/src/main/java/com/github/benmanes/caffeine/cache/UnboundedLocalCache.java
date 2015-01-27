@@ -712,6 +712,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override public Optional<Expiration<K, V>> expireAfterWrite() {
       return Optional.empty();
     }
+    @Override public Optional<Expiration<K, V>> refreshAfterWrite() {
+      return Optional.empty();
+    }
   }
 
   /* ---------------- Loading Cache -------------- */

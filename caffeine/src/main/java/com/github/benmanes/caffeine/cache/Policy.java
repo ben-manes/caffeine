@@ -73,6 +73,19 @@ public interface Policy<K, V> {
   @Nonnull
   Optional<Expiration<K, V>> expireAfterWrite();
 
+  /**
+   * Returns access to perform operations based on the time-to-live refresh policy. This policy
+   * determines that an entry should be automatically reloaded once a fixed duration has elapsed
+   * after the entry's creation, or the most recent replacement of its value.
+   * <p>
+   * If the cache was not constructed with write-based refresh or the implementation does not
+   * support these operations, an empty {@link Optional} is returned.
+   *
+   * @return access to low-level operations for this cache if a time-to-live refresh policy is used
+   */
+  @Nonnull
+  Optional<Expiration<K, V>> refreshAfterWrite();
+
   /** The low-level operations for a cache with a size-based eviction policy. */
   interface Eviction<K, V> {
 

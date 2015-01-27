@@ -21,9 +21,11 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
@@ -103,6 +105,7 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.expireAfterAccess()),
         ImmutableSet.copyOf(cacheSpec.expireAfterWrite()),
         ImmutableSet.copyOf(cacheSpec.refreshAfterWrite()),
+        ImmutableSet.copyOf(cacheSpec.advanceOnPopulation()),
         ImmutableSet.copyOf(keys),
         ImmutableSet.copyOf(values),
         ImmutableSet.copyOf(cacheSpec.executor()),
@@ -133,6 +136,7 @@ final class CacheGenerator {
         (Expire) combination.get(index++),
         (Expire) combination.get(index++),
         (Expire) combination.get(index++),
+        (Advance) combination.get(index++),
         (ReferenceType) combination.get(index++),
         (ReferenceType) combination.get(index++),
         (CacheExecutor) combination.get(index++),
@@ -169,6 +173,7 @@ final class CacheGenerator {
     // Ensure references are the same for identity comparison (soft, weak)
     for (int i = 1; i <= maximum; i++) {
       Integer key = (base + i);
+      Integer value = -key;
       if (key == first) {
         context.firstKey = key;
       }
@@ -178,8 +183,9 @@ final class CacheGenerator {
       if (key == last) {
         context.lastKey = key;
       }
-      context.original.put(key, -key);
+      cache.put(key, value);
+      context.original.put(key, value);
+      context.ticker().advance(context.advance.timeNanos(), TimeUnit.NANOSECONDS);
     }
-    cache.putAll(context.original);
   }
 }

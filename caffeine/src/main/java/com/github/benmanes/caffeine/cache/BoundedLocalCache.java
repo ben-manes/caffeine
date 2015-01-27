@@ -192,7 +192,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   final WriteOrderDeque<Node<K, V>> writeOrderDeque;
 
   // How long after the last write an entry becomes a candidate for refresh
-  final long refreshNanos;
+  volatile long refreshNanos;
   final @Nullable CacheLoader<? super K, V> loader;
 
   // These fields provide support for reference-based eviction
@@ -1695,6 +1695,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     final boolean isWeighted;
 
     Optional<Eviction<K, V>> eviction;
+    Optional<Expiration<K, V>> refreshes;
     Optional<Expiration<K, V>> afterWrite;
     Optional<Expiration<K, V>> afterAccess;
 
@@ -1710,7 +1711,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
           : Optional.empty();
     }
     @Override public Optional<Expiration<K, V>> expireAfterAccess() {
-      if (!(cache.expireAfterAccessNanos >= 0)) {
+      if (!(cache.expiresAfterAccess())) {
         return Optional.empty();
       }
       return (afterAccess == null)
@@ -1718,12 +1719,21 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
           : afterAccess;
     }
     @Override public Optional<Expiration<K, V>> expireAfterWrite() {
-      if (!(cache.expireAfterWriteNanos >= 0)) {
+      if (!(cache.expiresAfterWrite())) {
         return Optional.empty();
       }
       return (afterWrite == null)
           ? (afterWrite = Optional.of(new BoundedExpireAfterWrite()))
           : afterWrite;
+    }
+    @Override
+    public Optional<Expiration<K, V>> refreshAfterWrite() {
+      if (!(cache.refreshes())) {
+        return Optional.empty();
+      }
+      return (refreshes == null)
+          ? (refreshes = Optional.of(new BoundedRefreshAfterWrite()))
+          : refreshes;
     }
 
     final class BoundedEviction implements Eviction<K, V> {
@@ -1800,6 +1810,58 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       }
       @Override public Map<K, V> youngest(int limit) {
         return cache.orderedMap(cache.writeOrderDeque, transformer, false, limit);
+      }
+    }
+
+    final class BoundedRefreshAfterWrite implements Expiration<K, V> {
+      @Override public OptionalLong ageOf(K key, TimeUnit unit) {
+        Object keyRef = cache.nodeFactory.newLookupKey(key);
+        Node<?, ?> node = cache.data.get(keyRef);
+        if (node == null) {
+          return OptionalLong.empty();
+        }
+        long age = cache.ticker.read() - node.getWriteTime();
+        return (age > cache.refreshNanos)
+            ? OptionalLong.empty()
+            : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
+      }
+      @Override public long getExpiresAfter(TimeUnit unit) {
+        return unit.convert(cache.refreshNanos, TimeUnit.NANOSECONDS);
+      }
+      @Override public void setExpiresAfter(long duration, TimeUnit unit) {
+        Caffeine.requireArgument(duration >= 0);
+        cache.refreshNanos = unit.toNanos(duration);
+        cache.asyncCleanup();
+      }
+      @Override public Map<K, V> oldest(int limit) {
+        return cache.expiresAfterWrite()
+            ? expireAfterWrite().get().oldest(limit)
+            : sortedByWriteTime(true, limit);
+      }
+      @Override public Map<K, V> youngest(int limit) {
+        return cache.expiresAfterWrite()
+            ? expireAfterWrite().get().youngest(limit)
+            : sortedByWriteTime(false, limit);
+      }
+
+      private Map<K, V> sortedByWriteTime(boolean ascending, int limit) {
+        final int initialCapacity = (cache.weigher == Weigher.singleton())
+            ? Math.min(limit, (int) cache.weightedSize())
+            : 16;
+        final Map<K, V> map = new LinkedHashMap<>(initialCapacity);
+        Iterator<Node<K, V>> iterator = cache.data.values().stream().sorted((a, b) -> {
+              int comparison = Long.compare(a.getWriteTime(), b.getWriteTime());
+              return ascending ? comparison : -comparison;
+            }).iterator();
+        while (iterator.hasNext() && (limit > map.size())) {
+          Node<K, V> node = iterator.next();
+          K key = node.getKey();
+          V value = transformer.apply(node.getValue());
+          if ((key != null) && (value != null)) {
+            map.put(key, value);
+          }
+        }
+        return unmodifiableMap(map);
       }
     }
   }

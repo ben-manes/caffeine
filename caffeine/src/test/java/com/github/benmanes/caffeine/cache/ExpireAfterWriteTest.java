@@ -125,7 +125,6 @@ public final class ExpireAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }
 
-
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -196,14 +195,14 @@ public final class ExpireAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
-  public void getExpiresAfter_write(
+  public void getExpiresAfter(
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     assertThat(expireAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(1L));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
-  public void setExpiresAfter_write(Cache<Integer, Integer> cache, CacheContext context,
+  public void setExpiresAfter(Cache<Integer, Integer> cache, CacheContext context,
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     expireAfterWrite.setExpiresAfter(2, TimeUnit.MINUTES);
     assertThat(expireAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(2L));
@@ -216,7 +215,7 @@ public final class ExpireAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void ageOf_write(CacheContext context,
+  public void ageOf(CacheContext context,
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(0L));
     context.ticker().advance(30, TimeUnit.SECONDS);
@@ -224,7 +223,6 @@ public final class ExpireAfterWriteTest {
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(expireAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
   }
-
 
   /* ---------------- Policy: oldest -------------- */
 

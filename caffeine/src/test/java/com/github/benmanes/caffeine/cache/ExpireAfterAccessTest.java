@@ -209,14 +209,14 @@ public final class ExpireAfterAccessTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
-  public void getExpiresAfter_access(
+  public void getExpiresAfter(
       @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(1L));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
-  public void setExpiresAfter_access(Cache<Integer, Integer> cache, CacheContext context,
+  public void setExpiresAfter(Cache<Integer, Integer> cache, CacheContext context,
       @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.setExpiresAfter(2, TimeUnit.MINUTES);
     assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(2L));
@@ -229,7 +229,7 @@ public final class ExpireAfterAccessTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void ageOf_access(CacheContext context,
+  public void ageOf(CacheContext context,
       @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(0L));
     context.ticker().advance(30, TimeUnit.SECONDS);
