@@ -1183,7 +1183,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
           }
           return null;
         }
-        prior.setValue(keyRef, newValue[0], valueReferenceQueue);
+        prior.setValue(newValue[0], valueReferenceQueue);
         int oldWeight = prior.getWeight();
         int newWeight = weigher.weigh(key, newValue[0]);
         prior.setWeight(newWeight);
@@ -1584,7 +1584,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   final class EntryIterator implements Iterator<Entry<K, V>> {
     final Iterator<Node<K, V>> iterator = data.values().iterator();
     final long now = ticker.read();
-    Node<K, V> current;
+
+    K key;
+    V value;
     Node<K, V> next;
 
     @Override
@@ -1595,8 +1597,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       for (;;) {
         if (iterator.hasNext()) {
           next = iterator.next();
-          if (hasExpired(next, now)) {
+          value = next.getValue();
+          key = next.getKey();
+          if (hasExpired(next, now) || (key == null) || (value == null)) {
+            value = null;
             next = null;
+            key = null;
             continue;
           }
           return true;
@@ -1610,20 +1616,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      current = next;
       next = null;
-      return new WriteThroughEntry<>(BoundedLocalCache.this,
-          current.getKey(), current.getValue());
+      return new WriteThroughEntry<>(BoundedLocalCache.this, key, value);
     }
 
     @Override
     public void remove() {
-      Caffeine.requireState(current != null);
-      K key = current.getKey();
-      if (key != null) {
-        BoundedLocalCache.this.remove(key);
-      }
-      current = null;
+      Caffeine.requireState(key != null);
+      BoundedLocalCache.this.remove(key);
+      key = null;
     }
   }
 

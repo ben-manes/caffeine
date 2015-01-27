@@ -18,10 +18,14 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 
 import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.testng.annotations.Listeners;
@@ -72,6 +76,50 @@ public final class ReferenceTest {
     cleanUpUntilEmpty(cache, context);
     assertThat(cache, hasRemovalNotifications(
         context, context.initialSize(), RemovalCause.COLLECTED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(keys = ReferenceType.WEAK, population = Population.SINGLETON)
+  public void iterator_weakKeys(Cache<Integer, Integer> cache, CacheContext context) {
+    WeakReference<Integer> weakKey = new WeakReference<>(context.firstKey());
+    context.clear();
+    GcFinalization.awaitClear(weakKey);
+
+    for (Integer key : cache.asMap().keySet()) {
+      assertThat(key, is(not(nullValue())));
+    }
+    for (Entry<Integer, Integer> entry : cache.asMap().entrySet()) {
+      assertThat(entry.getKey(), is(not(nullValue())));
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(values = ReferenceType.WEAK, population = Population.SINGLETON)
+  public void iterator_weakValues(Cache<Integer, Integer> cache, CacheContext context) {
+    WeakReference<Integer> weakValue = new WeakReference<>(
+        context.original().get(context.firstKey()));
+    context.clear();
+    GcFinalization.awaitClear(weakValue);
+
+    for (Integer value : cache.asMap().values()) {
+      assertThat(value, is(not(nullValue())));
+    }
+    for (Entry<Integer, Integer> entry : cache.asMap().entrySet()) {
+      assertThat(entry.getValue(), is(not(nullValue())));
+    }
+  }
+
+  @Test(enabled = false, dataProvider = "caches")
+  @CacheSpec(values = ReferenceType.SOFT, population = Population.SINGLETON)
+  public void iterator_softValues(Cache<Integer, Integer> cache, CacheContext context) {
+    awaitSoftRefGc();
+
+    for (Integer value : cache.asMap().values()) {
+      assertThat(value, is(not(nullValue())));
+    }
+    for (Entry<Integer, Integer> entry : cache.asMap().entrySet()) {
+      assertThat(entry.getValue(), is(not(nullValue())));
+    }
   }
 
   static void cleanUpUntilEmpty(Cache<Integer, Integer> cache, CacheContext context) {

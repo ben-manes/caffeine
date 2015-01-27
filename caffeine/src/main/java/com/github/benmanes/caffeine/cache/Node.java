@@ -50,17 +50,7 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * and rely on the memory fence when the lock is released.
    */
   @GuardedBy("this")
-  default void setValue(@Nonnull V value, @Nullable ReferenceQueue<V> referenceQueue) {
-    setValue(getKeyReference(), value, referenceQueue);
-  }
-
-  /**
-   * Sets the value, which may be held strongly, weakly, or softly. This update may be set lazily
-   * and rely on the memory fence when the lock is released.
-   */
-  @GuardedBy("this")
-  void setValue(@Nonnull Object keyReference, @Nonnull V value,
-      @Nullable ReferenceQueue<V> referenceQueue);
+  void setValue(@Nonnull V value, @Nullable ReferenceQueue<V> referenceQueue);
 
   /**
    * Returns {@code true} if the given objects are considered equivalent. A strongly held value is

@@ -127,8 +127,6 @@ public final class NodeGenerator {
     MethodSpec.Builder setter = MethodSpec.methodBuilder("setValue")
         .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
-        .addParameter(ParameterSpec.builder(Object.class, "keyReference")
-            .addAnnotation(Nonnull.class).build())
         .addParameter(ParameterSpec.builder(vType, "value")
             .addAnnotation(Nonnull.class).build())
         .addParameter(ParameterSpec.builder(vRefQueueType, "referenceQueue")
@@ -138,9 +136,8 @@ public final class NodeGenerator {
       setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
-      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($N, $N, referenceQueue))",
-          UNSAFE_ACCESS, offsetName("value"), valueStrength.valueReferenceType(),
-          "keyReference", "value");
+      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($L, $N, referenceQueue))",
+          UNSAFE_ACCESS, offsetName("value"), valueStrength.valueReferenceType(), "key", "value");
     }
 
     return setter.build();
