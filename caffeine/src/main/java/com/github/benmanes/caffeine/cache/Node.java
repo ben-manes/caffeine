@@ -76,6 +76,22 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
     return (getWeight() == Integer.MIN_VALUE);
   }
 
+  /**
+   * Atomically transitions the node from the <tt>alive</tt> state to the <tt>retired</tt> state, if
+   * a valid transition.
+   *
+   * @return the retired weighted value if the transition was successful or null otherwise
+   */
+  default @Nullable V makeRetired() {
+    synchronized (this) {
+      if (!isAlive()) {
+        return null;
+      }
+      setWeight(-getWeight());
+      return getValue();
+    }
+  }
+
   /* ---------------- Access order -------------- */
 
   /** Returns the weight of this entry. */

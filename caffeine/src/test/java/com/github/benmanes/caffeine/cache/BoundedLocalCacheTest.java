@@ -124,7 +124,7 @@ public final class BoundedLocalCacheTest {
     assertThat(node.isDead(), is(expected == Status.DEAD));
 
     if (node.isDead()) {
-      localCache.makeRetired(node);
+      node.makeRetired();
       assertThat(node.isRetired(), is(false));
     }
   }

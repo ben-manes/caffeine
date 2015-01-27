@@ -664,23 +664,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   }
 
   /**
-   * Atomically transitions the node from the <tt>alive</tt> state to the <tt>retired</tt> state, if
-   * a valid transition.
-   *
-   * @param node the entry in the page replacement policy
-   * @return the retired weighted value if the transition was successful or null otherwise
-   */
-  @Nullable V makeRetired(Node<K, V> node) {
-    synchronized (node) {
-      if (!node.isAlive()) {
-        return null;
-      }
-      node.setWeight(-node.getWeight());
-      return node.getValue();
-    }
-  }
-
-  /**
    * Atomically transitions the node to the <tt>dead</tt> state and decrements the
    * <tt>weightedSize</tt>.
    *
@@ -1002,7 +985,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       return null;
     }
 
-    V oldValue = makeRetired(node);
+    V oldValue = node.makeRetired();
     if (oldValue != null) {
       afterWrite(node, new RemovalTask(node));
       if (hasRemovalListener()) {
@@ -1176,7 +1159,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         V oldValue = prior.getValue();
         newValue[0] = statsAware(remappingFunction, false, false).apply(key, oldValue);
         if (newValue[0] == null) {
-          makeRetired(prior);
+          prior.makeRetired();
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
             notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
@@ -1846,6 +1829,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       }
 
       private Map<K, V> sortedByWriteTime(boolean ascending, int limit) {
+        Caffeine.requireArgument(limit >= 0);
         final int initialCapacity = (cache.weigher == Weigher.singleton())
             ? Math.min(limit, (int) cache.weightedSize())
             : 16;
