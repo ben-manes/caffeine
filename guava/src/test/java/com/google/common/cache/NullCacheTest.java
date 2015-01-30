@@ -62,6 +62,9 @@ public class NullCacheTest extends TestCase {
   }
 
   public void testGet_expireAfterWrite() {
+    // Guava sends a notification with SIZE as the removal cause by redefining 0 expiration as
+    // a maximum size of zero. This is not done as expiration can be dynamically updated
+
     Object computed = new Object();
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .executor(MoreExecutors.directExecutor())
@@ -74,12 +77,15 @@ public class NullCacheTest extends TestCase {
     RemovalNotification<Object, Object> notification = listener.remove();
     assertSame(key, notification.getKey());
     assertSame(computed, notification.getValue());
-    assertSame(RemovalCause.SIZE, notification.getCause());
+    assertSame(RemovalCause.EXPIRED, notification.getCause());
     assertTrue(listener.isEmpty());
     checkEmpty(cache);
   }
 
   public void testGet_expireAfterAccess() {
+    // Guava sends a notification with SIZE as the removal cause by redefining 0 expiration as
+    // a maximum size of zero. This is not done as expiration can be dynamically updated
+
     Object computed = new Object();
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .executor(MoreExecutors.directExecutor())
@@ -92,7 +98,7 @@ public class NullCacheTest extends TestCase {
     RemovalNotification<Object, Object> notification = listener.remove();
     assertSame(key, notification.getKey());
     assertSame(computed, notification.getValue());
-    assertSame(RemovalCause.SIZE, notification.getCause());
+    assertSame(RemovalCause.EXPIRED, notification.getCause());
     assertTrue(listener.isEmpty());
     checkEmpty(cache);
   }

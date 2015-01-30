@@ -298,6 +298,11 @@ public final class CaffeineTest {
     Caffeine.newBuilder().refreshAfterWrite(1, TimeUnit.MILLISECONDS).build();
   }
 
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void refreshAfterWrite_zero() {
+    Caffeine.newBuilder().refreshAfterWrite(0, TimeUnit.MILLISECONDS);
+  }
+
   @Test
   public void refreshAfterWrite() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder()

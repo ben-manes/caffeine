@@ -426,7 +426,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       long expirationTime = now - expireAfterAccessNanos;
       for (;;) {
         final Node<K, V> node = accessOrderDeque.peekFirst();
-        if ((node == null) || (node.getAccessTime() >= expirationTime)) {
+        if ((node == null) || (node.getAccessTime() > expirationTime)) {
           break;
         }
         accessOrderDeque.pollFirst();
@@ -438,7 +438,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       long expirationTime = now - expireAfterWriteNanos;
       for (;;) {
         final Node<K, V> node = writeOrderDeque.peekFirst();
-        if ((node == null) || (node.getWriteTime() >= expirationTime)) {
+        if ((node == null) || (node.getWriteTime() > expirationTime)) {
           break;
         }
         writeOrderDeque.pollFirst();

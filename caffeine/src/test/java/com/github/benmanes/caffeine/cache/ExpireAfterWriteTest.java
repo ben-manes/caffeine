@@ -55,6 +55,14 @@ import com.google.common.collect.Iterables;
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterWriteTest {
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterWrite = Expire.IMMEDIATELY, population = Population.EMPTY)
+  public void expire_zero(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.put(context.absentKey(), context.absentValue());
+    assertThat(cache.estimatedSize(), is(0L));
+    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPIRED));
+  }
+
   /* ---------------- Cache -------------- */
 
   @Test(dataProvider = "caches")

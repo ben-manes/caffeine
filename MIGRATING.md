@@ -17,6 +17,13 @@ more thoroughly.
 Guava will evict prior to reaching the maximum size whereas Caffeine will evict once the threshold
 has been crossed.
 
+#### Immediate expiration
+
+Guava converts immediate expiration (`expireAfterAccess(0, timeUnit)` and 
+`expireAfterWrite(0, timeUnit)`) into the setting maximum size equals zero. This results in the
+removal notification supplying the size as the cause for removal instead of expiration. Caffeine
+correctly identifies expiration as the removal cause.
+
 #### Invalidation with concurrent computations
 
 Guava will ignore entries during invalidation while they are still being computed. In Caffeine
@@ -55,7 +62,7 @@ Caffeine does not provide compatibility due to those platforms not supporting Ja
 
 #### Weigher
 
-`ConcurrentLinkedHashMap` requires a minimum weight of 1. Like Guava, Caffeine allows a mimimum
+`ConcurrentLinkedHashMap` requires a minimum weight of 1. Like Guava, Caffeine allows a minimum
 weight of 0 to indicate that the entry will not be evicted due to a size-based policy.
 
 #### Asynchronous notifications

@@ -337,9 +337,6 @@ public final class Caffeine<K, V> {
 
   @Nonnegative
   long getMaximumWeight() {
-    if ((expireAfterWriteNanos == 0) || (expireAfterAccessNanos == 0)) {
-      return 0;
-    }
     return (weigher == null) ? maximumSize : maximumWeight;
   }
 
@@ -460,10 +457,6 @@ public final class Caffeine<K, V> {
    * Specifies that each entry should be automatically removed from the cache once a fixed duration
    * has elapsed after the entry's creation, or the most recent replacement of its value.
    * <p>
-   * When {@code duration} is zero, this method hands off to {@link #maximumSize(long) maximumSize}
-   * {@code (0)}, ignoring any otherwise-specified maximum size or weight. This can be useful in
-   * testing, or to disable caching temporarily without a code change.
-   * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
    * described in the class javadoc.
@@ -498,10 +491,6 @@ public final class Caffeine<K, V> {
    * access. Access time is reset by all cache read and write operations (including
    * {@code Cache.asMap().get(Object)} and {@code Cache.asMap().put(K, V)}), but not by operations
    * on the collection-views of {@link Cache#asMap}.
-   * <p>
-   * When {@code duration} is zero, this method hands off to {@link #maximumSize(long) maximumSize}
-   * {@code (0)}, ignoring any otherwise-specified maximum size or weight. This can be useful in
-   * testing, or to disable caching temporarily without a code change.
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance

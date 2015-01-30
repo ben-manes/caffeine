@@ -101,7 +101,10 @@ public final class GuavaLocalCache {
       builder.softValues();
     }
     if (context.removalListenerType != Listener.DEFAULT) {
-      builder.removalListener(new GuavaRemovalListener<>(context.removalListener()));
+      boolean translateZeroExpire = (context.afterAccess == Expire.IMMEDIATELY) ||
+          (context.afterWrite == Expire.IMMEDIATELY);
+      builder.removalListener(new GuavaRemovalListener<>(
+          translateZeroExpire, context.removalListener()));
     }
     Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker;
     if (context.loader == null) {
@@ -456,14 +459,21 @@ public final class GuavaLocalCache {
     private static final long serialVersionUID = 1L;
 
     final com.github.benmanes.caffeine.cache.RemovalListener<K, V> delegate;
+    final boolean translateZeroExpire;
 
-    GuavaRemovalListener(com.github.benmanes.caffeine.cache.RemovalListener<K, V> delegate) {
+    GuavaRemovalListener(boolean translateZeroExpire,
+        com.github.benmanes.caffeine.cache.RemovalListener<K, V> delegate) {
+      this.translateZeroExpire = translateZeroExpire;
       this.delegate = delegate;
     }
 
     @Override
     public void onRemoval(RemovalNotification<K, V> notification) {
       RemovalCause cause = RemovalCause.valueOf(notification.getCause().name());
+      if (translateZeroExpire && (cause == RemovalCause.SIZE)) {
+        // Guava internally uses sizing logic for null cache case
+        cause = RemovalCause.EXPIRED;
+      }
       delegate.onRemoval(new com.github.benmanes.caffeine.cache.RemovalNotification<K, V>(
           notification.getKey(), notification.getValue(), cause));
     }
