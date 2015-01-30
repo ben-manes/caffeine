@@ -18,20 +18,17 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.NodeSpec.NODE;
 import static com.github.benmanes.caffeine.cache.NodeSpec.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.NodeSpec.UNUSED;
-import static com.github.benmanes.caffeine.cache.NodeSpec.kType;
 import static com.github.benmanes.caffeine.cache.NodeSpec.kTypeVar;
 import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefSpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.keySpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.nodeType;
 import static com.github.benmanes.caffeine.cache.NodeSpec.vRefQueueType;
-import static com.github.benmanes.caffeine.cache.NodeSpec.vType;
 import static com.github.benmanes.caffeine.cache.NodeSpec.vTypeVar;
 import static com.github.benmanes.caffeine.cache.NodeSpec.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.valueSpec;
 
 import java.lang.ref.Reference;
-import java.lang.reflect.Type;
 import java.util.Objects;
 
 import javax.annotation.Nonnegative;
@@ -47,8 +44,9 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.Types;
 
 /**
  * Generates a node implementation.
@@ -103,13 +101,13 @@ public final class NodeGenerator {
   private void makeNodeSubtype() {
     nodeSubtype = TypeSpec.classBuilder(className)
         .addModifiers(Modifier.STATIC, Modifier.FINAL)
-        .addSuperinterface(Types.parameterizedType(nodeType, kType, vType));
+        .addSuperinterface(ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar));
   }
 
   private void addKey() {
     nodeSubtype.addTypeVariable(kTypeVar)
         .addField(newKeyField())
-        .addMethod(newGetter(keyStrength, kType, "key", Visibility.IMMEDIATE))
+        .addMethod(newGetter(keyStrength, kTypeVar, "key", Visibility.IMMEDIATE))
         .addMethod(newGetterRef("key"));
   }
 
@@ -117,7 +115,7 @@ public final class NodeGenerator {
     nodeSubtype.addTypeVariable(vTypeVar)
         .addField(newFieldOffset("value"))
         .addField(newValueField())
-        .addMethod(newGetter(valueStrength, vType, "value", Visibility.LAZY))
+        .addMethod(newGetter(valueStrength, vTypeVar, "value", Visibility.LAZY))
         .addMethod(makeSetValue())
         .addMethod(makeContainsValue());
   }
@@ -127,7 +125,7 @@ public final class NodeGenerator {
     MethodSpec.Builder setter = MethodSpec.methodBuilder("setValue")
         .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
-        .addParameter(ParameterSpec.builder(vType, "value")
+        .addParameter(ParameterSpec.builder(vTypeVar, "value")
             .addAnnotation(Nonnull.class).build())
         .addParameter(ParameterSpec.builder(vRefQueueType, "referenceQueue")
           .addAnnotation(Nonnull.class).build());
@@ -161,7 +159,7 @@ public final class NodeGenerator {
   private FieldSpec newKeyField() {
     Modifier[] modifiers = { Modifier.PRIVATE, Modifier.FINAL };
     FieldSpec.Builder fieldSpec = (keyStrength == Strength.STRONG)
-        ? FieldSpec.builder(kType, "key", modifiers)
+        ? FieldSpec.builder(kTypeVar, "key", modifiers)
         : FieldSpec.builder(keyStrength.keyReferenceType(), "key", modifiers);
     return fieldSpec.build();
   }
@@ -169,7 +167,7 @@ public final class NodeGenerator {
   private FieldSpec newValueField() {
     Modifier[] modifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
     FieldSpec.Builder fieldSpec = (valueStrength == Strength.STRONG)
-        ? FieldSpec.builder(vType, "value", modifiers)
+        ? FieldSpec.builder(vTypeVar, "value", modifiers)
         : FieldSpec.builder(valueStrength.valueReferenceType(), "value", modifiers);
     fieldSpec.addAnnotation(UNUSED);
     return fieldSpec.build();
@@ -237,8 +235,8 @@ public final class NodeGenerator {
   private void addWeight() {
     if(weighed) {
       nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
-          .addMethod(newGetter(Strength.STRONG, int.class, "weight", Visibility.IMMEDIATE))
-          .addMethod(newSetter(int.class, "weight", Visibility.IMMEDIATE));
+          .addMethod(newGetter(Strength.STRONG, TypeName.INT, "weight", Visibility.IMMEDIATE))
+          .addMethod(newSetter(TypeName.INT, "weight", Visibility.IMMEDIATE));
       addIntConstructorAssignment(constructorByKey, "weight", "weight", Visibility.IMMEDIATE);
       addIntConstructorAssignment(constructorByKeyRef, "weight", "weight", Visibility.IMMEDIATE);
     }
@@ -250,8 +248,9 @@ public final class NodeGenerator {
       nodeSubtype.addField(newFieldOffset("accessTime"))
           .addField(FieldSpec.builder(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
               .addAnnotation(UNUSED).build())
-          .addMethod(newGetter(Strength.STRONG, long.class, "accessTime", Visibility.LAZY))
-          .addMethod(newSetter(long.class, "accessTime", Visibility.LAZY));
+          .addMethod(newGetter(Strength.STRONG, TypeName.LONG,
+              "accessTime", Visibility.LAZY))
+          .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.LAZY));
       addLongConstructorAssignment(constructorByKey, "now", "accessTime", Visibility.LAZY);
       addLongConstructorAssignment(constructorByKeyRef, "now", "accessTime", Visibility.LAZY);
     }
@@ -259,8 +258,9 @@ public final class NodeGenerator {
       nodeSubtype.addField(newFieldOffset("writeTime"))
           .addField(FieldSpec.builder(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
               .addAnnotation(UNUSED).build())
-          .addMethod(newGetter(Strength.STRONG, long.class, "writeTime", Visibility.LAZY))
-          .addMethod(newSetter(long.class, "writeTime", Visibility.LAZY));
+          .addMethod(newGetter(Strength.STRONG, TypeName.LONG,
+              "writeTime", Visibility.LAZY))
+          .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
       addLongConstructorAssignment(constructorByKey, "now", "writeTime", Visibility.LAZY);
       addLongConstructorAssignment(constructorByKeyRef, "now", "writeTime", Visibility.LAZY);
     }
@@ -302,7 +302,7 @@ public final class NodeGenerator {
   }
 
   /** Adds a simple field, accessor, and mutator for the variable. */
-  private void addFieldAndGetter(TypeSpec.Builder typeSpec, Type varType, String varName) {
+  private void addFieldAndGetter(TypeSpec.Builder typeSpec, TypeName varType, String varName) {
     typeSpec.addField(varType, varName, Modifier.PRIVATE)
         .addMethod(newGetter(Strength.STRONG, varType, varName, Visibility.IMMEDIATE))
         .addMethod(newSetter(varType, varName, Visibility.IMMEDIATE));
@@ -336,7 +336,7 @@ public final class NodeGenerator {
   }
 
   /** Creates an accessor that returns the unwrapped variable. */
-  private MethodSpec newGetter(Strength strength, Type varType,
+  private MethodSpec newGetter(Strength strength, TypeName varType,
       String varName, Visibility visibility) {
     String methodName = "get" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
@@ -344,18 +344,16 @@ public final class NodeGenerator {
         .addModifiers(Modifier.PUBLIC)
         .returns(varType);
     String type;
-    boolean primitive = false;
-    if ((varType == int.class) || (varType == long.class)) {
-      primitive = true;
+    if (varType.isPrimitive()) {
       getter.addAnnotation(Nonnegative.class);
-      type = (varType == int.class) ? "Int" : "Long";
+      type = (varType == TypeName.INT) ? "Int" : "Long";
     } else {
       getter.addAnnotation(Nullable.class);
       type = "Object";
     }
     if (strength == Strength.STRONG) {
       if (visibility.isRelaxed) {
-        if (primitive) {
+        if (varType.isPrimitive()) {
           getter.addStatement("return $T.UNSAFE.get$N(this, $N)",
               UNSAFE_ACCESS, type, offsetName(varName));
         } else {
@@ -381,13 +379,11 @@ public final class NodeGenerator {
   }
 
   /** Creates a mutator to the variable. */
-  private MethodSpec newSetter(Type varType, String varName, Visibility visibility) {
+  private MethodSpec newSetter(TypeName varType, String varName, Visibility visibility) {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     String type;
-    boolean primitive = false;
-    if ((varType == int.class) || (varType == long.class)) {
-      primitive = true;
-      type = (varType == int.class) ? "Int" : "Long";
+    if (varType.isPrimitive()) {
+      type = (varType == TypeName.INT) ? "Int" : "Long";
     } else {
       type = "Object";
     }
@@ -395,7 +391,7 @@ public final class NodeGenerator {
         .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
         .addParameter(ParameterSpec.builder(varType, varName)
-            .addAnnotation(primitive ? Nonnegative.class : Nullable.class).build());
+            .addAnnotation(varType.isPrimitive() ? Nonnegative.class : Nullable.class).build());
     if (visibility.isRelaxed) {
       setter.addStatement("$T.UNSAFE.putOrdered$L(this, $N, $N)",
           UNSAFE_ACCESS, type, offsetName(varName), varName);

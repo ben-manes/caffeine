@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.lang.ref.ReferenceQueue;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
@@ -27,7 +25,9 @@ import javax.annotation.Nonnull;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.Types;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeVariableName;
 
 /**
  * Shared constants for a node specification.
@@ -37,34 +37,34 @@ import com.squareup.javapoet.Types;
 public final class NodeSpec {
   static final String PACKAGE_NAME = NodeFactoryGenerator.class.getPackage().getName();
 
-  static final TypeVariable<?> kTypeVar = Types.typeVariable("K");
-  static final TypeVariable<?> vTypeVar = Types.typeVariable("V");
-  static final Type kType = ClassName.get(PACKAGE_NAME, "K");
-  static final Type vType = ClassName.get(PACKAGE_NAME, "V");
-  static final Type kRefQueueType = Types.parameterizedType(ReferenceQueue.class, kType);
-  static final Type vRefQueueType = Types.parameterizedType(ReferenceQueue.class, vType);
-  static final Type nodeType = ClassName.get(PACKAGE_NAME, "Node");
-  static final Type lookupKeyType = Types.parameterizedType(ClassName.get(
-      PACKAGE_NAME + ".References", "LookupKeyReference"), kType);
-  static final Type referenceKeyType = Types.parameterizedType(ClassName.get(
-      PACKAGE_NAME + ".References", "WeakKeyReference"), kType);
+  static final TypeVariableName kTypeVar = TypeVariableName.get("K");
+  static final TypeVariableName vTypeVar = TypeVariableName.get("V");
+  static final TypeName kRefQueueType = ParameterizedTypeName.get(
+      ClassName.get(ReferenceQueue.class), kTypeVar);
+  static final TypeName vRefQueueType = ParameterizedTypeName.get(
+      ClassName.get(ReferenceQueue.class), vTypeVar);
+  static final ClassName nodeType = ClassName.get(PACKAGE_NAME, "Node");
+  static final TypeName lookupKeyType = ParameterizedTypeName.get(ClassName.get(
+      PACKAGE_NAME + ".References", "LookupKeyReference"), kTypeVar);
+  static final TypeName referenceKeyType = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
 
-  static final ParameterSpec keySpec = ParameterSpec.builder(kType, "key")
+  static final ParameterSpec keySpec = ParameterSpec.builder(kTypeVar, "key")
       .addAnnotation(Nonnull.class).build();
   static final ParameterSpec keyRefSpec = ParameterSpec.builder(Object.class, "keyReference")
       .addAnnotation(Nonnull.class).build();
   static final ParameterSpec keyRefQueueSpec =
       ParameterSpec.builder(kRefQueueType, "keyReferenceQueue").build();
 
-  static final ParameterSpec valueSpec = ParameterSpec.builder(vType, "value")
+  static final ParameterSpec valueSpec = ParameterSpec.builder(vTypeVar, "value")
       .addAnnotation(Nonnull.class).build();
   static final ParameterSpec valueRefQueueSpec =
       ParameterSpec.builder(vRefQueueType, "valueReferenceQueue").build();
 
   static final ParameterSpec weightSpec = ParameterSpec.builder(int.class, "weight")
       .addAnnotation(Nonnegative.class).build();
-  static final Type NODE = Types.parameterizedType(nodeType, kType, vType);
-  static final Type UNSAFE_ACCESS =
+  static final TypeName NODE = ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar);
+  static final TypeName UNSAFE_ACCESS =
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
   static final AnnotationSpec UNUSED =
       AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "$S", "unused").build();
@@ -81,16 +81,17 @@ public final class NodeSpec {
   enum Strength {
     STRONG, WEAK, SOFT;
 
-    public Type keyReferenceType() {
+    public TypeName keyReferenceType() {
       checkState(this == WEAK);
-      return Types.parameterizedType(ClassName.get(PACKAGE_NAME + ".References",
-          "WeakKeyReference"), kType);
+      return ParameterizedTypeName.get(
+          ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
     }
 
-    public Type valueReferenceType() {
+    public TypeName valueReferenceType() {
       checkState(this != STRONG);
       String clazz = (this == WEAK) ? "WeakValueReference" : "SoftValueReference";
-      return Types.parameterizedType(ClassName.get(PACKAGE_NAME + ".References", clazz), vType);
+      return ParameterizedTypeName.get(
+          ClassName.get(PACKAGE_NAME + ".References", clazz), vTypeVar);
     }
   }
 

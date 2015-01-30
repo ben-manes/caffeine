@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.NodeSpec.kRefQueueType;
-import static com.github.benmanes.caffeine.cache.NodeSpec.kType;
 import static com.github.benmanes.caffeine.cache.NodeSpec.kTypeVar;
 import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefSpec;
@@ -28,10 +27,7 @@ import static com.github.benmanes.caffeine.cache.NodeSpec.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.NodeSpec.valueSpec;
 import static java.util.Objects.requireNonNull;
 
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
@@ -73,9 +69,9 @@ import com.squareup.javapoet.TypeSpec;
 public final class NodeFactoryGenerator {
   static final String PACKAGE_NAME = NodeFactoryGenerator.class.getPackage().getName();
 
-  final String directory;
+  final Path directory;
 
-  public NodeFactoryGenerator(String directory) {
+  public NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
   }
 
@@ -86,15 +82,13 @@ public final class NodeFactoryGenerator {
   }
 
   private void writeJavaFile(TypeSpec.Builder typeSpec, String name) throws IOException {
-    Path path = Paths.get(directory, name + ".java");
-    try (BufferedWriter writer = Files.newBufferedWriter(path)) {
-      makeJavaFile(typeSpec).emit(writer, "  ");
-    }
+    makeJavaFile(typeSpec).writeTo(directory);
   }
 
   private JavaFile makeJavaFile(TypeSpec.Builder typeSpec) {
     return JavaFile.builder(getClass().getPackage().getName(), typeSpec.build())
         .addFileComment("Copyright 2015 Ben Manes. All Rights Reserved.")
+        .indent("  ")
         .build();
   }
 
@@ -112,7 +106,7 @@ public final class NodeFactoryGenerator {
                 + "holds keys strongly\nthen the key is returned. If the cache holds keys weakly "
                 + "then a {@link $T}\nholding the key argument is returned.\n", lookupKeyType)
             .addTypeVariable(kTypeVar)
-            .addParameter(ParameterSpec.builder(kType, "key")
+            .addParameter(ParameterSpec.builder(kTypeVar, "key")
                 .addAnnotation(Nonnull.class).build())
             .returns(Object.class).addAnnotation(Nonnull.class)
             .addStatement("return key")
@@ -122,7 +116,7 @@ public final class NodeFactoryGenerator {
                 + " keys strongly then\nthe key is returned. If the cache holds keys weakly "
                 + "then a {@link $T}\nholding the key argument is returned.\n", referenceKeyType)
             .addTypeVariable(kTypeVar)
-            .addParameter(ParameterSpec.builder(kType, "key")
+            .addParameter(ParameterSpec.builder(kTypeVar, "key")
                 .addAnnotation(Nonnull.class).build())
             .addParameter(ParameterSpec.builder(kRefQueueType, "referenceQueue")
                 .addAnnotation(Nonnull.class).build())
@@ -274,7 +268,7 @@ public final class NodeFactoryGenerator {
   private MethodSpec makeNewLookupKey() {
     return MethodSpec.methodBuilder("newLookupKey")
         .addTypeVariable(kTypeVar)
-        .addParameter(ParameterSpec.builder(kType, "key")
+        .addParameter(ParameterSpec.builder(kTypeVar, "key")
             .addAnnotation(Nonnull.class).build())
         .returns(Object.class).addAnnotation(Nonnull.class)
         .addAnnotation(Override.class)
@@ -285,7 +279,7 @@ public final class NodeFactoryGenerator {
   private MethodSpec makeReferenceKey() {
     return MethodSpec.methodBuilder("newReferenceKey")
         .addTypeVariable(kTypeVar)
-        .addParameter(ParameterSpec.builder(kType, "key")
+        .addParameter(ParameterSpec.builder(kTypeVar, "key")
             .addAnnotation(Nonnull.class).build())
         .addParameter(ParameterSpec.builder(kRefQueueType, "referenceQueue")
             .addAnnotation(Nonnull.class).build())
@@ -359,8 +353,6 @@ public final class NodeFactoryGenerator {
   }
 
   public static void main(String[] args) throws IOException {
-    String directory = args[0] + PACKAGE_NAME.replace('.', '/');
-    new File(directory).mkdirs();
-    new NodeFactoryGenerator(directory).generate();
+    new NodeFactoryGenerator(Paths.get(args[0])).generate();
   }
 }
