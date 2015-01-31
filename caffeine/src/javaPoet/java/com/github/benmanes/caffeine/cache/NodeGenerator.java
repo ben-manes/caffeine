@@ -15,7 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.NodeSpec.DEAD_STRONG_KEY;
+import static com.github.benmanes.caffeine.cache.NodeSpec.DEAD_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.NodeSpec.NODE;
+import static com.github.benmanes.caffeine.cache.NodeSpec.RETIRED_STRONG_KEY;
+import static com.github.benmanes.caffeine.cache.NodeSpec.RETIRED_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.NodeSpec.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.NodeSpec.UNUSED;
 import static com.github.benmanes.caffeine.cache.NodeSpec.kTypeVar;
@@ -91,6 +95,7 @@ public final class NodeGenerator {
     addWeight();
     addExpiration();
     addDeques();
+    addStateMethods();
 
     return nodeSubtype
         .addMethod(constructorByKey.build())
@@ -104,8 +109,48 @@ public final class NodeGenerator {
         .addSuperinterface(ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar));
   }
 
+  private void addStateMethods() {
+    String retiredArg = (keyStrength == Strength.STRONG) ? RETIRED_STRONG_KEY : RETIRED_WEAK_KEY;
+    String deadArg = (keyStrength == Strength.STRONG) ? DEAD_STRONG_KEY : DEAD_WEAK_KEY;
+
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
+        .addStatement("Object key = this.key")
+        .addStatement("return (key != $L) && (key != $L)", retiredArg, deadArg)
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("isRetired")
+        .addStatement("return (key == $L)", retiredArg)
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("retire")
+        .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName("key"), retiredArg)
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .build());
+
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("isDead")
+        .addStatement("return (key == $L)", deadArg)
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("die")
+        .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName("key"), deadArg)
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .build());
+  }
+
   private void addKey() {
     nodeSubtype.addTypeVariable(kTypeVar)
+        .addField(newFieldOffset("key"))
         .addField(newKeyField())
         .addMethod(newGetter(keyStrength, kTypeVar, "key", Visibility.IMMEDIATE))
         .addMethod(newGetterRef("key"));
@@ -157,7 +202,7 @@ public final class NodeGenerator {
   }
 
   private FieldSpec newKeyField() {
-    Modifier[] modifiers = { Modifier.PRIVATE, Modifier.FINAL };
+    Modifier[] modifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
     FieldSpec.Builder fieldSpec = (keyStrength == Strength.STRONG)
         ? FieldSpec.builder(kTypeVar, "key", modifiers)
         : FieldSpec.builder(keyStrength.keyReferenceType(), "key", modifiers);

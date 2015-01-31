@@ -47,8 +47,10 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
@@ -274,7 +276,8 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DIRECT)
+  @CacheSpec(executor = CacheExecutor.DIRECT, population = Population.SINGLETON,
+        maximumSize = MaximumSize.UNREACHABLE, implementation = Implementation.Caffeine)
   public void getBiFunc_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     CompletableFuture<Integer> failedFuture = CompletableFuture.completedFuture(null);

@@ -59,22 +59,16 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   boolean containsValue(@Nonnull Object value);
 
   /** If the entry is available in the hash-table and page replacement policy. */
-  default boolean isAlive() {
-    return getWeight() >= 0;
-  }
+  boolean isAlive();
 
   /**
    * If the entry was removed from the hash-table and is awaiting removal from the page
    * replacement policy.
    */
-  default boolean isRetired() {
-    return !isDead() && (getWeight() < 0);
-  }
+  boolean isRetired();
 
   /** If the entry was removed from the hash-table and the page replacement policy. */
-  default boolean isDead() {
-    return (getWeight() == Integer.MIN_VALUE);
-  }
+  boolean isDead();
 
   /**
    * Atomically transitions the node from the <tt>alive</tt> state to the <tt>retired</tt> state, if
@@ -87,10 +81,13 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
       if (!isAlive()) {
         return null;
       }
-      setWeight(-getWeight());
+      retire();
       return getValue();
     }
   }
+
+  void retire();
+  void die();
 
   /* ---------------- Access order -------------- */
 

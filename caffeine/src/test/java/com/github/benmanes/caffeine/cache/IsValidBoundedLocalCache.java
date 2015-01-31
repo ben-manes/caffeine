@@ -131,11 +131,13 @@ public final class IsValidBoundedLocalCache<K, V>
 
     final long weighted = weightedSize;
     desc.expectThat("Size != list length", map.size(), is(seen.size()));
-    Supplier<String> error = () -> String.format(
-        "WeightedSize != link weights [%d vs %d] {%d vs %d}",
-        map.weightedSize(), weighted, seen.size(), map.size());
-    desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
-    desc.expectThat(error, map.weightedSize(), is(weightedSize));
+    if (map.evicts()) {
+      Supplier<String> error = () -> String.format(
+          "WeightedSize != link weights [%d vs %d] {%d vs %d}",
+          map.weightedSize(), weighted, seen.size(), map.size());
+      desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
+      desc.expectThat(error, map.weightedSize(), is(weightedSize));
+    }
   }
 
   private void checkNode(BoundedLocalCache<K, V> map, Node<K, V> node, DescriptionBuilder desc) {

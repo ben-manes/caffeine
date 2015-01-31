@@ -54,7 +54,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.base.Preconditions;
@@ -87,7 +86,7 @@ public final class MultiThreadedTest{
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, maximumSize = MaximumSize.FULL, stats = Stats.ENABLED,
+  @CacheSpec(maximumSize = MaximumSize.FULL, stats = Stats.ENABLED,
       expireAfterAccess = Expire.FOREVER, expireAfterWrite = Expire.FOREVER,
       population = Population.EMPTY, removalListener = Listener.DEFAULT)
   public void concurrent(LoadingCache<Integer, Integer> cache, CacheContext context) {

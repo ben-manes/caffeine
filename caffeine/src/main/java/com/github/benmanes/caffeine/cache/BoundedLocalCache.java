@@ -32,7 +32,6 @@ import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,41 +63,11 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**
- * A hash table supporting full concurrency of retrievals, adjustable expected concurrency for
- * updates, and a maximum capacity to bound the map by. This implementation differs from
+ * An in-memory cache implementation that supports full concurrency of retrievals, a high expected
+ * concurrency for updates, and a multiple ways to bound the cache. This implementation differs from
  * {@link ConcurrentHashMap} in that it maintains a page replacement algorithm that is used to evict
- * an entry when the map has exceeded its capacity. Unlike the <tt>Java Collections Framework</tt>,
- * this map does not have a publicly visible constructor and instances are created through a
- * {@link Caffeine}.
- * <p>
- * An entry is evicted from the map when the <tt>weighted capacity</tt> exceeds its
- * <tt>maximum weighted capacity</tt> threshold. A {@link Weigher} determines how many units of
- * capacity that an entry consumes. The default weigher assigns each value a weight of <tt>1</tt> to
- * bound the map by the total number of key-value pairs. A map that holds collections may choose to
- * weigh values by the number of elements in the collection and bound the map by the total number of
- * elements that it contains. A change to a value that modifies its weight requires that an update
- * operation is performed on the map.
- * <p>
- * An {@link RemovalListener} may be supplied for notification when an entry is evicted from the
- * map. This listener is invoked on a caller's thread and will not block other threads from
- * operating on the map. An implementation should be aware that the caller's thread will not expect
- * long execution times or failures as a side effect of the listener being notified. Execution
- * safety and a fast turn around time can be achieved by performing the operation asynchronously,
- * such as by submitting a task to an {@link java.util.concurrent.ExecutorService}.
- * <p>
- * The <tt>concurrency level</tt> determines the number of threads that can concurrently modify the
- * table. Using a significantly higher or lower value than needed can waste space or lead to thread
- * contention, but an estimate within an order of magnitude of the ideal value does not usually have
- * a noticeable impact. Because placement in hash tables is essentially random, the actual
- * concurrency will vary.
- * <p>
- * This class and its views and iterators implement all of the <em>optional</em> methods of the
- * {@link Map} and {@link Iterator} interfaces.
- * <p>
- * Like {@link java.util.Hashtable} but unlike {@link HashMap}, this class does <em>not</em> allow
- * <tt>null</tt> to be used as a key or value. Unlike {@link java.util.LinkedHashMap}, this class
- * does <em>not</em> provide predictable iteration order. A snapshot of the keys and entries may be
- * obtained in ascending and descending order of retention.
+ * an entry when the map has exceeded its capacity, the entry expired, or the entry's key or value
+ * have been garbage collected.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the type of keys maintained by this map
@@ -127,15 +96,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    * Due to a lack of a strict ordering guarantee, a task can be executed out-of-order, such as a
    * removal followed by its addition. The state of the entry is encoded within the value's weight.
    *
-   * Alive: The entry is in both the hash-table and the page replacement policy. This is represented
-   * by a zero or positive weight.
+   * Alive: The entry is in both the hash-table and the page replacement policy.
    *
    * Retired: The entry is not in the hash-table and is pending removal from the page replacement
-   * policy. This is represented by a negative weight, where the hole of a retired entry with zero
-   * weight has no harmful impact on the policy behavior.
+   * policy. This is represented by a sentinel key that should not be used.
    *
    * Dead: The entry is not in the hash-table and is not in the page replacement policy. This is
-   * represented by a weight of Integer.MIN_VALUE.
+   * represented by a sentinel key that should not be used.
    *
    * The Least Recently Used page replacement algorithm was chosen due to its simplicity, high hit
    * rate, and ability to be implemented with O(1) time complexity.
@@ -246,8 +213,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     writeOrderDeque = new WriteOrderDeque<Node<K, V>>();
     accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
 
-    boolean evicts = (builder.getMaximumWeight() != Caffeine.UNSET_INT);
-    maximumWeightedSize = evicts
+    maximumWeightedSize = builder.evicts()
         ? new AtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY))
         : null;
     readBufferReadCount = new long[NUMBER_OF_READ_BUFFERS];
@@ -286,7 +252,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
-        /*builder.evicts()*/ true, /*builder.isWeighted()*/ true);
+        builder.evicts(), (isAsync && builder.evicts()) || builder.isWeighted());
   }
 
   /** Returns whether this cache notifies when an entry is removed. */
@@ -405,7 +371,6 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   @GuardedBy("evictionLock")
   void evict(Node<K, V> node, RemovalCause cause) {
-    makeDead(node);
 
     // Notify the listener only if the entry was evicted
     if (data.remove(node.getKeyReference(), node)) {
@@ -415,6 +380,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       statsCounter.recordEviction();
     }
 
+    makeDead(node);
     accessOrderDeque.remove(node);
     writeOrderDeque.remove(node);
   }
@@ -675,8 +641,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       if (node.isDead()) {
         return;
       }
-      weightedSize.lazySet(weightedSize.get() - Math.abs(node.getWeight()));
-      node.setWeight(Integer.MIN_VALUE);
+      weightedSize.lazySet(weightedSize.get() - node.getWeight());
+      node.die();
     }
   }
 
@@ -1008,13 +974,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     synchronized (node) {
       oldValue = node.getValue();
       if (node.isAlive() && node.containsValue(value)) {
-        node.setWeight(-node.getWeight()); // retire
+        node.retire();
       } else {
         return false;
       }
     }
-    data.remove(keyRef, node);
-    if (hasRemovalListener()) {
+    if (data.remove(keyRef, node) && hasRemovalListener()) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
       notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);

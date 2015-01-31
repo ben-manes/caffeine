@@ -36,6 +36,10 @@ import com.squareup.javapoet.TypeVariableName;
  */
 public final class NodeSpec {
   static final String PACKAGE_NAME = NodeFactoryGenerator.class.getPackage().getName();
+  static final String RETIRED_STRONG_KEY = "RETIRED_STRONG_KEY";
+  static final String RETIRED_WEAK_KEY = "RETIRED_WEAK_KEY";
+  static final String DEAD_STRONG_KEY = "DEAD_STRONG_KEY";
+  static final String DEAD_WEAK_KEY = "DEAD_WEAK_KEY";
 
   static final TypeVariableName kTypeVar = TypeVariableName.get("K");
   static final TypeVariableName vTypeVar = TypeVariableName.get("V");
@@ -48,6 +52,8 @@ public final class NodeSpec {
       PACKAGE_NAME + ".References", "LookupKeyReference"), kTypeVar);
   static final TypeName referenceKeyType = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
+  static final TypeName rawReferenceKeyType = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), ClassName.get(Object.class));
 
   static final ParameterSpec keySpec = ParameterSpec.builder(kTypeVar, "key")
       .addAnnotation(Nonnull.class).build();

@@ -335,6 +335,10 @@ public final class Caffeine<K, V> {
     return self;
   }
 
+  boolean evicts() {
+    return getMaximumWeight() != UNSET_INT;
+  }
+
   @Nonnegative
   long getMaximumWeight() {
     return (weigher == null) ? maximumSize : maximumWeight;
