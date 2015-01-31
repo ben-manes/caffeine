@@ -5,6 +5,7 @@ dependencies {
   compile libraries.akka
   compile libraries.joor
   compile libraries.guava
+  compile libraries.flip_tables
   compile libraries.univocity_parsers
 
   compile project(':tracing:async')

@@ -27,6 +27,7 @@ ext {
   versions = [
     akka: '2.3.9',
     disruptor: '3.3.0',
+    flip_tables: '1.0.2',
     guava: '18.0',
     javapoet: '1.0.0',
     joor: '0.9.4',
@@ -46,8 +47,9 @@ ext {
   benchmark_versions = [
     concurrentlinkedhashmap: '1.4.2',
     high_scale_lib: '1.0.6',
-    jmh: '1.5',
+    jamm: '0.3.0',
     java_object_layout: '0.2',
+    jmh: '1.5',
     koloboke: '0.6.5',
   ]
   plugin_versions = [
@@ -64,6 +66,7 @@ ext {
   libraries = [
     akka: "com.typesafe.akka:akka-actor_2.10:${versions.akka}",
     disruptor: "com.lmax:disruptor:${versions.disruptor}",
+    flip_tables: "com.jakewharton.fliptables:fliptables:${versions.flip_tables}",
     guava: "com.google.guava:guava:${versions.guava}",
     javapoet: "com.squareup:javapoet:${versions.javapoet}",
     joor: "org.jooq:joor:${versions.joor}",
@@ -89,11 +92,12 @@ ext {
   benchmark_libraries = [
     concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmark_versions.concurrentlinkedhashmap}",
     high_scale_lib: "com.boundary:high-scale-lib:${benchmark_versions.high_scale_lib}",
+    jamm: "com.github.jbellis:jamm:${benchmark_versions.jamm}",
+    java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
     jmh: [
       "org.openjdk.jmh:jmh-generator-annprocess:${benchmark_versions.jmh}",
       "org.openjdk.jmh:jmh-core:${benchmark_versions.jmh}",
     ],
-    java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
     koloboke: [
       "net.openhft:koloboke-api-jdk8:${benchmark_versions.koloboke}",
       "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",

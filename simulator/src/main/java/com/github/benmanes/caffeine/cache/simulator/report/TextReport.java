@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.jakewharton.fliptables.FlipTable;
 
 /**
  * A plain text report applicable for printing to the console or a file.
@@ -42,10 +43,18 @@ public final class TextReport {
   /** Writes an aggregated report. */
   public void writeTo(PrintStream ps) {
     results.sort((first, second) -> first.name().compareTo(second.name()));
-    for (PolicyStats policyStats : results) {
-      ps.printf("Policy: %s, hit rate: %.2f%%, evictions: %,d, executionTime=%,dms%n",
-          policyStats.name(), 100 * policyStats.hitRate(), policyStats.evictionCount(),
-          policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS));
+
+    String[] headers = { "Policy", "Hit rate", "Evictions", "Execution time"};
+    String[][] data = new String[results.size()][headers.length];
+    for (int i = 0; i < results.size(); i++) {
+      PolicyStats policyStats = results.get(i);
+      data[i] = new String[] {
+          policyStats.name(),
+          String.format("%.2f %%", 100 * policyStats.hitRate()),
+          String.format("%,d", policyStats.evictionCount()),
+          String.format("%,d ms", policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS))
+      };
     }
+    ps.append(FlipTable.of(headers, data));
   }
 }

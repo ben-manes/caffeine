@@ -14,7 +14,14 @@ plugins.withType(EclipsePlugin) {
 
 dependencies {
   jmh benchmark_libraries.jmh
-  jmh configurations.testCompile.allDependencies
+  afterEvaluate {
+    jmh configurations.testCompile.allDependencies
+  }
+}
+
+tasks.jmh {
+  group = 'Benchmarks'
+  description = 'Executes a Java microbenchmark'
 }
 
 jmh {

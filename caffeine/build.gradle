@@ -9,6 +9,10 @@ sourceSets {
   }
 }
 
+configurations {
+  javaAgent
+}
+
 plugins.withType(EclipsePlugin) {
   project.eclipse.classpath.plusConfigurations += [ configurations.javaPoetCompile ]
 }
@@ -24,7 +28,11 @@ dependencies {
   testCompile test_libraries.guava_testlib
   testCompile test_libraries.mockito
   testCompile test_libraries.testng
+  
+  javaAgent benchmark_libraries.jamm
 
+  jmh libraries.flip_tables
+  jmh benchmark_libraries.jamm
   jmh benchmark_libraries.koloboke
   jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.concurrentlinkedhashmap
@@ -46,3 +54,9 @@ task generateJavaPoet(type: JavaExec) {
 }
 
 compileJava.dependsOn(generateJavaPoet)
+
+task memoryOverhead(type: JavaExec, group: 'Benchmarks', description: 'Evaluates cache overhead') {
+  classpath sourceSets.jmh.runtimeClasspath
+  jvmArgs "-javaagent:${configurations.javaAgent.singleFile}"
+  main = 'com.github.benmanes.caffeine.cache.MemoryBenchmark'
+}
