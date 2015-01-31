@@ -60,9 +60,9 @@ final class CacheGenerator {
 
   /** Returns a lazy stream so that the test case is GC-able after use. */
   public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate(
-      Optional<Compute> compute, Optional<Implementation> implementation,
+      Optional<Compute> compute, Optional<Implementation> implementation, Optional<Stats> stats,
       Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
-    return combinations(compute, implementation, keyType, valueType).stream()
+    return combinations(compute, implementation, stats, keyType, valueType).stream()
         .map(this::newCacheContext)
         .filter(Optional::isPresent)
         .map(Optional::get)
@@ -75,8 +75,9 @@ final class CacheGenerator {
 
   @SuppressWarnings("unchecked")
   private Set<List<Object>> combinations(Optional<Compute> compute,
-      Optional<Implementation> implementation, Optional<ReferenceType> keyType,
-      Optional<ReferenceType> valueType) {
+      Optional<Implementation> implementation, Optional<Stats> stats,
+      Optional<ReferenceType> keyType, Optional<ReferenceType> valueType) {
+    Set<Stats> statistics = filterTypes(stats, cacheSpec.stats());
     Set<ReferenceType> keys = filterTypes(keyType, cacheSpec.keys());
     Set<ReferenceType> values = filterTypes(valueType, cacheSpec.values());
     Set<Compute> computations = filterTypes(compute, cacheSpec.compute());
@@ -99,7 +100,7 @@ final class CacheGenerator {
     }
     return Sets.cartesianProduct(
         ImmutableSet.copyOf(cacheSpec.initialCapacity()),
-        ImmutableSet.copyOf(cacheSpec.stats()),
+        ImmutableSet.copyOf(statistics),
         ImmutableSet.copyOf(cacheSpec.weigher()),
         ImmutableSet.copyOf(cacheSpec.maximumSize()),
         ImmutableSet.copyOf(cacheSpec.expireAfterAccess()),

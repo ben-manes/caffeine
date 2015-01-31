@@ -44,7 +44,7 @@ ext {
     truth: '0.24',
   ]
   benchmark_versions = [
-    concurrentlinkedhashmap: '1.4.1',
+    concurrentlinkedhashmap: '1.4.2',
     high_scale_lib: '1.0.6',
     jmh: '1.5',
     java_object_layout: '0.2',

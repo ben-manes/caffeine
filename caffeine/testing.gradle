@@ -7,9 +7,11 @@ test {
 
 def implementations = ['Caffeine', 'Guava']
 def testConfigurations = [
-  'slow', 'strongKeysAndStrongValues', 'strongKeysAndWeakValues',
+  'strongKeysAndStrongValues', 'strongKeysAndWeakValues',
   'weakKeysAndStrongValues', 'weakKeysAndWeakValues', 'weakKeysAndSoftValues']
-  .collect { type -> (type == 'slow') ? type : [type + 'Sync', type + 'Async'] }
+  .collectNested { [it, it + 'Stats'] }
+  .collectNested { it.contains('StrongValues') ? [it + 'Sync', it + 'Async'] : (it + 'Sync') }
+  .plus('slow')
   .collectNested { type -> implementations.collect { type + it + 'Test' } }.flatten()
 
 testConfigurations.each {
@@ -26,15 +28,17 @@ testConfigurations.each {
 
 testConfigurations.each { testName ->
   def isAsync = testName.contains('Async')
+  def hasStats = testName.contains('Stats')
   def implementation = implementations.find { testName.contains(it) }
-  def testType = testName - implementation - 'Test' - 'Async' - 'Sync'
+  def testType = testName - implementation - 'Test' - 'Stats' - 'Async' - 'Sync'
   def labels = testType.split('And').collect { it[0].toLowerCase() + it.substring(1) }
 
   task "${testName}"(type: Test) {
     useTestNG()
     group = 'Cache tests'
     description = 'Runs ' + labels.join(' with ') + 
-      implementation + ' ' + (isAsync ? 'Async' : 'Sync') + ' tests.'
+      implementation + ' and ' + (hasStats ? 'stats ' : 'no stats ') +
+      (isAsync ? 'asynchronous' : 'synchronous') + ' tests.'
     include 'com/github/benmanes/caffeine/cache/**'
 
     testClassesDir = sourceSets."${name}".output.classesDir
@@ -46,6 +50,7 @@ testConfigurations.each { testName ->
     }
     systemProperties['implementation'] = implementation
     systemProperties['compute'] = isAsync ? 'async' : 'sync'
+    systemProperties['stats'] = hasStats ? 'enabled' : 'disabled'
 
     // ensure we don't overwrite default report directories used by 'test' task
     reports.html.destination = "${buildDir}/reports/${name}"
@@ -72,10 +77,13 @@ tasks.withType(Test) {
   } else {
     maxHeapSize = '384m'
     options {
-      threadCount = System.env.'CI' ? 4 : 6
+      threadCount = System.env.'CI' ? 1 : 6
       excludeGroups = ['slow']
       parallel = 'methods'
     }
+  }
+  if (System.env.'CI') {
+    reports.html.enabled = false
   }
 }
 

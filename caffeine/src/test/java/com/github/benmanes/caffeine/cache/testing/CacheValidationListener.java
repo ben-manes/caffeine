@@ -82,8 +82,15 @@ public final class CacheValidationListener implements IInvokedMethodListener {
 
   /** Free memory by clearing unused resources after test execution. */
   private void cleanUp(ITestResult testResult) {
-    for (int i = 0; i < testResult.getParameters().length; i++) {
-      testResult.getParameters()[i] = Objects.toString(testResult.getParameters()[i]);
+    Object[] params = testResult.getParameters();
+    for (int i = 0; i < params.length; i++) {
+      Object param = params[i];
+      if ((param instanceof AsyncLoadingCache<?, ?>) || (param instanceof Cache<?, ?>)
+          || (param instanceof Map<?, ?>)) {
+        params[i] = param.getClass().getSimpleName();
+      } else {
+        params[i] = Objects.toString(param);
+      }
     }
     CacheSpec.interner.remove();
   }

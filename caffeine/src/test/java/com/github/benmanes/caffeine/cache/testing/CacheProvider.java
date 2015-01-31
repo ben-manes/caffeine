@@ -39,6 +39,7 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.google.common.base.Enums;
 
 /**
@@ -74,6 +75,10 @@ public final class CacheProvider {
     Optional<Implementation> implementation = Optional.ofNullable(Enums.getIfPresent(
         Implementation.class, System.getProperty("implementation", "")).orNull());
 
+    // compute indicates if an async or sync cache variation should be use, or both if unset
+    Optional<Stats> stats = Optional.ofNullable(Enums.getIfPresent(
+        Stats.class, System.getProperty("stats", "").toUpperCase()).orNull());
+
     // key/value reference combination to use, or all if unset
     Optional<ReferenceType> keys = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
         System.getProperty("keys", "").toUpperCase()).orNull());
@@ -88,7 +93,8 @@ public final class CacheProvider {
 
     // Lazily generate the test scenarios
     CacheGenerator generator = new CacheGenerator(cacheSpec, isLoadingOnly, isAsyncLoadingOnly);
-    return asTestCases(testMethod, generator.generate(compute, implementation, keys, values));
+    return asTestCases(testMethod, generator.generate(
+        compute, implementation, stats, keys, values));
   }
 
   /** Converts each scenario into test case parameters. */
