@@ -1,0 +1,14 @@
+/**
+ * JCache compatibility adapter.
+ */
+dependencies {
+  compile project(':caffeine')
+  compile libraries.jcache
+
+  testCompile test_libraries.junit
+  testCompile test_libraries.jcache_tck
+}
+
+bundle {
+  instruction 'Export-Package', 'com.github.benmanes.caffeine.jcache.*'
+}

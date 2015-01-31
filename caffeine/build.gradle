@@ -28,7 +28,7 @@ dependencies {
   testCompile test_libraries.guava_testlib
   testCompile test_libraries.mockito
   testCompile test_libraries.testng
-  
+
   javaAgent benchmark_libraries.jamm
 
   jmh libraries.flip_tables

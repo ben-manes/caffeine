@@ -38,7 +38,7 @@ public class GetPutBenchmark {
   private static final int MASK = SIZE - 1;
 
   @Param({
-//    "LinkedHashMap_Lru",
+    "LinkedHashMap_Lru",
 //    "ConcurrentHashMap",
     "ConcurrentLinkedHashMap",
     "Caffeine",
@@ -68,22 +68,22 @@ public class GetPutBenchmark {
     }
   }
 
-  @Benchmark @Group("read_only") @GroupThreads(4)
+  @Benchmark @Group("read_only") @GroupThreads(8)
   public void get_readOnly(ThreadState threadState) {
     cache.get(ints[threadState.index++ & MASK]);
   }
 
-  @Benchmark @Group("write_only") @GroupThreads(4)
+  @Benchmark @Group("write_only") @GroupThreads(8)
   public void put_writeOnly(ThreadState threadState) {
     cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
   }
 
-  @Benchmark @Group("readwrite") @GroupThreads(3)
+  @Benchmark @Group("readwrite") @GroupThreads(6)
   public void readwrite_get(ThreadState threadState) {
     cache.get(ints[threadState.index++ & MASK]);
   }
 
-  @Benchmark @Group("readwrite") @GroupThreads(1)
+  @Benchmark @Group("readwrite") @GroupThreads(2)
   public void readwrite_put(ThreadState threadState) {
     cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
   }
