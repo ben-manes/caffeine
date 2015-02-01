@@ -71,7 +71,8 @@ public final class EvictionTest {
   @CacheSpec(population = Population.FULL, maximumSize = MaximumSize.FULL,
       removalListener = Listener.REJECTING)
   public void removalListener_fails(Cache<Integer, Integer> cache, CacheContext context) {
-    RejectingRemovalListener<Integer, Integer> removalListener = context.removalListener();
+    RejectingRemovalListener<Integer, Integer> removalListener =
+        (RejectingRemovalListener<Integer, Integer>) context.removalListener();
     // Guava-style caches reject before the max size is reached & are unpredictable
     removalListener.rejected = 0;
     long size = cache.estimatedSize();

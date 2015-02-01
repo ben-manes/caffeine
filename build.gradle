@@ -7,11 +7,13 @@ buildscript {
 
   repositories {
     jcenter()
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
   }
 
   dependencies {
     classpath gradle_plugins.bundle
     classpath gradle_plugins.coveralls
+    classpath gradle_plugins.error_prone
     classpath gradle_plugins.jmh
     classpath gradle_plugins.nexus
     classpath gradle_plugins.semantic_versioning
@@ -38,6 +40,7 @@ subprojects { proj ->
 
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'org.dm.bundle'
+  apply plugin: 'errorprone'
   apply plugin: 'java'
 
   sourceCompatibility = JavaVersion.VERSION_1_8

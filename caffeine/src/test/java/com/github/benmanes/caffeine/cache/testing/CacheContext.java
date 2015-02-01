@@ -245,9 +245,8 @@ public final class CacheContext {
     return removalListenerType;
   }
 
-  @SuppressWarnings("unchecked")
-  public <T extends RemovalListener<Integer, Integer>> T removalListener() {
-    return (T) requireNonNull(removalListener);
+  public RemovalListener<Integer, Integer> removalListener() {
+    return requireNonNull(removalListener);
   }
 
   public List<RemovalNotification<Integer, Integer>> consumedNotifications() {

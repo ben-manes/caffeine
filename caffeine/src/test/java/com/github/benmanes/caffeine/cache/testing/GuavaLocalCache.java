@@ -62,6 +62,7 @@ public final class GuavaLocalCache {
   private GuavaLocalCache() {}
 
   /** Returns a Guava-backed cache. */
+  @SuppressWarnings("CheckReturnValue")
   public static <K, V> Cache<K, V> newGuavaCache(CacheContext context) {
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
@@ -104,7 +105,7 @@ public final class GuavaLocalCache {
       boolean translateZeroExpire = (context.afterAccess == Expire.IMMEDIATELY) ||
           (context.afterWrite == Expire.IMMEDIATELY);
       builder.removalListener(new GuavaRemovalListener<>(
-          translateZeroExpire, context.removalListener()));
+          translateZeroExpire, context.removalListener));
     }
     Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker;
     if (context.loader == null) {
