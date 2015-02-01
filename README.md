@@ -30,7 +30,7 @@ experience designing [ConcurrentLinkedHashMap](https://code.google.com/p/concurr
 and co-authoring [Guava's Cache](https://code.google.com/p/guava-libraries/wiki/CachesExplained).
 The API is extended to include an asynchronous cache and to expose low-level options like changing
 the maximum size, expiration timeouts, and traversing in retention order. To simplify integration,
-a Guava compatible adapter is available (see [migration guide](MIGRATING.md)).
+a Guava compatible adapter is available (see [migration guide](https://github.com/ben-manes/caffeine/wiki/Guava)).
 
 | Interface | Description |
 | --------- | ----------- |

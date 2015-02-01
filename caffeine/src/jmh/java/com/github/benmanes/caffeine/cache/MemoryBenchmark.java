@@ -15,12 +15,17 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.function.Function.identity;
+
 import java.io.PrintStream;
 import java.math.RoundingMode;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.github.jamm.MemoryMeter;
+import org.github.jamm.MemoryMeter.Guess;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -39,22 +44,31 @@ import com.jakewharton.fliptables.FlipTable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class MemoryBenchmark {
-  static final int FUZZY_SIZE = 10_000;
+  // The number of entries added to minimize skew due to non-entry factors
+  static final int FUZZY_SIZE = 25_000;
+  // The maximum size, which is larger than the fuzzy factor due to Guava's early eviction
+  static final int MAXIMUM_SIZE = 2 * FUZZY_SIZE;
+  // The pre-computed entries to store into the cache when computing the per-entry overhead
+  static final Map<Integer, Integer> workingSet = IntStream.range(0, FUZZY_SIZE)
+      .boxed().collect(Collectors.toMap(identity(), i -> -i));
 
-  final MemoryMeter meter = new MemoryMeter();
+  final MemoryMeter meter = new MemoryMeter().withGuessing(Guess.ALWAYS_SPEC);
   final PrintStream out = System.out;
 
   public void run() throws Exception {
+    if (!MemoryMeter.hasInstrumentation()) {
+      out.println("WARNING: Java agent not installed - guessing instead");
+    }
     out.println();
     unbounded();
     maximumSize();
-    maximumWeight();
     maximumSize_expireAfterAccess();
     maximumSize_expireAfterWrite();
     maximumSize_refreshAfterWrite();
-    expireAfterAccess_expireAfterWrite();
+    maximumWeight();
     expireAfterAccess();
     expireAfterWrite();
+    expireAfterAccess_expireAfterWrite();
     weakKeys();
     weakValues();
     weakKeys_weakValues();
@@ -69,28 +83,28 @@ public final class MemoryBenchmark {
   }
 
   private void maximumSize() {
-    Cache<Integer, Integer> caffeine = Caffeine.newBuilder().maximumSize(FUZZY_SIZE).build();
+    Cache<Integer, Integer> caffeine = Caffeine.newBuilder().maximumSize(MAXIMUM_SIZE).build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
-        .maximumSize(FUZZY_SIZE).build();
+        .maximumSize(MAXIMUM_SIZE).build();
     compare("Maximum Size", caffeine, guava);
   }
 
   private void maximumWeight() {
     Cache<Integer, Integer> caffeine = Caffeine.newBuilder()
-        .maximumWeight(FUZZY_SIZE).weigher((k, v) -> 1).build();
+        .maximumWeight(MAXIMUM_SIZE).weigher((k, v) -> 1).build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
-        .maximumWeight(FUZZY_SIZE).weigher((k, v) -> 1).build();
+        .maximumWeight(MAXIMUM_SIZE).weigher((k, v) -> 1).build();
     compare("Maximum Weight", caffeine, guava);
   }
 
   private void maximumSize_expireAfterAccess() {
     Cache<Integer, Integer> caffeine = Caffeine.newBuilder()
         .expireAfterAccess(1, TimeUnit.MINUTES)
-        .maximumSize(FUZZY_SIZE)
+        .maximumSize(MAXIMUM_SIZE)
         .build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
         .expireAfterAccess(1, TimeUnit.MINUTES)
-        .maximumSize(FUZZY_SIZE)
+        .maximumSize(MAXIMUM_SIZE)
         .build();
     compare("Maximum Size & Expire after Access", caffeine, guava);
   }
@@ -98,11 +112,11 @@ public final class MemoryBenchmark {
   private void maximumSize_expireAfterWrite() {
     Cache<Integer, Integer> caffeine = Caffeine.newBuilder()
         .expireAfterWrite(1, TimeUnit.MINUTES)
-        .maximumSize(FUZZY_SIZE)
+        .maximumSize(MAXIMUM_SIZE)
         .build();
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
         .expireAfterWrite(1, TimeUnit.MINUTES)
-        .maximumSize(FUZZY_SIZE)
+        .maximumSize(MAXIMUM_SIZE)
         .build();
     compare("Maximum Size & Expire after Write", caffeine, guava);
   }
@@ -110,11 +124,11 @@ public final class MemoryBenchmark {
   private void maximumSize_refreshAfterWrite() {
     Cache<Integer, Integer> caffeine = Caffeine.newBuilder()
         .refreshAfterWrite(1, TimeUnit.MINUTES)
-        .maximumSize(FUZZY_SIZE)
+        .maximumSize(MAXIMUM_SIZE)
         .build(k -> k);
     com.google.common.cache.Cache<Integer, Integer> guava = CacheBuilder.newBuilder()
         .refreshAfterWrite(1, TimeUnit.MINUTES)
-        .maximumSize(FUZZY_SIZE)
+        .maximumSize(MAXIMUM_SIZE)
         .build(new CacheLoader<Integer, Integer>() {
           @Override public Integer load(Integer key) {
             return key;
@@ -188,6 +202,9 @@ public final class MemoryBenchmark {
 
   private void compare(String label, Cache<Integer, Integer> caffeine,
       com.google.common.cache.Cache<Integer, Integer> guava) {
+    caffeine.cleanUp();
+    guava.cleanUp();
+
     int leftPadded = Math.max((36 - label.length()) / 2 - 1, 1);
     out.printf(" %2$-" + leftPadded + "s %s%n", label, " ");
     String result = FlipTable.of(new String[] { "Cache", "Baseline", "Per Entry" },new String[][] {
@@ -199,11 +216,13 @@ public final class MemoryBenchmark {
 
   private String[] evaluate(String label, Map<Integer, Integer> map) {
     long base = meter.measureDeep(map);
-    for (int i = 0; i < FUZZY_SIZE; i++) {
-      map.put(i, -i);
-    }
+    map.putAll(workingSet);
+
     long populated = meter.measureDeep(map);
-    long perEntry = LongMath.divide(populated - base, FUZZY_SIZE, RoundingMode.UP);
+    long entryOverhead = 2 * FUZZY_SIZE * meter.measureDeep(workingSet.keySet().iterator().next());
+    long perEntry = LongMath.divide(populated - entryOverhead - base,
+        FUZZY_SIZE, RoundingMode.HALF_EVEN);
+    perEntry += ((perEntry & 1) == 0) ? 0 : 1;
     return new String[] {
         label,
         String.format("%,d bytes", base),

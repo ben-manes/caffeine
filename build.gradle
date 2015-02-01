@@ -32,16 +32,15 @@ subprojects { proj ->
     return
   }
 
-  apply from: "${rootDir}/gradle/jmh.gradle"
-  apply from: "${rootDir}/gradle/publish.gradle"
-  apply from: "${rootDir}/gradle/code_quality.gradle"
-  apply from: "${rootDir}/gradle/dependencies.gradle"
-  apply from: "${rootDir}/gradle/object_layout.gradle"
-
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'org.dm.bundle'
   apply plugin: 'errorprone'
   apply plugin: 'java'
+
+  apply from: "${rootDir}/gradle/publish.gradle"
+  apply from: "${rootDir}/gradle/code_quality.gradle"
+  apply from: "${rootDir}/gradle/dependencies.gradle"
+  apply from: "${rootDir}/gradle/object_layout.gradle"
 
   sourceCompatibility = JavaVersion.VERSION_1_8
   compileJava.options.incremental = true
