@@ -85,7 +85,7 @@ repositories {
 
 // Only report code coverage for projects that are distrubuted
 def publishedProjects = subprojects.findAll {
-  !it.path.startsWith(':simulator') && (it.path != ':tracing')
+  !it.path.startsWith(':simulator') && (it.path != ':tracing') && !it.path.startsWith(':jcache')
 }
 
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
@@ -108,8 +108,8 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
 }
 
 coveralls {
+  sourceDirs = publishedProjects.sourceSets.main.allSource.srcDirs.flatten()
   jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
-  publishedProjects.sourceSets.main.allSource.srcDirs*.path.each { sourceDirs.addAll(it) }
 }
 
 tasks.coveralls {

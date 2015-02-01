@@ -20,7 +20,7 @@ javadoc.options.links('http://docs.oracle.com/javase/8/docs/api/');
 checkstyle {
   showViolations = true
   sourceSets = [sourceSets.main]
-  toolVersion = "${gradle_plugins.checkstyle}"
+  toolVersion = "${plugin_versions.checkstyle}"
   config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
 }
 
@@ -70,7 +70,7 @@ tasks.withType(Checkstyle) {
   group = 'Checkstyle'
   doLast {
     ant.xslt(in: "${buildDir}/reports/checkstyle/main.xml",
-             style: 'config/checkstyle/checkstyle.xsl',
+             style: "//${rootDir}/config/checkstyle/checkstyle.xsl",
              out:"${buildDir}/reports/checkstyle/checkstyle.html")
   }
 }
