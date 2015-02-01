@@ -34,7 +34,7 @@ subprojects { proj ->
 
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'org.dm.bundle'
-  apply plugin: 'errorprone'
+//  apply plugin: 'errorprone'
   apply plugin: 'java'
 
   apply from: "${rootDir}/gradle/publish.gradle"
