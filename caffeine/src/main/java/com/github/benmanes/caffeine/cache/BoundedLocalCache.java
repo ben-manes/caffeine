@@ -64,10 +64,7 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**
  * An in-memory cache implementation that supports full concurrency of retrievals, a high expected
- * concurrency for updates, and a multiple ways to bound the cache. This implementation differs from
- * {@link ConcurrentHashMap} in that it maintains a page replacement algorithm that is used to evict
- * an entry when the map has exceeded its capacity, the entry expired, or the entry's key or value
- * have been garbage collected.
+ * concurrency for updates, and multiple ways to bound the cache.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the type of keys maintained by this map
