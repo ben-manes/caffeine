@@ -42,7 +42,15 @@ subprojects { proj ->
   apply from: "${rootDir}/gradle/object_layout.gradle"
 
   sourceCompatibility = JavaVersion.VERSION_1_8
-  compileJava.options.incremental = true
+
+  tasks.withType(JavaCompile) {
+    if (System.env.'CI') {
+      options.fork = true
+      options.forkOptions.memoryMaximumSize = '384m'
+    } else {
+      options.incremental = true    
+    }
+  }
 
   group = 'com.github.ben-manes.caffeine'
   version.with {

@@ -75,15 +75,11 @@ tasks.withType(Test) {
     maxHeapSize = '128m'
     options.includeGroups = ['slow']
   } else {
-    maxHeapSize = '384m'
     options {
-      threadCount = System.env.'CI' ? 1 : 6
       excludeGroups = ['slow']
       parallel = 'methods'
+      threadCount = 6
     }
-  }
-  if (System.env.'CI') {
-    reports.html.enabled = false
   }
 }
 

@@ -49,10 +49,11 @@ tasks.withType(Test) {
     jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
   }
   options {
-    jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
+    jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10', '-XX:MaxMetaspaceSize=128m'
   }
   if (System.env.'CI') {
-    maxHeapSize = '256m'
+    maxHeapSize = '384m'
+    reports.html.enabled = false
   }
   testLogging {
     events 'skipped'

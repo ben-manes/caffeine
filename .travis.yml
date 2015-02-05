@@ -7,8 +7,11 @@ jdk:
 env:
  - TERM=dumb
 
+before_script:
+ - echo org.gradle.jvmargs=-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=10 -XX:MaxMetaspaceSize=128m > gradle.properties
+
 script:
- - ./gradlew check --no-daemon
+ - JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=10 -XX:MaxMetaspaceSize=128m" ./gradlew check --no-daemon
 
 after_success:
 - ./gradlew coveralls
