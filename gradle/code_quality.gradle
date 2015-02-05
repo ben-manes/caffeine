@@ -45,8 +45,14 @@ jacocoTestReport {
 }
 
 tasks.withType(Test) {
+  if (System.properties.containsKey('debug')) {
+    jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
+  }
   options {
     jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10'
+  }
+  if (System.env.'CI') {
+    maxHeapSize = '256m'
   }
   testLogging {
     events 'skipped'
@@ -62,7 +68,6 @@ tasks.withType(Test) {
     destinationFile = file("${rootDir}/build/jacoco/jacocoTest.exec")
     classDumpFile = file("${rootDir}/build/jacoco/classpathdumps")
   }
-  maxHeapSize = '384m'
 }
 
 tasks.withType(Checkstyle) {
