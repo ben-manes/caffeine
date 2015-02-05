@@ -27,6 +27,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,6 +50,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -90,25 +92,25 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.ONE)
   public void evict_alreadyRemoved(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Integer oldKey = 1;
-    Integer newKey = 2;
+    Entry<Integer, Integer> oldEntry = Iterables.get(context.absent().entrySet(), 0);
+    Entry<Integer, Integer> newEntry = Iterables.get(context.absent().entrySet(), 1);
 
-    localCache.put(oldKey, -oldKey);
+    localCache.put(oldEntry.getKey(), oldEntry.getValue());
     localCache.evictionLock.lock();
     try {
-      Object keyRef = localCache.nodeFactory.newLookupKey(oldKey);
+      Object keyRef = localCache.nodeFactory.newLookupKey(oldEntry.getKey());
       Node<Integer, Integer> node = localCache.data.get(keyRef);
       checkStatus(localCache, node, Status.ALIVE);
       new Thread(() -> {
-        localCache.put(newKey, -newKey);
-        assertThat(localCache.remove(oldKey), is(-oldKey));
+        localCache.put(newEntry.getKey(), newEntry.getValue());
+        assertThat(localCache.remove(oldEntry.getKey()), is(oldEntry.getValue()));
       }).start();
-      Awaits.await().until(() -> localCache.containsKey(oldKey), is(false));
+      Awaits.await().until(() -> localCache.containsKey(oldEntry.getKey()), is(false));
       checkStatus(localCache, node, Status.RETIRED);
       localCache.drainBuffers();
 
       checkStatus(localCache, node, Status.DEAD);
-      assertThat(localCache.containsKey(newKey), is(true));
+      assertThat(localCache.containsKey(newEntry.getKey()), is(true));
       assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
     } finally {
       localCache.evictionLock.unlock();

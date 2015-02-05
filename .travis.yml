@@ -8,7 +8,7 @@ env:
  - TERM=dumb
 
 script:
- - travis_wait ./gradlew check
+ - ./gradlew check --no-daemon
 
 after_success:
 - ./gradlew coveralls
