@@ -27,11 +27,15 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public interface Ticker {
 
-  /** Returns the number of nanoseconds elapsed since this ticker's fixed point of reference. */
+  /**
+   * @return the number of nanoseconds elapsed since this ticker's fixed point of reference
+   */
   @Nonnegative
   long read();
 
-  /** A ticker that reads the current time using {@link System#nanoTime}. */
+  /**
+   * @return a ticker that reads the current time using {@link System#nanoTime}
+   */
   public static Ticker systemTicker() {
     return SystemTicker.INSTANCE;
   }

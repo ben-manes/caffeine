@@ -79,6 +79,8 @@ public interface StatsCounter {
   /**
    * Returns a snapshot of this counter's values. Note that this may be an inconsistent view, as it
    * may be interleaved with update operations.
+   *
+   * @return a snapshot of this counter's values
    */
   @Nonnull
   CacheStats snapshot();

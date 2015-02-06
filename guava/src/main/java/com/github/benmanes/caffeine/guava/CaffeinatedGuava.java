@@ -39,7 +39,7 @@ public final class CaffeinatedGuava {
    * @param builder the configured cache builder
    * @return a cache exposed under the Guava APIs
    */
-  public static <K1 extends K, K, V1 extends V, V>Cache<K1, V1> build(Caffeine<K, V> builder) {
+  public static <K1 extends K, K, V1 extends V, V> Cache<K1, V1> build(Caffeine<K, V> builder) {
     return new CaffeinatedGuavaCache<K1, V1>(builder.build());
   }
 

@@ -34,7 +34,7 @@ public interface Tracer {
 
   void recordDelete(@Nonnull Object o);
 
-  /** Returns a tracer implementation that does not record any events. */
+  /** @return a tracer implementation that does not record any events. */
   public static Tracer disabled() {
     return DisabledTracer.INSTANCE;
   }
@@ -43,6 +43,8 @@ public interface Tracer {
    * Returns the tracer implementation loaded from a {@link ServiceLoader} or a disabled instance
    * if either not found or the system property <tt>caffeine.tracing.enabled</tt> is set to
    * <tt>false</tt>.
+   *
+   * @return the tracer implementation that was loaded or a disabled instance otherwise
    */
   public static Tracer getDefault() {
     return TracerHolder.INSTANCE;

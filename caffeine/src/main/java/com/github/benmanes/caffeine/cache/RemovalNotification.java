@@ -50,7 +50,9 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
     this.key = key;
   }
 
-  /** Returns the cause for which the entry was removed. */
+  /**
+   * @return the cause for which the entry was removed
+   */
   @Nonnull
   public RemovalCause getCause() {
     return cause;
@@ -59,6 +61,8 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
   /**
    * Returns {@code true} if there was an automatic removal due to eviction (the cause is neither
    * {@link RemovalCause#EXPLICIT} nor {@link RemovalCause#REPLACED}).
+   *
+   * @return if the entry was removed due to eviction
    */
   public boolean wasEvicted() {
     return cause.wasEvicted();

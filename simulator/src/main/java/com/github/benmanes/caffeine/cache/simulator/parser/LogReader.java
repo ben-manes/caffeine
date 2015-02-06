@@ -48,7 +48,7 @@ public final class LogReader {
   /**
    * Creates a {@link Stream} that lazily reads the log file in the binary format.
    *
-   * @param reader the input source to read the log file
+   * @param filePath the path to the log file
    * @return a lazy stream of cache events
    */
   public static Stream<CacheEvent> binaryLogStream(Path filePath) throws IOException {
@@ -62,7 +62,7 @@ public final class LogReader {
   /**
    * Creates a {@link Stream} that lazily reads the log file in the text format.
    *
-   * @param reader the input source to read the log file
+   * @param filePath the path to the log file
    * @return a lazy stream of cache events
    */
   public static Stream<CacheEvent> textLogStream(Path filePath) throws IOException {

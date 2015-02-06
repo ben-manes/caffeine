@@ -146,7 +146,7 @@ public final class Synthetic {
    * @param lowerBound lower bound of the distribution
    * @param upperBound upper bound of the distribution
    * @param items the number of items in the distribution
-   * @return
+   * @return a stream of cache events
    */
   public static Stream<CacheEvent> uniform(int lowerBound, int upperBound, int items) {
     return generate(new UniformIntegerGenerator(lowerBound, upperBound), items);

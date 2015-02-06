@@ -77,6 +77,7 @@ public interface CacheLoader<K, V> {
    * Asynchronously computes or retrieves the value corresponding to {@code key}.
    *
    * @param key the non-null key whose value should be loaded
+   * @param executor the executor that asynchronously loads the entry
    * @return the future value associated with {@code key}
    */
   @Nonnull
@@ -100,6 +101,7 @@ public interface CacheLoader<K, V> {
    * to {@link AsyncLoadingCache#get} if this method is not overridden.
    *
    * @param keys the unique, non-null keys whose values should be loaded
+   * @param executor the executor that with asynchronously loads the entries
    * @return a future containing the map from each key in {@code keys} to the value associated with
    *         that key; <b>may not contain null values</b>
    * @throws UnsupportedOperationException if bulk loading is not implemented

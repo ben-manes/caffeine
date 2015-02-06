@@ -23,6 +23,8 @@ import javax.annotation.concurrent.ThreadSafe;
  * Calculates the weights of cache entries. The total weight threshold is used to determine when an
  * eviction is required.
  *
+ * @param <K> the type of keys
+ * @param <V> the type of values
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
@@ -40,7 +42,13 @@ public interface Weigher<K, V> {
   @Nonnegative
   int weigh(@Nonnull K key, @Nonnull V value);
 
-  /** Returns a weigher where an entry has a weight of <tt>1</tt>. */
+  /**
+   * Returns a weigher where an entry has a weight of {@code 1}.
+   *
+   * @param <K> the type of keys
+   * @param <V> the type of values
+   * @return a weigher where an entry has a weight of {@code 1}
+   */
   public static <K, V> Weigher<K, V> singleton() {
     @SuppressWarnings("unchecked")
     Weigher<K, V> self = (Weigher<K, V>) SingletonWeigher.INSTANCE;

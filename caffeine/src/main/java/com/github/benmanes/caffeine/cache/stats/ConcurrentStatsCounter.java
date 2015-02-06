@@ -85,7 +85,11 @@ public final class ConcurrentStatsCounter implements StatsCounter {
         evictionCount.sum());
   }
 
-  /** Increments all counters by the values in {@code other}. */
+  /**
+   * Increments all counters by the values in {@code other}.
+   *
+   * @param other the counter to increment from
+   */
   public void incrementBy(@Nonnull StatsCounter other) {
     CacheStats otherStats = other.snapshot();
     hitCount.add(otherStats.hitCount());

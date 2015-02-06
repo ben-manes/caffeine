@@ -181,6 +181,8 @@ public final class Caffeine<K, V> {
   /**
    * Constructs a new {@code Caffeine} instance with default settings, including strong keys, strong
    * values, and no automatic eviction of any kind.
+   *
+   * @return a new instance with default settings
    */
   @Nonnull
   public static Caffeine<Object, Object> newBuilder() {
@@ -192,6 +194,8 @@ public final class Caffeine<K, V> {
    * construction time avoids the need for expensive resizing operations later, but setting this
    * value unnecessarily high wastes memory.
    *
+   * @param initialCapacity minimum total size for the internal hash tables
+   * @return this builder instance
    * @throws IllegalArgumentException if {@code initialCapacity} is negative
    * @throws IllegalStateException if an initial capacity was already set
    */
@@ -222,6 +226,7 @@ public final class Caffeine<K, V> {
    * may experience non-deterministic behavior.
    *
    * @param executor the executor to use for asynchronous execution
+   * @return this builder instance
    * @throws NullPointerException if the specified executor is null
    */
   @Nonnull
@@ -248,6 +253,7 @@ public final class Caffeine<K, V> {
    * This feature cannot be used in conjunction with {@link #maximumWeight}.
    *
    * @param maximumSize the maximum size of the cache
+   * @return this builder instance
    * @throws IllegalArgumentException if {@code size} is negative
    * @throws IllegalStateException if a maximum size or weight was already set
    */
@@ -281,6 +287,7 @@ public final class Caffeine<K, V> {
    * This feature cannot be used in conjunction with {@link #maximumSize}.
    *
    * @param maximumWeight the maximum total weight of entries the cache may contain
+   * @return this builder instance
    * @throws IllegalArgumentException if {@code weight} is negative
    * @throws IllegalStateException if a maximum weight or size was already set
    */
@@ -319,6 +326,10 @@ public final class Caffeine<K, V> {
    * {@link ClassCastException} at some <i>undefined</i> point in the future.
    *
    * @param weigher the weigher to use in calculating the weight of cache entries
+   * @param <K1> key type of the weigher
+   * @param <V1> value type of the weigher
+   * @return the cache builder reference that should be used instead of {@code this} for any
+   *         remaining configuration and cache building
    * @throws IllegalArgumentException if {@code size} is negative
    * @throws IllegalStateException if a maximum size was already set
    */
@@ -367,6 +378,7 @@ public final class Caffeine<K, V> {
    * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
    * entries are cleaned up as part of the routine maintenance described in the class javadoc.
    *
+   * @return this builder instance
    * @throws IllegalStateException if the key strength was already set
    */
   @Nonnull
@@ -404,6 +416,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
+   * @return this builder instance
    * @throws IllegalStateException if the value strength was already set
    */
   @Nonnull
@@ -448,6 +461,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
+   * @return this builder instance
    * @throws IllegalStateException if the value strength was already set
    */
   @Nonnull
@@ -468,6 +482,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is created that it should be automatically
    *        removed
    * @param unit the unit that {@code duration} is expressed in
+   * @return this builder instance
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to live or time to idle was already set
    */
@@ -503,6 +518,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is last accessed that it should be
    *        automatically removed
    * @param unit the unit that {@code duration} is expressed in
+   * @return this builder instance
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to idle or time to live was already set
    */
@@ -539,6 +555,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is created that it should be considered
    *        stale, and thus eligible for refresh
    * @param unit the unit that {@code duration} is expressed in
+   * @return this builder instance
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the refresh interval was already set
    */
@@ -567,6 +584,8 @@ public final class Caffeine<K, V> {
    * The primary intent of this method is to facilitate testing of caches which have been configured
    * with {@link #expireAfterWrite} or {@link #expireAfterAccess}.
    *
+   * @param ticker a nanosecond-precision time source
+   * @return this builder instance
    * @throws IllegalStateException if a ticker was already set
    * @throws NullPointerException if the specified ticker is null
    */
@@ -603,6 +622,10 @@ public final class Caffeine<K, V> {
    * <b>Warning:</b> any exception thrown by {@code listener} will <i>not</i> be propagated to the
    * {@code Cache} user, only logged via a {@link Logger}.
    *
+   * @param removalListener a listener instance that caches should notify each time an entry is
+   *        removed
+   * @param <K1> the key type of the listener
+   * @param <V1> the value type of the listener
    * @return the cache builder reference that should be used instead of {@code this} for any
    *         remaining configuration and cache building
    * @throws IllegalStateException if a removal listener was already set
@@ -636,6 +659,8 @@ public final class Caffeine<K, V> {
    * {@link Cache#stats} will return zero for all statistics. Note that recording stats requires
    * bookkeeping to be performed with each operation, and thus imposes a performance penalty on
    * cache operation.
+   *
+   * @return this builder instance
    */
   @Nonnull
   public Caffeine<K, V> recordStats() {
@@ -672,6 +697,8 @@ public final class Caffeine<K, V> {
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
    *
+   * @param <K1> the key type of the cache
+   * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
   @Nonnull
@@ -696,6 +723,8 @@ public final class Caffeine<K, V> {
    * again to create multiple independent caches.
    *
    * @param loader the cache loader used to obtain new values
+   * @param <K1> the key type of the loader
+   * @param <V1> the value type of the loader
    * @return a cache having the requested features
    * @throws NullPointerException if the specified cache loader is null
    */
@@ -722,6 +751,8 @@ public final class Caffeine<K, V> {
    * again to create multiple independent caches.
    *
    * @param loader the cache loader used to obtain new values
+   * @param <K1> the key type of the loader
+   * @param <V1> the value type of the loader
    * @return a cache having the requested features
    * @throws IllegalStateException if the value strength is weak or soft
    * @throws NullPointerException if the specified cache loader is null

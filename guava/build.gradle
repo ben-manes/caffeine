@@ -17,3 +17,7 @@ dependencies {
 bundle {
   instruction 'Export-Package', 'com.github.benmanes.caffeine.guava.*'
 }
+
+tasks.withType(Javadoc) {
+  options.addStringOption('Xdoclint:none', '-quiet')
+}

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.tracing.async;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,7 +40,7 @@ import com.lmax.disruptor.util.DaemonThreadFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
-public final class AsyncTracer implements Tracer {
+public final class AsyncTracer implements Tracer, Closeable {
   public static final String TRACING_FILE = "caffeine.tracing.file";
   public static final String TRACING_FORMAT = "caffeine.tracing.format";
   public static final String TRACING_BUFFER_SIZE = "caffeine.tracing.bufferSize";
@@ -84,8 +85,11 @@ public final class AsyncTracer implements Tracer {
   /**
    * Initiates an orderly shutdown in which previously submitted tasks are executed, but no new
    * tasks will be accepted. Invocation has no additional effect if already shut down.
+   *
+   * @throws IOException if this resource cannot be closed
    */
-  public void shutdown() throws IOException {
+  @Override
+  public void close() throws IOException {
     disruptor.shutdown();
     executor.shutdown();
     handler.close();

@@ -42,6 +42,8 @@ public interface RemovalListener<K, V> {
    * <p>
    * This does not always signify that the key is now absent from the cache, as it may have already
    * been re-added.
+   *
+   * @param notification information regarding the removed entry
    */
   void onRemoval(@Nonnull RemovalNotification<K, V> notification);
 }
