@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine;
 
 import com.google.common.testing.AbstractPackageSanityTests;
 
@@ -26,14 +26,10 @@ public class PackageSanityTests extends AbstractPackageSanityTests {
 
   public PackageSanityTests() {
     publicApiOnly();
-    setDefault(CacheLoader.class, key -> key);
-    setDefault(Caffeine.class, Caffeine.newBuilder());
     ignoreClasses(clazz ->
-        clazz.getSimpleName().endsWith("Test") ||
+        clazz.getSimpleName().contains("Test") ||
         clazz.getSimpleName().contains("Stresser") ||
-        clazz.getSimpleName().endsWith("Generator") ||
-        clazz.getSimpleName().endsWith("Benchmark") ||
-        clazz == RemovalNotification.class
-    );
+        clazz.getSimpleName().contains("Generator") ||
+        clazz.getSimpleName().contains("Benchmark"));
   }
 }

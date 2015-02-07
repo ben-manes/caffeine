@@ -31,6 +31,7 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -214,7 +215,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
    * @return {@code true} if this stack contains the specified element
    */
   @Override
-  public boolean contains(Object o) {
+  public boolean contains(@Nullable Object o) {
     requireNonNull(o);
 
     for (Node<E> node = top.get(); node != null; node = node.next) {
@@ -232,6 +233,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
    *
    * @return the top of the stack or <tt>null</tt> if this stack is empty
    */
+  @Nullable
   public E peek() {
     for (;;) {
       Node<E> node = top.get();
@@ -275,7 +277,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
    *
    * @param e the element to push
    */
-  public void push(E e) {
+  public void push(@Nonnull E e) {
     requireNonNull(e);
 
     Node<E> node = new Node<E>(e);
@@ -624,7 +626,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
     }
 
     @Override
-    public boolean contains(Object o) {
+    public boolean contains(@Nullable Object o) {
       return stack.contains(o);
     }
 
