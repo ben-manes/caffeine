@@ -15,6 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
+import java.io.Serializable;
+
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -54,6 +58,18 @@ public interface Weigher<K, V> {
     Weigher<K, V> self = (Weigher<K, V>) SingletonWeigher.INSTANCE;
     return self;
   }
+
+  /**
+   * Returns a weigher that enforces that the weight is non-negative.
+   *
+   * @param delegate the weigher to that weighs the entry
+   * @param <K> the type of keys
+   * @param <V> the type of values
+   * @return a weigher that enforces that the weight is non-negative
+   */
+  public static <K, V> Weigher<K, V> bounded(Weigher<K, V> delegate) {
+    return new BoundedWeigher<>(delegate);
+  }
 }
 
 enum SingletonWeigher implements Weigher<Object, Object> {
@@ -61,5 +77,26 @@ enum SingletonWeigher implements Weigher<Object, Object> {
 
   @Override public int weigh(Object key, Object value) {
     return 1;
+  }
+}
+
+final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
+  static final long serialVersionUID = 1;
+  final Weigher<? super K, ? super V> delegate;
+
+  BoundedWeigher(Weigher<? super K, ? super V> delegate) {
+    requireNonNull(delegate);
+    this.delegate = delegate;
+  }
+
+  @Override
+  public int weigh(K key, V value) {
+    int weight = delegate.weigh(key, value);
+    Caffeine.requireArgument(weight >= 0);
+    return weight;
+  }
+
+  Object writeReplace() {
+    return delegate;
   }
 }

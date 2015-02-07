@@ -295,8 +295,8 @@ public class CacheStats {
 
   @Override
   public boolean equals(Object o) {
-    if (o == null) {
-      return false;
+    if (o == this) {
+      return true;
     } else if (!(o instanceof CacheStats)) {
       return false;
     }
@@ -317,6 +317,7 @@ public class CacheStats {
         + "loadSuccessCount=" + loadSuccessCount + ','
         + "loadFailureCount=" + loadFailureCount + ','
         + "totalLoadTime=" + totalLoadTime + ','
-        + "evictionCount=" + evictionCount + ',';
+        + "evictionCount=" + evictionCount + ','
+        + '}';
   }
 }

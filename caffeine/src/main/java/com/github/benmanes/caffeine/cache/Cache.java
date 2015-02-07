@@ -22,7 +22,6 @@ import java.util.function.Function;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -51,7 +50,7 @@ public interface Cache<K, V> {
    * @return the value to which the specified key is mapped, or {@code null} if this map contains no
    *         mapping for the key
    */
-  @Nullable
+  @CheckForNull
   V getIfPresent(@Nonnull Object key);
 
   /**

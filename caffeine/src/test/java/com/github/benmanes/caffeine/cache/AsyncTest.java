@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.lang.reflect.Constructor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,8 +35,11 @@ import com.github.benmanes.caffeine.Awaits;
  */
 public final class AsyncTest {
 
-  public void testReflectivelyConstruct() throws Exception {
-    new Async();
+  @Test
+  public void reflectivelyConstruct() throws Exception {
+    Constructor<?> constructor = Async.class.getDeclaredConstructor();
+    constructor.setAccessible(true);
+    constructor.newInstance();
   }
 
   @Test(dataProvider = "successful")

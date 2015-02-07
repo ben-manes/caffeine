@@ -17,11 +17,9 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.ConcurrentModificationException;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -34,6 +32,8 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
+import com.github.benmanes.caffeine.cache.Async.AsyncRemovalListener;
+import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
@@ -357,8 +357,8 @@ public final class Caffeine<K, V> {
 
   @Nonnull @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
-    Weigher<K, V> delegate = isWeighted()
-        ? new BoundedWeigher<>(weigher)
+    Weigher<K1, V1> delegate = isWeighted()
+        ? Weigher.bounded((Weigher<K1, V1>) weigher)
         : Weigher.singleton();
     return (Weigher<K1, V1>) (isAsync ? new AsyncWeigher<>(delegate) : delegate);
   }
@@ -386,10 +386,6 @@ public final class Caffeine<K, V> {
     requireState(keyStrength == null, "Key strength was already set to %s", keyStrength);
     keyStrength = Strength.WEAK;
     return this;
-  }
-
-  Strength getKeyStrength() {
-    return isStrongKeys() ? Strength.STRONG : keyStrength;
   }
 
   boolean isStrongKeys() {
@@ -424,10 +420,6 @@ public final class Caffeine<K, V> {
     requireState(valueStrength == null, "Value strength was already set to %s", valueStrength);
     valueStrength = Strength.WEAK;
     return this;
-  }
-
-  Strength getValueStrength() {
-    return (valueStrength == null) ? Strength.STRONG : valueStrength;
   }
 
   boolean isStrongValues() {
@@ -823,84 +815,5 @@ public final class Caffeine<K, V> {
       s.deleteCharAt(s.length() - 1);
     }
     return s.append('}').toString();
-  }
-
-  /**
-   * A removal listener that asynchronously forwards the value stored in a {@link CompletableFuture}
-   * if successful to the user-supplied removal listener.
-   */
-  static final class AsyncRemovalListener<K, V>
-      implements RemovalListener<K, CompletableFuture<V>>, Serializable {
-    private static final long serialVersionUID = 1L;
-
-    final RemovalListener<K, V> delegate;
-    final Executor executor;
-
-    AsyncRemovalListener(RemovalListener<K, V> delegate, Executor executor) {
-      this.delegate = requireNonNull(delegate);
-      this.executor = requireNonNull(executor);
-    }
-
-    @Override
-    public void onRemoval(RemovalNotification<K, CompletableFuture<V>> notification) {
-      notification.getValue().thenAcceptAsync(value -> {
-        delegate.onRemoval(new RemovalNotification<K, V>(
-            notification.getKey(), value, notification.getCause()));
-      }, executor);
-    }
-
-    Object writeReplace() {
-      return delegate;
-    }
-  }
-
-  /**
-   * A weigher for asynchronous computations. When the value is being loaded this weigher returns
-   * {@code 0} to indicate that the entry should not be evicted due to a size constraint. If the
-   * value is computed successfully the entry must be reinserted so that the weight is updated and
-   * the expiration timeouts reflect the value once present. This can be done safely using
-   * {@link Map#replace(Object, Object, Object)}.
-   */
-  static final class AsyncWeigher<K, V> implements Weigher<K, CompletableFuture<V>>, Serializable {
-    private static final long serialVersionUID = 1L;
-
-    final Weigher<K, V> delegate;
-
-    AsyncWeigher(Weigher<K, V> delegate) {
-      this.delegate = requireNonNull(delegate);
-    }
-
-    @Override
-    public int weigh(K key, CompletableFuture<V> valueFuture) {
-      return (valueFuture.isDone() && !valueFuture.isCompletedExceptionally())
-          ? delegate.weigh(key, valueFuture.join())
-          : 0;
-    }
-
-    Object writeReplace() {
-      return delegate;
-    }
-  }
-
-  /** A weigher that enforces that the weight falls within a valid range. */
-  static final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
-    static final long serialVersionUID = 1;
-    final Weigher<? super K, ? super V> delegate;
-
-    BoundedWeigher(Weigher<? super K, ? super V> delegate) {
-      requireNonNull(delegate);
-      this.delegate = delegate;
-    }
-
-    @Override
-    public int weigh(K key, V value) {
-      int weight = delegate.weigh(key, value);
-      Caffeine.requireArgument(weight >= 0);
-      return weight;
-    }
-
-    Object writeReplace() {
-      return delegate;
-    }
   }
 }

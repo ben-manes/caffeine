@@ -56,13 +56,10 @@ tasks.withType(Test) {
     reports.html.enabled = false
   }
   testLogging {
-    events 'skipped'
-    error {
-      events 'failed'
-      showCauses = true
-      showExceptions = true
-      exceptionFormat 'full'
-    }
+    events 'skipped', 'failed'
+    exceptionFormat 'full'
+    showCauses = true
+    showExceptions = true
   }
   jacoco {
     append = true

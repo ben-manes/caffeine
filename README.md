@@ -125,7 +125,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void getIfPresent_notFound(
       Cache<Integer, Integer> cache, CacheContext context) {
-    // This test is run against 72 different cache configurations
+    // This test is run against at least 72 different cache configurations
     // (2 key types) * (3 value types) * (3 max sizes) * (4 population modes)
     assertThat(cache.getIfPresent(context.getAbsentKey()), is(nullValue());
     assertThat(cache.stats(), both(hasMissCount(1)).and(hasHitCount(0)));

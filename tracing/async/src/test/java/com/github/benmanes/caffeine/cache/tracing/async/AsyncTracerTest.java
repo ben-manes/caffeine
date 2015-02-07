@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.tracing.async;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 
@@ -73,6 +74,12 @@ public final class AsyncTracerTest {
     }
   }
 
+  @Test(dataProvider = "formats")
+  public void formats(String format, Class<?> eventHandlerClass) {
+    runWithFormat(format, () ->
+      assertThat(new AsyncTracer().handler, is(instanceOf(eventHandlerClass))));
+  }
+
   @Test(expectedExceptions = UncheckedIOException.class)
   public void badFilePath_text() throws IOException {
     try (LogEventHandler handler = new TextLogEventHandler(badPath)) {}
@@ -83,11 +90,33 @@ public final class AsyncTracerTest {
     try (LogEventHandler handler = new BinaryLogEventHandler(badPath)) {}
   }
 
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void badFileFormat() {
+    runWithFormat("braille", () -> new AsyncTracer());
+  }
+
+  private static void runWithFormat(String format, Runnable action) {
+    System.setProperty(AsyncTracer.TRACING_FORMAT, format);
+    try {
+      action.run();
+    } finally {
+      System.getProperties().remove(AsyncTracer.TRACING_FORMAT);
+    }
+  }
+
   @DataProvider(name = "tracer")
-  public Object[][] providerTracer() {
+  public Object[][] providesTracer() {
     return new Object[][] {
         { new AsyncTracer(new TextLogEventHandler(filePath), 64, executor), true },
         { new AsyncTracer(new BinaryLogEventHandler(filePath), 64, executor), false },
+    };
+  }
+
+  @DataProvider(name = "formats")
+  public Object[][] providesFormats() {
+    return new Object[][] {
+        { "text", TextLogEventHandler.class },
+        { "binary", BinaryLogEventHandler.class },
     };
   }
 }

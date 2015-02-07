@@ -41,6 +41,7 @@ public final class CacheStatsTest {
     CacheStats stats = new CacheStats(0, 0, 0, 0, 0, 0);
     checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0);
 
+    assertThat(stats, is(equalTo(stats)));
     assertThat(stats, is(not(equalTo(null))));
     assertThat(stats, is(not(equalTo(new Object()))));
     assertThat(stats, is(equalTo(new CacheStats(0, 0, 0, 0, 0, 0))));
@@ -54,6 +55,7 @@ public final class CacheStatsTest {
     checkStats(stats, 24, 11, 11.0/24, 13, 13.0/24,
         17, 19, 19.0/36, 17 + 19, 23, 23.0/(17 + 19), 27);
 
+    assertThat(stats, is(equalTo(stats)));
     assertThat(stats, is(not(equalTo(new CacheStats(0, 0, 0, 0, 0, 0)))));
     assertThat(stats.hashCode(), is(not(new CacheStats(0, 0, 0, 0, 0, 0).hashCode())));
     assertThat(stats, hasToString(not(new CacheStats(0, 0, 0, 0, 0, 0).toString())));

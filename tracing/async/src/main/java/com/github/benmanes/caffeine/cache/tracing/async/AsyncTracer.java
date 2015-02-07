@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.tracing.async;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,15 +39,15 @@ import com.lmax.disruptor.util.DaemonThreadFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @ThreadSafe
-public final class AsyncTracer implements Tracer, Closeable {
+public final class AsyncTracer implements Tracer {
   public static final String TRACING_FILE = "caffeine.tracing.file";
   public static final String TRACING_FORMAT = "caffeine.tracing.format";
   public static final String TRACING_BUFFER_SIZE = "caffeine.tracing.bufferSize";
 
-  private final EventTranslatorThreeArg<CacheEvent, Integer, Action, Object> translator;
-  private final Disruptor<CacheEvent> disruptor;
-  private final ExecutorService executor;
-  private final LogEventHandler handler;
+  final EventTranslatorThreeArg<CacheEvent, Integer, Action, Object> translator;
+  final Disruptor<CacheEvent> disruptor;
+  final ExecutorService executor;
+  final LogEventHandler handler;
 
   /**
    * Creates a tracer using the default configuration with optional system property overrides. This
@@ -88,8 +87,7 @@ public final class AsyncTracer implements Tracer, Closeable {
    *
    * @throws IOException if this resource cannot be closed
    */
-  @Override
-  public void close() throws IOException {
+  public void shutdown() throws IOException {
     disruptor.shutdown();
     executor.shutdown();
     handler.close();
