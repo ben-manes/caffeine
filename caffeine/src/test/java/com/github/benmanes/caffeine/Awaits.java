@@ -31,7 +31,6 @@ public final class Awaits {
   public static ConditionFactory await() {
     return Awaitility.with()
         .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS)
-        .atMost(30, TimeUnit.SECONDS);
+        .pollInterval(1, TimeUnit.MILLISECONDS);
   }
 }

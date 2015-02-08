@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
@@ -96,7 +97,7 @@ public final class CacheFromContext {
     } else if (context.valueStrength == ReferenceType.SOFT) {
       builder.softValues();
     }
-    if (context.executor != null) {
+    if (context.cacheExecutor != CacheExecutor.DEFAULT) {
       builder.executor(context.executor);
     }
     if (context.removalListenerType != Listener.DEFAULT) {

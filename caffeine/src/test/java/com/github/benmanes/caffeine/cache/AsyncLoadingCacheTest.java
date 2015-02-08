@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -116,7 +118,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DEFAULT)
+  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.SINGLE)
   public void getFunc_absent_null_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     Integer key = context.absentKey();
@@ -130,6 +132,8 @@ public final class AsyncLoadingCacheTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
+    MoreExecutors.shutdownAndAwaitTermination(
+        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -154,7 +158,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DEFAULT)
+  @CacheSpec(executor = CacheExecutor.SINGLE)
   public void getFunc_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     Integer key = context.absentKey();
@@ -168,6 +172,8 @@ public final class AsyncLoadingCacheTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
+    MoreExecutors.shutdownAndAwaitTermination(
+        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -177,7 +183,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DEFAULT)
+  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.SINGLE)
   public void getFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     Integer key = context.absentKey();
@@ -190,6 +196,8 @@ public final class AsyncLoadingCacheTest {
     valueFuture.cancel(true);
 
     Awaits.await().untilTrue(done);
+    MoreExecutors.shutdownAndAwaitTermination(
+        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -294,7 +302,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DEFAULT)
+  @CacheSpec(executor = CacheExecutor.SINGLE)
   public void getBiFunc_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
@@ -309,6 +317,8 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
     ready.set(true);
     Awaits.await().untilTrue(done);
+    MoreExecutors.shutdownAndAwaitTermination(
+        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -318,7 +328,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DEFAULT)
+  @CacheSpec(executor = CacheExecutor.SINGLE)
   public void getBiFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean done = new AtomicBoolean();
@@ -332,6 +342,8 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
     valueFuture.cancel(true);
     Awaits.await().untilTrue(done);
+    MoreExecutors.shutdownAndAwaitTermination(
+        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -390,9 +402,9 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DEFAULT, loader = Loader.EXCEPTIONAL)
+  @CacheSpec(executor = CacheExecutor.SINGLE, loader = Loader.EXCEPTIONAL)
   public void get_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
-      CacheContext context) {
+      CacheContext context) throws InterruptedException {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     Integer key = context.absentKey();
@@ -401,6 +413,8 @@ public final class AsyncLoadingCacheTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
+    MoreExecutors.shutdownAndAwaitTermination(
+        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -565,7 +579,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DEFAULT)
+  @CacheSpec(executor = CacheExecutor.SINGLE)
   public void put_insert_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
@@ -580,6 +594,8 @@ public final class AsyncLoadingCacheTest {
     cache.put(key, failedFuture);
     ready.set(true);
     Awaits.await().untilTrue(done);
+    MoreExecutors.shutdownAndAwaitTermination(
+        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -599,7 +615,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DEFAULT)
+  @CacheSpec(executor = CacheExecutor.SINGLE)
   public void put_replace_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
@@ -619,6 +635,8 @@ public final class AsyncLoadingCacheTest {
     cache.put(key, successFuture);
     ready.set(true);
     Awaits.await().untilTrue(done);
+    MoreExecutors.shutdownAndAwaitTermination(
+        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(1)));

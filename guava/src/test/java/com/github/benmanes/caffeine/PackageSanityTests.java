@@ -27,6 +27,8 @@ public class PackageSanityTests extends AbstractPackageSanityTests {
   public PackageSanityTests() {
     publicApiOnly();
     ignoreClasses(clazz ->
+        clazz == Awaits.class ||
+        clazz.getSimpleName().startsWith("Is") ||
         clazz.getSimpleName().contains("Test") ||
         clazz.getSimpleName().contains("Stresser") ||
         clazz.getSimpleName().contains("Generator") ||

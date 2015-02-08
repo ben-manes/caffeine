@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -41,6 +43,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The cache test specification so that a {@link org.testng.annotations.DataProvider} can construct
@@ -425,13 +428,29 @@ public @interface CacheSpec {
   /** The executors that the cache can be configured with. */
   enum CacheExecutor implements Supplier<Executor> {
     DEFAULT { // fork-join common pool
-      @Override public Executor get() { return null; }
+      @Override public Executor get() {
+        // Use with caution as may be unpredictable during tests if awaiting completion
+        return ForkJoinPool.commonPool();
+      }
     },
     DIRECT {
-      @Override public Executor get() { return MoreExecutors.directExecutor(); }
+      @Override public Executor get() {
+        // Cache implementations must avoid deadlocks by incorrectly assuming async execution
+        return MoreExecutors.directExecutor();
+      }
+    },
+    SINGLE {
+      @Override public Executor get() {
+        // Isolated to the test execution - may be shutdown by test to assert completion
+        return Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setDaemon(true).build());
+      }
     },
     REJECTING {
-      @Override public Executor get() { throw new RejectedExecutionException(); }
+      @Override public Executor get() {
+        // Cache implementations must avoid corrupting internal state due to rejections
+        return runnable -> { throw new RejectedExecutionException(); };
+      }
     };
 
     @Override

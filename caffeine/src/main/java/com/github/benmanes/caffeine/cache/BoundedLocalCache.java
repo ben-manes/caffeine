@@ -368,18 +368,21 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   @GuardedBy("evictionLock")
   void evict(Node<K, V> node, RemovalCause cause) {
-
-    // Notify the listener only if the entry was evicted
-    if (data.remove(node.getKeyReference(), node)) {
-      if (hasRemovalListener()) {
-        notifyRemoval(node.getKey(), node.getValue(), cause);
-      }
-      statsCounter.recordEviction();
-    }
+    boolean removed = data.remove(node.getKeyReference(), node);
+    K key = node.getKey();
 
     makeDead(node);
     accessOrderDeque.remove(node);
     writeOrderDeque.remove(node);
+
+    if (removed) {
+      statsCounter.recordEviction();
+      if (hasRemovalListener()) {
+        // Notify the listener only if the entry was evicted. This must be performed as the last
+        // step during eviction to safe guard against the executor rejecting the notification task.
+        notifyRemoval(key, node.getValue(), cause);
+      }
+    }
   }
 
   @GuardedBy("evictionLock")

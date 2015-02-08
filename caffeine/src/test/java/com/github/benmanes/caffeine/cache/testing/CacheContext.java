@@ -70,9 +70,9 @@ public final class CacheContext {
   final CacheWeigher weigher;
   final Expire afterAccess;
   final Expire afterWrite;
+  final Executor executor;
   final Advance advance;
   final Expire refresh;
-  final Executor executor;
   final Loader loader;
   final Stats stats;
 
@@ -281,6 +281,14 @@ public final class CacheContext {
 
   public Implementation implementation() {
     return implementation;
+  }
+
+  public CacheExecutor executorType() {
+    return cacheExecutor;
+  }
+
+  public Executor executor() {
+    return executor;
   }
 
   @Override

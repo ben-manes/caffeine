@@ -29,11 +29,12 @@ public class PackageSanityTests extends AbstractPackageSanityTests {
     setDefault(CacheLoader.class, key -> key);
     setDefault(Caffeine.class, Caffeine.newBuilder());
     ignoreClasses(clazz ->
+        clazz == RemovalNotification.class ||
+        clazz.getSimpleName().startsWith("Is") ||
         clazz.getSimpleName().endsWith("Test") ||
         clazz.getSimpleName().contains("Stresser") ||
         clazz.getSimpleName().endsWith("Generator") ||
-        clazz.getSimpleName().endsWith("Benchmark") ||
-        clazz == RemovalNotification.class
+        clazz.getSimpleName().endsWith("Benchmark")
     );
   }
 }

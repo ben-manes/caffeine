@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,9 +44,11 @@ import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -70,7 +73,7 @@ public final class BoundedLocalCacheTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine, population = Population.EMPTY,
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       maximumSize = MaximumSize.UNREACHABLE, weigher = CacheWeigher.MAX_VALUE)
   public void putWeighted_noOverflow() {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
@@ -85,6 +88,14 @@ public final class BoundedLocalCacheTest {
 
     assertThat(map.size(), is(1));
     assertThat(map.weightedSize(), is(BoundedLocalCache.MAXIMUM_CAPACITY));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = RejectedExecutionException.class)
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = MaximumSize.FULL,
+      executor = CacheExecutor.REJECTING, removalListener = Listener.CONSUMING)
+  public void evict_rejected(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.put(context.absentKey(), context.absentValue());
   }
 
   @Test(dataProvider = "caches")
