@@ -29,14 +29,15 @@ import java.util.Objects;
 public final class CacheEvent {
   public enum Action { CREATE, READ, READ_OR_CREATE, UPDATE, DELETE, EVICT }
 
-  private Action action;
+  private int weightDifference;
   private long timestamp;
+  private Action action;
   private int cacheId;
   private int hash;
 
   public CacheEvent() {}
 
-  public CacheEvent(int cacheId, Action action, int hash, long timestamp) {
+  public CacheEvent(int cacheId, Action action, int hash, int weightDifference, long timestamp) {
     this.timestamp = timestamp;
     this.cacheId = cacheId;
     this.action = action;
@@ -49,14 +50,6 @@ public final class CacheEvent {
 
   public void setAction(Action action) {
     this.action = action;
-  }
-
-  public long timestamp() {
-    return timestamp;
-  }
-
-  public void setTimestamp(long timestamp) {
-    this.timestamp = timestamp;
   }
 
   public int cacheId() {
@@ -75,6 +68,30 @@ public final class CacheEvent {
     this.hash = hash;
   }
 
+  public int weightDifference() {
+    return weightDifference;
+  }
+
+  public void setWeightDifference(int weightDifference) {
+    this.weightDifference = weightDifference;
+  }
+
+  public long timestamp() {
+    return timestamp;
+  }
+
+  public void setTimestamp(long timestamp) {
+    this.timestamp = timestamp;
+  }
+
+  public void copyFrom(CacheEvent event) {
+    this.weightDifference = event.weightDifference;
+    this.timestamp = event.timestamp;
+    this.cacheId = event.cacheId;
+    this.action = event.action;
+    this.hash = event.hash;
+  }
+
   public static CacheEvent fromTextRecord(String record) {
     return fromTextRecord(record.trim().split(" "));
   }
@@ -84,7 +101,8 @@ public final class CacheEvent {
     event.action = Action.valueOf(record[0]);
     event.cacheId = Integer.parseInt(record[1]);
     event.hash = Integer.parseInt(record[2]);
-    event.timestamp = Long.parseLong(record[3]);
+    event.weightDifference = Integer.parseInt(record[3]);
+    event.timestamp = Long.parseLong(record[4]);
     return event;
   }
 
@@ -95,6 +113,8 @@ public final class CacheEvent {
     output.append(' ');
     output.append(Integer.toString(hash));
     output.append(' ');
+    output.append(Integer.toString(weightDifference));
+    output.append(' ');
     output.append(Long.toString(timestamp));
   }
 
@@ -103,6 +123,7 @@ public final class CacheEvent {
     event.action = Action.values()[input.readShort()];
     event.cacheId = input.readInt();
     event.hash = input.readInt();
+    event.weightDifference = input.readInt();
     event.timestamp = input.readLong();
     return event;
   }
@@ -111,6 +132,7 @@ public final class CacheEvent {
     output.writeShort(action.ordinal());
     output.writeInt(cacheId);
     output.writeInt(hash);
+    output.writeInt(weightDifference);
     output.writeLong(timestamp);
   }
 
@@ -122,15 +144,16 @@ public final class CacheEvent {
       return false;
     }
     CacheEvent event = (CacheEvent) o;
-    return Objects.equals(action, event.action)
+    return Objects.equals(hash, event.hash)
+        && Objects.equals(action, event.action)
         && Objects.equals(cacheId, event.cacheId)
         && Objects.equals(timestamp, event.timestamp)
-        && Objects.equals(hash, event.hash);
+        && Objects.equals(weightDifference, event.weightDifference);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(action, cacheId, timestamp, hash);
+    return (int) timestamp ^ hash;
   }
 
   @Override

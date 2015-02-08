@@ -26,13 +26,40 @@ import javax.annotation.Nonnull;
  */
 public interface Tracer {
 
-  void recordCreate(@Nonnull Object o);
+  /**
+   * Records the addition of a new entry to the cache.
+   *
+   * @param key key to the entry now present in the cache
+   * @param weight the weight of the entry
+   */
+  void recordCreate(@Nonnull Object key, int weight);
 
-  void recordRead(@Nonnull Object o);
+  /**
+   * Records the entry that was read from the cache.
+   *
+   * @param key key to the retrieved entry
+   */
+  void recordRead(@Nonnull Object key);
 
-  void recordUpdate(@Nonnull Object o);
+  /**
+   * Records the entry that was updated in the cache.
+   *
+   * @param key key to the entry updated in the cache
+   * @param weightDifference the difference between the old and new entry's weight
+   */
+  void recordUpdate(@Nonnull Object key, int weightDifference);
 
-  void recordDelete(@Nonnull Object o);
+  /**
+   * Records the removal of an entry from the cache.
+   *
+   * @param key key to the entry now removed in the cache
+   */
+  void recordDelete(@Nonnull Object key);
+
+  /** @return if tracing is enabled and an implementation has been loaded. */
+  public static boolean isEnabled() {
+    return getDefault() != disabled();
+  }
 
   /** @return a tracer implementation that does not record any events. */
   public static Tracer disabled() {
@@ -54,10 +81,10 @@ public interface Tracer {
 enum DisabledTracer implements Tracer {
   INSTANCE;
 
-  @Override public void recordCreate(Object o) {}
-  @Override public void recordRead(Object o) {}
-  @Override public void recordUpdate(Object o) {}
-  @Override public void recordDelete(Object o) {}
+  @Override public void recordCreate(Object key, int weight) {}
+  @Override public void recordRead(Object key) {}
+  @Override public void recordUpdate(Object key, int weightDifference) {}
+  @Override public void recordDelete(Object key) {}
 }
 
 final class TracerHolder {

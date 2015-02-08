@@ -62,9 +62,9 @@ public final class AsyncTracerTest {
   public void publishEvents(AsyncTracer tracer, boolean plainText) throws Exception {
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 100; i++) {
-        tracer.recordCreate(i);
+        tracer.recordCreate(i, i);
         tracer.recordRead(i);
-        tracer.recordUpdate(i);
+        tracer.recordUpdate(i, i);
         tracer.recordDelete(i);
       }
     });

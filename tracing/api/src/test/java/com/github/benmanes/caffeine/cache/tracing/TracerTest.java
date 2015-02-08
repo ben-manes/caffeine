@@ -34,9 +34,9 @@ public final class TracerTest {
   @Test
   public void disabledTracer() {
     Tracer tracer = Tracer.disabled();
-    tracer.recordCreate(new Object());
+    tracer.recordCreate(new Object(), 1);
     tracer.recordRead(new Object());
-    tracer.recordUpdate(new Object());
+    tracer.recordUpdate(new Object(), 1);
     tracer.recordDelete(new Object());
   }
 }

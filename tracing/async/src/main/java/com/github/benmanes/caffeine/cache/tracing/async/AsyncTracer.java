@@ -27,7 +27,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
 import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
 import com.github.benmanes.caffeine.cache.tracing.Tracer;
-import com.lmax.disruptor.EventTranslatorThreeArg;
+import com.lmax.disruptor.EventTranslatorOneArg;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.util.DaemonThreadFactory;
 
@@ -44,7 +44,7 @@ public final class AsyncTracer implements Tracer {
   public static final String TRACING_FORMAT = "caffeine.tracing.format";
   public static final String TRACING_BUFFER_SIZE = "caffeine.tracing.bufferSize";
 
-  final EventTranslatorThreeArg<CacheEvent, Integer, Action, Object> translator;
+  final EventTranslatorOneArg<CacheEvent, CacheEvent> translator;
   final Disruptor<CacheEvent> disruptor;
   final ExecutorService executor;
   final LogEventHandler handler;
@@ -68,14 +68,9 @@ public final class AsyncTracer implements Tracer {
    */
   @SuppressWarnings("unchecked")
   public AsyncTracer(LogEventHandler handler, int ringBufferSize, ExecutorService executor) {
-    this.translator = (event, seq, id, action, object) -> {
-      event.setTimestamp(System.nanoTime());
-      event.setHash(object.hashCode());
-      event.setAction(action);
-      event.setCacheId(id);
-    };
     this.handler = handler;
     this.executor = executor;
+    this.translator = (event, seq, template) -> event.copyFrom(template);
     this.disruptor = new Disruptor<>(CacheEvent::new, ringBufferSize, executor);
     this.disruptor.handleEventsWith(handler);
     this.disruptor.start();
@@ -94,28 +89,30 @@ public final class AsyncTracer implements Tracer {
   }
 
   @Override
-  public void recordCreate(Object o) {
-    publish(0, Action.CREATE, o);
+  public void recordCreate(Object key, int weight) {
+    publish(0, Action.CREATE, key, weight);
   }
 
   @Override
-  public void recordRead(Object o) {
-    publish(0, Action.READ, o);
+  public void recordRead(Object key) {
+    publish(0, Action.READ, key, 0);
   }
 
   @Override
-  public void recordUpdate(Object o) {
-    publish(0, Action.UPDATE, o);
+  public void recordUpdate(Object key, int weightDifference) {
+    publish(0, Action.UPDATE, key, weightDifference);
   }
 
   @Override
-  public void recordDelete(Object o) {
-    publish(0, Action.DELETE, o);
+  public void recordDelete(Object key) {
+    publish(0, Action.DELETE, key, 0);
   }
 
-  /** Publishes the event onto the ringbuffer for asynchronous handling. */
-  private void publish(int id, Action action, Object o) {
-    disruptor.getRingBuffer().publishEvent(translator, id, action, o);
+  /** Publishes the event onto the ring buffer for asynchronous handling. */
+  private void publish(int id, Action action, Object key, int weightDifference) {
+    CacheEvent template = new CacheEvent(id, action,
+        key.hashCode(), weightDifference, System.nanoTime());
+    disruptor.getRingBuffer().publishEvent(translator, template);
   }
 
   /** Returns the event handler, either the default or specified by a system property. */

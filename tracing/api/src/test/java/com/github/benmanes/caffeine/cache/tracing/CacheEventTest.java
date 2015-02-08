@@ -36,7 +36,7 @@ public final class CacheEventTest {
   public void text() throws IOException {
     for (Action action : Action.values()) {
       CacheEvent event = new CacheEvent(random.nextInt(),
-          action, random.nextInt(), random.nextLong());
+          action, random.nextInt(), random.nextInt(), random.nextLong());
 
       StringBuilder output = new StringBuilder();
       event.appendTextRecord(output);
@@ -49,7 +49,7 @@ public final class CacheEventTest {
   @Test
   private void construction() {
     CacheEvent first = new CacheEvent(random.nextInt(),
-        Action.READ, random.nextInt(), random.nextLong());
+        Action.READ, random.nextInt(), random.nextInt(), random.nextLong());
     CacheEvent second = new CacheEvent();
     second.setHash(first.hash());
     second.setAction(first.action());

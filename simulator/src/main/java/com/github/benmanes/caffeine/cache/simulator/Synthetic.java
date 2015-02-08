@@ -155,6 +155,6 @@ public final class Synthetic {
   /** Returns a sequence of items constructed by the generator. */
   private static Stream<CacheEvent> generate(Generator generator, int items) {
     return IntStream.range(0, items).mapToObj(ignored ->
-      new CacheEvent(0, Action.READ_OR_CREATE, generator.nextString().hashCode(), 0L));
+      new CacheEvent(0, Action.READ_OR_CREATE, generator.nextString().hashCode(), 1, 0L));
   }
 }
