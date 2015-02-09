@@ -28,6 +28,8 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
+import com.github.benmanes.caffeine.base.UnsafeAccess;
+
 /**
  * A concurrent benchmark for read buffer implementation options. A read buffer may be a lossy,
  * bounded, non-blocking, multiple-producer / single-consumer unordered queue. These buffers are
@@ -77,13 +79,15 @@ public class ReadBufferBenchmark {
 
   public enum BufferType {
     LOSSY { @Override public Buffer create() { return new LossyBuffer(); } },
+    ONE_SHOT { @Override public Buffer create() { return new OneShotBuffer(); } },
     CLQ { @Override public Buffer create() { return new QueueBuffer(); } };
 
     public abstract Buffer create();
   }
 
+  /** A bounded buffer that uses lossy writes and may race with the reader. */
   static final class LossyBuffer implements Buffer {
-    final AtomicReference<Boolean>[] buffer;
+    final RelaxedAtomic<Boolean>[] buffer;
     final AtomicInteger writeCounter;
     final AtomicInteger readCounter;
 
@@ -91,9 +95,9 @@ public class ReadBufferBenchmark {
     LossyBuffer() {
       readCounter = new AtomicInteger();
       writeCounter = new AtomicInteger();
-      buffer = new AtomicReference[READ_BUFFER_SIZE];
+      buffer = new RelaxedAtomic[READ_BUFFER_SIZE];
       for (int i = 0; i < READ_BUFFER_SIZE; i++) {
-        buffer[i] = new AtomicReference<Boolean>();
+        buffer[i] = new RelaxedAtomic<Boolean>();
       }
     }
 
@@ -109,7 +113,7 @@ public class ReadBufferBenchmark {
       int readCount = readCounter.get();
       for (int i = 0; i < READ_BUFFER_SIZE; i++) {
         int index = readCount & READ_BUFFER_INDEX_MASK;
-        Boolean value = buffer[index].get();
+        Boolean value = buffer[index].getRelaxed();
         if (value == null) {
           break;
         }
@@ -117,6 +121,47 @@ public class ReadBufferBenchmark {
         readCount++;
       }
       readCounter.set(readCount);
+    }
+  }
+
+  /** A bounded buffer that attempts to record once. */
+  static final class OneShotBuffer implements Buffer {
+    final RelaxedAtomic<Boolean>[] buffer;
+    final AtomicInteger writeCounter;
+    final AtomicInteger readCounter;
+
+    @SuppressWarnings("unchecked")
+    OneShotBuffer() {
+      readCounter = new AtomicInteger();
+      writeCounter = new AtomicInteger();
+      buffer = new RelaxedAtomic[READ_BUFFER_SIZE];
+      for (int i = 0; i < READ_BUFFER_SIZE; i++) {
+        buffer[i] = new RelaxedAtomic<Boolean>();
+      }
+    }
+
+    @Override
+    public void record() {
+      final int writeCount = writeCounter.get();
+      final int index = writeCount & READ_BUFFER_INDEX_MASK;
+      if ((buffer[index].getRelaxed() == null) && buffer[index].compareAndSet(null, Boolean.TRUE)) {
+        writeCounter.lazySet(writeCount + 1);
+      }
+    }
+
+    @Override
+    public void drain() {
+      int readCount = readCounter.get();
+      for (int i = 0; i < READ_BUFFER_SIZE; i++) {
+        int index = readCount & READ_BUFFER_INDEX_MASK;
+        Boolean value = buffer[index].getRelaxed();
+        if (value == null) {
+          break;
+        }
+        buffer[index].lazySet(null);
+        readCount++;
+      }
+      readCounter.lazySet(readCount);
     }
   }
 
@@ -131,6 +176,27 @@ public class ReadBufferBenchmark {
     @Override
     public void drain() {
       while (buffer.poll() != null) {}
+    }
+  }
+
+  /** An {@link AtomicReference} like holder that supports relaxed reads. */
+  static final class RelaxedAtomic<E> {
+    static final long VALUE_OFFSET = UnsafeAccess.objectFieldOffset(RelaxedAtomic.class, "value");
+
+    @SuppressWarnings("unused")
+    private volatile E value;
+
+    @SuppressWarnings("unchecked")
+    public E getRelaxed() {
+      return (E) UnsafeAccess.UNSAFE.getObject(this, VALUE_OFFSET);
+    }
+
+    public boolean compareAndSet(E expect, E update) {
+      return UnsafeAccess.UNSAFE.compareAndSwapObject(this, VALUE_OFFSET, expect, update);
+    }
+
+    public final void lazySet(E newValue) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, VALUE_OFFSET, newValue);
     }
   }
 }
