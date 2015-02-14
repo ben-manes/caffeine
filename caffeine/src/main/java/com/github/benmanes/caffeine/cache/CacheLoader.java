@@ -25,7 +25,8 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
- * Computes or retrieves values, based on a key, for use in populating a {@link LoadingCache}.
+ * Computes or retrieves values, based on a key, for use in populating a {@link LoadingCache} or
+ * {@link AsyncLoadingCache}.
  * <p>
  * Most implementations will only need to implement {@link #load}. Other methods may be
  * overridden as desired.
@@ -45,7 +46,7 @@ public interface CacheLoader<K, V> {
    * Computes or retrieves the value corresponding to {@code key}.
    *
    * @param key the non-null key whose value should be loaded
-   * @return the value associated with {@code key}
+   * @return the value associated with {@code key} or {@code null} if not found
    */
   @CheckForNull
   V load(@Nonnull K key);
@@ -55,9 +56,9 @@ public interface CacheLoader<K, V> {
    * {@link LoadingCache#getAll}.
    * <p>
    * If the returned map doesn't contain all requested {@code keys} then the entries it does contain
-   * will be cached, but {@code getAll} will throw an exception. If the returned map contains extra
-   * keys not present in {@code keys} then all returned entries will be cached, but only the entries
-   * for {@code keys} will be returned from {@code getAll}.
+   * will be cached {@code getAll} will return the partial results. If the returned map contains
+   * extra keys not present in {@code keys} then all returned entries will be cached, but only the
+   * entries for {@code keys} will be returned from {@code getAll}.
    * <p>
    * This method should be overriden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link LoadingCache#getAll} will defer to individual calls to
@@ -92,9 +93,9 @@ public interface CacheLoader<K, V> {
    * called by {@link AsyncLoadingCache#getAll}.
    * <p>
    * If the returned map doesn't contain all requested {@code keys} then the entries it does contain
-   * will be cached, but {@code getAll} will throw an exception. If the returned map contains extra
-   * keys not present in {@code keys} then all returned entries will be cached, but only the entries
-   * for {@code keys} will be returned from {@code getAll}.
+   * will be cached {@code getAll} will return the partial results. If the returned map contains
+   * extra keys not present in {@code keys} then all returned entries will be cached, but only the
+   * entries for {@code keys} will be returned from {@code getAll}.
    * <p>
    * This method should be overridden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link AsyncLoadingCache#getAll} will defer to individual calls
@@ -115,15 +116,17 @@ public interface CacheLoader<K, V> {
   }
 
   /**
-   * Computes or retrieves a replacement value corresponding to an already-cached {@code key}. This
-   * method is called when an existing cache entry is refreshed by
+   * Computes or retrieves a replacement value corresponding to an already-cached {@code key}. If
+   * the replacement value is not found then the mapping will be removed if {@code null} is
+   * returned. This method is called when an existing cache entry is refreshed by
    * {@link Caffeine#refreshAfterWrite}, or through a call to {@link LoadingCache#refresh}.
    * <p>
    * <b>Note:</b> <i>all exceptions thrown by this method will be logged and then swallowed</i>.
    *
    * @param key the non-null key whose value should be loaded
    * @param oldValue the non-null old value corresponding to {@code key}
-   * @return the new value associated with {@code key}, or null if none
+   * @return the new value associated with {@code key}, or {@code null} if the mapping is to be
+   *         removed
    * @throws RuntimeException or Error, in which case the mapping is unchanged
    */
   @CheckForNull
