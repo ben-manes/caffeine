@@ -31,6 +31,7 @@ import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 /**
@@ -61,12 +62,14 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void drain(BoundedLocalCache<K, V> map) {
-    map.cleanUp();
+    while (!map.writeBuffer.isEmpty()) {
+      map.cleanUp();
+    }
 
     if (!map.evicts() && !map.expiresAfterAccess()) {
       return;
     }
-
+    map.evictionLock.lock();
     for (int i = 0; i < map.readBuffers.length; i++) {
       for (;;) {
         map.drainBuffers();
@@ -81,6 +84,7 @@ public final class IsValidBoundedLocalCache<K, V>
         map.readBufferReadCount[i]++;
       }
     }
+    map.evictionLock.unlock();
   }
 
   private void checkMap(BoundedLocalCache<K, V> map, DescriptionBuilder desc) {
@@ -120,17 +124,21 @@ public final class IsValidBoundedLocalCache<K, V>
 
   private void checkLinks(BoundedLocalCache<K, V> map,
       LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
-    long weightedSize = 0;
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
-    for (Node<K, V> node : deque) {
-      Supplier<String> errorMsg = () -> String.format(
-          "Loop detected: %s, saw %s in %s", node, seen, map);
-      desc.expectThat(errorMsg, seen.add(node), is(true));
-      weightedSize += node.getWeight();
+    long weightedSize = scanLinks(map, seen, deque, desc);
+
+    if (seen.size() != map.size()) {
+      // Retry in case race with an async update requiring a clean up
+      drain(map);
+      seen.clear();
+      weightedSize = scanLinks(map, seen, deque, desc);
+
+      Supplier<String> errorMsg = () -> String.format("Size != list length; additional: ",
+          Sets.difference(seen, ImmutableSet.copyOf(map.data.values())));
+      desc.expectThat(errorMsg, map.size(), is(seen.size()));
     }
 
     final long weighted = weightedSize;
-    desc.expectThat("Size != list length", map.size(), is(seen.size()));
     if (map.evicts()) {
       Supplier<String> error = () -> String.format(
           "WeightedSize != link weights [%d vs %d] {%d vs %d}",
@@ -138,6 +146,18 @@ public final class IsValidBoundedLocalCache<K, V>
       desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
       desc.expectThat(error, map.weightedSize(), is(weightedSize));
     }
+  }
+
+  private long scanLinks(BoundedLocalCache<K, V> map, Set<Node<K, V>> seen,
+      LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
+    long weightedSize = 0;
+    for (Node<K, V> node : deque) {
+      Supplier<String> errorMsg = () -> String.format(
+          "Loop detected: %s, saw %s in %s", node, seen, map);
+      desc.expectThat(errorMsg, seen.add(node), is(true));
+      weightedSize += node.getWeight();
+    }
+    return weightedSize;
   }
 
   private void checkNode(BoundedLocalCache<K, V> map, Node<K, V> node, DescriptionBuilder desc) {

@@ -133,7 +133,7 @@ public final class AsyncLoadingCacheTest {
     ready.set(true);
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 5, TimeUnit.SECONDS);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));

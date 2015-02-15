@@ -461,9 +461,9 @@ public @interface CacheSpec {
 
   /**
    * The number of entries to populate the cache with. The keys and values are integers starting
-   * from 0, with the value being the negated key. The cache will never be populated to exceed the
-   * maximum size, if defined, thereby ensuring that no evictions occur prior to the test. Each
-   * configuration results in a new combination.
+   * from above the integer cache limit, with the value being the negated key. The cache will never
+   * be populated to exceed the maximum size, if defined, thereby ensuring that no evictions occur
+   * prior to the test. Each configuration results in a new combination.
    */
   Population[] population() default {
     Population.EMPTY,
