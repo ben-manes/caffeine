@@ -28,9 +28,8 @@ import javax.annotation.Nullable;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
- * An in-memory cache providing thread safety and atomicity guarantees. This interface provides
- * extensions to the {@link ConcurrentMap} for use with shared skeletal implementations such as
- * {@link LocalManualCache}, {@link LocalLoadingCache}, and {@link LocalAsyncLoadingCache}.
+ * An in-memory cache providing thread safety and atomicity guarantees. This interface provides an
+ * extension to {@link ConcurrentMap} for use with skeletal implementations.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

@@ -91,18 +91,18 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    * single threaded.
    *
    * Due to a lack of a strict ordering guarantee, a task can be executed out-of-order, such as a
-   * removal followed by its addition. The state of the entry is encoded within the value's weight.
+   * removal followed by its addition. The state of the entry is encoded using the key field to
+   * avoid additional memory. An entry is "alive" if it is in both the hash table and the page
+   * replacement policy. It is "retired" if it is not in the hash table and is pending removal from
+   * the page replacement policy. Finally an entry transitions to the "dead" state when it is not in
+   * the hash table nor the page replacement policy. Both the retired and dead states are
+   * represented by a sentinel key that should not be used for map lookups.
    *
-   * Alive: The entry is in both the hash-table and the page replacement policy.
-   *
-   * Retired: The entry is not in the hash-table and is pending removal from the page replacement
-   * policy. This is represented by a sentinel key that should not be used.
-   *
-   * Dead: The entry is not in the hash-table and is not in the page replacement policy. This is
-   * represented by a sentinel key that should not be used.
-   *
-   * The Least Recently Used page replacement algorithm was chosen due to its simplicity, high hit
-   * rate, and ability to be implemented with O(1) time complexity.
+   * The maximum size policy is implemented using the Least Recently Used page replacement algorithm
+   * due to its simplicity, high hit rate, and ability to be implemented with O(1) time complexity.
+   * The expiration policy is implemented with O(1) time complexity by sharing the access-order
+   * queue (with the LRU policy) for a time-to-idle setting and using a write-order queue for a
+   * time-to-live policy.
    */
 
   /** The number of CPUs */
@@ -598,22 +598,21 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   /** Updates the node's location in the page replacement policy. */
   @GuardedBy("evictionLock")
   void applyRead(Node<K, V> node) {
-    // An entry may be scheduled for reordering despite having been removed. This can occur when the
-    // entry was concurrently read while a writer was removing it. If the entry is no longer linked
-    // then it does not need to be processed.
-    if (accessOrderDeque.contains(node)) {
-      accessOrderDeque.moveToBack(node);
-    }
+    reorder(accessOrderDeque, node);
   }
 
   /** Updates the node's location in the expiration policy. */
   @GuardedBy("evictionLock")
   void applyWrite(Node<K, V> node) {
+    reorder(writeOrderDeque, node);
+  }
+
+  static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node) {
     // An entry may be scheduled for reordering despite having been removed. This can occur when the
     // entry was concurrently read while a writer was removing it. If the entry is no longer linked
     // then it does not need to be processed.
-    if (writeOrderDeque.contains(node)) {
-      writeOrderDeque.moveToBack(node);
+    if (deque.contains(node)) {
+      deque.moveToBack(node);
     }
   }
 
@@ -1061,8 +1060,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     requireNonNull(key);
     requireNonNull(mappingFunction);
 
-    // optimistic fast path due to computeIfAbsent always locking is leveraged expiration check
-
+    // An optimistic fast path due to computeIfAbsent always locking. This is leveraged to evict
+    // if the entry is present but has expired.
     long now = ticker.read();
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if ((node != null)) {
@@ -1110,7 +1109,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     requireNonNull(remappingFunction);
 
-    // optimistic fast path due to computeIfAbsent always locking
+    // An optimistic fast path due to computeIfAbsent always locking
     Object ref = nodeFactory.newLookupKey(key);
     if (!data.containsKey(ref)) {
       return null;
