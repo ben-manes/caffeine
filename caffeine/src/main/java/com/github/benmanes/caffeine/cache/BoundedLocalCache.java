@@ -25,7 +25,6 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.ref.Reference;
-import java.lang.ref.ReferenceQueue;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -40,11 +39,9 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -60,7 +57,6 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**
  * An in-memory cache implementation that supports full concurrency of retrievals, a high expected
@@ -145,49 +141,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   // The factory for creating cache entries
   final NodeFactory nodeFactory;
 
-  // How long after the last access to an entry the map will retain that entry
-  volatile long expireAfterAccessNanos;
-  @GuardedBy("evictionLock")
-  final AccessOrderDeque<Node<K, V>> accessOrderDeque;
-
-  // How long after the last write to an entry the map will retain that entry
-  volatile long expireAfterWriteNanos;
-  @GuardedBy("evictionLock")
-  final WriteOrderDeque<Node<K, V>> writeOrderDeque;
-
-  // How long after the last write an entry becomes a candidate for refresh
-  volatile long refreshNanos;
-  final @Nullable CacheLoader<? super K, V> loader;
-
-  // These fields provide support for reference-based eviction
-  final ReferenceQueue<K> keyReferenceQueue;
-  final ReferenceQueue<V> valueReferenceQueue;
-
-  // These fields provide support to bound the map by a maximum capacity
-  final Weigher<? super K, ? super V> weigher;
-  @GuardedBy("evictionLock") // must write under lock
-  final AtomicLong weightedSize;
-  @GuardedBy("evictionLock") // must write under lock
-  final AtomicLong maximumWeightedSize;
-
-  final Queue<Runnable> writeBuffer;
-  final NonReentrantLock evictionLock;
-  final AtomicReference<DrainStatus> drainStatus;
-
-  @GuardedBy("evictionLock")
-  final long[] readBufferReadCount;
-  final AtomicLong[] readBufferWriteCount;
-  final AtomicLong[] readBufferDrainAtWriteCount;
-  final AtomicReference<Node<K, V>>[][] readBuffers;
-
-  // These fields provide support for notifying a listener.
-  final RemovalListener<K, V> removalListener;
-  final Executor executor;
-
-  // These fields provide support for recording stats
-  final Ticker ticker;
-  final boolean isRecordingStats;
-  final StatsCounter statsCounter;
+  // The page replacement algorithm
+  final PageReplacement<K, V> replacement;
 
   transient Set<K> keySet;
   transient Collection<V> values;
@@ -196,73 +151,22 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   /**
    * Creates an instance based on the builder's configuration.
    */
-  @SuppressWarnings({"unchecked", "cast"})
   private BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
-    // The data store and its maximum capacity
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
-    this.loader = loader;
-
-    // The expiration support
-    refreshNanos = builder.getRefreshNanos();
-    expireAfterWriteNanos = builder.getExpireAfterWriteNanos();
-    expireAfterAccessNanos = builder.getExpireAfterAccessNanos();
-    writeOrderDeque = new WriteOrderDeque<Node<K, V>>();
-    accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
-
-    maximumWeightedSize = builder.evicts()
-        ? new AtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY))
-        : null;
-    readBufferReadCount = new long[NUMBER_OF_READ_BUFFERS];
-    readBufferWriteCount = new AtomicLong[NUMBER_OF_READ_BUFFERS];
-    readBufferDrainAtWriteCount = new AtomicLong[NUMBER_OF_READ_BUFFERS];
-    readBuffers = new AtomicReference[NUMBER_OF_READ_BUFFERS][READ_BUFFER_SIZE];
-    for (int i = 0; i < NUMBER_OF_READ_BUFFERS; i++) {
-      readBufferWriteCount[i] = new AtomicLong();
-      readBufferDrainAtWriteCount[i] = new AtomicLong();
-      readBuffers[i] = new AtomicReference[READ_BUFFER_SIZE];
-      for (int j = 0; j < READ_BUFFER_SIZE; j++) {
-        readBuffers[i][j] = new AtomicReference<Node<K, V>>();
-      }
-    }
-    writeBuffer = new ConcurrentLinkedQueue<Runnable>();
-
-    // The eviction support
-    evictionLock = new NonReentrantLock();
-    weigher = builder.getWeigher(isAsync);
-    weightedSize = new AtomicLong();
-    drainStatus = new AtomicReference<DrainStatus>(IDLE);
-
-    // The reference eviction support
-    keyReferenceQueue = new ReferenceQueue<K>();
-    valueReferenceQueue = new ReferenceQueue<V>();
-
-    // The notification queue and listener
-    removalListener = builder.getRemovalListener(isAsync);
-    executor = builder.getExecutor();
-
-    // The statistics
-    statsCounter = builder.getStatsCounterSupplier().get();
-    isRecordingStats = builder.isRecordingStats();
-    ticker = builder.getTicker();
-
+    replacement = new PageReplacement<>(builder, loader, isAsync);
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
         builder.evicts(), (isAsync && builder.evicts()) || builder.isWeighted());
   }
 
-  /** Returns whether this cache notifies when an entry is removed. */
-  boolean hasRemovalListener() {
-    return (removalListener != null);
-  }
-
   /** Asynchronously sends a removal notification to the listener. */
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
-    requireNonNull(removalListener, "Notification should be guarded with a check");
-    executor.execute(() -> {
+    requireNonNull(replacement.removalListener(), "Notification should be guarded with a check");
+    replacement.executor().execute(() -> {
       try {
-        removalListener.onRemoval(new RemovalNotification<K, V>(key, value, cause));
+        replacement.removalListener().onRemoval(new RemovalNotification<K, V>(key, value, cause));
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown by removal listener", t);
       }
@@ -299,7 +203,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   boolean evicts() {
     // TODO(ben): Use nodeFactory.maximumSize()
-    return (maximumWeightedSize != null);
+    return (replacement.maximumWeightedSize() != null);
   }
 
   /**
@@ -308,7 +212,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    * @return the maximum weighted capacity
    */
   public long capacity() {
-    return maximumWeightedSize.get();
+    return replacement.maximumWeightedSize().get();
   }
 
   /**
@@ -320,20 +224,20 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    */
   public void setCapacity(long capacity) {
     Caffeine.requireArgument(capacity >= 0);
-    evictionLock.lock();
+    replacement.evictionLock().lock();
     try {
-      this.maximumWeightedSize.lazySet(Math.min(capacity, MAXIMUM_CAPACITY));
+      replacement.maximumWeightedSize().lazySet(Math.min(capacity, MAXIMUM_CAPACITY));
       drainBuffers();
       evict();
     } finally {
-      evictionLock.unlock();
+      replacement.evictionLock().unlock();
     }
   }
 
   /** Determines whether the map has exceeded its capacity. */
   @GuardedBy("evictionLock")
   boolean hasOverflowed() {
-    return weightedSize.get() > maximumWeightedSize.get();
+    return replacement.weightedSize() > capacity();
   }
 
   /**
@@ -350,7 +254,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     // fails due to a concurrent removal of the victim, that removal may cancel out the addition
     // that triggered this eviction. The victim is eagerly unlinked before the removal task so
     // that if an eviction is still required then a new victim will be chosen for removal.
-    Node<K, V> node = accessOrderDeque.peek();
+    Node<K, V> node = replacement.getAccessOrderDeque().peek();
     while (hasOverflowed()) {
       // If weighted values are used, then the pending operations will adjust the size to reflect
       // the correct weight
@@ -372,12 +276,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     K key = node.getKey();
 
     makeDead(node);
-    accessOrderDeque.remove(node);
-    writeOrderDeque.remove(node);
+    replacement.getAccessOrderDeque().remove(node);
+    replacement.getWriteOrderDeque().remove(node);
 
     if (removed) {
-      statsCounter.recordEviction();
-      if (hasRemovalListener()) {
+      replacement.getStatsCounter().recordEviction();
+      if (replacement.hasRemovalListener()) {
         // Notify the listener only if the entry was evicted. This must be performed as the last
         // step during eviction to safe guard against the executor rejecting the notification task.
         notifyRemoval(key, node.getValue(), cause);
@@ -387,36 +291,38 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   @GuardedBy("evictionLock")
   void expire() {
-    long now = ticker.read();
+    long now = replacement.getTicker().read();
     if (expiresAfterAccess()) {
-      long expirationTime = now - expireAfterAccessNanos;
+      long expirationTime = now - replacement.getExpireAfterAccessNanos();
       for (;;) {
-        final Node<K, V> node = accessOrderDeque.peekFirst();
+        final Node<K, V> node = replacement.getAccessOrderDeque().peekFirst();
         if ((node == null) || (node.getAccessTime() > expirationTime)) {
           break;
         }
-        accessOrderDeque.pollFirst();
-        writeOrderDeque.remove(node);
+        replacement.getAccessOrderDeque().pollFirst();
+        replacement.getWriteOrderDeque().remove(node);
         evict(node, RemovalCause.EXPIRED);
       }
     }
     if (expiresAfterWrite()) {
-      long expirationTime = now - expireAfterWriteNanos;
+      long expirationTime = now - replacement.expireAfterWriteNanos();
       for (;;) {
-        final Node<K, V> node = writeOrderDeque.peekFirst();
+        final Node<K, V> node = replacement.getWriteOrderDeque().peekFirst();
         if ((node == null) || (node.getWriteTime() > expirationTime)) {
           break;
         }
-        writeOrderDeque.pollFirst();
-        accessOrderDeque.remove(node);
+        replacement.getWriteOrderDeque().pollFirst();
+        replacement.getAccessOrderDeque().remove(node);
         evict(node, RemovalCause.EXPIRED);
       }
     }
   }
 
   boolean hasExpired(Node<K, V> node, long now) {
-    return (expiresAfterAccess() && (now - node.getAccessTime() >= expireAfterAccessNanos))
-        || (expiresAfterWrite() && (now - node.getWriteTime() >= expireAfterWriteNanos));
+    return (expiresAfterAccess()
+            && (now - node.getAccessTime() >= replacement.getExpireAfterAccessNanos()))
+        || (expiresAfterWrite()
+            && (now - node.getWriteTime() >= replacement.expireAfterWriteNanos()));
   }
 
   /**
@@ -427,9 +333,9 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    */
   void afterRead(Node<K, V> node, boolean recordHit) {
     if (recordHit) {
-      statsCounter.recordHits(1);
+      replacement.getStatsCounter().recordHits(1);
     }
-    long now = ticker.read();
+    long now = replacement.getTicker().read();
     node.setAccessTime(now);
     if (evicts() || expiresAfterAccess()) {
       final int bufferIndex = readBufferIndex();
@@ -437,14 +343,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       drainOnReadIfNeeded(bufferIndex, writeCount);
     }
 
-    if (refreshes() && ((now - node.getWriteTime()) > refreshNanos)) {
+    if (refreshes() && ((now - node.getWriteTime()) > replacement.refreshAfterWriteNanos())) {
       // FIXME: make atomic and avoid race
       node.setWriteTime(now);
-      executor.execute(() -> {
+      replacement.executor().execute(() -> {
         K key = node.getKey();
         if (key != null) {
           try {
-            computeIfPresent(key, (k, oldValue) -> loader.reload(key, oldValue));
+            computeIfPresent(key, (k, oldValue) -> replacement.getLoader().reload(key, oldValue));
           } catch (Throwable t) {
             logger.log(Level.WARNING, "Exception thrown during reload", t);
           }
@@ -472,12 +378,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     // The location in the buffer is chosen in a racy fashion as the increment is not atomic with
     // the insertion. This means that concurrent reads can overlap and overwrite one another,
     // resulting in a lossy buffer.
-    final AtomicLong counter = readBufferWriteCount[bufferIndex];
+    final AtomicLong counter = replacement.readBufferWriteCount()[bufferIndex];
     final long writeCount = counter.get();
     counter.lazySet(writeCount + 1);
 
     final int index = (int) (writeCount & READ_BUFFER_INDEX_MASK);
-    readBuffers[bufferIndex][index].lazySet(node);
+    replacement.readBuffers()[bufferIndex][index].lazySet(node);
 
     return writeCount;
   }
@@ -489,9 +395,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    * @param writeCount the number of writes on the chosen read buffer
    */
   void drainOnReadIfNeeded(int bufferIndex, long writeCount) {
-    final long pending = (writeCount - readBufferDrainAtWriteCount[bufferIndex].get());
+    final long pending =
+        (writeCount - replacement.readBufferDrainAtWriteCount()[bufferIndex].get());
     final boolean delayable = (pending < READ_BUFFER_THRESHOLD);
-    final DrainStatus status = drainStatus.get();
+    final DrainStatus status = replacement.drainStatus();
     if (status.shouldDrainBuffers(delayable)) {
       tryToDrainBuffers();
     }
@@ -504,13 +411,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    */
   void afterWrite(Node<K, V> node, Runnable task) {
     if (node != null) {
-      final long now = ticker.read();
+      final long now = replacement.getTicker().read();
       node.setAccessTime(now);
       node.setWriteTime(now);
     }
 
-    writeBuffer.add(task);
-    drainStatus.lazySet(REQUIRED);
+    replacement.writeBuffer().add(task);
+    replacement.lazySetDrainStatus(REQUIRED);
     tryToDrainBuffers();
   }
 
@@ -519,13 +426,13 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    * threshold, to the page replacement policy.
    */
   void tryToDrainBuffers() {
-    if (evictionLock.tryLock()) {
+    if (replacement.evictionLock().tryLock()) {
       try {
-        drainStatus.lazySet(PROCESSING);
+        replacement.lazySetDrainStatus(PROCESSING);
         drainBuffers();
       } finally {
-        drainStatus.compareAndSet(PROCESSING, IDLE);
-        evictionLock.unlock();
+        replacement.compareAndSetDrainStatus(PROCESSING, IDLE);
+        replacement.evictionLock().unlock();
       }
     }
   }
@@ -543,7 +450,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   void drainKeyReferences() {
     Reference<? extends K> keyRef;
-    while ((keyRef = keyReferenceQueue.poll()) != null) {
+    while ((keyRef = replacement.getKeyReferenceQueue().poll()) != null) {
       Node<K, V> node = data.get(keyRef);
       if (node != null) {
         evict(node, RemovalCause.COLLECTED);
@@ -553,7 +460,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   void drainValueReferences() {
     Reference<? extends V> valueRef;
-    while ((valueRef = valueReferenceQueue.poll()) != null) {
+    while ((valueRef = replacement.getValueReferenceQueue().poll()) != null) {
       @SuppressWarnings("unchecked")
       InternalReference<V> ref = (InternalReference<V>) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
@@ -579,10 +486,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   /** Drains the read buffer up to an amortized threshold. */
   @GuardedBy("evictionLock")
   void drainReadBuffer(int bufferIndex) {
-    final long writeCount = readBufferWriteCount[bufferIndex].get();
+    final long writeCount = replacement.readBufferWriteCount()[bufferIndex].get();
     for (int i = 0; i < READ_BUFFER_DRAIN_THRESHOLD; i++) {
-      final int index = (int) (readBufferReadCount[bufferIndex] & READ_BUFFER_INDEX_MASK);
-      final AtomicReference<Node<K, V>> slot = readBuffers[bufferIndex][index];
+      final int index =
+          (int) (replacement.readBufferReadCount()[bufferIndex] & READ_BUFFER_INDEX_MASK);
+      final AtomicReference<Node<K, V>> slot = replacement.readBuffers()[bufferIndex][index];
       final Node<K, V> node = slot.get();
       if (node == null) {
         break;
@@ -590,21 +498,21 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
       slot.lazySet(null);
       applyRead(node);
-      readBufferReadCount[bufferIndex]++;
+      replacement.readBufferReadCount()[bufferIndex]++;
     }
-    readBufferDrainAtWriteCount[bufferIndex].lazySet(writeCount);
+    replacement.readBufferDrainAtWriteCount()[bufferIndex].lazySet(writeCount);
   }
 
   /** Updates the node's location in the page replacement policy. */
   @GuardedBy("evictionLock")
   void applyRead(Node<K, V> node) {
-    reorder(accessOrderDeque, node);
+    reorder(replacement.getAccessOrderDeque(), node);
   }
 
   /** Updates the node's location in the expiration policy. */
   @GuardedBy("evictionLock")
   void applyWrite(Node<K, V> node) {
-    reorder(writeOrderDeque, node);
+    reorder(replacement.getWriteOrderDeque(), node);
   }
 
   static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node) {
@@ -620,7 +528,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   @GuardedBy("evictionLock")
   void drainWriteBuffer() {
     for (int i = 0; i < WRITE_BUFFER_DRAIN_THRESHOLD; i++) {
-      final Runnable task = writeBuffer.poll();
+      final Runnable task = replacement.writeBuffer().poll();
       if (task == null) {
         break;
       }
@@ -640,7 +548,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       if (node.isDead()) {
         return;
       }
-      weightedSize.lazySet(weightedSize.get() - node.getWeight());
+      replacement.lazySetWeightedSize(replacement.weightedSize() - node.getWeight());
       node.die();
     }
   }
@@ -658,15 +566,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     @Override
     @GuardedBy("evictionLock")
     public void run() {
-      weightedSize.lazySet(weightedSize.get() + weight);
+      replacement.lazySetWeightedSize(replacement.weightedSize() + weight);
 
       // ignore out-of-order write operations
       if (node.isAlive()) {
         if (expiresAfterWrite()) {
-          writeOrderDeque.add(node);
+          replacement.getWriteOrderDeque().add(node);
         }
         if (evicts() || expiresAfterAccess()) {
-          accessOrderDeque.add(node);
+          replacement.getAccessOrderDeque().add(node);
         }
         evict();
       }
@@ -686,10 +594,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     public void run() {
       // add may not have been processed yet
       if (expiresAfterWrite()) {
-        writeOrderDeque.remove(node);
+        replacement.getWriteOrderDeque().remove(node);
       }
       if (evicts() || expiresAfterAccess()) {
-        accessOrderDeque.remove(node);
+        replacement.getAccessOrderDeque().remove(node);
       }
       makeDead(node);
     }
@@ -708,7 +616,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     @Override
     @GuardedBy("evictionLock")
     public void run() {
-      weightedSize.lazySet(weightedSize.get() + weightDifference);
+      replacement.lazySetWeightedSize(replacement.weightedSize() + weightDifference);
       applyWrite(node);
       applyRead(node);
       evict();
@@ -744,24 +652,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
    * @return the combined weight of the values in this map
    */
   public long weightedSize() {
-    return Math.max(0, weightedSize.get());
+    return Math.max(0, replacement.weightedSize());
   }
 
   @Override
   public void clear() {
-    evictionLock.lock();
+    replacement.evictionLock().lock();
     try {
       // Apply all pending writes
       Runnable task;
-      while ((task = writeBuffer.poll()) != null) {
+      while ((task = replacement.writeBuffer().poll()) != null) {
         task.run();
       }
 
       // Discard all entries
       if (evicts() || expiresAfterAccess()) {
         Node<K, V> node;
-        while ((node = accessOrderDeque.poll()) != null) {
-          if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
+        while ((node = replacement.getAccessOrderDeque().poll()) != null) {
+          if (data.remove(node.getKeyReference(), node) && replacement.hasRemovalListener()) {
             K key = node.getKey();
             V value = node.getValue();
             if ((key == null) || (value == null)) {
@@ -774,7 +682,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         }
 
         // Discard all pending reads
-        for (AtomicReference<Node<K, V>>[] buffer : readBuffers) {
+        for (AtomicReference<Node<K, V>>[] buffer : replacement.readBuffers()) {
           for (AtomicReference<Node<K, V>> slot : buffer) {
             slot.lazySet(null);
           }
@@ -783,8 +691,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
       if (expiresAfterWrite()) {
         Node<K, V> node;
-        while ((node = writeOrderDeque.poll()) != null) {
-          if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
+        while ((node = replacement.getWriteOrderDeque().poll()) != null) {
+          if (data.remove(node.getKeyReference(), node) && replacement.hasRemovalListener()) {
             K key = node.getKey();
             V value = node.getValue();
             if ((key == null) || (value == null)) {
@@ -799,7 +707,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
       for (Entry<Object, Node<K, V>> entry : data.entrySet()) {
         Node<K, V> node = entry.getValue();
-        if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
+        if (data.remove(node.getKeyReference(), node) && replacement.hasRemovalListener()) {
           K key = node.getKey();
           V value = node.getValue();
           if ((key == null) || (value == null)) {
@@ -811,21 +719,21 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         makeDead(node);
       }
     } finally {
-      evictionLock.unlock();
+      replacement.evictionLock().unlock();
     }
   }
 
   @Override
   public boolean containsKey(Object key) {
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
-    return (node != null) && (!hasExpired(node, ticker.read()));
+    return (node != null) && (!hasExpired(node, replacement.getTicker().read()));
   }
 
   @Override
   public boolean containsValue(Object value) {
     requireNonNull(value);
 
-    long now = ticker.read();
+    long now = replacement.getTicker().read();
     for (Node<K, V> node : data.values()) {
       if (node.containsValue(value) && !hasExpired(node, now)) {
         return true;
@@ -844,12 +752,12 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if (node == null) {
       if (recordStats) {
-        statsCounter.recordMisses(1);
+        replacement.getStatsCounter().recordMisses(1);
       }
       return null;
-    } else if (hasExpired(node, ticker.read())) {
+    } else if (hasExpired(node, replacement.getTicker().read())) {
       if (recordStats) {
-        statsCounter.recordMisses(1);
+        replacement.getStatsCounter().recordMisses(1);
       }
       tryToDrainBuffers();
       return null;
@@ -861,7 +769,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
     int misses = 0;
-    long now = ticker.read();
+    long now = replacement.getTicker().read();
     Map<K, V> result = new LinkedHashMap<>();
     for (Object key : keys) {
       final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
@@ -877,7 +785,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       // TODO(ben): batch reads to call tryLock once
       afterRead(node, true);
     }
-    statsCounter.recordMisses(misses);
+    replacement.getStatsCounter().recordMisses(misses);
     return Collections.unmodifiableMap(result);
   }
 
@@ -904,10 +812,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     requireNonNull(key);
     requireNonNull(value);
 
-    final long now = ticker.read();
-    final int weight = weigher.weigh(key, value);
-    final Node<K, V> node = nodeFactory.newNode(
-        key, keyReferenceQueue, value, valueReferenceQueue, weight, now);
+    final long now = replacement.getTicker().read();
+    final int weight = replacement.weigher().weigh(key, value);
+    final Node<K, V> node = nodeFactory.newNode(key, replacement.getKeyReferenceQueue(),
+        value, replacement.getValueReferenceQueue(), weight, now);
 
     for (;;) {
       final Node<K, V> prior = data.putIfAbsent(node.getKeyReference(), node);
@@ -926,7 +834,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         }
         oldValue = prior.getValue();
         oldWeight = prior.getWeight();
-        prior.setValue(value, valueReferenceQueue);
+        prior.setValue(value, replacement.getValueReferenceQueue());
         prior.setWeight(weight);
       }
 
@@ -936,7 +844,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       } else {
         afterWrite(prior, new UpdateTask(prior, weightedDifference));
       }
-      if (hasRemovalListener() && (value != oldValue)) {
+      if (replacement.hasRemovalListener() && (value != oldValue)) {
         notifyRemoval(key, value, RemovalCause.REPLACED);
       }
       return oldValue;
@@ -953,7 +861,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     V oldValue = node.makeRetired();
     if (oldValue != null) {
       afterWrite(node, new RemovalTask(node));
-      if (hasRemovalListener()) {
+      if (replacement.hasRemovalListener()) {
         @SuppressWarnings("unchecked")
         K castKey = (K) key;
         notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);
@@ -978,7 +886,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         return false;
       }
     }
-    if (data.remove(keyRef, node) && hasRemovalListener()) {
+    if (data.remove(keyRef, node) && replacement.hasRemovalListener()) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
       notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);
@@ -992,7 +900,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     requireNonNull(key);
     requireNonNull(value);
 
-    final int weight = weigher.weigh(key, value);
+    final int weight = replacement.weigher().weigh(key, value);
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if (node == null) {
       return null;
@@ -1005,17 +913,17 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       }
       oldWeight = node.getWeight();
       oldValue = node.getValue();
-      node.setValue(value, valueReferenceQueue);
+      node.setValue(value, replacement.getValueReferenceQueue());
       node.setWeight(weight);
     }
     final int weightedDifference = (weight - oldWeight);
     if (weightedDifference == 0) {
-      node.setWriteTime(ticker.read());
+      node.setWriteTime(replacement.getTicker().read());
       afterRead(node, false);
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
-    if (hasRemovalListener() && (value != oldValue)) {
+    if (replacement.hasRemovalListener() && (value != oldValue)) {
       notifyRemoval(key, value, RemovalCause.REPLACED);
     }
     return oldValue;
@@ -1027,7 +935,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     requireNonNull(oldValue);
     requireNonNull(newValue);
 
-    final int weight = weigher.weigh(key, newValue);
+    final int weight = replacement.weigher().weigh(key, newValue);
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if (node == null) {
       return false;
@@ -1038,17 +946,17 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         return false;
       }
       oldWeight = node.getWeight();
-      node.setValue(newValue, valueReferenceQueue);
+      node.setValue(newValue, replacement.getValueReferenceQueue());
       node.setWeight(weight);
     }
     final int weightedDifference = (weight - oldWeight);
     if (weightedDifference == 0) {
-      node.setWriteTime(ticker.read());
+      node.setWriteTime(replacement.getTicker().read());
       afterRead(node, false);
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
-    if (hasRemovalListener() && (oldValue != newValue)) {
+    if (replacement.hasRemovalListener() && (oldValue != newValue)) {
       notifyRemoval(key, oldValue, RemovalCause.REPLACED);
     }
     return true;
@@ -1062,16 +970,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     // An optimistic fast path due to computeIfAbsent always locking. This is leveraged to evict
     // if the entry is present but has expired.
-    long now = ticker.read();
+    long now = replacement.getTicker().read();
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if ((node != null)) {
       if (hasExpired(node, now)) {
         if (data.remove(node.getKeyReference(), node)) {
           afterWrite(node, new RemovalTask(node));
-          if (hasRemovalListener()) {
+          if (replacement.hasRemovalListener()) {
             notifyRemoval(key, node.getValue(), RemovalCause.EXPIRED);
           }
-          statsCounter.recordEviction();
+          replacement.getStatsCounter().recordEviction();
         }
       } else {
         afterRead(node, true);
@@ -1082,15 +990,15 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     int[] weight = new int[1];
     @SuppressWarnings("unchecked")
     V[] value = (V[]) new Object[1];
-    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue);
+    Object keyRef = nodeFactory.newReferenceKey(key, replacement.getKeyReferenceQueue());
     node = data.computeIfAbsent(keyRef, k -> {
       value[0] = statsAware(mappingFunction, isAsync).apply(key);
       if (value[0] == null) {
         return null;
       }
-      weight[0] = weigher.weigh(key, value[0]);
-      return nodeFactory.newNode(key, keyReferenceQueue,
-          value[0], valueReferenceQueue, weight[0], now);
+      weight[0] = replacement.weigher().weigh(key, value[0]);
+      return nodeFactory.newNode(key, replacement.getKeyReferenceQueue(),
+          value[0], replacement.getValueReferenceQueue(), weight[0], now);
     });
     if (node == null) {
       return null;
@@ -1125,21 +1033,21 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         if (newValue[0] == null) {
           prior.makeRetired();
           task[0] = new RemovalTask(prior);
-          if (hasRemovalListener()) {
+          if (replacement.hasRemovalListener()) {
             notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
           }
           return null;
         }
-        prior.setValue(newValue[0], valueReferenceQueue);
+        prior.setValue(newValue[0], replacement.getValueReferenceQueue());
         int oldWeight = prior.getWeight();
-        int newWeight = weigher.weigh(key, newValue[0]);
+        int newWeight = replacement.weigher().weigh(key, newValue[0]);
         prior.setWeight(newWeight);
 
         final int weightedDifference = newWeight - oldWeight;
         if (weightedDifference != 0) {
           task[0] = new UpdateTask(prior, weightedDifference);
         }
-        if (hasRemovalListener() && (newValue[0] != oldValue)) {
+        if (replacement.hasRemovalListener() && (newValue[0] != oldValue)) {
           notifyRemoval(key, oldValue, RemovalCause.REPLACED);
         }
         return prior;
@@ -1161,7 +1069,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     @SuppressWarnings("unchecked")
     V[] newValue = (V[]) new Object[1];
-    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue);
+    Object keyRef = nodeFactory.newReferenceKey(key, replacement.getKeyReferenceQueue());
     Runnable[] task = new Runnable[2];
     Node<K, V> node = data.compute(keyRef, (k, prior) -> {
       if (prior == null) {
@@ -1169,10 +1077,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         if (newValue[0] == null) {
           return null;
         }
-        final long now = ticker.read();
-        final int weight = weigher.weigh(key, newValue[0]);
+        final long now = replacement.getTicker().read();
+        final int weight = replacement.weigher().weigh(key, newValue[0]);
         final Node<K, V> newNode = nodeFactory.newNode(
-            keyRef, newValue[0], valueReferenceQueue, weight, now);
+            keyRef, newValue[0], replacement.getValueReferenceQueue(), weight, now);
         task[0] = new AddTask(newNode, weight);
         return newNode;
       }
@@ -1184,7 +1092,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
           // conditionally removed won, but we got the entry lock first
           // so help out and pretend like we are inserting a fresh entry
           task[1] = new RemovalTask(prior);
-          if (hasRemovalListener()) {
+          if (replacement.hasRemovalListener()) {
             V value = prior.getValue();
             if (value == null) {
               notifyRemoval(key, value, RemovalCause.COLLECTED);
@@ -1196,28 +1104,28 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         newValue[0] = statsAware(remappingFunction, recordMiss, isAsync).apply(key, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
-          if (hasRemovalListener()) {
+          if (replacement.hasRemovalListener()) {
             notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
           }
           return null;
         }
         final int oldWeight = prior.getWeight();
-        final int newWeight = weigher.weigh(key, newValue[0]);
+        final int newWeight = replacement.weigher().weigh(key, newValue[0]);
         if (task[1] == null) {
           prior.setWeight(newWeight);
-          prior.setValue(newValue[0], valueReferenceQueue);
+          prior.setValue(newValue[0], replacement.getValueReferenceQueue());
           final int weightedDifference = newWeight - oldWeight;
           if (weightedDifference != 0) {
             task[0] = new UpdateTask(prior, weightedDifference);
           }
-          if (hasRemovalListener() && (newValue[0] != oldValue)) {
+          if (replacement.hasRemovalListener() && (newValue[0] != oldValue)) {
             notifyRemoval(key, oldValue, RemovalCause.REPLACED);
           }
           return prior;
         } else {
-          final long now = ticker.read();
+          final long now = replacement.getTicker().read();
           Node<K, V> newNode = nodeFactory.newNode(
-              keyRef, newValue[0], valueReferenceQueue, newWeight, now);
+              keyRef, newValue[0], replacement.getValueReferenceQueue(), newWeight, now);
           task[0] = new AddTask(newNode, newWeight);
           return newNode;
         }
@@ -1244,41 +1152,41 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   @Override
   public void cleanUp() {
-    evictionLock.lock();
+    replacement.evictionLock().lock();
     try {
       drainBuffers();
     } finally {
-      evictionLock.unlock();
+      replacement.evictionLock().unlock();
     }
   }
 
   void asyncCleanup() {
-    executor.execute(this::cleanUp);
+    replacement.executor().execute(this::cleanUp);
   }
 
   @Override
   public RemovalListener<K, V> removalListener() {
-    return removalListener;
+    return replacement.removalListener();
   }
 
   @Override
   public StatsCounter statsCounter() {
-    return statsCounter;
+    return replacement.getStatsCounter();
   }
 
   @Override
   public boolean isRecordingStats() {
-    return isRecordingStats;
+    return replacement.isRecordingStats();
   }
 
   @Override
   public Ticker ticker() {
-    return ticker;
+    return replacement.getTicker();
   }
 
   @Override
   public Executor executor() {
-    return executor;
+    return replacement.executor();
   }
 
   @Override
@@ -1302,11 +1210,11 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   Map<K, V> orderedMap(LinkedDeque<Node<K, V>> deque, Function<V, V> transformer,
       boolean ascending, int limit) {
     Caffeine.requireArgument(limit >= 0);
-    evictionLock.lock();
+    replacement.evictionLock().lock();
     try {
       drainBuffers();
 
-      final int initialCapacity = (weigher == Weigher.singleton())
+      final int initialCapacity = (replacement.weigher() == Weigher.singleton())
           ? Math.min(limit, (int) weightedSize())
           : 16;
       final Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
@@ -1323,7 +1231,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       }
       return unmodifiableMap(map);
     } finally {
-      evictionLock.unlock();
+      replacement.evictionLock().unlock();
     }
   }
 
@@ -1530,7 +1438,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   /** An adapter to safely externalize the entry iterator. */
   final class EntryIterator implements Iterator<Entry<K, V>> {
     final Iterator<Node<K, V>> iterator = data.values().iterator();
-    final long now = ticker.read();
+    final long now = replacement.getTicker().read();
 
     K key;
     V value;
@@ -1581,16 +1489,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     proxy.weakKeys = cache.nodeFactory.weakKeys();
     proxy.weakValues = cache.nodeFactory.weakValues();
     proxy.softValues = cache.nodeFactory.softValues();
-    proxy.expireAfterAccessNanos = cache.expireAfterAccessNanos;
-    proxy.expireAfterWriteNanos = cache.expireAfterWriteNanos;
-    proxy.isRecordingStats = cache.isRecordingStats;
-    proxy.removalListener = cache.removalListener;
-    proxy.ticker = cache.ticker;
+    proxy.expireAfterAccessNanos = cache.replacement.getExpireAfterAccessNanos();
+    proxy.expireAfterWriteNanos = cache.replacement.expireAfterWriteNanos();
+    proxy.isRecordingStats = cache.replacement.isRecordingStats();
+    proxy.removalListener = cache.replacement.removalListener();
+    proxy.ticker = cache.replacement.getTicker();
     if (cache.evicts()) {
-      if (cache.weigher == Weigher.singleton()) {
+      if (cache.replacement.weigher() == Weigher.singleton()) {
         proxy.maximumSize = cache.capacity();
       } else {
-        proxy.weigher = cache.weigher;
+        proxy.weigher = cache.replacement.weigher();
         proxy.maximumWeight = cache.capacity();
       }
     }
@@ -1698,10 +1606,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         cache.setCapacity(maximumSize);
       }
       @Override public Map<K, V> coldest(int limit) {
-        return cache.orderedMap(cache.accessOrderDeque, transformer, true, limit);
+        return cache.orderedMap(cache.replacement.getAccessOrderDeque(), transformer, true, limit);
       }
       @Override public Map<K, V> hottest(int limit) {
-        return cache.orderedMap(cache.accessOrderDeque, transformer, false, limit);
+        return cache.orderedMap(cache.replacement.getAccessOrderDeque(), transformer, false, limit);
       }
     }
 
@@ -1712,24 +1620,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         if (node == null) {
           return OptionalLong.empty();
         }
-        long age = cache.ticker.read() - node.getAccessTime();
-        return (age > cache.expireAfterAccessNanos)
+        long age = cache.replacement.getTicker().read() - node.getAccessTime();
+        return (age > cache.replacement.getExpireAfterAccessNanos())
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
-        return unit.convert(cache.expireAfterAccessNanos, TimeUnit.NANOSECONDS);
+        return unit.convert(cache.replacement.getExpireAfterAccessNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
-        cache.expireAfterAccessNanos = unit.toNanos(duration);
+        cache.replacement.setExpireAfterAccessNanos(unit.toNanos(duration));
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
-        return cache.orderedMap(cache.accessOrderDeque, transformer, true, limit);
+        return cache.orderedMap(cache.replacement.getAccessOrderDeque(), transformer, true, limit);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return cache.orderedMap(cache.accessOrderDeque, transformer, false, limit);
+        return cache.orderedMap(cache.replacement.getAccessOrderDeque(), transformer, false, limit);
       }
     }
 
@@ -1740,24 +1648,24 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         if (node == null) {
           return OptionalLong.empty();
         }
-        long age = cache.ticker.read() - node.getWriteTime();
-        return (age > cache.expireAfterWriteNanos)
+        long age = cache.replacement.getTicker().read() - node.getWriteTime();
+        return (age > cache.replacement.expireAfterWriteNanos())
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
-        return unit.convert(cache.expireAfterWriteNanos, TimeUnit.NANOSECONDS);
+        return unit.convert(cache.replacement.expireAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
-        cache.expireAfterWriteNanos = unit.toNanos(duration);
+        cache.replacement.setExpireAfterWriteNanos(unit.toNanos(duration));
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
-        return cache.orderedMap(cache.writeOrderDeque, transformer, true, limit);
+        return cache.orderedMap(cache.replacement.getWriteOrderDeque(), transformer, true, limit);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return cache.orderedMap(cache.writeOrderDeque, transformer, false, limit);
+        return cache.orderedMap(cache.replacement.getWriteOrderDeque(), transformer, false, limit);
       }
     }
 
@@ -1768,17 +1676,17 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         if (node == null) {
           return OptionalLong.empty();
         }
-        long age = cache.ticker.read() - node.getWriteTime();
-        return (age > cache.refreshNanos)
+        long age = cache.replacement.getTicker().read() - node.getWriteTime();
+        return (age > cache.replacement.refreshAfterWriteNanos())
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
-        return unit.convert(cache.refreshNanos, TimeUnit.NANOSECONDS);
+        return unit.convert(cache.replacement.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
-        cache.refreshNanos = unit.toNanos(duration);
+        cache.replacement.setRefreshAfterWriteNanos(unit.toNanos(duration));
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
@@ -1794,7 +1702,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
       private Map<K, V> sortedByWriteTime(boolean ascending, int limit) {
         Caffeine.requireArgument(limit >= 0);
-        final int initialCapacity = (cache.weigher == Weigher.singleton())
+        final int initialCapacity = (cache.replacement.weigher() == Weigher.singleton())
             ? Math.min(limit, (int) cache.weightedSize())
             : 16;
         final Map<K, V> map = new LinkedHashMap<>(initialCapacity);
@@ -1831,7 +1739,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     @Override
     public CacheLoader<? super K, V> loader() {
-      return cache().loader;
+      return cache().replacement.getLoader();
     }
 
     @Override
@@ -1847,8 +1755,8 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     Object writeReplace() {
       @SuppressWarnings("unchecked")
       SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
-      proxy.refreshAfterWriteNanos = cache.refreshNanos;
-      proxy.loader = cache.loader;
+      proxy.refreshAfterWriteNanos = cache.replacement.refreshAfterWriteNanos();
+      proxy.loader = cache.replacement.getLoader();
       return proxy;
     }
   }
@@ -1889,7 +1797,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     Object writeReplace() {
       SerializationProxy<K, V> proxy = makeSerializationProxy(cache);
-      proxy.refreshAfterWriteNanos = cache.refreshNanos;
+      proxy.refreshAfterWriteNanos = cache.replacement.refreshAfterWriteNanos();
       proxy.loader = loader;
       proxy.async = true;
       return proxy;

@@ -83,7 +83,7 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> map = asBoundedLocalCache(cache);
 
     cache.put(1, 1);
-    map.weightedSize.set(BoundedLocalCache.MAXIMUM_CAPACITY);
+    map.replacement.lazySetWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
     cache.put(2, 2);
 
     assertThat(map.size(), is(1));
@@ -107,7 +107,7 @@ public final class BoundedLocalCacheTest {
     Entry<Integer, Integer> newEntry = Iterables.get(context.absent().entrySet(), 1);
 
     localCache.put(oldEntry.getKey(), oldEntry.getValue());
-    localCache.evictionLock.lock();
+    localCache.replacement.evictionLock().lock();
     try {
       Object keyRef = localCache.nodeFactory.newLookupKey(oldEntry.getKey());
       Node<Integer, Integer> node = localCache.data.get(keyRef);
@@ -124,7 +124,7 @@ public final class BoundedLocalCacheTest {
       assertThat(localCache.containsKey(newEntry.getKey()), is(true));
       assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
     } finally {
-      localCache.evictionLock.unlock();
+      localCache.replacement.evictionLock().unlock();
     }
   }
 
@@ -184,7 +184,7 @@ public final class BoundedLocalCacheTest {
       Integer... expect) {
     localCache.drainBuffers();
     List<Integer> evictionList = Lists.newArrayList();
-    localCache.accessOrderDeque.forEach(
+    localCache.replacement.getAccessOrderDeque().forEach(
         node -> evictionList.add(node.getKey()));
     assertThat(localCache.size(), is(equalTo(expect.length)));
     assertThat(localCache.keySet(), containsInAnyOrder(expect));
@@ -196,7 +196,7 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onGet(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
+    Node<Integer, Integer> first = localCache.replacement.getAccessOrderDeque().peek();
     updateRecency(localCache, () -> localCache.get(first.getKey()));
   }
 
@@ -206,15 +206,15 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onGetQuietly(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     int index = BoundedLocalCache.readBufferIndex();
-    AtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
+    AtomicLong drainCounter = localCache.replacement.readBufferDrainAtWriteCount()[index];
 
-    Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
-    Node<Integer, Integer> last = localCache.accessOrderDeque.peekLast();
+    Node<Integer, Integer> first = localCache.replacement.getAccessOrderDeque().peek();
+    Node<Integer, Integer> last = localCache.replacement.getAccessOrderDeque().peekLast();
     long drained = drainCounter.get();
     localCache.drainBuffers();
 
-    assertThat(localCache.accessOrderDeque.peekFirst(), is(first));
-    assertThat(localCache.accessOrderDeque.peekLast(), is(last));
+    assertThat(localCache.replacement.getAccessOrderDeque().peekFirst(), is(first));
+    assertThat(localCache.replacement.getAccessOrderDeque().peekLast(), is(last));
     assertThat(drainCounter.get(), is(drained));
   }
 
@@ -223,7 +223,7 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
+    Node<Integer, Integer> first = localCache.replacement.getAccessOrderDeque().peek();
     updateRecency(localCache, () -> localCache.putIfAbsent(first.getKey(), first.getKey()));
   }
 
@@ -232,7 +232,7 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onPut(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
+    Node<Integer, Integer> first = localCache.replacement.getAccessOrderDeque().peek();
     updateRecency(localCache, () -> localCache.put(first.getKey(), first.getKey()));
   }
 
@@ -241,7 +241,7 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onReplace(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
+    Node<Integer, Integer> first = localCache.replacement.getAccessOrderDeque().peek();
     updateRecency(localCache, () -> localCache.replace(first.getKey(), first.getKey()));
   }
 
@@ -251,7 +251,7 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onReplaceConditionally(
       Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque.peek();
+    Node<Integer, Integer> first = localCache.replacement.getAccessOrderDeque().peek();
     Integer key = first.getKey();
     Integer value = context.original().get(key);
 
@@ -259,13 +259,13 @@ public final class BoundedLocalCacheTest {
   }
 
   private void updateRecency(BoundedLocalCache<Integer, Integer> cache, Runnable operation) {
-    Node<Integer, Integer> first = cache.accessOrderDeque.peek();
+    Node<Integer, Integer> first = cache.replacement.getAccessOrderDeque().peek();
 
     operation.run();
     cache.drainBuffers();
 
-    assertThat(cache.accessOrderDeque.peekFirst(), is(not(first)));
-    assertThat(cache.accessOrderDeque.peekLast(), is(first));
+    assertThat(cache.replacement.getAccessOrderDeque().peekFirst(), is(not(first)));
+    assertThat(cache.replacement.getAccessOrderDeque().peekLast(), is(first));
   }
 
   @Test(dataProvider = "caches")
@@ -276,8 +276,9 @@ public final class BoundedLocalCacheTest {
     Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
     int index = BoundedLocalCache.readBufferIndex();
-    AtomicLong drainCounter = localCache.readBufferDrainAtWriteCount[index];
-    localCache.readBufferWriteCount[index].set(BoundedLocalCache.READ_BUFFER_THRESHOLD - 1);
+    AtomicLong drainCounter = localCache.replacement.readBufferDrainAtWriteCount()[index];
+    localCache.replacement.readBufferWriteCount()[index].set(
+        BoundedLocalCache.READ_BUFFER_THRESHOLD - 1);
 
     localCache.afterRead(dummy, true);
     assertThat(drainCounter.get(), is(0L));
@@ -297,7 +298,7 @@ public final class BoundedLocalCacheTest {
     localCache.afterWrite(dummy, () -> ran[0] = true);
     assertThat(ran[0], is(true));
 
-    assertThat(localCache.writeBuffer, hasSize(0));
+    assertThat(localCache.replacement.writeBuffer(), hasSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -307,8 +308,8 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
 
     int index = BoundedLocalCache.readBufferIndex();
-    AtomicReference<Node<Integer, Integer>>[] buffer = localCache.readBuffers[index];
-    AtomicLong writeCounter = localCache.readBufferWriteCount[index];
+    AtomicReference<Node<Integer, Integer>>[] buffer = localCache.replacement.readBuffers()[index];
+    AtomicLong writeCounter = localCache.replacement.readBufferWriteCount()[index];
 
     for (int i = 0; i < BoundedLocalCache.READ_BUFFER_THRESHOLD; i++) {
       localCache.get(context.firstKey());
@@ -324,9 +325,9 @@ public final class BoundedLocalCacheTest {
     assertThat((int) writeCounter.get(), is(equalTo(pending)));
 
     localCache.get(context.firstKey());
-    assertThat(localCache.readBufferReadCount[index], is(equalTo(writeCounter.get())));
-    for (int i = 0; i < localCache.readBuffers.length; i++) {
-      assertThat(localCache.readBuffers[index][i].get(), is(nullValue()));
+    assertThat(localCache.replacement.readBufferReadCount()[index], is(equalTo(writeCounter.get())));
+    for (int i = 0; i < localCache.replacement.readBuffers().length; i++) {
+      assertThat(localCache.replacement.readBuffers()[index][i].get(), is(nullValue()));
     }
   }
 
@@ -336,8 +337,8 @@ public final class BoundedLocalCacheTest {
   public void drain_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     cache.put(1, 1);
-    assertThat(localCache.writeBuffer, hasSize(0));
-    assertThat(localCache.accessOrderDeque, hasSize(1));
+    assertThat(localCache.replacement.writeBuffer(), hasSize(0));
+    assertThat(localCache.replacement.getAccessOrderDeque(), hasSize(1));
   }
 
   @Test(dataProvider = "caches")
@@ -347,16 +348,16 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     AtomicBoolean done = new AtomicBoolean();
     Thread thread = new Thread(() -> {
-      localCache.drainStatus.set(DrainStatus.REQUIRED);
+      localCache.replacement.lazySetDrainStatus(DrainStatus.REQUIRED);
       localCache.tryToDrainBuffers();
       done.set(true);
     });
-    localCache.evictionLock.lock();
+    localCache.replacement.evictionLock().lock();
     try {
       thread.start();
       Awaits.await().untilTrue(done);
     } finally {
-      localCache.evictionLock.unlock();
+      localCache.replacement.evictionLock().unlock();
     }
   }
 
@@ -386,12 +387,12 @@ public final class BoundedLocalCacheTest {
   }
 
   void checkDrainBlocks(BoundedLocalCache<Integer, Integer> localCache, Runnable task) {
-    NonReentrantLock lock = localCache.evictionLock;
+    NonReentrantLock lock = localCache.replacement.evictionLock();
     AtomicBoolean done = new AtomicBoolean();
     lock.lock();
     try {
       executor.execute(() -> {
-        localCache.drainStatus.set(DrainStatus.REQUIRED);
+        localCache.replacement.lazySetDrainStatus(DrainStatus.REQUIRED);
         task.run();
         done.set(true);
       });

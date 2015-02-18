@@ -195,7 +195,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
   private static <K, V> void checkBoundedLocalLoadingCache(
       BoundedLocalCache.BoundedLocalLoadingCache<K, V> original,
       BoundedLocalCache.BoundedLocalLoadingCache<K, V> copy, DescriptionBuilder desc) {
-    desc.expectThat("same cacheLoader", copy.cache.loader, is(original.cache.loader));
+    desc.expectThat("same cacheLoader", copy.cache.replacement.getLoader(),
+        is(original.cache.replacement.getLoader()));
   }
 
   private static <K, V> void checkBoundedAsyncLocalLoadingCache(
@@ -209,29 +210,32 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
       BoundedLocalCache<K, V> copy, DescriptionBuilder desc) {
     desc.expectThat("empty", copy.estimatedSize(), is(0L));
     desc.expectThat("same weigher",
-        unwrapWeigher(copy.weigher).getClass(), is(equalTo(
-        unwrapWeigher(original.weigher).getClass())));
+        unwrapWeigher(copy.replacement.weigher()).getClass(), is(equalTo(
+        unwrapWeigher(original.replacement.weigher()).getClass())));
     desc.expectThat("same nodeFactory", copy.nodeFactory, is(original.nodeFactory));
-    if (copy.maximumWeightedSize == null) {
-      desc.expectThat("null maximumWeight", copy.maximumWeightedSize, is(nullValue()));
+    if (original.replacement.maximumWeightedSize() == null) {
+      desc.expectThat("null maximumWeight",
+          copy.replacement.maximumWeightedSize(), is(nullValue()));
     } else {
-      desc.expectThat("same maximumWeight",
-          copy.maximumWeightedSize.get(), is(original.maximumWeightedSize.get()));
+      desc.expectThat("same maximumWeight", copy.replacement.maximumWeightedSize().get(),
+          is(original.replacement.maximumWeightedSize().get()));
     }
 
     desc.expectThat("same expireAfterWriteNanos",
-        copy.expireAfterWriteNanos, is(original.expireAfterWriteNanos));
+        copy.replacement.expireAfterWriteNanos(), is(original.replacement.expireAfterWriteNanos()));
     desc.expectThat("same expireAfterWriteNanos",
-        copy.expireAfterWriteNanos, is(original.expireAfterWriteNanos));
+        copy.replacement.expireAfterWriteNanos(), is(original.replacement.expireAfterWriteNanos()));
     desc.expectThat("same expireAfterWriteNanos",
-        copy.expireAfterWriteNanos, is(original.expireAfterWriteNanos));
+        copy.replacement.expireAfterWriteNanos(), is(original.replacement.expireAfterWriteNanos()));
 
-    if (original.removalListener == null) {
-      desc.expectThat("same removalListener", copy.removalListener, is(nullValue()));
-    } else if (copy.removalListener == null) {
+    if (original.replacement.removalListener() == null) {
+      desc.expectThat("same removalListener", copy.replacement.removalListener(), is(nullValue()));
+    } else if (copy.replacement.removalListener() == null) {
       desc.expected("non-null removalListener");
-    } else if (copy.removalListener.getClass() != original.removalListener.getClass()) {
-      desc.expected("same removalListener but was " + copy.removalListener.getClass());
+    } else if (copy.replacement.removalListener().getClass() !=
+        original.replacement.removalListener().getClass()) {
+      desc.expected("same removalListener but was " +
+        copy.replacement.removalListener().getClass());
     }
   }
 

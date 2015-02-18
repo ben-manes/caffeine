@@ -92,9 +92,9 @@ public final class Stresser {
       @Override
       public void run() {
         long reads = 0;
-        for (int i = 0; i < local.readBuffers.length; i++) {
-          for (int j = 0; j < local.readBuffers[i].length; j++) {
-            if (local.readBuffers[i][j].get() != null) {
+        for (int i = 0; i < local.replacement.readBuffers().length; i++) {
+          for (int j = 0; j < local.replacement.readBuffers()[i].length; j++) {
+            if (local.replacement.readBuffers()[i][j].get() != null) {
               reads++;
             }
           }
@@ -102,12 +102,13 @@ public final class Stresser {
         runningTime += STATUS_INTERVAL;
         String elapsedTime = LocalTime.ofSecondOfDay(runningTime).toString();
         String pendingReads = NumberFormat.getInstance().format(reads);
-        String pendingWrites = NumberFormat.getInstance().format(local.writeBuffer.size());
+        String pendingWrites = NumberFormat.getInstance().format(
+            local.replacement.writeBuffer().size());
         System.out.printf("---------- %s ----------%n", elapsedTime);
         System.out.printf("Pending reads = %s%n", pendingReads);
         System.out.printf("Pending write = %s%n", pendingWrites);
-        System.out.printf("Drain status = %s%n", local.drainStatus);
-        System.out.printf("Lock status = %s%n", local.evictionLock.isLocked());
+        System.out.printf("Drain status = %s%n", local.replacement.drainStatus());
+        System.out.printf("Lock status = %s%n", local.replacement.evictionLock().isLocked());
         System.out.printf("Evictions = %,d%n", evictions.intValue());
       }
     };

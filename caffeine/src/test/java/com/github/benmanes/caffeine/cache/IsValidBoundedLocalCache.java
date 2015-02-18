@@ -52,134 +52,134 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   @Override
-  protected boolean matchesSafely(BoundedLocalCache<K, V> map, Description description) {
+  protected boolean matchesSafely(BoundedLocalCache<K, V> cache, Description description) {
     desc = new DescriptionBuilder(description);
 
-    drain(map);
-    checkMap(map, desc);
-    checkEvictionDeque(map, desc);
+    drain(cache);
+    checkCache(cache, desc);
+    checkEvictionDeque(cache, desc);
     return desc.matches();
   }
 
-  private void drain(BoundedLocalCache<K, V> map) {
-    while (!map.writeBuffer.isEmpty()) {
-      map.cleanUp();
+  private void drain(BoundedLocalCache<K, V> cache) {
+    while (!cache.replacement.writeBuffer().isEmpty()) {
+      cache.cleanUp();
     }
 
-    if (!map.evicts() && !map.expiresAfterAccess()) {
+    if (!cache.evicts() && !cache.expiresAfterAccess()) {
       return;
     }
-    map.evictionLock.lock();
-    for (int i = 0; i < map.readBuffers.length; i++) {
+    cache.replacement.evictionLock().lock();
+    for (int i = 0; i < cache.replacement.readBuffers().length; i++) {
       for (;;) {
-        map.drainBuffers();
+        cache.drainBuffers();
 
-        boolean fullyDrained = map.writeBuffer.isEmpty();
-        for (int j = 0; j < map.readBuffers.length; j++) {
-          fullyDrained &= (map.readBuffers[i][j].get() == null);
+        boolean fullyDrained = cache.replacement.writeBuffer().isEmpty();
+        for (int j = 0; j < cache.replacement.readBuffers().length; j++) {
+          fullyDrained &= (cache.replacement.readBuffers()[i][j].get() == null);
         }
         if (fullyDrained) {
           break;
         }
-        map.readBufferReadCount[i]++;
+        cache.replacement.readBufferReadCount()[i]++;
       }
     }
-    map.evictionLock.unlock();
+    cache.replacement.evictionLock().unlock();
   }
 
-  private void checkMap(BoundedLocalCache<K, V> map, DescriptionBuilder desc) {
-    desc.expectThat("Inconsistent size", map.data.size(), is(map.size()));
-    if (map.evicts()) {
-      desc.expectThat("weightedSize", map.weightedSize(), is(map.weightedSize.get()));
-      desc.expectThat("capacity", map.capacity(), is(map.maximumWeightedSize.get()));
-      desc.expectThat("overflow", map.maximumWeightedSize.get(),
-          is(greaterThanOrEqualTo(map.weightedSize())));
+  private void checkCache(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
+    desc.expectThat("Inconsistent size", cache.data.size(), is(cache.size()));
+    if (cache.evicts()) {
+      desc.expectThat("weightedSize", cache.weightedSize(), is(cache.replacement.weightedSize()));
+      desc.expectThat("capacity", cache.capacity(), is(cache.replacement.maximumWeightedSize().get()));
+      desc.expectThat("overflow", cache.replacement.maximumWeightedSize().get(),
+          is(greaterThanOrEqualTo(cache.weightedSize())));
     }
-    desc.expectThat("unlocked", map.evictionLock.isLocked(), is(false));
+    desc.expectThat("unlocked", cache.replacement.evictionLock().isLocked(), is(false));
 
-    if (map.isEmpty()) {
-      desc.expectThat("empty map", map, emptyMap());
+    if (cache.isEmpty()) {
+      desc.expectThat("empty map", cache, emptyMap());
     }
 
-    for (Node<K, V> node : map.data.values()) {
-      checkNode(map, node, desc);
+    for (Node<K, V> node : cache.data.values()) {
+      checkNode(cache, node, desc);
     }
   }
 
-  private void checkEvictionDeque(BoundedLocalCache<K, V> map, DescriptionBuilder desc) {
-    if (map.evicts() || map.expiresAfterAccess()) {
-      checkLinks(map, map.accessOrderDeque, desc);
-      checkDeque(map.accessOrderDeque, map.size(), desc);
+  private void checkEvictionDeque(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
+    if (cache.evicts() || cache.expiresAfterAccess()) {
+      checkLinks(cache, cache.replacement.getAccessOrderDeque(), desc);
+      checkDeque(cache.replacement.getAccessOrderDeque(), cache.size(), desc);
     }
-    if (map.expiresAfterWrite()) {
-      checkLinks(map, map.writeOrderDeque, desc);
-      checkDeque(map.writeOrderDeque, map.size(), desc);
+    if (cache.expiresAfterWrite()) {
+      checkLinks(cache, cache.replacement.getWriteOrderDeque(), desc);
+      checkDeque(cache.replacement.getWriteOrderDeque(), cache.size(), desc);
     }
   }
 
   private void checkDeque(LinkedDeque<Node<K, V>> deque, int size, DescriptionBuilder desc) {
-    desc.expectThat("deque size", deque, hasSize(size));
+    desc.expectThat(() -> "deque size " + deque, deque, hasSize(size));
     IsValidLinkedDeque.<Node<K, V>>validLinkedDeque().matchesSafely(deque, desc.getDescription());
   }
 
-  private void checkLinks(BoundedLocalCache<K, V> map,
+  private void checkLinks(BoundedLocalCache<K, V> cache,
       LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
-    long weightedSize = scanLinks(map, seen, deque, desc);
+    long weightedSize = scanLinks(cache, seen, deque, desc);
 
-    if (seen.size() != map.size()) {
+    if (seen.size() != cache.size()) {
       // Retry in case race with an async update requiring a clean up
-      drain(map);
+      drain(cache);
       seen.clear();
-      weightedSize = scanLinks(map, seen, deque, desc);
+      weightedSize = scanLinks(cache, seen, deque, desc);
 
       Supplier<String> errorMsg = () -> String.format("Size != list length; additional: ",
-          Sets.difference(seen, ImmutableSet.copyOf(map.data.values())));
-      desc.expectThat(errorMsg, map.size(), is(seen.size()));
+          Sets.difference(seen, ImmutableSet.copyOf(cache.data.values())));
+      desc.expectThat(errorMsg, cache.size(), is(seen.size()));
     }
 
     final long weighted = weightedSize;
-    if (map.evicts()) {
+    if (cache.evicts()) {
       Supplier<String> error = () -> String.format(
           "WeightedSize != link weights [%d vs %d] {%d vs %d}",
-          map.weightedSize(), weighted, seen.size(), map.size());
+          cache.weightedSize(), weighted, seen.size(), cache.size());
       desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
-      desc.expectThat(error, map.weightedSize(), is(weightedSize));
+      desc.expectThat(error, cache.weightedSize(), is(weightedSize));
     }
   }
 
-  private long scanLinks(BoundedLocalCache<K, V> map, Set<Node<K, V>> seen,
+  private long scanLinks(BoundedLocalCache<K, V> cache, Set<Node<K, V>> seen,
       LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
     long weightedSize = 0;
     for (Node<K, V> node : deque) {
       Supplier<String> errorMsg = () -> String.format(
-          "Loop detected: %s, saw %s in %s", node, seen, map);
+          "Loop detected: %s, saw %s in %s", node, seen, cache);
       desc.expectThat(errorMsg, seen.add(node), is(true));
       weightedSize += node.getWeight();
     }
     return weightedSize;
   }
 
-  private void checkNode(BoundedLocalCache<K, V> map, Node<K, V> node, DescriptionBuilder desc) {
-    Weigher<? super K, ? super V> weigher = map.weigher;
+  private void checkNode(BoundedLocalCache<K, V> cache, Node<K, V> node, DescriptionBuilder desc) {
+    Weigher<? super K, ? super V> weigher = cache.replacement.weigher();
     V value = node.getValue();
     K key = node.getKey();
 
     desc.expectThat("weight", node.getWeight(), is(greaterThanOrEqualTo(0)));
     desc.expectThat("weight", node.getWeight(), is(weigher.weigh(key, value)));
 
-    if (map.collectKeys()) {
+    if (cache.collectKeys()) {
       if ((key != null) && (value != null)) {
-        desc.expectThat("inconsistent", map.containsKey(key), is(true));
+        desc.expectThat("inconsistent", cache.containsKey(key), is(true));
       }
     } else {
       desc.expectThat("not null key", key, is(not(nullValue())));
     }
-    desc.expectThat("found wrong node", map.data.get(node.getKeyReference()), is(node));
+    desc.expectThat("found wrong node", cache.data.get(node.getKeyReference()), is(node));
 
-    if (!map.collectValues()) {
+    if (!cache.collectValues()) {
       desc.expectThat("not null value", value, is(not(nullValue())));
-      desc.expectThat(() -> "Could not find value: " + value, map.containsValue(value), is(true));
+      desc.expectThat(() -> "Could not find value: " + value, cache.containsValue(value), is(true));
     }
 
     if (value instanceof CompletableFuture<?>) {
