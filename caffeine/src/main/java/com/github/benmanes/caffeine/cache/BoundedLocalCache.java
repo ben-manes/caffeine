@@ -407,9 +407,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   /**
    * Performs the post-processing work required after a write.
    *
+   * @param node the node that was written to
    * @param task the pending operation to be applied
    */
-  void afterWrite(Node<K, V> node, Runnable task) {
+  void afterWrite(@Nullable Node<K, V> node, Runnable task) {
     if (node != null) {
       final long now = replacement.getTicker().read();
       node.setAccessTime(now);
@@ -1599,10 +1600,10 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
       @Override public OptionalLong weightedSize() {
         return isWeighted() ? OptionalLong.of(cache.weightedSize()) : OptionalLong.empty();
       }
-      @Override public long getMaximumSize() {
+      @Override public long getMaximum() {
         return cache.capacity();
       }
-      @Override public void setMaximumSize(long maximumSize) {
+      @Override public void setMaximum(long maximumSize) {
         cache.setCapacity(maximumSize);
       }
       @Override public Map<K, V> coldest(int limit) {

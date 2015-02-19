@@ -111,7 +111,7 @@ public interface Policy<K, V> {
      *
      * @return the maximum size bounding, which may be either weighted or unweighted
      */
-    long getMaximumSize();
+    long getMaximum();
 
     /**
      * Specifies the maximum total size of this cache. This value may be interpreted as the weighted
@@ -119,14 +119,14 @@ public interface Policy<K, V> {
      * exceeds the new maximum size this operation eagerly evict entries until the cache shrinks to
      * the appropriate size.
      * <p>
-     * Note that some implementations may have an internal inherit bound on the maximum total size.
+     * Note that some implementations may have an internal inherent bound on the maximum total size.
      * If the value specified exceeds that bound, then the value is set to the internal maximum.
      *
-     * @param maximumSize the maximum size, interpreted as weighted or unweighted depending on the
-     *        whether how this cache was constructed.
+     * @param maximum the maximum, interpreted as weighted or unweighted size depending on the
+     *        whether how this cache was constructed
      * @throws IllegalArgumentException if the maximum size specified is negative
      */
-    void setMaximumSize(@Nonnegative long maximumSize);
+    void setMaximum(@Nonnegative long maximum);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The

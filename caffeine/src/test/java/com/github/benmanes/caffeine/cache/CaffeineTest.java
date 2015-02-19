@@ -140,7 +140,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder().maximumSize(0);
     assertThat(builder.maximumSize, is(0L));
     Cache<?, ?> cache = builder.build();
-    assertThat(cache.policy().eviction().get().getMaximumSize(), is(0L));
+    assertThat(cache.policy().eviction().get().getMaximum(), is(0L));
   }
 
   @Test
@@ -148,7 +148,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder().maximumSize(Integer.MAX_VALUE);
     assertThat(builder.maximumSize, is((long) Integer.MAX_VALUE));
     Cache<?, ?> cache = builder.build();
-    assertThat(cache.policy().eviction().get().getMaximumSize(), is((long) Integer.MAX_VALUE));
+    assertThat(cache.policy().eviction().get().getMaximum(), is((long) Integer.MAX_VALUE));
   }
 
   /* ---------------- maximumWeight -------------- */
@@ -179,7 +179,7 @@ public final class CaffeineTest {
     assertThat(builder.weigher, is(Weigher.singleton()));
     assertThat(builder.maximumWeight, is(0L));
     Eviction<?, ?> eviction = builder.build().policy().eviction().get();
-    assertThat(eviction.getMaximumSize(), is(0L));
+    assertThat(eviction.getMaximum(), is(0L));
     assertThat(eviction.isWeighted(), is(true));
   }
 
@@ -191,7 +191,7 @@ public final class CaffeineTest {
     assertThat(builder.weigher, is(Weigher.singleton()));
 
     Eviction<?, ?> eviction = builder.build().policy().eviction().get();
-    assertThat(eviction.getMaximumSize(), is((long) Integer.MAX_VALUE));
+    assertThat(eviction.getMaximum(), is((long) Integer.MAX_VALUE));
     assertThat(eviction.isWeighted(), is(true));
   }
 
