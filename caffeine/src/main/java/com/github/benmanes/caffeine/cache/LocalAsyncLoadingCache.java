@@ -123,7 +123,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
   @Override
   public CompletableFuture<V> get(K key) {
-    return get(key, (k, executor) -> loader.asyncLoad(key, executor));
+    return get(key, loader::asyncLoad);
   }
 
   @Override

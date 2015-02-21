@@ -172,6 +172,8 @@ public final class AsyncLoadingCacheTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
+    Awaits.await().until(() -> valueFuture.getNumberOfDependents(), is(0));
+
     MoreExecutors.shutdownAndAwaitTermination(
         (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
 

@@ -133,7 +133,8 @@ public final class IsValidBoundedLocalCache<K, V>
       seen.clear();
       weightedSize = scanLinks(cache, seen, deque, desc);
 
-      Supplier<String> errorMsg = () -> String.format("Size != list length; additional: ",
+      Supplier<String> errorMsg = () -> String.format(
+          "Size != list length; pending=%s, additional: ", cache.replacement.writeBuffer().size(),
           Sets.difference(seen, ImmutableSet.copyOf(cache.data.values())));
       desc.expectThat(errorMsg, cache.size(), is(seen.size()));
     }

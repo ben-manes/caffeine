@@ -296,6 +296,7 @@ public final class CacheContext {
     return MoreObjects.toStringHelper(this)
         .add("population", population)
         .add("maximumSize", maximumSize)
+        .add("weigher", weigher)
         .add("afterAccess", afterAccess)
         .add("afterWrite", afterWrite)
         .add("refreshAfterWrite", refresh)
