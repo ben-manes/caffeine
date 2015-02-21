@@ -48,13 +48,19 @@ bundle {
   instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
 }
 
-task generateJavaPoet(type: JavaExec) {
+task generateLocalCaches(type: JavaExec) {
+  main = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'
+  classpath = sourceSets.javaPoet.runtimeClasspath
+  args "${buildDir}/generated-sources/"
+}
+compileJava.dependsOn(generateLocalCaches)
+
+task generateNodes(type: JavaExec) {
   main = 'com.github.benmanes.caffeine.cache.NodeFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
   args "${buildDir}/generated-sources/"
 }
-
-compileJava.dependsOn(generateJavaPoet)
+compileJava.dependsOn(generateNodes)
 
 task memoryOverhead(type: JavaExec, group: 'Benchmarks', description: 'Evaluates cache overhead') {
   classpath sourceSets.jmh.runtimeClasspath

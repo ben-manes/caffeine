@@ -15,22 +15,22 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.NodeSpec.DEAD_STRONG_KEY;
-import static com.github.benmanes.caffeine.cache.NodeSpec.DEAD_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.NodeSpec.NODE;
-import static com.github.benmanes.caffeine.cache.NodeSpec.RETIRED_STRONG_KEY;
-import static com.github.benmanes.caffeine.cache.NodeSpec.RETIRED_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.NodeSpec.UNSAFE_ACCESS;
-import static com.github.benmanes.caffeine.cache.NodeSpec.UNUSED;
-import static com.github.benmanes.caffeine.cache.NodeSpec.kTypeVar;
-import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefSpec;
-import static com.github.benmanes.caffeine.cache.NodeSpec.keySpec;
-import static com.github.benmanes.caffeine.cache.NodeSpec.nodeType;
-import static com.github.benmanes.caffeine.cache.NodeSpec.vRefQueueType;
-import static com.github.benmanes.caffeine.cache.NodeSpec.vTypeVar;
-import static com.github.benmanes.caffeine.cache.NodeSpec.valueRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.NodeSpec.valueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.NODE;
+import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
+import static com.github.benmanes.caffeine.cache.Specifications.UNUSED;
+import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
+import static com.github.benmanes.caffeine.cache.Specifications.nodeType;
+import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
+import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 
 import java.lang.ref.Reference;
 import java.util.Objects;
@@ -40,8 +40,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 
-import com.github.benmanes.caffeine.cache.NodeSpec.Strength;
-import com.github.benmanes.caffeine.cache.NodeSpec.Visibility;
+import com.github.benmanes.caffeine.cache.Specifications.Strength;
+import com.github.benmanes.caffeine.cache.Specifications.Visibility;
 import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;

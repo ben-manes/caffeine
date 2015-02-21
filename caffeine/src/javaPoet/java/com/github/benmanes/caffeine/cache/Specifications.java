@@ -30,12 +30,12 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
 
 /**
- * Shared constants for a node specification.
+ * Shared constants for a code generation specification.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class NodeSpec {
-  static final String PACKAGE_NAME = NodeFactoryGenerator.class.getPackage().getName();
+public final class Specifications {
+  static final String PACKAGE_NAME = Specifications.class.getPackage().getName();
   static final String RETIRED_STRONG_KEY = "RETIRED_STRONG_KEY";
   static final String RETIRED_WEAK_KEY = "RETIRED_WEAK_KEY";
   static final String DEAD_STRONG_KEY = "DEAD_STRONG_KEY";
@@ -101,5 +101,5 @@ public final class NodeSpec {
     }
   }
 
-  private NodeSpec() {}
+  private Specifications() {}
 }

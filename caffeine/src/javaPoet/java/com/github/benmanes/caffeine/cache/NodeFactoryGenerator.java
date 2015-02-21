@@ -15,21 +15,21 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.NodeSpec.DEAD_STRONG_KEY;
-import static com.github.benmanes.caffeine.cache.NodeSpec.DEAD_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.NodeSpec.RETIRED_STRONG_KEY;
-import static com.github.benmanes.caffeine.cache.NodeSpec.RETIRED_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.NodeSpec.kRefQueueType;
-import static com.github.benmanes.caffeine.cache.NodeSpec.kTypeVar;
-import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.NodeSpec.keyRefSpec;
-import static com.github.benmanes.caffeine.cache.NodeSpec.keySpec;
-import static com.github.benmanes.caffeine.cache.NodeSpec.lookupKeyType;
-import static com.github.benmanes.caffeine.cache.NodeSpec.rawReferenceKeyType;
-import static com.github.benmanes.caffeine.cache.NodeSpec.referenceKeyType;
-import static com.github.benmanes.caffeine.cache.NodeSpec.vTypeVar;
-import static com.github.benmanes.caffeine.cache.NodeSpec.valueRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.NodeSpec.valueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
+import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
+import static com.github.benmanes.caffeine.cache.Specifications.lookupKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.rawReferenceKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -44,7 +44,7 @@ import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.lang.model.element.Modifier;
 
-import com.github.benmanes.caffeine.cache.NodeSpec.Strength;
+import com.github.benmanes.caffeine.cache.Specifications.Strength;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -404,7 +404,7 @@ public final class NodeFactoryGenerator {
             .addAnnotation(Nonnegative.class).build())
         .addParameter(ParameterSpec.builder(long.class, "now")
             .addAnnotation(Nonnegative.class).build())
-        .returns(NodeSpec.NODE);
+        .returns(Specifications.NODE);
   }
 
   public static void main(String[] args) throws IOException {

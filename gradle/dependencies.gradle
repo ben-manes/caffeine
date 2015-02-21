@@ -51,7 +51,7 @@ ext {
     high_scale_lib: '1.0.6',
     jamm: '0.3.0',
     java_object_layout: '0.3',
-    jmh: '1.6',
+    jmh: '1.6.1',
     koloboke: '0.6.6',
   ]
   plugin_versions = [
