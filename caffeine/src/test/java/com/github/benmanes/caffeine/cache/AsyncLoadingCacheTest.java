@@ -128,12 +128,12 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       return null;
     });
-    valueFuture.whenComplete((r, e) -> done.set(true));
+    valueFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
 
     ready.set(true);
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 5, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -168,14 +168,12 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    valueFuture.whenComplete((r, e) -> done.set(true));
+    valueFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> valueFuture.getNumberOfDependents(), is(0));
-
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -194,12 +192,12 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().until(() -> done.get());
       return null;
     });
-    valueFuture.whenComplete((r, e) -> done.set(true));
+    valueFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
     valueFuture.cancel(true);
 
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -313,14 +311,14 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    failedFuture.whenComplete((r, e) -> done.set(true));
+    failedFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
 
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
     ready.set(true);
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -338,14 +336,14 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(done);
       return null;
     });
-    failedFuture.whenComplete((r, e) -> done.set(true));
+    failedFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
 
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
     valueFuture.cancel(true);
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -407,16 +405,14 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(executor = CacheExecutor.SINGLE, loader = Loader.EXCEPTIONAL)
   public void get_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) throws InterruptedException {
-    AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key);
-    valueFuture.whenComplete((r, e) -> done.set(true));
+    valueFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
 
-    ready.set(true);
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -590,14 +586,14 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    failedFuture.whenComplete((r, e) -> done.set(true));
+    failedFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
 
     Integer key = context.absentKey();
     cache.put(key, failedFuture);
     ready.set(true);
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -626,7 +622,7 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    failedFuture.whenComplete((r, e) -> done.set(true));
+    failedFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
 
     Integer key = context.absentKey();
     cache.put(key, failedFuture);
@@ -638,7 +634,7 @@ public final class AsyncLoadingCacheTest {
     ready.set(true);
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.SECONDS);
+        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(1)));
