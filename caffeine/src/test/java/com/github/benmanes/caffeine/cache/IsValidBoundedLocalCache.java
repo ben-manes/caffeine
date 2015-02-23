@@ -162,7 +162,7 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkNode(BoundedLocalCache<K, V> cache, Node<K, V> node, DescriptionBuilder desc) {
-    Weigher<? super K, ? super V> weigher = cache.replacement.weigher();
+    Weigher<? super K, ? super V> weigher = cache.weigher();
     V value = node.getValue();
     K key = node.getKey();
 

@@ -113,10 +113,12 @@ public final class LocalCacheFactoryGenerator {
     Set<Boolean> removalListeners = ImmutableSet.of(true, false);
     Set<Boolean> executors = ImmutableSet.of(true, false);
     Set<Boolean> stats = ImmutableSet.of(true, false);
+    Set<Boolean> maximumSize = ImmutableSet.of(true, false);
+    Set<Boolean> weighted = ImmutableSet.of(true, false);
 
     @SuppressWarnings("unchecked")
     Set<List<Object>> combinations = Sets.cartesianProduct(keyStrengths, valueStrengths,
-        cacheLoaders, removalListeners, executors, stats);
+        cacheLoaders, removalListeners, executors, stats, maximumSize, weighted);
     return combinations;
   }
 
@@ -128,14 +130,17 @@ public final class LocalCacheFactoryGenerator {
           (Boolean) combination.get(2),
           (Boolean) combination.get(3),
           (Boolean) combination.get(4),
-          (Boolean) combination.get(5));
+          (Boolean) combination.get(5),
+          (Boolean) combination.get(6),
+          (Boolean) combination.get(7));
     }
   }
 
   private void addLocalCacheSpec(Strength keyStrength, Strength valueStrength,
-      boolean cacheLoader, boolean removalListener, boolean executor, boolean stats) {
+      boolean cacheLoader, boolean removalListener, boolean executor, boolean stats,
+      boolean maximum, boolean weighed) {
     String enumName = makeEnumName(keyStrength, valueStrength, cacheLoader, removalListener,
-        executor, stats);
+        executor, stats, maximum, weighed);
     if (!seen.add(enumName)) {
       // skip duplicates
       return;
@@ -154,12 +159,13 @@ public final class LocalCacheFactoryGenerator {
         .build());
 
     LocalCacheGenerator generator = new LocalCacheGenerator(className, keyStrength, valueStrength,
-        cacheLoader, removalListener, executor, stats);
+        cacheLoader, removalListener, executor, stats, maximum, weighed);
     factory.addType(generator.generate());
   }
 
   private String makeEnumName(Strength keyStrength, Strength valueStrength, boolean cacheLoader,
-      boolean removalListener, boolean executor, boolean stats) {
+      boolean removalListener, boolean executor, boolean stats, boolean maximum,
+      boolean weighed) {
     StringBuilder name = new StringBuilder(keyStrength + "_KEYS");
     if (valueStrength == Strength.STRONG) {
       name.append("_STRONG_VALUES");
@@ -177,6 +183,14 @@ public final class LocalCacheFactoryGenerator {
     }
     if (stats) {
       name.append("_STATS");
+    }
+    if (maximum) {
+      name.append("_MAXIMUM");
+      if (weighed) {
+        name.append("_WEIGHT");
+      } else {
+        name.append("_SIZE");
+      }
     }
     return name.toString();
   }

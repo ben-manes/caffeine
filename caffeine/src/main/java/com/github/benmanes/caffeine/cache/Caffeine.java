@@ -350,6 +350,10 @@ public final class Caffeine<K, V> {
     return getMaximumWeight() != UNSET_INT;
   }
 
+  boolean isWeighted() {
+    return (weigher != null);
+  }
+
   @Nonnegative
   long getMaximumWeight() {
     return (weigher == null) ? maximumSize : maximumWeight;
@@ -357,14 +361,10 @@ public final class Caffeine<K, V> {
 
   @Nonnull @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
-    Weigher<K1, V1> delegate = isWeighted()
+    Weigher<K1, V1> delegate = isWeighted() && (weigher != Weigher.singleton())
         ? Weigher.bounded((Weigher<K1, V1>) weigher)
         : Weigher.singleton();
     return (Weigher<K1, V1>) (isAsync ? new AsyncWeigher<>(delegate) : delegate);
-  }
-
-  boolean isWeighted() {
-    return (weigher != null) && (weigher != Weigher.singleton());
   }
 
   /**

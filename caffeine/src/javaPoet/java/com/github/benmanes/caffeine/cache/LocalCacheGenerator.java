@@ -21,6 +21,8 @@ import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.REMOVAL_LISTENER;
 import static com.github.benmanes.caffeine.cache.Specifications.STATS_COUNTER;
+import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
+import static com.github.benmanes.caffeine.cache.Specifications.WEIGHER;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
@@ -52,15 +54,20 @@ public final class LocalCacheGenerator {
   private final boolean removalListener;
   private final boolean executor;
   private final boolean stats;
+  private final boolean maximum;
+  private final boolean weighed;
 
   LocalCacheGenerator(String className, Strength keyStrength, Strength valueStrength,
-      boolean cacheLoader, boolean removalListener, boolean executor, boolean stats) {
+      boolean cacheLoader, boolean removalListener, boolean executor, boolean stats,
+      boolean maximum, boolean weighed) {
     this.cache = TypeSpec.classBuilder(className);
     this.removalListener = removalListener;
     this.valueStrength = valueStrength;
     this.keyStrength = keyStrength;
     this.cacheLoader = cacheLoader;
     this.executor = executor;
+    this.maximum = maximum;
+    this.weighed = weighed;
     this.stats = stats;
   }
 
@@ -81,6 +88,9 @@ public final class LocalCacheGenerator {
     addRemovalListener(constructor);
     addExecutor(constructor);
     addStats(constructor);
+    addTicker(constructor);
+    addMaximum(constructor);
+    addWeigher(constructor);
     return cache.addMethod(constructor.build()).build();
   }
 
@@ -158,6 +168,51 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("isRecordingStats")
         .addStatement("return true")
         .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+  }
+
+  private void addTicker(MethodSpec.Builder constructor) {
+    // TODO(ben): Make conditional when all usage migrated
+
+    constructor.addStatement("this.ticker = builder.getTicker()");
+    cache.addField(FieldSpec.builder(TICKER, "ticker", privateFinalModifiers).build());
+    cache.addMethod(MethodSpec.methodBuilder("ticker")
+        .addStatement("return ticker")
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(TICKER)
+        .build());
+  }
+
+  private void addMaximum(MethodSpec.Builder constructor) {
+    if (!maximum) {
+      return;
+    }
+    cache.addMethod(MethodSpec.methodBuilder("evicts")
+        .addStatement("return true")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+  }
+
+  private void addWeigher(MethodSpec.Builder constructor) {
+    if (!maximum && !weighed) {
+      return;
+    }
+    constructor.addStatement("this.weigher = builder.getWeigher(async)");
+    cache.addField(FieldSpec.builder(WEIGHER, "weigher", privateFinalModifiers).build());
+    cache.addMethod(MethodSpec.methodBuilder("weigher")
+        .addStatement("return weigher")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(WEIGHER)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("isWeighted")
+        .addStatement("return true")
+        .addModifiers(Modifier.PROTECTED)
         .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());

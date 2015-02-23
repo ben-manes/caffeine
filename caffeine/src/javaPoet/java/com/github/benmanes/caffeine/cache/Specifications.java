@@ -93,6 +93,12 @@ public final class Specifications {
 
   static final TypeName STATS_COUNTER = ClassName.get(PACKAGE_NAME + ".stats", "StatsCounter");
 
+  static final TypeName TICKER = ClassName.get(PACKAGE_NAME, "Ticker");
+
+  static final TypeName WEIGHER = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "Weigher"),
+      TypeVariableName.get("? super K"),
+      TypeVariableName.get("? super V"));
 
   enum Visibility {
     IMMEDIATE(false), LAZY(true);

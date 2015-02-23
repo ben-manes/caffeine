@@ -74,6 +74,18 @@ public final class CacheSelectorCode {
     return this;
   }
 
+  private CacheSelectorCode maximum() {
+    name.beginControlFlow("if (builder.evicts())")
+            .addStatement("sb.append(\"_MAXIMUM\")")
+            .beginControlFlow("if (builder.isWeighted())")
+                .addStatement("sb.append(\"_WEIGHT\")")
+            .nextControlFlow("else")
+                .addStatement("sb.append(\"_SIZE\")")
+            .endControlFlow()
+        .endControlFlow();
+    return this;
+  }
+
   private CodeBlock build() {
     return name
         .addStatement("LocalCacheFactory factory = valueOf(sb.toString())")
@@ -89,6 +101,7 @@ public final class CacheSelectorCode {
         .removalListener()
         .executor()
         .stats()
+        .maximum()
         .build();
   }
 }

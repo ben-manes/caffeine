@@ -49,7 +49,6 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  */
 final class PageReplacement<K, V> {
   // These fields provide support to bound the map by a maximum capacity
-  private final Weigher<? super K, ? super V> weigher;
   @GuardedBy("evictionLock") // must write under lock
   private final AtomicLong weightedSize;
   @GuardedBy("evictionLock") // must write under lock
@@ -80,12 +79,9 @@ final class PageReplacement<K, V> {
   @GuardedBy("evictionLock")
   private final WriteOrderDeque<Node<K, V>> writeOrderDeque;
 
-  private final Ticker ticker;
-
   @SuppressWarnings({"unchecked", "cast"})
   PageReplacement(Caffeine<K, V> builder, boolean isAsync) {
     weightedSize = new AtomicLong();
-    weigher = builder.getWeigher(isAsync);
     maximumWeightedSize = builder.evicts()
         ? new AtomicLong(Math.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY))
         : null;
@@ -107,8 +103,6 @@ final class PageReplacement<K, V> {
     evictionLock = new NonReentrantLock();
     writeBuffer = new ConcurrentLinkedQueue<Runnable>();
     drainStatus = new AtomicReference<DrainStatus>(IDLE);
-
-    ticker = builder.getTicker();
 
     accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
     writeOrderDeque = new WriteOrderDeque<Node<K, V>>();
@@ -165,10 +159,6 @@ final class PageReplacement<K, V> {
 
   /* ---------------- Eviction Support -------------- */
 
-  Weigher<? super K, ? super V> weigher() {
-    return weigher;
-  }
-
   @Nullable AtomicLong maximumWeightedSize() {
     return maximumWeightedSize;
   }
@@ -182,10 +172,6 @@ final class PageReplacement<K, V> {
   }
 
   /* ---------------- Expiration Support -------------- */
-
-  Ticker getTicker() {
-    return ticker;
-  }
 
   long getExpireAfterAccessNanos() {
     return expireAfterAccessNanos;
