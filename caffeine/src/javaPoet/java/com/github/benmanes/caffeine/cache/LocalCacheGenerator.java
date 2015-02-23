@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.REMOVAL_LISTENER;
+import static com.github.benmanes.caffeine.cache.Specifications.STATS_COUNTER;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
@@ -50,15 +51,17 @@ public final class LocalCacheGenerator {
   private final boolean cacheLoader;
   private final boolean removalListener;
   private final boolean executor;
+  private final boolean stats;
 
   LocalCacheGenerator(String className, Strength keyStrength, Strength valueStrength,
-      boolean cacheLoader, boolean removalListener, boolean executor) {
+      boolean cacheLoader, boolean removalListener, boolean executor, boolean stats) {
     this.cache = TypeSpec.classBuilder(className);
     this.removalListener = removalListener;
     this.valueStrength = valueStrength;
     this.keyStrength = keyStrength;
     this.cacheLoader = cacheLoader;
     this.executor = executor;
+    this.stats = stats;
   }
 
   public TypeSpec generate() {
@@ -77,6 +80,7 @@ public final class LocalCacheGenerator {
     addCacheLoader(constructor);
     addRemovalListener(constructor);
     addExecutor(constructor);
+    addStats(constructor);
     return cache.addMethod(constructor.build()).build();
   }
 
@@ -136,6 +140,26 @@ public final class LocalCacheGenerator {
         .addAnnotation(Override.class)
         .addAnnotation(Nullable.class)
         .returns(CACHE_LOADER)
+        .build());
+  }
+
+  private void addStats(MethodSpec.Builder constructor) {
+    if (!stats) {
+      return;
+    }
+    constructor.addStatement("this.statsCounter = builder.getStatsCounterSupplier().get()");
+    cache.addField(FieldSpec.builder(STATS_COUNTER, "statsCounter", privateFinalModifiers).build());
+    cache.addMethod(MethodSpec.methodBuilder("statsCounter")
+        .addStatement("return statsCounter")
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(STATS_COUNTER)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("isRecordingStats")
+        .addStatement("return true")
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
         .build());
   }
 

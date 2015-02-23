@@ -59,18 +59,23 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.cache.References.InternalReference;
+import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
  * An in-memory cache implementation that supports full concurrency of retrievals, a high expected
  * concurrency for updates, and multiple ways to bound the cache.
+ * <p>
+ * This class is abstract and code generated subclasses provide the complete implementation for a
+ * particular configuration. This is to ensure that only the fields and execution paths necessary
+ * for a given configuration are used.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */
 @ThreadSafe
-class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K, V> {
+abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K, V> {
 
   /*
    * This class performs a best-effort bounding of a ConcurrentHashMap using a page-replacement
@@ -174,6 +179,18 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     return ForkJoinPool.commonPool();
   }
 
+  /* ---------------- Stats Support -------------- */
+
+  @Override
+  public StatsCounter statsCounter() {
+    return DisabledStatsCounter.INSTANCE;
+  }
+
+  @Override
+  public boolean isRecordingStats() {
+    return false;
+  }
+
   /* ---------------- Removal Listener Support -------------- */
 
   @Override
@@ -206,10 +223,6 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
 
   boolean collectValues() {
     return !nodeFactory.strongValues();
-  }
-
-  boolean collects() {
-    return collectKeys() || collectValues();
   }
 
   @Nullable
@@ -317,7 +330,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     replacement.getWriteOrderDeque().remove(node);
 
     if (removed) {
-      replacement.getStatsCounter().recordEviction();
+      statsCounter().recordEviction();
       if (hasRemovalListener()) {
         // Notify the listener only if the entry was evicted. This must be performed as the last
         // step during eviction to safe guard against the executor rejecting the notification task.
@@ -370,7 +383,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
    */
   void afterRead(Node<K, V> node, boolean recordHit) {
     if (recordHit) {
-      replacement.getStatsCounter().recordHits(1);
+      statsCounter().recordHits(1);
     }
     long now = replacement.getTicker().read();
     node.setAccessTime(now);
@@ -796,12 +809,12 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if (node == null) {
       if (recordStats) {
-        replacement.getStatsCounter().recordMisses(1);
+        statsCounter().recordMisses(1);
       }
       return null;
     } else if (hasExpired(node, replacement.getTicker().read())) {
       if (recordStats) {
-        replacement.getStatsCounter().recordMisses(1);
+        statsCounter().recordMisses(1);
       }
       tryToDrainBuffers();
       return null;
@@ -829,7 +842,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
       // TODO(ben): batch reads to call tryLock once
       afterRead(node, true);
     }
-    replacement.getStatsCounter().recordMisses(misses);
+    statsCounter().recordMisses(misses);
     return Collections.unmodifiableMap(result);
   }
 
@@ -1023,7 +1036,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
           if (hasRemovalListener()) {
             notifyRemoval(key, node.getValue(), RemovalCause.EXPIRED);
           }
-          replacement.getStatsCounter().recordEviction();
+          statsCounter().recordEviction();
         }
       } else {
         afterRead(node, true);
@@ -1206,16 +1219,6 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
 
   void asyncCleanup() {
     executor().execute(this::cleanUp);
-  }
-
-  @Override
-  public StatsCounter statsCounter() {
-    return replacement.getStatsCounter();
-  }
-
-  @Override
-  public boolean isRecordingStats() {
-    return replacement.isRecordingStats();
   }
 
   @Override
@@ -1525,7 +1528,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     proxy.softValues = cache.nodeFactory.softValues();
     proxy.expireAfterAccessNanos = cache.replacement.getExpireAfterAccessNanos();
     proxy.expireAfterWriteNanos = cache.replacement.expireAfterWriteNanos();
-    proxy.isRecordingStats = cache.replacement.isRecordingStats();
+    proxy.isRecordingStats = cache.isRecordingStats();
     proxy.removalListener = cache.removalListener();
     proxy.ticker = cache.replacement.getTicker();
     if (cache.evicts()) {

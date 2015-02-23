@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
-import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**
@@ -81,10 +80,7 @@ final class PageReplacement<K, V> {
   @GuardedBy("evictionLock")
   private final WriteOrderDeque<Node<K, V>> writeOrderDeque;
 
-  // These fields provide support for recording stats
   private final Ticker ticker;
-  private final boolean isRecordingStats;
-  private final StatsCounter statsCounter;
 
   @SuppressWarnings({"unchecked", "cast"})
   PageReplacement(Caffeine<K, V> builder, boolean isAsync) {
@@ -112,9 +108,6 @@ final class PageReplacement<K, V> {
     writeBuffer = new ConcurrentLinkedQueue<Runnable>();
     drainStatus = new AtomicReference<DrainStatus>(IDLE);
 
-    // The statistics
-    statsCounter = builder.getStatsCounterSupplier().get();
-    isRecordingStats = builder.isRecordingStats();
     ticker = builder.getTicker();
 
     accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
@@ -188,21 +181,11 @@ final class PageReplacement<K, V> {
     this.weightedSize.lazySet(weightedSize);
   }
 
-  /* ---------------- Stats Support -------------- */
+  /* ---------------- Expiration Support -------------- */
 
   Ticker getTicker() {
     return ticker;
   }
-
-  boolean isRecordingStats() {
-    return isRecordingStats;
-  }
-
-  StatsCounter getStatsCounter() {
-    return statsCounter;
-  }
-
-  /* ---------------- Expiration Support -------------- */
 
   long getExpireAfterAccessNanos() {
     return expireAfterAccessNanos;

@@ -91,6 +91,9 @@ public final class Specifications {
   static final TypeName REMOVAL_LISTENER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "RemovalListener"), kTypeVar, vTypeVar);
 
+  static final TypeName STATS_COUNTER = ClassName.get(PACKAGE_NAME + ".stats", "StatsCounter");
+
+
   enum Visibility {
     IMMEDIATE(false), LAZY(true);
 

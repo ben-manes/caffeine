@@ -28,6 +28,7 @@ import java.nio.file.Paths;
 import java.time.Year;
 import java.util.HashSet;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -35,6 +36,7 @@ import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Specifications.Strength;
 import com.google.common.base.CaseFormat;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.squareup.javapoet.JavaFile;
@@ -59,9 +61,9 @@ public final class LocalCacheFactoryGenerator {
   void generate() throws IOException {
     factory = TypeSpec.enumBuilder("LocalCacheFactory");
     addClassJavaDoc();
-    addFactoryMethods();
     generateLocalCaches();
 
+    addFactoryMethods();
     writeJavaFile();
   }
 
@@ -81,12 +83,14 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private MethodSpec newBoundedLocalCache() {
+    OptionalInt bufferSize = seen.stream().mapToInt(s -> s.length()).max();
+    Preconditions.checkState(bufferSize.isPresent(), "Must generate all cache types first");
     return MethodSpec.methodBuilder("newBoundedLocalCache")
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
         .returns(BOUNDED_LOCAL_CACHE)
         .addModifiers(Modifier.STATIC)
-        .addCode(CacheSelectorCode.get())
+        .addCode(CacheSelectorCode.get(bufferSize.getAsInt()))
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
@@ -108,10 +112,11 @@ public final class LocalCacheFactoryGenerator {
     Set<Boolean> cacheLoaders = ImmutableSet.of(true, false);
     Set<Boolean> removalListeners = ImmutableSet.of(true, false);
     Set<Boolean> executors = ImmutableSet.of(true, false);
+    Set<Boolean> stats = ImmutableSet.of(true, false);
 
     @SuppressWarnings("unchecked")
     Set<List<Object>> combinations = Sets.cartesianProduct(keyStrengths, valueStrengths,
-        cacheLoaders, removalListeners, executors);
+        cacheLoaders, removalListeners, executors, stats);
     return combinations;
   }
 
@@ -122,14 +127,15 @@ public final class LocalCacheFactoryGenerator {
           (Strength) combination.get(1),
           (Boolean) combination.get(2),
           (Boolean) combination.get(3),
-          (Boolean) combination.get(4));
+          (Boolean) combination.get(4),
+          (Boolean) combination.get(5));
     }
   }
 
   private void addLocalCacheSpec(Strength keyStrength, Strength valueStrength,
-      boolean cacheLoader, boolean removalListener, boolean executor) {
+      boolean cacheLoader, boolean removalListener, boolean executor, boolean stats) {
     String enumName = makeEnumName(keyStrength, valueStrength, cacheLoader, removalListener,
-        executor);
+        executor, stats);
     if (!seen.add(enumName)) {
       // skip duplicates
       return;
@@ -148,12 +154,12 @@ public final class LocalCacheFactoryGenerator {
         .build());
 
     LocalCacheGenerator generator = new LocalCacheGenerator(className, keyStrength, valueStrength,
-        cacheLoader, removalListener, executor);
+        cacheLoader, removalListener, executor, stats);
     factory.addType(generator.generate());
   }
 
   private String makeEnumName(Strength keyStrength, Strength valueStrength, boolean cacheLoader,
-      boolean removalListener, boolean executor) {
+      boolean removalListener, boolean executor, boolean stats) {
     StringBuilder name = new StringBuilder(keyStrength + "_KEYS");
     if (valueStrength == Strength.STRONG) {
       name.append("_STRONG_VALUES");
@@ -168,6 +174,9 @@ public final class LocalCacheFactoryGenerator {
     }
     if (executor) {
       name.append("_EXECUTOR");
+    }
+    if (stats) {
+      name.append("_STATS");
     }
     return name.toString();
   }

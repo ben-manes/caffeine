@@ -23,9 +23,9 @@ import com.squareup.javapoet.CodeBlock;
 public final class CacheSelectorCode {
   private final CodeBlock.Builder name;
 
-  private CacheSelectorCode() {
+  private CacheSelectorCode(int bufferSize) {
     name = CodeBlock.builder()
-        .addStatement("$T sb = new $T(64)", StringBuilder.class, StringBuilder.class);
+        .addStatement("$T sb = new $T($L)", StringBuilder.class, StringBuilder.class, bufferSize);
   }
 
   private CacheSelectorCode keys() {
@@ -67,6 +67,13 @@ public final class CacheSelectorCode {
     return this;
   }
 
+  private CacheSelectorCode stats() {
+    name.beginControlFlow("if (builder.isRecordingStats())")
+            .addStatement("sb.append(\"_STATS\")")
+        .endControlFlow();
+    return this;
+  }
+
   private CodeBlock build() {
     return name
         .addStatement("LocalCacheFactory factory = valueOf(sb.toString())")
@@ -74,13 +81,14 @@ public final class CacheSelectorCode {
         .build();
   }
 
-  public static CodeBlock get() {
-    return new CacheSelectorCode()
+  public static CodeBlock get(int bufferSize) {
+    return new CacheSelectorCode(bufferSize)
         .keys()
         .values()
         .cacheLoader()
         .removalListener()
         .executor()
+        .stats()
         .build();
   }
 }
