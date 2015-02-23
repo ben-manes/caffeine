@@ -62,7 +62,8 @@ public final class LocalCacheGenerator {
     MethodSpec.Builder constructor = MethodSpec.constructorBuilder()
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
-        .addStatement("super(builder, cacheLoader, false)");
+        .addParameter(boolean.class, "async")
+        .addStatement("super(builder, cacheLoader, async)");
 
     addKeyStrength();
     addValueStrength();

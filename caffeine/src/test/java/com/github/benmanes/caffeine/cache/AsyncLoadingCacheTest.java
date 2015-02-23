@@ -128,7 +128,7 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       return null;
     });
-    valueFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
+    valueFuture.whenComplete((r, e) -> done.set(true));
 
     ready.set(true);
     Awaits.await().untilTrue(done);
@@ -168,7 +168,7 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    valueFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
+    valueFuture.whenComplete((r, e) -> done.set(true));
 
     ready.set(true);
     Awaits.await().untilTrue(done);
@@ -192,7 +192,7 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().until(() -> done.get());
       return null;
     });
-    valueFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
+    valueFuture.whenComplete((r, e) -> done.set(true));
     valueFuture.cancel(true);
 
     Awaits.await().untilTrue(done);
@@ -311,7 +311,7 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    failedFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
+    failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
@@ -336,7 +336,7 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(done);
       return null;
     });
-    failedFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
+    failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
@@ -408,7 +408,7 @@ public final class AsyncLoadingCacheTest {
     AtomicBoolean done = new AtomicBoolean();
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key);
-    valueFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
+    valueFuture.whenComplete((r, e) -> done.set(true));
 
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
@@ -586,7 +586,7 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    failedFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
+    failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
     cache.put(key, failedFuture);
@@ -622,7 +622,7 @@ public final class AsyncLoadingCacheTest {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
-    failedFuture.whenCompleteAsync((r, e) -> done.set(true), context.executor());
+    failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
     cache.put(key, failedFuture);

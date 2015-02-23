@@ -733,7 +733,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public CacheLoader<? super K, V> loader() {
+    public CacheLoader<? super K, V> cacheLoader() {
       return loader;
     }
 

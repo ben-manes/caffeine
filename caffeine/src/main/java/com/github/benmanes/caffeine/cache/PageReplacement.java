@@ -20,7 +20,6 @@ import static com.github.benmanes.caffeine.cache.BoundedLocalCache.NUMBER_OF_REA
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.READ_BUFFER_SIZE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.IDLE;
 
-import java.lang.ref.ReferenceQueue;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -68,10 +67,6 @@ final class PageReplacement<K, V> {
   private final NonReentrantLock evictionLock;
   private final AtomicReference<DrainStatus> drainStatus;
 
-  // These fields provide support for reference-based eviction
-  private final ReferenceQueue<K> keyReferenceQueue;
-  private final ReferenceQueue<V> valueReferenceQueue;
-
   // How long after the last access to an entry the map will retain that entry
   private volatile long expireAfterAccessNanos;
 
@@ -87,8 +82,6 @@ final class PageReplacement<K, V> {
   @GuardedBy("evictionLock")
   private final WriteOrderDeque<Node<K, V>> writeOrderDeque;
 
-  private final @Nullable CacheLoader<? super K, V> loader;
-
   // These fields provide support for recording stats
   private final Ticker ticker;
   private final boolean isRecordingStats;
@@ -99,10 +92,7 @@ final class PageReplacement<K, V> {
   private final Executor executor;
 
   @SuppressWarnings({"unchecked", "cast"})
-  PageReplacement(Caffeine<K, V> builder,
-      @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
-    this.loader = loader;
-
+  PageReplacement(Caffeine<K, V> builder, boolean isAsync) {
     weightedSize = new AtomicLong();
     weigher = builder.getWeigher(isAsync);
     maximumWeightedSize = builder.evicts()
@@ -132,10 +122,6 @@ final class PageReplacement<K, V> {
     isRecordingStats = builder.isRecordingStats();
     ticker = builder.getTicker();
 
-    // The reference eviction support
-    keyReferenceQueue = new ReferenceQueue<K>();
-    valueReferenceQueue = new ReferenceQueue<V>();
-
     accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
     writeOrderDeque = new WriteOrderDeque<Node<K, V>>();
 
@@ -146,11 +132,6 @@ final class PageReplacement<K, V> {
 
     removalListener = builder.getRemovalListener(isAsync);
     executor = builder.getExecutor();
-  }
-
-  @Nullable
-  CacheLoader<? super K, V> getLoader() {
-    return loader;
   }
 
   LinkedDeque<Node<K, V>> getAccessOrderDeque() {
@@ -268,17 +249,5 @@ final class PageReplacement<K, V> {
 
   void setRefreshAfterWriteNanos(long refreshAfterWriteNanos) {
     this.refreshAfterWriteNanos = refreshAfterWriteNanos;
-  }
-
-  /* ---------------- Reference Support -------------- */
-
-  @Nullable
-  ReferenceQueue<K> getKeyReferenceQueue() {
-    return keyReferenceQueue;
-  }
-
-  @Nullable
-  ReferenceQueue<V> getValueReferenceQueue() {
-    return valueReferenceQueue;
   }
 }

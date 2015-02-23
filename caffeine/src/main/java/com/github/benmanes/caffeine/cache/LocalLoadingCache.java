@@ -37,7 +37,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
   static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
   /** Returns the {@link CacheLoader} used by this cache. */
-  CacheLoader<? super K, V> loader();
+  CacheLoader<? super K, V> cacheLoader();
 
   /** Returns whether the cache loader supports bulk loading. */
   boolean hasBulkLoader();
@@ -54,7 +54,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
 
   @Override
   default V get(K key) {
-    return cache().computeIfAbsent(key, loader()::load);
+    return cache().computeIfAbsent(key, cacheLoader()::load);
   }
 
   @Override
@@ -83,7 +83,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
 
     if (!hasBulkLoader()) {
       for (K key : keysToLoad) {
-        V value = cache().compute(key, (k, v) -> loader().load(key), false, false);
+        V value = cache().compute(key, (k, v) -> cacheLoader().load(key), false, false);
         if (value != null) {
           result.put(key, value);
         }
@@ -95,7 +95,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
     long startTime = cache().ticker().read();
     try {
       @SuppressWarnings("unchecked")
-      Map<K, V> loaded = (Map<K, V>) loader().loadAll(keysToLoad);
+      Map<K, V> loaded = (Map<K, V>) cacheLoader().loadAll(keysToLoad);
       cache().putAll(loaded);
       for (K key : keysToLoad) {
         V value = loaded.get(key);
@@ -120,7 +120,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
     cache().executor().execute(() -> {
       try {
         BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
-            (oldValue == null)  ? loader().load(key) : loader().reload(key, oldValue);
+            (oldValue == null)  ? cacheLoader().load(key) : cacheLoader().reload(key, oldValue);
         cache().compute(key, refreshFunction, false, false);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown during refresh", t);

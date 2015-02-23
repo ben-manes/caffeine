@@ -84,7 +84,7 @@ public final class Specifications {
       ClassName.get(PACKAGE_NAME, "BoundedLocalCache"), kTypeVar, vTypeVar);
 
   static final TypeName CACHE_LOADER = ParameterizedTypeName.get(
-      ClassName.get(PACKAGE_NAME, "CacheLoader"), kTypeVar, vTypeVar);
+      ClassName.get(PACKAGE_NAME, "CacheLoader"), TypeVariableName.get("? super K"), vTypeVar);
   static final ParameterSpec CACHE_LOADER_PARAM =
       ParameterSpec.builder(CACHE_LOADER, "cacheLoader").addAnnotation(Nullable.class).build();
 

@@ -155,7 +155,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
   protected BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
-    replacement = new PageReplacement<>(builder, loader, isAsync);
+    replacement = new PageReplacement<>(builder, isAsync);
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
@@ -175,9 +175,8 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
   }
 
   @Nullable
-  @SuppressWarnings("unchecked")
-  protected CacheLoader<K, V> cacheLoader() {
-    return (CacheLoader<K, V>) replacement.getLoader();
+  protected CacheLoader<? super K, V> cacheLoader() {
+    return null;
   }
 
   /* ---------------- Reference Support -------------- */
@@ -196,12 +195,12 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
 
   @Nullable
   protected ReferenceQueue<K> keyReferenceQueue() {
-    return replacement.getKeyReferenceQueue();
+    return null;
   }
 
   @Nullable
   protected ReferenceQueue<V> valueReferenceQueue() {
-    return replacement.getValueReferenceQueue();
+    return null;
   }
 
   /* ---------------- Expiration Support -------------- */
@@ -469,6 +468,9 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
   }
 
   void drainKeyReferences() {
+    if (!collectKeys()) {
+      return;
+    }
     Reference<? extends K> keyRef;
     while ((keyRef = keyReferenceQueue().poll()) != null) {
       Node<K, V> node = data.get(keyRef);
@@ -479,8 +481,11 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
   }
 
   void drainValueReferences() {
+    if (!collectValues()) {
+      return;
+    }
     Reference<? extends V> valueRef;
-    while ((valueRef = replacement.getValueReferenceQueue().poll()) != null) {
+    while ((valueRef = valueReferenceQueue().poll()) != null) {
       @SuppressWarnings("unchecked")
       InternalReference<V> ref = (InternalReference<V>) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
@@ -835,7 +840,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     final long now = replacement.getTicker().read();
     final int weight = replacement.weigher().weigh(key, value);
     final Node<K, V> node = nodeFactory.newNode(key, keyReferenceQueue(),
-        value, replacement.getValueReferenceQueue(), weight, now);
+        value, valueReferenceQueue(), weight, now);
 
     for (;;) {
       final Node<K, V> prior = data.putIfAbsent(node.getKeyReference(), node);
@@ -854,7 +859,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         }
         oldValue = prior.getValue();
         oldWeight = prior.getWeight();
-        prior.setValue(value, replacement.getValueReferenceQueue());
+        prior.setValue(value, valueReferenceQueue());
         prior.setWeight(weight);
       }
 
@@ -933,7 +938,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
       }
       oldWeight = node.getWeight();
       oldValue = node.getValue();
-      node.setValue(value, replacement.getValueReferenceQueue());
+      node.setValue(value, valueReferenceQueue());
       node.setWeight(weight);
     }
     final int weightedDifference = (weight - oldWeight);
@@ -966,7 +971,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         return false;
       }
       oldWeight = node.getWeight();
-      node.setValue(newValue, replacement.getValueReferenceQueue());
+      node.setValue(newValue, valueReferenceQueue());
       node.setWeight(weight);
     }
     final int weightedDifference = (weight - oldWeight);
@@ -1018,7 +1023,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
       }
       weight[0] = replacement.weigher().weigh(key, value[0]);
       return nodeFactory.newNode(key, keyReferenceQueue(),
-          value[0], replacement.getValueReferenceQueue(), weight[0], now);
+          value[0], valueReferenceQueue(), weight[0], now);
     });
     if (node == null) {
       return null;
@@ -1058,7 +1063,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
           }
           return null;
         }
-        prior.setValue(newValue[0], replacement.getValueReferenceQueue());
+        prior.setValue(newValue[0], valueReferenceQueue());
         int oldWeight = prior.getWeight();
         int newWeight = replacement.weigher().weigh(key, newValue[0]);
         prior.setWeight(newWeight);
@@ -1100,7 +1105,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         final long now = replacement.getTicker().read();
         final int weight = replacement.weigher().weigh(key, newValue[0]);
         final Node<K, V> newNode = nodeFactory.newNode(
-            keyRef, newValue[0], replacement.getValueReferenceQueue(), weight, now);
+            keyRef, newValue[0], valueReferenceQueue(), weight, now);
         task[0] = new AddTask(newNode, weight);
         return newNode;
       }
@@ -1133,7 +1138,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         final int newWeight = replacement.weigher().weigh(key, newValue[0]);
         if (task[1] == null) {
           prior.setWeight(newWeight);
-          prior.setValue(newValue[0], replacement.getValueReferenceQueue());
+          prior.setValue(newValue[0], valueReferenceQueue());
           final int weightedDifference = newWeight - oldWeight;
           if (weightedDifference != 0) {
             task[0] = new UpdateTask(prior, weightedDifference);
@@ -1145,7 +1150,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         } else {
           final long now = replacement.getTicker().read();
           Node<K, V> newNode = nodeFactory.newNode(
-              keyRef, newValue[0], replacement.getValueReferenceQueue(), newWeight, now);
+              keyRef, newValue[0], valueReferenceQueue(), newWeight, now);
           task[0] = new AddTask(newNode, newWeight);
           return newNode;
         }
@@ -1540,7 +1545,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     }
 
     BoundedLocalManualCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      cache = new BoundedLocalCache<>(builder, loader, false);
+      cache = LocalCacheFactory.newBoundedLocalCache(builder, loader, false);
       isWeighted = (builder.weigher != null);
     }
 
@@ -1758,8 +1763,8 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     }
 
     @Override
-    public CacheLoader<? super K, V> loader() {
-      return cache().replacement.getLoader();
+    public CacheLoader<? super K, V> cacheLoader() {
+      return cache.cacheLoader();
     }
 
     @Override
@@ -1776,7 +1781,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
       @SuppressWarnings("unchecked")
       SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
       proxy.refreshAfterWriteNanos = cache.replacement.refreshAfterWriteNanos();
-      proxy.loader = cache.replacement.getLoader();
+      proxy.loader = cache.cacheLoader();
       return proxy;
     }
   }
@@ -1793,7 +1798,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
 
     @SuppressWarnings("unchecked")
     BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      super(new BoundedLocalCache<>((Caffeine<K, CompletableFuture<V>>) builder,
+      super(LocalCacheFactory.newBoundedLocalCache((Caffeine<K, CompletableFuture<V>>) builder,
           key -> loader.asyncLoad(key, builder.getExecutor()), true), loader);
       this.isWeighted = builder.isWeighted();
     }

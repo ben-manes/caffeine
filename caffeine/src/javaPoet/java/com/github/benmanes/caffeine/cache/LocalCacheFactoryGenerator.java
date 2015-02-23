@@ -72,6 +72,7 @@ public final class LocalCacheFactoryGenerator {
         .addTypeVariable(vTypeVar)
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
+        .addParameter(boolean.class, "async")
         .returns(BOUNDED_LOCAL_CACHE)
         .addAnnotation(Nonnull.class)
         .addModifiers(Modifier.ABSTRACT)
@@ -88,6 +89,7 @@ public final class LocalCacheFactoryGenerator {
         .addCode(CacheSelectorCode.get())
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
+        .addParameter(boolean.class, "async")
         .addJavadoc("Returns a cache optimized for this configuration.\n")
         .build();
   }
@@ -123,11 +125,11 @@ public final class LocalCacheFactoryGenerator {
   private void addLocalCacheSpec(Strength keyStrength, Strength valueStrength,
       boolean cacheLoader) {
     String enumName = makeEnumName(keyStrength, valueStrength, cacheLoader);
-    String className = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
-    if (!seen.add(className)) {
+    if (!seen.add(enumName)) {
       // skip duplicates
       return;
     }
+    String className = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
     factory.addEnumConstant(enumName,TypeSpec.anonymousClassBuilder("")
         .addMethod(MethodSpec.methodBuilder("create")
             .addTypeVariable(kTypeVar).addTypeVariable(vTypeVar)
@@ -135,7 +137,8 @@ public final class LocalCacheFactoryGenerator {
             .returns(BOUNDED_LOCAL_CACHE)
             .addParameter(BUILDER_PARAM)
             .addParameter(CACHE_LOADER_PARAM)
-            .addStatement("return new $N<>(builder, cacheLoader)", className)
+            .addParameter(boolean.class, "async")
+            .addStatement("return new $N<>(builder, cacheLoader, async)", className)
             .build())
         .build());
 

@@ -56,7 +56,7 @@ public final class CacheSelectorCode {
   private CodeBlock build() {
     return name
         .addStatement("LocalCacheFactory factory = valueOf(sb.toString())")
-        .addStatement("return factory.create(builder, cacheLoader)")
+        .addStatement("return factory.create(builder, cacheLoader, async)")
         .build();
   }
 
