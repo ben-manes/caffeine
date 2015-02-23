@@ -25,6 +25,7 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -67,7 +68,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @param <V> the type of mapped values
  */
 @ThreadSafe
-final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K, V> {
+class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K, V> {
 
   /*
    * This class performs a best-effort bounding of a ConcurrentHashMap using a page-replacement
@@ -151,7 +152,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
   /**
    * Creates an instance based on the builder's configuration.
    */
-  private BoundedLocalCache(Caffeine<K, V> builder,
+  protected BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     replacement = new PageReplacement<>(builder, loader, isAsync);
@@ -173,6 +174,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     });
   }
 
+  @Nullable
+  @SuppressWarnings("unchecked")
+  protected CacheLoader<K, V> cacheLoader() {
+    return (CacheLoader<K, V>) replacement.getLoader();
+  }
+
+  /* ---------------- Reference Support -------------- */
+
   boolean collectKeys() {
     return nodeFactory.weakKeys();
   }
@@ -183,6 +192,16 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   boolean collects() {
     return collectKeys() || collectValues();
+  }
+
+  @Nullable
+  protected ReferenceQueue<K> keyReferenceQueue() {
+    return replacement.getKeyReferenceQueue();
+  }
+
+  @Nullable
+  protected ReferenceQueue<V> valueReferenceQueue() {
+    return replacement.getValueReferenceQueue();
   }
 
   /* ---------------- Expiration Support -------------- */
@@ -350,7 +369,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
         K key = node.getKey();
         if (key != null) {
           try {
-            computeIfPresent(key, (k, oldValue) -> replacement.getLoader().reload(key, oldValue));
+            computeIfPresent(key, (k, oldValue) -> cacheLoader().reload(key, oldValue));
           } catch (Throwable t) {
             logger.log(Level.WARNING, "Exception thrown during reload", t);
           }
@@ -451,7 +470,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
   void drainKeyReferences() {
     Reference<? extends K> keyRef;
-    while ((keyRef = replacement.getKeyReferenceQueue().poll()) != null) {
+    while ((keyRef = keyReferenceQueue().poll()) != null) {
       Node<K, V> node = data.get(keyRef);
       if (node != null) {
         evict(node, RemovalCause.COLLECTED);
@@ -815,7 +834,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     final long now = replacement.getTicker().read();
     final int weight = replacement.weigher().weigh(key, value);
-    final Node<K, V> node = nodeFactory.newNode(key, replacement.getKeyReferenceQueue(),
+    final Node<K, V> node = nodeFactory.newNode(key, keyReferenceQueue(),
         value, replacement.getValueReferenceQueue(), weight, now);
 
     for (;;) {
@@ -991,14 +1010,14 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
     int[] weight = new int[1];
     @SuppressWarnings("unchecked")
     V[] value = (V[]) new Object[1];
-    Object keyRef = nodeFactory.newReferenceKey(key, replacement.getKeyReferenceQueue());
+    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     node = data.computeIfAbsent(keyRef, k -> {
       value[0] = statsAware(mappingFunction, isAsync).apply(key);
       if (value[0] == null) {
         return null;
       }
       weight[0] = replacement.weigher().weigh(key, value[0]);
-      return nodeFactory.newNode(key, replacement.getKeyReferenceQueue(),
+      return nodeFactory.newNode(key, keyReferenceQueue(),
           value[0], replacement.getValueReferenceQueue(), weight[0], now);
     });
     if (node == null) {
@@ -1070,7 +1089,7 @@ final class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCa
 
     @SuppressWarnings("unchecked")
     V[] newValue = (V[]) new Object[1];
-    Object keyRef = nodeFactory.newReferenceKey(key, replacement.getKeyReferenceQueue());
+    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     Runnable[] task = new Runnable[2];
     Node<K, V> node = data.compute(keyRef, (k, prior) -> {
       if (prior == null) {

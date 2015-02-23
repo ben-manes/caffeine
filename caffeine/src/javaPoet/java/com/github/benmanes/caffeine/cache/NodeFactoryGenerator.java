@@ -77,11 +77,13 @@ public final class NodeFactoryGenerator {
   static final String PACKAGE_NAME = NodeFactoryGenerator.class.getPackage().getName();
 
   final Path directory;
+  final Set<String> seen;
 
   TypeSpec.Builder nodeFactory;
 
   public NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
+    this.seen = new HashSet<>();
   }
 
   void generate() throws IOException {
@@ -216,9 +218,8 @@ public final class NodeFactoryGenerator {
   }
 
   private void generatedNodes() throws IOException {
-    Set<String> seen = new HashSet<>();
     for (List<Object> combination : combinations()) {
-      addNodeSpec(seen,
+      addNodeSpec(
           (Strength) combination.get(0),
           (Strength) combination.get(1),
           (boolean) combination.get(2),
@@ -229,7 +230,7 @@ public final class NodeFactoryGenerator {
     }
   }
 
-  private void addNodeSpec(Set<String> seen, Strength keyStrength, Strength valueStrength,
+  private void addNodeSpec(Strength keyStrength, Strength valueStrength,
       boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
       boolean maximum, boolean weighed) throws IOException {
     String enumName = makeEnumName(keyStrength, valueStrength,

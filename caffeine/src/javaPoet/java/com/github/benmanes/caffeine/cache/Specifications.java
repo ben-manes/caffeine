@@ -21,6 +21,7 @@ import java.lang.ref.ReferenceQueue;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -74,6 +75,18 @@ public final class Specifications {
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
   static final AnnotationSpec UNUSED =
       AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "$S", "unused").build();
+
+  static final TypeName BUILDER = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "Caffeine"), kTypeVar, vTypeVar);
+  static final ParameterSpec BUILDER_PARAM =
+      ParameterSpec.builder(BUILDER, "builder").addAnnotation(Nonnull.class).build();
+  static final TypeName BOUNDED_LOCAL_CACHE = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "BoundedLocalCache"), kTypeVar, vTypeVar);
+
+  static final TypeName CACHE_LOADER = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "CacheLoader"), kTypeVar, vTypeVar);
+  static final ParameterSpec CACHE_LOADER_PARAM =
+      ParameterSpec.builder(CACHE_LOADER, "cacheLoader").addAnnotation(Nullable.class).build();
 
   enum Visibility {
     IMMEDIATE(false), LAZY(true);
