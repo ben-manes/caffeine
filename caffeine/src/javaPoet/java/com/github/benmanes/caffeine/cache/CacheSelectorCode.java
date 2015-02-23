@@ -53,6 +53,20 @@ public final class CacheSelectorCode {
     return this;
   }
 
+  private CacheSelectorCode removalListener() {
+    name.beginControlFlow("if (builder.removalListener != null)")
+            .addStatement("sb.append(\"_LISTENING\")")
+        .endControlFlow();
+    return this;
+  }
+
+  private CacheSelectorCode executor() {
+    name.beginControlFlow("if (builder.executor != null)")
+            .addStatement("sb.append(\"_EXECUTOR\")")
+        .endControlFlow();
+    return this;
+  }
+
   private CodeBlock build() {
     return name
         .addStatement("LocalCacheFactory factory = valueOf(sb.toString())")
@@ -65,6 +79,8 @@ public final class CacheSelectorCode {
         .keys()
         .values()
         .cacheLoader()
+        .removalListener()
+        .executor()
         .build();
   }
 }

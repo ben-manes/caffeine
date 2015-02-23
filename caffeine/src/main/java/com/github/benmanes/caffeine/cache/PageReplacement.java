@@ -22,7 +22,6 @@ import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.I
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -87,10 +86,6 @@ final class PageReplacement<K, V> {
   private final boolean isRecordingStats;
   private final StatsCounter statsCounter;
 
-  // These fields provide support for notifying a listener.
-  private final RemovalListener<K, V> removalListener;
-  private final Executor executor;
-
   @SuppressWarnings({"unchecked", "cast"})
   PageReplacement(Caffeine<K, V> builder, boolean isAsync) {
     weightedSize = new AtomicLong();
@@ -129,9 +124,6 @@ final class PageReplacement<K, V> {
     expireAfterAccessNanos = builder.getExpireAfterAccessNanos();
     expireAfterWriteNanos = builder.getExpireAfterWriteNanos();
     refreshAfterWriteNanos = builder.getRefreshNanos();
-
-    removalListener = builder.getRemovalListener(isAsync);
-    executor = builder.getExecutor();
   }
 
   LinkedDeque<Node<K, V>> getAccessOrderDeque() {
@@ -160,10 +152,6 @@ final class PageReplacement<K, V> {
 
   NonReentrantLock evictionLock() {
     return evictionLock;
-  }
-
-  Executor executor() {
-    return executor;
   }
 
   long[] readBufferReadCount() {
@@ -198,17 +186,6 @@ final class PageReplacement<K, V> {
 
   void lazySetWeightedSize(long weightedSize) {
     this.weightedSize.lazySet(weightedSize);
-  }
-
-  /* ---------------- Removal Listener Support -------------- */
-
-  /** Returns whether this cache notifies when an entry is removed. */
-  boolean hasRemovalListener() {
-    return (removalListener != null);
-  }
-
-  RemovalListener<K, V> removalListener() {
-    return removalListener;
   }
 
   /* ---------------- Stats Support -------------- */

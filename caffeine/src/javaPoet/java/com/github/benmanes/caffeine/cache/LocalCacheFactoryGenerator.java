@@ -106,10 +106,12 @@ public final class LocalCacheFactoryGenerator {
     Set<Strength> keyStrengths = ImmutableSet.of(Strength.STRONG, Strength.WEAK);
     Set<Strength> valueStrengths = ImmutableSet.of(Strength.STRONG, Strength.WEAK, Strength.SOFT);
     Set<Boolean> cacheLoaders = ImmutableSet.of(true, false);
+    Set<Boolean> removalListeners = ImmutableSet.of(true, false);
+    Set<Boolean> executors = ImmutableSet.of(true, false);
 
     @SuppressWarnings("unchecked")
     Set<List<Object>> combinations = Sets.cartesianProduct(keyStrengths, valueStrengths,
-        cacheLoaders);
+        cacheLoaders, removalListeners, executors);
     return combinations;
   }
 
@@ -118,13 +120,16 @@ public final class LocalCacheFactoryGenerator {
       addLocalCacheSpec(
           (Strength) combination.get(0),
           (Strength) combination.get(1),
-          (Boolean) combination.get(2));
+          (Boolean) combination.get(2),
+          (Boolean) combination.get(3),
+          (Boolean) combination.get(4));
     }
   }
 
   private void addLocalCacheSpec(Strength keyStrength, Strength valueStrength,
-      boolean cacheLoader) {
-    String enumName = makeEnumName(keyStrength, valueStrength, cacheLoader);
+      boolean cacheLoader, boolean removalListener, boolean executor) {
+    String enumName = makeEnumName(keyStrength, valueStrength, cacheLoader, removalListener,
+        executor);
     if (!seen.add(enumName)) {
       // skip duplicates
       return;
@@ -143,11 +148,12 @@ public final class LocalCacheFactoryGenerator {
         .build());
 
     LocalCacheGenerator generator = new LocalCacheGenerator(className, keyStrength, valueStrength,
-        cacheLoader);
+        cacheLoader, removalListener, executor);
     factory.addType(generator.generate());
   }
 
-  private String makeEnumName(Strength keyStrength, Strength valueStrength, boolean cacheLoader) {
+  private String makeEnumName(Strength keyStrength, Strength valueStrength, boolean cacheLoader,
+      boolean removalListener, boolean executor) {
     StringBuilder name = new StringBuilder(keyStrength + "_KEYS");
     if (valueStrength == Strength.STRONG) {
       name.append("_STRONG_VALUES");
@@ -156,6 +162,12 @@ public final class LocalCacheFactoryGenerator {
     }
     if (cacheLoader) {
       name.append("_LOADING");
+    }
+    if (removalListener) {
+      name.append("_LISTENING");
+    }
+    if (executor) {
+      name.append("_EXECUTOR");
     }
     return name.toString();
   }

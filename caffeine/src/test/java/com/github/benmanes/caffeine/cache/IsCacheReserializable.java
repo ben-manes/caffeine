@@ -227,14 +227,12 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     desc.expectThat("same expireAfterWriteNanos",
         copy.replacement.expireAfterWriteNanos(), is(original.replacement.expireAfterWriteNanos()));
 
-    if (original.replacement.removalListener() == null) {
-      desc.expectThat("same removalListener", copy.replacement.removalListener(), is(nullValue()));
-    } else if (copy.replacement.removalListener() == null) {
+    if (original.removalListener() == null) {
+      desc.expectThat("same removalListener", copy.removalListener(), is(nullValue()));
+    } else if (copy.removalListener() == null) {
       desc.expected("non-null removalListener");
-    } else if (copy.replacement.removalListener().getClass() !=
-        original.replacement.removalListener().getClass()) {
-      desc.expected("same removalListener but was " +
-        copy.replacement.removalListener().getClass());
+    } else if (copy.removalListener().getClass() != original.removalListener().getClass()) {
+      desc.expected("same removalListener but was " + copy.removalListener().getClass());
     }
   }
 

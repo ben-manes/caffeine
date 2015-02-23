@@ -88,6 +88,9 @@ public final class Specifications {
   static final ParameterSpec CACHE_LOADER_PARAM =
       ParameterSpec.builder(CACHE_LOADER, "cacheLoader").addAnnotation(Nullable.class).build();
 
+  static final TypeName REMOVAL_LISTENER = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "RemovalListener"), kTypeVar, vTypeVar);
+
   enum Visibility {
     IMMEDIATE(false), LAZY(true);
 

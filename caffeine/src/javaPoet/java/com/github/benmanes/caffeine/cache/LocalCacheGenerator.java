@@ -19,10 +19,13 @@ import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CA
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.REMOVAL_LISTENER;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+
+import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
@@ -45,13 +48,17 @@ public final class LocalCacheGenerator {
   private final Strength keyStrength;
   private final Strength valueStrength;
   private final boolean cacheLoader;
+  private final boolean removalListener;
+  private final boolean executor;
 
   LocalCacheGenerator(String className, Strength keyStrength, Strength valueStrength,
-      boolean cacheLoader) {
+      boolean cacheLoader, boolean removalListener, boolean executor) {
     this.cache = TypeSpec.classBuilder(className);
+    this.removalListener = removalListener;
     this.valueStrength = valueStrength;
     this.keyStrength = keyStrength;
     this.cacheLoader = cacheLoader;
+    this.executor = executor;
   }
 
   public TypeSpec generate() {
@@ -68,6 +75,8 @@ public final class LocalCacheGenerator {
     addKeyStrength();
     addValueStrength();
     addCacheLoader(constructor);
+    addRemovalListener(constructor);
+    addExecutor(constructor);
     return cache.addMethod(constructor.build()).build();
   }
 
@@ -77,6 +86,42 @@ public final class LocalCacheGenerator {
 
   private void addValueStrength() {
     addStrength(valueStrength, "valueReferenceQueue", vRefQueueType);
+  }
+
+  private void addRemovalListener(MethodSpec.Builder constructor) {
+    if (!removalListener) {
+      return;
+    }
+    cache.addField(
+        FieldSpec.builder(REMOVAL_LISTENER, "removalListener", privateFinalModifiers).build());
+    constructor.addStatement("this.removalListener = builder.getRemovalListener(async)");
+    cache.addMethod(MethodSpec.methodBuilder("removalListener")
+        .addStatement("return removalListener")
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .addAnnotation(Nullable.class)
+        .returns(REMOVAL_LISTENER)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("hasRemovalListener")
+        .addStatement("return true")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+  }
+
+  private void addExecutor(MethodSpec.Builder constructor) {
+    if (!executor) {
+      return;
+    }
+    cache.addField(FieldSpec.builder(Executor.class, "executor", privateFinalModifiers).build());
+    constructor.addStatement("this.executor = builder.getExecutor()");
+    cache.addMethod(MethodSpec.methodBuilder("executor")
+        .addStatement("return executor")
+        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(Override.class)
+        .returns(Executor.class)
+        .build());
   }
 
   private void addCacheLoader(MethodSpec.Builder constructor) {

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.IDLE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.PROCESSING;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.REQUIRED;
+import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 
@@ -44,6 +45,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -162,21 +164,38 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         builder.evicts(), (isAsync && builder.evicts()) || builder.isWeighted());
   }
 
+  @Nullable
+  protected CacheLoader<? super K, V> cacheLoader() {
+    return null;
+  }
+
+  @Override
+  public Executor executor() {
+    return ForkJoinPool.commonPool();
+  }
+
+  /* ---------------- Removal Listener Support -------------- */
+
+  @Override
+  public RemovalListener<K, V> removalListener() {
+    return null;
+  }
+
+  /** Returns whether this cache notifies when an entry is removed. */
+  protected boolean hasRemovalListener() {
+    return false;
+  }
+
   /** Asynchronously sends a removal notification to the listener. */
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
-    requireNonNull(replacement.removalListener(), "Notification should be guarded with a check");
-    replacement.executor().execute(() -> {
+    requireState(hasRemovalListener(), "Notification should be guarded with a check");
+    executor().execute(() -> {
       try {
-        replacement.removalListener().onRemoval(new RemovalNotification<K, V>(key, value, cause));
+        removalListener().onRemoval(new RemovalNotification<K, V>(key, value, cause));
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown by removal listener", t);
       }
     });
-  }
-
-  @Nullable
-  protected CacheLoader<? super K, V> cacheLoader() {
-    return null;
   }
 
   /* ---------------- Reference Support -------------- */
@@ -299,7 +318,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
 
     if (removed) {
       replacement.getStatsCounter().recordEviction();
-      if (replacement.hasRemovalListener()) {
+      if (hasRemovalListener()) {
         // Notify the listener only if the entry was evicted. This must be performed as the last
         // step during eviction to safe guard against the executor rejecting the notification task.
         notifyRemoval(key, node.getValue(), cause);
@@ -364,7 +383,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     if (refreshes() && ((now - node.getWriteTime()) > replacement.refreshAfterWriteNanos())) {
       // FIXME: make atomic and avoid race
       node.setWriteTime(now);
-      replacement.executor().execute(() -> {
+      executor().execute(() -> {
         K key = node.getKey();
         if (key != null) {
           try {
@@ -694,7 +713,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
       if (evicts() || expiresAfterAccess()) {
         Node<K, V> node;
         while ((node = replacement.getAccessOrderDeque().poll()) != null) {
-          if (data.remove(node.getKeyReference(), node) && replacement.hasRemovalListener()) {
+          if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
             K key = node.getKey();
             V value = node.getValue();
             if ((key == null) || (value == null)) {
@@ -717,7 +736,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
       if (expiresAfterWrite()) {
         Node<K, V> node;
         while ((node = replacement.getWriteOrderDeque().poll()) != null) {
-          if (data.remove(node.getKeyReference(), node) && replacement.hasRemovalListener()) {
+          if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
             K key = node.getKey();
             V value = node.getValue();
             if ((key == null) || (value == null)) {
@@ -732,7 +751,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
 
       for (Entry<Object, Node<K, V>> entry : data.entrySet()) {
         Node<K, V> node = entry.getValue();
-        if (data.remove(node.getKeyReference(), node) && replacement.hasRemovalListener()) {
+        if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
           K key = node.getKey();
           V value = node.getValue();
           if ((key == null) || (value == null)) {
@@ -869,7 +888,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
       } else {
         afterWrite(prior, new UpdateTask(prior, weightedDifference));
       }
-      if (replacement.hasRemovalListener() && (value != oldValue)) {
+      if (hasRemovalListener() && (value != oldValue)) {
         notifyRemoval(key, value, RemovalCause.REPLACED);
       }
       return oldValue;
@@ -886,7 +905,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     V oldValue = node.makeRetired();
     if (oldValue != null) {
       afterWrite(node, new RemovalTask(node));
-      if (replacement.hasRemovalListener()) {
+      if (hasRemovalListener()) {
         @SuppressWarnings("unchecked")
         K castKey = (K) key;
         notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);
@@ -911,7 +930,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         return false;
       }
     }
-    if (data.remove(keyRef, node) && replacement.hasRemovalListener()) {
+    if (data.remove(keyRef, node) && hasRemovalListener()) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
       notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);
@@ -948,7 +967,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
-    if (replacement.hasRemovalListener() && (value != oldValue)) {
+    if (hasRemovalListener() && (value != oldValue)) {
       notifyRemoval(key, value, RemovalCause.REPLACED);
     }
     return oldValue;
@@ -981,7 +1000,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     } else {
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
-    if (replacement.hasRemovalListener() && (oldValue != newValue)) {
+    if (hasRemovalListener() && (oldValue != newValue)) {
       notifyRemoval(key, oldValue, RemovalCause.REPLACED);
     }
     return true;
@@ -1001,7 +1020,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
       if (hasExpired(node, now)) {
         if (data.remove(node.getKeyReference(), node)) {
           afterWrite(node, new RemovalTask(node));
-          if (replacement.hasRemovalListener()) {
+          if (hasRemovalListener()) {
             notifyRemoval(key, node.getValue(), RemovalCause.EXPIRED);
           }
           replacement.getStatsCounter().recordEviction();
@@ -1058,7 +1077,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         if (newValue[0] == null) {
           prior.makeRetired();
           task[0] = new RemovalTask(prior);
-          if (replacement.hasRemovalListener()) {
+          if (hasRemovalListener()) {
             notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
           }
           return null;
@@ -1072,7 +1091,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         if (weightedDifference != 0) {
           task[0] = new UpdateTask(prior, weightedDifference);
         }
-        if (replacement.hasRemovalListener() && (newValue[0] != oldValue)) {
+        if (hasRemovalListener() && (newValue[0] != oldValue)) {
           notifyRemoval(key, oldValue, RemovalCause.REPLACED);
         }
         return prior;
@@ -1117,7 +1136,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
           // conditionally removed won, but we got the entry lock first
           // so help out and pretend like we are inserting a fresh entry
           task[1] = new RemovalTask(prior);
-          if (replacement.hasRemovalListener()) {
+          if (hasRemovalListener()) {
             V value = prior.getValue();
             if (value == null) {
               notifyRemoval(key, value, RemovalCause.COLLECTED);
@@ -1129,7 +1148,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
         newValue[0] = statsAware(remappingFunction, recordMiss, isAsync).apply(key, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
-          if (replacement.hasRemovalListener()) {
+          if (hasRemovalListener()) {
             notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
           }
           return null;
@@ -1143,7 +1162,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
           if (weightedDifference != 0) {
             task[0] = new UpdateTask(prior, weightedDifference);
           }
-          if (replacement.hasRemovalListener() && (newValue[0] != oldValue)) {
+          if (hasRemovalListener() && (newValue[0] != oldValue)) {
             notifyRemoval(key, oldValue, RemovalCause.REPLACED);
           }
           return prior;
@@ -1186,12 +1205,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
   }
 
   void asyncCleanup() {
-    replacement.executor().execute(this::cleanUp);
-  }
-
-  @Override
-  public RemovalListener<K, V> removalListener() {
-    return replacement.removalListener();
+    executor().execute(this::cleanUp);
   }
 
   @Override
@@ -1207,11 +1221,6 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
   @Override
   public Ticker ticker() {
     return replacement.getTicker();
-  }
-
-  @Override
-  public Executor executor() {
-    return replacement.executor();
   }
 
   @Override
@@ -1517,7 +1526,7 @@ class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K,
     proxy.expireAfterAccessNanos = cache.replacement.getExpireAfterAccessNanos();
     proxy.expireAfterWriteNanos = cache.replacement.expireAfterWriteNanos();
     proxy.isRecordingStats = cache.replacement.isRecordingStats();
-    proxy.removalListener = cache.replacement.removalListener();
+    proxy.removalListener = cache.removalListener();
     proxy.ticker = cache.replacement.getTicker();
     if (cache.evicts()) {
       if (cache.replacement.weigher() == Weigher.singleton()) {
