@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.lang.ref.ReferenceQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
@@ -105,6 +106,10 @@ public final class Specifications {
 
   static final TypeName WRITE_ORDER_DEQUE = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "WriteOrderDeque"), NODE);
+
+  static final TypeName WRITE_QUEUE = ParameterizedTypeName.get(
+      ClassName.get(ConcurrentLinkedQueue.class), ClassName.get(Runnable.class));
+
 
   enum Visibility {
     IMMEDIATE(false), LAZY(true);

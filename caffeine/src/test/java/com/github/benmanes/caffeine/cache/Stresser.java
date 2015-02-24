@@ -102,8 +102,7 @@ public final class Stresser {
         runningTime += STATUS_INTERVAL;
         String elapsedTime = LocalTime.ofSecondOfDay(runningTime).toString();
         String pendingReads = NumberFormat.getInstance().format(reads);
-        String pendingWrites = NumberFormat.getInstance().format(
-            local.replacement.writeBuffer().size());
+        String pendingWrites = NumberFormat.getInstance().format(local.writeQueue().size());
         System.out.printf("---------- %s ----------%n", elapsedTime);
         System.out.printf("Pending reads = %s%n", pendingReads);
         System.out.printf("Pending write = %s%n", pendingWrites);

@@ -488,7 +488,7 @@ public final class Caffeine<K, V> {
   }
 
   @Nonnegative
-  long getExpireAfterWriteNanos() {
+  long getExpiresAfterWriteNanos() {
     return expiresAfterWrite() ? expireAfterWriteNanos : DEFAULT_EXPIRATION_NANOS;
   }
 
@@ -524,7 +524,7 @@ public final class Caffeine<K, V> {
   }
 
   @Nonnegative
-  long getExpireAfterAccessNanos() {
+  long getExpiresAfterAccessNanos() {
     return expiresAfterAccess() ? expireAfterAccessNanos : DEFAULT_EXPIRATION_NANOS;
   }
 
@@ -561,7 +561,7 @@ public final class Caffeine<K, V> {
   }
 
   @Nonnegative
-  long getRefreshNanos() {
+  long getRefreshAfterWriteNanos() {
     return refreshes() ? refreshNanos : DEFAULT_REFRESH_NANOS;
   }
 

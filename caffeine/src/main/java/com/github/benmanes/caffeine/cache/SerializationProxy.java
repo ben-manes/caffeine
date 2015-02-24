@@ -35,8 +35,8 @@ final class SerializationProxy<K, V> implements Serializable {
   boolean softValues;
   Weigher<?, ?> weigher;
   boolean isRecordingStats;
-  long expireAfterWriteNanos;
-  long expireAfterAccessNanos;
+  long expiresAfterWriteNanos;
+  long expiresAfterAccessNanos;
   long refreshAfterWriteNanos;
   CacheLoader<? super K, V> loader;
   RemovalListener<?, ?> removalListener;
@@ -59,11 +59,11 @@ final class SerializationProxy<K, V> implements Serializable {
       builder.maximumWeight(maximumWeight);
       builder.weigher((Weigher<Object, Object>) weigher);
     }
-    if (expireAfterWriteNanos > 0) {
-      builder.expireAfterWrite(expireAfterWriteNanos, TimeUnit.NANOSECONDS);
+    if (expiresAfterWriteNanos > 0) {
+      builder.expireAfterWrite(expiresAfterWriteNanos, TimeUnit.NANOSECONDS);
     }
-    if (expireAfterAccessNanos > 0) {
-      builder.expireAfterAccess(expireAfterAccessNanos, TimeUnit.NANOSECONDS);
+    if (expiresAfterAccessNanos > 0) {
+      builder.expireAfterAccess(expiresAfterAccessNanos, TimeUnit.NANOSECONDS);
     }
     if (refreshAfterWriteNanos > 0) {
       builder.refreshAfterWrite(refreshAfterWriteNanos, TimeUnit.NANOSECONDS);

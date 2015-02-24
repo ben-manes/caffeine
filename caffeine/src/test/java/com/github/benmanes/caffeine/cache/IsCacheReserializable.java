@@ -220,12 +220,26 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
           is(original.replacement.maximumWeightedSize().get()));
     }
 
-    desc.expectThat("same expireAfterWriteNanos",
-        copy.replacement.expireAfterWriteNanos(), is(original.replacement.expireAfterWriteNanos()));
-    desc.expectThat("same expireAfterWriteNanos",
-        copy.replacement.expireAfterWriteNanos(), is(original.replacement.expireAfterWriteNanos()));
-    desc.expectThat("same expireAfterWriteNanos",
-        copy.replacement.expireAfterWriteNanos(), is(original.replacement.expireAfterWriteNanos()));
+    if (original.expiresAfterAccess()) {
+      desc.expectThat("same expiresAfterAccessNanos",
+          copy.expiresAfterAccessNanos(), is(original.expiresAfterAccessNanos()));
+    } else {
+      desc.expectThat("", copy.expiresAfterAccess(), is(false));
+    }
+
+    if (original.expiresAfterWrite()) {
+      desc.expectThat("same expireAfterWriteNanos",
+          copy.expiresAfterWriteNanos(), is(original.expiresAfterWriteNanos()));
+    } else {
+      desc.expectThat("", copy.expiresAfterWrite(), is(false));
+    }
+
+    if (original.refreshAfterWrite()) {
+      desc.expectThat("same refreshAfterWriteNanos",
+          copy.refreshAfterWriteNanos(), is(original.refreshAfterWriteNanos()));
+    } else {
+      desc.expectThat("", copy.refreshAfterWrite(), is(false));
+    }
 
     if (original.removalListener() == null) {
       desc.expectThat("same removalListener", copy.removalListener(), is(nullValue()));

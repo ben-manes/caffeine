@@ -20,8 +20,6 @@ import static com.github.benmanes.caffeine.cache.BoundedLocalCache.NUMBER_OF_REA
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.READ_BUFFER_SIZE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.IDLE;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -60,18 +58,8 @@ final class PageReplacement<K, V> {
   private final AtomicLong[] readBufferDrainAtWriteCount;
   private final AtomicReference<Node<K, V>>[][] readBuffers;
 
-  private final Queue<Runnable> writeBuffer;
   private final NonReentrantLock evictionLock;
   private final AtomicReference<DrainStatus> drainStatus;
-
-  // How long after the last access to an entry the map will retain that entry
-  private volatile long expireAfterAccessNanos;
-
-  // How long after the last write to an entry the map will retain that entry
-  private volatile long expireAfterWriteNanos;
-
-  // How long after the last write an entry becomes a candidate for refresh
-  private volatile long refreshAfterWriteNanos;
 
   @SuppressWarnings({"unchecked", "cast"})
   PageReplacement(Caffeine<K, V> builder, boolean isAsync) {
@@ -95,17 +83,7 @@ final class PageReplacement<K, V> {
 
     // The eviction support
     evictionLock = new NonReentrantLock();
-    writeBuffer = new ConcurrentLinkedQueue<Runnable>();
     drainStatus = new AtomicReference<DrainStatus>(IDLE);
-
-    // The expiration support
-    expireAfterAccessNanos = builder.getExpireAfterAccessNanos();
-    expireAfterWriteNanos = builder.getExpireAfterWriteNanos();
-    refreshAfterWriteNanos = builder.getRefreshNanos();
-  }
-
-  Queue<Runnable> writeBuffer() {
-    return writeBuffer;
   }
 
   DrainStatus drainStatus() {
@@ -152,31 +130,5 @@ final class PageReplacement<K, V> {
 
   void lazySetWeightedSize(long weightedSize) {
     this.weightedSize.lazySet(weightedSize);
-  }
-
-  /* ---------------- Expiration Support -------------- */
-
-  long getExpireAfterAccessNanos() {
-    return expireAfterAccessNanos;
-  }
-
-  void setExpireAfterAccessNanos(long expireAfterAccessNanos) {
-    this.expireAfterAccessNanos = expireAfterAccessNanos;
-  }
-
-  long expireAfterWriteNanos() {
-    return expireAfterWriteNanos;
-  }
-
-  void setExpireAfterWriteNanos(long expireAfterWriteNanos) {
-    this.expireAfterWriteNanos = expireAfterWriteNanos;
-  }
-
-  long refreshAfterWriteNanos() {
-    return refreshAfterWriteNanos;
-  }
-
-  void setRefreshAfterWriteNanos(long refreshAfterWriteNanos) {
-    this.refreshAfterWriteNanos = refreshAfterWriteNanos;
   }
 }

@@ -62,7 +62,7 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void drain(BoundedLocalCache<K, V> cache) {
-    while (!cache.replacement.writeBuffer().isEmpty()) {
+    while (!cache.writeQueue().isEmpty()) {
       cache.cleanUp();
     }
 
@@ -74,7 +74,7 @@ public final class IsValidBoundedLocalCache<K, V>
       for (;;) {
         cache.drainBuffers();
 
-        boolean fullyDrained = cache.replacement.writeBuffer().isEmpty();
+        boolean fullyDrained = cache.writeQueue().isEmpty();
         for (int j = 0; j < cache.replacement.readBuffers().length; j++) {
           fullyDrained &= (cache.replacement.readBuffers()[i][j].get() == null);
         }
@@ -134,7 +134,7 @@ public final class IsValidBoundedLocalCache<K, V>
       weightedSize = scanLinks(cache, seen, deque, desc);
 
       Supplier<String> errorMsg = () -> String.format(
-          "Size != list length; pending=%s, additional: %s", cache.replacement.writeBuffer().size(),
+          "Size != list length; pending=%s, additional: %s", cache.writeQueue().size(),
           Sets.difference(seen, ImmutableSet.copyOf(cache.data.values())));
       desc.expectThat(errorMsg, cache.size(), is(seen.size()));
     }

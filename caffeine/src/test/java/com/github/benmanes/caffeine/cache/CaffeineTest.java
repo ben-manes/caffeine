@@ -307,7 +307,7 @@ public final class CaffeineTest {
   public void refreshAfterWrite() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder()
         .refreshAfterWrite(1, TimeUnit.MILLISECONDS);
-    assertThat(builder.getRefreshNanos(), is(TimeUnit.MILLISECONDS.toNanos(1)));
+    assertThat(builder.getRefreshAfterWriteNanos(), is(TimeUnit.MILLISECONDS.toNanos(1)));
     builder.build(k -> k);
   }
 

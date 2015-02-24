@@ -298,7 +298,7 @@ public final class BoundedLocalCacheTest {
     localCache.afterWrite(dummy, () -> ran[0] = true);
     assertThat(ran[0], is(true));
 
-    assertThat(localCache.replacement.writeBuffer(), hasSize(0));
+    assertThat(localCache.writeQueue(), hasSize(0));
   }
 
   @Test(dataProvider = "caches")
@@ -337,7 +337,7 @@ public final class BoundedLocalCacheTest {
   public void drain_onWrite(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     cache.put(1, 1);
-    assertThat(localCache.replacement.writeBuffer(), hasSize(0));
+    assertThat(localCache.writeQueue(), hasSize(0));
     assertThat(localCache.accessOrderDeque(), hasSize(1));
   }
 

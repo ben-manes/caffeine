@@ -25,6 +25,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.STATS_COUNTER;
 import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
 import static com.github.benmanes.caffeine.cache.Specifications.WEIGHER;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_ORDER_DEQUE;
+import static com.github.benmanes.caffeine.cache.Specifications.WRITE_QUEUE;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
@@ -108,6 +109,7 @@ public final class LocalCacheGenerator {
     addExpireAfterWrite();
     addRefreshAfterWrite();
     addWriteOrderDeque();
+    addWriteQueue();
     return cache.addMethod(constructor.build()).build();
   }
 
@@ -241,11 +243,26 @@ public final class LocalCacheGenerator {
     if (!expireAfterAccess) {
       return;
     }
+    constructor.addStatement("this.expiresAfterAccessNanos = builder.getExpiresAfterAccessNanos()");
+    cache.addField(FieldSpec.builder(long.class, "expiresAfterAccessNanos",
+        Modifier.PRIVATE, Modifier.VOLATILE).build());
     cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccess")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
         .addAnnotation(Override.class)
         .returns(boolean.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccessNanos")
+        .addStatement("return expiresAfterAccessNanos")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(long.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("setExpiresAfterAccessNanos")
+        .addStatement("this.expiresAfterAccessNanos = expiresAfterAccessNanos")
+        .addParameter(long.class, "expiresAfterAccessNanos")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
         .build());
   }
 
@@ -253,11 +270,26 @@ public final class LocalCacheGenerator {
     if (!expireAfterWrite) {
       return;
     }
+    constructor.addStatement("this.expiresAfterWriteNanos = builder.getExpiresAfterWriteNanos()");
+    cache.addField(FieldSpec.builder(long.class, "expiresAfterWriteNanos",
+        Modifier.PRIVATE, Modifier.VOLATILE).build());
     cache.addMethod(MethodSpec.methodBuilder("expiresAfterWrite")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
         .addAnnotation(Override.class)
         .returns(boolean.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("expiresAfterWriteNanos")
+        .addStatement("return expiresAfterWriteNanos")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(long.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("setExpiresAfterWriteNanos")
+        .addStatement("this.expiresAfterWriteNanos = expiresAfterWriteNanos")
+        .addParameter(long.class, "expiresAfterWriteNanos")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
         .build());
   }
 
@@ -265,11 +297,26 @@ public final class LocalCacheGenerator {
     if (!refreshAfterWrite) {
       return;
     }
+    constructor.addStatement("this.refreshAfterWriteNanos = builder.getRefreshAfterWriteNanos()");
+    cache.addField(FieldSpec.builder(long.class, "refreshAfterWriteNanos",
+        Modifier.PRIVATE, Modifier.VOLATILE).build());
     cache.addMethod(MethodSpec.methodBuilder("refreshAfterWrite")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
         .addAnnotation(Override.class)
         .returns(boolean.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("refreshAfterWriteNanos")
+        .addStatement("return refreshAfterWriteNanos")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(long.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("setRefreshAfterWriteNanos")
+        .addStatement("this.refreshAfterWriteNanos = refreshAfterWriteNanos")
+        .addParameter(long.class, "refreshAfterWriteNanos")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
         .build());
   }
 
@@ -290,8 +337,8 @@ public final class LocalCacheGenerator {
   }
 
   private void addWriteOrderDeque() {
-    boolean useAccessOrderDeque = expireAfterWrite || refreshAfterWrite;
-    if (!useAccessOrderDeque) {
+    boolean useWriteOrderDeque = expireAfterWrite || refreshAfterWrite;
+    if (!useWriteOrderDeque) {
       return;
     }
     constructor.addStatement("this.writeOrderDeque = new $T()", WRITE_ORDER_DEQUE);
@@ -302,6 +349,27 @@ public final class LocalCacheGenerator {
         .addModifiers(Modifier.PROTECTED)
         .addAnnotation(Override.class)
         .returns(WRITE_ORDER_DEQUE)
+        .build());
+  }
+
+  private void addWriteQueue() {
+    boolean useWriteQueue = maximum || expireAfterAccess || expireAfterWrite || refreshAfterWrite;
+    if (!useWriteQueue) {
+      return;
+    }
+    constructor.addStatement("this.writeQueue = new $T()", WRITE_QUEUE);
+    cache.addField(FieldSpec.builder(WRITE_QUEUE, "writeQueue", privateFinalModifiers).build());
+    cache.addMethod(MethodSpec.methodBuilder("writeQueue")
+        .addStatement("return writeQueue")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(WRITE_QUEUE)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("buffersWrites")
+        .addStatement("return true")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
         .build());
   }
 

@@ -44,6 +44,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -180,6 +181,15 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     throw new UnsupportedOperationException();
   }
 
+  protected ConcurrentLinkedQueue<Runnable> writeQueue() {
+    throw new UnsupportedOperationException();
+  }
+
+  /** If the page replacement policy buffers writes. */
+  protected boolean buffersWrites() {
+    return false;
+  }
+
   protected CacheLoader<? super K, V> cacheLoader() {
     throw new UnsupportedOperationException();
   }
@@ -256,12 +266,39 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     return false;
   }
 
+  /** How long after the last access to an entry the map will retain that entry. */
+  protected long expiresAfterAccessNanos() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected void setExpiresAfterAccessNanos(long expireAfterAccessNanos) {
+    throw new UnsupportedOperationException();
+  }
+
   protected boolean expiresAfterWrite() {
     return false;
   }
 
+  /** How long after the last write to an entry the map will retain that entry. */
+  protected long expiresAfterWriteNanos() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected void setExpiresAfterWriteNanos(long expireAfterWriteNanos) {
+    throw new UnsupportedOperationException();
+  }
+
   protected boolean refreshAfterWrite() {
     return false;
+  }
+
+  /** How long after the last write an entry becomes a candidate for refresh. */
+  protected long refreshAfterWriteNanos() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected void setRefreshAfterWriteNanos(long refreshAfterWriteNanos) {
+    throw new UnsupportedOperationException();
   }
 
   /* ---------------- Eviction Support -------------- */
@@ -370,7 +407,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   void expire() {
     long now = ticker().read();
     if (expiresAfterAccess()) {
-      long expirationTime = now - replacement.getExpireAfterAccessNanos();
+      long expirationTime = now - expiresAfterAccessNanos();
       for (;;) {
         final Node<K, V> node = accessOrderDeque().peekFirst();
         if ((node == null) || (node.getAccessTime() > expirationTime)) {
@@ -384,7 +421,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       }
     }
     if (expiresAfterWrite()) {
-      long expirationTime = now - replacement.expireAfterWriteNanos();
+      long expirationTime = now - expiresAfterWriteNanos();
       for (;;) {
         final Node<K, V> node = writeOrderDeque().peekFirst();
         if ((node == null) || (node.getWriteTime() > expirationTime)) {
@@ -400,10 +437,8 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   }
 
   boolean hasExpired(Node<K, V> node, long now) {
-    return (expiresAfterAccess()
-            && (now - node.getAccessTime() >= replacement.getExpireAfterAccessNanos()))
-        || (expiresAfterWrite()
-            && (now - node.getWriteTime() >= replacement.expireAfterWriteNanos()));
+    return (expiresAfterAccess() && (now - node.getAccessTime() >= expiresAfterAccessNanos()))
+        || (expiresAfterWrite() && (now - node.getWriteTime() >= expiresAfterWriteNanos()));
   }
 
   /**
@@ -424,7 +459,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       drainOnReadIfNeeded(bufferIndex, writeCount);
     }
 
-    if (refreshAfterWrite() && ((now - node.getWriteTime()) > replacement.refreshAfterWriteNanos())) {
+    if (refreshAfterWrite() && ((now - node.getWriteTime()) > refreshAfterWriteNanos())) {
       // FIXME: make atomic and avoid race
       node.setWriteTime(now);
       executor().execute(() -> {
@@ -497,8 +532,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       node.setAccessTime(now);
       node.setWriteTime(now);
     }
-
-    replacement.writeBuffer().add(task);
+    if (buffersWrites()) {
+      writeQueue().add(task);
+    }
     replacement.lazySetDrainStatus(REQUIRED);
     tryToDrainBuffers();
   }
@@ -605,8 +641,11 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   /** Drains the read buffer up to an amortized threshold. */
   @GuardedBy("evictionLock")
   void drainWriteBuffer() {
+    if (!buffersWrites()) {
+      return;
+    }
     for (int i = 0; i < WRITE_BUFFER_DRAIN_THRESHOLD; i++) {
-      final Runnable task = replacement.writeBuffer().poll();
+      final Runnable task = writeQueue().poll();
       if (task == null) {
         break;
       }
@@ -743,7 +782,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     try {
       // Apply all pending writes
       Runnable task;
-      while ((task = replacement.writeBuffer().poll()) != null) {
+      while ((task = writeQueue().poll()) != null) {
         task.run();
       }
 
@@ -1546,11 +1585,15 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     proxy.weakKeys = cache.nodeFactory.weakKeys();
     proxy.weakValues = cache.nodeFactory.weakValues();
     proxy.softValues = cache.nodeFactory.softValues();
-    proxy.expireAfterAccessNanos = cache.replacement.getExpireAfterAccessNanos();
-    proxy.expireAfterWriteNanos = cache.replacement.expireAfterWriteNanos();
     proxy.isRecordingStats = cache.isRecordingStats();
     proxy.removalListener = cache.removalListener();
     proxy.ticker = cache.ticker();
+    if (cache.expiresAfterAccess()) {
+      proxy.expiresAfterAccessNanos = cache.expiresAfterAccessNanos();
+    }
+    if (cache.expiresAfterWrite()) {
+      proxy.expiresAfterWriteNanos = cache.expiresAfterWriteNanos();
+    }
     if (cache.evicts()) {
       if (cache.weigher() == Weigher.singleton()) {
         proxy.maximumSize = cache.capacity();
@@ -1678,16 +1721,16 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           return OptionalLong.empty();
         }
         long age = cache.ticker().read() - node.getAccessTime();
-        return (age > cache.replacement.getExpireAfterAccessNanos())
+        return (age > cache.expiresAfterAccessNanos())
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
-        return unit.convert(cache.replacement.getExpireAfterAccessNanos(), TimeUnit.NANOSECONDS);
+        return unit.convert(cache.expiresAfterAccessNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
-        cache.replacement.setExpireAfterAccessNanos(unit.toNanos(duration));
+        cache.setExpiresAfterAccessNanos(unit.toNanos(duration));
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
@@ -1706,16 +1749,16 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           return OptionalLong.empty();
         }
         long age = cache.ticker().read() - node.getWriteTime();
-        return (age > cache.replacement.expireAfterWriteNanos())
+        return (age > cache.expiresAfterWriteNanos())
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
-        return unit.convert(cache.replacement.expireAfterWriteNanos(), TimeUnit.NANOSECONDS);
+        return unit.convert(cache.expiresAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
-        cache.replacement.setExpireAfterWriteNanos(unit.toNanos(duration));
+        cache.setExpiresAfterWriteNanos(unit.toNanos(duration));
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
@@ -1734,16 +1777,16 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           return OptionalLong.empty();
         }
         long age = cache.ticker().read() - node.getWriteTime();
-        return (age > cache.replacement.refreshAfterWriteNanos())
+        return (age > cache.refreshAfterWriteNanos())
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
       @Override public long getExpiresAfter(TimeUnit unit) {
-        return unit.convert(cache.replacement.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);
+        return unit.convert(cache.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
-        cache.replacement.setRefreshAfterWriteNanos(unit.toNanos(duration));
+        cache.setRefreshAfterWriteNanos(unit.toNanos(duration));
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
@@ -1812,7 +1855,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     Object writeReplace() {
       @SuppressWarnings("unchecked")
       SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
-      proxy.refreshAfterWriteNanos = cache.replacement.refreshAfterWriteNanos();
+      if (cache.refreshAfterWrite()) {
+        proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
+      }
       proxy.loader = cache.cacheLoader();
       return proxy;
     }
@@ -1854,7 +1899,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
     Object writeReplace() {
       SerializationProxy<K, V> proxy = makeSerializationProxy(cache);
-      proxy.refreshAfterWriteNanos = cache.replacement.refreshAfterWriteNanos();
+      if (cache.refreshAfterWrite()) {
+        proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
+      }
       proxy.loader = loader;
       proxy.async = true;
       return proxy;
