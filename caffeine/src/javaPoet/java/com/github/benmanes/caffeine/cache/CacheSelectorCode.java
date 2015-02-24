@@ -86,6 +86,19 @@ public final class CacheSelectorCode {
     return this;
   }
 
+  private CacheSelectorCode expires() {
+    name.beginControlFlow("if (builder.expiresAfterAccess())")
+            .addStatement("sb.append(\"_EXPIRE_ACCESS\")")
+        .endControlFlow()
+        .beginControlFlow("if (builder.expiresAfterWrite())")
+            .addStatement("sb.append(\"_EXPIRE_WRITE\")")
+        .endControlFlow()
+        .beginControlFlow("if (builder.refreshes())")
+            .addStatement("sb.append(\"_REFRESH_WRITE\")")
+        .endControlFlow();
+    return this;
+  }
+
   private CodeBlock build() {
     return name
         .addStatement("LocalCacheFactory factory = valueOf(sb.toString())")
@@ -102,6 +115,7 @@ public final class CacheSelectorCode {
         .executor()
         .stats()
         .maximum()
+        .expires()
         .build();
   }
 }

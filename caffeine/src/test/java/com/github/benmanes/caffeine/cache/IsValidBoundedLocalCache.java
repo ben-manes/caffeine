@@ -108,12 +108,12 @@ public final class IsValidBoundedLocalCache<K, V>
 
   private void checkEvictionDeque(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
     if (cache.evicts() || cache.expiresAfterAccess()) {
-      checkLinks(cache, cache.replacement.getAccessOrderDeque(), desc);
-      checkDeque(cache.replacement.getAccessOrderDeque(), cache.size(), desc);
+      checkLinks(cache, cache.accessOrderDeque(), desc);
+      checkDeque(cache.accessOrderDeque(), cache.size(), desc);
     }
     if (cache.expiresAfterWrite()) {
-      checkLinks(cache, cache.replacement.getWriteOrderDeque(), desc);
-      checkDeque(cache.replacement.getWriteOrderDeque(), cache.size(), desc);
+      checkLinks(cache, cache.writeOrderDeque(), desc);
+      checkDeque(cache.writeOrderDeque(), cache.size(), desc);
     }
   }
 

@@ -115,10 +115,14 @@ public final class LocalCacheFactoryGenerator {
     Set<Boolean> stats = ImmutableSet.of(true, false);
     Set<Boolean> maximumSize = ImmutableSet.of(true, false);
     Set<Boolean> weighted = ImmutableSet.of(true, false);
+    Set<Boolean> expireAfterAccess = ImmutableSet.of(true, false);
+    Set<Boolean> expireAfterWrite = ImmutableSet.of(true, false);
+    Set<Boolean> refreshAfterWrite = ImmutableSet.of(true, false);
 
     @SuppressWarnings("unchecked")
     Set<List<Object>> combinations = Sets.cartesianProduct(keyStrengths, valueStrengths,
-        cacheLoaders, removalListeners, executors, stats, maximumSize, weighted);
+        cacheLoaders, removalListeners, executors, stats, maximumSize, weighted, expireAfterAccess,
+        expireAfterWrite, refreshAfterWrite);
     return combinations;
   }
 
@@ -132,17 +136,20 @@ public final class LocalCacheFactoryGenerator {
           (Boolean) combination.get(4),
           (Boolean) combination.get(5),
           (Boolean) combination.get(6),
-          (Boolean) combination.get(7));
+          (Boolean) combination.get(7),
+          (Boolean) combination.get(8),
+          (Boolean) combination.get(9),
+          (Boolean) combination.get(10));
     }
   }
 
   private void addLocalCacheSpec(Strength keyStrength, Strength valueStrength,
       boolean cacheLoader, boolean removalListener, boolean executor, boolean stats,
-      boolean maximum, boolean weighed) {
+      boolean maximum, boolean weighed, boolean expireAfterAccess, boolean expireAfterWrite,
+      boolean refreshAfterWrite) {
     String enumName = makeEnumName(keyStrength, valueStrength, cacheLoader, removalListener,
-        executor, stats, maximum, weighed);
-    if (!seen.add(enumName)) {
-      // skip duplicates
+        executor, stats, maximum, weighed, expireAfterAccess, expireAfterWrite, refreshAfterWrite);
+    if ((weighed && !maximum) || !seen.add(enumName)) {
       return;
     }
     String className = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
@@ -159,13 +166,15 @@ public final class LocalCacheFactoryGenerator {
         .build());
 
     LocalCacheGenerator generator = new LocalCacheGenerator(className, keyStrength, valueStrength,
-        cacheLoader, removalListener, executor, stats, maximum, weighed);
+        cacheLoader, removalListener, executor, stats, maximum, weighed, expireAfterAccess,
+        expireAfterWrite, refreshAfterWrite);
     factory.addType(generator.generate());
   }
 
   private String makeEnumName(Strength keyStrength, Strength valueStrength, boolean cacheLoader,
       boolean removalListener, boolean executor, boolean stats, boolean maximum,
-      boolean weighed) {
+      boolean weighed, boolean expireAfterAccess, boolean expireAfterWrite,
+      boolean refreshAfterWrite) {
     StringBuilder name = new StringBuilder(keyStrength + "_KEYS");
     if (valueStrength == Strength.STRONG) {
       name.append("_STRONG_VALUES");
@@ -191,6 +200,15 @@ public final class LocalCacheFactoryGenerator {
       } else {
         name.append("_SIZE");
       }
+    }
+    if (expireAfterAccess) {
+      name.append("_EXPIRE_ACCESS");
+    }
+    if (expireAfterWrite) {
+      name.append("_EXPIRE_WRITE");
+    }
+    if (refreshAfterWrite) {
+      name.append("_REFRESH_WRITE");
     }
     return name.toString();
   }

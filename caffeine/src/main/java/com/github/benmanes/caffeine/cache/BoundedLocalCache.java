@@ -170,9 +170,18 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         builder.evicts(), (isAsync && builder.evicts()) || builder.isWeighted());
   }
 
-  @Nullable
+  @GuardedBy("evictionLock")
+  protected AccessOrderDeque<Node<K, V>> accessOrderDeque() {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected WriteOrderDeque<Node<K, V>> writeOrderDeque() {
+    throw new UnsupportedOperationException();
+  }
+
   protected CacheLoader<? super K, V> cacheLoader() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -223,12 +232,12 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   /* ---------------- Reference Support -------------- */
 
-  boolean collectKeys() {
-    return nodeFactory.weakKeys();
+  protected boolean collectKeys() {
+    return false;
   }
 
-  boolean collectValues() {
-    return !nodeFactory.strongValues();
+  protected boolean collectValues() {
+    return false;
   }
 
   @Nullable
@@ -243,16 +252,16 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   /* ---------------- Expiration Support -------------- */
 
-  boolean expiresAfterAccess() {
-    return nodeFactory.expiresAfterAccess();
+  protected boolean expiresAfterAccess() {
+    return false;
   }
 
-  boolean expiresAfterWrite() {
-    return nodeFactory.expiresAfterWrite();
+  protected boolean expiresAfterWrite() {
+    return false;
   }
 
-  boolean refreshes() {
-    return nodeFactory.refreshAfterWrite();
+  protected boolean refreshAfterWrite() {
+    return false;
   }
 
   /* ---------------- Eviction Support -------------- */
@@ -318,7 +327,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     // fails due to a concurrent removal of the victim, that removal may cancel out the addition
     // that triggered this eviction. The victim is eagerly unlinked before the removal task so
     // that if an eviction is still required then a new victim will be chosen for removal.
-    Node<K, V> node = replacement.getAccessOrderDeque().peek();
+    Node<K, V> node = accessOrderDeque().peek();
     while (hasOverflowed()) {
       // If weighted values are used, then the pending operations will adjust the size to reflect
       // the correct weight
@@ -340,8 +349,12 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     K key = node.getKey();
 
     makeDead(node);
-    replacement.getAccessOrderDeque().remove(node);
-    replacement.getWriteOrderDeque().remove(node);
+    if (evicts() || expiresAfterAccess()) {
+      accessOrderDeque().remove(node);
+    }
+    if (expiresAfterWrite() || refreshAfterWrite()) {
+      writeOrderDeque().remove(node);
+    }
 
     if (removed) {
       statsCounter().recordEviction();
@@ -359,24 +372,28 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     if (expiresAfterAccess()) {
       long expirationTime = now - replacement.getExpireAfterAccessNanos();
       for (;;) {
-        final Node<K, V> node = replacement.getAccessOrderDeque().peekFirst();
+        final Node<K, V> node = accessOrderDeque().peekFirst();
         if ((node == null) || (node.getAccessTime() > expirationTime)) {
           break;
         }
-        replacement.getAccessOrderDeque().pollFirst();
-        replacement.getWriteOrderDeque().remove(node);
+        accessOrderDeque().pollFirst();
+        if (expiresAfterWrite() || refreshAfterWrite()) {
+          writeOrderDeque().remove(node);
+        }
         evict(node, RemovalCause.EXPIRED);
       }
     }
     if (expiresAfterWrite()) {
       long expirationTime = now - replacement.expireAfterWriteNanos();
       for (;;) {
-        final Node<K, V> node = replacement.getWriteOrderDeque().peekFirst();
+        final Node<K, V> node = writeOrderDeque().peekFirst();
         if ((node == null) || (node.getWriteTime() > expirationTime)) {
           break;
         }
-        replacement.getWriteOrderDeque().pollFirst();
-        replacement.getAccessOrderDeque().remove(node);
+        writeOrderDeque().pollFirst();
+        if (evicts() || expiresAfterAccess()) {
+          accessOrderDeque().remove(node);
+        }
         evict(node, RemovalCause.EXPIRED);
       }
     }
@@ -407,7 +424,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       drainOnReadIfNeeded(bufferIndex, writeCount);
     }
 
-    if (refreshes() && ((now - node.getWriteTime()) > replacement.refreshAfterWriteNanos())) {
+    if (refreshAfterWrite() && ((now - node.getWriteTime()) > replacement.refreshAfterWriteNanos())) {
       // FIXME: make atomic and avoid race
       node.setWriteTime(now);
       executor().execute(() -> {
@@ -568,7 +585,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       }
 
       slot.lazySet(null);
-      applyRead(node);
+      reorder(accessOrderDeque(), node);
       replacement.readBufferReadCount()[bufferIndex]++;
     }
     replacement.readBufferDrainAtWriteCount()[bufferIndex].lazySet(writeCount);
@@ -576,16 +593,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   /** Updates the node's location in the page replacement policy. */
   @GuardedBy("evictionLock")
-  void applyRead(Node<K, V> node) {
-    reorder(replacement.getAccessOrderDeque(), node);
-  }
-
-  /** Updates the node's location in the expiration policy. */
-  @GuardedBy("evictionLock")
-  void applyWrite(Node<K, V> node) {
-    reorder(replacement.getWriteOrderDeque(), node);
-  }
-
   static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node) {
     // An entry may be scheduled for reordering despite having been removed. This can occur when the
     // entry was concurrently read while a writer was removing it. If the entry is no longer linked
@@ -641,11 +648,11 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
       // ignore out-of-order write operations
       if (node.isAlive()) {
-        if (expiresAfterWrite()) {
-          replacement.getWriteOrderDeque().add(node);
+        if (expiresAfterWrite() || refreshAfterWrite()) {
+          writeOrderDeque().add(node);
         }
         if (evicts() || expiresAfterAccess()) {
-          replacement.getAccessOrderDeque().add(node);
+          accessOrderDeque().add(node);
         }
         evict();
       }
@@ -664,11 +671,11 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     @GuardedBy("evictionLock")
     public void run() {
       // add may not have been processed yet
-      if (expiresAfterWrite()) {
-        replacement.getWriteOrderDeque().remove(node);
-      }
       if (evicts() || expiresAfterAccess()) {
-        replacement.getAccessOrderDeque().remove(node);
+        accessOrderDeque().remove(node);
+      }
+      if (expiresAfterWrite() || refreshAfterWrite()) {
+        writeOrderDeque().remove(node);
       }
       makeDead(node);
     }
@@ -688,8 +695,12 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     @GuardedBy("evictionLock")
     public void run() {
       replacement.lazySetWeightedSize(replacement.weightedSize() + weightDifference);
-      applyWrite(node);
-      applyRead(node);
+      if (evicts() || expiresAfterAccess()) {
+        reorder(accessOrderDeque(), node);
+      }
+      if (expiresAfterWrite() || refreshAfterWrite()) {
+        reorder(writeOrderDeque(), node);
+      }
       evict();
     }
   }
@@ -739,7 +750,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       // Discard all entries
       if (evicts() || expiresAfterAccess()) {
         Node<K, V> node;
-        while ((node = replacement.getAccessOrderDeque().poll()) != null) {
+        while ((node = accessOrderDeque().poll()) != null) {
           if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
             K key = node.getKey();
             V value = node.getValue();
@@ -760,9 +771,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         }
       }
 
-      if (expiresAfterWrite()) {
+      if (expiresAfterWrite() || refreshAfterWrite()) {
         Node<K, V> node;
-        while ((node = replacement.getWriteOrderDeque().poll()) != null) {
+        while ((node = writeOrderDeque().poll()) != null) {
           if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
             K key = node.getKey();
             V value = node.getValue();
@@ -1630,7 +1641,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     }
     @Override
     public Optional<Expiration<K, V>> refreshAfterWrite() {
-      if (!(cache.refreshes())) {
+      if (!(cache.refreshAfterWrite())) {
         return Optional.empty();
       }
       return (refreshes == null)
@@ -1652,10 +1663,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         cache.setCapacity(maximumSize);
       }
       @Override public Map<K, V> coldest(int limit) {
-        return cache.orderedMap(cache.replacement.getAccessOrderDeque(), transformer, true, limit);
+        return cache.orderedMap(cache.accessOrderDeque(), transformer, true, limit);
       }
       @Override public Map<K, V> hottest(int limit) {
-        return cache.orderedMap(cache.replacement.getAccessOrderDeque(), transformer, false, limit);
+        return cache.orderedMap(cache.accessOrderDeque(), transformer, false, limit);
       }
     }
 
@@ -1680,10 +1691,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
-        return cache.orderedMap(cache.replacement.getAccessOrderDeque(), transformer, true, limit);
+        return cache.orderedMap(cache.accessOrderDeque(), transformer, true, limit);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return cache.orderedMap(cache.replacement.getAccessOrderDeque(), transformer, false, limit);
+        return cache.orderedMap(cache.accessOrderDeque(), transformer, false, limit);
       }
     }
 
@@ -1708,10 +1719,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         cache.asyncCleanup();
       }
       @Override public Map<K, V> oldest(int limit) {
-        return cache.orderedMap(cache.replacement.getWriteOrderDeque(), transformer, true, limit);
+        return cache.orderedMap(cache.writeOrderDeque(), transformer, true, limit);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return cache.orderedMap(cache.replacement.getWriteOrderDeque(), transformer, false, limit);
+        return cache.orderedMap(cache.writeOrderDeque(), transformer, false, limit);
       }
     }
 

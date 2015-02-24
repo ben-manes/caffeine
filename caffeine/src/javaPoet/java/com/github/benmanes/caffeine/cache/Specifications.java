@@ -100,6 +100,12 @@ public final class Specifications {
       TypeVariableName.get("? super K"),
       TypeVariableName.get("? super V"));
 
+  static final TypeName ACCESS_ORDER_DEQUE = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "AccessOrderDeque"), NODE);
+
+  static final TypeName WRITE_ORDER_DEQUE = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "WriteOrderDeque"), NODE);
+
   enum Visibility {
     IMMEDIATE(false), LAZY(true);
 

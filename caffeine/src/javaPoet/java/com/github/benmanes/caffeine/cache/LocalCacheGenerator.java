@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Specifications.ACCESS_ORDER_DEQUE;
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
@@ -23,6 +24,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.REMOVAL_LISTENER
 import static com.github.benmanes.caffeine.cache.Specifications.STATS_COUNTER;
 import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
 import static com.github.benmanes.caffeine.cache.Specifications.WEIGHER;
+import static com.github.benmanes.caffeine.cache.Specifications.WRITE_ORDER_DEQUE;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
@@ -48,6 +50,8 @@ public final class LocalCacheGenerator {
   private final Modifier[] privateFinalModifiers = { Modifier.PRIVATE, Modifier.FINAL };
 
   private final TypeSpec.Builder cache;
+  private final MethodSpec.Builder constructor;
+
   private final Strength keyStrength;
   private final Strength valueStrength;
   private final boolean cacheLoader;
@@ -56,11 +60,19 @@ public final class LocalCacheGenerator {
   private final boolean stats;
   private final boolean maximum;
   private final boolean weighed;
+  private final boolean expireAfterAccess;
+  private final boolean expireAfterWrite;
+  private final boolean refreshAfterWrite;
 
   LocalCacheGenerator(String className, Strength keyStrength, Strength valueStrength,
       boolean cacheLoader, boolean removalListener, boolean executor, boolean stats,
-      boolean maximum, boolean weighed) {
+      boolean maximum, boolean weighed, boolean expireAfterAccess, boolean expireAfterWrite,
+      boolean refreshAfterWrite) {
+    this.constructor = MethodSpec.constructorBuilder();
     this.cache = TypeSpec.classBuilder(className);
+    this.expireAfterAccess = expireAfterAccess;
+    this.refreshAfterWrite = refreshAfterWrite;
+    this.expireAfterWrite = expireAfterWrite;
     this.removalListener = removalListener;
     this.valueStrength = valueStrength;
     this.keyStrength = keyStrength;
@@ -76,7 +88,7 @@ public final class LocalCacheGenerator {
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
         .superclass(BOUNDED_LOCAL_CACHE);
-    MethodSpec.Builder constructor = MethodSpec.constructorBuilder()
+    constructor
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
@@ -84,25 +96,30 @@ public final class LocalCacheGenerator {
 
     addKeyStrength();
     addValueStrength();
-    addCacheLoader(constructor);
-    addRemovalListener(constructor);
-    addExecutor(constructor);
-    addStats(constructor);
-    addTicker(constructor);
-    addMaximum(constructor);
-    addWeigher(constructor);
+    addCacheLoader();
+    addRemovalListener();
+    addExecutor();
+    addStats();
+    addTicker();
+    addMaximum();
+    addWeigher();
+    addAccessOrderDeque();
+    addExpireAfterAccess();
+    addExpireAfterWrite();
+    addRefreshAfterWrite();
+    addWriteOrderDeque();
     return cache.addMethod(constructor.build()).build();
   }
 
   private void addKeyStrength() {
-    addStrength(keyStrength, "keyReferenceQueue", kRefQueueType);
+    addStrength(keyStrength, "collectKeys", "keyReferenceQueue", kRefQueueType);
   }
 
   private void addValueStrength() {
-    addStrength(valueStrength, "valueReferenceQueue", vRefQueueType);
+    addStrength(valueStrength, "collectValues", "valueReferenceQueue", vRefQueueType);
   }
 
-  private void addRemovalListener(MethodSpec.Builder constructor) {
+  private void addRemovalListener() {
     if (!removalListener) {
       return;
     }
@@ -124,7 +141,7 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private void addExecutor(MethodSpec.Builder constructor) {
+  private void addExecutor() {
     if (!executor) {
       return;
     }
@@ -138,7 +155,7 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private void addCacheLoader(MethodSpec.Builder constructor) {
+  private void addCacheLoader() {
     if (!cacheLoader) {
       return;
     }
@@ -153,7 +170,7 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private void addStats(MethodSpec.Builder constructor) {
+  private void addStats() {
     if (!stats) {
       return;
     }
@@ -173,9 +190,11 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private void addTicker(MethodSpec.Builder constructor) {
-    // TODO(ben): Make conditional when all usage migrated
-
+  private void addTicker() {
+    boolean useTicker = expireAfterAccess || expireAfterWrite || refreshAfterWrite || stats;
+    if (!useTicker) {
+      return;
+    }
     constructor.addStatement("this.ticker = builder.getTicker()");
     cache.addField(FieldSpec.builder(TICKER, "ticker", privateFinalModifiers).build());
     cache.addMethod(MethodSpec.methodBuilder("ticker")
@@ -186,7 +205,7 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private void addMaximum(MethodSpec.Builder constructor) {
+  private void addMaximum() {
     if (!maximum) {
       return;
     }
@@ -198,7 +217,7 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private void addWeigher(MethodSpec.Builder constructor) {
+  private void addWeigher() {
     if (!maximum && !weighed) {
       return;
     }
@@ -218,21 +237,94 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  /** Adds a reference queue if needed, otherwise delegates to the default (no-op) method. */
-  private void addStrength(Strength strength, String name, TypeName type) {
+  private void addExpireAfterAccess() {
+    if (!expireAfterAccess) {
+      return;
+    }
+    cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccess")
+        .addStatement("return true")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+  }
+
+  private void addExpireAfterWrite() {
+    if (!expireAfterWrite) {
+      return;
+    }
+    cache.addMethod(MethodSpec.methodBuilder("expiresAfterWrite")
+        .addStatement("return true")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+  }
+
+  private void addRefreshAfterWrite() {
+    if (!refreshAfterWrite) {
+      return;
+    }
+    cache.addMethod(MethodSpec.methodBuilder("refreshAfterWrite")
+        .addStatement("return true")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
+  }
+
+  private void addAccessOrderDeque() {
+    boolean useAccessOrderDeque = maximum || expireAfterAccess;
+    if (!useAccessOrderDeque) {
+      return;
+    }
+    constructor.addStatement("this.accessOrderDeque = new $T()", ACCESS_ORDER_DEQUE);
+    cache.addField(
+        FieldSpec.builder(ACCESS_ORDER_DEQUE, "accessOrderDeque", privateFinalModifiers).build());
+    cache.addMethod(MethodSpec.methodBuilder("accessOrderDeque")
+        .addStatement("return accessOrderDeque")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(ACCESS_ORDER_DEQUE)
+        .build());
+  }
+
+  private void addWriteOrderDeque() {
+    boolean useAccessOrderDeque = expireAfterWrite || refreshAfterWrite;
+    if (!useAccessOrderDeque) {
+      return;
+    }
+    constructor.addStatement("this.writeOrderDeque = new $T()", WRITE_ORDER_DEQUE);
+    cache.addField(
+        FieldSpec.builder(WRITE_ORDER_DEQUE, "writeOrderDeque", privateFinalModifiers).build());
+    cache.addMethod(MethodSpec.methodBuilder("writeOrderDeque")
+        .addStatement("return writeOrderDeque")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(WRITE_ORDER_DEQUE)
+        .build());
+  }
+
+  /** Adds the weak/soft methods for the key or value, if needed. */
+  private void addStrength(Strength strength, String collectName, String queueName, TypeName type) {
     if (strength == Strength.STRONG) {
       return;
     }
-    MethodSpec.Builder method = MethodSpec.methodBuilder(name)
+    cache.addMethod(MethodSpec.methodBuilder(queueName)
         .addModifiers(Modifier.PROTECTED)
         .addAnnotation(Override.class)
         .addAnnotation(Nullable.class)
-        .returns(type);
-    method.addStatement("return $N", name);
-    FieldSpec field = FieldSpec.builder(type, name, privateFinalModifiers)
+        .returns(type)
+        .addStatement("return $N", queueName)
+        .build());
+    cache.addField(FieldSpec.builder(type, queueName, privateFinalModifiers)
         .initializer("new $T()", type)
-        .build();
-    cache.addField(field);
-    cache.addMethod(method.build());
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder(collectName)
+        .addStatement("return true")
+        .addModifiers(Modifier.PROTECTED)
+        .addAnnotation(Override.class)
+        .returns(boolean.class)
+        .build());
   }
 }

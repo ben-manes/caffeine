@@ -73,12 +73,6 @@ final class PageReplacement<K, V> {
   // How long after the last write an entry becomes a candidate for refresh
   private volatile long refreshAfterWriteNanos;
 
-  @GuardedBy("evictionLock")
-  private final AccessOrderDeque<Node<K, V>> accessOrderDeque;
-
-  @GuardedBy("evictionLock")
-  private final WriteOrderDeque<Node<K, V>> writeOrderDeque;
-
   @SuppressWarnings({"unchecked", "cast"})
   PageReplacement(Caffeine<K, V> builder, boolean isAsync) {
     weightedSize = new AtomicLong();
@@ -104,21 +98,10 @@ final class PageReplacement<K, V> {
     writeBuffer = new ConcurrentLinkedQueue<Runnable>();
     drainStatus = new AtomicReference<DrainStatus>(IDLE);
 
-    accessOrderDeque = new AccessOrderDeque<Node<K, V>>();
-    writeOrderDeque = new WriteOrderDeque<Node<K, V>>();
-
     // The expiration support
     expireAfterAccessNanos = builder.getExpireAfterAccessNanos();
     expireAfterWriteNanos = builder.getExpireAfterWriteNanos();
     refreshAfterWriteNanos = builder.getRefreshNanos();
-  }
-
-  LinkedDeque<Node<K, V>> getAccessOrderDeque() {
-    return accessOrderDeque;
-  }
-
-  LinkedDeque<Node<K, V>> getWriteOrderDeque() {
-    return writeOrderDeque;
   }
 
   Queue<Runnable> writeBuffer() {
