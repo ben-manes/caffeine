@@ -46,6 +46,11 @@ public final class ConcurrentTestHarness {
 
   private ConcurrentTestHarness() {}
 
+  /** Executes the task using the shared thread pool. */
+  public static void execute(Runnable task) {
+    executor.execute(task);
+  }
+
   /**
    * Executes a task, on N threads, all starting at the same time.
    *

@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.TestCase;
 
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
@@ -355,13 +356,11 @@ public class CacheBuilderTest extends TestCase {
 
     final CountDownLatch computationStarted = new CountDownLatch(1);
     final CountDownLatch computationComplete = new CountDownLatch(1);
-    new Thread(new Runnable() {
-      @Override public void run() {
-        computationStarted.countDown();
-        cache.getUnchecked("b");
-        computationComplete.countDown();
-      }
-    }).start();
+    ConcurrentTestHarness.execute(() -> {
+      computationStarted.countDown();
+      cache.getUnchecked("b");
+      computationComplete.countDown();
+    });
 
     // wait for the computingEntry to be created
     computationStarted.await();

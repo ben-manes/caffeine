@@ -1582,7 +1582,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   /** Creates a serialization proxy based on the common configuration shared by all cache types. */
   static <K, V> SerializationProxy<K, V> makeSerializationProxy(BoundedLocalCache<?, ?> cache) {
     SerializationProxy<K, V> proxy = new SerializationProxy<>();
-    proxy.weakKeys = cache.nodeFactory.weakKeys();
+    proxy.weakKeys = cache.collectKeys();
     proxy.weakValues = cache.nodeFactory.weakValues();
     proxy.softValues = cache.nodeFactory.softValues();
     proxy.isRecordingStats = cache.isRecordingStats();

@@ -62,7 +62,7 @@ public final class UnsafeAccessTest {
   }
 
   @Test(dataProvider = "relaxedFields")
-  public void relaxed_ovalue(RelaxedFields relaxedFields) {
+  public void relaxed_ovalue(MoreRelaxedFields relaxedFields) {
     Object o = new Object();
     relaxedFields.setRelaxedObject(o);
     Object read = relaxedFields.getRelaxedObject();
@@ -72,17 +72,15 @@ public final class UnsafeAccessTest {
 
   @DataProvider(name = "relaxedFields")
   public Object[][] providesRelaxedFields() {
-    return new Object[][] {{ new RelaxedFields() }};
+    return new Object[][] {{ new MoreRelaxedFields() }};
   }
 
-  static final class RelaxedFields {
+  static class RelaxedFields {
     static final long IVALUE_OFFSET = UnsafeAccess.objectFieldOffset(RelaxedFields.class, "ivalue");
     static final long LVALUE_OFFSET = UnsafeAccess.objectFieldOffset(RelaxedFields.class, "lvalue");
-    static final long OVALUE_OFFSET = UnsafeAccess.objectFieldOffset(RelaxedFields.class, "ovalue");
 
     private volatile int ivalue;
     private volatile long lvalue;
-    private volatile Object ovalue;
 
     void setRelaxedInt(int value) {
       UnsafeAccess.UNSAFE.putOrderedInt(this, RelaxedFields.IVALUE_OFFSET, value);
@@ -99,13 +97,20 @@ public final class UnsafeAccessTest {
     long getRelaxedLong() {
       return UnsafeAccess.UNSAFE.getInt(this, RelaxedFields.LVALUE_OFFSET);
     }
+  }
+
+  static final class MoreRelaxedFields extends RelaxedFields {
+    static final long OVALUE_OFFSET =
+        UnsafeAccess.objectFieldOffset(MoreRelaxedFields.class, "ovalue");
+
+    private volatile Object ovalue;
 
     void setRelaxedObject(Object value) {
-      UnsafeAccess.UNSAFE.putOrderedObject(this, RelaxedFields.OVALUE_OFFSET, value);
+      UnsafeAccess.UNSAFE.putOrderedObject(this, MoreRelaxedFields.OVALUE_OFFSET, value);
     }
 
     Object getRelaxedObject() {
-      return UnsafeAccess.UNSAFE.getObject(this, RelaxedFields.OVALUE_OFFSET);
+      return UnsafeAccess.UNSAFE.getObject(this, MoreRelaxedFields.OVALUE_OFFSET);
     }
   }
 }

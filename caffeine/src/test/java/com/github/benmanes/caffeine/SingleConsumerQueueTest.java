@@ -417,7 +417,7 @@ public class SingleConsumerQueueTest {
     AtomicInteger started = new AtomicInteger();
     AtomicInteger finished = new AtomicInteger();
 
-    Thread producer = new Thread(() -> {
+    ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
       Awaits.await().untilAtomic(started, is(2));
       for (int i = 0; i < POPULATED_SIZE; i++) {
@@ -425,7 +425,7 @@ public class SingleConsumerQueueTest {
       }
       finished.incrementAndGet();
     });
-    Thread consumer = new Thread(() -> {
+    ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
       Awaits.await().untilAtomic(started, is(2));
       for (int i = 0; i < POPULATED_SIZE; i++) {
@@ -434,8 +434,6 @@ public class SingleConsumerQueueTest {
       finished.incrementAndGet();
     });
 
-    producer.start();
-    consumer.start();
     Awaits.await().untilAtomic(finished, is(2));
     assertThat(queue, is(deeplyEmpty()));
   }
@@ -456,7 +454,7 @@ public class SingleConsumerQueueTest {
     AtomicInteger started = new AtomicInteger();
     AtomicInteger finished = new AtomicInteger();
 
-    Thread consumer = new Thread(() -> {
+    ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
       Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < (NUM_PRODUCERS * POPULATED_SIZE); i++) {
@@ -464,7 +462,6 @@ public class SingleConsumerQueueTest {
       }
       finished.incrementAndGet();
     });
-    consumer.start();
 
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       started.incrementAndGet();

@@ -38,6 +38,7 @@ import java.util.logging.Logger;
 
 import junit.framework.TestCase;
 
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
@@ -2087,20 +2088,14 @@ public class CacheLoadingTest extends TestCase {
     assertFalse(map.containsKey(getKey));
     assertSame(refreshKey, map.get(refreshKey));
 
-    new Thread() {
-      @Override
-      public void run() {
-        cache.getUnchecked(getKey);
-        getFinishedSignal.countDown();
-      }
-    }.start();
-    new Thread() {
-      @Override
-      public void run() {
-        cache.refresh(refreshKey);
-        getFinishedSignal.countDown();
-      }
-    }.start();
+    ConcurrentTestHarness.execute(() -> {
+      cache.getUnchecked(getKey);
+      getFinishedSignal.countDown();
+    });
+    ConcurrentTestHarness.execute(() -> {
+      cache.refresh(refreshKey);
+      getFinishedSignal.countDown();
+    });
 
     getStartedSignal.await();
 
@@ -2144,20 +2139,14 @@ public class CacheLoadingTest extends TestCase {
     ConcurrentMap<String,String> map = cache.asMap();
     map.put(refreshKey, refreshKey);
 
-    new Thread() {
-      @Override
-      public void run() {
-        cache.getUnchecked(getKey);
-        getFinishedSignal.countDown();
-      }
-    }.start();
-    new Thread() {
-      @Override
-      public void run() {
-        cache.refresh(refreshKey);
-        getFinishedSignal.countDown();
-      }
-    }.start();
+    ConcurrentTestHarness.execute(() -> {
+      cache.getUnchecked(getKey);
+      getFinishedSignal.countDown();
+    });
+    ConcurrentTestHarness.execute(() -> {
+      cache.refresh(refreshKey);
+      getFinishedSignal.countDown();
+    });
 
     computationStarted.await();
     cache.invalidate(getKey);
@@ -2202,20 +2191,14 @@ public class CacheLoadingTest extends TestCase {
     ConcurrentMap<String,String> map = cache.asMap();
     map.put(refreshKey, refreshKey);
 
-    new Thread() {
-      @Override
-      public void run() {
-        cache.getUnchecked(getKey);
-        getFinishedSignal.countDown();
-      }
-    }.start();
-    new Thread() {
-      @Override
-      public void run() {
-        cache.refresh(refreshKey);
-        getFinishedSignal.countDown();
-      }
-    }.start();
+    ConcurrentTestHarness.execute(() -> {
+      cache.getUnchecked(getKey);
+      getFinishedSignal.countDown();
+    });
+    ConcurrentTestHarness.execute(() -> {
+      cache.refresh(refreshKey);
+      getFinishedSignal.countDown();
+    });
 
     computationStarted.await();
     cache.invalidate(getKey);
@@ -2224,20 +2207,14 @@ public class CacheLoadingTest extends TestCase {
     assertFalse(map.containsKey(refreshKey));
 
     // start new computations
-    new Thread() {
-      @Override
-      public void run() {
-        cache.getUnchecked(getKey);
-        getFinishedSignal.countDown();
-      }
-    }.start();
-    new Thread() {
-      @Override
-      public void run() {
-        cache.refresh(refreshKey);
-        getFinishedSignal.countDown();
-      }
-    }.start();
+    ConcurrentTestHarness.execute(() -> {
+      cache.getUnchecked(getKey);
+      getFinishedSignal.countDown();
+    });
+    ConcurrentTestHarness.execute(() -> {
+      cache.refresh(refreshKey);
+      getFinishedSignal.countDown();
+    });
 
     // let computation complete
     letGetFinishSignal.countDown();

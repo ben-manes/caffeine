@@ -39,6 +39,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.Awaits;
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
@@ -112,10 +113,10 @@ public final class BoundedLocalCacheTest {
       Object keyRef = localCache.nodeFactory.newLookupKey(oldEntry.getKey());
       Node<Integer, Integer> node = localCache.data.get(keyRef);
       checkStatus(localCache, node, Status.ALIVE);
-      new Thread(() -> {
+      ConcurrentTestHarness.execute(() -> {
         localCache.put(newEntry.getKey(), newEntry.getValue());
         assertThat(localCache.remove(oldEntry.getKey()), is(oldEntry.getValue()));
-      }).start();
+      });
       Awaits.await().until(() -> localCache.containsKey(oldEntry.getKey()), is(false));
       checkStatus(localCache, node, Status.RETIRED);
       localCache.drainBuffers();
@@ -347,14 +348,14 @@ public final class BoundedLocalCacheTest {
   public void drain_nonblocking(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     AtomicBoolean done = new AtomicBoolean();
-    Thread thread = new Thread(() -> {
+    Runnable task = () -> {
       localCache.replacement.lazySetDrainStatus(DrainStatus.REQUIRED);
       localCache.tryToDrainBuffers();
       done.set(true);
-    });
+    };
     localCache.replacement.evictionLock().lock();
     try {
-      thread.start();
+      ConcurrentTestHarness.execute(task);
       Awaits.await().untilTrue(done);
     } finally {
       localCache.replacement.evictionLock().unlock();

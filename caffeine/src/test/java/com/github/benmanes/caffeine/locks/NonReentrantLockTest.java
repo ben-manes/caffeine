@@ -29,6 +29,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.Awaits;
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -71,7 +72,7 @@ public final class NonReentrantLockTest {
   @Test(dataProvider = "lock")
   public void lock_exclusive(NonReentrantLock lock) {
     Thread testThread = Thread.currentThread();
-    Thread thread = new Thread(() -> {
+    ConcurrentTestHarness.execute(() -> {
       lock.lock();
       Awaits.await().until(() -> lock.hasQueuedThreads());
       assertThat(lock.getQueueLength(), is(1));
@@ -79,7 +80,6 @@ public final class NonReentrantLockTest {
       assertThat(lock.hasQueuedThread(testThread), is(true));
       lock.unlock();
     });
-    thread.start();
     Awaits.await().until(() -> lock.isLocked());
     assertThat(lock.tryLock(), is(false));
     lock.lock();

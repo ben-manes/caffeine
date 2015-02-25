@@ -220,23 +220,18 @@ public final class EliminationStackTest {
     final AtomicBoolean done = new AtomicBoolean();
     final String value = "test";
     final int startIndex = 1;
-    new Thread(() -> {
+    ConcurrentTestHarness.execute(() -> {
       started.set(true);
       while (!done.get()) {
         if (stack.scanAndTransferToWaiter(value, startIndex)) {
           done.set(true);
         }
       }
-    }).start();
+    });
     Awaits.await().untilTrue(started);
 
     try {
-      final AtomicReference<String> found = new AtomicReference<>();
-      Awaits.await().until(() -> {
-        found.set(stack.awaitMatch(startIndex));
-        return (found.get() != null);
-      });
-      assertThat(found.get(), is(equalTo(value)));
+      Awaits.await().until(() -> stack.awaitMatch(startIndex), is(value));
     } finally {
       done.set(true);
     }
@@ -248,23 +243,18 @@ public final class EliminationStackTest {
     final AtomicBoolean done = new AtomicBoolean();
     final String value = "test";
     final int startIndex = 1;
-    new Thread(() -> {
+    ConcurrentTestHarness.execute(() -> {
       started.set(true);
       while (!done.get()) {
         if (stack.awaitExchange(value, startIndex)) {
           done.set(true);
         }
       }
-    }).start();
+    });
     Awaits.await().untilTrue(started);
 
     try {
-      final AtomicReference<String> found = new AtomicReference<>();
-      Awaits.await().until(() -> {
-        found.set(stack.awaitMatch(startIndex));
-        return (found.get() != null);
-      });
-      assertThat(found.get(), is(equalTo(value)));
+      Awaits.await().until(() -> stack.awaitMatch(startIndex), is(value));
     } finally {
       done.set(true);
     }
@@ -276,23 +266,18 @@ public final class EliminationStackTest {
     final AtomicBoolean done = new AtomicBoolean();
     final String value = "test";
     final int startIndex = 1;
-    new Thread(() -> {
+    ConcurrentTestHarness.execute(() -> {
       started.set(true);
       while (!done.get()) {
         if (stack.awaitExchange(value, startIndex)) {
           done.set(true);
         }
       }
-    }).start();
+    });
     Awaits.await().untilTrue(started);
 
     try {
-      final AtomicReference<String> found = new AtomicReference<>();
-      Awaits.await().until(() -> {
-        found.set(stack.scanAndMatch(startIndex));
-        return (found.get() != null);
-      });
-      assertThat(found.get(), is(equalTo(value)));
+      Awaits.await().until(() -> stack.scanAndMatch(startIndex), is(value));
     } finally {
       done.set(true);
     }
