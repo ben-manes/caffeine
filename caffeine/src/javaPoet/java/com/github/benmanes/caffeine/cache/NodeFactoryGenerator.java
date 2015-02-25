@@ -38,6 +38,7 @@ import java.nio.file.Paths;
 import java.time.Year;
 import java.util.HashSet;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.Set;
 
 import javax.annotation.Nonnegative;
@@ -46,6 +47,7 @@ import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Specifications.Strength;
 import com.google.common.base.CaseFormat;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -87,8 +89,12 @@ public final class NodeFactoryGenerator {
   }
 
   void generate() throws IOException {
-    nodeFactory = newNodeFactoryBuilder();
+    nodeFactory = TypeSpec.enumBuilder("NodeFactory");
+    addClassJavaDoc();
+    addNodeStateStatics();
+    addKeyMethods();
     generatedNodes();
+    addGetFactoryMethods();
     writeJavaFile();
   }
 
@@ -98,15 +104,6 @@ public final class NodeFactoryGenerator {
         .indent("  ")
         .build()
         .writeTo(directory);
-  }
-
-  private TypeSpec.Builder newNodeFactoryBuilder() {
-    nodeFactory = TypeSpec.enumBuilder("NodeFactory");
-    addClassJavaDoc();
-    addNodeStateStatics();
-    addKeyMethods();
-    addGetFactoryMethods();
-    return nodeFactory;
   }
 
   private void addClassJavaDoc() {
@@ -184,34 +181,31 @@ public final class NodeFactoryGenerator {
   }
 
   private void addGetFactoryMethods() {
-    List<String> params = ImmutableList.of("strongKeys", "weakKeys", "strongValues", "weakValues",
-        "softValues", "expiresAfterAccess", "expiresAfterWrite", "refreshAfterWrite",
-        "maximumSize", "weighed");
     MethodSpec.Builder getFactory = MethodSpec.methodBuilder("getFactory")
         .addJavadoc("Returns a factory optimized for the specified features.\n")
         .returns(ClassName.bestGuess("NodeFactory")).addAnnotation(Nonnull.class);
-    StringBuilder condition = new StringBuilder("if (");
+
+    List<String> params = ImmutableList.of("strongKeys", "weakKeys", "strongValues", "weakValues",
+        "softValues", "expiresAfterAccess", "expiresAfterWrite", "refreshAfterWrite",
+        "maximumSize", "weighed");
     for (String param : params) {
-      String property = CaseFormat.UPPER_CAMEL.to(
-          CaseFormat.LOWER_UNDERSCORE, param).replace('_', ' ');
+      getFactory.addParameter(boolean.class, param);
+    }
+
+    for (String param : ImmutableList.of("weakValues", "softValues")) {
+      String feature = CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, param);
+      String property = feature.replace('_', ' ').toLowerCase();
       nodeFactory.addMethod(MethodSpec.methodBuilder(param)
           .addJavadoc("Returns whether this factory supports the " + property + " feature.\n")
-          .addModifiers(Modifier.ABSTRACT)
-          .returns(boolean.class).build());
-      getFactory.addParameter(boolean.class, param);
-      condition.append("(").append(param).append(" == factory.").append(param).append("())");
-      condition.append("\n    && ");
+          .addStatement("return name().contains($S)", feature)
+          .returns(boolean.class)
+          .build());
     }
-    condition.delete(condition.length() - 8, condition.length());
-    condition.append(")");
 
+    OptionalInt bufferSize = seen.stream().mapToInt(s -> s.length()).max();
+    Preconditions.checkState(bufferSize.isPresent(), "Must generate all cache types first");
     getFactory
-        .beginControlFlow("for (NodeFactory factory : values())")
-            .beginControlFlow(condition.toString())
-                .addStatement("return factory")
-            .endControlFlow()
-        .endControlFlow()
-        .addStatement("throw new $T()", IllegalArgumentException.class)
+        .addCode(NodeSelectorCode.get(bufferSize.getAsInt()))
         .addModifiers(Modifier.STATIC)
         .build();
     nodeFactory.addMethod(getFactory.build());
@@ -261,17 +255,7 @@ public final class NodeFactoryGenerator {
         .addMethod(newNodeByKey().addAnnotation(Override.class)
             .addStatement(statementWithKey, className).build())
         .addMethod(newNodeByKeyRef().addAnnotation(Override.class)
-            .addStatement(statementWithKeyRef, className).build())
-        .addMethod(isMethod("strongKeys", keyStrength == Strength.STRONG))
-        .addMethod(isMethod("weakKeys", keyStrength == Strength.WEAK))
-        .addMethod(isMethod("strongValues", valueStrength == Strength.STRONG))
-        .addMethod(isMethod("weakValues", valueStrength == Strength.WEAK))
-        .addMethod(isMethod("softValues", valueStrength == Strength.SOFT))
-        .addMethod(isMethod("expiresAfterAccess", expireAfterAccess))
-        .addMethod(isMethod("expiresAfterWrite", expireAfterWrite))
-        .addMethod(isMethod("refreshAfterWrite", refreshAfterWrite))
-        .addMethod(isMethod("maximumSize", maximum))
-        .addMethod(isMethod("weighed", weighed));
+            .addStatement(statementWithKeyRef, className).build());
     if (keyStrength == Strength.WEAK) {
       typeSpec.addMethod(makeNewLookupKey());
       typeSpec.addMethod(makeReferenceKey());
@@ -310,12 +294,6 @@ public final class NodeFactoryGenerator {
     }
     statement.append(")");
     return statement.toString();
-  }
-
-  private MethodSpec isMethod(String varName, boolean value) {
-    return MethodSpec.methodBuilder(varName)
-        .addStatement("return " + value)
-        .returns(boolean.class).build();
   }
 
   private MethodSpec makeNewLookupKey() {
@@ -362,9 +340,6 @@ public final class NodeFactoryGenerator {
       } else {
         name.append("_SIZE");
       }
-    } else if (weighed) {
-      // FIXME: Used for async caches
-      name.append("_WEIGHT");
     }
     return name.toString();
   }
