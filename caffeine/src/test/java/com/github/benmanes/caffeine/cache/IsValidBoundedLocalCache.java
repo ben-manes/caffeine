@@ -62,7 +62,7 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void drain(BoundedLocalCache<K, V> cache) {
-    while (!cache.writeQueue().isEmpty()) {
+    while (cache.buffersWrites() && !cache.writeQueue().isEmpty()) {
       cache.cleanUp();
     }
 
@@ -74,7 +74,7 @@ public final class IsValidBoundedLocalCache<K, V>
       for (;;) {
         cache.drainBuffers();
 
-        boolean fullyDrained = cache.writeQueue().isEmpty();
+        boolean fullyDrained = cache.buffersWrites() && cache.writeQueue().isEmpty();
         for (int j = 0; j < cache.replacement.readBuffers().length; j++) {
           fullyDrained &= (cache.replacement.readBuffers()[i][j].get() == null);
         }

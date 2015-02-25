@@ -782,7 +782,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     try {
       // Apply all pending writes
       Runnable task;
-      while ((task = writeQueue().poll()) != null) {
+      while (buffersWrites() && (task = writeQueue().poll()) != null) {
         task.run();
       }
 
