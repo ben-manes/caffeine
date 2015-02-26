@@ -33,7 +33,6 @@ import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.Feature;
@@ -116,14 +115,11 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("removalListener")
         .addStatement("return removalListener")
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
-        .addAnnotation(Nullable.class)
         .returns(REMOVAL_LISTENER)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("hasRemovalListener")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
   }
@@ -137,7 +133,6 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("executor")
         .addStatement("return executor")
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
         .returns(Executor.class)
         .build());
   }
@@ -151,8 +146,6 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("cacheLoader")
         .addStatement("return cacheLoader")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
-        .addAnnotation(Nullable.class)
         .returns(CACHE_LOADER)
         .build());
   }
@@ -166,13 +159,11 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("statsCounter")
         .addStatement("return statsCounter")
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
         .returns(STATS_COUNTER)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("isRecordingStats")
         .addStatement("return true")
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
   }
@@ -193,7 +184,6 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("ticker")
         .addStatement("return ticker")
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
         .returns(TICKER)
         .build());
   }
@@ -210,7 +200,6 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("evicts")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
   }
@@ -224,13 +213,11 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("weigher")
         .addStatement("return weigher")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(WEIGHER)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("isWeighted")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
   }
@@ -245,20 +232,17 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccess")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccessNanos")
         .addStatement("return expiresAfterAccessNanos")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(long.class)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("setExpiresAfterAccessNanos")
         .addStatement("this.expiresAfterAccessNanos = expiresAfterAccessNanos")
         .addParameter(long.class, "expiresAfterAccessNanos")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .build());
   }
 
@@ -272,20 +256,17 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("expiresAfterWrite")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("expiresAfterWriteNanos")
         .addStatement("return expiresAfterWriteNanos")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(long.class)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("setExpiresAfterWriteNanos")
         .addStatement("this.expiresAfterWriteNanos = expiresAfterWriteNanos")
         .addParameter(long.class, "expiresAfterWriteNanos")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .build());
   }
 
@@ -299,20 +280,17 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("refreshAfterWrite")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("refreshAfterWriteNanos")
         .addStatement("return refreshAfterWriteNanos")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(long.class)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("setRefreshAfterWriteNanos")
         .addStatement("this.refreshAfterWriteNanos = refreshAfterWriteNanos")
         .addParameter(long.class, "refreshAfterWriteNanos")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .build());
   }
 
@@ -332,7 +310,6 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("accessOrderDeque")
         .addStatement("return accessOrderDeque")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(ACCESS_ORDER_DEQUE)
         .build());
   }
@@ -352,7 +329,6 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("writeOrderDeque")
         .addStatement("return writeOrderDeque")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(WRITE_ORDER_DEQUE)
         .build());
   }
@@ -374,13 +350,11 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder("writeQueue")
         .addStatement("return writeQueue")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(WRITE_QUEUE)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("buffersWrites")
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
   }
@@ -389,8 +363,6 @@ public final class LocalCacheGenerator {
   private void addStrength(String collectName, String queueName, TypeName type) {
     cache.addMethod(MethodSpec.methodBuilder(queueName)
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
-        .addAnnotation(Nullable.class)
         .returns(type)
         .addStatement("return $N", queueName)
         .build());
@@ -400,7 +372,6 @@ public final class LocalCacheGenerator {
     cache.addMethod(MethodSpec.methodBuilder(collectName)
         .addStatement("return true")
         .addModifiers(Modifier.PROTECTED)
-        .addAnnotation(Override.class)
         .returns(boolean.class)
         .build());
   }

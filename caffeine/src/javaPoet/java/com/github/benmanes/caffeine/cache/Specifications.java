@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -80,14 +79,14 @@ public final class Specifications {
   static final TypeName BUILDER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "Caffeine"), kTypeVar, vTypeVar);
   static final ParameterSpec BUILDER_PARAM =
-      ParameterSpec.builder(BUILDER, "builder").addAnnotation(Nonnull.class).build();
+      ParameterSpec.builder(BUILDER, "builder").build();
   static final TypeName BOUNDED_LOCAL_CACHE = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "BoundedLocalCache"), kTypeVar, vTypeVar);
 
   static final TypeName CACHE_LOADER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "CacheLoader"), TypeVariableName.get("? super K"), vTypeVar);
   static final ParameterSpec CACHE_LOADER_PARAM =
-      ParameterSpec.builder(CACHE_LOADER, "cacheLoader").addAnnotation(Nullable.class).build();
+      ParameterSpec.builder(CACHE_LOADER, "cacheLoader").build();
 
   static final TypeName REMOVAL_LISTENER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "RemovalListener"), kTypeVar, vTypeVar);

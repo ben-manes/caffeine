@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import javax.annotation.Nonnull;
 import javax.lang.model.element.Modifier;
 
 import com.google.common.base.CaseFormat;
@@ -115,7 +114,6 @@ public final class LocalCacheFactoryGenerator {
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
         .returns(BOUNDED_LOCAL_CACHE)
-        .addAnnotation(Nonnull.class)
         .addModifiers(Modifier.ABSTRACT)
         .addJavadoc("Returns a cache optimized for this configuration.\n")
         .build());
@@ -193,7 +191,6 @@ public final class LocalCacheFactoryGenerator {
     factory.addEnumConstant(enumName, TypeSpec.anonymousClassBuilder("")
         .addMethod(MethodSpec.methodBuilder("create")
             .addTypeVariable(kTypeVar).addTypeVariable(vTypeVar)
-            .addAnnotation(Override.class)
             .returns(BOUNDED_LOCAL_CACHE)
             .addParameter(BUILDER_PARAM)
             .addParameter(CACHE_LOADER_PARAM)
