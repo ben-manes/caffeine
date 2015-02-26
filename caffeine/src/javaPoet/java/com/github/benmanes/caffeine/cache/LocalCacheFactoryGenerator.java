@@ -27,17 +27,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import javax.lang.model.element.Modifier;
 
-import com.google.common.base.CaseFormat;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -55,38 +53,6 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
-  enum Feature {
-    STRONG_KEYS(0), WEAK_KEYS(0),
-    STRONG_VALUES(1), INFIRM_VALUES(1),
-    LOADING(2),
-    LISTENING(3),
-    EXECUTOR(4),
-    STATS(5),
-    MAXIMUM_SIZE(6),
-    MAXIMUM_WEIGHT(7),
-    EXPIRE_ACCESS(8),
-    EXPIRE_WRITE(9),
-    REFRESH_WRITE(10);
-
-    static Feature[] featureByIndex;
-
-    int index;
-    Feature(int index) {
-      this.index = index;
-    }
-
-    static Feature forIndex(int index) {
-      Preconditions.checkArgument(index > 1);
-      if (featureByIndex == null) {
-        featureByIndex = new Feature[Feature.values().length];
-        for (Feature feature : values()) {
-          featureByIndex[feature.index] = feature;
-        }
-      }
-      return featureByIndex[index];
-    }
-  }
-
   final Path directory;
   final Set<String> seen;
   TypeSpec.Builder factory;
@@ -144,26 +110,20 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private Set<List<Object>> combinations() {
-    Set<Boolean> keyStrengths = ImmutableSet.of(true, false);
-    Set<Boolean> valueStrengths = ImmutableSet.of(true, false);
-    Set<Boolean> cacheLoaders = ImmutableSet.of(true, false);
-    Set<Boolean> removalListeners = ImmutableSet.of(true, false);
-    Set<Boolean> executors = ImmutableSet.of(true, false);
-    Set<Boolean> stats = ImmutableSet.of(true, false);
-    Set<Boolean> maximumSize = ImmutableSet.of(true, false);
-    Set<Boolean> weighted = ImmutableSet.of(true, false);
-    Set<Boolean> expireAfterAccess = ImmutableSet.of(true, false);
-    Set<Boolean> expireAfterWrite = ImmutableSet.of(true, false);
-    Set<Boolean> refreshAfterWrite = ImmutableSet.of(true, false);
-
-    @SuppressWarnings("unchecked")
-    Set<List<Object>> combinations = Sets.cartesianProduct(keyStrengths, valueStrengths,
-        cacheLoaders, removalListeners, executors, stats, maximumSize, weighted, expireAfterAccess,
-        expireAfterWrite, refreshAfterWrite);
-    return combinations;
+    Set<Boolean> options = ImmutableSet.of(true, false);
+    List<Set<Boolean>> sets = new ArrayList<>();
+    for (int i = 0; i < 11; i++) {
+      sets.add(options);
+    }
+    return Sets.cartesianProduct(sets);
   }
 
   private void generateLocalCaches() {
+    Feature[] featureByIndex = new Feature[] { null, null,
+        Feature.LOADING, Feature.LISTENING, Feature.EXECUTOR, Feature.STATS, Feature.MAXIMUM_SIZE,
+        Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
+    };
+
     for (List<Object> combination : combinations()) {
       Set<Feature> features = new LinkedHashSet<>();
 
@@ -171,7 +131,7 @@ public final class LocalCacheFactoryGenerator {
       features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
       for (int i = 2; i < combination.size(); i++) {
         if ((Boolean) combination.get(i)) {
-          features.add(Feature.forIndex(i));
+          features.add(featureByIndex[i]);
         }
       }
       if (features.contains(Feature.MAXIMUM_WEIGHT)) {
@@ -183,11 +143,11 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private void addLocalCacheSpec(Set<Feature> features) {
-    String enumName = makeEnumName(features);
+    String enumName = Feature.makeEnumName(features);
     if (!seen.add(enumName)) {
       return;
     }
-    String className = makeClassName(features);
+    String className = Feature.makeClassName(features);
     factory.addEnumConstant(enumName, TypeSpec.anonymousClassBuilder("")
         .addMethod(MethodSpec.methodBuilder("create")
             .addTypeVariable(kTypeVar).addTypeVariable(vTypeVar)
@@ -210,22 +170,11 @@ public final class LocalCacheFactoryGenerator {
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
       generateFeatures = ImmutableSet.of(Iterables.getLast(features));
       superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
-          makeClassName(parentFeatures)), kTypeVar, vTypeVar);
+          Feature.makeClassName(parentFeatures)), kTypeVar, vTypeVar);
     }
     LocalCacheGenerator generator = new LocalCacheGenerator(
         superClass, className, parentFeatures, generateFeatures);
     factory.addType(generator.generate());
-  }
-
-  private String makeEnumName(Iterable<Feature> features) {
-    return StreamSupport.stream(features.spliterator(), false)
-        .map(feature -> feature.name())
-        .collect(Collectors.joining("_"));
-  }
-
-  private String makeClassName(Iterable<Feature> features) {
-    String enumName = makeEnumName(features);
-    return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
   }
 
   private void addClassJavaDoc() {

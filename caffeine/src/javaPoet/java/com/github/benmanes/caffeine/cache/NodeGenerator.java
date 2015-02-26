@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE;
+import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
@@ -31,18 +32,19 @@ import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.lang.ref.Reference;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 
-import com.github.benmanes.caffeine.cache.Specifications.Strength;
-import com.github.benmanes.caffeine.cache.Specifications.Visibility;
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.Iterables;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
@@ -59,29 +61,15 @@ import com.squareup.javapoet.TypeSpec;
  */
 public final class NodeGenerator {
   private final String className;
-  private final Strength keyStrength;
-  private final Strength valueStrength;
-  private final boolean expireAfterAccess;
-  private final boolean expireAfterWrite;
-  private final boolean refreshAfterWrite;
-  private final boolean maximum;
-  private final boolean weighed;
+  private final Set<Feature> features;
 
   private TypeSpec.Builder nodeSubtype;
   private MethodSpec.Builder constructorByKey;
   private MethodSpec.Builder constructorByKeyRef;
 
-  public NodeGenerator(String className, Strength keyStrength, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
-      boolean maximum, boolean weighed) {
+  public NodeGenerator(String className, Set<Feature> features) {
     this.className = className;
-    this.keyStrength = keyStrength;
-    this.valueStrength = valueStrength;
-    this.expireAfterAccess = expireAfterAccess;
-    this.expireAfterWrite = expireAfterWrite;
-    this.refreshAfterWrite = refreshAfterWrite;
-    this.maximum = maximum;
-    this.weighed = weighed;
+    this.features = features;
   }
 
   /** Returns an node class implementation optimized for the provided configuration. */
@@ -103,6 +91,14 @@ public final class NodeGenerator {
         .addMethod(newToString());
   }
 
+  private boolean isStrongKeys() {
+    return features.contains(Feature.STRONG_KEYS);
+  }
+
+  private boolean isStrongValues() {
+    return features.contains(Feature.STRONG_VALUES);
+  }
+
   private void makeNodeSubtype() {
     nodeSubtype = TypeSpec.classBuilder(className)
         .addModifiers(Modifier.STATIC, Modifier.FINAL)
@@ -110,8 +106,15 @@ public final class NodeGenerator {
   }
 
   private void addStateMethods() {
-    String retiredArg = (keyStrength == Strength.STRONG) ? RETIRED_STRONG_KEY : RETIRED_WEAK_KEY;
-    String deadArg = (keyStrength == Strength.STRONG) ? DEAD_STRONG_KEY : DEAD_WEAK_KEY;
+    String retiredArg;
+    String deadArg;
+    if (features.contains(Feature.STRONG_KEYS)) {
+      retiredArg = RETIRED_STRONG_KEY;
+      deadArg = DEAD_STRONG_KEY;
+    } else {
+      retiredArg = RETIRED_WEAK_KEY;
+      deadArg = DEAD_WEAK_KEY;
+    }
 
     nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
         .addStatement("Object key = this.key")
@@ -149,6 +152,7 @@ public final class NodeGenerator {
   }
 
   private void addKey() {
+    Strength keyStrength = strengthOf(Iterables.get(features, 0));
     nodeSubtype.addTypeVariable(kTypeVar)
         .addField(newFieldOffset("key"))
         .addField(newKeyField())
@@ -157,6 +161,7 @@ public final class NodeGenerator {
   }
 
   private void addValue() {
+    Strength valueStrength = strengthOf(Iterables.get(features, 1));
     nodeSubtype.addTypeVariable(vTypeVar)
         .addField(newFieldOffset("value"))
         .addField(newValueField())
@@ -175,12 +180,12 @@ public final class NodeGenerator {
         .addParameter(ParameterSpec.builder(vRefQueueType, "referenceQueue")
           .addAnnotation(Nonnull.class).build());
 
-    if (valueStrength == Strength.STRONG) {
+    if (isStrongValues()) {
       setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
       setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($L, $N, referenceQueue))",
-          UNSAFE_ACCESS, offsetName("value"), valueStrength.valueReferenceType(), "key", "value");
+          UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "key", "value");
     }
 
     return setter.build();
@@ -193,7 +198,7 @@ public final class NodeGenerator {
         .addModifiers(Modifier.PUBLIC)
         .addAnnotation(Override.class)
         .returns(boolean.class);
-    if (valueStrength == Strength.STRONG) {
+    if (isStrongValues()) {
       containsValue.addStatement("return $T.equals(value, getValue())", Objects.class);
     } else {
       containsValue.addStatement("return getValue() == value");
@@ -203,17 +208,17 @@ public final class NodeGenerator {
 
   private FieldSpec newKeyField() {
     Modifier[] modifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
-    FieldSpec.Builder fieldSpec = (keyStrength == Strength.STRONG)
+    FieldSpec.Builder fieldSpec = isStrongKeys()
         ? FieldSpec.builder(kTypeVar, "key", modifiers)
-        : FieldSpec.builder(keyStrength.keyReferenceType(), "key", modifiers);
+        : FieldSpec.builder(keyReferenceType(), "key", modifiers);
     return fieldSpec.build();
   }
 
   private FieldSpec newValueField() {
     Modifier[] modifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
-    FieldSpec.Builder fieldSpec = (valueStrength == Strength.STRONG)
+    FieldSpec.Builder fieldSpec = isStrongValues()
         ? FieldSpec.builder(vTypeVar, "value", modifiers)
-        : FieldSpec.builder(valueStrength.valueReferenceType(), "value", modifiers);
+        : FieldSpec.builder(valueReferenceType(), "value", modifiers);
     fieldSpec.addAnnotation(UNUSED);
     return fieldSpec.build();
   }
@@ -237,14 +242,16 @@ public final class NodeGenerator {
 
   private void completeBaseConstructor(MethodSpec.Builder constructor) {
     constructor.addParameter(valueSpec);
-    if (valueStrength != Strength.STRONG) {
+    if (!isStrongValues()) {
       constructor.addParameter(valueRefQueueSpec);
     }
-    if (weighed) {
+    if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       constructor.addParameter(ParameterSpec.builder(int.class, "weight")
           .addAnnotation(Nonnegative.class).build());
     }
-    if (expireAfterAccess || expireAfterWrite || refreshAfterWrite) {
+    if (features.contains(Feature.EXPIRE_ACCESS)
+        || features.contains(Feature.EXPIRE_WRITE)
+        || features.contains(Feature.REFRESH_WRITE)) {
       constructor.addParameter(ParameterSpec.builder(long.class, "now")
           .addAnnotation(Nonnegative.class).build());
     }
@@ -253,32 +260,32 @@ public final class NodeGenerator {
 
   /** Adds a constructor assignment. */
   private void addKeyConstructorAssignment(MethodSpec.Builder constructor, boolean isReference) {
-    if (isReference || (keyStrength == Strength.STRONG)) {
-      String refAssignment = (keyStrength == Strength.STRONG)
+    if (isReference || isStrongKeys()) {
+      String refAssignment = isStrongKeys()
           ? "(K) keyReference"
           : "(WeakKeyReference<K>) keyReference";
       constructor.addStatement("this.$N = $N", "key", isReference ? refAssignment : "key");
     } else {
       constructor.addStatement("this.$N = new $T($N, $N)",
-          "key", keyStrength.keyReferenceType(), "key", "keyReferenceQueue");
+          "key", keyReferenceType(), "key", "keyReferenceQueue");
     }
   }
 
   /** Adds a constructor assignment. */
   private void addValueConstructorAssignment(MethodSpec.Builder constructor) {
-    if (valueStrength == Strength.STRONG) {
+    if (isStrongValues()) {
       constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
       constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T(this.$N, $N, $N))",
-          UNSAFE_ACCESS, offsetName("value"), valueStrength.valueReferenceType(),
+          UNSAFE_ACCESS, offsetName("value"), valueReferenceType(),
           "key", "value", "valueReferenceQueue");
     }
   }
 
   /** Adds weight support, if enabled, to the node type. */
   private void addWeight() {
-    if(weighed) {
+    if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
           .addMethod(newGetter(Strength.STRONG, TypeName.INT, "weight", Visibility.IMMEDIATE))
           .addMethod(newSetter(TypeName.INT, "weight", Visibility.IMMEDIATE));
@@ -289,7 +296,7 @@ public final class NodeGenerator {
 
   /** Adds the expiration support, if enabled, to the node type. */
   private void addExpiration() {
-    if (expireAfterAccess) {
+    if (features.contains(Feature.EXPIRE_ACCESS)) {
       nodeSubtype.addField(newFieldOffset("accessTime"))
           .addField(FieldSpec.builder(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
               .addAnnotation(UNUSED).build())
@@ -299,12 +306,11 @@ public final class NodeGenerator {
       addLongConstructorAssignment(constructorByKey, "now", "accessTime", Visibility.LAZY);
       addLongConstructorAssignment(constructorByKeyRef, "now", "accessTime", Visibility.LAZY);
     }
-    if (expireAfterWrite || refreshAfterWrite) {
+    if (features.contains(Feature.EXPIRE_WRITE) || features.contains(Feature.REFRESH_WRITE)) {
       nodeSubtype.addField(newFieldOffset("writeTime"))
           .addField(FieldSpec.builder(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
               .addAnnotation(UNUSED).build())
-          .addMethod(newGetter(Strength.STRONG, TypeName.LONG,
-              "writeTime", Visibility.LAZY))
+          .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
       addLongConstructorAssignment(constructorByKey, "now", "writeTime", Visibility.LAZY);
       addLongConstructorAssignment(constructorByKeyRef, "now", "writeTime", Visibility.LAZY);
@@ -336,11 +342,13 @@ public final class NodeGenerator {
 
   /** Adds the access and write deques, if needed, to the type. */
   private void addDeques() {
-    if (maximum || expireAfterAccess) {
+    if (features.contains(Feature.MAXIMUM_SIZE)
+        || features.contains(Feature.MAXIMUM_WEIGHT)
+        || features.contains(Feature.EXPIRE_ACCESS)) {
       addFieldAndGetter(nodeSubtype, NODE, "previousInAccessOrder");
       addFieldAndGetter(nodeSubtype, NODE, "nextInAccessOrder");
     }
-    if (expireAfterWrite) {
+    if (features.contains(Feature.EXPIRE_WRITE)) {
       addFieldAndGetter(nodeSubtype, NODE, "previousInWriteOrder");
       addFieldAndGetter(nodeSubtype, NODE, "nextInWriteOrder");
     }
@@ -453,15 +461,15 @@ public final class NodeGenerator {
     StringBuilder end = new StringBuilder();
     start.append("return String.format(\"%s=[key=%s, value=%s");
     end.append("]\",\ngetClass().getSimpleName(), getKey(), getValue()");
-    if (weighed) {
+    if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       start.append(", weight=%d");
       end.append(", getWeight()");
     }
-    if (expireAfterAccess) {
+    if (features.contains(Feature.EXPIRE_ACCESS)) {
       start.append(", accessTimeNS=%,d");
       end.append(", getAccessTime()");
     }
-    if (expireAfterWrite || refreshAfterWrite) {
+    if (features.contains(Feature.EXPIRE_WRITE) || features.contains(Feature.REFRESH_WRITE)) {
       start.append(", writeTimeNS=%,d");
       end.append(", getWriteTime()");
     }
@@ -473,5 +481,41 @@ public final class NodeGenerator {
         .returns(String.class)
         .addStatement(start.toString() + end.toString())
         .build();
+  }
+
+  private TypeName keyReferenceType() {
+    checkState(features.contains(Feature.WEAK_KEYS));
+    return ParameterizedTypeName.get(
+        ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
+  }
+
+  private TypeName valueReferenceType() {
+    checkState(!features.contains(Feature.STRONG_VALUES));
+    String clazz = features.contains(Feature.WEAK_VALUES)
+        ? "WeakValueReference"
+        : "SoftValueReference";
+    return ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME + ".References", clazz), vTypeVar);
+  }
+
+  Strength strengthOf(Feature feature) {
+    for (Strength strength : Strength.values()) {
+      if (feature.name().startsWith(strength.name())) {
+        return strength;
+      }
+    }
+    throw new IllegalStateException("No strength for " + feature);
+  }
+
+  enum Strength {
+    STRONG, WEAK, SOFT;
+  }
+
+  enum Visibility {
+    IMMEDIATE(false), LAZY(true);
+
+    final boolean isRelaxed;
+    private Visibility(boolean mode) {
+      this.isRelaxed = mode;
+    }
   }
 }

@@ -37,6 +37,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -45,7 +46,6 @@ import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.lang.model.element.Modifier;
 
-import com.github.benmanes.caffeine.cache.Specifications.Strength;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -76,8 +76,6 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class NodeFactoryGenerator {
-  static final String PACKAGE_NAME = NodeFactoryGenerator.class.getPackage().getName();
-
   final Path directory;
   final Set<String> seen;
 
@@ -212,84 +210,79 @@ public final class NodeFactoryGenerator {
   }
 
   private void generatedNodes() throws IOException {
+    Feature[] featureByIndex = new Feature[] { null, null,
+        Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
+        Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
+
     for (List<Object> combination : combinations()) {
-      addNodeSpec(
-          (Strength) combination.get(0),
-          (Strength) combination.get(1),
-          (boolean) combination.get(2),
-          (boolean) combination.get(3),
-          (boolean) combination.get(4),
-          (boolean) combination.get(5),
-          (boolean) combination.get(6));
+      Set<Feature> features = new LinkedHashSet<>();
+
+      features.add((Feature) combination.get(0));
+      features.add((Feature) combination.get(1));
+      for (int i = 2; i < combination.size(); i++) {
+        if ((Boolean) combination.get(i)) {
+          features.add(featureByIndex[i]);
+        }
+      }
+      if (features.contains(Feature.MAXIMUM_WEIGHT)) {
+        features.remove(Feature.MAXIMUM_SIZE);
+      }
+
+      addNodeSpec(features);
     }
   }
 
-  private void addNodeSpec(Strength keyStrength, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
-      boolean maximum, boolean weighed) throws IOException {
-    String enumName = makeEnumName(keyStrength, valueStrength,
-        expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximum, weighed);
-    String className = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
+  private void addNodeSpec(Set<Feature> features) throws IOException {
+    String enumName = Feature.makeEnumName(features);
+    String className = Feature.makeClassName(features);
     if (!seen.add(className)) {
       // skip duplicates
       return;
     }
 
-    addEnumConstant(className, enumName, keyStrength, valueStrength,
-        expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximum, weighed);
+    addEnumConstant(className, enumName, features);
 
-    NodeGenerator nodeGenerator = new NodeGenerator(className, keyStrength, valueStrength,
-        expireAfterAccess, expireAfterWrite, refreshAfterWrite, maximum, weighed);
+    NodeGenerator nodeGenerator = new NodeGenerator(className, features);
     TypeSpec.Builder nodeSubType = nodeGenerator.createNodeType();
     nodeFactory.addType(nodeSubType.build());
   }
 
-  private void addEnumConstant(String className, String enumName, Strength keyStrength,
-      Strength valueStrength, boolean expireAfterAccess, boolean expireAfterWrite,
-      boolean refreshAfterWrite, boolean maximum, boolean weighed) {
-    String statementWithKey = makeFactoryStatementKey(keyStrength, valueStrength,
-        expireAfterAccess, expireAfterWrite, refreshAfterWrite, weighed);
-    String statementWithKeyRef = makeFactoryStatementKeyRef(valueStrength,
-        expireAfterAccess, expireAfterWrite, refreshAfterWrite, weighed);
+  private void addEnumConstant(String className, String enumName, Set<Feature> features) {
+    String statementWithKey = makeFactoryStatementKey(features);
+    String statementWithKeyRef = makeFactoryStatementKeyRef(features);
     TypeSpec.Builder typeSpec = TypeSpec.anonymousClassBuilder("")
         .addMethod(newNodeByKey().addAnnotation(Override.class)
             .addStatement(statementWithKey, className).build())
         .addMethod(newNodeByKeyRef().addAnnotation(Override.class)
             .addStatement(statementWithKeyRef, className).build());
-    if (keyStrength == Strength.WEAK) {
+    if (features.contains(Feature.WEAK_KEYS)) {
       typeSpec.addMethod(makeNewLookupKey());
       typeSpec.addMethod(makeReferenceKey());
     }
     nodeFactory.addEnumConstant(enumName, typeSpec.build());
   }
 
-  private String makeFactoryStatementKey(Strength keyStrength, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
-      boolean weighed) {
+  private String makeFactoryStatementKey(Set<Feature> features) {
     StringBuilder statement = new StringBuilder("return new $N<>(key, keyReferenceQueue");
-    return completeFactoryStatement(statement, valueStrength,
-        expireAfterAccess, expireAfterWrite, refreshAfterWrite, weighed);
+    return completeFactoryStatement(statement, features);
   }
 
-  private String makeFactoryStatementKeyRef(Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
-      boolean weighed) {
+  private String makeFactoryStatementKeyRef(Set<Feature> features) {
     StringBuilder statement = new StringBuilder("return new $N<>(keyReference");
-    return completeFactoryStatement(statement, valueStrength,
-        expireAfterAccess, expireAfterWrite, refreshAfterWrite, weighed);
+    return completeFactoryStatement(statement, features);
   }
 
-  private String completeFactoryStatement(StringBuilder statement, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
-      boolean weighed) {
+  private String completeFactoryStatement(StringBuilder statement, Set<Feature> features) {
     statement.append(", value");
-    if (valueStrength != Strength.STRONG) {
+    if (!features.contains(Feature.STRONG_VALUES)) {
       statement.append(", valueReferenceQueue");
     }
-    if (weighed) {
+    if (features.contains(Feature.MAXIMUM_WEIGHT)) {
       statement.append(", weight");
     }
-    if (expireAfterAccess || expireAfterWrite || refreshAfterWrite) {
+    if (features.contains(Feature.EXPIRE_ACCESS)
+        || features.contains(Feature.EXPIRE_WRITE)
+        || features.contains(Feature.REFRESH_WRITE)) {
       statement.append(", now");
     }
     statement.append(")");
@@ -320,33 +313,10 @@ public final class NodeFactoryGenerator {
         .build();
   }
 
-  private String makeEnumName(Strength keyStrength, Strength valueStrength,
-      boolean expireAfterAccess, boolean expireAfterWrite, boolean refreshAfterWrite,
-      boolean maximum, boolean weighed) {
-    StringBuilder name = new StringBuilder(keyStrength + "_KEYS_" + valueStrength + "_VALUES");
-    if (expireAfterAccess) {
-      name.append("_EXPIRE_ACCESS");
-    }
-    if (expireAfterWrite) {
-      name.append("_EXPIRE_WRITE");
-    }
-    if (refreshAfterWrite) {
-      name.append("_REFRESH_WRITE");
-    }
-    if (maximum) {
-      name.append("_MAXIMUM");
-      if (weighed) {
-        name.append("_WEIGHT");
-      } else {
-        name.append("_SIZE");
-      }
-    }
-    return name.toString();
-  }
-
   private Set<List<Object>> combinations() {
-    Set<Strength> keyStrengths = ImmutableSet.of(Strength.STRONG, Strength.WEAK);
-    Set<Strength> valueStrengths = ImmutableSet.of(Strength.STRONG, Strength.WEAK, Strength.SOFT);
+    Set<Feature> keyStrengths = ImmutableSet.of(Feature.STRONG_KEYS, Feature.WEAK_KEYS);
+    Set<Feature> valueStrengths = ImmutableSet.of(
+        Feature.STRONG_VALUES, Feature.WEAK_VALUES, Feature.SOFT_VALUES);
     Set<Boolean> expireAfterAccess = ImmutableSet.of(false, true);
     Set<Boolean> expireAfterWrite = ImmutableSet.of(false, true);
     Set<Boolean> refreshAfterWrite = ImmutableSet.of(false, true);

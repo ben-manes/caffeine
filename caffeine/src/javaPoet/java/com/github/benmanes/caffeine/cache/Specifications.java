@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.lang.ref.ReferenceQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -108,33 +106,6 @@ public final class Specifications {
 
   static final TypeName WRITE_QUEUE = ParameterizedTypeName.get(
       ClassName.get(ConcurrentLinkedQueue.class), ClassName.get(Runnable.class));
-
-
-  enum Visibility {
-    IMMEDIATE(false), LAZY(true);
-
-    final boolean isRelaxed;
-    private Visibility(boolean mode) {
-      this.isRelaxed = mode;
-    }
-  }
-
-  enum Strength {
-    STRONG, WEAK, SOFT;
-
-    public TypeName keyReferenceType() {
-      checkState(this == WEAK);
-      return ParameterizedTypeName.get(
-          ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
-    }
-
-    public TypeName valueReferenceType() {
-      checkState(this != STRONG);
-      String clazz = (this == WEAK) ? "WeakValueReference" : "SoftValueReference";
-      return ParameterizedTypeName.get(
-          ClassName.get(PACKAGE_NAME + ".References", clazz), vTypeVar);
-    }
-  }
 
   private Specifications() {}
 }

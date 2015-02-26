@@ -35,7 +35,6 @@ import java.util.concurrent.Executor;
 
 import javax.lang.model.element.Modifier;
 
-import com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
