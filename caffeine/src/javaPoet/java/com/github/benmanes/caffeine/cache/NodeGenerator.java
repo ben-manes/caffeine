@@ -22,7 +22,6 @@ import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
-import static com.github.benmanes.caffeine.cache.Specifications.UNUSED;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
@@ -38,18 +37,13 @@ import java.lang.ref.Reference;
 import java.util.Objects;
 import java.util.Set;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.Iterables;
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -61,13 +55,15 @@ import com.squareup.javapoet.TypeSpec;
  */
 public final class NodeGenerator {
   private final String className;
+  private final TypeName superClass;
   private final Set<Feature> features;
 
   private TypeSpec.Builder nodeSubtype;
   private MethodSpec.Builder constructorByKey;
   private MethodSpec.Builder constructorByKeyRef;
 
-  public NodeGenerator(String className, Set<Feature> features) {
+  public NodeGenerator(TypeName superClass, String className, Set<Feature> features) {
+    this.superClass = superClass;
     this.className = className;
     this.features = features;
   }
@@ -101,54 +97,9 @@ public final class NodeGenerator {
 
   private void makeNodeSubtype() {
     nodeSubtype = TypeSpec.classBuilder(className)
+        .superclass(superClass)
         .addModifiers(Modifier.STATIC, Modifier.FINAL)
         .addSuperinterface(ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar));
-  }
-
-  private void addStateMethods() {
-    String retiredArg;
-    String deadArg;
-    if (features.contains(Feature.STRONG_KEYS)) {
-      retiredArg = RETIRED_STRONG_KEY;
-      deadArg = DEAD_STRONG_KEY;
-    } else {
-      retiredArg = RETIRED_WEAK_KEY;
-      deadArg = DEAD_WEAK_KEY;
-    }
-
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
-        .addStatement("Object key = this.key")
-        .addStatement("return (key != $L) && (key != $L)", retiredArg, deadArg)
-        .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
-        .returns(boolean.class)
-        .build());
-
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("isRetired")
-        .addStatement("return (key == $L)", retiredArg)
-        .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
-        .returns(boolean.class)
-        .build());
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("retire")
-        .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName("key"), retiredArg)
-        .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
-        .build());
-
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("isDead")
-        .addStatement("return (key == $L)", deadArg)
-        .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
-        .returns(boolean.class)
-        .build());
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("die")
-        .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName("key"), deadArg)
-        .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
-        .build());
   }
 
   private void addKey() {
@@ -173,12 +124,9 @@ public final class NodeGenerator {
   /** Creates the setValue method. */
   private MethodSpec makeSetValue() {
     MethodSpec.Builder setter = MethodSpec.methodBuilder("setValue")
-        .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
-        .addParameter(ParameterSpec.builder(vTypeVar, "value")
-            .addAnnotation(Nonnull.class).build())
-        .addParameter(ParameterSpec.builder(vRefQueueType, "referenceQueue")
-          .addAnnotation(Nonnull.class).build());
+        .addParameter(vTypeVar, "value")
+        .addParameter(vRefQueueType, "referenceQueue");
 
     if (isStrongValues()) {
       setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
@@ -193,10 +141,8 @@ public final class NodeGenerator {
 
   private MethodSpec makeContainsValue() {
     MethodSpec.Builder containsValue = MethodSpec.methodBuilder("containsValue")
-        .addParameter(ParameterSpec.builder(Object.class, "value")
-            .addAnnotation(Nonnull.class).build())
+        .addParameter(Object.class, "value")
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
         .returns(boolean.class);
     if (isStrongValues()) {
       containsValue.addStatement("return $T.equals(value, getValue())", Objects.class);
@@ -219,7 +165,6 @@ public final class NodeGenerator {
     FieldSpec.Builder fieldSpec = isStrongValues()
         ? FieldSpec.builder(vTypeVar, "value", modifiers)
         : FieldSpec.builder(valueReferenceType(), "value", modifiers);
-    fieldSpec.addAnnotation(UNUSED);
     return fieldSpec.build();
   }
 
@@ -234,8 +179,6 @@ public final class NodeGenerator {
   /** Adds the constructor by key reference to the node type. */
   private void makeBaseConstructorByKeyRef() {
     constructorByKeyRef = MethodSpec.constructorBuilder().addParameter(keyRefSpec);
-    constructorByKeyRef.addAnnotation( AnnotationSpec.builder(SuppressWarnings.class)
-        .addMember("value", "$S", "unchecked").build());
     addKeyConstructorAssignment(constructorByKeyRef, true);
     completeBaseConstructor(constructorByKeyRef);
   }
@@ -246,14 +189,12 @@ public final class NodeGenerator {
       constructor.addParameter(valueRefQueueSpec);
     }
     if (features.contains(Feature.MAXIMUM_WEIGHT)) {
-      constructor.addParameter(ParameterSpec.builder(int.class, "weight")
-          .addAnnotation(Nonnegative.class).build());
+      constructor.addParameter(int.class, "weight");
     }
     if (features.contains(Feature.EXPIRE_ACCESS)
         || features.contains(Feature.EXPIRE_WRITE)
         || features.contains(Feature.REFRESH_WRITE)) {
-      constructor.addParameter(ParameterSpec.builder(long.class, "now")
-          .addAnnotation(Nonnegative.class).build());
+      constructor.addParameter(long.class, "now");
     }
     addValueConstructorAssignment(constructor);
   }
@@ -298,8 +239,7 @@ public final class NodeGenerator {
   private void addExpiration() {
     if (features.contains(Feature.EXPIRE_ACCESS)) {
       nodeSubtype.addField(newFieldOffset("accessTime"))
-          .addField(FieldSpec.builder(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
-              .addAnnotation(UNUSED).build())
+          .addField(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG,
               "accessTime", Visibility.LAZY))
           .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.LAZY));
@@ -308,8 +248,7 @@ public final class NodeGenerator {
     }
     if (features.contains(Feature.EXPIRE_WRITE) || features.contains(Feature.REFRESH_WRITE)) {
       nodeSubtype.addField(newFieldOffset("writeTime"))
-          .addField(FieldSpec.builder(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
-              .addAnnotation(UNUSED).build())
+          .addField(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
       addLongConstructorAssignment(constructorByKey, "now", "writeTime", Visibility.LAZY);
@@ -361,6 +300,47 @@ public final class NodeGenerator {
         .addMethod(newSetter(varType, varName, Visibility.IMMEDIATE));
   }
 
+  private void addStateMethods() {
+    String retiredArg;
+    String deadArg;
+    if (features.contains(Feature.STRONG_KEYS)) {
+      retiredArg = RETIRED_STRONG_KEY;
+      deadArg = DEAD_STRONG_KEY;
+    } else {
+      retiredArg = RETIRED_WEAK_KEY;
+      deadArg = DEAD_WEAK_KEY;
+    }
+
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
+        .addStatement("Object key = this.key")
+        .addStatement("return (key != $L) && (key != $L)", retiredArg, deadArg)
+        .addModifiers(Modifier.PUBLIC)
+        .returns(boolean.class)
+        .build());
+
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("isRetired")
+        .addStatement("return (key == $L)", retiredArg)
+        .addModifiers(Modifier.PUBLIC)
+        .returns(boolean.class)
+        .build());
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("retire")
+        .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName("key"), retiredArg)
+        .addModifiers(Modifier.PUBLIC)
+        .build());
+
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("isDead")
+        .addStatement("return (key == $L)", deadArg)
+        .addModifiers(Modifier.PUBLIC)
+        .returns(boolean.class)
+        .build());
+    nodeSubtype.addMethod(MethodSpec.methodBuilder("die")
+        .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName("key"), deadArg)
+        .addModifiers(Modifier.PUBLIC)
+        .build());
+  }
+
   /** Creates a static field with an Unsafe address offset. */
   private FieldSpec newFieldOffset(String varName) {
     String name = offsetName(varName);
@@ -380,10 +360,8 @@ public final class NodeGenerator {
     String methodName = String.format("get%sReference",
         Character.toUpperCase(varName.charAt(0)) + varName.substring(1));
     MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
-        .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
         .returns(Object.class);
-    getter.addAnnotation(Nonnull.class);
     getter.addStatement("return $N", varName);
     return getter.build();
   }
@@ -393,15 +371,12 @@ public final class NodeGenerator {
       String varName, Visibility visibility) {
     String methodName = "get" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
-        .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
         .returns(varType);
     String type;
     if (varType.isPrimitive()) {
-      getter.addAnnotation(Nonnegative.class);
       type = (varType == TypeName.INT) ? "Int" : "Long";
     } else {
-      getter.addAnnotation(Nullable.class);
       type = "Object";
     }
     if (strength == Strength.STRONG) {
@@ -424,10 +399,6 @@ public final class NodeGenerator {
         getter.addStatement("return $N.get()", varName);
       }
     }
-    if (visibility.isRelaxed && type.equals("Object")) {
-      getter.addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-          .addMember("value", "$S", "unchecked").build());
-    }
     return getter.build();
   }
 
@@ -441,10 +412,8 @@ public final class NodeGenerator {
       type = "Object";
     }
     MethodSpec.Builder setter = MethodSpec.methodBuilder(methodName)
-        .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
-        .addParameter(ParameterSpec.builder(varType, varName)
-            .addAnnotation(varType.isPrimitive() ? Nonnegative.class : Nullable.class).build());
+        .addParameter(varType, varName);
     if (visibility.isRelaxed) {
       setter.addStatement("$T.UNSAFE.putOrdered$L(this, $N, $N)",
           UNSAFE_ACCESS, type, offsetName(varName), varName);
@@ -477,7 +446,6 @@ public final class NodeGenerator {
 
     return MethodSpec.methodBuilder("toString")
         .addModifiers(Modifier.PUBLIC)
-        .addAnnotation(Override.class)
         .returns(String.class)
         .addStatement(start.toString() + end.toString())
         .build();

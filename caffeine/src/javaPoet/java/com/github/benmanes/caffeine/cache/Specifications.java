@@ -18,10 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.lang.ref.ReferenceQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -54,25 +50,20 @@ public final class Specifications {
   static final TypeName rawReferenceKeyType = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), ClassName.get(Object.class));
 
-  static final ParameterSpec keySpec = ParameterSpec.builder(kTypeVar, "key")
-      .addAnnotation(Nonnull.class).build();
-  static final ParameterSpec keyRefSpec = ParameterSpec.builder(Object.class, "keyReference")
-      .addAnnotation(Nonnull.class).build();
+  static final ParameterSpec keySpec = ParameterSpec.builder(kTypeVar, "key").build();
+  static final ParameterSpec keyRefSpec =
+      ParameterSpec.builder(Object.class, "keyReference").build();
   static final ParameterSpec keyRefQueueSpec =
       ParameterSpec.builder(kRefQueueType, "keyReferenceQueue").build();
 
-  static final ParameterSpec valueSpec = ParameterSpec.builder(vTypeVar, "value")
-      .addAnnotation(Nonnull.class).build();
+  static final ParameterSpec valueSpec = ParameterSpec.builder(vTypeVar, "value").build();
   static final ParameterSpec valueRefQueueSpec =
       ParameterSpec.builder(vRefQueueType, "valueReferenceQueue").build();
 
-  static final ParameterSpec weightSpec = ParameterSpec.builder(int.class, "weight")
-      .addAnnotation(Nonnegative.class).build();
+  static final ParameterSpec weightSpec = ParameterSpec.builder(int.class, "weight").build();
   static final TypeName NODE = ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar);
   static final TypeName UNSAFE_ACCESS =
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
-  static final AnnotationSpec UNUSED =
-      AnnotationSpec.builder(SuppressWarnings.class).addMember("value", "$S", "unused").build();
 
   static final TypeName BUILDER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "Caffeine"), kTypeVar, vTypeVar);

@@ -42,8 +42,6 @@ import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
 import javax.lang.model.element.Modifier;
 
 import com.google.common.base.CaseFormat;
@@ -51,11 +49,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 /**
@@ -87,7 +86,10 @@ public final class NodeFactoryGenerator {
   }
 
   void generate() throws IOException {
-    nodeFactory = TypeSpec.enumBuilder("NodeFactory");
+    AnnotationSpec suppressed = AnnotationSpec.builder(SuppressWarnings.class)
+        .addMember("value", "{ $S, $S }", "unchecked", "unused")
+        .build();
+    nodeFactory = TypeSpec.enumBuilder("NodeFactory").addAnnotation(suppressed);
     addClassJavaDoc();
     addNodeStateStatics();
     addKeyMethods();
@@ -156,10 +158,9 @@ public final class NodeFactoryGenerator {
             + "holds keys strongly\nthen the key is returned. If the cache holds keys weakly "
             + "then a {@link $T}\nholding the key argument is returned.\n", lookupKeyType)
         .addTypeVariable(kTypeVar)
-        .addParameter(ParameterSpec.builder(kTypeVar, "key")
-            .addAnnotation(Nonnull.class).build())
-        .returns(Object.class).addAnnotation(Nonnull.class)
+        .addParameter(kTypeVar, "key")
         .addStatement("return key")
+        .returns(Object.class)
         .build();
   }
 
@@ -169,11 +170,9 @@ public final class NodeFactoryGenerator {
             + " keys strongly then\nthe key is returned. If the cache holds keys weakly "
             + "then a {@link $T}\nholding the key argument is returned.\n", referenceKeyType)
         .addTypeVariable(kTypeVar)
-        .addParameter(ParameterSpec.builder(kTypeVar, "key")
-            .addAnnotation(Nonnull.class).build())
-        .addParameter(ParameterSpec.builder(kRefQueueType, "referenceQueue")
-            .addAnnotation(Nonnull.class).build())
-        .returns(Object.class).addAnnotation(Nonnull.class)
+        .addParameter(kTypeVar, "key")
+        .addParameter(kRefQueueType, "referenceQueue")
+        .returns(Object.class)
         .addStatement("return $L", "key")
         .build();
   }
@@ -181,7 +180,7 @@ public final class NodeFactoryGenerator {
   private void addGetFactoryMethods() {
     MethodSpec.Builder getFactory = MethodSpec.methodBuilder("getFactory")
         .addJavadoc("Returns a factory optimized for the specified features.\n")
-        .returns(ClassName.bestGuess("NodeFactory")).addAnnotation(Nonnull.class);
+        .returns(ClassName.bestGuess("NodeFactory"));
 
     List<String> params = ImmutableList.of("strongKeys", "weakKeys", "strongValues", "weakValues",
         "softValues", "expiresAfterAccess", "expiresAfterWrite", "refreshAfterWrite",
@@ -233,33 +232,31 @@ public final class NodeFactoryGenerator {
   }
 
   private void addNodeSpec(Set<Feature> features) throws IOException {
-    String enumName = Feature.makeEnumName(features);
     String className = Feature.makeClassName(features);
     if (!seen.add(className)) {
       // skip duplicates
       return;
     }
 
-    addEnumConstant(className, enumName, features);
-
-    NodeGenerator nodeGenerator = new NodeGenerator(className, features);
+    NodeGenerator nodeGenerator = new NodeGenerator(TypeName.OBJECT, className, features);
     TypeSpec.Builder nodeSubType = nodeGenerator.createNodeType();
     nodeFactory.addType(nodeSubType.build());
+    addEnumConstant(className, features);
   }
 
-  private void addEnumConstant(String className, String enumName, Set<Feature> features) {
+  private void addEnumConstant(String className, Set<Feature> features) {
     String statementWithKey = makeFactoryStatementKey(features);
     String statementWithKeyRef = makeFactoryStatementKeyRef(features);
     TypeSpec.Builder typeSpec = TypeSpec.anonymousClassBuilder("")
-        .addMethod(newNodeByKey().addAnnotation(Override.class)
+        .addMethod(newNodeByKey()
             .addStatement(statementWithKey, className).build())
-        .addMethod(newNodeByKeyRef().addAnnotation(Override.class)
+        .addMethod(newNodeByKeyRef()
             .addStatement(statementWithKeyRef, className).build());
     if (features.contains(Feature.WEAK_KEYS)) {
       typeSpec.addMethod(makeNewLookupKey());
       typeSpec.addMethod(makeReferenceKey());
     }
-    nodeFactory.addEnumConstant(enumName, typeSpec.build());
+    nodeFactory.addEnumConstant(Feature.makeEnumName(features), typeSpec.build());
   }
 
   private String makeFactoryStatementKey(Set<Feature> features) {
@@ -292,24 +289,19 @@ public final class NodeFactoryGenerator {
   private MethodSpec makeNewLookupKey() {
     return MethodSpec.methodBuilder("newLookupKey")
         .addTypeVariable(kTypeVar)
-        .addParameter(ParameterSpec.builder(kTypeVar, "key")
-            .addAnnotation(Nonnull.class).build())
-        .returns(Object.class).addAnnotation(Nonnull.class)
-        .addAnnotation(Override.class)
+        .addParameter(kTypeVar, "key")
         .addStatement("return new $T(key)", lookupKeyType)
+        .returns(Object.class)
         .build();
   }
 
   private MethodSpec makeReferenceKey() {
     return MethodSpec.methodBuilder("newReferenceKey")
         .addTypeVariable(kTypeVar)
-        .addParameter(ParameterSpec.builder(kTypeVar, "key")
-            .addAnnotation(Nonnull.class).build())
-        .addParameter(ParameterSpec.builder(kRefQueueType, "referenceQueue")
-            .addAnnotation(Nonnull.class).build())
-        .returns(Object.class).addAnnotation(Nonnull.class)
-        .addAnnotation(Override.class)
+        .addParameter(kTypeVar, "key")
+        .addParameter(kRefQueueType, "referenceQueue")
         .addStatement("return new $T($L, $L)", referenceKeyType, "key", "referenceQueue")
+        .returns(Object.class)
         .build();
   }
 
@@ -341,15 +333,12 @@ public final class NodeFactoryGenerator {
 
   private MethodSpec.Builder completeNewNode(MethodSpec.Builder method) {
     return method
-        .addAnnotation(Nonnull.class)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
         .addParameter(valueSpec)
         .addParameter(valueRefQueueSpec)
-        .addParameter(ParameterSpec.builder(int.class, "weight")
-            .addAnnotation(Nonnegative.class).build())
-        .addParameter(ParameterSpec.builder(long.class, "now")
-            .addAnnotation(Nonnegative.class).build())
+        .addParameter(int.class, "weight")
+        .addParameter(long.class, "now")
         .returns(Specifications.NODE);
   }
 
