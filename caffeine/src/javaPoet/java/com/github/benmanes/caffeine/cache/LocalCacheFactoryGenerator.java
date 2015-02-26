@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static java.util.Objects.requireNonNull;
@@ -27,20 +28,26 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.annotation.Nonnull;
 import javax.lang.model.element.Modifier;
 
-import com.github.benmanes.caffeine.cache.Specifications.Strength;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 /**
@@ -49,6 +56,38 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
+  enum Feature {
+    STRONG_KEYS(0), WEAK_KEYS(0),
+    STRONG_VALUES(1), INFIRM_VALUES(1),
+    LOADING(2),
+    LISTENING(3),
+    EXECUTOR(4),
+    STATS(5),
+    MAXIMUM_SIZE(6),
+    MAXIMUM_WEIGHT(7),
+    EXPIRE_ACCESS(8),
+    EXPIRE_WRITE(9),
+    REFRESH_WRITE(10);
+
+    static Feature[] featureByIndex;
+
+    int index;
+    Feature(int index) {
+      this.index = index;
+    }
+
+    static Feature forIndex(int index) {
+      Preconditions.checkArgument(index > 1);
+      if (featureByIndex == null) {
+        featureByIndex = new Feature[Feature.values().length];
+        for (Feature feature : values()) {
+          featureByIndex[feature.index] = feature;
+        }
+      }
+      return featureByIndex[index];
+    }
+  }
+
   final Path directory;
   final Set<String> seen;
   TypeSpec.Builder factory;
@@ -107,8 +146,8 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private Set<List<Object>> combinations() {
-    Set<Strength> keyStrengths = ImmutableSet.of(Strength.STRONG, Strength.WEAK);
-    Set<Strength> valueStrengths = ImmutableSet.of(Strength.STRONG, Strength.WEAK, Strength.SOFT);
+    Set<Boolean> keyStrengths = ImmutableSet.of(true, false);
+    Set<Boolean> valueStrengths = ImmutableSet.of(true, false);
     Set<Boolean> cacheLoaders = ImmutableSet.of(true, false);
     Set<Boolean> removalListeners = ImmutableSet.of(true, false);
     Set<Boolean> executors = ImmutableSet.of(true, false);
@@ -128,32 +167,30 @@ public final class LocalCacheFactoryGenerator {
 
   private void generateLocalCaches() {
     for (List<Object> combination : combinations()) {
-      addLocalCacheSpec(
-          (Strength) combination.get(0),
-          (Strength) combination.get(1),
-          (Boolean) combination.get(2),
-          (Boolean) combination.get(3),
-          (Boolean) combination.get(4),
-          (Boolean) combination.get(5),
-          (Boolean) combination.get(6),
-          (Boolean) combination.get(7),
-          (Boolean) combination.get(8),
-          (Boolean) combination.get(9),
-          (Boolean) combination.get(10));
+      Set<Feature> features = new LinkedHashSet<>();
+
+      features.add(((Boolean) combination.get(0)) ? Feature.STRONG_KEYS : Feature.WEAK_KEYS);
+      features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
+      for (int i = 2; i < combination.size(); i++) {
+        if ((Boolean) combination.get(i)) {
+          features.add(Feature.forIndex(i));
+        }
+      }
+      if (features.contains(Feature.MAXIMUM_WEIGHT)) {
+        features.remove(Feature.MAXIMUM_SIZE);
+      }
+
+      addLocalCacheSpec(features);
     }
   }
 
-  private void addLocalCacheSpec(Strength keyStrength, Strength valueStrength,
-      boolean cacheLoader, boolean removalListener, boolean executor, boolean stats,
-      boolean maximum, boolean weighed, boolean expireAfterAccess, boolean expireAfterWrite,
-      boolean refreshAfterWrite) {
-    String enumName = makeEnumName(keyStrength, valueStrength, cacheLoader, removalListener,
-        executor, stats, maximum, weighed, expireAfterAccess, expireAfterWrite, refreshAfterWrite);
-    if ((weighed && !maximum) || !seen.add(enumName)) {
+  private void addLocalCacheSpec(Set<Feature> features) {
+    String enumName = makeEnumName(features);
+    if (!seen.add(enumName)) {
       return;
     }
-    String className = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
-    factory.addEnumConstant(enumName,TypeSpec.anonymousClassBuilder("")
+    String className = makeClassName(features);
+    factory.addEnumConstant(enumName, TypeSpec.anonymousClassBuilder("")
         .addMethod(MethodSpec.methodBuilder("create")
             .addTypeVariable(kTypeVar).addTypeVariable(vTypeVar)
             .addAnnotation(Override.class)
@@ -165,52 +202,33 @@ public final class LocalCacheFactoryGenerator {
             .build())
         .build());
 
-    LocalCacheGenerator generator = new LocalCacheGenerator(className, keyStrength, valueStrength,
-        cacheLoader, removalListener, executor, stats, maximum, weighed, expireAfterAccess,
-        expireAfterWrite, refreshAfterWrite);
+    TypeName superClass;
+    Set<Feature> parentFeatures;
+    Set<Feature> generateFeatures;
+    if (features.size() == 2) {
+      parentFeatures = ImmutableSet.of();
+      generateFeatures = features;
+      superClass = BOUNDED_LOCAL_CACHE;
+    } else {
+      parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
+      generateFeatures = ImmutableSet.of(Iterables.getLast(features));
+      superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
+          makeClassName(parentFeatures)), kTypeVar, vTypeVar);
+    }
+    LocalCacheGenerator generator = new LocalCacheGenerator(
+        superClass, className, parentFeatures, generateFeatures);
     factory.addType(generator.generate());
   }
 
-  private String makeEnumName(Strength keyStrength, Strength valueStrength, boolean cacheLoader,
-      boolean removalListener, boolean executor, boolean stats, boolean maximum,
-      boolean weighed, boolean expireAfterAccess, boolean expireAfterWrite,
-      boolean refreshAfterWrite) {
-    StringBuilder name = new StringBuilder(keyStrength + "_KEYS");
-    if (valueStrength == Strength.STRONG) {
-      name.append("_STRONG_VALUES");
-    } else {
-      name.append("_INFIRM_VALUES");
-    }
-    if (cacheLoader) {
-      name.append("_LOADING");
-    }
-    if (removalListener) {
-      name.append("_LISTENING");
-    }
-    if (executor) {
-      name.append("_EXECUTOR");
-    }
-    if (stats) {
-      name.append("_STATS");
-    }
-    if (maximum) {
-      name.append("_MAXIMUM");
-      if (weighed) {
-        name.append("_WEIGHT");
-      } else {
-        name.append("_SIZE");
-      }
-    }
-    if (expireAfterAccess) {
-      name.append("_EXPIRE_ACCESS");
-    }
-    if (expireAfterWrite) {
-      name.append("_EXPIRE_WRITE");
-    }
-    if (refreshAfterWrite) {
-      name.append("_REFRESH_WRITE");
-    }
-    return name.toString();
+  private String makeEnumName(Iterable<Feature> features) {
+    return StreamSupport.stream(features.spliterator(), false)
+        .map(feature -> feature.name())
+        .collect(Collectors.joining("_"));
+  }
+
+  private String makeClassName(Iterable<Feature> features) {
+    String enumName = makeEnumName(features);
+    return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
   }
 
   private void addClassJavaDoc() {

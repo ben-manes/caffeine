@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Specifications.ACCESS_ORDER_DEQUE;
-import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
@@ -31,12 +30,13 @@ import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
 
-import com.github.benmanes.caffeine.cache.Specifications.Strength;
+import com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
@@ -53,42 +53,23 @@ public final class LocalCacheGenerator {
   private final TypeSpec.Builder cache;
   private final MethodSpec.Builder constructor;
 
-  private final Strength keyStrength;
-  private final Strength valueStrength;
-  private final boolean cacheLoader;
-  private final boolean removalListener;
-  private final boolean executor;
-  private final boolean stats;
-  private final boolean maximum;
-  private final boolean weighed;
-  private final boolean expireAfterAccess;
-  private final boolean expireAfterWrite;
-  private final boolean refreshAfterWrite;
+  private final Set<Feature> parentFeatures;
+  private final Set<Feature> generateFeatures;
 
-  LocalCacheGenerator(String className, Strength keyStrength, Strength valueStrength,
-      boolean cacheLoader, boolean removalListener, boolean executor, boolean stats,
-      boolean maximum, boolean weighed, boolean expireAfterAccess, boolean expireAfterWrite,
-      boolean refreshAfterWrite) {
+  LocalCacheGenerator(TypeName superClass, String className,
+      Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
     this.constructor = MethodSpec.constructorBuilder();
-    this.cache = TypeSpec.classBuilder(className);
-    this.expireAfterAccess = expireAfterAccess;
-    this.refreshAfterWrite = refreshAfterWrite;
-    this.expireAfterWrite = expireAfterWrite;
-    this.removalListener = removalListener;
-    this.valueStrength = valueStrength;
-    this.keyStrength = keyStrength;
-    this.cacheLoader = cacheLoader;
-    this.executor = executor;
-    this.maximum = maximum;
-    this.weighed = weighed;
-    this.stats = stats;
+    this.cache = TypeSpec.classBuilder(className)
+        .superclass(superClass)
+        .addModifiers(Modifier.STATIC);
+    this.parentFeatures = parentFeatures;
+    this.generateFeatures = generateFeatures;
   }
 
   public TypeSpec generate() {
-    cache.addModifiers(Modifier.FINAL)
+    cache
         .addTypeVariable(kTypeVar)
-        .addTypeVariable(vTypeVar)
-        .superclass(BOUNDED_LOCAL_CACHE);
+        .addTypeVariable(vTypeVar);
     constructor
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
@@ -114,15 +95,19 @@ public final class LocalCacheGenerator {
   }
 
   private void addKeyStrength() {
-    addStrength(keyStrength, "collectKeys", "keyReferenceQueue", kRefQueueType);
+    if (generateFeatures.contains(Feature.WEAK_KEYS)) {
+      addStrength("collectKeys", "keyReferenceQueue", kRefQueueType);
+    }
   }
 
   private void addValueStrength() {
-    addStrength(valueStrength, "collectValues", "valueReferenceQueue", vRefQueueType);
+    if (generateFeatures.contains(Feature.INFIRM_VALUES)) {
+      addStrength("collectValues", "valueReferenceQueue", vRefQueueType);
+    }
   }
 
   private void addRemovalListener() {
-    if (!removalListener) {
+    if (!generateFeatures.contains(Feature.LISTENING)) {
       return;
     }
     cache.addField(
@@ -144,7 +129,7 @@ public final class LocalCacheGenerator {
   }
 
   private void addExecutor() {
-    if (!executor) {
+    if (!generateFeatures.contains(Feature.EXECUTOR)) {
       return;
     }
     cache.addField(FieldSpec.builder(Executor.class, "executor", privateFinalModifiers).build());
@@ -158,7 +143,7 @@ public final class LocalCacheGenerator {
   }
 
   private void addCacheLoader() {
-    if (!cacheLoader) {
+    if (!generateFeatures.contains(Feature.LOADING)) {
       return;
     }
     constructor.addStatement("this.cacheLoader = cacheLoader");
@@ -173,7 +158,7 @@ public final class LocalCacheGenerator {
   }
 
   private void addStats() {
-    if (!stats) {
+    if (!generateFeatures.contains(Feature.STATS)) {
       return;
     }
     constructor.addStatement("this.statsCounter = builder.getStatsCounterSupplier().get()");
@@ -192,9 +177,15 @@ public final class LocalCacheGenerator {
         .build());
   }
 
+  private static boolean usesTicker(Set<Feature> features) {
+    return features.contains(Feature.STATS)
+        || features.contains(Feature.EXPIRE_ACCESS)
+        || features.contains(Feature.EXPIRE_WRITE)
+        || features.contains(Feature.REFRESH_WRITE);
+  }
+
   private void addTicker() {
-    boolean useTicker = expireAfterAccess || expireAfterWrite || refreshAfterWrite || stats;
-    if (!useTicker) {
+    if (usesTicker(parentFeatures) || !usesTicker(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.ticker = builder.getTicker()");
@@ -207,8 +198,13 @@ public final class LocalCacheGenerator {
         .build());
   }
 
+  private static boolean usesMaximum(Set<Feature> features) {
+    return features.contains(Feature.MAXIMUM_SIZE)
+        || features.contains(Feature.MAXIMUM_WEIGHT);
+  }
+
   private void addMaximum() {
-    if (!maximum) {
+    if (usesMaximum(parentFeatures) || !usesMaximum(generateFeatures)) {
       return;
     }
     cache.addMethod(MethodSpec.methodBuilder("evicts")
@@ -220,7 +216,7 @@ public final class LocalCacheGenerator {
   }
 
   private void addWeigher() {
-    if (!maximum && !weighed) {
+    if (!generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
       return;
     }
     constructor.addStatement("this.weigher = builder.getWeigher(async)");
@@ -240,7 +236,7 @@ public final class LocalCacheGenerator {
   }
 
   private void addExpireAfterAccess() {
-    if (!expireAfterAccess) {
+    if (!generateFeatures.contains(Feature.EXPIRE_ACCESS)) {
       return;
     }
     constructor.addStatement("this.expiresAfterAccessNanos = builder.getExpiresAfterAccessNanos()");
@@ -267,7 +263,7 @@ public final class LocalCacheGenerator {
   }
 
   private void addExpireAfterWrite() {
-    if (!expireAfterWrite) {
+    if (!generateFeatures.contains(Feature.EXPIRE_WRITE)) {
       return;
     }
     constructor.addStatement("this.expiresAfterWriteNanos = builder.getExpiresAfterWriteNanos()");
@@ -294,7 +290,7 @@ public final class LocalCacheGenerator {
   }
 
   private void addRefreshAfterWrite() {
-    if (!refreshAfterWrite) {
+    if (!generateFeatures.contains(Feature.REFRESH_WRITE)) {
       return;
     }
     constructor.addStatement("this.refreshAfterWriteNanos = builder.getRefreshAfterWriteNanos()");
@@ -320,9 +316,14 @@ public final class LocalCacheGenerator {
         .build());
   }
 
+  private static boolean usesAccessOrderDeque(Set<Feature> features) {
+    return features.contains(Feature.MAXIMUM_SIZE)
+        || features.contains(Feature.MAXIMUM_WEIGHT)
+        || features.contains(Feature.EXPIRE_ACCESS);
+  }
+
   private void addAccessOrderDeque() {
-    boolean useAccessOrderDeque = maximum || expireAfterAccess;
-    if (!useAccessOrderDeque) {
+    if (usesAccessOrderDeque(parentFeatures) || !usesAccessOrderDeque(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.accessOrderDeque = new $T()", ACCESS_ORDER_DEQUE);
@@ -336,9 +337,13 @@ public final class LocalCacheGenerator {
         .build());
   }
 
+  private static boolean usesWriteOrderDeque(Set<Feature> features) {
+    return features.contains(Feature.EXPIRE_WRITE)
+        || features.contains(Feature.REFRESH_WRITE);
+  }
+
   private void addWriteOrderDeque() {
-    boolean useWriteOrderDeque = expireAfterWrite || refreshAfterWrite;
-    if (!useWriteOrderDeque) {
+    if (usesWriteOrderDeque(parentFeatures) || !usesWriteOrderDeque(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.writeOrderDeque = new $T()", WRITE_ORDER_DEQUE);
@@ -352,9 +357,16 @@ public final class LocalCacheGenerator {
         .build());
   }
 
+  private static boolean usesWriteQueue(Set<Feature> features) {
+    return features.contains(Feature.MAXIMUM_SIZE)
+        || features.contains(Feature.MAXIMUM_WEIGHT)
+        || features.contains(Feature.EXPIRE_ACCESS)
+        || features.contains(Feature.EXPIRE_WRITE)
+        || features.contains(Feature.REFRESH_WRITE);
+  }
+
   private void addWriteQueue() {
-    boolean useWriteQueue = maximum || expireAfterAccess || expireAfterWrite || refreshAfterWrite;
-    if (!useWriteQueue) {
+    if (usesWriteQueue(parentFeatures) || !usesWriteQueue(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.writeQueue = new $T()", WRITE_QUEUE);
@@ -373,11 +385,8 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  /** Adds the weak/soft methods for the key or value, if needed. */
-  private void addStrength(Strength strength, String collectName, String queueName, TypeName type) {
-    if (strength == Strength.STRONG) {
-      return;
-    }
+  /** Adds the reference strength methods for the key or value. */
+  private void addStrength(String collectName, String queueName, TypeName type) {
     cache.addMethod(MethodSpec.methodBuilder(queueName)
         .addModifiers(Modifier.PROTECTED)
         .addAnnotation(Override.class)
