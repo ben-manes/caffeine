@@ -389,7 +389,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     if (evicts() || expiresAfterAccess()) {
       accessOrderDeque().remove(node);
     }
-    if (expiresAfterWrite() || refreshAfterWrite()) {
+    if (expiresAfterWrite()) {
       writeOrderDeque().remove(node);
     }
 
@@ -414,7 +414,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           break;
         }
         accessOrderDeque().pollFirst();
-        if (expiresAfterWrite() || refreshAfterWrite()) {
+        if (expiresAfterWrite()) {
           writeOrderDeque().remove(node);
         }
         evict(node, RemovalCause.EXPIRED);
@@ -687,7 +687,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
       // ignore out-of-order write operations
       if (node.isAlive()) {
-        if (expiresAfterWrite() || refreshAfterWrite()) {
+        if (expiresAfterWrite()) {
           writeOrderDeque().add(node);
         }
         if (evicts() || expiresAfterAccess()) {
@@ -713,7 +713,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (evicts() || expiresAfterAccess()) {
         accessOrderDeque().remove(node);
       }
-      if (expiresAfterWrite() || refreshAfterWrite()) {
+      if (expiresAfterWrite()) {
         writeOrderDeque().remove(node);
       }
       makeDead(node);
@@ -737,7 +737,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (evicts() || expiresAfterAccess()) {
         reorder(accessOrderDeque(), node);
       }
-      if (expiresAfterWrite() || refreshAfterWrite()) {
+      if (expiresAfterWrite()) {
         reorder(writeOrderDeque(), node);
       }
       evict();
@@ -810,7 +810,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         }
       }
 
-      if (expiresAfterWrite() || refreshAfterWrite()) {
+      if (expiresAfterWrite()) {
         Node<K, V> node;
         while ((node = writeOrderDeque().poll()) != null) {
           if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {

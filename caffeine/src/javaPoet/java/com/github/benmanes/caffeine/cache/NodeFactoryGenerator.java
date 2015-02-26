@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
@@ -48,12 +49,14 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
@@ -87,7 +90,7 @@ public final class NodeFactoryGenerator {
 
   void generate() throws IOException {
     AnnotationSpec suppressed = AnnotationSpec.builder(SuppressWarnings.class)
-        .addMember("value", "{ $S, $S }", "unchecked", "unused")
+        .addMember("value", "$S", "unchecked")
         .build();
     nodeFactory = TypeSpec.enumBuilder("NodeFactory").addAnnotation(suppressed);
     addClassJavaDoc();
@@ -238,15 +241,30 @@ public final class NodeFactoryGenerator {
       return;
     }
 
-    NodeGenerator nodeGenerator = new NodeGenerator(TypeName.OBJECT, className, features);
+    TypeName superClass;
+    Set<Feature> parentFeatures;
+    Set<Feature> generateFeatures;
+    if (features.size() == 2) {
+      parentFeatures = ImmutableSet.of();
+      generateFeatures = features;
+      superClass = TypeName.OBJECT;
+    } else {
+      parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
+      generateFeatures = ImmutableSet.of(Iterables.getLast(features));
+      superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
+          Feature.makeClassName(parentFeatures)), kTypeVar, vTypeVar);
+    }
+
+    NodeGenerator nodeGenerator = new NodeGenerator(
+        superClass, className, parentFeatures, generateFeatures);
     TypeSpec.Builder nodeSubType = nodeGenerator.createNodeType();
     nodeFactory.addType(nodeSubType.build());
     addEnumConstant(className, features);
   }
 
   private void addEnumConstant(String className, Set<Feature> features) {
-    String statementWithKey = makeFactoryStatementKey(features);
-    String statementWithKeyRef = makeFactoryStatementKeyRef(features);
+    String statementWithKey = makeFactoryStatementKey();
+    String statementWithKeyRef = makeFactoryStatementKeyRef();
     TypeSpec.Builder typeSpec = TypeSpec.anonymousClassBuilder("")
         .addMethod(newNodeByKey()
             .addStatement(statementWithKey, className).build())
@@ -259,31 +277,12 @@ public final class NodeFactoryGenerator {
     nodeFactory.addEnumConstant(Feature.makeEnumName(features), typeSpec.build());
   }
 
-  private String makeFactoryStatementKey(Set<Feature> features) {
-    StringBuilder statement = new StringBuilder("return new $N<>(key, keyReferenceQueue");
-    return completeFactoryStatement(statement, features);
+  private String makeFactoryStatementKey() {
+    return "return new $N<>(key, keyReferenceQueue, value, valueReferenceQueue, weight, now)";
   }
 
-  private String makeFactoryStatementKeyRef(Set<Feature> features) {
-    StringBuilder statement = new StringBuilder("return new $N<>(keyReference");
-    return completeFactoryStatement(statement, features);
-  }
-
-  private String completeFactoryStatement(StringBuilder statement, Set<Feature> features) {
-    statement.append(", value");
-    if (!features.contains(Feature.STRONG_VALUES)) {
-      statement.append(", valueReferenceQueue");
-    }
-    if (features.contains(Feature.MAXIMUM_WEIGHT)) {
-      statement.append(", weight");
-    }
-    if (features.contains(Feature.EXPIRE_ACCESS)
-        || features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE)) {
-      statement.append(", now");
-    }
-    statement.append(")");
-    return statement.toString();
+  private String makeFactoryStatementKeyRef() {
+    return "return new $N<>(keyReference, value, valueReferenceQueue, weight, now)";
   }
 
   private MethodSpec makeNewLookupKey() {

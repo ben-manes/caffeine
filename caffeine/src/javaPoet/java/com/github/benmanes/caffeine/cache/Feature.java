@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -55,5 +56,35 @@ enum Feature {
   public static String makeClassName(Iterable<Feature> features) {
     String enumName = makeEnumName(features);
     return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
+  }
+
+  public static boolean usesWriteOrderDeque(Set<Feature> features) {
+    return features.contains(Feature.EXPIRE_WRITE);
+  }
+
+  public static boolean usesAccessOrderDeque(Set<Feature> features) {
+    return features.contains(Feature.MAXIMUM_SIZE)
+        || features.contains(Feature.MAXIMUM_WEIGHT)
+        || features.contains(Feature.EXPIRE_ACCESS);
+  }
+
+  public static boolean usesWriteQueue(Set<Feature> features) {
+    return features.contains(Feature.MAXIMUM_SIZE)
+        || features.contains(Feature.MAXIMUM_WEIGHT)
+        || features.contains(Feature.EXPIRE_ACCESS)
+        || features.contains(Feature.EXPIRE_WRITE)
+        || features.contains(Feature.REFRESH_WRITE);
+  }
+
+  public static boolean usesTicker(Set<Feature> features) {
+    return features.contains(Feature.STATS)
+        || features.contains(Feature.EXPIRE_ACCESS)
+        || features.contains(Feature.EXPIRE_WRITE)
+        || features.contains(Feature.REFRESH_WRITE);
+  }
+
+  public static boolean usesMaximum(Set<Feature> features) {
+    return features.contains(Feature.MAXIMUM_SIZE)
+        || features.contains(Feature.MAXIMUM_WEIGHT);
   }
 }

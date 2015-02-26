@@ -167,15 +167,8 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private static boolean usesTicker(Set<Feature> features) {
-    return features.contains(Feature.STATS)
-        || features.contains(Feature.EXPIRE_ACCESS)
-        || features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE);
-  }
-
   private void addTicker() {
-    if (usesTicker(parentFeatures) || !usesTicker(generateFeatures)) {
+    if (Feature.usesTicker(parentFeatures) || !Feature.usesTicker(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.ticker = builder.getTicker()");
@@ -187,13 +180,8 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private static boolean usesMaximum(Set<Feature> features) {
-    return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT);
-  }
-
   private void addMaximum() {
-    if (usesMaximum(parentFeatures) || !usesMaximum(generateFeatures)) {
+    if (Feature.usesMaximum(parentFeatures) || !Feature.usesMaximum(generateFeatures)) {
       return;
     }
     cache.addMethod(MethodSpec.methodBuilder("evicts")
@@ -293,14 +281,9 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private static boolean usesAccessOrderDeque(Set<Feature> features) {
-    return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT)
-        || features.contains(Feature.EXPIRE_ACCESS);
-  }
-
   private void addAccessOrderDeque() {
-    if (usesAccessOrderDeque(parentFeatures) || !usesAccessOrderDeque(generateFeatures)) {
+    if (Feature.usesAccessOrderDeque(parentFeatures)
+        || !Feature.usesAccessOrderDeque(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.accessOrderDeque = new $T()", ACCESS_ORDER_DEQUE);
@@ -313,13 +296,9 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private static boolean usesWriteOrderDeque(Set<Feature> features) {
-    return features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE);
-  }
-
   private void addWriteOrderDeque() {
-    if (usesWriteOrderDeque(parentFeatures) || !usesWriteOrderDeque(generateFeatures)) {
+    if (Feature.usesWriteOrderDeque(parentFeatures)
+        || !Feature.usesWriteOrderDeque(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.writeOrderDeque = new $T()", WRITE_ORDER_DEQUE);
@@ -332,16 +311,9 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private static boolean usesWriteQueue(Set<Feature> features) {
-    return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT)
-        || features.contains(Feature.EXPIRE_ACCESS)
-        || features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE);
-  }
-
   private void addWriteQueue() {
-    if (usesWriteQueue(parentFeatures) || !usesWriteQueue(generateFeatures)) {
+    if (Feature.usesWriteQueue(parentFeatures)
+        || !Feature.usesWriteQueue(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.writeQueue = new $T()", WRITE_QUEUE);

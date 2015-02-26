@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static java.util.Objects.requireNonNull;
@@ -169,7 +168,7 @@ public final class LocalCacheFactoryGenerator {
     } else {
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
       generateFeatures = ImmutableSet.of(Iterables.getLast(features));
-      superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
+      superClass = ParameterizedTypeName.get(ClassName.bestGuess(
           Feature.makeClassName(parentFeatures)), kTypeVar, vTypeVar);
     }
     LocalCacheGenerator generator = new LocalCacheGenerator(
