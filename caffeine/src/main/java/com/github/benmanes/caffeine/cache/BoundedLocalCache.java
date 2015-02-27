@@ -459,19 +459,20 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       drainOnReadIfNeeded(bufferIndex, writeCount);
     }
 
-    if (refreshAfterWrite() && ((now - node.getWriteTime()) > refreshAfterWriteNanos())) {
-      // FIXME: make atomic and avoid race
-      node.setWriteTime(now);
-      executor().execute(() -> {
-        K key = node.getKey();
-        if (key != null) {
-          try {
-            computeIfPresent(key, (k, oldValue) -> cacheLoader().reload(key, oldValue));
-          } catch (Throwable t) {
-            logger.log(Level.WARNING, "Exception thrown during reload", t);
+    if (refreshAfterWrite()) {
+      long writeTime = node.getWriteTime();
+      if (((now - writeTime) > refreshAfterWriteNanos()) && node.casWriteTime(writeTime, now)) {
+        executor().execute(() -> {
+          K key = node.getKey();
+          if (key != null) {
+            try {
+              computeIfPresent(key, cacheLoader()::reload);
+            } catch (Throwable t) {
+              logger.log(Level.WARNING, "Exception thrown during reload", t);
+            }
           }
-        }
-      });
+        });
+      }
     }
   }
 

@@ -119,7 +119,6 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * Sets the access time in nanoseconds. This update may be set lazily and rely on the memory fence
    * when the lock is released.
    */
-  @GuardedBy("this")
   default void setAccessTime(@Nonnegative long time) {}
 
   @Override
@@ -158,8 +157,15 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * Sets the write time in nanoseconds. This update may be set lazily and rely on the memory fence
    * when the lock is released.
    */
-  @GuardedBy("this")
   default void setWriteTime(@Nonnegative long time) {}
+
+  /**
+   * Atomically sets the write time to the given updated value if the current value equals the
+   * expected value and returns if the update was successful.
+   */
+  default boolean casWriteTime(@Nonnegative long expect, @Nonnegative long update) {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   @GuardedBy("evictionLock")

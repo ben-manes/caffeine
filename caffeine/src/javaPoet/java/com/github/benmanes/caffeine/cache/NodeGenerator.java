@@ -150,7 +150,7 @@ public final class NodeGenerator {
   /** Creates the setValue method. */
   private MethodSpec makeSetValue() {
     MethodSpec.Builder setter = MethodSpec.methodBuilder("setValue")
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .addParameter(vTypeVar, "value")
         .addParameter(vRefQueueType, "referenceQueue");
 
@@ -167,8 +167,8 @@ public final class NodeGenerator {
 
   private MethodSpec makeContainsValue() {
     MethodSpec.Builder containsValue = MethodSpec.methodBuilder("containsValue")
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .addParameter(Object.class, "value")
-        .addModifiers(Modifier.PUBLIC)
         .returns(boolean.class);
     if (isStrongValues()) {
       containsValue.addStatement("return $T.equals(value, getValue())", Objects.class);
@@ -258,11 +258,6 @@ public final class NodeGenerator {
     }
   }
 
-  private static boolean useWriteTime(Set<Feature> features) {
-    return features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE);
-  }
-
   /** Adds the expiration support, if enabled, to the node type. */
   private void addExpiration() {
     if (generateFeatures.contains(Feature.EXPIRE_ACCESS)) {
@@ -275,13 +270,24 @@ public final class NodeGenerator {
       addLongConstructorAssignment(constructorByKeyRef, "now", "accessTime", Visibility.LAZY);
     }
 
-    if (!useWriteTime(parentFeatures) && useWriteTime(generateFeatures)) {
+    if (!Feature.useWriteTime(parentFeatures) && Feature.useWriteTime(generateFeatures)) {
       nodeSubtype.addField(newFieldOffset("writeTime"))
           .addField(long.class, "writeTime", Modifier.PROTECTED, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
       addLongConstructorAssignment(constructorByKey, "now", "writeTime", Visibility.LAZY);
       addLongConstructorAssignment(constructorByKeyRef, "now", "writeTime", Visibility.LAZY);
+    }
+
+    if (generateFeatures.contains(Feature.REFRESH_WRITE)) {
+      nodeSubtype.addMethod(MethodSpec.methodBuilder("casWriteTime")
+          .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+          .addParameter(long.class, "expect")
+          .addParameter(long.class, "update")
+          .returns(boolean.class)
+          .addStatement("return $T.UNSAFE.compareAndSwapLong(this, $N, $N, $N)",
+              UNSAFE_ACCESS, offsetName("writeTime"), "expect", "update")
+          .build());
     }
   }
 
@@ -351,30 +357,30 @@ public final class NodeGenerator {
     nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
         .addStatement("Object key = this.key")
         .addStatement("return (key != $L) && (key != $L)", retiredArg, deadArg)
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
 
     nodeSubtype.addMethod(MethodSpec.methodBuilder("isRetired")
         .addStatement("return (key == $L)", retiredArg)
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
     nodeSubtype.addMethod(MethodSpec.methodBuilder("retire")
         .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
             UNSAFE_ACCESS, keyOffset, retiredArg)
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .build());
 
     nodeSubtype.addMethod(MethodSpec.methodBuilder("isDead")
         .addStatement("return (key == $L)", deadArg)
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
     nodeSubtype.addMethod(MethodSpec.methodBuilder("die")
         .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
             UNSAFE_ACCESS, keyOffset, deadArg)
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .build());
   }
 
@@ -404,7 +410,7 @@ public final class NodeGenerator {
     String methodName = String.format("get%sReference",
         Character.toUpperCase(varName.charAt(0)) + varName.substring(1));
     MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(Object.class);
     getter.addStatement("return $N", varName);
     return getter.build();
@@ -415,7 +421,7 @@ public final class NodeGenerator {
       String varName, Visibility visibility) {
     String methodName = "get" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(varType);
     String type;
     if (varType.isPrimitive()) {
@@ -456,7 +462,7 @@ public final class NodeGenerator {
       type = "Object";
     }
     MethodSpec.Builder setter = MethodSpec.methodBuilder(methodName)
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .addParameter(varType, varName);
     if (visibility.isRelaxed) {
       setter.addStatement("$T.UNSAFE.putOrdered$L(this, $N, $N)",
@@ -487,7 +493,7 @@ public final class NodeGenerator {
     end.append(")");
 
     nodeSubtype.addMethod(MethodSpec.methodBuilder("toString")
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(String.class)
         .addStatement(start.toString() + end.toString())
         .build());

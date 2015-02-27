@@ -76,6 +76,11 @@ enum Feature {
         || features.contains(Feature.REFRESH_WRITE);
   }
 
+  public static boolean useWriteTime(Set<Feature> features) {
+    return features.contains(Feature.EXPIRE_WRITE)
+        || features.contains(Feature.REFRESH_WRITE);
+  }
+
   public static boolean usesTicker(Set<Feature> features) {
     return features.contains(Feature.STATS)
         || features.contains(Feature.EXPIRE_ACCESS)
