@@ -56,7 +56,7 @@ public interface CacheLoader<K, V> {
    * {@link LoadingCache#getAll}.
    * <p>
    * If the returned map doesn't contain all requested {@code keys} then the entries it does contain
-   * will be cached {@code getAll} will return the partial results. If the returned map contains
+   * will be cached and {@code getAll} will return the partial results. If the returned map contains
    * extra keys not present in {@code keys} then all returned entries will be cached, but only the
    * entries for {@code keys} will be returned from {@code getAll}.
    * <p>
@@ -93,7 +93,7 @@ public interface CacheLoader<K, V> {
    * called by {@link AsyncLoadingCache#getAll}.
    * <p>
    * If the returned map doesn't contain all requested {@code keys} then the entries it does contain
-   * will be cached {@code getAll} will return the partial results. If the returned map contains
+   * will be cached and {@code getAll} will return the partial results. If the returned map contains
    * extra keys not present in {@code keys} then all returned entries will be cached, but only the
    * entries for {@code keys} will be returned from {@code getAll}.
    * <p>

@@ -36,7 +36,7 @@ public interface Ticker {
   /**
    * @return a ticker that reads the current time using {@link System#nanoTime}
    */
-  public static Ticker systemTicker() {
+  static Ticker systemTicker() {
     return SystemTicker.INSTANCE;
   }
 }

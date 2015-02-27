@@ -53,7 +53,7 @@ public interface Weigher<K, V> {
    * @param <V> the type of values
    * @return a weigher where an entry has a weight of {@code 1}
    */
-  public static <K, V> Weigher<K, V> singleton() {
+  static <K, V> Weigher<K, V> singleton() {
     @SuppressWarnings("unchecked")
     Weigher<K, V> self = (Weigher<K, V>) SingletonWeigher.INSTANCE;
     return self;
@@ -67,7 +67,7 @@ public interface Weigher<K, V> {
    * @param <V> the type of values
    * @return a weigher that enforces that the weight is non-negative
    */
-  public static <K, V> Weigher<K, V> bounded(Weigher<K, V> delegate) {
+  static <K, V> Weigher<K, V> bounded(Weigher<K, V> delegate) {
     return new BoundedWeigher<>(delegate);
   }
 }

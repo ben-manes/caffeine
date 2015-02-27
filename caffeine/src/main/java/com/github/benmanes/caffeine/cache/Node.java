@@ -86,7 +86,12 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
     }
   }
 
+  /** Sets the node to the <tt>retired</tt> state. */
+  @GuardedBy("this")
   void retire();
+
+  /** Sets the node to the <tt>dead</tt> state. */
+  @GuardedBy("this")
   void die();
 
   /* ---------------- Access order -------------- */
@@ -120,22 +125,26 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getPreviousInAccessOrder() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setPreviousInAccessOrder(Node<K, V> prev) {}
+  default void setPreviousInAccessOrder(Node<K, V> prev) {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getNextInAccessOrder() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setNextInAccessOrder(Node<K, V> next) {}
+  default void setNextInAccessOrder(Node<K, V> next) {
+    throw new UnsupportedOperationException();
+  }
 
   /* ---------------- Write order -------------- */
 
@@ -155,20 +164,24 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getPreviousInWriteOrder() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setPreviousInWriteOrder(Node<K, V> prev) {}
+  default void setPreviousInWriteOrder(Node<K, V> prev) {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getNextInWriteOrder() {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setNextInWriteOrder(Node<K, V> next) {}
+  default void setNextInWriteOrder(Node<K, V> next) {
+    throw new UnsupportedOperationException();
+  }
 }
