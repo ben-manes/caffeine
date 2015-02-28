@@ -1,1 +1,1 @@
-com.github.benmanes.caffeine.jcache.CaffeineCachingProvider
+com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider

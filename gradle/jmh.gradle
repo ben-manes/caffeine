@@ -13,7 +13,6 @@ plugins.withType(EclipsePlugin) {
 }
 
 dependencies {
-  jmh benchmark_libraries.jmh
   afterEvaluate {
     jmh configurations.testCompile.allDependencies
   }

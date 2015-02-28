@@ -26,14 +26,14 @@
 ext {
   versions = [
     akka: '2.3.9',
-    disruptor: '3.3.0',
+    disruptor: '3.3.2',
     flip_tables: '1.0.2',
     guava: '18.0',
     javapoet: '1.0.0',
     jcache: '1.0.0',
     joor: '0.9.4',
     jsr305: '3.0.0',
-    univocity_parsers: '1.3.1',
+    univocity_parsers: '1.3.2',
   ]
   test_versions = [
     awaitility: '1.6.3',
@@ -51,7 +51,6 @@ ext {
     high_scale_lib: '1.0.6',
     jamm: '0.3.0',
     java_object_layout: '0.3',
-    jmh: '1.6.1',
     koloboke: '0.6.6',
   ]
   plugin_versions = [
@@ -59,7 +58,7 @@ ext {
     checkstyle: '6.3',
     coveralls: '2.3.1',
     error_prone: '0.0.6',
-    jmh: '0.1.3',
+    jmh: '0.2.0',
     nexus: '2.3',
     versions: '0.8',
     semantic_versioning: '1.1.0',
@@ -99,10 +98,6 @@ ext {
     high_scale_lib: "com.boundary:high-scale-lib:${benchmark_versions.high_scale_lib}",
     jamm: "com.github.jbellis:jamm:${benchmark_versions.jamm}",
     java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
-    jmh: [
-      "org.openjdk.jmh:jmh-generator-annprocess:${benchmark_versions.jmh}",
-      "org.openjdk.jmh:jmh-core:${benchmark_versions.jmh}",
-    ],
     koloboke: [
       "net.openhft:koloboke-api-jdk8:${benchmark_versions.koloboke}",
       "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",
