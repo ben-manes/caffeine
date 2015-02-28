@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * An access point for inspecting and performing low-level operations based on the cache's runtime
@@ -30,6 +31,7 @@ import javax.annotation.Nonnull;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@ThreadSafe
 public interface Policy<K, V> {
 
   /**

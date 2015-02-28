@@ -49,7 +49,7 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
   @Override
   public void describeTo(Description description) {
     description.appendText("stats: " + type.name() + "=" + count);
-    if (description != desc.getDescription()) {
+    if ((desc != null) && (description != desc.getDescription())) {
       description.appendText(desc.getDescription().toString());
     }
   }

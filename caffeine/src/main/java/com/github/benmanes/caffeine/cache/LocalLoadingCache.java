@@ -18,8 +18,10 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -59,38 +61,63 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
 
   @Override
   default Map<K, V> getAll(Iterable<? extends K> keys) {
-    List<K> keysToLoad = new ArrayList<>();
-    Map<K, V> result = new HashMap<>();
-    for (K key : keys) {
-      V value = cache().getIfPresent(key, false);
-      if (value == null) {
-        keysToLoad.add(key);
-      } else {
-        result.put(key, value);
-      }
-    }
-    cache().statsCounter().recordHits(result.size());
-    if (keysToLoad.isEmpty()) {
-      return result;
-    }
-    batchLoad(keysToLoad, result);
-    return Collections.unmodifiableMap(result);
+    return hasBulkLoader() ? loadInBulk(keys) : loadSequentially(keys);
   }
 
-  /** Performs a batch load, either sequentially or in bulk depending on the loader. */
-  default void batchLoad(List<K> keysToLoad, Map<K, V> result) {
-    cache().statsCounter().recordMisses(keysToLoad.size());
-
-    if (!hasBulkLoader()) {
-      for (K key : keysToLoad) {
-        V value = cache().compute(key, (k, v) -> cacheLoader().load(key), false, false);
+  /** Sequentially loads each missing entry. */
+  default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
+    int count = 0;
+    Map<K, V> result = new HashMap<>();
+    Iterator<? extends K> iter = keys.iterator();
+    while (iter.hasNext()) {
+      K key = iter.next();
+      count++;
+      try {
+        V value = get(key);
         if (value != null) {
           result.put(key, value);
         }
+      } catch (Throwable t) {
+        int remaining;
+        if (keys instanceof Collection<?>) {
+          remaining = ((Collection<?>) keys).size() - count;
+        } else {
+          remaining = 0;
+          while (iter.hasNext()) {
+            remaining++;
+            iter.next();
+          }
+        }
+        cache().statsCounter().recordMisses(remaining);
+        throw t;
       }
-      return;
+    }
+    return Collections.unmodifiableMap(result);
+  }
+
+  /** Batch loads the missing entries. */
+  default Map<K, V> loadInBulk(Iterable<? extends K> keys) {
+    Map<K, V> found = cache().getAllPresent(keys);
+    List<K> keysToLoad = new ArrayList<>();
+    for (K key : keys) {
+      if (!found.containsKey(key)) {
+        keysToLoad.add(key);
+      }
+    }
+    if (keysToLoad.isEmpty()) {
+      return found;
     }
 
+    Map<K, V> result = new HashMap<>(found);
+    bulkLoad(keysToLoad, result);
+    return Collections.unmodifiableMap(result);
+  }
+
+  /**
+   * Performs a non-blocking bulk load of the missing keys. Any missing entry that materializes
+   * during the load are replaced when the loaded entries are inserted into the cache.
+   */
+  default void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
     boolean success = false;
     long startTime = cache().ticker().read();
     try {
