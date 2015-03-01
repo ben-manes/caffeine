@@ -87,7 +87,7 @@ public final class CacheManagerImpl implements CacheManager {
     requireNonNull(configuration);
 
     Cache<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
-      if ((existing == null) || !existing.isClosed()) {
+      if ((existing != null) && !existing.isClosed()) {
         throw new CacheException("Cache " + cacheName + " already exists");
       }
       CompleteConfiguration<K, V> config = copyFrom(configuration);
@@ -99,11 +99,11 @@ public final class CacheManagerImpl implements CacheManager {
       // TODO(ben): configure...
 
       if (config.isReadThrough() && (cacheLoader != null)) {
-        return new CacheProxy<K, V>(cacheName, this, config,
-            builder.build(), Optional.ofNullable(cacheLoader));
-      } else {
         return new LoadingCacheProxy<K, V>(cacheName, this, config,
             builder.build(new CacheLoaderAdapter<>(cacheLoader)), cacheLoader);
+      } else {
+        return new CacheProxy<K, V>(cacheName, this, config,
+            builder.build(), Optional.ofNullable(cacheLoader));
       }
     });
 

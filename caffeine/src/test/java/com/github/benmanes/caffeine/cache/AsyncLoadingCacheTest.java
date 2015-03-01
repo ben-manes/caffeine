@@ -77,10 +77,14 @@ public final class AsyncLoadingCacheTest {
     assertThat(future.get(), is(1));
   }
 
-  @Test(enabled = false, expectedExceptions = UnsupportedOperationException.class)
-  public void asyncLoadAll() {
+  @Test(expectedExceptions = UnsupportedOperationException.class)
+  public void asyncLoadAll() throws Throwable {
     CacheLoader<Object, ?> loader = key -> key;
-    loader.asyncLoadAll(Collections.<Object>emptyList(), MoreExecutors.directExecutor());
+    try {
+      loader.asyncLoadAll(Collections.<Object>emptyList(), MoreExecutors.directExecutor()).get();
+    } catch (ExecutionException e) {
+      throw e.getCause();
+    }
   }
 
   /* ---------------- getFunc -------------- */

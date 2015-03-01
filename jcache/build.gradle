@@ -1,15 +1,40 @@
 /**
  * JCache compatibility adapter.
  */
+configurations {
+  tck
+}
+
 dependencies {
   compile project(':caffeine')
   compile libraries.jcache
   compile libraries.config
 
   testCompile test_libraries.junit
+  testCompile test_libraries.hamcrest
   testCompile test_libraries.jcache_tck
+  testCompile test_libraries.jcache_tck_tests
+
+  tck dependencies.create(test_libraries.jcache_tck_tests) {
+    transitive = false
+  }
 }
 
 bundle {
   instruction 'Export-Package', 'com.github.benmanes.caffeine.jcache.*'
 }
+
+task unzipTestKit(group: 'Build', description: 'Unzips the JCache TCK', type: Copy) {
+  from configurations.tck.collect { zipTree(it) }
+  into { "${buildDir}/tck" }
+}
+tasks.test.dependsOn(unzipTestKit)
+
+test {
+  testClassesDir = file("${buildDir}/tck")
+  systemProperty 'java.net.preferIPv4Stack', 'true'
+  testLogging {
+    events 'started'
+  }
+}
+tasks.test.enabled = hasProperty('runTCK')
