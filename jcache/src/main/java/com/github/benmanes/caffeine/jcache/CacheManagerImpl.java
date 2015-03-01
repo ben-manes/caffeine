@@ -21,14 +21,21 @@ import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
+import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.configuration.Factory;
+import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 
 /**
  * An implementation of JSR-107 {@link CacheManager} that manages Caffeine-based caches.
@@ -77,12 +84,27 @@ public final class CacheManagerImpl implements CacheManager {
   public <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(String cacheName,
       C configuration) throws IllegalArgumentException {
     requireNotClosed();
+    requireNonNull(configuration);
 
     Cache<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
       if ((existing == null) || !existing.isClosed()) {
-        throw new CacheException("Cache " + cacheName + " exists");
+        throw new CacheException("Cache " + cacheName + " already exists");
       }
-      throw new UnsupportedOperationException();
+      CompleteConfiguration<K, V> config = copyFrom(configuration);
+      Factory<CacheLoader<K, V>> cacheLoaderFactory = config.getCacheLoaderFactory();
+      CacheLoader<K, V> cacheLoader =
+          (cacheLoaderFactory == null) ? null : cacheLoaderFactory.create();
+
+      Caffeine<Object, Object> builder = Caffeine.newBuilder();
+      // TODO(ben): configure...
+
+      if (config.isReadThrough() && (cacheLoader != null)) {
+        return new CacheProxy<K, V>(cacheName, this, config,
+            builder.build(), Optional.ofNullable(cacheLoader));
+      } else {
+        return new LoadingCacheProxy<K, V>(cacheName, this, config,
+            builder.build(new CacheLoaderAdapter<>(cacheLoader)), cacheLoader);
+      }
     });
 
     @SuppressWarnings("unchecked")
@@ -194,6 +216,35 @@ public final class CacheManagerImpl implements CacheManager {
   private void requireNotClosed() {
     if (isClosed()) {
       throw new IllegalStateException();
+    }
+  }
+
+  private static <K, V> CompleteConfiguration<K, V> copyFrom(Configuration<K, V> configuration) {
+    if (configuration instanceof CompleteConfiguration<?, ?>) {
+      return new CaffeineConfiguration<>((CompleteConfiguration<K, V>) configuration);
+    }
+    return new CaffeineConfiguration<K, V>()
+        .setStoreByValue(configuration.isStoreByValue())
+        .setTypes(configuration.getKeyType(), configuration.getValueType());
+  }
+
+  /** An adapter from a JCache cache loader to Caffeine's. */
+  private static final class CacheLoaderAdapter<K, V>
+      implements com.github.benmanes.caffeine.cache.CacheLoader<K, V> {
+    private final CacheLoader<K, V> delegate;
+
+    CacheLoaderAdapter(CacheLoader<K, V> delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public V load(K key) {
+      return delegate.load(key);
+    }
+
+    @Override
+    public Map<K, V> loadAll(Iterable<? extends K> keys) {
+      return delegate.loadAll(keys);
     }
   }
 }

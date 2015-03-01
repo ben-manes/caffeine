@@ -71,10 +71,10 @@ properties or an `application.conf` file. It can be run locally using
 
 ```gradle
 # Run a simulation against a local trace file
-gradlew simulate -Dsimulator.source=file -Dsimulator.file.path=trace.log
+gradlew simulate -Dcaffeine.simulator.source=file -Dcaffeine.simulator.file.path=trace.log
 
 # Run a simulation against a generated data set
-gradlew simulate -Dsimulator.source=synthetic -Dsimulator.synthetic.size=1000
+gradlew simulate -Dcaffeine.simulator.source=synthetic -Dcaffeine.simulator.synthetic.size=1000
 ```
 
 ## Development Notes

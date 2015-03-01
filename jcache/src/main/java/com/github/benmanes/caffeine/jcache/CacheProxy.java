@@ -19,14 +19,19 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -39,16 +44,25 @@ import javax.cache.processor.EntryProcessorResult;
  */
 class CacheProxy<K, V> implements Cache<K, V> {
   private final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
+  private final Optional<CacheLoader<K, V>> cacheLoader;
+  private final Configuration<K, V> configuration;
   private final CacheManager cacheManager;
   private final String name;
 
   private volatile boolean closed;
 
-  CacheProxy(String name, CacheManager cacheManager,
-      com.github.benmanes.caffeine.cache.Cache<K, V> cache) {
+  CacheProxy(String name, CacheManager cacheManager, Configuration<K, V> configuration,
+      com.github.benmanes.caffeine.cache.Cache<K, V> cache,
+      Optional<CacheLoader<K, V>> cacheLoader) {
+    this.configuration = requireNonNull(configuration);
     this.cacheManager = requireNonNull(cacheManager);
+    this.cacheLoader = requireNonNull(cacheLoader);
     this.cache = requireNonNull(cache);
     this.name = requireNonNull(name);
+  }
+
+  protected Optional<CacheLoader<K, V>> cacheLoader() {
+    return cacheLoader;
   }
 
   @Override
@@ -74,7 +88,25 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
-      CompletionListener completionListener) {}
+      CompletionListener completionListener) {
+    if (!cacheLoader.isPresent()) {
+      return;
+    }
+    ForkJoinPool.commonPool().execute(() -> {
+      if (replaceExistingValues) {
+        cache.putAll(cacheLoader.get().loadAll(keys));
+        return;
+      }
+
+      List<K> keysToLoad = keys.stream()
+          .filter(key -> !cache.asMap().containsKey(key))
+          .collect(Collectors.<K>toList());
+      Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
+      for (Map.Entry<K, V> entry : result.entrySet()) {
+        cache.asMap().putIfAbsent(entry.getKey(), entry.getValue());
+      }
+    });
+  }
 
   @Override
   public void put(K key, V value) {
@@ -143,7 +175,11 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public <C extends Configuration<K, V>> C getConfiguration(Class<C> clazz) {
-    throw new UnsupportedOperationException();
+    if (clazz.isInstance(configuration)) {
+      return clazz.cast(configuration);
+    }
+    throw new IllegalArgumentException("The configuration class " + clazz
+        + " is not supported by this implementation");
   }
 
   @Override

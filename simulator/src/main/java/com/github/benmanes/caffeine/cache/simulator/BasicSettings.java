@@ -37,23 +37,23 @@ public class BasicSettings {
   private final Config config;
 
   public BasicSettings(UntypedActor actor) {
-    config = actor.getContext().system().settings().config();
+    config = actor.getContext().system().settings().config().getConfig("caffeine.simulator");
   }
 
   public List<String> policies() {
-    return config().getStringList("simulator.policies");
+    return config().getStringList("policies");
   }
 
   public int maximumSize() {
-    return config().getInt("simulator.maximumSize");
+    return config().getInt("maximumSize");
   }
 
   public boolean isFile() {
-    return config().getString("simulator.source").equals("file");
+    return config().getString("source").equals("file");
   }
 
   public boolean isSynthetic() {
-    return config().getString("simulator.source").equals("synthetic");
+    return config().getString("source").equals("synthetic");
   }
 
   public FileSource fileSource() {
@@ -66,25 +66,26 @@ public class BasicSettings {
     return new SyntheticSource();
   }
 
+  /** Returns the config resolved at the simulator's path. */
   protected Config config() {
     return config;
   }
 
   final class FileSource {
     public Path path() {
-      return Paths.get(config().getString("simulator.file.path"));
+      return Paths.get(config().getString("file.path"));
     }
     public FileFormat format() {
-      return FileFormat.valueOf(config().getString("simulator.file.format").toUpperCase());
+      return FileFormat.valueOf(config().getString("file.format").toUpperCase());
     }
   }
 
   final class SyntheticSource {
     public String distribution() {
-      return config().getString("simulator.synthetic.distribution");
+      return config().getString("synthetic.distribution");
     }
     public int events() {
-      return config().getInt("simulator.synthetic.events");
+      return config().getInt("synthetic.events");
     }
     public Counter counter() {
       return new Counter();
@@ -101,34 +102,34 @@ public class BasicSettings {
 
     final class Counter {
       public int start() {
-        return config().getInt("simulator.synthetic.counter.start");
+        return config().getInt("synthetic.counter.start");
       }
     }
     final class Exponential {
       public double mean() {
-        return config().getDouble("simulator.synthetic.exponential.mean");
+        return config().getDouble("synthetic.exponential.mean");
       }
     }
     final class Hotspot {
       public int lowerBound() {
-        return config().getInt("simulator.synthetic.hotspot.lowerBound");
+        return config().getInt("synthetic.hotspot.lowerBound");
       }
       public int upperBound() {
-        return config().getInt("simulator.synthetic.hotspot.upperBound");
+        return config().getInt("synthetic.hotspot.upperBound");
       }
       public double hotsetFraction() {
-        return config().getDouble("simulator.synthetic.hotspot.hotsetFraction");
+        return config().getDouble("synthetic.hotspot.hotsetFraction");
       }
       public double hotOpnFraction() {
-        return config().getDouble("simulator.synthetic.hotspot.hotOpnFraction");
+        return config().getDouble("synthetic.hotspot.hotOpnFraction");
       }
     }
     final class Uniform {
       public int lowerBound() {
-        return config().getInt("simulator.synthetic.uniform.lowerBound");
+        return config().getInt("synthetic.uniform.lowerBound");
       }
       public int upperBound() {
-        return config().getInt("simulator.synthetic.uniform.upperBound");
+        return config().getInt("synthetic.uniform.upperBound");
       }
     }
   }

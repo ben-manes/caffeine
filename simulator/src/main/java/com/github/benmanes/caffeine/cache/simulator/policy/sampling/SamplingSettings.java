@@ -30,10 +30,10 @@ final class SamplingSettings extends BasicSettings {
   }
 
   public int sampleSize() {
-    return config().getInt("simulator.sampling.size");
+    return config().getInt("sampling.size");
   }
 
   public Sample sampleStrategy() {
-    return Sample.valueOf(config().getString("simulator.sampling.strategy").toUpperCase());
+    return Sample.valueOf(config().getString("sampling.strategy").toUpperCase());
   }
 }

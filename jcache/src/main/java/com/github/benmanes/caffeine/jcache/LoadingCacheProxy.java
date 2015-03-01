@@ -15,18 +15,18 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
+import javax.cache.configuration.Configuration;
+import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CompletionListener;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 
 /**
@@ -35,13 +35,11 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
-  private final com.github.benmanes.caffeine.cache.CacheLoader<K, V> cacheLoader;
   private final LoadingCache<K, V> cache;
 
-  LoadingCacheProxy(String name, CacheManager cacheManager, LoadingCache<K, V> cache,
-      CacheLoader<K, V> cacheLoader) {
-    super(name, cacheManager, cache);
-    this.cacheLoader = requireNonNull(cacheLoader);
+  LoadingCacheProxy(String name, CacheManager cacheManager, Configuration<K, V> configuration,
+      LoadingCache<K, V> cache, CacheLoader<K, V> cacheLoader) {
+    super(name, cacheManager, configuration, cache, Optional.of(cacheLoader));
     this.cache = cache;
   }
 
@@ -66,7 +64,7 @@ final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       CompletionListener completionListener) {
     ForkJoinPool.commonPool().execute(() -> {
       if (replaceExistingValues) {
-        cache.putAll(cacheLoader.loadAll(keys));
+        cache.putAll(cacheLoader().get().loadAll(keys));
       } else {
         cache.getAll(keys);
       }

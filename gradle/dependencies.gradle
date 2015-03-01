@@ -26,6 +26,7 @@
 ext {
   versions = [
     akka: '2.3.9',
+    config: '1.2.1',
     disruptor: '3.3.2',
     flip_tables: '1.0.2',
     guava: '18.0',
@@ -67,6 +68,7 @@ ext {
 
   libraries = [
     akka: "com.typesafe.akka:akka-actor_2.10:${versions.akka}",
+    config: "com.typesafe:config:${versions.config}",
     disruptor: "com.lmax:disruptor:${versions.disruptor}",
     flip_tables: "com.jakewharton.fliptables:fliptables:${versions.flip_tables}",
     guava: "com.google.guava:guava:${versions.guava}",

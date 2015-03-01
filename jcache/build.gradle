@@ -4,6 +4,7 @@
 dependencies {
   compile project(':caffeine')
   compile libraries.jcache
+  compile libraries.config
 
   testCompile test_libraries.junit
   testCompile test_libraries.jcache_tck
