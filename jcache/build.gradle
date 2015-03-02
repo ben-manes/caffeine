@@ -31,9 +31,6 @@ task unzipTestKit(group: 'Build', description: 'Unzips the JCache TCK', type: Co
 tasks.test.dependsOn(unzipTestKit)
 
 test {
-  testLogging {
-    events 'started'
-  }
   // TODO(ben): Remove disabled tests in ExcludeList
   ignoreFailures = true
 

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,8 @@ import javax.cache.processor.EntryProcessorResult;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
+import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
+
 
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine cache.
@@ -235,13 +238,49 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments)
       throws EntryProcessorException {
-    throw new UnsupportedOperationException();
+    requireNonNull(entryProcessor);
+    requireNonNull(arguments);
+    requireNotClosed();
+
+    Object[] result = new Object[1];
+
+    cache.asMap().compute(copyOf(key), (k, value) -> {
+      if ((value == null) && cacheLoader.isPresent()) {
+        try {
+          value = cacheLoader().get().load(key);
+        } catch (RuntimeException ignored) {}
+      }
+      EntryProcessorEntry<K, V> entry = new EntryProcessorEntry<>(key, value, (value != null));
+      try {
+        result[0] = entryProcessor.process(entry, arguments);
+        return entry.getValue();
+      } catch (EntryProcessorException e) {
+        throw e;
+      } catch (RuntimeException e) {
+        throw new EntryProcessorException(e);
+      }
+    });
+
+    @SuppressWarnings("unchecked")
+    T castedResult = (T) result[0];
+    return castedResult;
   }
 
   @Override
   public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys,
       EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
-    throw new UnsupportedOperationException();
+    Map<K, EntryProcessorResult<T>> results = new HashMap<>(keys.size());
+    for (K key : keys) {
+      try {
+        T result = invoke(key, entryProcessor, arguments);
+        if (result != null) {
+          results.put(key, () -> result);
+        }
+      } catch (EntryProcessorException e) {
+        results.put(key, () -> { throw e; });
+      }
+    }
+    return results;
   }
 
   @Override
