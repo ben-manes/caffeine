@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -47,7 +49,13 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   @Override
   public V get(K key) {
     requireNotClosed();
-    return copyOf(cache.get(key));
+    try {
+      return copyOf(cache.get(key));
+    } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new CacheException(e);
+    }
   }
 
   @Override
@@ -66,11 +74,20 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();
+    for (K key : keys) {
+      requireNonNull(key);
+    }
+
     ForkJoinPool.commonPool().execute(() -> {
-      if (replaceExistingValues) {
-        cache.putAll(cacheLoader().get().loadAll(keys));
-      } else {
-        cache.getAll(keys);
+      try {
+        if (replaceExistingValues) {
+          cache.putAll(cacheLoader().get().loadAll(keys));
+        } else {
+          cache.getAll(keys);
+        }
+        completionListener.onCompletion();
+      } catch (Exception e) {
+        completionListener.onException(e);
       }
     });
   }

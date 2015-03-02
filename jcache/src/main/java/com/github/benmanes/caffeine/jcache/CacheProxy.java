@@ -88,8 +88,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public V get(K key) {
     requireNotClosed();
-    V value = cache.getIfPresent(key);
-    return copyOf(value);
+    try {
+      return copyOf(cache.getIfPresent(key));
+    } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new CacheException(e);
+    }
   }
 
   @Override
@@ -114,22 +119,31 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();
+    for (K key : keys) {
+      requireNonNull(key);
+    }
 
     if (!cacheLoader.isPresent()) {
       return;
     }
     ForkJoinPool.commonPool().execute(() -> {
-      if (replaceExistingValues) {
-        cache.putAll(cacheLoader.get().loadAll(keys));
-        return;
-      }
+      try {
+        if (replaceExistingValues) {
+          cache.putAll(cacheLoader.get().loadAll(keys));
+          completionListener.onCompletion();
+          return;
+        }
 
-      List<K> keysToLoad = keys.stream()
-          .filter(key -> !cache.asMap().containsKey(key))
-          .collect(Collectors.<K>toList());
-      Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
-      for (Map.Entry<K, V> entry : result.entrySet()) {
-        cache.asMap().putIfAbsent(entry.getKey(), entry.getValue());
+        List<K> keysToLoad = keys.stream()
+            .filter(key -> !cache.asMap().containsKey(key))
+            .collect(Collectors.<K>toList());
+        Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
+        for (Map.Entry<K, V> entry : result.entrySet()) {
+          cache.asMap().putIfAbsent(entry.getKey(), entry.getValue());
+        }
+        completionListener.onCompletion();
+      } catch (Exception e) {
+        completionListener.onException(e);
       }
     });
   }
@@ -245,7 +259,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     Object[] result = new Object[1];
 
     cache.asMap().compute(copyOf(key), (k, value) -> {
-      if ((value == null) && cacheLoader.isPresent()) {
+      if ((value == null) && cacheLoader.isPresent() && configuration.isReadThrough()) {
         try {
           value = cacheLoader().get().load(key);
         } catch (RuntimeException ignored) {}

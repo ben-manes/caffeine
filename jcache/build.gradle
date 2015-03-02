@@ -31,9 +31,7 @@ task unzipTestKit(group: 'Build', description: 'Unzips the JCache TCK', type: Co
 tasks.test.dependsOn(unzipTestKit)
 
 test {
-  // TODO(ben): Remove disabled tests in ExcludeList
   ignoreFailures = true
-
   testClassesDir = file("${buildDir}/tck")
   systemProperty 'java.net.preferIPv4Stack', 'true'
   systemProperty 'javax.cache.Cache', 'com.github.benmanes.caffeine.jcache.CacheProxy'

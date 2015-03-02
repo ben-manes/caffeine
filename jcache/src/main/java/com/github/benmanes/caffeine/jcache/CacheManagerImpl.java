@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -32,6 +33,7 @@ import javax.cache.CacheManager;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheLoaderException;
 import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -296,12 +298,26 @@ public final class CacheManagerImpl implements CacheManager {
 
     @Override
     public V load(K key) {
-      return delegate.load(key);
+      try {
+        return delegate.load(key);
+      } catch (CacheLoaderException e) {
+        throw e;
+      } catch (RuntimeException e) {
+        throw new CacheLoaderException(e);
+      }
     }
 
     @Override
     public Map<K, V> loadAll(Iterable<? extends K> keys) {
-      return delegate.loadAll(keys);
+      try {
+        return delegate.loadAll(keys).entrySet().stream()
+            .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
+            .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+      } catch (CacheLoaderException e) {
+        throw e;
+      } catch (RuntimeException e) {
+        throw new CacheLoaderException(e);
+      }
     }
   }
 }
