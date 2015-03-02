@@ -1,0 +1,30 @@
+#List tests to be excluded.
+#Lines beginning with a '#' are comments
+#Enter One method per line with syntax FULL_CLASS_NAME#METHOD_NAME as in the example below
+
+# This is a dummy test that fails if not in the exclude list.
+org.jsr107.tck.CachingTest#dummyTest
+
+# An example of how to exclude a test
+#org.jsr107.tck.CachingTest#cachingProviderGetCache
+
+org.jsr107.tck.expiry.CacheExpiryTest#loadAllWithReadThroughEnabledShouldCallGetExpiryForCreatedEntry
+org.jsr107.tck.integration.CacheLoaderTest#shouldLoadSingleExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderTest#shouldLoadMultipleNonExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderTest#shouldNotLoadMultipleNullEntriesUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderTest#shouldNotLoadMultipleNullValuesUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderTest#shouldLoadMultipleExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderTest#shouldPropagateExceptionUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderTest#shouldLoadSingleMissingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWithoutReadThroughTest#shouldLoadSingleExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWithoutReadThroughTest#shouldLoadMultipleNonExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWithoutReadThroughTest#shouldNotLoadMultipleNullEntriesUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWithoutReadThroughTest#shouldNotLoadMultipleNullValuesUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWithoutReadThroughTest#shouldLoadMultipleExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWithoutReadThroughTest#shouldPropagateExceptionUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWithoutReadThroughTest#shouldLoadSingleMissingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWriterTest#shouldLoadSingleExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWriterTest#shouldLoadMultipleNonExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWriterTest#shouldLoadMultipleExistingEntryUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWriterTest#shouldNotWriteThroughUsingLoadAll
+org.jsr107.tck.integration.CacheLoaderWriterTest#shouldLoadSingleMissingEntryUsingLoadAll

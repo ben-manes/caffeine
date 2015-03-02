@@ -34,7 +34,7 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
+public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, V> cache;
 
   LoadingCacheProxy(String name, CacheManager cacheManager,
@@ -46,11 +46,13 @@ final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   @Override
   public V get(K key) {
+    requireNotClosed();
     return copyOf(cache.get(key));
   }
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
+    requireNotClosed();
     try {
       return copyOf(cache.getAll(keys));
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
@@ -63,6 +65,7 @@ final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   @Override
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
+    requireNotClosed();
     ForkJoinPool.commonPool().execute(() -> {
       if (replaceExistingValues) {
         cache.putAll(cacheLoader().get().loadAll(keys));

@@ -22,7 +22,6 @@ import javax.cache.configuration.MutableConfiguration;
 
 import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigException;
 
 /**
  * A JCache configuration with Caffeine specific settings.
@@ -47,23 +46,12 @@ public final class CaffeineConfiguration<K, V> extends MutableConfiguration<K, V
    * Retrieves the cache's settings from the configuration resource.
    *
    * @param config the configuration resource
-   * @param cacheName the name of the cache configuration
-   * @return the configuration for the cache with the specified name
-   * @throws IllegalStateException if there is no configuration for the specified name
+   * @return the configuration for the cache
    */
-  public static <K, V> CaffeineConfiguration<K, V> from(Config config, String cacheName) {
+  public static <K, V> CaffeineConfiguration<K, V> from(Config config) {
     CaffeineConfiguration<K, V> configuration = new CaffeineConfiguration<>();
-    Config cacheConfig;
-    try {
-      cacheConfig = config.hasPath(cacheName)
-          ? config.getConfig(cacheName).withFallback(config)
-          : config;
-    } catch (ConfigException.BadPath e) {
-      cacheConfig = config;
-    }
-
     configuration.setCopyStrategyFactory(FactoryBuilder.factoryOf(
-        cacheConfig.getString("storeByValue.strategy")));
+        config.getString("storeByValue.strategy")));
     return configuration;
   }
 

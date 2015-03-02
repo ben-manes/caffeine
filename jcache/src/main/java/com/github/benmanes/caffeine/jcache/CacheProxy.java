@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.jcache;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +45,7 @@ import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-class CacheProxy<K, V> implements Cache<K, V> {
+public class CacheProxy<K, V> implements Cache<K, V> {
   private final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
   private final CaffeineConfiguration<K, V> configuration;
   private final Optional<CacheLoader<K, V>> cacheLoader;
@@ -85,12 +84,14 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public V get(K key) {
+    requireNotClosed();
     V value = cache.getIfPresent(key);
     return copyOf(value);
   }
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
+    requireNotClosed();
     try {
       return copyOf(cache.getAllPresent(keys));
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
@@ -102,12 +103,15 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public boolean containsKey(K key) {
+    requireNotClosed();
     return cache.asMap().containsKey(key);
   }
 
   @Override
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
+    requireNotClosed();
+
     if (!cacheLoader.isPresent()) {
       return;
     }
@@ -129,16 +133,23 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public void put(K key, V value) {
+    requireNotClosed();
     cache.put(copyOf(key), copyOf(value));
   }
 
   @Override
   public V getAndPut(K key, V value) {
+    requireNotClosed();
     return copyOf(cache.asMap().put(copyOf(key), copyOf(value)));
   }
 
   @Override
   public void putAll(Map<? extends K, ? extends V> map) {
+    requireNotClosed();
+    for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
+      requireNonNull(entry.getKey());
+      requireNonNull(entry.getValue());
+    }
     for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
       put(entry.getKey(), entry.getValue());
     }
@@ -146,6 +157,9 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public boolean putIfAbsent(K key, V value) {
+    requireNotClosed();
+    requireNonNull(value);
+
     boolean[] absent = { false };
     cache.asMap().computeIfAbsent(copyOf(key), k -> {
       absent[0] = true;
@@ -156,46 +170,56 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public boolean remove(K key) {
+    requireNotClosed();
     return cache.asMap().remove(key) != null;
   }
 
   @Override
   public boolean remove(K key, V oldValue) {
+    requireNotClosed();
+    requireNonNull(oldValue);
     return cache.asMap().remove(key, oldValue);
   }
 
   @Override
   public V getAndRemove(K key) {
+    requireNotClosed();
     return copyOf(cache.asMap().remove(key));
   }
 
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
+    requireNotClosed();
     return cache.asMap().replace(key, oldValue, copyOf(newValue));
   }
 
   @Override
   public boolean replace(K key, V value) {
+    requireNotClosed();
     return cache.asMap().replace(key, copyOf(value)) != null;
   }
 
   @Override
   public V getAndReplace(K key, V value) {
+    requireNotClosed();
     return copyOf(cache.asMap().replace(key, copyOf(value)));
   }
 
   @Override
   public void removeAll(Set<? extends K> keys) {
+    requireNotClosed();
     cache.invalidateAll(keys);
   }
 
   @Override
   public void removeAll() {
+    requireNotClosed();
     clear();
   }
 
   @Override
   public void clear() {
+    requireNotClosed();
     cache.invalidateAll();
   }
 
@@ -271,9 +295,8 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public Iterator<Cache.Entry<K, V>> iterator() {
-    if (isClosed()) {
-      throw new IllegalStateException();
-    }
+    requireNotClosed();
+
     return new Iterator<Cache.Entry<K, V>>() {
       final Iterator<Map.Entry<K, V>> delegate = cache.asMap().entrySet().iterator();
 
@@ -285,7 +308,7 @@ class CacheProxy<K, V> implements Cache<K, V> {
       @Override
       public Cache.Entry<K, V> next() {
         Map.Entry<K, V> entry = delegate.next();
-        return new EntryView<K, V>(copyOf(entry.getKey()), copyOf(entry.getValue()));
+        return new EntryProxy<K, V>(copyOf(entry.getKey()), copyOf(entry.getValue()));
       }
 
       @Override
@@ -295,22 +318,10 @@ class CacheProxy<K, V> implements Cache<K, V> {
     };
   }
 
-  private static final class EntryView<K, V> extends SimpleImmutableEntry<K, V>
-      implements Cache.Entry<K, V> {
-    private static final long serialVersionUID = 1L;
-
-    EntryView(K key, V value) {
-      super(key, value);
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> clazz) {
-      if (!clazz.isInstance(this)) {
-        throw new IllegalArgumentException("Class " + clazz + " is unknown to this implementation");
-      }
-      @SuppressWarnings("unchecked")
-      T castedEntry = (T) this;
-      return castedEntry;
+  /** Checks that the cache is not closed. */
+  protected final void requireNotClosed() {
+    if (isClosed()) {
+      throw new IllegalStateException();
     }
   }
 }

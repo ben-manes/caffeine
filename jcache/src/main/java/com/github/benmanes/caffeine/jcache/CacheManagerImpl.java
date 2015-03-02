@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.WeakReference;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +36,8 @@ import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
 /**
@@ -47,6 +50,7 @@ public final class CacheManagerImpl implements CacheManager {
   private final Map<String, Cache<?, ?>> caches;
   private final CachingProvider cacheProvider;
   private final Properties properties;
+  private final Config preconfigured;
   private final URI uri;
 
   private volatile boolean closed;
@@ -54,6 +58,7 @@ public final class CacheManagerImpl implements CacheManager {
   public CacheManagerImpl(CachingProvider cacheProvider, URI uri, ClassLoader classLoader,
       Properties properties) {
     this.classLoaderReference = new WeakReference<>(requireNonNull(classLoader));
+    this.preconfigured = ConfigFactory.load().getConfig("caffeine.jcache");
     this.cacheProvider = requireNonNull(cacheProvider);
     this.properties = requireNonNull(properties);
     this.caches = new ConcurrentHashMap<>();
@@ -124,13 +129,12 @@ public final class CacheManagerImpl implements CacheManager {
 
   @Override
   public <K, V> Cache<K, V> getCache(String cacheName, Class<K> keyType, Class<V> valueType) {
-    requireNonNull(keyType);
-    requireNonNull(valueType);
-
-    Cache<K, V> cache = getCache(cacheName);
+    Cache<K, V> cache = getOrCreateCache(cacheName);
     if (cache == null) {
       return null;
     }
+    requireNonNull(keyType);
+    requireNonNull(valueType);
 
     @SuppressWarnings("unchecked")
     Configuration<?, ?> config = cache.getConfiguration(Configuration.class);
@@ -146,16 +150,39 @@ public final class CacheManagerImpl implements CacheManager {
 
   @Override
   public <K, V> Cache<K, V> getCache(String cacheName) {
+    Cache<K, V> cache = getOrCreateCache(cacheName);
+    if (cache == null) {
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    Configuration<?, ?> configuration = cache.getConfiguration(Configuration.class);
+    if (!Object.class.equals(configuration.getKeyType()) ||
+        !Object.class.equals(configuration.getValueType())) {
+      String msg = String.format("Cache %s was defined with specific types Cache<%s, %s> in which "
+          + "case CacheManager.getCache(String, Class, Class) must be used", cacheName,
+          configuration.getKeyType(), configuration.getValueType());
+      throw new IllegalArgumentException(msg);
+    }
+
+    return cache;
+  }
+
+  /** Returns the cache, creating it if necessary. */
+  private <K, V> Cache<K, V> getOrCreateCache(String cacheName) {
     requireNonNull(cacheName);
     requireNotClosed();
 
     Cache<?, ?> cache = caches.get(cacheName);
     if (cache == null) {
-      CaffeineConfiguration<K, V> configuration = CaffeineConfiguration.from(
-          ConfigFactory.load().getConfig("caffeine.jcache"), cacheName);
-      cache = caches.computeIfAbsent(cacheName, name -> newCache(cacheName, configuration));
+      try {
+        if (preconfigured.hasPath(cacheName)) {
+          CaffeineConfiguration<K, V> configuration = CaffeineConfiguration.from(
+              preconfigured.getConfig(cacheName).withFallback(preconfigured));
+          cache = caches.computeIfAbsent(cacheName, name -> newCache(cacheName, configuration));
+        }
+      } catch (ConfigException.BadPath e) {}
     }
-
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) cache;
     return castedCache;
@@ -163,7 +190,7 @@ public final class CacheManagerImpl implements CacheManager {
 
   @Override
   public Iterable<String> getCacheNames() {
-    return Collections.unmodifiableCollection(caches.keySet());
+    return Collections.unmodifiableCollection(new ArrayList<>(caches.keySet()));
   }
 
   @Override
@@ -209,6 +236,9 @@ public final class CacheManagerImpl implements CacheManager {
     synchronized (caches) {
       if (!isClosed()) {
         cacheProvider.close(uri, classLoaderReference.get());
+        for (Cache<?, ?> cache : caches.values()) {
+          cache.close();
+        }
         closed = true;
       }
     }
@@ -228,20 +258,21 @@ public final class CacheManagerImpl implements CacheManager {
         + " is not a supported by this implementation");
   }
 
+  /** Checks that the cache manager is not closed. */
   private void requireNotClosed() {
     if (isClosed()) {
       throw new IllegalStateException();
     }
   }
 
-  private static <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
+  private <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
       String cacheName, Configuration<K, V> configuration) {
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       return new CaffeineConfiguration<K, V>((CaffeineConfiguration<K, V>) configuration);
     }
 
     CaffeineConfiguration<K, V> defaults = CaffeineConfiguration.from(
-        ConfigFactory.load().getConfig("caffeine.jcache"), cacheName);
+        preconfigured.withFallback(preconfigured));
     if (configuration instanceof CompleteConfiguration<?, ?>) {
       CaffeineConfiguration<K, V> config = new CaffeineConfiguration<>(
           (CompleteConfiguration<K, V>) configuration);
