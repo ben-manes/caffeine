@@ -80,7 +80,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return cacheLoader;
   }
 
-  /** Returns a copy of the object if value-based caching is enabled. */
+  /**
+   * Returns a copy of the object if value-based caching is enabled.
+   *
+   * @param object the object to be copied
+   * @param <T> the type of object being copied
+   * @return a copy of the object if storing by value or the same instance if by reference
+   */
   protected @Nullable <T> T copyOf(@Nullable T object) {
     return (object == null) ? null : copyStrategy.copy(object, cacheManager.getClassLoader());
   }
@@ -178,7 +184,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNonNull(value);
 
     boolean[] absent = { false };
-    cache.asMap().computeIfAbsent(copyOf(key), k -> {
+    cache.get(copyOf(key), k -> {
       absent[0] = true;
       return copyOf(value);
     });
@@ -318,6 +324,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         closed = true;
       }
     }
+    cache.invalidateAll();
   }
 
   @Override

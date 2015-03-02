@@ -91,12 +91,12 @@ public class SerializationAwareCopyStrategy implements CopyStrategy {
     this.deepCopyStrategies = requireNonNull(deepCopyStrategies);
   }
 
-  /** Returns the set of Java native classes that are immutable. */
+  /** @return the set of Java native classes that are immutable */
   public static Set<Class<?>> javaImmutableClasses() {
     return JAVA_IMMUTABLE;
   }
 
-  /** Returns the set of Java native classes that are immutable. */
+  /** @return the set of Java native classes that are immutable. */
   public static Map<Class<?>, Function<Object, Object>> javaDeepCopyStrategies() {
     return JAVA_DEEP_COPY;
   }
@@ -116,17 +116,27 @@ public class SerializationAwareCopyStrategy implements CopyStrategy {
     return copy;
   }
 
-  /** Returns if the class is an immutable type and does not need to be copied. */
+  /**
+   * Returns if the class is an immutable type and does not need to be copied.
+   *
+   * @param clazz the class of the object being copied
+   * @return if the class is an immutable type and does not need to be copied
+   */
   protected boolean isImmutable(Class<?> clazz) {
     return immutableClasses.contains(clazz) || clazz.isEnum();
   }
 
-  /** Returns if the class has a known deep copy strategy. */
+  /**
+   * Returns if the class has a known deep copy strategy.
+   *
+   * @param clazz the class of the object being copied
+   * @return if the class has a known deep copy strategy
+   */
   protected boolean canDeeplyCopy(Class<?> clazz) {
     return deepCopyStrategies.containsKey(clazz);
   }
 
-  /** Returns if the class represents an array of immutable values. */
+  /** @return if the class represents an array of immutable values. */
   private boolean isArrayOfImmutableTypes(Class<?> clazz) {
     if (!clazz.isArray()) {
       return false;
@@ -135,7 +145,7 @@ public class SerializationAwareCopyStrategy implements CopyStrategy {
     return component.isPrimitive() || isImmutable(component);
   }
 
-  /** Returns a shallow copy of the array. */
+  /** @return a shallow copy of the array. */
   private <T> T arrayCopy(T object) {
     int length = Array.getLength(object);
     @SuppressWarnings("unchecked")
@@ -144,14 +154,19 @@ public class SerializationAwareCopyStrategy implements CopyStrategy {
     return copy;
   }
 
-  /** Returns a deep copy of the object. */
+  /** @return a deep copy of the object. */
   private <T> T deepCopy(T object) {
     @SuppressWarnings("unchecked")
     T copy = (T) deepCopyStrategies.get(object.getClass()).apply(object);
     return copy;
   }
 
-  /** Serializes the object with Java native serialization. */
+  /**
+   * Serializes the object with Java native serialization.
+   *
+   * @param object the object to serialize
+   * @return the serialized bytes
+   */
   protected static byte[] serialize(Object object) {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     try (ObjectOutputStream output = new ObjectOutputStream(bytes)) {
@@ -162,7 +177,13 @@ public class SerializationAwareCopyStrategy implements CopyStrategy {
     return bytes.toByteArray();
   }
 
-  /** Deserializes the data using the provided classloader. */
+  /**
+   * Deserializes the data using the provided classloader.
+   *
+   * @param data the serialized bytes
+   * @param classLoader the classloader to create the instance with
+   * @return the deserialized object
+   */
   protected static Object deserialize(byte[] data, ClassLoader classLoader) {
     try (InputStream bytes = new ByteArrayInputStream(data);
         ObjectInputStream input = new ClassLoaderAwareObjectInputStream(bytes, classLoader)) {

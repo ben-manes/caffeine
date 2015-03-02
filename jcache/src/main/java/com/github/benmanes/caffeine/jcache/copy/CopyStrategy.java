@@ -33,6 +33,7 @@ public interface CopyStrategy {
    *
    * @param object the object to copy
    * @param classLoader the classloader to instantiate with
+   * @param <T> the type of object being copied
    * @return a copy of the object
    */
   @Nonnull

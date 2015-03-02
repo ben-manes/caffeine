@@ -11,6 +11,7 @@ dependencies {
   compile libraries.config
 
   testCompile test_libraries.junit
+  testCompile test_libraries.testng
   testCompile test_libraries.hamcrest
   testCompile test_libraries.jcache_tck
   testCompile test_libraries.jcache_tck_tests
@@ -24,13 +25,19 @@ bundle {
   instruction 'Export-Package', 'com.github.benmanes.caffeine.jcache.*'
 }
 
+test {
+  useTestNG()
+}
+
 task unzipTestKit(group: 'Build', description: 'Unzips the JCache TCK', type: Copy) {
   from configurations.tck.collect { zipTree(it) }
   into { "${buildDir}/tck" }
 }
-tasks.test.dependsOn(unzipTestKit)
 
-test {
+task testCompatibilityKit(type: Test, group: "Build", description: "Runs the JCache TCK") {
+  dependsOn(unzipTestKit)
+
+  useJUnit()
   ignoreFailures = true
   testClassesDir = file("${buildDir}/tck")
   systemProperty 'java.net.preferIPv4Stack', 'true'
@@ -38,3 +45,4 @@ test {
   systemProperty 'javax.cache.Cache.Entry', 'com.github.benmanes.caffeine.jcache.EntryProxy'
   systemProperty 'javax.cache.CacheManager', 'com.github.benmanes.caffeine.jcache.CacheManagerImpl'
 }
+check.dependsOn(testCompatibilityKit)

@@ -46,6 +46,8 @@ public final class CaffeineConfiguration<K, V> extends MutableConfiguration<K, V
    * Retrieves the cache's settings from the configuration resource.
    *
    * @param config the configuration resource
+   * @param <K> the type of keys maintained the cache
+   * @param <V> the type of cached values
    * @return the configuration for the cache
    */
   public static <K, V> CaffeineConfiguration<K, V> from(Config config) {
