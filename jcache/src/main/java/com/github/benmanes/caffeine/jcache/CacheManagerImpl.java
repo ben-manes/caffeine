@@ -30,12 +30,12 @@ import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
-import javax.cache.configuration.Factory;
 import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * An implementation of JSR-107 {@link CacheManager} that manages Caffeine-based caches.
@@ -90,26 +90,36 @@ public final class CacheManagerImpl implements CacheManager {
       if ((existing != null) && !existing.isClosed()) {
         throw new CacheException("Cache " + cacheName + " already exists");
       }
-      CompleteConfiguration<K, V> config = copyFrom(configuration);
-      Factory<CacheLoader<K, V>> cacheLoaderFactory = config.getCacheLoaderFactory();
-      CacheLoader<K, V> cacheLoader =
-          (cacheLoaderFactory == null) ? null : cacheLoaderFactory.create();
-
-      Caffeine<Object, Object> builder = Caffeine.newBuilder();
-      // TODO(ben): configure...
-
-      if (config.isReadThrough() && (cacheLoader != null)) {
-        return new LoadingCacheProxy<K, V>(cacheName, this, config,
-            builder.build(new CacheLoaderAdapter<>(cacheLoader)), cacheLoader);
-      } else {
-        return new CacheProxy<K, V>(cacheName, this, config,
-            builder.build(), Optional.ofNullable(cacheLoader));
-      }
+      return newCache(cacheName, configuration);
     });
 
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) cache;
     return castedCache;
+  }
+
+  private <K, V> Cache<K, V> newCache(String cacheName, Configuration<K, V> configuration) {
+    CaffeineConfiguration<K, V> config = resolveConfigurationFor(cacheName, configuration);
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    configure(builder, config);
+
+    CacheLoader<K, V> cacheLoader = null;
+    if (config.getCacheLoaderFactory() != null) {
+      cacheLoader = config.getCacheLoaderFactory().create();
+    }
+
+    if (config.isReadThrough() && (cacheLoader != null)) {
+      return new LoadingCacheProxy<K, V>(cacheName, this, config,
+          builder.build(new CacheLoaderAdapter<>(cacheLoader)), cacheLoader);
+    } else {
+      return new CacheProxy<K, V>(cacheName, this, config,
+          builder.build(), Optional.ofNullable(cacheLoader));
+    }
+  }
+
+  private static <K, V> void configure(Caffeine<Object, Object> builder,
+      CaffeineConfiguration<K, V> config) {
+    // TODO(ben): configure...
   }
 
   @Override
@@ -139,7 +149,12 @@ public final class CacheManagerImpl implements CacheManager {
     requireNonNull(cacheName);
     requireNotClosed();
 
-    Cache<?, ?> cache = caches.computeIfAbsent(cacheName, key -> /* load from config */ null);
+    Cache<?, ?> cache = caches.get(cacheName);
+    if (cache == null) {
+      CaffeineConfiguration<K, V> configuration = CaffeineConfiguration.from(
+          ConfigFactory.load().getConfig("caffeine.jcache"), cacheName);
+      cache = caches.computeIfAbsent(cacheName, name -> newCache(cacheName, configuration));
+    }
 
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) cache;
@@ -219,13 +234,24 @@ public final class CacheManagerImpl implements CacheManager {
     }
   }
 
-  private static <K, V> CompleteConfiguration<K, V> copyFrom(Configuration<K, V> configuration) {
-    if (configuration instanceof CompleteConfiguration<?, ?>) {
-      return new CaffeineConfiguration<>((CompleteConfiguration<K, V>) configuration);
+  private static <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
+      String cacheName, Configuration<K, V> configuration) {
+    if (configuration instanceof CaffeineConfiguration<?, ?>) {
+      return new CaffeineConfiguration<K, V>((CaffeineConfiguration<K, V>) configuration);
     }
-    return new CaffeineConfiguration<K, V>()
-        .setStoreByValue(configuration.isStoreByValue())
-        .setTypes(configuration.getKeyType(), configuration.getValueType());
+
+    CaffeineConfiguration<K, V> defaults = CaffeineConfiguration.from(
+        ConfigFactory.load().getConfig("caffeine.jcache"), cacheName);
+    if (configuration instanceof CompleteConfiguration<?, ?>) {
+      CaffeineConfiguration<K, V> config = new CaffeineConfiguration<>(
+          (CompleteConfiguration<K, V>) configuration);
+      config.setCopyStrategyFactory(defaults.getCopyStrategyFactory());
+      return config;
+    }
+
+    defaults.setTypes(configuration.getKeyType(), configuration.getValueType());
+    defaults.setStoreByValue(configuration.isStoreByValue());
+    return defaults;
   }
 
   /** An adapter from a JCache cache loader to Caffeine's. */

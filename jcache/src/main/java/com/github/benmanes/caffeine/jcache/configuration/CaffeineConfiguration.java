@@ -16,9 +16,13 @@
 package com.github.benmanes.caffeine.jcache.configuration;
 
 import javax.cache.configuration.CompleteConfiguration;
+import javax.cache.configuration.Factory;
+import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableConfiguration;
 
+import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 
 /**
  * A JCache configuration with Caffeine specific settings.
@@ -28,11 +32,16 @@ import com.typesafe.config.Config;
 public final class CaffeineConfiguration<K, V> extends MutableConfiguration<K, V> {
   private static final long serialVersionUID = 1L;
 
-  public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
-    super(configuration);
-  }
+  private Factory<CopyStrategy> copyStrategyFactory;
 
   public CaffeineConfiguration() {}
+
+  public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
+    super(configuration);
+    if (configuration instanceof CaffeineConfiguration<?, ?>) {
+      copyStrategyFactory = ((CaffeineConfiguration<K, V>) configuration).getCopyStrategyFactory();
+    }
+  }
 
   /**
    * Retrieves the cache's settings from the configuration resource.
@@ -43,6 +52,27 @@ public final class CaffeineConfiguration<K, V> extends MutableConfiguration<K, V
    * @throws IllegalStateException if there is no configuration for the specified name
    */
   public static <K, V> CaffeineConfiguration<K, V> from(Config config, String cacheName) {
-    return new CaffeineConfiguration<>();
+    CaffeineConfiguration<K, V> configuration = new CaffeineConfiguration<>();
+    Config cacheConfig;
+    try {
+      cacheConfig = config.hasPath(cacheName)
+          ? config.getConfig(cacheName).withFallback(config)
+          : config;
+    } catch (ConfigException.BadPath e) {
+      cacheConfig = config;
+    }
+
+    configuration.setCopyStrategyFactory(FactoryBuilder.factoryOf(
+        cacheConfig.getString("storeByValue.strategy")));
+    return configuration;
+  }
+
+  public Factory<CopyStrategy> getCopyStrategyFactory() {
+    return copyStrategyFactory;
+  }
+
+  public CaffeineConfiguration<K, V> setCopyStrategyFactory(Factory<CopyStrategy> factory) {
+    copyStrategyFactory = factory;
+    return this;
   }
 }

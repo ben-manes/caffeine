@@ -23,11 +23,11 @@ import java.util.concurrent.ForkJoinPool;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
-import javax.cache.configuration.Configuration;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CompletionListener;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine loading cache.
@@ -37,21 +37,22 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, V> cache;
 
-  LoadingCacheProxy(String name, CacheManager cacheManager, Configuration<K, V> configuration,
-      LoadingCache<K, V> cache, CacheLoader<K, V> cacheLoader) {
+  LoadingCacheProxy(String name, CacheManager cacheManager,
+      CaffeineConfiguration<K, V> configuration, LoadingCache<K, V> cache,
+      CacheLoader<K, V> cacheLoader) {
     super(name, cacheManager, configuration, cache, Optional.of(cacheLoader));
     this.cache = cache;
   }
 
   @Override
   public V get(K key) {
-    return cache.get(key);
+    return copyOf(cache.get(key));
   }
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
     try {
-      return cache.getAll(keys);
+      return copyOf(cache.getAll(keys));
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
     } catch (RuntimeException e) {

@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
@@ -37,6 +38,9 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 
+import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
+
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine cache.
  *
@@ -44,14 +48,15 @@ import javax.cache.processor.EntryProcessorResult;
  */
 class CacheProxy<K, V> implements Cache<K, V> {
   private final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
+  private final CaffeineConfiguration<K, V> configuration;
   private final Optional<CacheLoader<K, V>> cacheLoader;
-  private final Configuration<K, V> configuration;
+  private final CopyStrategy copyStrategy;
   private final CacheManager cacheManager;
   private final String name;
 
   private volatile boolean closed;
 
-  CacheProxy(String name, CacheManager cacheManager, Configuration<K, V> configuration,
+  CacheProxy(String name, CacheManager cacheManager, CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, V> cache,
       Optional<CacheLoader<K, V>> cacheLoader) {
     this.configuration = requireNonNull(configuration);
@@ -59,21 +64,35 @@ class CacheProxy<K, V> implements Cache<K, V> {
     this.cacheLoader = requireNonNull(cacheLoader);
     this.cache = requireNonNull(cache);
     this.name = requireNonNull(name);
+
+    copyStrategy = configuration.isStoreByValue()
+        ? configuration.getCopyStrategyFactory().create()
+        : CacheProxy::identity;
+  }
+
+  private static <T> T identity(T object, ClassLoader classLoader) {
+    return object;
   }
 
   protected Optional<CacheLoader<K, V>> cacheLoader() {
     return cacheLoader;
   }
 
+  /** Returns a copy of the object if value-based caching is enabled. */
+  protected @Nullable <T> T copyOf(@Nullable T object) {
+    return (object == null) ? null : copyStrategy.copy(object, cacheManager.getClassLoader());
+  }
+
   @Override
   public V get(K key) {
-    return cache.getIfPresent(key);
+    V value = cache.getIfPresent(key);
+    return copyOf(value);
   }
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
     try {
-      return cache.getAllPresent(keys);
+      return copyOf(cache.getAllPresent(keys));
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -110,27 +129,34 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public void put(K key, V value) {
-    cache.put(key, value);
+    cache.put(copyOf(key), copyOf(value));
   }
 
   @Override
   public V getAndPut(K key, V value) {
-    return cache.asMap().put(key, value);
+    return copyOf(cache.asMap().put(copyOf(key), copyOf(value)));
   }
 
   @Override
   public void putAll(Map<? extends K, ? extends V> map) {
-    cache.putAll(map);
+    for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
+      put(entry.getKey(), entry.getValue());
+    }
   }
 
   @Override
   public boolean putIfAbsent(K key, V value) {
-    return cache.asMap().putIfAbsent(key, value) == null;
+    boolean[] absent = { false };
+    cache.asMap().computeIfAbsent(copyOf(key), k -> {
+      absent[0] = true;
+      return copyOf(value);
+    });
+    return absent[0];
   }
 
   @Override
   public boolean remove(K key) {
-    return getAndRemove(key) != null;
+    return cache.asMap().remove(key) != null;
   }
 
   @Override
@@ -140,22 +166,22 @@ class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public V getAndRemove(K key) {
-    return cache.asMap().remove(key);
+    return copyOf(cache.asMap().remove(key));
   }
 
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
-    return cache.asMap().replace(key, oldValue, newValue);
+    return cache.asMap().replace(key, oldValue, copyOf(newValue));
   }
 
   @Override
   public boolean replace(K key, V value) {
-    return getAndReplace(key, value) != null;
+    return cache.asMap().replace(key, copyOf(value)) != null;
   }
 
   @Override
   public V getAndReplace(K key, V value) {
-    return cache.asMap().replace(key, value);
+    return copyOf(cache.asMap().replace(key, copyOf(value)));
   }
 
   @Override
@@ -259,7 +285,7 @@ class CacheProxy<K, V> implements Cache<K, V> {
       @Override
       public Cache.Entry<K, V> next() {
         Map.Entry<K, V> entry = delegate.next();
-        return new EntryView<K, V>(entry.getKey(), entry.getValue());
+        return new EntryView<K, V>(copyOf(entry.getKey()), copyOf(entry.getValue()));
       }
 
       @Override

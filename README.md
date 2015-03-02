@@ -2,15 +2,15 @@
 [![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
 [![Stories in Ready](https://badge.waffle.io/ben-manes/caffeine.png?label=ready&title=Ready)](https://waffle.io/ben-manes/caffeine)
 [![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
-[![Analytics](https://ga-beacon.appspot.com/UA-59778842-1/caffeine/readme?pixel)](http://www.seethestats.com/site/github.com/ben-manes/caffeine)
 
 # Caffeine
 
 Concurrent data-structures for Java 8.
 
-This project is stable, feature complete, and well tested. There is no release yet as focus
-shifts to performance, code readability, and iterations based on external reviews. Feedback on
-API design, missing features, or implementation code is welcome and appreciated.
+The core is stable, feature complete, and well tested. There is no release yet as focus shifts to 
+performance, code readability, and iterations based on external reviews. Feedback on API design,
+missing features, or implementation code is welcome and appreciated. The extensions providing cache
+tracing, simulator, and JCache adapter are in active development.
 
 ## Collections
 
@@ -77,6 +77,17 @@ gradlew simulate -Dcaffeine.simulator.source=file -Dcaffeine.simulator.file.path
 gradlew simulate -Dcaffeine.simulator.source=synthetic -Dcaffeine.simulator.synthetic.size=1000
 ```
 
+#### JCache (JSR-107)
+JCache is a standardized caching API that is Java 6 compatible and introduced in JEE 8. The intent
+of this JSR was to ease adoption of commercial distributed caching products and therefore makes many
+design decisions that are beneficial for vendors but may be poorly thought out for users. While we
+do not recommend or encourage adopting JCache for local in-memory caches, an implementation is
+provided. The [reference implementation](https://github.com/jsr107/RI) provides integration with
+Guice, Spring, and CDI containers that delegates to the JCache provider.
+
+The JCache provider is configured using [Typesafe's Config](https://github.com/typesafehub/config)
+library. See the [reference.conf](jcache/src/main/resources/reference.conf) for more details.
+
 ## Development Notes
 To get started, [sign the Contributor License Agreement](https://www.clahub.com/agreements/ben-manes/caffeine).
 
@@ -103,8 +114,9 @@ Static code analysis tasks are not enabled by default and can be run using
 gradlew clean build -Dcheckstyle -Dfindbugs -Dpmd
 ```
 
-#### Parameterized testing
+#### Java Object Layout
 
+#### Parameterized testing
 Cache unit tests can opt into being run against all cache configurations that meet a specification
 constraint. A test method annotated with a configured `@CacheSpec` and using the `CacheProvider`
 will be executed with all possible combinations. The test case can inspect the execution
