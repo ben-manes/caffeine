@@ -51,7 +51,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public V get(K key) {
     requireNotClosed();
     try {
-      return copyOf(cache.get(key));
+      V value = copyOf(cache.get(key));
+      dispatcher().awaitSynchronous();
+      return value;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -63,7 +65,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public Map<K, V> getAll(Set<? extends K> keys) {
     requireNotClosed();
     try {
-      return copyOf(cache.getAll(keys));
+      Map<K, V> result = copyOf(cache.getAll(keys));
+      dispatcher().awaitSynchronous();
+      return result;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -82,9 +86,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     ForkJoinPool.commonPool().execute(() -> {
       try {
         if (replaceExistingValues) {
-          cache.putAll(cacheLoader().get().loadAll(keys));
+          putAll(cacheLoader().get().loadAll(keys));
         } else {
-          cache.getAll(keys);
+          getAll(keys);
         }
         completionListener.onCompletion();
       } catch (Exception e) {

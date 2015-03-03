@@ -65,4 +65,11 @@ public final class CaffeineConfiguration<K, V> extends MutableConfiguration<K, V
     copyStrategyFactory = factory;
     return this;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    // FIXME: Do not subclass MutableConfiguration as it defines equals meaning that no new fields
+    // can be taken into account. Consider using composition instead of inheritance.
+    return super.equals(o);
+  }
 }

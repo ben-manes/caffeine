@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -90,14 +89,8 @@ public final class EventDispatcher<K, V> {
    */
   public void deregister(CacheEntryListenerConfiguration<K, V> configuration) {
     requireNonNull(configuration);
-
-    for (Iterator<Registration<K, V>> iter = dispatchQueues.keySet().iterator(); iter.hasNext();) {
-      Registration<K, V> registration = iter.next();
-      if (configuration.equals(registration.getConfiguration())) {
-        iter.remove();
-        return;
-      }
-    }
+    dispatchQueues.keySet().removeIf(registration ->
+        configuration.equals(registration.getConfiguration()));
   }
 
   /**
@@ -136,7 +129,7 @@ public final class EventDispatcher<K, V> {
    */
   public void publishRemoved(Cache<K, V> cache, K key, V value) {
     CacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
-        cache, EventType.REMOVED, key, value, null);
+        cache, EventType.REMOVED, key, null, value);
     publish(event, listener -> listener.onRemoved(Collections.singleton(event)));
   }
 
@@ -160,7 +153,9 @@ public final class EventDispatcher<K, V> {
   public void awaitSynchronous() {
     List<CompletableFuture<Void>> futures = pending.get();
     try {
-      CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])).join();
+      if (!futures.isEmpty()) {
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])).join();
+      }
     } catch (CompletionException e) {
       // ignored
     } finally {

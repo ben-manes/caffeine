@@ -33,6 +33,7 @@ import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -142,7 +143,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     ForkJoinPool.commonPool().execute(() -> {
       try {
         if (replaceExistingValues) {
-          cache.putAll(cacheLoader.get().loadAll(keys));
+          putAll(cacheLoader.get().loadAll(keys));
           completionListener.onCompletion();
           return;
         }
@@ -152,11 +153,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
             .collect(Collectors.<K>toList());
         Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
         for (Map.Entry<K, V> entry : result.entrySet()) {
-          cache.asMap().putIfAbsent(entry.getKey(), entry.getValue());
+          if ((entry.getKey() != null) && (entry.getValue() != null)) {
+            putIfAbsent(entry.getKey(), entry.getValue());
+          }
         }
         completionListener.onCompletion();
-      } catch (Exception e) {
+      } catch (CacheLoaderException e) {
         completionListener.onException(e);
+      } catch (Exception e) {
+        completionListener.onException(new CacheLoaderException(e));
       }
     });
   }
@@ -164,13 +169,33 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void put(K key, V value) {
     requireNotClosed();
-    cache.put(copyOf(key), copyOf(value));
+    putNoCopyOrAwait(key, value);
+    dispatcher.awaitSynchronous();
   }
 
   @Override
   public V getAndPut(K key, V value) {
     requireNotClosed();
-    return copyOf(cache.asMap().put(copyOf(key), copyOf(value)));
+    V val = putNoCopyOrAwait(key, value);
+    dispatcher.awaitSynchronous();
+    return copyOf(val);
+  }
+
+  private V putNoCopyOrAwait(K key, V value) {
+    requireNonNull(value);
+    @SuppressWarnings("unchecked")
+    V[] replaced = (V[]) new Object[1];
+    cache.asMap().compute(copyOf(key), (k, oldValue) -> {
+      V newValue = copyOf(value);
+      if (oldValue == null) {
+        dispatcher.publishCreated(this, key, newValue);
+      } else {
+        replaced[0] = oldValue;
+        dispatcher.publishUpdated(this, key, oldValue, newValue);
+      }
+      return newValue;
+    });
+    return replaced[0];
   }
 
   @Override
@@ -181,8 +206,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       requireNonNull(entry.getValue());
     }
     for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      put(entry.getKey(), entry.getValue());
+      putNoCopyOrAwait(entry.getKey(), entry.getValue());
     }
+    dispatcher.awaitSynchronous();
   }
 
   @Override
@@ -193,58 +219,119 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean[] absent = { false };
     cache.get(copyOf(key), k -> {
       absent[0] = true;
-      return copyOf(value);
+      V copy = copyOf(value);
+      dispatcher.publishCreated(this, key, copy);
+      return copy;
     });
+    dispatcher.awaitSynchronous();
     return absent[0];
   }
 
   @Override
   public boolean remove(K key) {
     requireNotClosed();
-    return cache.asMap().remove(key) != null;
+
+    V value = removeNoCopyOrAwait(key);
+    dispatcher.awaitSynchronous();
+    return (value != null);
+  }
+
+  private V removeNoCopyOrAwait(K key) {
+    @SuppressWarnings("unchecked")
+    V[] removed = (V[]) new Object[1];
+    cache.asMap().computeIfPresent(key, (k, value) -> {
+      dispatcher.publishRemoved(this, key, value);
+      removed[0] = value;
+      return null;
+    });
+    return removed[0];
   }
 
   @Override
   public boolean remove(K key, V oldValue) {
     requireNotClosed();
     requireNonNull(oldValue);
-    return cache.asMap().remove(key, oldValue);
+    boolean[] removed = { false };
+    cache.asMap().computeIfPresent(key, (k, value) -> {
+      if (oldValue.equals(value)) {
+        dispatcher.publishRemoved(this, key, value);
+        removed[0] = true;
+        return null;
+      }
+      return value;
+    });
+    dispatcher.awaitSynchronous();
+    return removed[0];
   }
 
   @Override
   public V getAndRemove(K key) {
     requireNotClosed();
-    return copyOf(cache.asMap().remove(key));
+
+    V value = removeNoCopyOrAwait(key);
+    dispatcher.awaitSynchronous();
+    return copyOf(value);
   }
 
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
     requireNotClosed();
-    return cache.asMap().replace(key, oldValue, copyOf(newValue));
+    requireNonNull(oldValue);
+    requireNonNull(newValue);
+    boolean[] replaced = { false };
+    cache.asMap().computeIfPresent(key, (k, value) -> {
+      if (value.equals(oldValue)) {
+        dispatcher.publishUpdated(this, key, value, copyOf(newValue));
+        replaced[0] = true;
+        return newValue;
+      }
+      return value;
+    });
+    dispatcher.awaitSynchronous();
+    return replaced[0];
   }
 
   @Override
   public boolean replace(K key, V value) {
     requireNotClosed();
-    return cache.asMap().replace(key, copyOf(value)) != null;
+    V oldValue = replaceNoCopyOrAwait(key, value);
+    dispatcher.awaitSynchronous();
+    return (oldValue != null);
   }
 
   @Override
   public V getAndReplace(K key, V value) {
     requireNotClosed();
-    return copyOf(cache.asMap().replace(key, copyOf(value)));
+    V oldValue = replaceNoCopyOrAwait(key, value);
+    dispatcher.awaitSynchronous();
+    return copyOf(oldValue);
+  }
+
+  private V replaceNoCopyOrAwait(K key, V value) {
+    requireNonNull(value);
+    V copy = copyOf(value);
+    @SuppressWarnings("unchecked")
+    V[] replaced = (V[]) new Object[1];
+    cache.asMap().computeIfPresent(key, (k, v) -> {
+      dispatcher.publishUpdated(this, key, value, copy);
+      replaced[0] = v;
+      return copy;
+    });
+    return replaced[0];
   }
 
   @Override
   public void removeAll(Set<? extends K> keys) {
     requireNotClosed();
-    cache.invalidateAll(keys);
+    for (K key : keys) {
+      removeNoCopyOrAwait(key);
+    }
+    dispatcher.awaitSynchronous();
   }
 
   @Override
   public void removeAll() {
-    requireNotClosed();
-    clear();
+    removeAll(cache.asMap().keySet());
   }
 
   @Override
@@ -280,6 +367,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       EntryProcessorEntry<K, V> entry = new EntryProcessorEntry<>(key, value, (value != null));
       try {
         result[0] = entryProcessor.process(entry, arguments);
+        if ((value == null) && entry.exists()) {
+          dispatcher.publishCreated(this, key, entry.getValue());
+        } else if (value != null) {
+          if (!entry.exists()) {
+            dispatcher.publishRemoved(this, key, value);
+          } else if (!entry.getValue().equals(value)) {
+            dispatcher.publishUpdated(this, key, value, entry.getValue());
+          }
+        }
         return entry.getValue();
       } catch (EntryProcessorException e) {
         throw e;
@@ -287,6 +383,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         throw new EntryProcessorException(e);
       }
     });
+    dispatcher.awaitSynchronous();
 
     @SuppressWarnings("unchecked")
     T castedResult = (T) result[0];
@@ -351,12 +448,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void registerCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
+    requireNotClosed();
+    configuration.addCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
     dispatcher.register(cacheEntryListenerConfiguration);
   }
 
   @Override
   public void deregisterCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
+    requireNotClosed();
+    configuration.removeCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
     dispatcher.deregister(cacheEntryListenerConfiguration);
   }
 
@@ -366,6 +467,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     return new Iterator<Cache.Entry<K, V>>() {
       final Iterator<Map.Entry<K, V>> delegate = cache.asMap().entrySet().iterator();
+      Map.Entry<K, V> entry = null;
 
       @Override
       public boolean hasNext() {
@@ -374,13 +476,17 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
       @Override
       public Cache.Entry<K, V> next() {
-        Map.Entry<K, V> entry = delegate.next();
+        entry = delegate.next();
         return new EntryProxy<K, V>(copyOf(entry.getKey()), copyOf(entry.getValue()));
       }
 
       @Override
       public void remove() {
-        delegate.remove();
+        if (entry == null) {
+          throw new IllegalStateException();
+        }
+        CacheProxy.this.remove(entry.getKey(), entry.getValue());
+        entry = null;
       }
     };
   }
