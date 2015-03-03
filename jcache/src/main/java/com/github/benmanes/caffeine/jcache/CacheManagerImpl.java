@@ -38,6 +38,7 @@ import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -115,12 +116,18 @@ public final class CacheManagerImpl implements CacheManager {
       cacheLoader = config.getCacheLoaderFactory().create();
     }
 
+    EventDispatcher<K, V> dispatcher = new EventDispatcher<K, V>();
+    config.getCacheEntryListenerConfigurations().forEach(dispatcher::register);
+
     if (config.isReadThrough() && (cacheLoader != null)) {
-      return new LoadingCacheProxy<K, V>(cacheName, this, config,
-          builder.build(new CacheLoaderAdapter<>(cacheLoader)), cacheLoader);
+      CacheLoaderAdapter<K, V> adapter = new CacheLoaderAdapter<>(cacheLoader, dispatcher);
+      CacheProxy<K, V> cache = new LoadingCacheProxy<K, V>(cacheName, this,
+          config, builder.build(adapter), dispatcher, cacheLoader);
+      adapter.setCache(cache);
+      return cache;
     } else {
       return new CacheProxy<K, V>(cacheName, this, config,
-          builder.build(), Optional.ofNullable(cacheLoader));
+          builder.build(), dispatcher, Optional.ofNullable(cacheLoader));
     }
   }
 
@@ -290,16 +297,25 @@ public final class CacheManagerImpl implements CacheManager {
   /** An adapter from a JCache cache loader to Caffeine's. */
   private static final class CacheLoaderAdapter<K, V>
       implements com.github.benmanes.caffeine.cache.CacheLoader<K, V> {
+    private final EventDispatcher<K, V> dispatcher;
     private final CacheLoader<K, V> delegate;
+    private Cache<K, V> cache;
 
-    CacheLoaderAdapter(CacheLoader<K, V> delegate) {
-      this.delegate = delegate;
+    CacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher) {
+      this.dispatcher = requireNonNull(dispatcher);
+      this.delegate = requireNonNull(delegate);
+    }
+
+    void setCache(Cache<K, V> cache) {
+      this.cache = requireNonNull(cache);
     }
 
     @Override
     public V load(K key) {
       try {
-        return delegate.load(key);
+        V value = delegate.load(key);
+        dispatcher.publishCreated(cache, key, value);
+        return value;
       } catch (CacheLoaderException e) {
         throw e;
       } catch (RuntimeException e) {
@@ -310,9 +326,13 @@ public final class CacheManagerImpl implements CacheManager {
     @Override
     public Map<K, V> loadAll(Iterable<? extends K> keys) {
       try {
-        return delegate.loadAll(keys).entrySet().stream()
+        Map<K, V> result = delegate.loadAll(keys).entrySet().stream()
             .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
             .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+        for (Map.Entry<K, V> entry : result.entrySet()) {
+          dispatcher.publishCreated(cache, entry.getKey(), entry.getValue());
+        }
+        return result;
       } catch (CacheLoaderException e) {
         throw e;
       } catch (RuntimeException e) {

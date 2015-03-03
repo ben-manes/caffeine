@@ -30,6 +30,7 @@ import javax.cache.integration.CompletionListener;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine loading cache.
@@ -41,8 +42,8 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   LoadingCacheProxy(String name, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, V> cache,
-      CacheLoader<K, V> cacheLoader) {
-    super(name, cacheManager, configuration, cache, Optional.of(cacheLoader));
+      EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader) {
+    super(name, cacheManager, configuration, cache, dispatcher, Optional.of(cacheLoader));
     this.cache = cache;
   }
 

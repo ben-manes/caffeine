@@ -40,6 +40,7 @@ import javax.cache.processor.EntryProcessorResult;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
+import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 
 
@@ -52,6 +53,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
   private final CaffeineConfiguration<K, V> configuration;
   private final Optional<CacheLoader<K, V>> cacheLoader;
+  private final EventDispatcher<K, V> dispatcher;
   private final CopyStrategy copyStrategy;
   private final CacheManager cacheManager;
   private final String name;
@@ -59,11 +61,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private volatile boolean closed;
 
   CacheProxy(String name, CacheManager cacheManager, CaffeineConfiguration<K, V> configuration,
-      com.github.benmanes.caffeine.cache.Cache<K, V> cache,
+      com.github.benmanes.caffeine.cache.Cache<K, V> cache, EventDispatcher<K, V> dispatcher,
       Optional<CacheLoader<K, V>> cacheLoader) {
     this.configuration = requireNonNull(configuration);
     this.cacheManager = requireNonNull(cacheManager);
     this.cacheLoader = requireNonNull(cacheLoader);
+    this.dispatcher = requireNonNull(dispatcher);
     this.cache = requireNonNull(cache);
     this.name = requireNonNull(name);
 
@@ -78,6 +81,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   protected Optional<CacheLoader<K, V>> cacheLoader() {
     return cacheLoader;
+  }
+
+  protected EventDispatcher<K, V> dispatcher() {
+    return dispatcher;
   }
 
   /**
@@ -344,13 +351,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void registerCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
-    throw new UnsupportedOperationException();
+    dispatcher.register(cacheEntryListenerConfiguration);
   }
 
   @Override
   public void deregisterCacheEntryListener(
       CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
-    throw new UnsupportedOperationException();
+    dispatcher.deregister(cacheEntryListenerConfiguration);
   }
 
   @Override
