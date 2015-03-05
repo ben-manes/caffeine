@@ -86,13 +86,19 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     ForkJoinPool.commonPool().execute(() -> {
       try {
         if (replaceExistingValues) {
-          putAll(cacheLoader().get().loadAll(keys));
+          Map<K, V> loaded = cacheLoader().get().loadAll(keys);
+          for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
+            putNoCopyOrAwait(entry.getKey(), entry.getValue(), false);
+          }
+          completionListener.onCompletion();
         } else {
           getAll(keys);
         }
         completionListener.onCompletion();
       } catch (Exception e) {
         completionListener.onException(e);
+      } finally {
+        dispatcher().ignoreSynchronous();
       }
     });
   }

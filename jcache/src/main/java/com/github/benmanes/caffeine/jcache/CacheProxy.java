@@ -17,13 +17,17 @@ package com.github.benmanes.caffeine.jcache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -34,6 +38,8 @@ import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
+import javax.cache.integration.CacheWriter;
+import javax.cache.integration.CacheWriterException;
 import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -42,6 +48,7 @@ import javax.cache.processor.EntryProcessorResult;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
+import com.github.benmanes.caffeine.jcache.integration.DisabledCacheWriter;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 
 
@@ -57,6 +64,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private final EventDispatcher<K, V> dispatcher;
   private final CopyStrategy copyStrategy;
   private final CacheManager cacheManager;
+  private final CacheWriter<K, V> writer;
   private final String name;
 
   private volatile boolean closed;
@@ -74,10 +82,17 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     copyStrategy = configuration.isStoreByValue()
         ? configuration.getCopyStrategyFactory().create()
         : CacheProxy::identity;
+    writer = configuration.hasCacheWriter()
+        ? configuration.getCacheWriter()
+        : DisabledCacheWriter.get();
   }
 
   private static <T> T identity(T object, ClassLoader classLoader) {
     return object;
+  }
+
+  protected CacheWriter<? super K, ? super V> cacheWriter() {
+    return writer;
   }
 
   protected Optional<CacheLoader<K, V>> cacheLoader() {
@@ -143,7 +158,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     ForkJoinPool.commonPool().execute(() -> {
       try {
         if (replaceExistingValues) {
-          putAll(cacheLoader.get().loadAll(keys));
+          Map<K, V> loaded = cacheLoader.get().loadAll(keys);
+          for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
+            putNoCopyOrAwait(entry.getKey(), entry.getValue(), false);
+          }
           completionListener.onCompletion();
           return;
         }
@@ -154,7 +172,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
         for (Map.Entry<K, V> entry : result.entrySet()) {
           if ((entry.getKey() != null) && (entry.getValue() != null)) {
-            putIfAbsent(entry.getKey(), entry.getValue());
+            putIfAbsentNoAwait(entry.getKey(), entry.getValue(), false);
           }
         }
         completionListener.onCompletion();
@@ -162,6 +180,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         completionListener.onException(e);
       } catch (Exception e) {
         completionListener.onException(new CacheLoaderException(e));
+      } finally {
+        dispatcher.ignoreSynchronous();
       }
     });
   }
@@ -169,24 +189,29 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void put(K key, V value) {
     requireNotClosed();
-    putNoCopyOrAwait(key, value);
+    putNoCopyOrAwait(key, value, true);
     dispatcher.awaitSynchronous();
   }
 
   @Override
   public V getAndPut(K key, V value) {
     requireNotClosed();
-    V val = putNoCopyOrAwait(key, value);
+    V val = putNoCopyOrAwait(key, value, true);
     dispatcher.awaitSynchronous();
     return copyOf(val);
   }
 
-  private V putNoCopyOrAwait(K key, V value) {
+  protected V putNoCopyOrAwait(K key, V value, boolean publishToWriter) {
+    requireNonNull(key);
     requireNonNull(value);
+
     @SuppressWarnings("unchecked")
     V[] replaced = (V[]) new Object[1];
     cache.asMap().compute(copyOf(key), (k, oldValue) -> {
       V newValue = copyOf(value);
+      if (publishToWriter) {
+        publishToCacheWriter(writer::write, () -> new EntryProxy<K, V>(key, value));
+      }
       if (oldValue == null) {
         dispatcher.publishCreated(this, key, newValue);
       } else {
@@ -205,10 +230,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       requireNonNull(entry.getKey());
       requireNonNull(entry.getValue());
     }
+    CacheWriterException e = writeAllToCacheWriter(map);
     for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      putNoCopyOrAwait(entry.getKey(), entry.getValue());
+      putNoCopyOrAwait(entry.getKey(), entry.getValue(), false);
     }
     dispatcher.awaitSynchronous();
+    if (e != null) {
+      throw e;
+    }
   }
 
   @Override
@@ -216,21 +245,31 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     requireNonNull(value);
 
+    boolean added = putIfAbsentNoAwait(key, value, true);
+    dispatcher.awaitSynchronous();
+    return added;
+  }
+
+  private boolean putIfAbsentNoAwait(K key, V value, boolean publishToCacheWriter) {
     boolean[] absent = { false };
     cache.get(copyOf(key), k -> {
       absent[0] = true;
       V copy = copyOf(value);
+      if (publishToCacheWriter) {
+        publishToCacheWriter(writer::write, () -> new EntryProxy<K, V>(key, value));
+      }
       dispatcher.publishCreated(this, key, copy);
       return copy;
     });
-    dispatcher.awaitSynchronous();
     return absent[0];
   }
 
   @Override
   public boolean remove(K key) {
     requireNotClosed();
+    requireNonNull(key);
 
+    publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
     return (value != null);
@@ -250,10 +289,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public boolean remove(K key, V oldValue) {
     requireNotClosed();
+    requireNonNull(key);
     requireNonNull(oldValue);
+
     boolean[] removed = { false };
     cache.asMap().computeIfPresent(key, (k, value) -> {
       if (oldValue.equals(value)) {
+        publishToCacheWriter(writer::delete, () -> key);
         dispatcher.publishRemoved(this, key, value);
         removed[0] = true;
         return null;
@@ -267,7 +309,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public V getAndRemove(K key) {
     requireNotClosed();
+    requireNonNull(key);
 
+    publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
     return copyOf(value);
@@ -281,6 +325,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     boolean[] replaced = { false };
     cache.asMap().computeIfPresent(key, (k, value) -> {
       if (value.equals(oldValue)) {
+        publishToCacheWriter(writer::write, () -> new EntryProxy<K, V>(key, value));
         dispatcher.publishUpdated(this, key, value, copyOf(newValue));
         replaced[0] = true;
         return newValue;
@@ -313,6 +358,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     @SuppressWarnings("unchecked")
     V[] replaced = (V[]) new Object[1];
     cache.asMap().computeIfPresent(key, (k, v) -> {
+      publishToCacheWriter(writer::write, () -> new EntryProxy<K, V>(key, value));
       dispatcher.publishUpdated(this, key, value, copy);
       replaced[0] = v;
       return copy;
@@ -323,15 +369,22 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void removeAll(Set<? extends K> keys) {
     requireNotClosed();
+    CacheWriterException e = deleteAllToCacheWriter(keys);
     for (K key : keys) {
       removeNoCopyOrAwait(key);
     }
     dispatcher.awaitSynchronous();
+    if (e != null) {
+      throw e;
+    }
   }
 
   @Override
   public void removeAll() {
-    removeAll(cache.asMap().keySet());
+    Set<K> keys = configuration.isWriteThrough()
+        ? new HashSet<>(cache.asMap().keySet())
+        : cache.asMap().keySet();
+    removeAll(keys);
   }
 
   @Override
@@ -367,12 +420,20 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       EntryProcessorEntry<K, V> entry = new EntryProcessorEntry<>(key, value, (value != null));
       try {
         result[0] = entryProcessor.process(entry, arguments);
-        if ((value == null) && entry.exists()) {
-          dispatcher.publishCreated(this, key, entry.getValue());
-        } else if (value != null) {
+        if (value == null) {
+          if (entry.exists()) {
+            publishToCacheWriter(writer::write, () -> entry);
+            dispatcher.publishCreated(this, key, entry.getValue());
+          } else if (!entry.wasCreated()) {
+            publishToCacheWriter(writer::delete, () -> key);
+            dispatcher.publishRemoved(this, key, value);
+          }
+        } else {
           if (!entry.exists()) {
+            publishToCacheWriter(writer::delete, () -> key);
             dispatcher.publishRemoved(this, key, value);
           } else if (!entry.getValue().equals(value)) {
+            publishToCacheWriter(writer::write, () -> entry);
             dispatcher.publishUpdated(this, key, value, entry.getValue());
           }
         }
@@ -495,6 +556,57 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final void requireNotClosed() {
     if (isClosed()) {
       throw new IllegalStateException();
+    }
+  }
+
+  protected <T> void publishToCacheWriter(Consumer<T> action, Supplier<T> data) {
+    if (!configuration.isWriteThrough()) {
+      return;
+    }
+    try {
+      action.accept(data.get());
+    } catch (CacheWriterException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new CacheWriterException("Exception in CacheWriter", e);
+    }
+  }
+
+  protected <T> CacheWriterException writeAllToCacheWriter(Map<? extends K, ? extends V> map) {
+    if (!configuration.isWriteThrough()  || map.isEmpty()) {
+      return null;
+    }
+    List<Cache.Entry<? extends K, ? extends V>> entries = map.entrySet().stream()
+        .map(entry -> new EntryProxy<>(entry.getKey(), entry.getValue()))
+        .collect(Collectors.<Cache.Entry<? extends K, ? extends V>>toList());
+    try {
+      writer.writeAll(entries);
+      return null;
+    } catch (RuntimeException e) {
+      for (Cache.Entry<? extends K, ? extends V> entry : entries) {
+        map.remove(entry.getKey());
+      }
+      if (e instanceof CacheWriterException) {
+        return (CacheWriterException) e;
+      }
+      return new CacheWriterException("Exception in CacheWriter", e);
+    }
+  }
+
+  protected <T> CacheWriterException deleteAllToCacheWriter(Set<? extends K> keys) {
+    if (!configuration.isWriteThrough() || keys.isEmpty()) {
+      return null;
+    }
+    List<K> keysToDelete = new ArrayList<>(keys);
+    try {
+      writer.deleteAll(keysToDelete);
+      return null;
+    } catch (RuntimeException e) {
+      keys.removeAll(keysToDelete);
+      if (e instanceof CacheWriterException) {
+        return (CacheWriterException) e;
+      }
+      return new CacheWriterException("Exception in CacheWriter", e);
     }
   }
 }

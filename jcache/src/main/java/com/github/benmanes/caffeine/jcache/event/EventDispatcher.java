@@ -163,6 +163,14 @@ public final class EventDispatcher<K, V> {
     }
   }
 
+  /**
+   * Ignores and clears the queued futures to the synchronous listeners that are processing events
+   * this thread published.
+   */
+  public void ignoreSynchronous() {
+    pending.get().clear();
+  }
+
   /** Broadcasts the event to all of the interested listener's dispatch queues. */
   private void publish(CacheEntryEvent<K, V> event,
       Consumer<EventTypeAwareListener<K, V>> operation) {

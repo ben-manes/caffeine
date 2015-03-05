@@ -32,6 +32,7 @@ import javax.cache.processor.MutableEntry;
 public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   private K key;
   private V value;
+  private boolean wasCreated;
 
   public EntryProcessorEntry(K key, V value, boolean exists) {
     this.key = key;
@@ -61,6 +62,12 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   @Override
   public void setValue(V value) {
     this.value = requireNonNull(value);
+    wasCreated = true;
+  }
+
+  /** If the processor created an entry, which may have been removed by the end of processing. */
+  public boolean wasCreated() {
+    return wasCreated;
   }
 
   @Override
