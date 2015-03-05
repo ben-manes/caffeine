@@ -40,9 +40,13 @@ task testCompatibilityKit(type: Test, group: "Build", description: "Runs the JCa
   useJUnit()
   ignoreFailures = true
   testClassesDir = file("${buildDir}/tck")
+  
+  def pkg = 'com.github.benmanes.caffeine.jcache'
   systemProperty 'java.net.preferIPv4Stack', 'true'
-  systemProperty 'javax.cache.Cache', 'com.github.benmanes.caffeine.jcache.CacheProxy'
-  systemProperty 'javax.cache.Cache.Entry', 'com.github.benmanes.caffeine.jcache.EntryProxy'
-  systemProperty 'javax.cache.CacheManager', 'com.github.benmanes.caffeine.jcache.CacheManagerImpl'
+  systemProperty 'javax.cache.Cache', "${pkg}.CacheProxy"
+  systemProperty 'javax.cache.Cache.Entry', "${pkg}.EntryProxy"
+  systemProperty 'javax.cache.CacheManager', "${pkg}.CacheManagerImpl"
+  systemProperty 'org.jsr107.tck.management.agentId', 'CaffeineMBeanServer'
+  systemProperty 'javax.management.builder.initial', "${pkg}.management.JCacheMBeanServerBuilder"
 }
 check.dependsOn(testCompatibilityKit)

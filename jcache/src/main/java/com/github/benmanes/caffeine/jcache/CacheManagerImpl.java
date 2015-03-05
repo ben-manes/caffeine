@@ -39,6 +39,7 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
 import com.github.benmanes.caffeine.jcache.integration.JCacheRemovalListener;
+import com.github.benmanes.caffeine.jcache.management.JmxRegistration;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -50,7 +51,7 @@ import com.typesafe.config.ConfigFactory;
  */
 public final class CacheManagerImpl implements CacheManager {
   private final WeakReference<ClassLoader> classLoaderReference;
-  private final Map<String, Cache<?, ?>> caches;
+  private final Map<String, CacheProxy<?, ?>> caches;
   private final CachingProvider cacheProvider;
   private final Properties properties;
   private final Config preconfigured;
@@ -94,19 +95,21 @@ public final class CacheManagerImpl implements CacheManager {
     requireNotClosed();
     requireNonNull(configuration);
 
-    Cache<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
+    CacheProxy<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
       if ((existing != null) && !existing.isClosed()) {
         throw new CacheException("Cache " + cacheName + " already exists");
       }
       return newCache(cacheName, configuration);
     });
+    enableManagement(cache.getName(), cache.getConfiguration().isManagementEnabled());
+    enableStatistics(cache.getName(), cache.getConfiguration().isStatisticsEnabled());
 
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) cache;
     return castedCache;
   }
 
-  private <K, V> Cache<K, V> newCache(String cacheName, Configuration<K, V> configuration) {
+  private <K, V> CacheProxy<K, V> newCache(String cacheName, Configuration<K, V> configuration) {
     CaffeineConfiguration<K, V> config = resolveConfigurationFor(cacheName, configuration);
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
 
@@ -154,15 +157,14 @@ public final class CacheManagerImpl implements CacheManager {
 
   @Override
   public <K, V> Cache<K, V> getCache(String cacheName, Class<K> keyType, Class<V> valueType) {
-    Cache<K, V> cache = getOrCreateCache(cacheName);
+    CacheProxy<K, V> cache = getOrCreateCache(cacheName);
     if (cache == null) {
       return null;
     }
     requireNonNull(keyType);
     requireNonNull(valueType);
 
-    @SuppressWarnings("unchecked")
-    Configuration<?, ?> config = cache.getConfiguration(Configuration.class);
+    Configuration<?, ?> config = cache.getConfiguration();
     if (keyType != config.getKeyType()) {
       throw new ClassCastException("Incompatible cache key types specified, expected " +
           config.getKeyType() + " but " + keyType + " was specified");
@@ -175,13 +177,13 @@ public final class CacheManagerImpl implements CacheManager {
 
   @Override
   public <K, V> Cache<K, V> getCache(String cacheName) {
-    Cache<K, V> cache = getOrCreateCache(cacheName);
+    CacheProxy<K, V> cache = getOrCreateCache(cacheName);
     if (cache == null) {
       return null;
     }
 
     @SuppressWarnings("unchecked")
-    Configuration<?, ?> configuration = cache.getConfiguration(Configuration.class);
+    Configuration<?, ?> configuration = cache.getConfiguration();
     if (!Object.class.equals(configuration.getKeyType()) ||
         !Object.class.equals(configuration.getValueType())) {
       String msg = String.format("Cache %s was defined with specific types Cache<%s, %s> in which "
@@ -194,11 +196,11 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   /** Returns the cache, creating it if necessary. */
-  private <K, V> Cache<K, V> getOrCreateCache(String cacheName) {
+  private <K, V> CacheProxy<K, V> getOrCreateCache(String cacheName) {
     requireNonNull(cacheName);
     requireNotClosed();
 
-    Cache<?, ?> cache = caches.get(cacheName);
+    CacheProxy<?, ?> cache = caches.get(cacheName);
     if (cache == null) {
       try {
         if (preconfigured.hasPath(cacheName)) {
@@ -209,7 +211,7 @@ public final class CacheManagerImpl implements CacheManager {
       } catch (ConfigException.BadPath e) {}
     }
     @SuppressWarnings("unchecked")
-    Cache<K, V> castedCache = (Cache<K, V>) cache;
+    CacheProxy<K, V> castedCache = (CacheProxy<K, V>) cache;
     return castedCache;
   }
 
@@ -223,9 +225,11 @@ public final class CacheManagerImpl implements CacheManager {
     requireNonNull(cacheName);
     requireNotClosed();
 
-    Cache<?, ?> cache = caches.remove(cacheName);
+    CacheProxy<?, ?> cache = caches.remove(cacheName);
     if (cache != null) {
       cache.close();
+      JmxRegistration.unregisterCacheMXBean(cache);
+      JmxRegistration.unregisterStatisticsMXBean(cache);
     }
   }
 
@@ -234,11 +238,16 @@ public final class CacheManagerImpl implements CacheManager {
     requireNonNull(cacheName);
     requireNotClosed();
 
-    Cache<?, ?> cache = caches.get(cacheName);
-    if (cache != null) {
-      // TODO(ben): implement
+    CacheProxy<?, ?> cache = caches.get(cacheName);
+    if (cache == null) {
+      return;
     }
-    throw new UnsupportedOperationException();
+    if (enabled) {
+      JmxRegistration.registerCacheMXBean(cache);
+    } else {
+      JmxRegistration.unregisterCacheMXBean(cache);
+    }
+    cache.getConfiguration().setManagementEnabled(enabled);
   }
 
   @Override
@@ -246,11 +255,16 @@ public final class CacheManagerImpl implements CacheManager {
     requireNonNull(cacheName);
     requireNotClosed();
 
-    Cache<?, ?> cache = caches.get(cacheName);
-    if (cache != null) {
-      // TODO(ben): implement
+    CacheProxy<?, ?> cache = caches.get(cacheName);
+    if (cache == null) {
+      return;
     }
-    throw new UnsupportedOperationException();
+    if (enabled) {
+      JmxRegistration.registerStatisticsMXBean(cache);
+    } else {
+      JmxRegistration.unregisterStatisticsMXBean(cache);
+    }
+    cache.getConfiguration().setStatisticsEnabled(enabled);
   }
 
   @Override

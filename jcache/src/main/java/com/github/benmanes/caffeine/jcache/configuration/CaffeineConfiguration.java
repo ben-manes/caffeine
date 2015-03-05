@@ -138,9 +138,33 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     return delegate.isStatisticsEnabled();
   }
 
+  /**
+   * Sets whether statistics gathering is enabled on a cache.
+   * <p>
+   * Statistics may be enabled or disabled at runtime via
+   * {@link CacheManager#enableStatistics(String, boolean)}.
+   *
+   * @param enabled true to enable statistics, false to disable
+   */
+  public void setStatisticsEnabled(boolean enabled) {
+    delegate.setStatisticsEnabled(enabled);
+  }
+
   @Override
   public boolean isManagementEnabled() {
     return delegate.isManagementEnabled();
+  }
+
+  /**
+   * Sets whether management is enabled on a cache.
+   * <p>
+   * Management may be enabled or disabled at runtime via
+   * {@link CacheManager#enableManagement(String, boolean)}.
+   *
+   * @param enabled true to enable statistics, false to disable
+   */
+  public void setManagementEnabled(boolean enabled) {
+    delegate.setManagementEnabled(enabled);
   }
 
   @Override

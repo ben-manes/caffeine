@@ -41,6 +41,8 @@ import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
 import javax.cache.integration.CompletionListener;
+import javax.cache.management.CacheMXBean;
+import javax.cache.management.CacheStatisticsMXBean;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
@@ -49,6 +51,8 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.integration.DisabledCacheWriter;
+import com.github.benmanes.caffeine.jcache.management.JCacheMXBean;
+import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 
 
@@ -62,9 +66,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private final CaffeineConfiguration<K, V> configuration;
   private final Optional<CacheLoader<K, V>> cacheLoader;
   private final EventDispatcher<K, V> dispatcher;
+  private final CacheStatisticsMXBean statistics;
   private final CopyStrategy copyStrategy;
   private final CacheManager cacheManager;
   private final CacheWriter<K, V> writer;
+  private final CacheMXBean cacheMXBean;
   private final String name;
 
   private volatile boolean closed;
@@ -85,6 +91,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     writer = configuration.hasCacheWriter()
         ? configuration.getCacheWriter()
         : DisabledCacheWriter.get();
+    cacheMXBean = new JCacheMXBean(this);
+    statistics = new JCacheStatisticsMXBean();
   }
 
   private static <T> T identity(T object, ClassLoader classLoader) {
@@ -95,12 +103,24 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return writer;
   }
 
+  protected CaffeineConfiguration<K, V> getConfiguration() {
+    return configuration;
+  }
+
   protected Optional<CacheLoader<K, V>> cacheLoader() {
     return cacheLoader;
   }
 
   protected EventDispatcher<K, V> dispatcher() {
     return dispatcher;
+  }
+
+  public CacheStatisticsMXBean getStatisticsMXBean() {
+    return statistics;
+  }
+
+  public CacheMXBean getCacheMXBean() {
+    return cacheMXBean;
   }
 
   /**
