@@ -20,10 +20,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.cache.Cache;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 
+import com.github.benmanes.caffeine.jcache.CacheProxy;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 
 /**
@@ -35,15 +35,19 @@ public final class JCacheLoaderAdapter<K, V>
     implements com.github.benmanes.caffeine.cache.CacheLoader<K, V> {
   private final EventDispatcher<K, V> dispatcher;
   private final CacheLoader<K, V> delegate;
-  private Cache<K, V> cache;
+  private CacheProxy<K, V> cache;
 
   public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher) {
     this.dispatcher = requireNonNull(dispatcher);
     this.delegate = requireNonNull(delegate);
   }
 
-  /** Sets the cache instance that was created with this loader. */
-  public void setCache(Cache<K, V> cache) {
+  /**
+   * Sets the cache instance that was created with this loader.
+   *
+   * @param cache the cache that uses this loader
+   */
+  public void setCache(CacheProxy<K, V> cache) {
     this.cache = requireNonNull(cache);
   }
 

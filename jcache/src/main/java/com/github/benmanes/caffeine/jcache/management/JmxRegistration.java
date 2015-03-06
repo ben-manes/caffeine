@@ -35,31 +35,30 @@ import com.github.benmanes.caffeine.jcache.CacheProxy;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JmxRegistration {
-  private enum MBeanType { Configuration, Statistics }
+  public enum MBeanType { Configuration, Statistics }
 
   private JmxRegistration() {}
 
-  /** Registers the JMX management bean for the cache. */
-  public static void registerCacheMXBean(CacheProxy<?, ?> cache) {
-    ObjectName objectName = getObjectName(cache, MBeanType.Configuration);
-    register(objectName, cache.getCacheMXBean());
+  /**
+   * Registers the JMX management bean for the cache.
+   *
+   * @param cache the cache to register
+   * @param mxbean the management bean
+   * @param type the mxbean type
+   */
+  public static void registerMXBean(Cache<?, ?> cache, Object mxbean, MBeanType type) {
+    ObjectName objectName = getObjectName(cache, type);
+    register(objectName, mxbean);
   }
 
-  /** Registers the JMX statistics bean for the cache. */
-  public static void registerStatisticsMXBean(CacheProxy<?, ?> cache) {
-    ObjectName objectName = getObjectName(cache, MBeanType.Statistics);
-    register(objectName, cache.getStatisticsMXBean());
-  }
-
-  /** Unregisters the JMX management bean for the cache. */
-  public static void unregisterCacheMXBean(CacheProxy<?, ?> cache) {
-    ObjectName objectName = getObjectName(cache, MBeanType.Configuration);
-    unregister(objectName);
-  }
-
-  /** Unregisters the JMX statistics bean for the cache. */
-  public static void unregisterStatisticsMXBean(CacheProxy<?, ?> cache) {
-    ObjectName objectName = getObjectName(cache, MBeanType.Statistics);
+  /**
+   * Unregisters the JMX management bean for the cache.
+   *
+   * @param cache the cache to unregister
+   * @param type the mxbean type
+   */
+  public static void unregisterMXBean(CacheProxy<?, ?> cache, MBeanType type) {
+    ObjectName objectName = getObjectName(cache, type);
     unregister(objectName);
   }
 

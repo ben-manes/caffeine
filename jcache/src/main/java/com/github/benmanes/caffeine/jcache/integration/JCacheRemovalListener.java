@@ -38,7 +38,11 @@ public final class JCacheRemovalListener<K, V> implements RemovalListener<K, V> 
     this.dispatcher = requireNonNull(dispatcher);
   }
 
-  /** Sets the cache instance that was created with this listener. */
+  /**
+   * Sets the cache instance that was created with this listener.
+   *
+   * @param cache the cache that uses this loader
+   */
   public void setCache(Cache<K, V> cache) {
     this.cache = requireNonNull(cache);
   }

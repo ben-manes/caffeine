@@ -48,7 +48,10 @@ final class Async {
   static @Nullable <V> V getWhenSuccessful(@Nullable CompletableFuture<V> future) {
     try {
       return (future == null) ? null : future.get();
-    } catch (InterruptedException | ExecutionException e) {
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    } catch (ExecutionException e) {
       return null;
     }
   }

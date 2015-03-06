@@ -41,8 +41,6 @@ import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriter;
 import javax.cache.integration.CacheWriterException;
 import javax.cache.integration.CompletionListener;
-import javax.cache.management.CacheMXBean;
-import javax.cache.management.CacheStatisticsMXBean;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
@@ -53,6 +51,8 @@ import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.integration.DisabledCacheWriter;
 import com.github.benmanes.caffeine.jcache.management.JCacheMXBean;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
+import com.github.benmanes.caffeine.jcache.management.JmxRegistration;
+import com.github.benmanes.caffeine.jcache.management.JmxRegistration.MBeanType;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 
 
@@ -65,12 +65,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
   private final CaffeineConfiguration<K, V> configuration;
   private final Optional<CacheLoader<K, V>> cacheLoader;
+  private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
-  private final CacheStatisticsMXBean statistics;
   private final CopyStrategy copyStrategy;
   private final CacheManager cacheManager;
   private final CacheWriter<K, V> writer;
-  private final CacheMXBean cacheMXBean;
+  private final JCacheMXBean cacheMXBean;
   private final String name;
 
   private volatile boolean closed;
@@ -115,12 +115,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return dispatcher;
   }
 
-  public CacheStatisticsMXBean getStatisticsMXBean() {
+  public JCacheStatisticsMXBean getStatisticsMXBean() {
     return statistics;
-  }
-
-  public CacheMXBean getCacheMXBean() {
-    return cacheMXBean;
   }
 
   /**
@@ -138,7 +134,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public V get(K key) {
     requireNotClosed();
     try {
-      return copyOf(cache.getIfPresent(key));
+      V value = copyOf(cache.getIfPresent(key));
+      if (value == null) {
+        statistics.recordMisses(1L);
+      } else {
+        statistics.recordHits(1L);
+      }
+      return value;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -150,7 +152,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public Map<K, V> getAll(Set<? extends K> keys) {
     requireNotClosed();
     try {
-      return copyOf(cache.getAllPresent(keys));
+      Map<K, V> result = copyOf(cache.getAllPresent(keys));
+      statistics.recordMisses(keys.size() - result.size());
+      statistics.recordHits(result.size());
+      return result;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -211,6 +216,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     putNoCopyOrAwait(key, value, true);
     dispatcher.awaitSynchronous();
+    statistics.recordPuts(1);
   }
 
   @Override
@@ -218,6 +224,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     V val = putNoCopyOrAwait(key, value, true);
     dispatcher.awaitSynchronous();
+    statistics.recordPuts(1);
+
+    if (val == null) {
+      statistics.recordMisses(1L);
+    } else {
+      statistics.recordHits(1L);
+    }
     return copyOf(val);
   }
 
@@ -254,6 +267,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
       putNoCopyOrAwait(entry.getKey(), entry.getValue(), false);
     }
+    statistics.recordPuts(map.size());
     dispatcher.awaitSynchronous();
     if (e != null) {
       throw e;
@@ -267,6 +281,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     boolean added = putIfAbsentNoAwait(key, value, true);
     dispatcher.awaitSynchronous();
+    if (added) {
+      statistics.recordPuts(1L);
+    }
     return added;
   }
 
@@ -292,7 +309,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
-    return (value != null);
+    if (value != null) {
+      statistics.recordRemovals(1L);
+      return true;
+    }
+    return false;
   }
 
   private V removeNoCopyOrAwait(K key) {
@@ -323,6 +344,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return value;
     });
     dispatcher.awaitSynchronous();
+    if (removed[0]) {
+      statistics.recordRemovals(1L);
+      statistics.recordHits(1L);
+    } else {
+      statistics.recordMisses(1L);
+    }
     return removed[0];
   }
 
@@ -334,6 +361,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
+    if (value != null) {
+      statistics.recordHits(1L);
+      statistics.recordRemovals(1L);
+    } else {
+      statistics.recordMisses(1L);
+    }
     return copyOf(value);
   }
 
@@ -343,7 +376,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNonNull(oldValue);
     requireNonNull(newValue);
     boolean[] replaced = { false };
+    boolean[] found = { false };
     cache.asMap().computeIfPresent(key, (k, value) -> {
+      found[0] = true;
       if (value.equals(oldValue)) {
         publishToCacheWriter(writer::write, () -> new EntryProxy<K, V>(key, value));
         dispatcher.publishUpdated(this, key, value, copyOf(newValue));
@@ -353,6 +388,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return value;
     });
     dispatcher.awaitSynchronous();
+    if (replaced[0]) {
+      statistics.recordPuts(1L);
+    }
+    if (found[0]) {
+      statistics.recordHits(1L);
+    } else {
+      statistics.recordMisses(1L);
+    }
     return replaced[0];
   }
 
@@ -361,7 +404,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     V oldValue = replaceNoCopyOrAwait(key, value);
     dispatcher.awaitSynchronous();
-    return (oldValue != null);
+    if (oldValue == null) {
+      statistics.recordMisses(1L);
+      return false;
+    }
+    statistics.recordHits(1L);
+    statistics.recordPuts(1L);
+    return true;
   }
 
   @Override
@@ -369,6 +418,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     V oldValue = replaceNoCopyOrAwait(key, value);
     dispatcher.awaitSynchronous();
+    if (oldValue == null) {
+      statistics.recordMisses(1L);
+    } else {
+      statistics.recordHits(1L);
+      statistics.recordPuts(1L);
+    }
     return copyOf(oldValue);
   }
 
@@ -390,10 +445,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void removeAll(Set<? extends K> keys) {
     requireNotClosed();
     CacheWriterException e = deleteAllToCacheWriter(keys);
+    int removed = 0;
     for (K key : keys) {
-      removeNoCopyOrAwait(key);
+      V value = removeNoCopyOrAwait(key);
+      if (value != null) {
+        removed++;
+      }
     }
     dispatcher.awaitSynchronous();
+    statistics.recordRemovals(removed);
     if (e != null) {
       throw e;
     }
@@ -442,20 +502,25 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         result[0] = entryProcessor.process(entry, arguments);
         if (value == null) {
           if (entry.exists()) {
+            statistics.recordPuts(1L);
             publishToCacheWriter(writer::write, () -> entry);
             dispatcher.publishCreated(this, key, entry.getValue());
           } else if (!entry.wasCreated()) {
             publishToCacheWriter(writer::delete, () -> key);
             dispatcher.publishRemoved(this, key, value);
           }
+          statistics.recordMisses(1L);
         } else {
           if (!entry.exists()) {
             publishToCacheWriter(writer::delete, () -> key);
             dispatcher.publishRemoved(this, key, value);
+            statistics.recordRemovals(1L);
           } else if (!entry.getValue().equals(value)) {
+            statistics.recordPuts(1L);
             publishToCacheWriter(writer::write, () -> entry);
             dispatcher.publishUpdated(this, key, value, entry.getValue());
           }
+          statistics.recordHits(1L);
         }
         return entry.getValue();
       } catch (EntryProcessorException e) {
@@ -503,8 +568,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (isClosed()) {
       return;
     }
-    synchronized (cache) {
+    synchronized (configuration) {
       if (!isClosed()) {
+        enableManagement(false);
+        enableStatistics(false);
         cacheManager.destroyCache(name);
         closed = true;
       }
@@ -571,6 +638,34 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       }
     };
   }
+
+  void enableManagement(boolean enabled) {
+    requireNotClosed();
+
+    synchronized (configuration) {
+      if (enabled) {
+        JmxRegistration.registerMXBean(this, cacheMXBean, MBeanType.Configuration);
+      } else {
+        JmxRegistration.unregisterMXBean(this, MBeanType.Configuration);
+      }
+      configuration.setManagementEnabled(enabled);
+    }
+  }
+
+  void enableStatistics(boolean enabled) {
+    requireNotClosed();
+
+    synchronized (configuration) {
+      if (enabled) {
+        JmxRegistration.registerMXBean(this, statistics, MBeanType.Statistics);
+      } else {
+        JmxRegistration.unregisterMXBean(this, MBeanType.Statistics);
+      }
+      statistics.enable(enabled);
+      configuration.setStatisticsEnabled(enabled);
+    }
+  }
+
 
   /** Checks that the cache is not closed. */
   protected final void requireNotClosed() {

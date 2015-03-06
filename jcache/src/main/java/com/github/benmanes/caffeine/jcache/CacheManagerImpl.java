@@ -39,7 +39,6 @@ import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
 import com.github.benmanes.caffeine.jcache.integration.JCacheRemovalListener;
-import com.github.benmanes.caffeine.jcache.management.JmxRegistration;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -182,7 +181,6 @@ public final class CacheManagerImpl implements CacheManager {
       return null;
     }
 
-    @SuppressWarnings("unchecked")
     Configuration<?, ?> configuration = cache.getConfiguration();
     if (!Object.class.equals(configuration.getKeyType()) ||
         !Object.class.equals(configuration.getValueType())) {
@@ -222,49 +220,34 @@ public final class CacheManagerImpl implements CacheManager {
 
   @Override
   public void destroyCache(String cacheName) {
-    requireNonNull(cacheName);
     requireNotClosed();
 
-    CacheProxy<?, ?> cache = caches.remove(cacheName);
+    Cache<?, ?> cache = caches.remove(cacheName);
     if (cache != null) {
       cache.close();
-      JmxRegistration.unregisterCacheMXBean(cache);
-      JmxRegistration.unregisterStatisticsMXBean(cache);
     }
   }
 
   @Override
   public void enableManagement(String cacheName, boolean enabled) {
-    requireNonNull(cacheName);
     requireNotClosed();
 
     CacheProxy<?, ?> cache = caches.get(cacheName);
     if (cache == null) {
       return;
     }
-    if (enabled) {
-      JmxRegistration.registerCacheMXBean(cache);
-    } else {
-      JmxRegistration.unregisterCacheMXBean(cache);
-    }
-    cache.getConfiguration().setManagementEnabled(enabled);
+    cache.enableManagement(enabled);
   }
 
   @Override
   public void enableStatistics(String cacheName, boolean enabled) {
-    requireNonNull(cacheName);
     requireNotClosed();
 
     CacheProxy<?, ?> cache = caches.get(cacheName);
     if (cache == null) {
       return;
     }
-    if (enabled) {
-      JmxRegistration.registerStatisticsMXBean(cache);
-    } else {
-      JmxRegistration.unregisterStatisticsMXBean(cache);
-    }
-    cache.getConfiguration().setStatisticsEnabled(enabled);
+    cache.enableStatistics(enabled);
   }
 
   @Override

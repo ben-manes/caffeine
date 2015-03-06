@@ -28,7 +28,13 @@ import javax.cache.integration.CacheWriter;
 public enum DisabledCacheWriter implements CacheWriter<Object, Object> {
   INSTANCE;
 
-  /** @return a cache writer that performs no operation */
+  /**
+   * Returns a disabled cache writer.
+   *
+   * @param <K> the type of key
+   * @param <V> the type of value
+   * @return a cache writer that performs no operation
+   */
   @SuppressWarnings("unchecked")
   public static <K, V> CacheWriter<K, V> get() {
     return (CacheWriter<K, V>) INSTANCE;

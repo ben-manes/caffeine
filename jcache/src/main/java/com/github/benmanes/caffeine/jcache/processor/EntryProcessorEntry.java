@@ -65,7 +65,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
     wasCreated = true;
   }
 
-  /** If the processor created an entry, which may have been removed by the end of processing. */
+  /** @return if the processor created an entry, which may have been removed prior to completion. */
   public boolean wasCreated() {
     return wasCreated;
   }
