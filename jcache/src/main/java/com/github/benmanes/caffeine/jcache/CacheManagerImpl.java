@@ -36,6 +36,7 @@ import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
 import com.github.benmanes.caffeine.jcache.integration.JCacheRemovalListener;
@@ -53,17 +54,22 @@ public final class CacheManagerImpl implements CacheManager {
   private final Map<String, CacheProxy<?, ?>> caches;
   private final CachingProvider cacheProvider;
   private final Properties properties;
-  private final Config preconfigured;
+  private final Config rootConfig;
   private final URI uri;
 
   private volatile boolean closed;
 
   public CacheManagerImpl(CachingProvider cacheProvider, URI uri, ClassLoader classLoader,
       Properties properties) {
+    this(cacheProvider, uri, classLoader, properties, ConfigFactory.load());
+  }
+
+  public CacheManagerImpl(CachingProvider cacheProvider, URI uri, ClassLoader classLoader,
+      Properties properties, Config rootConfig) {
     this.classLoaderReference = new WeakReference<>(requireNonNull(classLoader));
-    this.preconfigured = ConfigFactory.load().getConfig("caffeine.jcache");
     this.cacheProvider = requireNonNull(cacheProvider);
     this.properties = requireNonNull(properties);
+    this.rootConfig = requireNonNull(rootConfig);
     this.caches = new ConcurrentHashMap<>();
     this.uri = requireNonNull(uri);
   }
@@ -201,10 +207,11 @@ public final class CacheManagerImpl implements CacheManager {
     CacheProxy<?, ?> cache = caches.get(cacheName);
     if (cache == null) {
       try {
-        if (preconfigured.hasPath(cacheName)) {
-          CaffeineConfiguration<K, V> configuration = CaffeineConfiguration.from(
-              preconfigured.getConfig(cacheName).withFallback(preconfigured));
-          cache = caches.computeIfAbsent(cacheName, name -> newCache(cacheName, configuration));
+        Optional<CaffeineConfiguration<K, V>> configuration =
+            TypesafeConfigurator.from(rootConfig, cacheName);
+        if (configuration.isPresent()) {
+          cache = caches.computeIfAbsent(cacheName, name ->
+              newCache(cacheName, configuration.get()));
         }
       } catch (ConfigException.BadPath e) {}
     }
@@ -293,8 +300,7 @@ public final class CacheManagerImpl implements CacheManager {
       return new CaffeineConfiguration<K, V>((CaffeineConfiguration<K, V>) configuration);
     }
 
-    CaffeineConfiguration<K, V> defaults = CaffeineConfiguration.from(
-        preconfigured.withFallback(preconfigured));
+    CaffeineConfiguration<K, V> defaults = TypesafeConfigurator.defaults(rootConfig);
     if (configuration instanceof CompleteConfiguration<?, ?>) {
       CaffeineConfiguration<K, V> config = new CaffeineConfiguration<>(
           (CompleteConfiguration<K, V>) configuration);

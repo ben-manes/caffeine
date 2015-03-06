@@ -54,9 +54,9 @@ public final class Synthetic {
             hotspot.hotOpnFraction(), hotspot.hotsetFraction(), items);
       case "zipfian":
         return zipfian(items);
-      case "scrambledzipfian":
+      case "scrambled-zipfian":
         return scrambledZipfian(items);
-      case "skewedZipfianLatest":
+      case "skewed-zipfian-latest":
         return skewedZipfianLatest(items);
       case "uniform":
         Uniform uniform = settings.synthetic().uniform();

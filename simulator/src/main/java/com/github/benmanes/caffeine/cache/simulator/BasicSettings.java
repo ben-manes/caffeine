@@ -45,7 +45,7 @@ public class BasicSettings {
   }
 
   public int maximumSize() {
-    return config().getInt("maximumSize");
+    return config().getInt("maximum-size");
   }
 
   public boolean isFile() {
@@ -112,24 +112,24 @@ public class BasicSettings {
     }
     final class Hotspot {
       public int lowerBound() {
-        return config().getInt("synthetic.hotspot.lowerBound");
+        return config().getInt("synthetic.hotspot.lower-bound");
       }
       public int upperBound() {
-        return config().getInt("synthetic.hotspot.upperBound");
+        return config().getInt("synthetic.hotspot.upper-bound");
       }
       public double hotsetFraction() {
-        return config().getDouble("synthetic.hotspot.hotsetFraction");
+        return config().getDouble("synthetic.hotspot.hotset-fraction");
       }
       public double hotOpnFraction() {
-        return config().getDouble("synthetic.hotspot.hotOpnFraction");
+        return config().getDouble("synthetic.hotspot.hot-opn-fraction");
       }
     }
     final class Uniform {
       public int lowerBound() {
-        return config().getInt("synthetic.uniform.lowerBound");
+        return config().getInt("synthetic.uniform.lower-bound");
       }
       public int upperBound() {
-        return config().getInt("synthetic.uniform.upperBound");
+        return config().getInt("synthetic.uniform.upper-bound");
       }
     }
   }
