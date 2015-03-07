@@ -24,6 +24,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 
 import com.github.benmanes.caffeine.jcache.CacheProxy;
+import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 
 /**
@@ -32,7 +33,7 @@ import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JCacheLoaderAdapter<K, V>
-    implements com.github.benmanes.caffeine.cache.CacheLoader<K, V> {
+    implements com.github.benmanes.caffeine.cache.CacheLoader<K, Expirable<V>> {
   private final EventDispatcher<K, V> dispatcher;
   private final CacheLoader<K, V> delegate;
   private CacheProxy<K, V> cache;
@@ -52,11 +53,11 @@ public final class JCacheLoaderAdapter<K, V>
   }
 
   @Override
-  public V load(K key) {
+  public Expirable<V> load(K key) {
     try {
       V value = delegate.load(key);
       dispatcher.publishCreated(cache, key, value);
-      return value;
+      return new Expirable<>(value);
     } catch (CacheLoaderException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -65,13 +66,14 @@ public final class JCacheLoaderAdapter<K, V>
   }
 
   @Override
-  public Map<K, V> loadAll(Iterable<? extends K> keys) {
+  public Map<K, Expirable<V>> loadAll(Iterable<? extends K> keys) {
     try {
-      Map<K, V> result = delegate.loadAll(keys).entrySet().stream()
+      Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
           .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
-          .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
-      for (Map.Entry<K, V> entry : result.entrySet()) {
-        dispatcher.publishCreated(cache, entry.getKey(), entry.getValue());
+          .collect(Collectors.toMap(entry -> entry.getKey(),
+              entry -> new Expirable<>(entry.getValue())));
+      for (Map.Entry<K, Expirable<V>> entry : result.entrySet()) {
+        dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
       }
       return result;
     } catch (CacheLoaderException e) {

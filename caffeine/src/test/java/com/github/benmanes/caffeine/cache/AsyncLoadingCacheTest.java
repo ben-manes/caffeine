@@ -26,7 +26,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Collections;
@@ -143,7 +145,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isDone(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.synchronous().asMap(), not(hasKey(key)));
   }
 
   @Test(dataProvider = "caches")

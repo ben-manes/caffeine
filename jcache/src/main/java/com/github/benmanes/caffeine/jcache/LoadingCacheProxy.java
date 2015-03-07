@@ -29,6 +29,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CompletionListener;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 
@@ -38,12 +39,12 @@ import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
-  private final LoadingCache<K, V> cache;
+  private final LoadingCache<K, Expirable<V>> cache;
 
   LoadingCacheProxy(String name, CacheManager cacheManager,
-      CaffeineConfiguration<K, V> configuration, LoadingCache<K, V> cache,
-      EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader) {
-    super(name, cacheManager, configuration, cache, dispatcher, Optional.of(cacheLoader));
+      CaffeineConfiguration<K, V> configuration, LoadingCache<K, Expirable<V>> cache,
+      EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader, Ticker ticker) {
+    super(name, cacheManager, configuration, cache, dispatcher, Optional.of(cacheLoader), ticker);
     this.cache = cache;
   }
 
@@ -51,7 +52,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public V get(K key) {
     requireNotClosed();
     try {
-      V value = copyOf(cache.get(key));
+      V value = copyValue(cache.get(key));
       dispatcher().awaitSynchronous();
       return value;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
@@ -65,7 +66,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public Map<K, V> getAll(Set<? extends K> keys) {
     requireNotClosed();
     try {
-      Map<K, V> result = copyOf(cache.getAll(keys));
+      Map<K, V> result = copyMap(cache.getAll(keys));
       dispatcher().awaitSynchronous();
       return result;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {

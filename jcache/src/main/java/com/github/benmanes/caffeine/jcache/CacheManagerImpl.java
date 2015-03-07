@@ -35,6 +35,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
@@ -131,12 +132,12 @@ public final class CacheManagerImpl implements CacheManager {
     CacheProxy<K, V> cache;
     if (config.isReadThrough() && (cacheLoader != null)) {
       JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(cacheLoader, dispatcher);
-      cache = new LoadingCacheProxy<K, V>(cacheName, this,
-          config, builder.build(adapter), dispatcher, cacheLoader);
+      cache = new LoadingCacheProxy<K, V>(cacheName, this, config,
+          builder.build(adapter), dispatcher, cacheLoader, Ticker.systemTicker());
       adapter.setCache(cache);
     } else {
-      cache = new CacheProxy<K, V>(cacheName, this, config,
-          builder.build(), dispatcher, Optional.ofNullable(cacheLoader));
+      cache = new CacheProxy<K, V>(cacheName, this, config, builder.build(),
+          dispatcher, Optional.ofNullable(cacheLoader), Ticker.systemTicker());
     }
 
     if (removalListener.isPresent()) {

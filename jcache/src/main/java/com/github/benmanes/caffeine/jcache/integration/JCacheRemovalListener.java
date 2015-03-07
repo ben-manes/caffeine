@@ -22,6 +22,7 @@ import javax.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
+import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 
 /**
@@ -29,7 +30,7 @@ import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class JCacheRemovalListener<K, V> implements RemovalListener<K, V> {
+public final class JCacheRemovalListener<K, V> implements RemovalListener<K, Expirable<V>> {
   private final EventDispatcher<K, V> dispatcher;
 
   private Cache<K, V> cache;
@@ -48,9 +49,9 @@ public final class JCacheRemovalListener<K, V> implements RemovalListener<K, V> 
   }
 
   @Override
-  public void onRemoval(RemovalNotification<K, V> notification) {
+  public void onRemoval(RemovalNotification<K, Expirable<V>> notification) {
     if (notification.getCause() == RemovalCause.SIZE) {
-      dispatcher.publishRemoved(cache, notification.getKey(), notification.getValue());
+      dispatcher.publishRemoved(cache, notification.getKey(), notification.getValue().get());
       dispatcher.ignoreSynchronous();
     }
   }

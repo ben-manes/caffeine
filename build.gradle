@@ -92,7 +92,7 @@ repositories {
 
 // Only report code coverage for projects that are distrubuted
 def publishedProjects = subprojects.findAll {
-  !it.path.startsWith(':simulator') && (it.path != ':tracing') && !it.path.startsWith(':jcache')
+  !it.path.startsWith(':simulator') && (it.path != ':tracing')
 }
 
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
