@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -243,6 +245,7 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     Node<E> first = null;
     Node<E> last = null;
     for (E e : c) {
+      requireNonNull(e);
       if (first == null) {
         first = new Node<E>(e);
         last = first;
