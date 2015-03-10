@@ -127,7 +127,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    * @param count the number of writes to record
    */
   public void recordPuts(@Nonnegative long count) {
-    if (enabled) {
+    if (enabled && (count != 0)) {
       puts.add(count);
     }
   }
@@ -151,6 +151,17 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
   @Override
   public long getCacheEvictions() {
     return evictions.sum();
+  }
+
+  /**
+   * Records cache evictions.
+   *
+   * @param count the number of evictions to record
+   */
+  public void recordEvictions(@Nonnegative long count) {
+    if (enabled) {
+      evictions.add(count);
+    }
   }
 
   @Override

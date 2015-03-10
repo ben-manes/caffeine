@@ -31,6 +31,7 @@ import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
@@ -130,14 +131,17 @@ public final class CacheManagerImpl implements CacheManager {
     }
 
     CacheProxy<K, V> cache;
+    Ticker ticker = Ticker.systemTicker();
+    ExpiryPolicy expiry = config.getExpiryPolicyFactory().create();
     if (config.isReadThrough() && (cacheLoader != null)) {
-      JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(cacheLoader, dispatcher);
+      JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
+          cacheLoader, dispatcher, expiry, ticker);
       cache = new LoadingCacheProxy<K, V>(cacheName, this, config,
-          builder.build(adapter), dispatcher, cacheLoader, Ticker.systemTicker());
+          builder.build(adapter), dispatcher, cacheLoader, expiry, Ticker.systemTicker());
       adapter.setCache(cache);
     } else {
       cache = new CacheProxy<K, V>(cacheName, this, config, builder.build(),
-          dispatcher, Optional.ofNullable(cacheLoader), Ticker.systemTicker());
+          dispatcher, Optional.ofNullable(cacheLoader), expiry, ticker);
     }
 
     if (removalListener.isPresent()) {

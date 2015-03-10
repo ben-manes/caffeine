@@ -25,6 +25,7 @@ import java.util.concurrent.ForkJoinPool;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
+import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CompletionListener;
 
@@ -43,8 +44,10 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   LoadingCacheProxy(String name, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, Expirable<V>> cache,
-      EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader, Ticker ticker) {
-    super(name, cacheManager, configuration, cache, dispatcher, Optional.of(cacheLoader), ticker);
+      EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,
+      ExpiryPolicy expiry, Ticker ticker) {
+    super(name, cacheManager, configuration, cache, dispatcher,
+        Optional.of(cacheLoader), expiry, ticker);
     this.cache = cache;
   }
 
@@ -52,13 +55,29 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public V get(K key) {
     requireNotClosed();
     try {
-      V value = copyValue(cache.get(key));
-      dispatcher().awaitSynchronous();
-      return value;
+      Expirable<V> expirable = cache.getIfPresent(key);
+      if ((expirable == null) || expirable.hasExpired(currentTimeMillis())) {
+        if (cache.asMap().remove(key, expirable)) {
+          dispatcher().publishExpired(this, key, expirable.get());
+          statistics().recordEvictions(1);
+        }
+        expirable = null;
+      }
+
+      if (expirable == null) {
+        expirable = cache.get(key);
+      }
+      if (expirable != null) {
+        setExpirationTime(expirable, currentTimeMillis(), expiry()::getExpiryForAccess);
+        return copyValue(expirable);
+      }
+      return null;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;
     } catch (RuntimeException e) {
       throw new CacheException(e);
+    } finally {
+      dispatcher().awaitSynchronous();
     }
   }
 
@@ -87,9 +106,10 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     ForkJoinPool.commonPool().execute(() -> {
       try {
         if (replaceExistingValues) {
+          int[] ignored = { 0 };
           Map<K, V> loaded = cacheLoader().get().loadAll(keys);
           for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
-            putNoCopyOrAwait(entry.getKey(), entry.getValue(), false);
+            putNoCopyOrAwait(entry.getKey(), entry.getValue(), false, ignored);
           }
           completionListener.onCompletion();
         } else {

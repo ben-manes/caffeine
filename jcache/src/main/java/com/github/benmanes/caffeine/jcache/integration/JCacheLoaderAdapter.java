@@ -20,9 +20,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.CacheProxy;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
@@ -36,11 +38,17 @@ public final class JCacheLoaderAdapter<K, V>
     implements com.github.benmanes.caffeine.cache.CacheLoader<K, Expirable<V>> {
   private final EventDispatcher<K, V> dispatcher;
   private final CacheLoader<K, V> delegate;
+  private final ExpiryPolicy expiry;
+  private final Ticker ticker;
+
   private CacheProxy<K, V> cache;
 
-  public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher) {
+  public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher,
+      ExpiryPolicy expiry, Ticker ticker) {
     this.dispatcher = requireNonNull(dispatcher);
     this.delegate = requireNonNull(delegate);
+    this.expiry = requireNonNull(expiry);
+    this.ticker = requireNonNull(ticker);
   }
 
   /**
@@ -57,7 +65,7 @@ public final class JCacheLoaderAdapter<K, V>
     try {
       V value = delegate.load(key);
       dispatcher.publishCreated(cache, key, value);
-      return new Expirable<>(value);
+      return new Expirable<>(value, expireTimeMS());
     } catch (CacheLoaderException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -68,10 +76,11 @@ public final class JCacheLoaderAdapter<K, V>
   @Override
   public Map<K, Expirable<V>> loadAll(Iterable<? extends K> keys) {
     try {
+      long expireTimeMS = expireTimeMS();
       Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
           .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
           .collect(Collectors.toMap(entry -> entry.getKey(),
-              entry -> new Expirable<>(entry.getValue())));
+              entry -> new Expirable<>(entry.getValue(), expireTimeMS)));
       for (Map.Entry<K, Expirable<V>> entry : result.entrySet()) {
         dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
       }
@@ -80,6 +89,14 @@ public final class JCacheLoaderAdapter<K, V>
       throw e;
     } catch (RuntimeException e) {
       throw new CacheLoaderException(e);
+    }
+  }
+
+  private long expireTimeMS() {
+    try {
+      return expiry.getExpiryForCreation().getAdjustedTime(ticker.read() >> 10);
+    } catch (Exception e) {
+      return Long.MAX_VALUE;
     }
   }
 }

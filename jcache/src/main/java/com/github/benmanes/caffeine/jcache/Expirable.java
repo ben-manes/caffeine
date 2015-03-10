@@ -18,35 +18,30 @@ package com.github.benmanes.caffeine.jcache;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A value with expiration timestamps.
+ * A value with an expiration timestamp.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Expirable<V> {
   private final V value;
 
-  private volatile long expireAccessTimeNS;
-  private volatile long expireUpdateTimeNS;
-  private volatile long expireCreationTimeNS;
+  private volatile long expireTimeMS;
 
-  public Expirable(V value) {
+  public Expirable(V value, long expireTimeMS) {
     this.value = requireNonNull(value);
+    this.expireTimeMS = expireTimeMS;
   }
 
   public V get() {
     return value;
   }
 
-  public boolean hasExpiredOnAccess(long now) {
-    return (expireAccessTimeNS <= now);
+  public void setExpireTimeMS(long expireTimeMS) {
+    this.expireTimeMS = expireTimeMS;
   }
 
-  public boolean hasExpiredOnUpdate(long now) {
-    return (expireUpdateTimeNS <= now);
-  }
-
-  public boolean hasExpiredOnCreation(long now) {
-    return (expireCreationTimeNS <= now);
+  public boolean hasExpired(long currentTimeMS) {
+    return (expireTimeMS <= currentTimeMS);
   }
 
   @Override
