@@ -17,13 +17,16 @@ package com.github.benmanes.caffeine.jcache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
 
 import javax.cache.Cache;
-import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -42,7 +45,7 @@ import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, Expirable<V>> cache;
 
-  LoadingCacheProxy(String name, CacheManager cacheManager,
+  public LoadingCacheProxy(String name, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,
       ExpiryPolicy expiry, Ticker ticker) {
@@ -53,13 +56,12 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   @Override
   public V get(K key) {
-    requireNotClosed();
-    try {
+    return doSafely(() -> {
       Expirable<V> expirable = cache.getIfPresent(key);
       if ((expirable == null) || expirable.hasExpired(currentTimeMillis())) {
         if (cache.asMap().remove(key, expirable)) {
-          dispatcher().publishExpired(this, key, expirable.get());
-          statistics().recordEvictions(1);
+          dispatcher.publishExpired(this, key, expirable.get());
+          statistics.recordEvictions(1);
         }
         expirable = null;
       }
@@ -68,31 +70,45 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         expirable = cache.get(key);
       }
       if (expirable != null) {
-        setExpirationTime(expirable, currentTimeMillis(), expiry()::getExpiryForAccess);
+        setExpirationTime(expirable, currentTimeMillis(), expiry::getExpiryForAccess);
         return copyValue(expirable);
       }
       return null;
-    } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
-      throw e;
-    } catch (RuntimeException e) {
-      throw new CacheException(e);
-    } finally {
-      dispatcher().awaitSynchronous();
-    }
+    });
   }
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
-    requireNotClosed();
-    try {
-      Map<K, V> result = copyMap(cache.getAll(keys));
-      dispatcher().awaitSynchronous();
-      return result;
-    } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
-      throw e;
-    } catch (RuntimeException e) {
-      throw new CacheException(e);
+    return doSafely(() -> {
+      Map<K, Expirable<V>> result = getAndFilterExpiredEntries(keys);
+      if (result.size() != keys.size()) {
+        List<K> keysToLoad = keys.stream()
+            .filter(key -> !result.containsKey(key))
+            .collect(Collectors.<K>toList());
+        result.putAll(cache.getAll(keysToLoad));
+      }
+      return copyMap(result);
+    });
+  }
+
+  /** Returns all of the mappings present, expiring as required. */
+  private Map<K, Expirable<V>> getAndFilterExpiredEntries(Set<? extends K> keys) {
+    Map<K, Expirable<V>> result = new HashMap<>(cache.getAllPresent(keys));
+
+    int expired = 0;
+    long now = currentTimeMillis();
+    for (Iterator<Map.Entry<K, Expirable<V>>> i = result.entrySet().iterator(); i.hasNext();) {
+      Map.Entry<K, Expirable<V>> entry = i.next();
+      if (entry.getValue().hasExpired(now)) {
+        if (cache.asMap().remove(entry.getKey(), entry.getValue())) {
+          dispatcher.publishExpired(this, entry.getKey(), entry.getValue().get());
+          expired++;
+        }
+        i.remove();
+      }
     }
+    statistics.recordEvictions(expired);
+    return result;
   }
 
   @Override
@@ -107,7 +123,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       try {
         if (replaceExistingValues) {
           int[] ignored = { 0 };
-          Map<K, V> loaded = cacheLoader().get().loadAll(keys);
+          Map<K, V> loaded = cacheLoader.get().loadAll(keys);
           for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
             putNoCopyOrAwait(entry.getKey(), entry.getValue(), false, ignored);
           }
@@ -119,7 +135,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       } catch (Exception e) {
         completionListener.onException(e);
       } finally {
-        dispatcher().ignoreSynchronous();
+        dispatcher.ignoreSynchronous();
       }
     });
   }

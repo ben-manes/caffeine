@@ -38,4 +38,18 @@ public interface CopyStrategy {
    */
   @Nonnull
   <T> T copy(@Nonnull T object, @Nonnull ClassLoader classLoader);
+
+  /** @return a copy strategy that performs an identity function, for use by store-by-reference */
+  static CopyStrategy identity() {
+    return ReferenceCopyStrategy.INSTANCE;
+  }
+}
+
+enum ReferenceCopyStrategy implements CopyStrategy {
+  INSTANCE;
+
+  @Override
+  public <T> T copy(@Nonnull T object, @Nonnull ClassLoader classLoader) {
+    return object;
+  }
 }
