@@ -30,13 +30,17 @@ import javax.cache.processor.MutableEntry;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
+  public enum Action { NONE, CREATED, READ, UPDATED, DELETED }
+
   private K key;
   private V value;
-  private boolean wasCreated;
+  private Action action;
+  private boolean wasMutated;
 
-  public EntryProcessorEntry(K key, V value, boolean exists) {
+  public EntryProcessorEntry(K key, V value, boolean exists, boolean loaded) {
     this.key = key;
     this.value = value;
+    this.action = loaded ? Action.CREATED : Action.NONE;
   }
 
   @Override
@@ -51,23 +55,38 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
 
   @Override
   public V getValue() {
+    if (exists() && (action == Action.NONE)) {
+      action = Action.READ;
+    }
     return value;
   }
 
   @Override
   public void remove() {
+    if (exists()) {
+      action = Action.DELETED;
+    }
     value = null;
   }
 
   @Override
   public void setValue(V value) {
-    this.value = requireNonNull(value);
-    wasCreated = true;
+    requireNonNull(value);
+    if (action != Action.CREATED) {
+      action = exists() ? Action.UPDATED : Action.CREATED;
+    }
+    this.value = value;
+    wasMutated = true;
+  }
+
+  /** @return the dominant action performed by the processor on the entry. */
+  public Action getAction() {
+    return action;
   }
 
   /** @return if the processor created an entry, which may have been removed prior to completion. */
-  public boolean wasCreated() {
-    return wasCreated;
+  public boolean wasMutated() {
+    return wasMutated;
   }
 
   @Override

@@ -76,11 +76,10 @@ public final class JCacheLoaderAdapter<K, V>
   @Override
   public Map<K, Expirable<V>> loadAll(Iterable<? extends K> keys) {
     try {
-      long expireTimeMS = expireTimeMS();
       Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
           .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
           .collect(Collectors.toMap(entry -> entry.getKey(),
-              entry -> new Expirable<>(entry.getValue(), expireTimeMS)));
+              entry -> new Expirable<>(entry.getValue(), expireTimeMS())));
       for (Map.Entry<K, Expirable<V>> entry : result.entrySet()) {
         dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
       }

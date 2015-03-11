@@ -66,7 +66,6 @@ final class MapTestFactory {
             // Suppressed due to entrySet() view supporting additions, while the keySet() and
             // values() views do not. The Guava tests are unable to understand this rational.
             CollectionAddTester.class.getMethod("testAdd_unsupportedNotPresent"),
-            CollectionAddTester.class.getMethod("testAdd_supportedNotPresent"),
             CollectionAddAllTester.class.getMethod("testAddAll_unsupportedNonePresent"),
             CollectionAddAllTester.class.getMethod("testAddAll_unsupportedSomePresent"),
 

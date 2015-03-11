@@ -80,8 +80,8 @@ gradlew simulate -Dcaffeine.simulator.source=synthetic -Dcaffeine.simulator.synt
 #### JCache (JSR-107)
 JCache is a standardized caching API that is Java 6 compatible and introduced in JEE 8. The intent
 of this JSR was to ease adoption of commercial distributed caching products and therefore makes many
-design decisions that are beneficial for vendors but may be poorly thought out for users. While we
-do not recommend or encourage adopting JCache for local in-memory caches, an implementation is
+design decisions that are beneficial for vendors but poorly thought out for users. While **we do
+not recommend or encourage adopting JCache** for local in-memory caches, an implementation is
 provided. The [reference implementation](https://github.com/jsr107/RI) provides integration with
 Guice, Spring, and CDI containers that delegates to the JCache provider.
 
@@ -113,8 +113,6 @@ Static code analysis tasks are not enabled by default and can be run using
 ```gradle
 gradlew clean build -Dcheckstyle -Dfindbugs -Dpmd
 ```
-
-#### Java Object Layout
 
 #### Parameterized testing
 Cache unit tests can opt into being run against all cache configurations that meet a specification

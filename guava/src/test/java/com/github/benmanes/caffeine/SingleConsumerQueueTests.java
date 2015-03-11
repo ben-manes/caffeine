@@ -40,7 +40,7 @@ public final class SingleConsumerQueueTests extends TestCase {
               return new SingleConsumerQueue<>(MinimalCollection.of(elements));
             }
           })
-        .named("SingleConsumerQueue")
+        .named(SingleConsumerQueue.class.getSimpleName())
         .withFeatures(
             CollectionFeature.GENERAL_PURPOSE,
             CollectionFeature.KNOWN_ORDER,

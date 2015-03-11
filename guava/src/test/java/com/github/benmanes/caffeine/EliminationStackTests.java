@@ -40,7 +40,7 @@ public final class EliminationStackTests extends TestCase {
               return new EliminationStack<>(MinimalCollection.of(elements)).asLifoQueue();
             }
           })
-        .named("EliminationStack")
+        .named(EliminationStack.class.getSimpleName())
         .withFeatures(
             CollectionFeature.GENERAL_PURPOSE,
             CollectionSize.ANY)

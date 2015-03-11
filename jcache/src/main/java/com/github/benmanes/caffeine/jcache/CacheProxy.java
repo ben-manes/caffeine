@@ -58,6 +58,7 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.github.benmanes.caffeine.jcache.management.JmxRegistration;
 import com.github.benmanes.caffeine.jcache.management.JmxRegistration.MBeanType;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
+import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry.Action;
 
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine cache.
@@ -621,7 +622,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         value = null;
       } else {
         value = expirable.get();
-        setExpirationTime(expirable, now, expiry::getExpiryForAccess);
       }
       boolean loaded = false;
       if ((value == null) && cacheLoader.isPresent() && configuration.isReadThrough()) {
@@ -630,7 +630,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           loaded = true;
         } catch (RuntimeException ignored) {}
       }
-      EntryProcessorEntry<K, V> entry = new EntryProcessorEntry<>(key, value, (expirable != null));
+      EntryProcessorEntry<K, V> entry = new EntryProcessorEntry<>(
+          key, value, (expirable != null), loaded);
       try {
         result[0] = entryProcessor.process(entry, arguments);
         long expireTimeMS = loaded ? expireTimeMS(expiry::getExpiryForCreation) : Long.MAX_VALUE;
@@ -640,7 +641,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
             publishToCacheWriter(writer::write, () -> entry);
             dispatcher.publishCreated(this, key, entry.getValue());
             expireTimeMS = expireTimeMS(expiry::getExpiryForCreation);
-          } else if (!entry.wasCreated()) {
+          } else if (!entry.wasMutated()) {
             publishToCacheWriter(writer::delete, () -> key);
             dispatcher.publishRemoved(this, key, value);
           }
@@ -653,11 +654,18 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           } else if (!entry.getValue().equals(value)) {
             statistics.recordPuts(1L);
             publishToCacheWriter(writer::write, () -> entry);
-            expireTimeMS = expireTimeMS(expiry::getExpiryForUpdate);
             dispatcher.publishUpdated(this, key, value, entry.getValue());
           }
           statistics.recordHits(1L);
         }
+        if (entry.getAction() == Action.UPDATED) {
+          expireTimeMS = expireTimeMS(expiry::getExpiryForUpdate);
+        } else if (entry.getAction() == Action.CREATED) {
+          expireTimeMS = expireTimeMS(expiry::getExpiryForCreation);
+        } else if (entry.getAction() == Action.READ) {
+          expireTimeMS = expireTimeMS(expiry::getExpiryForAccess);
+        }
+
         return entry.exists() ? new Expirable<>(entry.getValue(), expireTimeMS) : null;
       } catch (EntryProcessorException e) {
         throw e;

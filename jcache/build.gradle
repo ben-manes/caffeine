@@ -29,7 +29,7 @@ test {
   useTestNG()
 }
 
-task unzipTestKit(group: 'Build', description: 'Unzips the JCache TCK', type: Copy) {
+task unzipTestKit(type: Copy, group: 'Build', description: 'Unzips the JCache TCK') {
   from configurations.tck.collect { zipTree(it) }
   into { "${buildDir}/tck" }
 }
@@ -38,9 +38,8 @@ task testCompatibilityKit(type: Test, group: "Build", description: "Runs the JCa
   dependsOn(unzipTestKit)
 
   useJUnit()
-  ignoreFailures = true
   testClassesDir = file("${buildDir}/tck")
-  
+
   def pkg = 'com.github.benmanes.caffeine.jcache'
   systemProperty 'java.net.preferIPv4Stack', 'true'
   systemProperty 'javax.cache.Cache', "${pkg}.CacheProxy"
