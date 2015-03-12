@@ -1539,6 +1539,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
     K key;
     V value;
+    K removalKey;
     Node<K, V> next;
 
     @Override
@@ -1568,15 +1569,19 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
+      Entry<K, V> entry = new WriteThroughEntry<>(BoundedLocalCache.this, key, value);
+      removalKey = key;
+      value = null;
       next = null;
-      return new WriteThroughEntry<>(BoundedLocalCache.this, key, value);
+      key = null;
+      return entry;
     }
 
     @Override
     public void remove() {
-      Caffeine.requireState(key != null);
-      BoundedLocalCache.this.remove(key);
-      key = null;
+      Caffeine.requireState(removalKey != null);
+      BoundedLocalCache.this.remove(removalKey);
+      removalKey = null;
     }
   }
 

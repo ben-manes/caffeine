@@ -27,7 +27,6 @@ import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.collect.testing.features.MapFeature;
 import com.google.common.collect.testing.testers.CollectionAddAllTester;
 import com.google.common.collect.testing.testers.CollectionAddTester;
-import com.google.common.collect.testing.testers.CollectionIteratorTester;
 
 /**
  * A JUnit test suite factory for the map tests from Guava's testlib.
@@ -65,12 +64,9 @@ final class MapTestFactory {
         .suppressing(
             // Suppressed due to entrySet() view supporting additions, while the keySet() and
             // values() views do not. The Guava tests are unable to understand this rational.
-            CollectionAddTester.class.getMethod("testAdd_unsupportedNotPresent"),
-            CollectionAddAllTester.class.getMethod("testAddAll_unsupportedNonePresent"),
-            CollectionAddAllTester.class.getMethod("testAddAll_unsupportedSomePresent"),
-
-            // FIXME: Not sure what this test does
-            CollectionIteratorTester.class.getMethod("testIterator_unknownOrderRemoveSupported"))
+            CollectionAddTester.getAddUnsupportedNotPresentMethod(),
+            CollectionAddAllTester.getAddAllUnsupportedNonePresentMethod(),
+            CollectionAddAllTester.getAddAllUnsupportedSomePresentMethod())
         .createTestSuite();
   }
 }
