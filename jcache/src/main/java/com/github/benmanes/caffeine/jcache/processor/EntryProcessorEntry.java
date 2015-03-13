@@ -18,8 +18,11 @@ package com.github.benmanes.caffeine.jcache.processor;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
+import java.util.Optional;
 
+import javax.annotation.Nullable;
 import javax.cache.Cache;
+import javax.cache.integration.CacheLoader;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
 
@@ -30,22 +33,22 @@ import javax.cache.processor.MutableEntry;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
-  public enum Action { NONE, CREATED, READ, UPDATED, DELETED }
+  private final K key;
 
-  private K key;
   private V value;
   private Action action;
-  private boolean wasMutated;
+  private Optional<CacheLoader<K, V>> cacheLoader;
 
-  public EntryProcessorEntry(K key, V value, boolean exists, boolean loaded) {
-    this.key = key;
+  public EntryProcessorEntry(K key, @Nullable V value, Optional<CacheLoader<K, V>> cacheLoader) {
+    this.cacheLoader = cacheLoader;
+    this.action = Action.NONE;
     this.value = value;
-    this.action = loaded ? Action.CREATED : Action.NONE;
+    this.key = key;
   }
 
   @Override
   public boolean exists() {
-    return (value != null);
+    return (getValue() != null);
   }
 
   @Override
@@ -55,17 +58,23 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
 
   @Override
   public V getValue() {
-    if (exists() && (action == Action.NONE)) {
+    if (action != Action.NONE) {
+      return value;
+    } else if (value != null) {
       action = Action.READ;
+    } else if (cacheLoader.isPresent()) {
+      value = cacheLoader.get().load(key);
+      cacheLoader = Optional.empty();
+      if (value != null) {
+        action = Action.LOADED;
+      }
     }
     return value;
   }
 
   @Override
   public void remove() {
-    if (exists()) {
-      action = Action.DELETED;
-    }
+    action = (action == Action.CREATED) ? Action.NONE : Action.DELETED;
     value = null;
   }
 
@@ -76,17 +85,11 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
       action = exists() ? Action.UPDATED : Action.CREATED;
     }
     this.value = value;
-    wasMutated = true;
   }
 
   /** @return the dominant action performed by the processor on the entry. */
   public Action getAction() {
     return action;
-  }
-
-  /** @return if the processor created an entry, which may have been removed prior to completion. */
-  public boolean wasMutated() {
-    return wasMutated;
   }
 
   @Override
@@ -106,16 +109,16 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
     }
     Cache.Entry<?, ?> entry = (Cache.Entry<?, ?>) o;
     return Objects.equals(key, entry.getKey())
-        && Objects.equals(value, entry.getValue());
+        && Objects.equals(getValue(), entry.getValue());
   }
 
   @Override
   public int hashCode() {
-    return (key == null ? 0 : key.hashCode()) ^ (value == null ? 0 : value.hashCode());
+    return (key == null ? 0 : key.hashCode()) ^ (getValue() == null ? 0 : value.hashCode());
   }
 
   @Override
   public String toString() {
-    return key + "=" + value;
+    return key + "=" + getValue();
   }
 }

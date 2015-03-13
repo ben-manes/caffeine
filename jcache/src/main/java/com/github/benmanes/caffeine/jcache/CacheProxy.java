@@ -28,6 +28,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -59,7 +60,6 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.github.benmanes.caffeine.jcache.management.JmxRegistration;
 import com.github.benmanes.caffeine.jcache.management.JmxRegistration.MBeanType;
 import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
-import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry.Action;
 
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine cache.
@@ -173,23 +173,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     ForkJoinPool.commonPool().execute(() -> {
       try {
         if (replaceExistingValues) {
-          int[] ignored = { 0 };
-          Map<K, V> loaded = cacheLoader.get().loadAll(keys);
-          for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
-            putNoCopyOrAwait(entry.getKey(), entry.getValue(), false, ignored);
-          }
-          completionListener.onCompletion();
-          return;
-        }
-
-        List<K> keysToLoad = keys.stream()
-            .filter(key -> !cache.asMap().containsKey(key))
-            .collect(Collectors.<K>toList());
-        Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
-        for (Map.Entry<K, V> entry : result.entrySet()) {
-          if ((entry.getKey() != null) && (entry.getValue() != null)) {
-            putIfAbsentNoAwait(entry.getKey(), entry.getValue(), false);
-          }
+          loadAllAndReplaceExisting(keys);
+        } else {
+          loadAllAndKeepExisting(keys);
         }
         completionListener.onCompletion();
       } catch (CacheLoaderException e) {
@@ -200,6 +186,28 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         dispatcher.ignoreSynchronous();
       }
     });
+  }
+
+  /** Performs the bulk load where the existing entries are replace. */
+  private void loadAllAndReplaceExisting(Set<? extends K> keys) {
+    int[] ignored = { 0 };
+    Map<K, V> loaded = cacheLoader.get().loadAll(keys);
+    for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
+      putNoCopyOrAwait(entry.getKey(), entry.getValue(), false, ignored);
+    }
+  }
+
+  /** Performs the bulk load where the existing entries are retained. */
+  private void loadAllAndKeepExisting(Set<? extends K> keys) {
+    List<K> keysToLoad = keys.stream()
+        .filter(key -> !cache.asMap().containsKey(key))
+        .collect(Collectors.<K>toList());
+    Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
+    for (Map.Entry<K, V> entry : result.entrySet()) {
+      if ((entry.getKey() != null) && (entry.getValue() != null)) {
+        putIfAbsentNoAwait(entry.getKey(), entry.getValue(), false);
+      }
+    }
   }
 
   @Override
@@ -227,6 +235,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return copyOf(val);
   }
 
+  /**
+   * Associates the specified value with the specified key in the cache.
+   *
+   * @param key key with which the specified value is to be associated
+   * @param value value to be associated with the specified key
+   * @param publishToWriter if the writer should be notified
+   * @param puts the accumulator for additions and updates
+   * @return the old value
+   */
   protected V putNoCopyOrAwait(K key, V value, boolean publishToWriter, int[] puts) {
     requireNonNull(key);
     requireNonNull(value);
@@ -294,7 +311,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return added;
   }
 
-  private boolean putIfAbsentNoAwait(K key, V value, boolean publishToCacheWriter) {
+  /**
+   * Associates the specified value with the specified key in the cache if there is no existing
+   * mapping.
+   *
+   * @param key key with which the specified value is to be associated
+   * @param value value to be associated with the specified key
+   * @param publishToWriter if the writer should be notified
+   * @return if the mapping was successful
+   */
+  private boolean putIfAbsentNoAwait(K key, V value, boolean publishToWriter) {
     boolean[] absent = { false };
     cache.asMap().compute(copyOf(key), (k, expirable) -> {
       if ((expirable != null) && expirable.hasExpired(ticker.read())) {
@@ -311,7 +337,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (expireTimeMS == 0) {
         return null;
       }
-      if (publishToCacheWriter) {
+      if (publishToWriter) {
         publishToCacheWriter(writer::write, () -> new EntryProxy<K, V>(key, value));
       }
       V copy = copyOf(value);
@@ -336,6 +362,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return false;
   }
 
+  /**
+   * Removes the mapping from the cache without store-by-value copying nor waiting for synchronous
+   * listeners to complete.
+   *
+   * @param key key whose mapping is to be removed from the cache
+   * @return the old value
+   */
   private V removeNoCopyOrAwait(K key) {
     @SuppressWarnings("unchecked")
     V[] removed = (V[]) new Object[1];
@@ -465,6 +498,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     return copyOf(oldValue);
   }
 
+  /**
+   * Replaces the entry for the specified key only if it is currently mapped to some value. The
+   * entry is not store-by-value copied nor does the method wait for synchronous listeners to
+   * complete.
+   *
+   * @param key key with which the specified value is associated
+   * @param value value to be associated with the specified key
+   * @return the old value
+   */
   private V replaceNoCopyOrAwait(K key, V value) {
     requireNonNull(value);
     V copy = copyOf(value);
@@ -537,76 +579,68 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
 
     Object[] result = new Object[1];
-
-    cache.asMap().compute(copyOf(key), (k, expirable) -> {
-      V value;
+    BiFunction<K, Expirable<V>, Expirable<V>> remappingFunction = (k, expirable) -> {
       long now = currentTimeMillis();
+      V value;
       if ((expirable == null) || expirable.hasExpired(now)) {
+        statistics.recordMisses(1L);
         value = null;
       } else {
         value = expirable.get();
+        statistics.recordHits(1L);
       }
-      boolean loaded = false;
-      if ((value == null) && cacheLoader.isPresent() && configuration.isReadThrough()) {
-        try {
-          value = cacheLoader.get().load(key);
-          loaded = true;
-        } catch (RuntimeException ignored) {}
-      }
-      EntryProcessorEntry<K, V> entry = new EntryProcessorEntry<>(
-          key, value, (expirable != null), loaded);
+      EntryProcessorEntry<K, V> entry = new EntryProcessorEntry<>(key, value,
+          configuration.isReadThrough() ? cacheLoader : Optional.empty());
       try {
         result[0] = entryProcessor.process(entry, arguments);
-        long expireTimeMS = postProcess(key, value, entry, loaded);
-        return entry.exists() ? new Expirable<>(entry.getValue(), expireTimeMS) : null;
+        return postProcess(expirable, entry);
       } catch (EntryProcessorException e) {
         throw e;
       } catch (RuntimeException e) {
         throw new EntryProcessorException(e);
       }
-    });
-    dispatcher.awaitSynchronous();
+    };
+    try {
+      cache.asMap().compute(copyOf(key), remappingFunction);
+      dispatcher.awaitSynchronous();
+    } catch (Throwable thr) {
+      dispatcher.ignoreSynchronous();
+      throw thr;
+    }
 
     @SuppressWarnings("unchecked")
     T castedResult = (T) result[0];
     return castedResult;
   }
 
-  /** Returns the expiration time after post-processing the entry. */
-  private long postProcess(K key, V value, EntryProcessorEntry<K, V> entry, boolean loaded) {
-    long expireTimeMS = loaded ? expireTimeMS(expiry::getExpiryForCreation) : Long.MAX_VALUE;
-
-    if (value == null) {
-      if (entry.exists()) {
+  /** Returns the updated expirable value after performing the post processing actions. */
+  private Expirable<V> postProcess(Expirable<V> expirable, EntryProcessorEntry<K, V> entry) {
+    switch (entry.getAction()) {
+      case NONE:
+        return expirable;
+      case READ:
+        expirable.setExpireTimeMS(expireTimeMS(expiry::getExpiryForAccess));
+        return expirable;
+      case CREATED:
+        this.publishToCacheWriter(writer::write, () -> entry);
+        // fall through
+      case LOADED:
+        statistics.recordPuts(1L);
+        dispatcher.publishCreated(this, entry.getKey(), entry.getValue());
+        return new Expirable<>(entry.getValue(), expireTimeMS(expiry::getExpiryForCreation));
+      case UPDATED:
         statistics.recordPuts(1L);
         publishToCacheWriter(writer::write, () -> entry);
-        dispatcher.publishCreated(this, key, entry.getValue());
-        expireTimeMS = expireTimeMS(expiry::getExpiryForCreation);
-      } else if (!entry.wasMutated()) {
-        publishToCacheWriter(writer::delete, () -> key);
-        dispatcher.publishRemoved(this, key, value);
-      }
-      statistics.recordMisses(1L);
-    } else {
-      if (!entry.exists()) {
-        publishToCacheWriter(writer::delete, () -> key);
-        dispatcher.publishRemoved(this, key, value);
+        dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), entry.getValue());
+        return new Expirable<>(entry.getValue(), expireTimeMS(expiry::getExpiryForUpdate));
+      case DELETED:
         statistics.recordRemovals(1L);
-      } else if (!entry.getValue().equals(value)) {
-        statistics.recordPuts(1L);
-        publishToCacheWriter(writer::write, () -> entry);
-        dispatcher.publishUpdated(this, key, value, entry.getValue());
-      }
-      statistics.recordHits(1L);
+        publishToCacheWriter(writer::delete, entry::getKey);
+        dispatcher.publishRemoved(this, entry.getKey(), entry.getValue());
+        return null;
+      default:
+        throw new IllegalStateException("Unknown state: " + entry.getAction());
     }
-    if (entry.getAction() == Action.UPDATED) {
-      expireTimeMS = expireTimeMS(expiry::getExpiryForUpdate);
-    } else if (entry.getAction() == Action.CREATED) {
-      expireTimeMS = expireTimeMS(expiry::getExpiryForCreation);
-    } else if (entry.getAction() == Action.READ) {
-      expireTimeMS = expireTimeMS(expiry::getExpiryForAccess);
-    }
-    return expireTimeMS;
   }
 
   @Override
