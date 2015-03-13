@@ -650,26 +650,16 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       @Override
       public Iterator<V> iterator() {
         return new Iterator<V>() {
-          Iterator<CompletableFuture<V>> iterator = delegate.values().iterator();
-          V cursor;
+          Iterator<Entry<K, V>> iterator = entrySet().iterator();
 
           @Override
           public boolean hasNext() {
-            while ((cursor == null) && iterator.hasNext()) {
-              CompletableFuture<V> future = iterator.next();
-              cursor = Async.getIfReady(future);
-            }
-            return (cursor != null);
+            return iterator.hasNext();
           }
 
           @Override
           public V next() {
-            if (!hasNext()) {
-              throw new NoSuchElementException();
-            }
-            V value = cursor;
-            cursor = null;
-            return value;
+            return iterator.next().getValue();
           }
 
           @Override
@@ -703,11 +693,6 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       }
 
       @Override
-      public boolean add(Entry<K, V> entry) {
-        return (AsMapView.this.putIfAbsent(entry.getKey(), entry.getValue()) == null);
-      }
-
-      @Override
       public boolean remove(Object obj) {
         if (!(obj instanceof Entry<?, ?>)) {
           return false;
@@ -726,6 +711,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
         return new Iterator<Entry<K, V>>() {
           Iterator<Entry<K, CompletableFuture<V>>> iterator = delegate.entrySet().iterator();
           Entry<K, V> cursor;
+          K removalKey;
 
           @Override
           public boolean hasNext() {
@@ -744,6 +730,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
             if (!hasNext()) {
               throw new NoSuchElementException();
             }
+            removalKey = cursor.getKey();
             Entry<K, V> entry = cursor;
             cursor = null;
             return entry;
@@ -751,7 +738,9 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
           @Override
           public void remove() {
-            iterator.remove();
+            Caffeine.requireState(removalKey != null);
+            delegate.remove(removalKey);
+            removalKey = null;
           }
         };
       }

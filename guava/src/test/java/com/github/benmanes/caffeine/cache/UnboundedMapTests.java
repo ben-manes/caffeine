@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
+import junit.framework.TestSuite;
 
 /**
  * Guava testlib map tests for the unbounded {@link Cache#asMap()} view.
@@ -26,6 +27,9 @@ import junit.framework.TestCase;
 public final class UnboundedMapTests extends TestCase {
 
   public static Test suite() throws NoSuchMethodException, SecurityException {
-    return MapTestFactory.suite("UnoundedLocalCache", Caffeine.newBuilder());
+    TestSuite suite = new TestSuite();
+    suite.addTest(MapTestFactory.suite("UnoundedLocalCache", Caffeine.newBuilder(), false));
+    suite.addTest(MapTestFactory.suite("UnoundedLocalAsyncCache", Caffeine.newBuilder(), true));
+    return suite;
   }
 }

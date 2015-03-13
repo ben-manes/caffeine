@@ -1464,14 +1464,14 @@ public final class AsMapTest {
   }
 
   @CheckNoStats
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void entrySet_addIsSupported(Map<Integer, Integer> map, CacheContext context) {
-    assertThat(map.entrySet().add(immutableEntry(1, 2)), is(true));
-    assertThat(map.entrySet().add(immutableEntry(1, 2)), is(false));
-    assertThat(map.entrySet().size(), is(1));
-    assertThat(map.size(), is(1));
+  @CacheSpec(population = Population.EMPTY, removalListener = Listener.DEFAULT)
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void entrySet_addIsNotSupported(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.entrySet().add(immutableEntry(1, 2));
+    } finally {
+      assertThat(map.size(), is(0));
+    }
   }
 
   @CacheSpec

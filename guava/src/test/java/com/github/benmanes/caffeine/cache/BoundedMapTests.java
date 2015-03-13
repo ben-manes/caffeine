@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
+import junit.framework.TestSuite;
 
 /**
  * Guava testlib map tests for the bounded {@link Cache#asMap()} view.
@@ -26,7 +27,11 @@ import junit.framework.TestCase;
 public final class BoundedMapTests extends TestCase {
 
   public static Test suite() throws NoSuchMethodException, SecurityException {
-    return MapTestFactory.suite("BoundedLocalCache",
-        Caffeine.newBuilder().maximumSize(Long.MAX_VALUE));
+    TestSuite suite = new TestSuite();
+    suite.addTest(MapTestFactory.suite("BoundedLocalCache",
+        Caffeine.newBuilder().maximumSize(Long.MAX_VALUE), false));
+    suite.addTest(MapTestFactory.suite("BoundedLocalAsyncCache",
+        Caffeine.newBuilder().maximumSize(Long.MAX_VALUE), true));
+    return suite;
   }
 }

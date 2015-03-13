@@ -611,11 +611,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public boolean add(Entry<K, V> entry) {
-      return (cache.putIfAbsent(entry.getKey(), entry.getValue()) == null);
-    }
-
-    @Override
     public boolean remove(Object obj) {
       if (!(obj instanceof Entry<?, ?>)) {
         return false;

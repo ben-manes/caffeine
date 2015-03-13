@@ -25,8 +25,6 @@ import com.google.common.collect.testing.TestStringMapGenerator;
 import com.google.common.collect.testing.features.CollectionFeature;
 import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.collect.testing.features.MapFeature;
-import com.google.common.collect.testing.testers.CollectionAddAllTester;
-import com.google.common.collect.testing.testers.CollectionAddTester;
 
 /**
  * A JUnit test suite factory for the map tests from Guava's testlib.
@@ -42,14 +40,17 @@ final class MapTestFactory {
    *
    * @param name the name of the cache type under test
    * @param builder the preconfigured cache builder
+   * @param async if the cache is asynchronous
    * @return a suite of tests
    */
-  protected static Test suite(String name, Caffeine<Object, Object> builder)
+  protected static Test suite(String name, Caffeine<Object, Object> builder, boolean async)
       throws NoSuchMethodException, SecurityException {
     return MapTestSuiteBuilder
         .using(new TestStringMapGenerator() {
           @Override protected Map<String, String> create(Entry<String, String>[] entries) {
-            Map<String, String> map = builder.<String, String>build().asMap();
+            Map<String, String> map = async
+                ? builder.<String, String>buildAsync(key -> null).synchronous().asMap()
+                : builder.<String, String>build().asMap();
             for (Entry<String, String> entry : entries) {
               map.put(entry.getKey(), entry.getValue());
             }
@@ -61,12 +62,6 @@ final class MapTestFactory {
             MapFeature.GENERAL_PURPOSE,
             CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
             CollectionSize.ANY)
-        .suppressing(
-            // Suppressed due to entrySet() view supporting additions, while the keySet() and
-            // values() views do not. The Guava tests are unable to understand this rational.
-            CollectionAddTester.getAddUnsupportedNotPresentMethod(),
-            CollectionAddAllTester.getAddAllUnsupportedNonePresentMethod(),
-            CollectionAddAllTester.getAddAllUnsupportedSomePresentMethod())
         .createTestSuite();
   }
 }

@@ -1518,11 +1518,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     }
 
     @Override
-    public boolean add(Entry<K, V> entry) {
-      return (map.putIfAbsent(entry.getKey(), entry.getValue()) == null);
-    }
-
-    @Override
     public boolean remove(Object obj) {
       if (!(obj instanceof Entry<?, ?>)) {
         return false;
