@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.configuration;
 
 import java.util.Objects;
+import java.util.OptionalLong;
 
 import javax.annotation.Nullable;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -36,24 +37,29 @@ import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
  */
 public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<K, V> {
   private static final long serialVersionUID = 1L;
-  private static final long UNSET = -1;
-
-  private final MutableConfiguration<K, V> delegate;
 
   private Factory<CopyStrategy> copyStrategyFactory;
   private Factory<Weigher<K, V>> weigherFactory;
-  private long maximumWeight = UNSET;
-  private long maximumSize = UNSET;
+  private MutableConfiguration<K, V> delegate;
+  private OptionalLong expireAfterAccessNanos;
+  private OptionalLong expireAfterWriteNanos;
+  private OptionalLong maximumWeight;
+  private OptionalLong maximumSize;
 
   public CaffeineConfiguration() {
+    expireAfterAccessNanos = OptionalLong.empty();
+    expireAfterWriteNanos = OptionalLong.empty();
     delegate = new MutableConfiguration<>();
+    maximumWeight = OptionalLong.empty();
+    maximumSize = OptionalLong.empty();
   }
 
   public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
+    this();
+    delegate = new MutableConfiguration<>(configuration);
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       copyStrategyFactory = ((CaffeineConfiguration<K, V>) configuration).getCopyStrategyFactory();
     }
-    delegate = new MutableConfiguration<>(configuration);
   }
 
   @Override
@@ -203,6 +209,78 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
+   * Set the expire after write in nanoseconds.
+   *
+   * @param expireAfterWriteNanos the duration in nanoseconds
+   */
+  public void setExpireAfterWrite(OptionalLong expireAfterWriteNanos) {
+    this.expireAfterWriteNanos = expireAfterWriteNanos;
+  }
+
+  /**
+   * Returns the expire after write in nanoseconds.
+   *
+   * @return the duration in nanoseconds
+   */
+  public OptionalLong getExpireAfterWrite() {
+    return expireAfterWriteNanos;
+  }
+
+  /**
+   * Set the expire after write in nanoseconds.
+   *
+   * @param expireAfterAccessNanos the duration in nanoseconds
+   */
+  public void setExpireAfterAccess(OptionalLong expireAfterAccessNanos) {
+    this.expireAfterAccessNanos = expireAfterAccessNanos;
+  }
+
+  /**
+   * Returns the expire after access in nanoseconds.
+   *
+   * @return the duration in nanoseconds
+   */
+  public OptionalLong getExpireAfterAccess() {
+    return expireAfterAccessNanos;
+  }
+
+  /**
+   * Set the maximum weight.
+   *
+   * @param maximumSize the maximum size
+   */
+  public void setMaximumSize(OptionalLong maximumSize) {
+    this.maximumSize = maximumSize;
+  }
+
+  /**
+   * Returns the maximum weight to be used for the cache.
+   *
+   * @return the maximum size
+   */
+  public OptionalLong getMaximumSize() {
+    return maximumSize;
+  }
+
+  /**
+   * Set the maximum weight.
+   *
+   * @param maximumWeight the maximum weighted size
+   */
+  public void setMaximumWeight(OptionalLong maximumWeight) {
+    this.maximumWeight = maximumWeight;
+  }
+
+  /**
+   * Returns the maximum weight to be used for the cache.
+   *
+   * @return the maximum weight
+   */
+  public OptionalLong getMaximumWeight() {
+    return maximumWeight;
+  }
+
+  /**
    * Returns the {@link Factory} for the {@link Weigher} to be used for the cache.
    *
    * @return the {@link Factory} for the {@link Weigher}
@@ -220,24 +298,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     weigherFactory = factory;
   }
 
-  /**
-   * Set the maximum weight.
-   *
-   * @param maximumWeight the maximum weighted size
-   */
-  public void setMaximimWeight(Long maximumWeight) {
-    this.maximumWeight = maximumWeight;
-  }
-
-  /**
-   * Returns the maximum weight to be used for the cache.
-   *
-   * @return the maximum weight or null if not set
-   */
-  public Long getMaximimWeight() {
-    return maximumWeight;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (o == this) {
@@ -249,8 +309,8 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     return delegate.equals(config.delegate)
         && Objects.equals(copyStrategyFactory, config.copyStrategyFactory)
         && Objects.equals(weigherFactory, config.weigherFactory)
-        && (maximumWeight == config.maximumWeight)
-        && (maximumSize == config.maximumSize);
+        && Objects.equals(maximumWeight, config.maximumWeight)
+        && Objects.equals(maximumSize, config.maximumSize);
   }
 
   @Override

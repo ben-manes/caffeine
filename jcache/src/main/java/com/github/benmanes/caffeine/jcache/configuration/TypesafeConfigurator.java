@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.configuration;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.configuration.Factory;
@@ -31,6 +32,7 @@ import javax.cache.expiry.ExpiryPolicy;
 
 import com.github.benmanes.caffeine.jcache.expiry.JCacheExpiryPolicy;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 
 /**
  * Static utility methods pertaining to externalized {@link CaffeineConfiguration} entries using the
@@ -55,7 +57,7 @@ public final class TypesafeConfigurator {
   }
 
   /**
-   * Retrieves the cache's settings from the configuration resource.
+   * Retrieves the cache's settings from the configuration resource if defined.
    *
    * @param config the configuration resource
    * @param cacheName the name of the cache
@@ -64,9 +66,13 @@ public final class TypesafeConfigurator {
    * @return the configuration for the cache
    */
   public static <K, V> Optional<CaffeineConfiguration<K, V>> from(Config config, String cacheName) {
-    return config.hasPath("caffeine.jcache." + cacheName)
-        ? Optional.of(new Configurator<K, V>(config, cacheName).configure())
-        : Optional.empty();
+    CaffeineConfiguration<K, V> configuration = null;
+    try {
+      if (config.hasPath("caffeine.jcache." + cacheName)) {
+        configuration = new Configurator<K, V>(config, cacheName).configure();
+      }
+    } catch (ConfigException.BadPath ignored) {}
+    return Optional.ofNullable(configuration);
   }
 
   private static final class Configurator<K, V> {
@@ -87,8 +93,9 @@ public final class TypesafeConfigurator {
       addReadThrough();
       addWriteThrough();
       addMonitoring();
-      addExpiration();
-      addMaximumSize();
+      addLazyExpiration();
+      addEagerExpiration();
+      addMaximum();
 
       return configuration;
     }
@@ -144,10 +151,10 @@ public final class TypesafeConfigurator {
       configuration.setManagementEnabled(config.getBoolean("monitoring.management"));
     }
 
-    public void addExpiration() {
-      Duration creation = getDurationFor("policy.expiration.creation");
-      Duration update = getDurationFor("policy.expiration.update");
-      Duration access = getDurationFor("policy.expiration.access");
+    public void addLazyExpiration() {
+      Duration creation = getDurationFor("policy.lazy-expiration.creation");
+      Duration update = getDurationFor("policy.lazy-expiration.update");
+      Duration access = getDurationFor("policy.lazy-expiration.access");
 
       boolean eternal = creation.isEternal() && update.isEternal() && access.isEternal();
       Factory<? extends ExpiryPolicy> factory = eternal
@@ -164,15 +171,28 @@ public final class TypesafeConfigurator {
       return Duration.ETERNAL;
     }
 
-    private void addMaximumSize() {
-      if (config.hasPath("policy.maximum-size")) {
-        configuration.setMaximimWeight(config.getLong("policy.maximum-size"));
+    public void addEagerExpiration() {
+      Config expiration = config.getConfig("policy.eager-expiration");
+      if (expiration.hasPath("after-write")) {
+        long nanos = config.getDuration("after-write", TimeUnit.NANOSECONDS);
+        configuration.setExpireAfterWrite(OptionalLong.of(nanos));
       }
-      if (config.hasPath("policy.maximum-weight")) {
-        configuration.setMaximimWeight(config.getLong("policy.maximum-weight"));
+      if (expiration.hasPath("after-access")) {
+        long nanos = config.getDuration("after-access", TimeUnit.NANOSECONDS);
+        configuration.setExpireAfterAccess(OptionalLong.of(nanos));
       }
-      if (config.hasPath("policy.weigher")) {
-        configuration.setWeigherFactory(FactoryBuilder.factoryOf("policy.weigher"));
+    }
+
+    private void addMaximum() {
+      Config maximum = config.getConfig("policy.maximum");
+      if (maximum.hasPath("size")) {
+        configuration.setMaximumSize(OptionalLong.of(maximum.getLong("size")));
+      }
+      if (maximum.hasPath("weight")) {
+        configuration.setMaximumWeight(OptionalLong.of(maximum.getLong("weight")));
+      }
+      if (maximum.hasPath("weigher")) {
+        configuration.setWeigherFactory(FactoryBuilder.factoryOf(maximum.getString("weigher")));
       }
     }
   }

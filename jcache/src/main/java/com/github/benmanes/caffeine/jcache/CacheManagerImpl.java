@@ -22,29 +22,17 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.Nullable;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
-import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.Ticker;
-import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
-import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
-import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
-import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
-import com.github.benmanes.caffeine.jcache.integration.JCacheRemovalListener;
-import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 
 /**
@@ -56,8 +44,8 @@ public final class CacheManagerImpl implements CacheManager {
   private final WeakReference<ClassLoader> classLoaderReference;
   private final Map<String, CacheProxy<?, ?>> caches;
   private final CachingProvider cacheProvider;
+  private final CacheFactory cacheFactory;
   private final Properties properties;
-  private final Config rootConfig;
   private final URI uri;
 
   private volatile boolean closed;
@@ -70,9 +58,9 @@ public final class CacheManagerImpl implements CacheManager {
   public CacheManagerImpl(CachingProvider cacheProvider, URI uri, ClassLoader classLoader,
       Properties properties, Config rootConfig) {
     this.classLoaderReference = new WeakReference<>(requireNonNull(classLoader));
+    this.cacheFactory = new CacheFactory(this, rootConfig);
     this.cacheProvider = requireNonNull(cacheProvider);
     this.properties = requireNonNull(properties);
-    this.rootConfig = requireNonNull(rootConfig);
     this.caches = new ConcurrentHashMap<>();
     this.uri = requireNonNull(uri);
   }
@@ -107,7 +95,7 @@ public final class CacheManagerImpl implements CacheManager {
       if ((existing != null) && !existing.isClosed()) {
         throw new CacheException("Cache " + cacheName + " already exists");
       }
-      return newCache(cacheName, configuration);
+      return cacheFactory.createCache(cacheName, configuration);
     });
     enableManagement(cache.getName(), cache.getConfiguration().isManagementEnabled());
     enableStatistics(cache.getName(), cache.getConfiguration().isStatisticsEnabled());
@@ -115,58 +103,6 @@ public final class CacheManagerImpl implements CacheManager {
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) cache;
     return castedCache;
-  }
-
-  private <K, V> CacheProxy<K, V> newCache(String cacheName, Configuration<K, V> configuration) {
-    CaffeineConfiguration<K, V> config = resolveConfigurationFor(cacheName, configuration);
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
-
-    EventDispatcher<K, V> dispatcher = new EventDispatcher<K, V>();
-    JCacheStatisticsMXBean statistics = new JCacheStatisticsMXBean();
-    config.getCacheEntryListenerConfigurations().forEach(dispatcher::register);
-
-    Optional<JCacheRemovalListener<K, V>> removalListener =
-        configure(builder, config, dispatcher, statistics);
-
-    CacheLoader<K, V> cacheLoader = null;
-    if (config.getCacheLoaderFactory() != null) {
-      cacheLoader = config.getCacheLoaderFactory().create();
-    }
-
-    CacheProxy<K, V> cache;
-    Ticker ticker = Ticker.systemTicker();
-    ExpiryPolicy expiry = config.getExpiryPolicyFactory().create();
-    if (config.isReadThrough() && (cacheLoader != null)) {
-      JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
-          cacheLoader, dispatcher, expiry, ticker, statistics);
-      cache = new LoadingCacheProxy<K, V>(cacheName, this, config, builder.build(adapter),
-          dispatcher, cacheLoader, expiry, Ticker.systemTicker(), statistics);
-      adapter.setCache(cache);
-    } else {
-      cache = new CacheProxy<K, V>(cacheName, this, config, builder.build(),
-          dispatcher, Optional.ofNullable(cacheLoader), expiry, ticker, statistics);
-    }
-
-    if (removalListener.isPresent()) {
-      removalListener.get().setCache(cache);
-    }
-
-    return cache;
-  }
-
-  // TODO(ben): configure...
-  private static <K, V> Optional<JCacheRemovalListener<K, V>> configure(
-      Caffeine<Object, Object> builder, CaffeineConfiguration<K, V> config,
-      EventDispatcher<K, V> dispatcher, JCacheStatisticsMXBean statistics) {
-    boolean requiresRemovalListener = false;
-
-    if (!requiresRemovalListener) {
-      JCacheRemovalListener<K, V> removalListener =
-          new JCacheRemovalListener<>(dispatcher, statistics);
-      builder.removalListener(removalListener);
-      return Optional.of(removalListener);
-    }
-    return Optional.empty();
   }
 
   @Override
@@ -209,21 +145,13 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   /** Returns the cache, creating it if necessary. */
-  private <K, V> CacheProxy<K, V> getOrCreateCache(String cacheName) {
+  private @Nullable <K, V> CacheProxy<K, V> getOrCreateCache(String cacheName) {
     requireNonNull(cacheName);
     requireNotClosed();
 
-    CacheProxy<?, ?> cache = caches.get(cacheName);
-    if (cache == null) {
-      try {
-        Optional<CaffeineConfiguration<K, V>> configuration =
-            TypesafeConfigurator.from(rootConfig, cacheName);
-        if (configuration.isPresent()) {
-          cache = caches.computeIfAbsent(cacheName, name ->
-              newCache(cacheName, configuration.get()));
-        }
-      } catch (ConfigException.BadPath e) {}
-    }
+    CacheProxy<?, ?> cache = caches.computeIfAbsent(cacheName,
+        cacheFactory::tryToCreateFromExternalSettings);
+
     @SuppressWarnings("unchecked")
     CacheProxy<K, V> castedCache = (CacheProxy<K, V>) cache;
     return castedCache;
@@ -301,24 +229,5 @@ public final class CacheManagerImpl implements CacheManager {
     if (isClosed()) {
       throw new IllegalStateException();
     }
-  }
-
-  private <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
-      String cacheName, Configuration<K, V> configuration) {
-    if (configuration instanceof CaffeineConfiguration<?, ?>) {
-      return new CaffeineConfiguration<K, V>((CaffeineConfiguration<K, V>) configuration);
-    }
-
-    CaffeineConfiguration<K, V> defaults = TypesafeConfigurator.defaults(rootConfig);
-    if (configuration instanceof CompleteConfiguration<?, ?>) {
-      CaffeineConfiguration<K, V> config = new CaffeineConfiguration<>(
-          (CompleteConfiguration<K, V>) configuration);
-      config.setCopyStrategyFactory(defaults.getCopyStrategyFactory());
-      return config;
-    }
-
-    defaults.setTypes(configuration.getKeyType(), configuration.getValueType());
-    defaults.setStoreByValue(configuration.isStoreByValue());
-    return defaults;
   }
 }
