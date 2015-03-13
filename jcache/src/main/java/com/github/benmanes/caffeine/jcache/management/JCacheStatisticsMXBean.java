@@ -169,14 +169,48 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
     return average(getCacheGets(), getTimeNanos.sum());
   }
 
+  /**
+   * Records the time to execute get operations. This time does not include the time it takes to
+   * load an entry on a cache miss, as specified by the specification.
+   *
+   * @param durationNanos the amount of time in nanoseconds
+   */
+  public void recordGetTime(long durationNanos) {
+    if (enabled && (durationNanos != 0)) {
+      getTimeNanos.add(durationNanos);
+    }
+  }
+
   @Override
   public float getAveragePutTime() {
     return average(getCachePuts(), putTimeNanos.sum());
   }
 
+  /**
+   * Records the time to execute put operations.
+   *
+   * @param durationNanos the amount of time in nanoseconds
+   */
+  public void recordPutTime(long durationNanos) {
+    if (enabled && (durationNanos != 0)) {
+      putTimeNanos.add(durationNanos);
+    }
+  }
+
   @Override
   public float getAverageRemoveTime() {
     return average(getCacheRemovals(), removeTimeNanos.sum());
+  }
+
+  /**
+   * Records the time to execute remove operations.
+   *
+   * @param durationNanos the amount of time in nanoseconds
+   */
+  public void recordRemoveTime(long durationNanos) {
+    if (enabled && (durationNanos != 0)) {
+      removeTimeNanos.add(durationNanos);
+    }
   }
 
   private static float average(long requestCount, long opsTimeNanos) {

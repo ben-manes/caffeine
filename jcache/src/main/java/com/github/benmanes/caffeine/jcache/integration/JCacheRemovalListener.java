@@ -19,11 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import javax.cache.Cache;
 
-import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
+import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 
 /**
  * A Caffeine listener that publishes eviction events to the JCache listeners.
@@ -31,12 +31,15 @@ import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JCacheRemovalListener<K, V> implements RemovalListener<K, Expirable<V>> {
+  private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
 
   private Cache<K, V> cache;
 
-  public JCacheRemovalListener(EventDispatcher<K, V> dispatcher) {
+  public JCacheRemovalListener(EventDispatcher<K, V> dispatcher,
+      JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);
+    this.statistics = requireNonNull(statistics);
   }
 
   /**
@@ -50,9 +53,10 @@ public final class JCacheRemovalListener<K, V> implements RemovalListener<K, Exp
 
   @Override
   public void onRemoval(RemovalNotification<K, Expirable<V>> notification) {
-    if (notification.getCause() == RemovalCause.SIZE) {
+    if (notification.wasEvicted()) {
       dispatcher.publishRemoved(cache, notification.getKey(), notification.getValue().get());
       dispatcher.ignoreSynchronous();
+      statistics.recordEvictions(1L);
     }
   }
 }

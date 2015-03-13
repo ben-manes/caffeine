@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.CacheProxy;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
+import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 
 /**
  * An adapter from a JCache cache loader to Caffeine's.
@@ -36,6 +37,7 @@ import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
  */
 public final class JCacheLoaderAdapter<K, V>
     implements com.github.benmanes.caffeine.cache.CacheLoader<K, Expirable<V>> {
+  private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
   private final CacheLoader<K, V> delegate;
   private final ExpiryPolicy expiry;
@@ -44,8 +46,9 @@ public final class JCacheLoaderAdapter<K, V>
   private CacheProxy<K, V> cache;
 
   public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher,
-      ExpiryPolicy expiry, Ticker ticker) {
+      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);
+    this.statistics = requireNonNull(statistics);
     this.delegate = requireNonNull(delegate);
     this.expiry = requireNonNull(expiry);
     this.ticker = requireNonNull(ticker);
@@ -63,9 +66,12 @@ public final class JCacheLoaderAdapter<K, V>
   @Override
   public Expirable<V> load(K key) {
     try {
+      long start = ticker.read();
       V value = delegate.load(key);
       dispatcher.publishCreated(cache, key, value);
-      return new Expirable<>(value, expireTimeMS());
+      long end = ticker.read();
+      statistics.recordGetTime(start - end);
+      return new Expirable<>(value, expireTimeMS(end));
     } catch (CacheLoaderException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -76,13 +82,15 @@ public final class JCacheLoaderAdapter<K, V>
   @Override
   public Map<K, Expirable<V>> loadAll(Iterable<? extends K> keys) {
     try {
+      long start = ticker.read();
       Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
           .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
           .collect(Collectors.toMap(entry -> entry.getKey(),
-              entry -> new Expirable<>(entry.getValue(), expireTimeMS())));
+              entry -> new Expirable<>(entry.getValue(), expireTimeMS(start))));
       for (Map.Entry<K, Expirable<V>> entry : result.entrySet()) {
         dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
       }
+      statistics.recordGetTime(start - ticker.read());
       return result;
     } catch (CacheLoaderException e) {
       throw e;
@@ -91,9 +99,9 @@ public final class JCacheLoaderAdapter<K, V>
     }
   }
 
-  private long expireTimeMS() {
+  private long expireTimeMS(long now) {
     try {
-      return expiry.getExpiryForCreation().getAdjustedTime(ticker.read() >> 10);
+      return expiry.getExpiryForCreation().getAdjustedTime(now >> 10);
     } catch (Exception e) {
       return Long.MAX_VALUE;
     }

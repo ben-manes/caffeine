@@ -73,13 +73,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private final CacheManager cacheManager;
   private final CacheWriter<K, V> writer;
   private final JCacheMXBean cacheMXBean;
-  private final Ticker ticker;
   private final String name;
 
   protected final Optional<CacheLoader<K, V>> cacheLoader;
   protected final JCacheStatisticsMXBean statistics;
   protected final EventDispatcher<K, V> dispatcher;
   protected final ExpiryPolicy expiry;
+  protected final Ticker ticker;
 
   private volatile boolean closed;
 
@@ -87,11 +87,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, Optional<CacheLoader<K, V>> cacheLoader,
-      ExpiryPolicy expiry, Ticker ticker) {
+      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
     this.configuration = requireNonNull(configuration);
     this.cacheManager = requireNonNull(cacheManager);
     this.cacheLoader = requireNonNull(cacheLoader);
     this.dispatcher = requireNonNull(dispatcher);
+    this.statistics = requireNonNull(statistics);
     this.expiry = requireNonNull(expiry);
     this.ticker = requireNonNull(ticker);
     this.cache = requireNonNull(cache);
@@ -104,7 +105,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         ? configuration.getCacheWriter()
         : DisabledCacheWriter.get();
     cacheMXBean = new JCacheMXBean(this);
-    statistics = new JCacheStatisticsMXBean();
   }
 
   @Override
@@ -129,11 +129,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public V get(K key) {
     Expirable<V> expirable = doSafely(() -> cache.getIfPresent(key));
 
-    long now = currentTimeMillis();
+    long now = ticker.read();
     if (expirable == null) {
       statistics.recordMisses(1L);
       return null;
-    } else if (expirable.hasExpired(now)) {
+    } else if (expirable.hasExpired(ticker.read())) {
       if (cache.asMap().remove(key, expirable)) {
         dispatcher.publishExpired(this, key, expirable.get());
         dispatcher.awaitSynchronous();
@@ -150,14 +150,17 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } else {
       statistics.recordHits(1L);
     }
+    statistics.recordGetTime(ticker.read() - now);
     return value;
   }
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
+    long start = ticker.read();
     Map<K, V> result = doSafely(() -> copyMap(cache.getAllPresent(keys)));
     statistics.recordMisses(keys.size() - result.size());
     statistics.recordHits(result.size());
+    statistics.recordGetTime(ticker.read() - start);
     return result;
   }
 
@@ -214,15 +217,18 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void put(K key, V value) {
     requireNotClosed();
     int[] puts = { 0 };
+    long start = ticker.read();
     putNoCopyOrAwait(key, value, true, puts);
     dispatcher.awaitSynchronous();
     statistics.recordPuts(puts[0]);
+    statistics.recordPutTime(ticker.read() - start);
   }
 
   @Override
   public V getAndPut(K key, V value) {
     requireNotClosed();
     int[] puts = { 0 };
+    long start = ticker.read();
     V val = putNoCopyOrAwait(key, value, true, puts);
     dispatcher.awaitSynchronous();
     statistics.recordPuts(puts[0]);
@@ -232,7 +238,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } else {
       statistics.recordHits(1L);
     }
-    return copyOf(val);
+    V copy = copyOf(val);
+    long duration = ticker.read() - start;
+    statistics.recordGetTime(duration);
+    statistics.recordPutTime(duration);
+    return copy;
   }
 
   /**
@@ -282,6 +292,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void putAll(Map<? extends K, ? extends V> map) {
     requireNotClosed();
+    long start = ticker.read();
     for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
       requireNonNull(entry.getKey());
       requireNonNull(entry.getValue());
@@ -293,6 +304,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     statistics.recordPuts(puts[0]);
     dispatcher.awaitSynchronous();
+    statistics.recordPutTime(ticker.read() - start);
     if (e != null) {
       throw e;
     }
@@ -303,11 +315,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     requireNonNull(value);
 
+    long start = ticker.read();
     boolean added = putIfAbsentNoAwait(key, value, true);
     dispatcher.awaitSynchronous();
     if (added) {
       statistics.recordPuts(1L);
     }
+    statistics.recordPutTime(ticker.read() - start);
     return added;
   }
 
@@ -352,9 +366,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     requireNonNull(key);
 
+    long start = ticker.read();
     publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
+    statistics.recordRemoveTime(ticker.read() - start);
     if (value != null) {
       statistics.recordRemovals(1L);
       return true;
@@ -392,6 +408,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNonNull(key);
     requireNonNull(oldValue);
 
+    long start = ticker.read();
     boolean[] removed = { false };
     cache.asMap().computeIfPresent(key, (k, expirable) -> {
       if (expirable.hasExpired(ticker.read())) {
@@ -415,6 +432,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } else {
       statistics.recordMisses(1L);
     }
+    statistics.recordRemoveTime(ticker.read() - start);
     return removed[0];
   }
 
@@ -423,6 +441,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     requireNonNull(key);
 
+    long start = ticker.read();
     publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
@@ -432,7 +451,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } else {
       statistics.recordMisses(1L);
     }
-    return copyOf(value);
+    V copy = copyOf(value);
+    long duration = ticker.read() - start;
+    statistics.recordRemoveTime(duration);
+    statistics.recordGetTime(duration);
+    return copy;
   }
 
   @Override
@@ -440,6 +463,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNotClosed();
     requireNonNull(oldValue);
     requireNonNull(newValue);
+
+    long start = ticker.read();
     boolean[] found = { false };
     boolean[] replaced = { false };
     cache.asMap().computeIfPresent(key, (k, expirable) -> {
@@ -467,12 +492,18 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     statistics.recordMisses(found[0] ? 0L : 1L);
     statistics.recordHits(found[0] ? 1L : 0L);
     dispatcher.awaitSynchronous();
+
+    long duration = ticker.read() - start;
+    statistics.recordGetTime(duration);
+    statistics.recordPutTime(duration);
     return replaced[0];
   }
 
   @Override
   public boolean replace(K key, V value) {
     requireNotClosed();
+
+    long start = ticker.read();
     V oldValue = replaceNoCopyOrAwait(key, value);
     dispatcher.awaitSynchronous();
     if (oldValue == null) {
@@ -481,12 +512,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     statistics.recordHits(1L);
     statistics.recordPuts(1L);
+    statistics.recordPutTime(ticker.read() - start);
     return true;
   }
 
   @Override
   public V getAndReplace(K key, V value) {
     requireNotClosed();
+
+    long start = ticker.read();
     V oldValue = replaceNoCopyOrAwait(key, value);
     dispatcher.awaitSynchronous();
     if (oldValue == null) {
@@ -495,7 +529,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       statistics.recordHits(1L);
       statistics.recordPuts(1L);
     }
-    return copyOf(oldValue);
+    V copy = copyOf(oldValue);
+    long duration = ticker.read() - start;
+    statistics.recordGetTime(duration);
+    statistics.recordPutTime(duration);
+    return copy;
   }
 
   /**
@@ -531,6 +569,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void removeAll(Set<? extends K> keys) {
     requireNotClosed();
+    long start = ticker.read();
     CacheWriterException e = deleteAllToCacheWriter(keys);
     long removed = keys.stream()
         .map(this::removeNoCopyOrAwait)
@@ -538,6 +577,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         .count();
     statistics.recordRemovals(removed);
     dispatcher.awaitSynchronous();
+    statistics.recordRemoveTime(ticker.read() - start);
     if (e != null) {
       throw e;
     }

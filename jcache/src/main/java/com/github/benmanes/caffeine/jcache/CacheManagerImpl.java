@@ -42,6 +42,7 @@ import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
 import com.github.benmanes.caffeine.jcache.integration.JCacheRemovalListener;
+import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -121,9 +122,11 @@ public final class CacheManagerImpl implements CacheManager {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
 
     EventDispatcher<K, V> dispatcher = new EventDispatcher<K, V>();
+    JCacheStatisticsMXBean statistics = new JCacheStatisticsMXBean();
     config.getCacheEntryListenerConfigurations().forEach(dispatcher::register);
 
-    Optional<JCacheRemovalListener<K, V>> removalListener = configure(builder, config, dispatcher);
+    Optional<JCacheRemovalListener<K, V>> removalListener =
+        configure(builder, config, dispatcher, statistics);
 
     CacheLoader<K, V> cacheLoader = null;
     if (config.getCacheLoaderFactory() != null) {
@@ -135,13 +138,13 @@ public final class CacheManagerImpl implements CacheManager {
     ExpiryPolicy expiry = config.getExpiryPolicyFactory().create();
     if (config.isReadThrough() && (cacheLoader != null)) {
       JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
-          cacheLoader, dispatcher, expiry, ticker);
-      cache = new LoadingCacheProxy<K, V>(cacheName, this, config,
-          builder.build(adapter), dispatcher, cacheLoader, expiry, Ticker.systemTicker());
+          cacheLoader, dispatcher, expiry, ticker, statistics);
+      cache = new LoadingCacheProxy<K, V>(cacheName, this, config, builder.build(adapter),
+          dispatcher, cacheLoader, expiry, Ticker.systemTicker(), statistics);
       adapter.setCache(cache);
     } else {
       cache = new CacheProxy<K, V>(cacheName, this, config, builder.build(),
-          dispatcher, Optional.ofNullable(cacheLoader), expiry, ticker);
+          dispatcher, Optional.ofNullable(cacheLoader), expiry, ticker, statistics);
     }
 
     if (removalListener.isPresent()) {
@@ -154,11 +157,12 @@ public final class CacheManagerImpl implements CacheManager {
   // TODO(ben): configure...
   private static <K, V> Optional<JCacheRemovalListener<K, V>> configure(
       Caffeine<Object, Object> builder, CaffeineConfiguration<K, V> config,
-      EventDispatcher<K, V> dispatcher) {
+      EventDispatcher<K, V> dispatcher, JCacheStatisticsMXBean statistics) {
     boolean requiresRemovalListener = false;
 
-    if (requiresRemovalListener) {
-      JCacheRemovalListener<K, V> removalListener = new JCacheRemovalListener<>(dispatcher);
+    if (!requiresRemovalListener) {
+      JCacheRemovalListener<K, V> removalListener =
+          new JCacheRemovalListener<>(dispatcher, statistics);
       builder.removalListener(removalListener);
       return Optional.of(removalListener);
     }

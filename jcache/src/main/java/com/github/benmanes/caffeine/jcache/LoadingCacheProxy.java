@@ -36,6 +36,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
+import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 
 /**
  * An implementation of JSR-107 {@link Cache} backed by a Caffeine loading cache.
@@ -48,15 +49,16 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public LoadingCacheProxy(String name, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,
-      ExpiryPolicy expiry, Ticker ticker) {
+      ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
     super(name, cacheManager, configuration, cache, dispatcher,
-        Optional.of(cacheLoader), expiry, ticker);
+        Optional.of(cacheLoader), expiry, ticker, statistics);
     this.cache = cache;
   }
 
   @Override
   public V get(K key) {
-    return doSafely(() -> {
+    final long start = ticker.read();
+    V value = doSafely(() -> {
       Expirable<V> expirable = cache.getIfPresent(key);
       if ((expirable == null) || expirable.hasExpired(currentTimeMillis())) {
         if (cache.asMap().remove(key, expirable)) {
@@ -65,9 +67,11 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         }
         expirable = null;
       }
-
       if (expirable == null) {
         expirable = cache.get(key);
+        statistics.recordMisses(1L);
+      } else {
+        statistics.recordHits(1L);
       }
       if (expirable != null) {
         setExpirationTime(expirable, currentTimeMillis(), expiry::getExpiryForAccess);
@@ -75,20 +79,27 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       }
       return null;
     });
+    statistics.recordGetTime(ticker.read() - start);
+    return value;
   }
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
-    return doSafely(() -> {
-      Map<K, Expirable<V>> result = getAndFilterExpiredEntries(keys);
-      if (result.size() != keys.size()) {
+    final long start = ticker.read();
+    Map<K, V> result = doSafely(() -> {
+      Map<K, Expirable<V>> entries = getAndFilterExpiredEntries(keys);
+      statistics.recordHits(entries.size());
+      if (entries.size() != keys.size()) {
         List<K> keysToLoad = keys.stream()
-            .filter(key -> !result.containsKey(key))
+            .filter(key -> !entries.containsKey(key))
             .collect(Collectors.<K>toList());
-        result.putAll(cache.getAll(keysToLoad));
+        statistics.recordMisses(keysToLoad.size());
+        entries.putAll(cache.getAll(keysToLoad));
       }
-      return copyMap(result);
+      return copyMap(entries);
     });
+    statistics.recordGetTime(ticker.read() - start);
+    return result;
   }
 
   /** Returns all of the mappings present, expiring as required. */
