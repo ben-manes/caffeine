@@ -12,6 +12,18 @@ performance, code readability, and iterations based on external reviews. Feedbac
 missing features, or implementation code is welcome and appreciated. The extensions providing cache
 tracing, simulator, and JCache adapter are in active development.
 
+Snapshots of the development version are available in 
+[Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots/).
+
+```gradle
+compile 'com.github.ben-manes.caffeine:caffeine:1.0.0-SNAPSHOT'
+
+// Optional extensions
+compile 'com.github.ben-manes.caffeine:guava:1.0.0-SNAPSHOT'
+compile 'com.github.ben-manes.caffeine:jcache:1.0.0-SNAPSHOT'
+compile 'com.github.ben-manes.caffeine:tracing-async:1.0.0-SNAPSHOT'
+```
+
 ## Collections
 
 #### [EliminationStack](caffeine/src/main/java/com/github/benmanes/caffeine/EliminationStack.java)

@@ -306,11 +306,13 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       return false;
     }
     CaffeineConfiguration<?, ?> config = (CaffeineConfiguration<?, ?>) o;
-    return delegate.equals(config.delegate)
+    return Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
+        && Objects.equals(expireAfterWriteNanos, config.expireAfterWriteNanos)
         && Objects.equals(copyStrategyFactory, config.copyStrategyFactory)
         && Objects.equals(weigherFactory, config.weigherFactory)
         && Objects.equals(maximumWeight, config.maximumWeight)
-        && Objects.equals(maximumSize, config.maximumSize);
+        && Objects.equals(maximumSize, config.maximumSize)
+        && delegate.equals(config.delegate);
   }
 
   @Override

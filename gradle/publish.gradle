@@ -3,6 +3,13 @@
  */
 apply plugin: 'com.bmuschko.nexus'
 
+if (System.env.'nexusUsername') {
+  project.nexusUsername = System.env.'nexusUsername'
+  project.nexusPassword = System.env.'nexusPassword'
+}
+
+extraArchive.tests = true
+
 modifyPom {
   project {
     name 'Caffeine cache'

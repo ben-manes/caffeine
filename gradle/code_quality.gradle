@@ -52,7 +52,7 @@ tasks.withType(Test) {
     jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10', '-XX:MaxMetaspaceSize=128m'
   }
   if (System.env.'CI') {
-    maxHeapSize = '384m'
+    maxHeapSize = '512m'
     reports.html.enabled = false
   }
   testLogging {

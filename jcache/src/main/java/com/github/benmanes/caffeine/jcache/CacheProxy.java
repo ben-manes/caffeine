@@ -168,7 +168,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();
-    keys.stream().forEach(Objects::requireNonNull);
+    keys.forEach(Objects::requireNonNull);
 
     if (!cacheLoader.isPresent()) {
       return;
@@ -569,14 +569,17 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public void removeAll(Set<? extends K> keys) {
     requireNotClosed();
+    keys.forEach(Objects::requireNonNull);
+
     long start = ticker.read();
-    CacheWriterException e = deleteAllToCacheWriter(keys);
-    long removed = keys.stream()
+    Set<K> keysToRemove = new HashSet<>(keys);
+    CacheWriterException e = deleteAllToCacheWriter(keysToRemove);
+    long removed = keysToRemove.stream()
         .map(this::removeNoCopyOrAwait)
         .filter(Objects::nonNull)
         .count();
-    statistics.recordRemovals(removed);
     dispatcher.awaitSynchronous();
+    statistics.recordRemovals(removed);
     statistics.recordRemoveTime(ticker.read() - start);
     if (e != null) {
       throw e;
@@ -585,10 +588,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public void removeAll() {
-    Set<K> keys = configuration.isWriteThrough()
-        ? new HashSet<>(cache.asMap().keySet())
-        : cache.asMap().keySet();
-    removeAll(keys);
+    removeAll(cache.asMap().keySet());
   }
 
   @Override
@@ -827,7 +827,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
   }
 
-  /** Deletes all of the entries using the cache writer if write-through is enabled. */
+  /** Deletes all of the entries using the cache writer, retaining only the keys that succeeded. */
   private <T> CacheWriterException deleteAllToCacheWriter(Set<? extends K> keys) {
     if (!configuration.isWriteThrough() || keys.isEmpty()) {
       return null;

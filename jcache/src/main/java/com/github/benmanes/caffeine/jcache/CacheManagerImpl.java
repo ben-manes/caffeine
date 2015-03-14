@@ -199,7 +199,7 @@ public final class CacheManagerImpl implements CacheManager {
     if (isClosed()) {
       return;
     }
-    synchronized (caches) {
+    synchronized (cacheFactory) {
       if (!isClosed()) {
         cacheProvider.close(uri, classLoaderReference.get());
         for (Cache<?, ?> cache : caches.values()) {
