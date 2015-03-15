@@ -49,7 +49,8 @@ tasks.withType(Test) {
     jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
   }
   options {
-    jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10', '-XX:MaxMetaspaceSize=128m'
+    jvmArgs '-XX:+UseG1GC', '-XX:SoftRefLRUPolicyMSPerMB=10',
+            '-XX:MaxMetaspaceSize=128m', '-noverify'
   }
   if (System.env.'CI') {
     maxHeapSize = '512m'

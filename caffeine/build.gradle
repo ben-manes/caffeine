@@ -52,6 +52,7 @@ task generateLocalCaches(type: JavaExec) {
   main = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
   args "${buildDir}/generated-sources/"
+  jvmArgs += '-noverify'
 
   outputs.upToDateWhen { !tasks.compileJavaPoetJava.didWork }
 }
@@ -61,6 +62,7 @@ task generateNodes(type: JavaExec) {
   main = 'com.github.benmanes.caffeine.cache.NodeFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath
   args "${buildDir}/generated-sources/"
+  jvmArgs += '-noverify'
 
   outputs.upToDateWhen { !tasks.compileJavaPoetJava.didWork }
 }
