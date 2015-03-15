@@ -89,6 +89,34 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
+  /* ---------------- getIfPresent -------------- */
+
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getIfPresent_nullKey(AsyncLoadingCache<Integer, Integer> cache) {
+    cache.getIfPresent(null);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getIfPresent_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void getIfPresent_present(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    assertThat(cache.getIfPresent(context.firstKey()), is(not(nullValue())));
+    assertThat(cache.getIfPresent(context.middleKey()), is(not(nullValue())));
+    assertThat(cache.getIfPresent(context.lastKey()), is(not(nullValue())));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
+
   /* ---------------- getFunc -------------- */
 
   @CacheSpec
@@ -272,21 +300,15 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
+  @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DIRECT)
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_absent_null(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    CompletableFuture<Integer> failedFuture = CompletableFuture.completedFuture(null);
-    failedFuture.obtrudeException(new IllegalStateException());
-
     Integer key = context.absentKey();
-    try {
-      cache.get(key, (k, executor) -> null);
-    } finally {
-      assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-      assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
-    }
+    assertThat(cache.get(key, (k, executor) -> null), is(nullValue()));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
   @Test(dataProvider = "caches")

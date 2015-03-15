@@ -87,6 +87,11 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   }
 
   @Override
+  public CompletableFuture<V> getIfPresent(@Nonnull Object key) {
+    return cache.getIfPresent(key, true);
+  }
+
+  @Override
   public CompletableFuture<V> get(@Nonnull K key,
       @Nonnull Function<? super K, ? extends V> mappingFunction) {
     requireNonNull(mappingFunction);
@@ -102,7 +107,9 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     CompletableFuture<V>[] result = new CompletableFuture[1];
     CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
       result[0] = mappingFunction.apply(key, cache.executor());
-      requireNonNull(result[0]);
+      if (result[0] == null) {
+        cache.statsCounter().recordLoadFailure(cache.ticker().read() - now);
+      }
       return result[0];
     }, true);
     if (result[0] != null) {

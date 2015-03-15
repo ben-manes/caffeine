@@ -21,6 +21,7 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -37,6 +38,18 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public interface AsyncLoadingCache<K, V> {
+
+  /**
+   * Returns the future associated with {@code key} in this cache, or {@code null} if there is no
+   * cached future for {@code key}.
+   *
+   * @param key key whose associated value is to be returned
+   * @return the current (existing or computed) future value to which the specified key is mapped,
+   *         or {@code null} if this map contains no mapping for the key
+   * @throws NullPointerException if the specified key is null
+   */
+  @CheckForNull
+  CompletableFuture<V> getIfPresent(@Nonnull Object key);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
@@ -74,7 +87,7 @@ public interface AsyncLoadingCache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
    *         in which case the mapping is left unestablished
    */
-  @Nonnull
+  @CheckForNull
   CompletableFuture<V> get(@Nonnull K key,
       @Nonnull BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction);
 
