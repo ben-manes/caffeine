@@ -75,6 +75,7 @@ public final class TypesafeConfigurator {
     return Optional.ofNullable(configuration);
   }
 
+  /** A one-shot builder for creating a configuration instance. */
   private static final class Configurator<K, V> {
     final CaffeineConfiguration<K, V> configuration;
     final Config rootConfig;
@@ -87,6 +88,7 @@ public final class TypesafeConfigurator {
           .withFallback(rootConfig.getConfig("caffeine.jcache.default"));
     }
 
+    /** Returns a configuration built from the external settings. */
     CaffeineConfiguration<K, V> configure() {
       addStoreByValue();
       addListeners();
@@ -100,6 +102,7 @@ public final class TypesafeConfigurator {
       return configuration;
     }
 
+    /** Adds the store-by-value settings. */
     private void addStoreByValue() {
       boolean enabled = config.getBoolean("store-by-value.enabled");
       configuration.setStatisticsEnabled(enabled);
@@ -109,6 +112,7 @@ public final class TypesafeConfigurator {
       }
     }
 
+    /** Adds the entry listeners settings. */
     private void addListeners() {
       for (String path : config.getStringList("listeners")) {
         Config listener = rootConfig.getConfig(path);
@@ -128,6 +132,7 @@ public final class TypesafeConfigurator {
       }
     }
 
+    /** Adds the read through settings. */
     private void addReadThrough() {
       boolean isReadThrough = config.getBoolean("read-through.enabled");
       configuration.setReadThrough(isReadThrough);
@@ -137,6 +142,7 @@ public final class TypesafeConfigurator {
       }
     }
 
+    /** Adds the write through settings. */
     private void addWriteThrough() {
       boolean isWriteThrough = config.getBoolean("write-through.enabled");
       configuration.setWriteThrough(isWriteThrough);
@@ -146,11 +152,13 @@ public final class TypesafeConfigurator {
       }
     }
 
+    /** Adds the JMX monitoring settings. */
     private void addMonitoring() {
       configuration.setStatisticsEnabled(config.getBoolean("monitoring.statistics"));
       configuration.setManagementEnabled(config.getBoolean("monitoring.management"));
     }
 
+    /** Adds the JCache specification's lazy expiration settings. */
     public void addLazyExpiration() {
       Duration creation = getDurationFor("policy.lazy-expiration.creation");
       Duration update = getDurationFor("policy.lazy-expiration.update");
@@ -163,6 +171,7 @@ public final class TypesafeConfigurator {
       configuration.setExpiryPolicyFactory(factory);
     }
 
+    /** Returns the duration for the expiration time. */
     private Duration getDurationFor(String path) {
       if (config.hasPath(path)) {
         long nanos = config.getDuration(path, TimeUnit.NANOSECONDS);
@@ -171,6 +180,7 @@ public final class TypesafeConfigurator {
       return Duration.ETERNAL;
     }
 
+    /** Adds the Caffeine eager expiration settings. */
     public void addEagerExpiration() {
       Config expiration = config.getConfig("policy.eager-expiration");
       if (expiration.hasPath("after-write")) {
@@ -183,6 +193,7 @@ public final class TypesafeConfigurator {
       }
     }
 
+    /** Adds the maximum size and weight bounding settings. */
     private void addMaximum() {
       Config maximum = config.getConfig("policy.maximum");
       if (maximum.hasPath("size")) {

@@ -907,7 +907,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       Duration duration = expires.get();
       long expireTimeMS = duration.getAdjustedTime(currentTimeMS);
       expirable.setExpireTimeMS(expireTimeMS);
-    } catch (Exception e) {}
+    } catch (Exception ignored) {}
   }
 
   /**

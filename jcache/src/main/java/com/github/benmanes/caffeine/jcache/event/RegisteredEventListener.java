@@ -82,9 +82,4 @@ final class Registration<K, V> {
   public int hashCode() {
     return listener.hashCode();
   }
-
-  @Override
-  public String toString() {
-    return configuration.toString();
-  }
 }

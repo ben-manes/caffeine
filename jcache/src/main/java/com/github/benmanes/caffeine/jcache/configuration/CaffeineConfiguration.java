@@ -41,17 +41,13 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private Factory<CopyStrategy> copyStrategyFactory;
   private Factory<Weigher<K, V>> weigherFactory;
   private MutableConfiguration<K, V> delegate;
-  private OptionalLong expireAfterAccessNanos;
-  private OptionalLong expireAfterWriteNanos;
-  private OptionalLong maximumWeight;
-  private OptionalLong maximumSize;
+  private Long expireAfterAccessNanos;
+  private Long expireAfterWriteNanos;
+  private Long maximumWeight;
+  private Long maximumSize;
 
   public CaffeineConfiguration() {
-    expireAfterAccessNanos = OptionalLong.empty();
-    expireAfterWriteNanos = OptionalLong.empty();
     delegate = new MutableConfiguration<>();
-    maximumWeight = OptionalLong.empty();
-    maximumSize = OptionalLong.empty();
   }
 
   public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
@@ -214,7 +210,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param expireAfterWriteNanos the duration in nanoseconds
    */
   public void setExpireAfterWrite(OptionalLong expireAfterWriteNanos) {
-    this.expireAfterWriteNanos = expireAfterWriteNanos;
+    this.expireAfterWriteNanos = expireAfterWriteNanos.isPresent()
+        ? expireAfterWriteNanos.getAsLong()
+        : null;
   }
 
   /**
@@ -223,7 +221,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the duration in nanoseconds
    */
   public OptionalLong getExpireAfterWrite() {
-    return expireAfterWriteNanos;
+    return (expireAfterWriteNanos == null)
+        ? OptionalLong.empty()
+        : OptionalLong.of(expireAfterWriteNanos);
   }
 
   /**
@@ -232,7 +232,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param expireAfterAccessNanos the duration in nanoseconds
    */
   public void setExpireAfterAccess(OptionalLong expireAfterAccessNanos) {
-    this.expireAfterAccessNanos = expireAfterAccessNanos;
+    this.expireAfterAccessNanos = expireAfterAccessNanos.isPresent()
+        ? expireAfterAccessNanos.getAsLong()
+        : null;
   }
 
   /**
@@ -241,7 +243,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the duration in nanoseconds
    */
   public OptionalLong getExpireAfterAccess() {
-    return expireAfterAccessNanos;
+    return (expireAfterAccessNanos == null)
+        ? OptionalLong.empty()
+        : OptionalLong.of(expireAfterAccessNanos);
   }
 
   /**
@@ -250,7 +254,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param maximumSize the maximum size
    */
   public void setMaximumSize(OptionalLong maximumSize) {
-    this.maximumSize = maximumSize;
+    this.maximumSize = maximumSize.isPresent()
+        ? maximumSize.getAsLong()
+        : null;
   }
 
   /**
@@ -259,7 +265,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the maximum size
    */
   public OptionalLong getMaximumSize() {
-    return maximumSize;
+    return (maximumSize == null)
+        ? OptionalLong.empty()
+        : OptionalLong.of(maximumSize);
   }
 
   /**
@@ -268,7 +276,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param maximumWeight the maximum weighted size
    */
   public void setMaximumWeight(OptionalLong maximumWeight) {
-    this.maximumWeight = maximumWeight;
+    this.maximumWeight = maximumWeight.isPresent()
+        ? maximumWeight.getAsLong()
+        : null;
   }
 
   /**
@@ -277,7 +287,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @return the maximum weight
    */
   public OptionalLong getMaximumWeight() {
-    return maximumWeight;
+    return (maximumWeight == null)
+        ? OptionalLong.empty()
+        : OptionalLong.of(maximumWeight);
   }
 
   /**
