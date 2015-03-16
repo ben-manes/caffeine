@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.testng.annotations.Test;
 
@@ -404,6 +405,26 @@ public final class CaffeineTest {
     RemovalListener<Object, Object> removalListener = notif -> {};
     Caffeine<?, ?> builder = Caffeine.newBuilder().removalListener(removalListener);
     assertThat(builder.getRemovalListener(false), is(removalListener));
+    builder.build();
+  }
+
+  /* ---------------- named -------------- */
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void named_null() {
+    Caffeine.newBuilder().named(null);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void named_twice() {
+    Caffeine.newBuilder().named(() -> "a").named(() -> "b");
+  }
+
+  @Test
+  public void named() {
+    Supplier<String> nameSupplier = () -> "a";
+    Caffeine<?, ?> builder = Caffeine.newBuilder().named(nameSupplier);
+    assertThat(builder.name(), is(nameSupplier));
     builder.build();
   }
 }

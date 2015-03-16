@@ -25,6 +25,11 @@ public enum DisabledStatsCounter implements StatsCounter {
 
   private static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0);
 
+  /** @return a disabled statistics counter */
+  public static StatsCounter get() {
+    return INSTANCE;
+  }
+
   @Override
   public void recordHits(int count) {}
 

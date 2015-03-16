@@ -117,6 +117,7 @@ final class CacheFactory {
       this.statistics = new JCacheStatisticsMXBean();
       this.expiry = config.getExpiryPolicyFactory().create();
 
+      caffeine.named(cacheName::toString);
       if (config.getCacheLoaderFactory() != null) {
         cacheLoader = config.getCacheLoaderFactory().create();
       }

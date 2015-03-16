@@ -119,12 +119,10 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @param <V> the base value type for all caches created by this builder
  */
 public final class Caffeine<K, V> {
-  static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER =
-      () -> DisabledStatsCounter.INSTANCE;
-  static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER =
-      () -> new ConcurrentStatsCounter();
-  enum Strength { STRONG, WEAK, SOFT }
+  static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER = DisabledStatsCounter::get;
+  static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
 
+  enum Strength { STRONG, WEAK, SOFT }
   static final int UNSET_INT = -1;
 
   static final int DEFAULT_INITIAL_CAPACITY = 16;
@@ -142,6 +140,7 @@ public final class Caffeine<K, V> {
   RemovalListener<? super K, ? super V> removalListener;
   Weigher<? super K, ? super V> weigher;
   Supplier<StatsCounter> statsCounterSupplier;
+  Supplier<String> nameSupplier;
   Executor executor;
   Ticker ticker;
 
@@ -669,6 +668,60 @@ public final class Caffeine<K, V> {
     return (statsCounterSupplier == null)
         ? DISABLED_STATS_COUNTER_SUPPLIER
         : ENABLED_STATS_COUNTER_SUPPLIER;
+  }
+
+  /**
+   * Specifies the supplier that provides the name of the cache. The cache name is used if tracing
+   * is enabled to help identify the instance when simulating the alternative configurations. The
+   * name of the cache is not required to be unique. If a strategy is not explicitly configured then
+   * the a best effort guess of the calling class is used as the identifier.
+   *
+   * @param nameSupplier a supplier instance that returns the name of a cache
+   * @return this builder instance
+   * @throws IllegalStateException if a removal listener was already set
+   * @throws NullPointerException if the specified supplier is null
+   */
+  @Nonnull
+  public Caffeine<K, V> named(@Nonnull Supplier<String> nameSupplier) {
+    requireState(this.nameSupplier == null);
+    this.nameSupplier = requireNonNull(nameSupplier);
+    return this;
+  }
+
+  @Nonnull
+  Supplier<String> name() {
+    return (nameSupplier == null) ? Caffeine::callerClassName : nameSupplier;
+  }
+
+  /** Returns a best effort guess of the calling class's simple name. */
+  static String callerClassName() {
+    Class<?>[] classContext = new SecurityManager() {
+      @Override public Class<?>[] getClassContext() {
+        return super.getClassContext();
+      }
+    }.getClassContext();
+    if (classContext != null) {
+      for (Class<?> clazz : classContext) {
+        if (!clazz.getPackage().getName().startsWith(Caffeine.class.getPackage().getName())) {
+          String name = clazz.getSimpleName();
+          int end = name.indexOf('$');
+          if (!name.isEmpty()) {
+            return (end == -1) ? name : name.substring(0, end);
+          }
+        }
+      }
+    }
+    for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+      if (!element.getClassName().startsWith(Caffeine.class.getPackage().getName())) {
+        String name = element.getClassName().replaceAll("\\$[0-9]+", "\\$");
+        int start = name.lastIndexOf('$');
+        if (start == -1) {
+          start = name.lastIndexOf('.');
+        }
+        return name.substring(start + 1);
+      }
+    }
+    return "Unknown";
   }
 
   boolean isBounded() {
