@@ -480,22 +480,17 @@ public final class NodeGenerator {
       return;
     }
 
-    StringBuilder start = new StringBuilder();
-    StringBuilder end = new StringBuilder();
-    start.append("return String.format(\"%s=[key=%s, value=%s");
-    end.append("]\",\ngetClass().getSimpleName(), getKey(), getValue()");
-    start.append(", weight=%d");
-    end.append(", getWeight()");
-    start.append(", accessTimeNS=%,d");
-    end.append(", getAccessTime()");
-    start.append(", writeTimeNS=%,d");
-    end.append(", getWriteTime()");
-    end.append(")");
+    String statement = "return String.format(\"%s=[key=%s, value=%s, weight=%d, accessTimeNS=%,d, "
+        + "writeTimeNS=%,d, \"\n+ \"prevInAccess=%s, nextInAccess=%s, prevInWrite=%s, "
+        + "nextInWrite=%s]\",\ngetClass().getSimpleName(), getKey(), getValue(), getWeight(), "
+        + "getAccessTime(),\ngetWriteTime(), getPreviousInAccessOrder() != null, "
+        + "getNextInAccessOrder() != null,\ngetPreviousInWriteOrder() != null, "
+        + "getNextInWriteOrder() != null)";
 
     nodeSubtype.addMethod(MethodSpec.methodBuilder("toString")
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(String.class)
-        .addStatement(start.toString() + end.toString())
+        .addStatement(statement)
         .build());
   }
 

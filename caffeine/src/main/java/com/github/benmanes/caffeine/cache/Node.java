@@ -124,24 +124,24 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getPreviousInAccessOrder() {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setPreviousInAccessOrder(Node<K, V> prev) {
+  default void setPreviousInAccessOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getNextInAccessOrder() {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setNextInAccessOrder(Node<K, V> next) {
+  default void setNextInAccessOrder(@Nullable Node<K, V> next) {
     throw new UnsupportedOperationException();
   }
 
@@ -170,24 +170,24 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getPreviousInWriteOrder() {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setPreviousInWriteOrder(Node<K, V> prev) {
+  default void setPreviousInWriteOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
   default Node<K, V> getNextInWriteOrder() {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setNextInWriteOrder(Node<K, V> next) {
+  default void setNextInWriteOrder(@Nullable Node<K, V> next) {
     throw new UnsupportedOperationException();
   }
 }

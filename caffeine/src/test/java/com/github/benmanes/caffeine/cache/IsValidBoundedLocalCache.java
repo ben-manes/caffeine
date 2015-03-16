@@ -152,11 +152,14 @@ public final class IsValidBoundedLocalCache<K, V>
   private long scanLinks(BoundedLocalCache<K, V> cache, Set<Node<K, V>> seen,
       LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
     long weightedSize = 0;
+    Node<?, ?> prev = null;
     for (Node<K, V> node : deque) {
       Supplier<String> errorMsg = () -> String.format(
           "Loop detected: %s, saw %s in %s", node, seen, cache);
+      desc.expectThat("wrong previous", deque.getPrevious(node), is(prev));
       desc.expectThat(errorMsg, seen.add(node), is(true));
       weightedSize += node.getWeight();
+      prev = node;
     }
     return weightedSize;
   }
