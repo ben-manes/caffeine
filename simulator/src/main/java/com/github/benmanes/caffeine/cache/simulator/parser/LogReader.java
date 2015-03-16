@@ -31,7 +31,7 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.univocity.parsers.csv.CsvFormat;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
@@ -51,10 +51,10 @@ public final class LogReader {
    * @param filePath the path to the log file
    * @return a lazy stream of cache events
    */
-  public static Stream<CacheEvent> binaryLogStream(Path filePath) throws IOException {
+  public static Stream<TraceEvent> binaryLogStream(Path filePath) throws IOException {
     DataInputStream input = new DataInputStream(
         new BufferedInputStream(Files.newInputStream(filePath)));
-    Spliterator<CacheEvent> spliterator = Spliterators.spliteratorUnknownSize(
+    Spliterator<TraceEvent> spliterator = Spliterators.spliteratorUnknownSize(
         new BinaryLogIterator(input), Spliterator.NONNULL);
     return StreamSupport.stream(spliterator, false);
   }
@@ -65,14 +65,14 @@ public final class LogReader {
    * @param filePath the path to the log file
    * @return a lazy stream of cache events
    */
-  public static Stream<CacheEvent> textLogStream(Path filePath) throws IOException {
+  public static Stream<TraceEvent> textLogStream(Path filePath) throws IOException {
     BufferedReader reader = Files.newBufferedReader(filePath);
-    Spliterator<CacheEvent> spliterator = Spliterators.spliteratorUnknownSize(
+    Spliterator<TraceEvent> spliterator = Spliterators.spliteratorUnknownSize(
         new TextLogIterator(reader), Spliterator.NONNULL);
     return StreamSupport.stream(spliterator, false);
   }
 
-  private static final class BinaryLogIterator implements Iterator<CacheEvent> {
+  private static final class BinaryLogIterator implements Iterator<TraceEvent> {
     final DataInputStream input;
 
     BinaryLogIterator(DataInputStream input) {
@@ -97,21 +97,21 @@ public final class LogReader {
     }
 
     @Override
-    public CacheEvent next() {
+    public TraceEvent next() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
       try {
-        return CacheEvent.fromBinaryRecord(input);
+        return TraceEvent.fromBinaryRecord(input);
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
     }
   }
 
-  private static final class TextLogIterator implements Iterator<CacheEvent> {
+  private static final class TextLogIterator implements Iterator<TraceEvent> {
     final CsvParser parser;
-    CacheEvent next;
+    TraceEvent next;
 
     TextLogIterator(Reader reader) {
       parser = makeParser();
@@ -136,16 +136,16 @@ public final class LogReader {
         parser.stopParsing();
         return false;
       }
-      next = CacheEvent.fromTextRecord(record);
+      next = TraceEvent.fromTextRecord(record);
       return true;
     }
 
     @Override
-    public CacheEvent next() {
+    public TraceEvent next() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      CacheEvent current = next;
+      TraceEvent current = next;
       next = null;
       return current;
     }

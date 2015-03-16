@@ -13,30 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.tracing;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-
-import org.testng.annotations.Test;
+package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
 /**
+ * Implements a least-recently-used cache based on sampling the entries.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TracerTest {
+public final class Lru extends AbstractSamplingPolicy {
 
-  @Test
-  public void serviceLoader() {
-    Tracer defaultTracer = Tracer.getDefault();
-    assertThat(defaultTracer, is(Tracer.disabled()));
-  }
-
-  @Test
-  public void disabledTracer() {
-    Tracer tracer = Tracer.disabled();
-    long id = tracer.register("abc");
-    tracer.recordRead(id, new Object());
-    tracer.recordWrite(id, new Object(), 1);
-    tracer.recordDelete(id, new Object());
+  public Lru(String name) {
+    super(name, EvictionPolicy.LRU);
   }
 }

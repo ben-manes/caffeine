@@ -26,7 +26,7 @@ import akka.dispatch.RequiresMessageQueue;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.google.common.base.MoreObjects;
 
 /**
@@ -61,9 +61,9 @@ abstract class AbstractLinkedPolicy extends UntypedActor
 
   @Override
   public void onReceive(Object msg) throws Exception {
-    if (msg instanceof CacheEvent) {
+    if (msg instanceof TraceEvent) {
       policyStats.stopwatch().start();
-      handleEvent((CacheEvent) msg);
+      handleEvent((TraceEvent) msg);
       policyStats.stopwatch().stop();
     } else if (msg == Message.END) {
       getSender().tell(policyStats, ActorRef.noSender());
@@ -71,49 +71,38 @@ abstract class AbstractLinkedPolicy extends UntypedActor
     }
   }
 
-  private void handleEvent(CacheEvent event) {
+  private void handleEvent(TraceEvent event) {
     switch (event.action()) {
-      case CREATE:
-      case UPDATE:
-        onCreateOrUpdate(event, false);
-        break;
+      case WRITE:
+        if (data.containsKey(event.keyHash())) {
+          onRead(event);
+        } else {
+          onCreateOrUpdate(event);
+        }
       case READ:
         onRead(event);
         break;
-      case READ_OR_CREATE:
-        if (data.containsKey(event.hash())) {
-          onRead(event);
-        } else {
-          onCreateOrUpdate(event, true);
-        }
-        break;
       case DELETE:
-        data.remove(event.hash());
+        data.remove(event.keyHash());
         break;
       default:
         throw new UnsupportedOperationException();
     }
   }
 
-  private void onCreateOrUpdate(CacheEvent event, boolean recordStats) {
-    Node node = new Node(event.hash(), sentinel);
+  private void onCreateOrUpdate(TraceEvent event) {
+    Node node = new Node(event.keyHash(), sentinel);
     Node old = data.putIfAbsent(node.key, node);
     if (old == null) {
-      if (recordStats) {
-        policyStats.recordMiss();
-      }
       node.appendToTail();
       evict();
     } else {
-      if (recordStats) {
-        policyStats.recordHit();
-      }
       policy.onAccess(old);
     }
   }
 
-  private void onRead(CacheEvent event) {
-    Node node = data.get(event.hash());
+  private void onRead(TraceEvent event) {
+    Node node = data.get(event.keyHash());
     if (node == null) {
       policyStats.recordMiss();
     } else {

@@ -13,27 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sampling;
+package com.github.benmanes.caffeine.cache.tracing;
 
-import akka.actor.UntypedActor;
+import java.util.HashSet;
+import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.sampling.AbstractSamplingPolicy.Sample;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class SamplingSettings extends BasicSettings {
+public final class TracerIdGeneratorTest {
+  TracerIdGenerator generator = new TracerIdGenerator();
 
-  public SamplingSettings(UntypedActor actor) {
-    super(actor);
-  }
-
-  public int sampleSize() {
-    return config().getInt("sampling.size");
-  }
-
-  public Sample sampleStrategy() {
-    return Sample.valueOf(config().getString("sampling.strategy").toUpperCase());
+  @Test
+  public void unique() {
+    long[] ids = new long[1024];
+    for (int i = 0; i < ids.length; i++) {
+      ids[i] = generator.nextId();
+    }
+    Set<Long> unique = new HashSet<Long>(ids.length);
+    for (long id : ids) {
+      if (!unique.add(id)) {
+        Assert.fail("Duplicate id detected: " + id);
+      }
+    }
   }
 }

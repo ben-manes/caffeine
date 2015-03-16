@@ -13,30 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.tracing;
+package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import akka.actor.UntypedActor;
 
-import org.testng.annotations.Test;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.sampled.AbstractSamplingPolicy.Sample;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TracerTest {
+final class SamplingSettings extends BasicSettings {
 
-  @Test
-  public void serviceLoader() {
-    Tracer defaultTracer = Tracer.getDefault();
-    assertThat(defaultTracer, is(Tracer.disabled()));
+  public SamplingSettings(UntypedActor actor) {
+    super(actor);
   }
 
-  @Test
-  public void disabledTracer() {
-    Tracer tracer = Tracer.disabled();
-    long id = tracer.register("abc");
-    tracer.recordRead(id, new Object());
-    tracer.recordWrite(id, new Object(), 1);
-    tracer.recordDelete(id, new Object());
+  public int sampleSize() {
+    return config().getInt("sampling.size");
+  }
+
+  public Sample sampleStrategy() {
+    return Sample.valueOf(config().getString("sampling.strategy").toUpperCase());
   }
 }

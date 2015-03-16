@@ -20,41 +20,59 @@ import java.util.ServiceLoader;
 import javax.annotation.Nonnull;
 
 /**
- * A tracing api for recording cache operations (create-read-update-delete).
+ * A tracing api for recording cache operations.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Tracer {
 
   /**
-   * Records the addition of a new entry to the cache.
+   * Registers a cache by name for identifying the cache during simulation. The name is not required
+   * to be unique and duplicate names will be identified separately by the simulator. The returned
+   * identifier is guaranteed to be unique if tracing is enabled.
    *
-   * @param key key to the entry now present in the cache
-   * @param weight the weight of the entry
+   * @param name the human readable label for identifying the cache
+   * @return a unique identifier of the cache instance.
    */
-  void recordCreate(@Nonnull Object key, int weight);
+  long register(@Nonnull String name);
 
   /**
-   * Records the entry that was read from the cache.
+   * Records a read only operation on the cache, which may or may not successfully have returned the
+   * associated value. The cache operation must not be of a type that automatically computes the
+   * value if the read was unsuccessful (use {@link #recordWrite} instead).
    *
    * @param key key to the retrieved entry
    */
-  void recordRead(@Nonnull Object key);
+  void recordRead(long id, @Nonnull Object key);
 
   /**
-   * Records the entry that was updated in the cache.
+   * Records a write operation that results in an entry existing in the cache. A write should be
+   * recorded for the following operations:
+   * <ul>
+   *   <li>a read that triggers computing the entry if not present</li>
+   *   <li>insertion of a new entry</li>
+   *   <li>insertion of a new entry if a mapping for the key is absent<li>
+   *   <li>update or replacement of an existing entry</li>
+   * </ul>
+   * The cache operation should be recorded regardless of whether the cache was mutated, as
+   * replaying the events under simulation will have different effects. Unlike the cache integrity
+   * constraints, the recorded weight may be negative which indicates an update that reduced the
+   * entry's weight.
    *
-   * @param key key to the entry updated in the cache
-   * @param weightDifference the difference between the old and new entry's weight
+   * @param key key to the entry present in the cache
+   * @param weight the weight of the entry
    */
-  void recordUpdate(@Nonnull Object key, int weightDifference);
+  void recordWrite(long id, @Nonnull Object key, int weight);
 
   /**
-   * Records the removal of an entry from the cache.
+   * Records the explicit removal of an entry from the cache. The deletion must be recorded
+   * regardless of whether the cache was mutated as a result of the operation. A removal caused by
+   * eviction should not be recorded, as replaying the events under simulation eviction will occur
+   * differently.
    *
    * @param key key to the entry now removed in the cache
    */
-  void recordDelete(@Nonnull Object key);
+  void recordDelete(long id, @Nonnull Object key);
 
   /** @return if tracing is enabled and an implementation has been loaded. */
   public static boolean isEnabled() {
@@ -81,10 +99,10 @@ public interface Tracer {
 enum DisabledTracer implements Tracer {
   INSTANCE;
 
-  @Override public void recordCreate(Object key, int weight) {}
-  @Override public void recordRead(Object key) {}
-  @Override public void recordUpdate(Object key, int weightDifference) {}
-  @Override public void recordDelete(Object key) {}
+  @Override public long register(String name) { return 0L; }
+  @Override public void recordRead(long id, Object key) {}
+  @Override public void recordWrite(long id, Object key, int weight) {}
+  @Override public void recordDelete(long id, Object key) {}
 }
 
 final class TracerHolder {

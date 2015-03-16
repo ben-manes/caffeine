@@ -34,7 +34,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings.FileFormat;
 import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 
 /**
  * The simulator broadcasts the recorded cache events to each policy actor and generates an
@@ -73,7 +73,7 @@ public final class Simulator extends UntypedActor {
     }
   }
 
-  private Stream<CacheEvent> events() throws IOException {
+  private Stream<TraceEvent> events() throws IOException {
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings);
     }

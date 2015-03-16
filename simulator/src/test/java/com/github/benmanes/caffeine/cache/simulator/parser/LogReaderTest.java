@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.Synthetic;
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.github.benmanes.caffeine.cache.tracing.async.BinaryLogEventHandler;
 import com.github.benmanes.caffeine.cache.tracing.async.LogEventHandler;
 import com.github.benmanes.caffeine.cache.tracing.async.TextLogEventHandler;
@@ -41,29 +41,29 @@ public final class LogReaderTest {
 
   @Test
   public void readTextLog() throws Exception {
-    List<CacheEvent> events = makeEvents();
+    List<TraceEvent> events = makeEvents();
     Path filePath = eventsAsLogFile(events, path -> new TextLogEventHandler(path));
-    List<CacheEvent> read = LogReader.textLogStream(filePath).collect(Collectors.toList());
+    List<TraceEvent> read = LogReader.textLogStream(filePath).collect(Collectors.toList());
     assertThat(read, is(equalTo(events)));
   }
 
   @Test
   public void readBinaryLog() throws Exception {
-    List<CacheEvent> events = makeEvents();
+    List<TraceEvent> events = makeEvents();
     Path filePath = eventsAsLogFile(events, path -> new BinaryLogEventHandler(path));
-    List<CacheEvent> read = LogReader.binaryLogStream(filePath).collect(Collectors.toList());
+    List<TraceEvent> read = LogReader.binaryLogStream(filePath).collect(Collectors.toList());
     assertThat(read, is(equalTo(events)));
   }
 
-  private List<CacheEvent> makeEvents() {
+  private List<TraceEvent> makeEvents() {
     return Synthetic.counter(0, FILE_SIZE).collect(Collectors.toList());
   }
 
-  private Path eventsAsLogFile(List<CacheEvent> events, Function<Path, LogEventHandler> handlerFun)
+  private Path eventsAsLogFile(List<TraceEvent> events, Function<Path, LogEventHandler> handlerFun)
       throws Exception {
     Path path = Jimfs.newFileSystem().getPath("caffeine.log");
     LogEventHandler handler = handlerFun.apply(path);
-    for (CacheEvent event : events) {
+    for (TraceEvent event : events) {
       handler.onEvent(event, 1, true);
     }
     handler.close();

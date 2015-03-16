@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.tracing.async;
 
 import java.io.Closeable;
 
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.lmax.disruptor.EventHandler;
 
 /**
@@ -25,4 +25,4 @@ import com.lmax.disruptor.EventHandler;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface LogEventHandler extends EventHandler<CacheEvent>, Closeable {}
+public interface LogEventHandler extends EventHandler<TraceEvent>, Closeable {}

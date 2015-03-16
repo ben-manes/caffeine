@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sampling;
+package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ import akka.dispatch.RequiresMessageQueue;
 
 import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.google.common.base.MoreObjects;
 
 /**
@@ -75,9 +75,9 @@ abstract class AbstractSamplingPolicy extends UntypedActor
 
   @Override
   public void onReceive(Object msg) throws Exception {
-    if (msg instanceof CacheEvent) {
+    if (msg instanceof TraceEvent) {
       policyStats.stopwatch().start();
-      handleEvent((CacheEvent) msg);
+      handleEvent((TraceEvent) msg);
       policyStats.stopwatch().stop();
     } else if (msg == Message.END) {
       getSender().tell(policyStats, ActorRef.noSender());
@@ -85,21 +85,17 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     }
   }
 
-  private void handleEvent(CacheEvent event) {
+  private void handleEvent(TraceEvent event) {
     switch (event.action()) {
-      case CREATE:
-      case UPDATE:
-        onCreateOrUpdate(event, false);
+      case WRITE:
+        if (data.containsKey(event.keyHash())) {
+          onRead(event);
+        } else {
+          onCreateOrUpdate(event);
+        }
         break;
       case READ:
         onRead(event);
-        break;
-      case READ_OR_CREATE:
-        if (data.containsKey(event.hash())) {
-          onRead(event);
-        } else {
-          onCreateOrUpdate(event, true);
-        }
         break;
       case DELETE:
         onDelete(event);
@@ -109,27 +105,20 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     }
   }
 
-  private void onCreateOrUpdate(CacheEvent event, boolean recordStats) {
-    Node node = data.get(event.hash());
+  private void onCreateOrUpdate(TraceEvent event) {
+    Node node = data.get(event.keyHash());
     if (node == null) {
-      if (recordStats) {
-        policyStats.recordMiss();
-      }
       evict();
-      node = new Node(event.hash(), free.pop());
-      data.put(event.hash(), node);
+      node = new Node(event.keyHash(), free.pop());
+      data.put(event.keyHash(), node);
       table[node.index] = node;
     } else {
-      if (recordStats) {
-        node.frequency++;
-        policyStats.recordHit();
-      }
       node.accessTime = System.nanoTime();
     }
   }
 
-  private void onRead(CacheEvent event) {
-    Node node = data.get(event.hash());
+  private void onRead(TraceEvent event) {
+    Node node = data.get(event.keyHash());
     if (node == null) {
       policyStats.recordMiss();
     } else {
@@ -139,8 +128,8 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     }
   }
 
-  private void onDelete(CacheEvent event) {
-    Node node = data.remove(event.hash());
+  private void onDelete(TraceEvent event) {
+    Node node = data.remove(event.keyHash());
     if (node != null) {
       removeFromTable(node);
     }

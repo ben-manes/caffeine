@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sampling;
+package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
 /**
- * Implements a random cache based on sampling the entries.
+ * Implements a first-in/first-out cache based on sampling the entries.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Random extends AbstractSamplingPolicy {
+public final class Fifo extends AbstractSamplingPolicy {
 
-  public Random(String name) {
-    super(name, EvictionPolicy.RANDOM);
+  public Fifo(String name) {
+    super(name, EvictionPolicy.FIFO);
   }
 }

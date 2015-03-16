@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.tracing.async;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,9 +26,10 @@ import java.util.concurrent.Executors;
 
 import javax.annotation.concurrent.ThreadSafe;
 
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent;
-import com.github.benmanes.caffeine.cache.tracing.CacheEvent.Action;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent.Action;
 import com.github.benmanes.caffeine.cache.tracing.Tracer;
+import com.github.benmanes.caffeine.cache.tracing.TracerIdGenerator;
 import com.lmax.disruptor.EventTranslatorOneArg;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.util.DaemonThreadFactory;
@@ -44,8 +47,9 @@ public final class AsyncTracer implements Tracer {
   public static final String TRACING_FORMAT = "caffeine.tracing.format";
   public static final String TRACING_BUFFER_SIZE = "caffeine.tracing.bufferSize";
 
-  final EventTranslatorOneArg<CacheEvent, CacheEvent> translator;
-  final Disruptor<CacheEvent> disruptor;
+  final EventTranslatorOneArg<TraceEvent, TraceEvent> translator;
+  final Disruptor<TraceEvent> disruptor;
+  final TracerIdGenerator generator;
   final ExecutorService executor;
   final LogEventHandler handler;
 
@@ -71,8 +75,9 @@ public final class AsyncTracer implements Tracer {
     this.handler = handler;
     this.executor = executor;
     this.translator = (event, seq, template) -> event.copyFrom(template);
-    this.disruptor = new Disruptor<>(CacheEvent::new, ringBufferSize, executor);
+    this.disruptor = new Disruptor<>(TraceEvent::new, ringBufferSize, executor);
     this.disruptor.handleEventsWith(handler);
+    this.generator = new TracerIdGenerator();
     this.disruptor.start();
   }
 
@@ -89,29 +94,32 @@ public final class AsyncTracer implements Tracer {
   }
 
   @Override
-  public void recordCreate(Object key, int weight) {
-    publish(0, Action.CREATE, key, weight);
+  public long register(String name) {
+    requireNonNull(name);
+    long id = generator.nextId();
+    publish(name, id, Action.REGISTER, null, 0);
+    return id;
   }
 
   @Override
-  public void recordRead(Object key) {
-    publish(0, Action.READ, key, 0);
+  public void recordRead(long id, Object key) {
+    publish(null, id, Action.READ, key, 0);
   }
 
   @Override
-  public void recordUpdate(Object key, int weightDifference) {
-    publish(0, Action.UPDATE, key, weightDifference);
+  public void recordWrite(long id, Object key, int weight) {
+    publish(null, id, Action.WRITE, key, weight);
   }
 
   @Override
-  public void recordDelete(Object key) {
-    publish(0, Action.DELETE, key, 0);
+  public void recordDelete(long id, Object key) {
+    publish(null, id, Action.DELETE, key, 0);
   }
 
   /** Publishes the event onto the ring buffer for asynchronous handling. */
-  private void publish(int id, Action action, Object key, int weightDifference) {
-    CacheEvent template = new CacheEvent(id, action,
-        key.hashCode(), weightDifference, System.nanoTime());
+  private void publish(String name, long id, Action action, Object key, int weight) {
+    TraceEvent template = new TraceEvent(name, id, action,
+        (key == null) ? 0 : key.hashCode(), weight, System.nanoTime());
     disruptor.getRingBuffer().publishEvent(translator, template);
   }
 
