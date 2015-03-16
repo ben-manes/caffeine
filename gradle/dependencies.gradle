@@ -86,6 +86,7 @@ ext {
       exclude group: 'junit'
     },
     hamcrest: "org.hamcrest:hamcrest-library:${test_versions.hamcrest}",
+    jcache_guice: "org.jsr107.ri:cache-annotations-ri-guice:${versions.jcache}",
     jcache_tck: "javax.cache:cache-tests:${test_versions.jcache_tck}",
     jcache_tck_tests: "javax.cache:cache-tests:${test_versions.jcache_tck}:tests",
     jimfs: "com.google.jimfs:jimfs:${test_versions.jimfs}",

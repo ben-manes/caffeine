@@ -94,11 +94,18 @@ JCache is a standardized caching API that is Java 6 compatible and introduced in
 of this JSR was to ease adoption of commercial distributed caching products and therefore makes many
 design decisions that are beneficial for vendors but poorly thought out for users. While **we do
 not recommend or encourage adopting JCache** for local in-memory caches, an implementation is
-provided. The [reference implementation](https://github.com/jsr107/RI) provides integration with
-Guice, Spring, and CDI containers that delegates to the JCache provider.
-
-The JCache provider is configured using [Typesafe's Config](https://github.com/typesafehub/config)
+provided. The JCache provider is configured using [Typesafe's Config](https://github.com/typesafehub/config)
 library. See the [reference.conf](jcache/src/main/resources/reference.conf) for more details.
+
+Integration with Guice, Spring, and CDI dependency injectors is provided by the 
+[reference implementation](https://github.com/jsr107/RI), which proxies to the default JCache
+provider.
+
+```gradle
+compile 'org.jsr107.ri:cache-annotations-ri-spring:1.0.0'
+compile 'org.jsr107.ri:cache-annotations-ri-guice:1.0.0'
+compile 'org.jsr107.ri:cache-annotations-ri-cdi:1.0.0'
+```
 
 ## Development Notes
 To get started, [sign the Contributor License Agreement](https://www.clahub.com/agreements/ben-manes/caffeine).
@@ -159,4 +166,5 @@ public final class CacheTest {
 #### A special thanks to...
 ![YourKit](http://www.yourkit.com/images/yklogo.png)
 
-[YourKit](http://www.yourkit.com) supports open source projects with its full-featured Java Profiler.
+[YourKit](http://www.yourkit.com) supports open source projects with its full-featured Java 
+Profiler.

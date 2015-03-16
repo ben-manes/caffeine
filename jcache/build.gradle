@@ -15,6 +15,7 @@ dependencies {
   testCompile test_libraries.hamcrest
   testCompile test_libraries.jcache_tck
   testCompile test_libraries.jcache_tck_tests
+  testCompile test_libraries.jcache_guice
 
   tck dependencies.create(test_libraries.jcache_tck_tests) {
     transitive = false
