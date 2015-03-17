@@ -90,12 +90,10 @@ public final class IsValidBoundedLocalCache<K, V>
   private void checkCache(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
     desc.expectThat("Inconsistent size", cache.data.size(), is(cache.size()));
     if (cache.evicts()) {
-      desc.expectThat("weightedSize", cache.weightedSize(), is(cache.weightedSize()));
-      desc.expectThat("capacity", cache.capacity(), is(cache.maximumWeightedSize().get()));
-      desc.expectThat("overflow", cache.maximumWeightedSize().get(),
-          is(greaterThanOrEqualTo(cache.weightedSize())));
+      desc.expectThat("overflow", cache.maximum(),
+          is(greaterThanOrEqualTo(cache.adjustedWeightedSize())));
+      desc.expectThat("unlocked", cache.evictionLock().isLocked(), is(false));
     }
-    desc.expectThat("unlocked", cache.evictionLock().isLocked(), is(false));
 
     if (cache.isEmpty()) {
       desc.expectThat("empty map", cache, emptyMap());
@@ -143,9 +141,9 @@ public final class IsValidBoundedLocalCache<K, V>
     if (cache.evicts()) {
       Supplier<String> error = () -> String.format(
           "WeightedSize != link weights [%d vs %d] {%d vs %d}",
-          cache.weightedSize(), weighted, seen.size(), cache.size());
+          cache.adjustedWeightedSize(), weighted, seen.size(), cache.size());
       desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
-      desc.expectThat(error, cache.weightedSize(), is(weightedSize));
+      desc.expectThat(error, cache.adjustedWeightedSize(), is(weightedSize));
     }
   }
 

@@ -26,7 +26,9 @@ import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
+import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
 import static com.github.benmanes.caffeine.cache.Specifications.nodeType;
+import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
@@ -41,7 +43,6 @@ import java.util.stream.Collectors;
 
 import javax.lang.model.element.Modifier;
 
-import com.google.common.base.CaseFormat;
 import com.google.common.collect.Iterables;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
@@ -124,7 +125,7 @@ public final class NodeGenerator {
     }
     Strength keyStrength = strengthOf(Iterables.get(generateFeatures, 0));
     nodeSubtype
-        .addField(newFieldOffset("key"))
+        .addField(newFieldOffset(className, "key"))
         .addField(newKeyField())
         .addMethod(newGetter(keyStrength, kTypeVar, "key", Visibility.IMMEDIATE))
         .addMethod(newGetterRef("key"));
@@ -138,7 +139,7 @@ public final class NodeGenerator {
     }
     Strength valueStrength = strengthOf(Iterables.get(generateFeatures, 1));
     nodeSubtype
-        .addField(newFieldOffset("value"))
+        .addField(newFieldOffset(className, "value"))
         .addField(newValueField())
         .addMethod(newGetter(valueStrength, vTypeVar, "value", Visibility.LAZY))
         .addMethod(makeSetValue())
@@ -261,7 +262,7 @@ public final class NodeGenerator {
   /** Adds the expiration support, if enabled, to the node type. */
   private void addExpiration() {
     if (generateFeatures.contains(Feature.EXPIRE_ACCESS)) {
-      nodeSubtype.addField(newFieldOffset("accessTime"))
+      nodeSubtype.addField(newFieldOffset(className, "accessTime"))
           .addField(long.class, "accessTime", Modifier.PROTECTED, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG,
               "accessTime", Visibility.LAZY))
@@ -271,7 +272,7 @@ public final class NodeGenerator {
     }
 
     if (!Feature.useWriteTime(parentFeatures) && Feature.useWriteTime(generateFeatures)) {
-      nodeSubtype.addField(newFieldOffset("writeTime"))
+      nodeSubtype.addField(newFieldOffset(className, "writeTime"))
           .addField(long.class, "writeTime", Modifier.PROTECTED, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
@@ -382,20 +383,6 @@ public final class NodeGenerator {
             UNSAFE_ACCESS, keyOffset, deadArg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .build());
-  }
-
-  /** Creates a static field with an Unsafe address offset. */
-  private FieldSpec newFieldOffset(String varName) {
-    String name = offsetName(varName);
-    return FieldSpec
-        .builder(long.class, name, Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL)
-        .initializer("$T.objectFieldOffset($T.class, $S)", UNSAFE_ACCESS,
-            ClassName.bestGuess(className), varName).build();
-  }
-
-  /** Returns the offset constant to this variable. */
-  private String offsetName(String varName) {
-    return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName) + "_OFFSET";
   }
 
   private String baseClassName() {

@@ -88,7 +88,7 @@ public final class BoundedLocalCacheTest {
     cache.put(2, 2);
 
     assertThat(map.size(), is(1));
-    assertThat(map.weightedSize(), is(BoundedLocalCache.MAXIMUM_CAPACITY));
+    assertThat(map.adjustedWeightedSize(), is(BoundedLocalCache.MAXIMUM_CAPACITY));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = RejectedExecutionException.class)
@@ -384,7 +384,7 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void drain_blocksCapacity(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    checkDrainBlocks(localCache, () -> localCache.setCapacity(0));
+    checkDrainBlocks(localCache, () -> localCache.setMaximum(0));
   }
 
   void checkDrainBlocks(BoundedLocalCache<Integer, Integer> localCache, Runnable task) {

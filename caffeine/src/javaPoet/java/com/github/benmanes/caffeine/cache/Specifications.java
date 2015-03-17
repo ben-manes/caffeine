@@ -18,7 +18,11 @@ package com.github.benmanes.caffeine.cache;
 import java.lang.ref.ReferenceQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import javax.lang.model.element.Modifier;
+
+import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -99,4 +103,18 @@ public final class Specifications {
       ClassName.get(ConcurrentLinkedQueue.class), ClassName.get(Runnable.class));
 
   private Specifications() {}
+
+  /** Returns the offset constant to this variable. */
+  static String offsetName(String varName) {
+    return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName) + "_OFFSET";
+  }
+
+  /** Creates a static field with an Unsafe address offset. */
+  static FieldSpec newFieldOffset(String className, String varName) {
+    String name = offsetName(varName);
+    return FieldSpec
+        .builder(long.class, name, Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL)
+        .initializer("$T.objectFieldOffset($T.class, $S)", UNSAFE_ACCESS,
+            ClassName.bestGuess(className), varName).build();
+  }
 }

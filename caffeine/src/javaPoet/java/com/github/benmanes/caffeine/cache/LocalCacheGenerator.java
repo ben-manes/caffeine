@@ -22,11 +22,14 @@ import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PAR
 import static com.github.benmanes.caffeine.cache.Specifications.REMOVAL_LISTENER;
 import static com.github.benmanes.caffeine.cache.Specifications.STATS_COUNTER;
 import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
+import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.WEIGHER;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_ORDER_DEQUE;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_QUEUE;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
+import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 
@@ -47,7 +50,9 @@ import com.squareup.javapoet.TypeSpec;
  */
 public final class LocalCacheGenerator {
   private final Modifier[] privateFinalModifiers = { Modifier.PRIVATE, Modifier.FINAL };
+  private final Modifier[] privateVolatileModifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
 
+  private final String className;
   private final TypeSpec.Builder cache;
   private final MethodSpec.Builder constructor;
 
@@ -56,12 +61,13 @@ public final class LocalCacheGenerator {
 
   LocalCacheGenerator(TypeName superClass, String className,
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
-    this.constructor = MethodSpec.constructorBuilder();
+    this.className = className;
+    this.parentFeatures = parentFeatures;
+    this.generateFeatures = generateFeatures;
     this.cache = TypeSpec.classBuilder(className)
         .superclass(superClass)
         .addModifiers(Modifier.STATIC);
-    this.parentFeatures = parentFeatures;
-    this.generateFeatures = generateFeatures;
+    this.constructor = MethodSpec.constructorBuilder();
   }
 
   public TypeSpec generate() {
@@ -189,6 +195,37 @@ public final class LocalCacheGenerator {
         .addStatement("return true")
         .returns(boolean.class)
         .build());
+
+    constructor.addStatement(
+        "this.maximum = $T.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY)", Math.class);
+    cache.addField(FieldSpec.builder(long.class, "maximum", privateVolatileModifiers).build());
+    cache.addField(newFieldOffset(className, "maximum"));
+    cache.addMethod(MethodSpec.methodBuilder("maximum")
+        .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
+        .addStatement("return $T.UNSAFE.getLong(this, $N)", UNSAFE_ACCESS, offsetName("maximum"))
+        .returns(long.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("lazySetMaximum")
+        .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
+        .addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName("maximum"), "maximum")
+        .addParameter(long.class, "maximum")
+        .build());
+
+    cache.addField(FieldSpec.builder(long.class, "weightedSize", privateVolatileModifiers).build());
+    cache.addField(newFieldOffset(className, "weightedSize"));
+    cache.addMethod(MethodSpec.methodBuilder("weightedSize")
+        .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
+        .addStatement("return $T.UNSAFE.getLong(this, $N)",
+            UNSAFE_ACCESS, offsetName("weightedSize"))
+        .returns(long.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("lazySetWeightedSize")
+        .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
+        .addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName("weightedSize"), "weightedSize")
+        .addParameter(long.class, "weightedSize")
+        .build());
   }
 
   private void addWeigher() {
@@ -215,7 +252,7 @@ public final class LocalCacheGenerator {
     }
     constructor.addStatement("this.expiresAfterAccessNanos = builder.getExpiresAfterAccessNanos()");
     cache.addField(FieldSpec.builder(long.class, "expiresAfterAccessNanos",
-        Modifier.PRIVATE, Modifier.VOLATILE).build());
+        privateVolatileModifiers).build());
     cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccess")
         .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
         .addStatement("return true")
@@ -239,7 +276,7 @@ public final class LocalCacheGenerator {
     }
     constructor.addStatement("this.expiresAfterWriteNanos = builder.getExpiresAfterWriteNanos()");
     cache.addField(FieldSpec.builder(long.class, "expiresAfterWriteNanos",
-        Modifier.PRIVATE, Modifier.VOLATILE).build());
+        privateVolatileModifiers).build());
     cache.addMethod(MethodSpec.methodBuilder("expiresAfterWrite")
         .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
         .addStatement("return true")
@@ -263,7 +300,7 @@ public final class LocalCacheGenerator {
     }
     constructor.addStatement("this.refreshAfterWriteNanos = builder.getRefreshAfterWriteNanos()");
     cache.addField(FieldSpec.builder(long.class, "refreshAfterWriteNanos",
-        Modifier.PRIVATE, Modifier.VOLATILE).build());
+        privateVolatileModifiers).build());
     cache.addMethod(MethodSpec.methodBuilder("refreshAfterWrite")
         .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
         .addStatement("return true")
