@@ -69,33 +69,33 @@ public final class IsValidBoundedLocalCache<K, V>
     if (!cache.evicts() && !cache.expiresAfterAccess()) {
       return;
     }
-    cache.replacement.evictionLock().lock();
-    for (int i = 0; i < cache.replacement.readBuffers().length; i++) {
+    cache.evictionLock().lock();
+    for (int i = 0; i < cache.readBuffers().length; i++) {
       for (;;) {
         cache.drainBuffers();
 
         boolean fullyDrained = cache.buffersWrites() && cache.writeQueue().isEmpty();
-        for (int j = 0; j < cache.replacement.readBuffers().length; j++) {
-          fullyDrained &= (cache.replacement.readBuffers()[i][j].get() == null);
+        for (int j = 0; j < cache.readBuffers().length; j++) {
+          fullyDrained &= (cache.readBuffers()[i][j].get() == null);
         }
         if (fullyDrained) {
           break;
         }
-        cache.replacement.readBufferReadCount()[i]++;
+        cache.readBufferReadCount()[i]++;
       }
     }
-    cache.replacement.evictionLock().unlock();
+    cache.evictionLock().unlock();
   }
 
   private void checkCache(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
     desc.expectThat("Inconsistent size", cache.data.size(), is(cache.size()));
     if (cache.evicts()) {
-      desc.expectThat("weightedSize", cache.weightedSize(), is(cache.replacement.weightedSize()));
-      desc.expectThat("capacity", cache.capacity(), is(cache.replacement.maximumWeightedSize().get()));
-      desc.expectThat("overflow", cache.replacement.maximumWeightedSize().get(),
+      desc.expectThat("weightedSize", cache.weightedSize(), is(cache.weightedSize()));
+      desc.expectThat("capacity", cache.capacity(), is(cache.maximumWeightedSize().get()));
+      desc.expectThat("overflow", cache.maximumWeightedSize().get(),
           is(greaterThanOrEqualTo(cache.weightedSize())));
     }
-    desc.expectThat("unlocked", cache.replacement.evictionLock().isLocked(), is(false));
+    desc.expectThat("unlocked", cache.evictionLock().isLocked(), is(false));
 
     if (cache.isEmpty()) {
       desc.expectThat("empty map", cache, emptyMap());

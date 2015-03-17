@@ -212,12 +212,11 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
         unwrapWeigher(copy.weigher()).getClass(), is(equalTo(
         unwrapWeigher(original.weigher()).getClass())));
     desc.expectThat("same nodeFactory", copy.nodeFactory, is(original.nodeFactory));
-    if (original.replacement.maximumWeightedSize() == null) {
-      desc.expectThat("null maximumWeight",
-          copy.replacement.maximumWeightedSize(), is(nullValue()));
+    if (original.maximumWeightedSize() == null) {
+      desc.expectThat("null maximumWeight", copy.maximumWeightedSize(), is(nullValue()));
     } else {
-      desc.expectThat("same maximumWeight", copy.replacement.maximumWeightedSize().get(),
-          is(original.replacement.maximumWeightedSize().get()));
+      desc.expectThat("same maximumWeight", copy.maximumWeightedSize().get(),
+          is(original.maximumWeightedSize().get()));
     }
 
     if (original.expiresAfterAccess()) {
