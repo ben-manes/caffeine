@@ -9,6 +9,7 @@ dependencies {
 
 test {
   useTestNG()
+  systemProperty 'caffeine.tracing.enabled', 'true'
 }
 
 bundle {

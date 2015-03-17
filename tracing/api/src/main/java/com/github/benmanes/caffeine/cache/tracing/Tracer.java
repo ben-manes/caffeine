@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.tracing;
 
 import java.util.ServiceLoader;
 
+import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
 /**
@@ -52,17 +53,15 @@ public interface Tracer {
    *   <li>a read that triggers computing the entry if not present</li>
    *   <li>insertion of a new entry</li>
    *   <li>insertion of a new entry if a mapping for the key is absent<li>
-   *   <li>update or replacement of an existing entry</li>
+   *   <li>replacement of an existing entry</li>
    * </ul>
    * The cache operation should be recorded regardless of whether the cache was mutated, as
-   * replaying the events under simulation will have different effects. Unlike the cache integrity
-   * constraints, the recorded weight may be negative which indicates an update that reduced the
-   * entry's weight.
+   * replaying the events under simulation will have different effects.
    *
    * @param key key to the entry present in the cache
    * @param weight the weight of the entry
    */
-  void recordWrite(long id, @Nonnull Object key, int weight);
+  void recordWrite(long id, @Nonnull Object key, @Nonnegative int weight);
 
   /**
    * Records the explicit removal of an entry from the cache. The deletion must be recorded
@@ -110,7 +109,7 @@ final class TracerHolder {
 
   private static Tracer load() {
     String property = System.getProperty("caffeine.tracing.enabled");
-    if ((property == null) || Boolean.valueOf(property)) {
+    if ((property == null) || Boolean.parseBoolean(property)) {
       for (Tracer tracer : ServiceLoader.load(Tracer.class)) {
         return tracer;
       };

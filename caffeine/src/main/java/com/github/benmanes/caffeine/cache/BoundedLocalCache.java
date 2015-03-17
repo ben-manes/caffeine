@@ -63,6 +63,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
 /**
  * An in-memory cache implementation that supports full concurrency of retrievals, a high expected
@@ -154,6 +155,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   // The page replacement algorithm
   final PageReplacement<K, V> replacement;
 
+  // The tracer id
+  final long id;
+
   transient Set<K> keySet;
   transient Collection<V> values;
   transient Set<Entry<K, V>> entrySet;
@@ -163,8 +167,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
    */
   protected BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
-    data = new ConcurrentHashMap<>(builder.getInitialCapacity());
+    id = tracer().register(builder.name());
     replacement = new PageReplacement<>(builder, isAsync);
+    data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
@@ -567,6 +572,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     drainValueReferences();
   }
 
+  /** Drains the weak key references queue. */
   void drainKeyReferences() {
     if (!collectKeys()) {
       return;
@@ -580,6 +586,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     }
   }
 
+  /** Drains the weak / soft value references queue. */
   void drainValueReferences() {
     if (!collectValues()) {
       return;
@@ -799,6 +806,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
             } else {
               notifyRemoval(key, value, RemovalCause.EXPLICIT);
             }
+            tracer().recordDelete(id, node.getKeyReference());
           }
           makeDead(node);
         }
@@ -822,6 +830,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
             } else {
               notifyRemoval(key, value, RemovalCause.EXPLICIT);
             }
+            tracer().recordDelete(id, node.getKeyReference());
           }
           makeDead(node);
         }
@@ -837,6 +846,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           } else {
             notifyRemoval(key, value, RemovalCause.EXPLICIT);
           }
+          tracer().recordDelete(id, node.getKeyReference());
         }
         makeDead(node);
       }
@@ -872,6 +882,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   @Override
   public V getIfPresent(Object key, boolean recordStats) {
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
+    tracer().recordRead(id, key);
     if (node == null) {
       if (recordStats) {
         statsCounter().recordMisses(1);
@@ -895,6 +906,8 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     Map<K, V> result = new LinkedHashMap<>();
     for (Object key : keys) {
       final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
+      tracer().recordRead(id, key);
+
       if ((node == null) || hasExpired(node, now)) {
         misses++;
         continue;
@@ -941,6 +954,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
     for (;;) {
       final Node<K, V> prior = data.putIfAbsent(node.getKeyReference(), node);
+      tracer().recordWrite(id, key, weight);
       if (prior == null) {
         afterWrite(node, new AddTask(node, weight));
         return null;
@@ -976,6 +990,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   @Override
   public V remove(Object key) {
     final Node<K, V> node = data.remove(nodeFactory.newLookupKey(key));
+    tracer().recordDelete(id, key);
     if (node == null) {
       return null;
     }
@@ -996,6 +1011,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   public boolean remove(Object key, Object value) {
     Object keyRef = nodeFactory.newLookupKey(key);
     final Node<K, V> node = data.get(keyRef);
+    tracer().recordDelete(id, key);
     if ((node == null) || (value == null)) {
       return false;
     }
@@ -1024,6 +1040,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
     final int weight = weigher().weigh(key, value);
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
+    tracer().recordWrite(id, key, weight);
     if (node == null) {
       return null;
     }
@@ -1059,6 +1076,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
     final int weight = weigher().weigh(key, newValue);
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
+    tracer().recordWrite(id, key, weight);
     if (node == null) {
       return false;
     }
@@ -1105,7 +1123,11 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         }
       } else {
         afterRead(node, true);
-        return node.getValue();
+        V value = node.getValue();
+        if (Tracer.isEnabled() && (value != null)) {
+          tracer().recordWrite(id, key, weigher().weigh(key, value));
+        }
+        return value;
       }
     }
 
@@ -1125,13 +1147,18 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     if (node == null) {
       return null;
     }
+    V val;
     if (value[0] == null) {
+      val = node.getValue();
       afterRead(node, true);
-      return node.getValue();
     } else {
+      val = value[0];
       afterWrite(node, new AddTask(node, weight[0]));
-      return value[0];
     }
+    if (Tracer.isEnabled() && (val != null)) {
+      tracer().recordWrite(id, key, weigher().weigh(key, val));
+    }
+    return val;
   }
 
   @Override
@@ -1172,6 +1199,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         if (hasRemovalListener() && (newValue[0] != oldValue)) {
           notifyRemoval(key, oldValue, RemovalCause.REPLACED);
         }
+        tracer().recordWrite(id, key, newWeight);
         return prior;
       }
     });
@@ -1197,6 +1225,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (prior == null) {
         newValue[0] = statsAware(remappingFunction, recordMiss, isAsync).apply(key, null);
         if (newValue[0] == null) {
+          tracer().recordDelete(id, key);
           return null;
         }
         final long now = ticker().read();
@@ -1204,6 +1233,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         final Node<K, V> newNode = nodeFactory.newNode(
             keyRef, newValue[0], valueReferenceQueue(), weight, now);
         task[0] = new AddTask(newNode, weight);
+        tracer().recordWrite(id, key, weight);
         return newNode;
       }
       synchronized (prior) {
@@ -1229,6 +1259,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           if (hasRemovalListener()) {
             notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
           }
+          tracer().recordDelete(id, key);
           return null;
         }
         final int oldWeight = prior.getWeight();
@@ -1243,6 +1274,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           if (hasRemovalListener() && (newValue[0] != oldValue)) {
             notifyRemoval(key, oldValue, RemovalCause.REPLACED);
           }
+          tracer().recordWrite(id, key, newWeight);
           return prior;
         } else {
           final long now = ticker().read();

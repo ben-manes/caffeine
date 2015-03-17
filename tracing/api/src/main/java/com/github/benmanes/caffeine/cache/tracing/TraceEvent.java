@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -97,7 +98,7 @@ public final class TraceEvent {
    *
    * @param action the traced cache operation
    */
-  public void setAction(Action action) {
+  public void setAction(@Nullable Action action) {
     this.action = action;
   }
 
@@ -159,7 +160,7 @@ public final class TraceEvent {
    * @param record the columns in the text record
    * @return the event that the record represents
    */
-  public static TraceEvent fromTextRecord(String[] record) {
+  public static TraceEvent fromTextRecord(@Nonnull String[] record) {
     TraceEvent event = new TraceEvent();
     int index = 0;
     event.action = Action.valueOf(record[index++]);
@@ -181,7 +182,7 @@ public final class TraceEvent {
    * @param output the text sink
    * @throws IOException if the output cannot be written
    */
-  public void appendTextRecord(Appendable output) throws IOException {
+  public void appendTextRecord(@Nonnull Appendable output) throws IOException {
     output.append(action.name());
     output.append(' ');
     if (action == Action.REGISTER) {
@@ -206,7 +207,7 @@ public final class TraceEvent {
    * @return the event that the next record represents
    * @throws IOException if the input cannot be read
    */
-  public static TraceEvent fromBinaryRecord(DataInputStream input) throws IOException {
+  public static TraceEvent fromBinaryRecord(@Nonnull DataInputStream input) throws IOException {
     TraceEvent event = new TraceEvent();
     event.action = Action.values()[input.readShort()];
     if (event.action == Action.REGISTER) {
@@ -232,7 +233,7 @@ public final class TraceEvent {
    * @param output the binary sink
    * @throws IOException if the output cannot be written
    */
-  public void appendBinaryRecord(DataOutputStream output) throws IOException {
+  public void appendBinaryRecord(@Nonnull DataOutputStream output) throws IOException {
     output.writeShort(action.ordinal());
     if (action == Action.REGISTER) {
       output.writeInt(name.length());

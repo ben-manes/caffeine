@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
 /**
  * A builder of {@link AsyncLoadingCache}, {@link LoadingCache}, and {@link Cache} instances
@@ -689,13 +690,16 @@ public final class Caffeine<K, V> {
   }
 
   @Nonnull
-  Supplier<String> name() {
-    return (nameSupplier == null) ? Caffeine::callerClassName : nameSupplier;
+  String name() {
+    if (Tracer.isEnabled()) {
+      Supplier<String> named = (nameSupplier == null) ? Caffeine::callerClassName : nameSupplier;
+      return named.get();
+    }
+    return "";
   }
 
   /** Returns a best effort guess of the calling class's simple name. */
   static String callerClassName() {
-    String packageName = "com.github.benmanes.caffeine";
     Class<?>[] classContext = new SecurityManager() {
       @Override public Class<?>[] getClassContext() {
         return super.getClassContext();
@@ -703,7 +707,8 @@ public final class Caffeine<K, V> {
     }.getClassContext();
     if (classContext != null) {
       for (Class<?> clazz : classContext) {
-        if (!clazz.getPackage().getName().startsWith(packageName)) {
+        String pkg = clazz.getPackage().getName();
+        if (!pkg.startsWith("com.github.benmanes.caffeine") && !pkg.startsWith("java")) {
           String name = clazz.getSimpleName();
           int end = name.indexOf('$');
           if (!name.isEmpty()) {
@@ -713,7 +718,8 @@ public final class Caffeine<K, V> {
       }
     }
     for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
-      if (!element.getClassName().startsWith(packageName)) {
+      String className = element.getClassName();
+      if (!className.startsWith("com.github.benmanes.caffeine") && !className.startsWith("java")) {
         String name = element.getClassName().replaceAll("\\$[0-9]+", "\\$");
         int start = name.lastIndexOf('$');
         if (start == -1) {

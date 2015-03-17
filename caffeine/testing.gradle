@@ -81,6 +81,7 @@ tasks.withType(Test) {
       threadCount = 6
     }
   }
+  systemProperty 'caffeine.tracing.enabled', 'false'
 }
 
 task stress(type: JavaExec, group: 'Cache tests', description: 'Executes a stress test') {

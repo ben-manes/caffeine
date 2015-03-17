@@ -424,7 +424,7 @@ public final class CaffeineTest {
   public void named() {
     Supplier<String> nameSupplier = () -> "a";
     Caffeine<?, ?> builder = Caffeine.newBuilder().named(nameSupplier);
-    assertThat(builder.name(), is(nameSupplier));
+    assertThat(builder.nameSupplier, is(nameSupplier));
     builder.build();
   }
 }
