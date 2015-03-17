@@ -152,7 +152,9 @@ final class CacheGenerator {
         || (context.valueStrength() != ReferenceType.STRONG)
         || !context.isLoading();
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
-    boolean skip = (context.isAsync() && asyncIncompatible) || refreshIncompatible;
+    boolean weigherIncompatible = context.isUnbounded() && context.isWeighted();
+    boolean skip = (context.isAsync() && asyncIncompatible)
+        || refreshIncompatible || weigherIncompatible;
 
     return skip ? Optional.empty() : Optional.of(context);
   }

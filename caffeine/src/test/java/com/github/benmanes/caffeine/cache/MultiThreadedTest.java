@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.testng.Assert.fail;
@@ -28,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -50,16 +50,19 @@ import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.SerializableTester;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -86,13 +89,58 @@ public final class MultiThreadedTest{
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL, stats = Stats.ENABLED,
-      expireAfterAccess = Expire.FOREVER, expireAfterWrite = Expire.FOREVER,
-      population = Population.EMPTY, removalListener = Listener.DEFAULT)
-  public void concurrent(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  @CacheSpec(maximumSize = MaximumSize.DISABLED, stats = Stats.DISABLED,
+      population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, refreshAfterWrite = Expire.DISABLED,
+      removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG)
+  public void concurrent_unbounded(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    runTest(cache);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
+      expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.DISABLED,
+      removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG)
+  public void concurrent_bounded(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    runTest(cache);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = MaximumSize.DISABLED, stats = Stats.DISABLED,
+      population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, refreshAfterWrite = Expire.DISABLED,
+      removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG)
+  public void async_concurrent_unbounded(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    runTest(cache);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
+      expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.DISABLED,
+      removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,
+      values = ReferenceType.STRONG)
+  public void async_concurrent_bounded(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    runTest(cache);
+  }
+
+  private void runTest(LoadingCache<Integer, Integer> cache) {
     Queue<String> failures = new ConcurrentLinkedQueue<>();
-    Thrasher thrasher = new Thrasher(cache, workingSets, failures);
-    executeWithTimeOut(cache, failures, () -> ConcurrentTestHarness.timeTasks(NTHREADS, thrasher));
+    Runnable thrasher = new Thrasher(cache, workingSets, failures);
+    executeWithTimeOut(failures, () -> ConcurrentTestHarness.timeTasks(NTHREADS, thrasher));
+    assertThat(failures.isEmpty(), is(true));
+  }
+
+  private void runTest(AsyncLoadingCache<Integer, Integer> cache) {
+    Queue<String> failures = new ConcurrentLinkedQueue<>();
+    Runnable thrasher = new AsyncThrasher(cache, workingSets, failures);
+    executeWithTimeOut(failures, () -> ConcurrentTestHarness.timeTasks(NTHREADS, thrasher));
     assertThat(failures.isEmpty(), is(true));
   }
 
@@ -206,27 +254,72 @@ public final class MultiThreadedTest{
       },
   };
 
+  /** Executes operations against the async cache to simulate random load. */
+  private final class AsyncThrasher implements Runnable {
+    private final AsyncLoadingCache<Integer, Integer> cache;
+    private final List<List<Integer>> sets;
+    private final Queue<String> failures;
+    private final AtomicInteger index;
+
+    public AsyncThrasher(AsyncLoadingCache<Integer, Integer> cache,
+        List<List<Integer>> sets, Queue<String> failures) {
+      this.index = new AtomicInteger();
+      this.failures = failures;
+      this.cache = cache;
+      this.sets = sets;
+    }
+
+    @Override
+    public void run() {
+      Random random = new Random();
+      int id = index.getAndIncrement();
+      for (Integer key : sets.get(id)) {
+        AsyncCacheOperation<Integer, Integer> operation =
+            asyncOperations[random.nextInt(asyncOperations.length)];
+        try {
+          operation.execute(cache, key, key);
+        } catch (Throwable t) {
+          failures.add(String.format("Failed: key %s on operation %s", key, operation));
+          throw t;
+        }
+      }
+    }
+  }
+
+  /** The public operations that can be performed on the async cache. */
+  interface AsyncCacheOperation<K, V> {
+    void execute(AsyncLoadingCache<Integer, Integer> cache, Integer key, Integer value);
+  }
+
+  @SuppressWarnings("unchecked")
+  AsyncCacheOperation<Integer, Integer>[] asyncOperations = new AsyncCacheOperation[] {
+    (cache, key, value) -> cache.getIfPresent(key),
+    (cache, key, value) -> cache.get(key, k -> value),
+    (cache, key, value) -> cache.get(key, (k, e) -> CompletableFuture.completedFuture(value)),
+    (cache, key, value) -> cache.get(key),
+    (cache, key, value) -> cache.getAll(ImmutableList.of(key)),
+    (cache, key, value) -> cache.put(key, CompletableFuture.completedFuture(value)),
+  };
+
   /* ---------------- Utilities -------------- */
 
-  private void executeWithTimeOut(Cache<?, ?> cache, Queue<String> failures, Callable<Long> task) {
+  private void executeWithTimeOut(Queue<String> failures, Callable<Long> task) {
     ExecutorService es = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true).build());
     Future<Long> future = es.submit(task);
     try {
       long timeNS = future.get(TIMEOUT, TimeUnit.SECONDS);
       logger.debug("\nExecuted in " + TimeUnit.NANOSECONDS.toSeconds(timeNS) + " second(s)");
-      assertThat((Cache<?, ?>) cache, is(validCache()));
     } catch (ExecutionException e) {
       fail("Exception during test: " + e.toString(), e);
     } catch (TimeoutException e) {
-      handleTimout(cache, failures, es, e);
+      handleTimout(failures, es, e);
     } catch (InterruptedException e) {
       fail("", e);
     }
   }
 
-  private void handleTimout(Cache<?, ?> cache, Queue<String> failures,
-      ExecutorService es, TimeoutException e) {
+  private void handleTimout(Queue<String> failures, ExecutorService es, TimeoutException e) {
     for (StackTraceElement[] trace : Thread.getAllStackTraces().values()) {
       for (StackTraceElement element : trace) {
         logger.info("\tat " + element);
@@ -235,14 +328,7 @@ public final class MultiThreadedTest{
         logger.info("------");
       }
     }
-    es.shutdownNow();
-    try {
-      es.awaitTermination(10, TimeUnit.SECONDS);
-    } catch (InterruptedException ex) {
-      fail("", ex);
-    }
-
-    logger.debug("Cached Elements: " + cache.toString());
+    MoreExecutors.shutdownAndAwaitTermination(es, 10, TimeUnit.SECONDS);
     for (String failure : failures) {
       logger.debug(failure);
     }
