@@ -44,11 +44,8 @@ subprojects { proj ->
   sourceCompatibility = JavaVersion.VERSION_1_8
 
   tasks.withType(JavaCompile) {
-    if (System.env.'CI') {
-      options.fork = true
-      options.forkOptions.memoryMaximumSize = '384m'
-    } else {
-      options.incremental = true    
+    if (!System.env.'CI') {
+      options.incremental = true
     }
   }
 

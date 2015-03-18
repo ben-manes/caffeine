@@ -33,7 +33,7 @@ public interface Tracer {
    * identifier is guaranteed to be unique if tracing is enabled.
    *
    * @param name the human readable label for identifying the cache
-   * @return a unique identifier of the cache instance.
+   * @return a unique identifier of the cache instance
    */
   long register(@Nonnull String name);
 
@@ -42,6 +42,7 @@ public interface Tracer {
    * associated value. The cache operation must not be of a type that automatically computes the
    * value if the read was unsuccessful (use {@link #recordWrite} instead).
    *
+   * @param id the unique identifier of the cache instance
    * @param key key to the retrieved entry
    */
   void recordRead(long id, @Nonnull Object key);
@@ -58,6 +59,7 @@ public interface Tracer {
    * The cache operation should be recorded regardless of whether the cache was mutated, as
    * replaying the events under simulation will have different effects.
    *
+   * @param id the unique identifier of the cache instance
    * @param key key to the entry present in the cache
    * @param weight the weight of the entry
    */
@@ -69,6 +71,7 @@ public interface Tracer {
    * eviction should not be recorded, as replaying the events under simulation eviction will occur
    * differently.
    *
+   * @param id the unique identifier of the cache instance
    * @param key key to the entry now removed in the cache
    */
   void recordDelete(long id, @Nonnull Object key);

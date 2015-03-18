@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
@@ -56,6 +57,7 @@ public final class IsValidBoundedLocalCache<K, V>
     desc = new DescriptionBuilder(description);
 
     drain(cache);
+    //checkReadBuffer(cache);
     checkCache(cache, desc);
     checkEvictionDeque(cache, desc);
     return desc.matches();
@@ -65,23 +67,20 @@ public final class IsValidBoundedLocalCache<K, V>
     while (cache.buffersWrites() && !cache.writeQueue().isEmpty()) {
       cache.cleanUp();
     }
+  }
 
+  @SuppressWarnings("unused")
+  private void checkReadBuffer(BoundedLocalCache<K, V> cache) {
     if (!cache.evicts() && !cache.expiresAfterAccess()) {
       return;
     }
     cache.evictionLock().lock();
-    for (int i = 0; i < cache.readBuffers().length; i++) {
-      for (;;) {
-        cache.drainBuffers();
-
-        boolean fullyDrained = cache.buffersWrites() && cache.writeQueue().isEmpty();
-        for (int j = 0; j < cache.readBuffers().length; j++) {
-          fullyDrained &= (cache.readBuffers()[i][j].get() == null);
+    for (int i = 0; i < BoundedLocalCache.NUMBER_OF_READ_BUFFERS; i++) {
+      for (AtomicReference<?> slot : cache.readBuffers()[i]) {
+        if ((slot.get() != null)) {
+          desc.expected(String.format("readCount=%s, writeCount=%s, node=%s",
+              cache.readBufferReadCount()[i], cache.readBufferWriteCount()[i], slot.get()));
         }
-        if (fullyDrained) {
-          break;
-        }
-        cache.readBufferReadCount()[i]++;
       }
     }
     cache.evictionLock().unlock();
@@ -125,17 +124,10 @@ public final class IsValidBoundedLocalCache<K, V>
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
     long weightedSize = scanLinks(cache, seen, deque, desc);
 
-    if (seen.size() != cache.size()) {
-      // Retry in case race with an async update requiring a clean up
-      drain(cache);
-      seen.clear();
-      weightedSize = scanLinks(cache, seen, deque, desc);
-
-      Supplier<String> errorMsg = () -> String.format(
-          "Size != list length; pending=%s, additional: %s", cache.writeQueue().size(),
-          Sets.difference(seen, ImmutableSet.copyOf(cache.data.values())));
-      desc.expectThat(errorMsg, cache.size(), is(seen.size()));
-    }
+    Supplier<String> errorMsg = () -> String.format(
+        "Size != list length; pending=%s, additional: %s", cache.writeQueue().size(),
+        Sets.difference(seen, ImmutableSet.copyOf(cache.data.values())));
+    desc.expectThat(errorMsg, cache.size(), is(seen.size()));
 
     final long weighted = weightedSize;
     if (cache.evicts()) {

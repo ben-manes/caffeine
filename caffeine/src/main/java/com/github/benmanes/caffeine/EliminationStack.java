@@ -534,14 +534,13 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
 
   /**
    * Returns the start index to begin searching the arena with. Uses a one-step FNV-1a hash code
-   * (http://www.isthe.com/chongo/tech/comp/fnv/) based on the current thread's Thread.getId().
-   * These hash codes have more uniform distribution properties with respect to small moduli
-   * (here 1-31) than do other simple hashing functions. This technique is a simplified version
-   * borrowed from {@link java.util.concurrent.Exchanger}'s hashIndex function.
+   * (http://www.isthe.com/chongo/tech/comp/fnv) based on the current thread's id. These hash codes
+   * have more uniform distribution properties with respect to small moduli (here 1-31) than do
+   * other simple hashing functions.
    */
   static int startIndex() {
-    long id = Thread.currentThread().getId();
-    return (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
+    int id = (int) Thread.currentThread().getId();
+    return (id ^ 0x811c9dc5) * 0x01000193;
   }
 
   /* ---------------- Serialization Support -------------- */

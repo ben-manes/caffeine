@@ -1,3 +1,4 @@
 org.gradle.jvmargs=-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=10 -XX:MaxMetaspaceSize=128m -noverify
+org.gradle.daemon=false
 nexusUsername=
 nexusPassword=

@@ -30,6 +30,7 @@ public final class UnsafeAccess {
   static final String ANDROID = "THE_ONE";
   static final String OPEN_JDK = "theUnsafe";
 
+  /** The Unsafe instance. */
   public static final Unsafe UNSAFE;
 
   static {

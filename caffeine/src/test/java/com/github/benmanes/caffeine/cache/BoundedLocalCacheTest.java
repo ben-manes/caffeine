@@ -204,24 +204,6 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
-  public void updateRecency_onGetQuietly(Cache<Integer, Integer> cache) {
-    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    int index = BoundedLocalCache.readBufferIndex();
-    AtomicLong drainCounter = localCache.readBufferDrainAtWriteCount()[index];
-
-    Node<Integer, Integer> first = localCache.accessOrderDeque().peek();
-    Node<Integer, Integer> last = localCache.accessOrderDeque().peekLast();
-    long drained = drainCounter.get();
-    localCache.drainBuffers();
-
-    assertThat(localCache.accessOrderDeque().peekFirst(), is(first));
-    assertThat(localCache.accessOrderDeque().peekLast(), is(last));
-    assertThat(drainCounter.get(), is(drained));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = localCache.accessOrderDeque().peek();
@@ -277,15 +259,13 @@ public final class BoundedLocalCacheTest {
     Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
     int index = BoundedLocalCache.readBufferIndex();
-    AtomicLong drainCounter = localCache.readBufferDrainAtWriteCount()[index];
-    localCache.readBufferWriteCount()[index].set(
-        BoundedLocalCache.READ_BUFFER_THRESHOLD - 1);
+    for (int i = 0; i < BoundedLocalCache.READ_BUFFER_SIZE; i++) {
+      localCache.recordRead(index, dummy);
+    }
+    assertThat(localCache.recordRead(index, dummy), is(false));
 
     localCache.afterRead(dummy, true);
-    assertThat(drainCounter.get(), is(0L));
-
-    localCache.afterRead(dummy, true);
-    assertThat(drainCounter.get(), is(BoundedLocalCache.READ_BUFFER_THRESHOLD + 1L));
+    assertThat(localCache.recordRead(index, dummy), is(true));
   }
 
   @Test(dataProvider = "caches")
@@ -312,7 +292,7 @@ public final class BoundedLocalCacheTest {
     AtomicReference<Node<Integer, Integer>>[] buffer = localCache.readBuffers()[index];
     AtomicLong writeCounter = localCache.readBufferWriteCount()[index];
 
-    for (int i = 0; i < BoundedLocalCache.READ_BUFFER_THRESHOLD; i++) {
+    for (int i = 0; i < BoundedLocalCache.READ_BUFFER_SIZE; i++) {
       localCache.get(context.firstKey());
     }
 
@@ -322,13 +302,13 @@ public final class BoundedLocalCacheTest {
         pending++;
       }
     }
-    assertThat(pending, is(equalTo(BoundedLocalCache.READ_BUFFER_THRESHOLD)));
+    assertThat(pending, is(BoundedLocalCache.READ_BUFFER_SIZE));
     assertThat((int) writeCounter.get(), is(equalTo(pending)));
 
     localCache.get(context.firstKey());
     assertThat(localCache.readBufferReadCount()[index], is(equalTo(writeCounter.get())));
-    for (int i = 0; i < localCache.readBuffers().length; i++) {
-      assertThat(localCache.readBuffers()[index][i].get(), is(nullValue()));
+    for (AtomicReference<?> slot : localCache.readBuffers()[index]) {
+      assertThat(slot.get(), is(nullValue()));
     }
   }
 

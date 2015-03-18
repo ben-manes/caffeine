@@ -57,7 +57,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Immutable
-public class CacheStats {
+public final class CacheStats {
   private final long hitCount;
   private final long missCount;
   private final long loadSuccessCount;
@@ -68,7 +68,7 @@ public class CacheStats {
   /**
    * Constructs a new {@code CacheStats} instance.
    * <p>
-   * Five parameters of the same type in a row is a bad thing, but this class is not constructed
+   * Six parameters of the same type in a row is a bad thing, but this class is not constructed
    * by end users and is too fine-grained for a builder.
    *
    * @param hitCount the number of cache hits
@@ -81,8 +81,8 @@ public class CacheStats {
   public CacheStats(@Nonnegative long hitCount, @Nonnegative long missCount,
       @Nonnegative long loadSuccessCount, @Nonnegative long loadFailureCount,
       @Nonnegative long totalLoadTime, @Nonnegative long evictionCount) {
-    if ((hitCount < 0) || (missCount < 0) || (loadSuccessCount < 0) || (loadFailureCount < 0)
-        || (totalLoadTime < 0) || (evictionCount < 0)) {
+    if ((hitCount < 0) || (missCount < 0) || (loadSuccessCount < 0)
+        || (loadFailureCount < 0) || (totalLoadTime < 0) || (evictionCount < 0)) {
       throw new IllegalArgumentException();
     }
     this.hitCount = hitCount;
@@ -261,12 +261,12 @@ public class CacheStats {
   @Nonnull
   public CacheStats minus(@Nonnull CacheStats other) {
     return new CacheStats(
-        Math.max(0, hitCount - other.hitCount),
-        Math.max(0, missCount - other.missCount),
-        Math.max(0, loadSuccessCount - other.loadSuccessCount),
-        Math.max(0, loadFailureCount - other.loadFailureCount),
-        Math.max(0, totalLoadTime - other.totalLoadTime),
-        Math.max(0, evictionCount - other.evictionCount));
+        Math.max(0L, hitCount - other.hitCount),
+        Math.max(0L, missCount - other.missCount),
+        Math.max(0L, loadSuccessCount - other.loadSuccessCount),
+        Math.max(0L, loadFailureCount - other.loadFailureCount),
+        Math.max(0L, totalLoadTime - other.totalLoadTime),
+        Math.max(0L, evictionCount - other.evictionCount));
   }
 
   /**

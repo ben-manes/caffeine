@@ -6,7 +6,7 @@ test {
 }
 
 def implementations = ['Caffeine', 'Guava']
-def testConfigurations = [
+def testNames = [
   'strongKeysAndStrongValues', 'strongKeysAndWeakValues',
   'weakKeysAndStrongValues', 'weakKeysAndWeakValues', 'weakKeysAndSoftValues']
   .collectNested { [it, it + 'Stats'] }
@@ -14,19 +14,7 @@ def testConfigurations = [
   .plus('slow')
   .collectNested { type -> implementations.collect { type + it + 'Test' } }.flatten()
 
-testConfigurations.each {
-  // Create configurations
-  def config = configurations.maybeCreate it
-  config.extendsFrom configurations.testCompile
-  config.extendsFrom configurations.testRuntime
-  
-  // Create sourceSets
-  def sourceSet = sourceSets.maybeCreate it
-  sourceSet.java.srcDir 'src/test/java'
-  sourceSet.resources.srcDir 'src/test/resources'
-}
-
-testConfigurations.each { testName ->
+testNames.each { testName ->
   def isAsync = testName.contains('Async')
   def hasStats = testName.contains('Stats')
   def implementation = implementations.find { testName.contains(it) }
@@ -41,8 +29,6 @@ testConfigurations.each { testName ->
       (isAsync ? 'asynchronous' : 'synchronous') + ' tests.'
     include 'com/github/benmanes/caffeine/cache/**'
 
-    testClassesDir = sourceSets."${name}".output.classesDir
-    classpath = sourceSets."${name}".runtimeClasspath
     if (labels.size() == 2) {
       def strength = labels.collect{ it.split('Keys|Values') }.flatten()
       systemProperties['keys'] = strength[0]
@@ -60,11 +46,6 @@ testConfigurations.each { testName ->
     // Configure task dependencies
     if (System.env.'CI' || !name.startsWith('slow')) {
       tasks.test.dependsOn(it)
-    }
-    dependencies {
-      "${name}Compile" sourceSets.main.output, sourceSets.test.output
-      "${name}Compile" configurations.compile, configurations.testCompile
-      "${name}Runtime" configurations.runtime, configurations.testRuntime
     }
   }
 }

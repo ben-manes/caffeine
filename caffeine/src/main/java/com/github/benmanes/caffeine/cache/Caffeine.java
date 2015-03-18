@@ -220,7 +220,7 @@ public final class Caffeine<K, V> {
    * <p>
    * The primary intent of this method is to facilitate testing of caches which have been
    * configured with {@link #removalListener} or utilize asynchronous computations. A test may
-   * instead prefer to configure the cache that executes directly on the same thread.
+   * instead prefer to configure the cache to execute tasks directly on the same thread.
    * <p>
    * Beware that configuring a cache with an executor that throws {@link RejectedExecutionException}
    * may experience non-deterministic behavior.
@@ -675,7 +675,7 @@ public final class Caffeine<K, V> {
    * Specifies the supplier that provides the name of the cache. The cache name is used if tracing
    * is enabled to help identify the instance when simulating the alternative configurations. The
    * name of the cache is not required to be unique. If a strategy is not explicitly configured then
-   * the a best effort guess of the calling class is used as the identifier.
+   * a best effort guess of the calling class is used as the identifier.
    *
    * @param nameSupplier a supplier instance that returns the name of a cache
    * @return this builder instance

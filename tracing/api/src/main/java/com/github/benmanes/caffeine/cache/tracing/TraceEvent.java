@@ -144,7 +144,11 @@ public final class TraceEvent {
     this.timestamp = timestamp;
   }
 
-  /** Copies the event to the internal fields. */
+  /**
+   * Copies the event to the internal fields.
+   *
+   * @param event the prototype to copy from
+   */
   public void copyFrom(TraceEvent event) {
     this.timestamp = event.timestamp;
     this.keyHash = event.keyHash;
