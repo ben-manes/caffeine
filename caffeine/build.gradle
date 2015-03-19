@@ -27,6 +27,7 @@ dependencies {
   testCompile libraries.guava
   testCompile test_libraries.awaitility
   testCompile test_libraries.guava_testlib
+  testCompile test_libraries.jctools
   testCompile test_libraries.mockito
   testCompile test_libraries.testng
 

@@ -12,7 +12,7 @@ performance, code readability, and iterations based on external reviews. Feedbac
 missing features, or implementation code is welcome and appreciated. The extensions providing cache
 tracing, simulator, and JCache adapter are in active development.
 
-Snapshots of the development version are available in 
+Snapshots of the development version is available in 
 [Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots/).
 
 ```gradle
