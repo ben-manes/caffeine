@@ -91,23 +91,15 @@ public final class Stresser {
 
       @Override
       public void run() {
-        long reads = 0;
-        for (int i = 0; i < local.readBuffers().length; i++) {
-          for (int j = 0; j < local.readBuffers()[i].length; j++) {
-            if (local.readBuffers()[i][j].get() != null) {
-              reads++;
-            }
-          }
-        }
         runningTime += STATUS_INTERVAL;
         String elapsedTime = LocalTime.ofSecondOfDay(runningTime).toString();
-        String pendingReads = NumberFormat.getInstance().format(reads);
+        String pendingReads = NumberFormat.getInstance().format(local.readBuffer.size());
         String pendingWrites = NumberFormat.getInstance().format(local.writeQueue().size());
         System.out.printf("---------- %s ----------%n", elapsedTime);
         System.out.printf("Pending reads = %s%n", pendingReads);
         System.out.printf("Pending write = %s%n", pendingWrites);
-        System.out.printf("Drain status = %s%n", local.drainStatus());
-        System.out.printf("Lock status = %s%n", local.evictionLock().isLocked());
+        System.out.printf("Drain status = %s%n", local.drainStatus.get());
+        System.out.printf("Lock status = %s%n", local.evictionLock.isLocked());
         System.out.printf("Evictions = %,d%n", evictions.intValue());
       }
     };

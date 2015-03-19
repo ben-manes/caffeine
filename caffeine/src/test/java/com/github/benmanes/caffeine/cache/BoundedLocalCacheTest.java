@@ -24,7 +24,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
 import java.util.Map.Entry;
@@ -32,8 +31,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -108,7 +105,7 @@ public final class BoundedLocalCacheTest {
     Entry<Integer, Integer> newEntry = Iterables.get(context.absent().entrySet(), 1);
 
     localCache.put(oldEntry.getKey(), oldEntry.getValue());
-    localCache.evictionLock().lock();
+    localCache.evictionLock.lock();
     try {
       Object keyRef = localCache.nodeFactory.newLookupKey(oldEntry.getKey());
       Node<Integer, Integer> node = localCache.data.get(keyRef);
@@ -125,7 +122,7 @@ public final class BoundedLocalCacheTest {
       assertThat(localCache.containsKey(newEntry.getKey()), is(true));
       assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
     } finally {
-      localCache.evictionLock().unlock();
+      localCache.evictionLock.unlock();
     }
   }
 
@@ -258,14 +255,14 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
-    int index = BoundedLocalCache.readBufferIndex();
-    for (int i = 0; i < BoundedLocalCache.READ_BUFFER_SIZE; i++) {
-      localCache.recordRead(index, dummy);
+    BoundedBuffer<Node<Integer, Integer>> buffer = localCache.readBuffer;
+    for (int i = 0; i < BoundedBuffer.RING_BUFFER_SIZE; i++) {
+      buffer.submit(dummy);
     }
-    assertThat(localCache.recordRead(index, dummy), is(false));
+    assertThat(buffer.submit(dummy), is(true));
 
     localCache.afterRead(dummy, true);
-    assertThat(localCache.recordRead(index, dummy), is(true));
+    assertThat(buffer.submit(dummy), is(false));
   }
 
   @Test(dataProvider = "caches")
@@ -288,28 +285,17 @@ public final class BoundedLocalCacheTest {
   public void drain_onRead(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
 
-    int index = BoundedLocalCache.readBufferIndex();
-    AtomicReference<Node<Integer, Integer>>[] buffer = localCache.readBuffers()[index];
-    AtomicLong writeCounter = localCache.readBufferWriteCount()[index];
-
-    for (int i = 0; i < BoundedLocalCache.READ_BUFFER_SIZE; i++) {
+    BoundedBuffer<Node<Integer, Integer>> buffer = localCache.readBuffer;
+    for (int i = 0; i < BoundedBuffer.RING_BUFFER_SIZE; i++) {
       localCache.get(context.firstKey());
     }
 
-    int pending = 0;
-    for (AtomicReference<?> slot : buffer) {
-      if (slot.get() != null) {
-        pending++;
-      }
-    }
-    assertThat(pending, is(BoundedLocalCache.READ_BUFFER_SIZE));
-    assertThat((int) writeCounter.get(), is(equalTo(pending)));
+    int pending = buffer.size();
+    assertThat(buffer.writes(), is(equalTo(pending)));
+    assertThat(pending, is(BoundedBuffer.RING_BUFFER_SIZE));
 
     localCache.get(context.firstKey());
-    assertThat(localCache.readBufferReadCount()[index], is(equalTo(writeCounter.get())));
-    for (AtomicReference<?> slot : localCache.readBuffers()[index]) {
-      assertThat(slot.get(), is(nullValue()));
-    }
+    assertThat(buffer.size(), is(0));
   }
 
   @Test(dataProvider = "caches")
@@ -333,12 +319,12 @@ public final class BoundedLocalCacheTest {
       localCache.tryToDrainBuffers();
       done.set(true);
     };
-    localCache.evictionLock().lock();
+    localCache.evictionLock.lock();
     try {
       ConcurrentTestHarness.execute(task);
       Awaits.await().untilTrue(done);
     } finally {
-      localCache.evictionLock().unlock();
+      localCache.evictionLock.unlock();
     }
   }
 
@@ -368,7 +354,7 @@ public final class BoundedLocalCacheTest {
   }
 
   void checkDrainBlocks(BoundedLocalCache<Integer, Integer> localCache, Runnable task) {
-    NonReentrantLock lock = localCache.evictionLock();
+    NonReentrantLock lock = localCache.evictionLock;
     AtomicBoolean done = new AtomicBoolean();
     lock.lock();
     try {

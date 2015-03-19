@@ -57,7 +57,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * java.util.ConcurrentModificationException}, and may proceed concurrently with other operations.
  * Elements contained in the queue since the creation of the iterator will be returned exactly once.
  * <p>
- * Beware that it is the responsibility of the caller to ensure that a consumer has exclusive
+ * Beware that it is the responsibility of the caller to ensure that a consumer has exclusive read
  * access to the queue. This implementation does <em>not</em> include fail-fast behavior to guard
  * against incorrect consumer usage.
  * <p>

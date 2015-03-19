@@ -24,7 +24,6 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
@@ -57,33 +56,25 @@ public final class IsValidBoundedLocalCache<K, V>
     desc = new DescriptionBuilder(description);
 
     drain(cache);
-    //checkReadBuffer(cache);
+    checkReadBuffer(cache);
     checkCache(cache, desc);
     checkEvictionDeque(cache, desc);
     return desc.matches();
   }
 
   private void drain(BoundedLocalCache<K, V> cache) {
-    while (cache.buffersWrites() && !cache.writeQueue().isEmpty()) {
+    do {
       cache.cleanUp();
-    }
+    } while (cache.buffersWrites() && !cache.writeQueue().isEmpty());
   }
 
-  @SuppressWarnings("unused")
   private void checkReadBuffer(BoundedLocalCache<K, V> cache) {
     if (!cache.evicts() && !cache.expiresAfterAccess()) {
       return;
     }
-    cache.evictionLock().lock();
-    for (int i = 0; i < BoundedLocalCache.NUMBER_OF_READ_BUFFERS; i++) {
-      for (AtomicReference<?> slot : cache.readBuffers()[i]) {
-        if ((slot.get() != null)) {
-          desc.expected(String.format("readCount=%s, writeCount=%s, node=%s",
-              cache.readBufferReadCount()[i], cache.readBufferWriteCount()[i], slot.get()));
-        }
-      }
-    }
-    cache.evictionLock().unlock();
+    BoundedBuffer<?> buffer = cache.readBuffer;
+    desc.expectThat("buffer is empty", buffer.size(), is(0));
+    desc.expectThat("buffer reads = writes", buffer.reads(), is(buffer.writes()));
   }
 
   private void checkCache(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
@@ -91,7 +82,7 @@ public final class IsValidBoundedLocalCache<K, V>
     if (cache.evicts()) {
       desc.expectThat("overflow", cache.maximum(),
           is(greaterThanOrEqualTo(cache.adjustedWeightedSize())));
-      desc.expectThat("unlocked", cache.evictionLock().isLocked(), is(false));
+      desc.expectThat("unlocked", cache.evictionLock.isLocked(), is(false));
     }
 
     if (cache.isEmpty()) {

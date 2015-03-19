@@ -32,7 +32,7 @@ import com.github.benmanes.caffeine.ConcurrentTestHarness;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ReadBufferTest {
+public final class BufferTest {
 
   @DataProvider
   public Iterator<Object[]> buffers() {
