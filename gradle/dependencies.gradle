@@ -34,7 +34,7 @@ ext {
     jcache: '1.0.0',
     joor: '0.9.5',
     jsr305: '3.0.0',
-    univocity_parsers: '1.3.2',
+    univocity_parsers: '1.4.0',
   ]
   test_versions = [
     awaitility: '1.6.3',

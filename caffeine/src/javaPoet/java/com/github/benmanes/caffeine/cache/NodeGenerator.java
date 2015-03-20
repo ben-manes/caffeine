@@ -57,6 +57,7 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class NodeGenerator {
+  private final boolean isFinal;
   private final String className;
   private final TypeName superClass;
   private final Set<Feature> parentFeatures;
@@ -66,8 +67,9 @@ public final class NodeGenerator {
   private MethodSpec.Builder constructorByKey;
   private MethodSpec.Builder constructorByKeyRef;
 
-  public NodeGenerator(TypeName superClass, String className,
+  public NodeGenerator(TypeName superClass, String className, boolean isFinal,
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
+    this.isFinal = isFinal;
     this.className = className;
     this.superClass = superClass;
     this.parentFeatures = parentFeatures;
@@ -112,6 +114,9 @@ public final class NodeGenerator {
         .addModifiers(Modifier.STATIC)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
+    if (isFinal) {
+      nodeSubtype.addModifiers(Modifier.FINAL);
+    }
     if (isBaseClass()) {
       nodeSubtype.addSuperinterface(ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar));
     } else {

@@ -37,15 +37,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.OptionalInt;
+import java.util.NavigableMap;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.lang.model.element.Modifier;
 
-import com.google.common.base.CaseFormat;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -79,20 +78,20 @@ import com.squareup.javapoet.TypeSpec;
  */
 public final class NodeFactoryGenerator {
   final Path directory;
-  final Set<String> seen;
+  final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
 
   TypeSpec.Builder nodeFactory;
 
   public NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
-    this.seen = new HashSet<>();
+    this.classNameToFeatures = new TreeMap<>();
   }
 
   void generate() throws IOException {
-    AnnotationSpec suppressed = AnnotationSpec.builder(SuppressWarnings.class)
-        .addMember("value", "$S", "unchecked")
-        .build();
-    nodeFactory = TypeSpec.enumBuilder("NodeFactory").addAnnotation(suppressed);
+    nodeFactory = TypeSpec.enumBuilder("NodeFactory")
+        .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
+            .addMember("value", "$S", "unchecked")
+            .build());
     addClassJavaDoc();
     addNodeStateStatics();
     addKeyMethods();
@@ -192,26 +191,36 @@ public final class NodeFactoryGenerator {
       getFactory.addParameter(boolean.class, param);
     }
 
-    for (String param : ImmutableList.of("weakValues", "softValues")) {
-      String feature = CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, param);
-      String property = feature.replace('_', ' ').toLowerCase();
-      nodeFactory.addMethod(MethodSpec.methodBuilder(param)
-          .addJavadoc("Returns whether this factory supports the " + property + " feature.\n")
-          .addStatement("return name().contains($S)", feature)
-          .returns(boolean.class)
-          .build());
-    }
+    nodeFactory.addMethod(MethodSpec.methodBuilder("weakValues")
+        .addJavadoc("Returns whether this factory supports the weak values.\n")
+        .addStatement("return name().matches($S)", ".W.*")
+        .returns(boolean.class)
+        .build());
+    nodeFactory.addMethod(MethodSpec.methodBuilder("softValues")
+        .addJavadoc("Returns whether this factory supports the soft values.\n")
+        .addStatement("return name().matches($S)", ".So.*")
+        .returns(boolean.class)
+        .build());
 
-    OptionalInt bufferSize = seen.stream().mapToInt(s -> s.length()).max();
-    Preconditions.checkState(bufferSize.isPresent(), "Must generate all cache types first");
+    Preconditions.checkState(!classNameToFeatures.isEmpty(), "Must generate all cache types first");
     getFactory
-        .addCode(NodeSelectorCode.get(bufferSize.getAsInt()))
+        .addCode(NodeSelectorCode.get())
         .addModifiers(Modifier.STATIC)
         .build();
     nodeFactory.addMethod(getFactory.build());
   }
 
   private void generatedNodes() throws IOException {
+    fillClassNameToFeatures();
+    classNameToFeatures.entrySet().stream().forEach(entry -> {
+      String className = entry.getKey();
+      String higherKey = classNameToFeatures.higherKey(className);
+      boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
+      addNodeSpec(entry.getKey(), isLeaf, entry.getValue());
+    });
+  }
+
+  private void fillClassNameToFeatures() {
     Feature[] featureByIndex = new Feature[] { null, null,
         Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
         Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
@@ -230,17 +239,12 @@ public final class NodeFactoryGenerator {
         features.remove(Feature.MAXIMUM_SIZE);
       }
 
-      addNodeSpec(features);
+      String className = Feature.makeClassName(features);
+      classNameToFeatures.put(encode(className), ImmutableSet.copyOf(features));
     }
   }
 
-  private void addNodeSpec(Set<Feature> features) throws IOException {
-    String className = Feature.makeClassName(features);
-    if (!seen.add(className)) {
-      // skip duplicates
-      return;
-    }
-
+  private void addNodeSpec(String className, boolean isFinal, Set<Feature> features) {
     TypeName superClass;
     Set<Feature> parentFeatures;
     Set<Feature> generateFeatures;
@@ -252,11 +256,11 @@ public final class NodeFactoryGenerator {
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
       generateFeatures = ImmutableSet.of(Iterables.getLast(features));
       superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
-          Feature.makeClassName(parentFeatures)), kTypeVar, vTypeVar);
+          encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
 
     NodeGenerator nodeGenerator = new NodeGenerator(
-        superClass, className, parentFeatures, generateFeatures);
+        superClass, className, isFinal, parentFeatures, generateFeatures);
     TypeSpec.Builder nodeSubType = nodeGenerator.createNodeType();
     nodeFactory.addType(nodeSubType.build());
     addEnumConstant(className, features);
@@ -274,7 +278,7 @@ public final class NodeFactoryGenerator {
       typeSpec.addMethod(makeNewLookupKey());
       typeSpec.addMethod(makeReferenceKey());
     }
-    nodeFactory.addEnumConstant(Feature.makeEnumName(features), typeSpec.build());
+    nodeFactory.addEnumConstant(className, typeSpec.build());
   }
 
   private String makeFactoryStatementKey() {
@@ -339,6 +343,22 @@ public final class NodeFactoryGenerator {
         .addParameter(int.class, "weight")
         .addParameter(long.class, "now")
         .returns(Specifications.NODE);
+  }
+
+  /** Returns an encoded form of the class name for compact use. */
+  private static String encode(String className) {
+    return Feature.makeEnumName(className)
+        .replaceFirst("STRONG_KEYS", "S")
+        .replaceFirst("WEAK_KEYS", "W")
+        .replaceFirst("_STRONG_VALUES", "St")
+        .replaceFirst("_WEAK_VALUES", "W")
+        .replaceFirst("_SOFT_VALUES", "So")
+        .replaceFirst("_EXPIRE_ACCESS", "A")
+        .replaceFirst("_EXPIRE_WRITE", "W")
+        .replaceFirst("_REFRESH_WRITE", "R")
+        .replaceFirst("_MAXIMUM", "M")
+        .replaceFirst("_WEIGHT", "W")
+        .replaceFirst("_SIZE", "S");
   }
 
   public static void main(String[] args) throws IOException {

@@ -23,51 +23,51 @@ import com.squareup.javapoet.CodeBlock;
 public final class NodeSelectorCode {
   private final CodeBlock.Builder name;
 
-  private NodeSelectorCode(int bufferSize) {
+  private NodeSelectorCode() {
     name = CodeBlock.builder()
-        .addStatement("$T sb = new $T($L)", StringBuilder.class, StringBuilder.class, bufferSize);
+        .addStatement("$T sb = new $T()", StringBuilder.class, StringBuilder.class);
   }
 
   private NodeSelectorCode keys() {
     name.beginControlFlow("if (strongKeys)")
-            .addStatement("sb.append(\"STRONG_KEYS\")")
+            .addStatement("sb.append('S')")
         .nextControlFlow("else")
-            .addStatement("sb.append(\"WEAK_KEYS\")")
+            .addStatement("sb.append('W')")
         .endControlFlow();
     return this;
   }
 
   private NodeSelectorCode values() {
     name.beginControlFlow("if (strongValues)")
-            .addStatement("sb.append(\"_STRONG_VALUES\")")
+            .addStatement("sb.append(\"St\")")
         .nextControlFlow("else if (weakValues)")
-            .addStatement("sb.append(\"_WEAK_VALUES\")")
+            .addStatement("sb.append('W')")
         .nextControlFlow("else")
-            .addStatement("sb.append(\"_SOFT_VALUES\")")
+            .addStatement("sb.append(\"So\")")
         .endControlFlow();
     return this;
   }
 
   private NodeSelectorCode expires() {
     name.beginControlFlow("if (expiresAfterAccess)")
-            .addStatement("sb.append(\"_EXPIRE_ACCESS\")")
+            .addStatement("sb.append('A')")
         .endControlFlow()
         .beginControlFlow("if (expiresAfterWrite)")
-            .addStatement("sb.append(\"_EXPIRE_WRITE\")")
+            .addStatement("sb.append('W')")
         .endControlFlow()
         .beginControlFlow("if (refreshAfterWrite)")
-            .addStatement("sb.append(\"_REFRESH_WRITE\")")
+            .addStatement("sb.append('R')")
         .endControlFlow();
     return this;
   }
 
   private NodeSelectorCode maximum() {
     name.beginControlFlow("if (maximumSize)")
-            .addStatement("sb.append(\"_MAXIMUM\")")
+            .addStatement("sb.append('M')")
             .beginControlFlow("if (weighed)")
-                .addStatement("sb.append(\"_WEIGHT\")")
+                .addStatement("sb.append('W')")
             .nextControlFlow("else")
-                .addStatement("sb.append(\"_SIZE\")")
+                .addStatement("sb.append('S')")
             .endControlFlow()
         .endControlFlow();
     return this;
@@ -79,8 +79,8 @@ public final class NodeSelectorCode {
         .build();
   }
 
-  public static CodeBlock get(int bufferSize) {
-    return new NodeSelectorCode(bufferSize)
+  public static CodeBlock get() {
+    return new NodeSelectorCode()
         .keys()
         .values()
         .expires()

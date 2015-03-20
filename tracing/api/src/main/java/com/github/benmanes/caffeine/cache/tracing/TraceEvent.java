@@ -89,7 +89,7 @@ public final class TraceEvent {
   }
 
   /** @return the action recorded */
-  public Action action() {
+  public @Nullable Action action() {
     return action;
   }
 

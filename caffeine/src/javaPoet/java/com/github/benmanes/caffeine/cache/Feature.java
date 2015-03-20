@@ -53,8 +53,16 @@ enum Feature {
         .collect(Collectors.joining("_"));
   }
 
+  public static String makeEnumName(String enumName) {
+    return CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, enumName);
+  }
+
   public static String makeClassName(Iterable<Feature> features) {
     String enumName = makeEnumName(features);
+    return makeClassName(enumName);
+  }
+
+  public static String makeClassName(String enumName) {
     return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
   }
 

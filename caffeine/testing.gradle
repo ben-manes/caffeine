@@ -7,7 +7,7 @@ test {
 
 def implementations = ['Caffeine', 'Guava']
 def testNames = [
-  'strongKeysAndStrongValues', 'strongKeysAndWeakValues',
+  'strongKeysAndStrongValues', 'strongKeysAndWeakValues', 'strongKeysAndSoftValues',
   'weakKeysAndStrongValues', 'weakKeysAndWeakValues', 'weakKeysAndSoftValues']
   .collectNested { [it, it + 'Stats'] }
   .collectNested { it.contains('StrongValues') ? [it + 'Sync', it + 'Async'] : (it + 'Sync') }

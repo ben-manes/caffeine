@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.Set;
+
 import com.squareup.javapoet.CodeBlock;
 
 /**
@@ -23,64 +25,64 @@ import com.squareup.javapoet.CodeBlock;
 public final class CacheSelectorCode {
   private final CodeBlock.Builder name;
 
-  private CacheSelectorCode(int bufferSize) {
+  private CacheSelectorCode() {
     name = CodeBlock.builder()
-        .addStatement("$T sb = new $T($L)", StringBuilder.class, StringBuilder.class, bufferSize);
+        .addStatement("$T sb = new $T()", StringBuilder.class, StringBuilder.class);
   }
 
   private CacheSelectorCode keys() {
     name.beginControlFlow("if (builder.isStrongKeys())")
-            .addStatement("sb.append(\"STRONG_KEYS\")")
+            .addStatement("sb.append('S')")
         .nextControlFlow("else")
-            .addStatement("sb.append(\"WEAK_KEYS\")")
+            .addStatement("sb.append('W')")
         .endControlFlow();
     return this;
   }
 
   private CacheSelectorCode values() {
     name.beginControlFlow("if (builder.isStrongValues())")
-            .addStatement("sb.append(\"_STRONG_VALUES\")")
+            .addStatement("sb.append('S')")
         .nextControlFlow("else")
-            .addStatement("sb.append(\"_INFIRM_VALUES\")")
+            .addStatement("sb.append('I')")
         .endControlFlow();
     return this;
   }
 
   private CacheSelectorCode cacheLoader() {
     name.beginControlFlow("if (cacheLoader != null)")
-            .addStatement("sb.append(\"_LOADING\")")
+            .addStatement("sb.append(\"Lo\")")
         .endControlFlow();
     return this;
   }
 
   private CacheSelectorCode removalListener() {
     name.beginControlFlow("if (builder.removalListener != null)")
-            .addStatement("sb.append(\"_LISTENING\")")
+            .addStatement("sb.append(\"Li\")")
         .endControlFlow();
     return this;
   }
 
   private CacheSelectorCode executor() {
     name.beginControlFlow("if (builder.executor != null)")
-            .addStatement("sb.append(\"_EXECUTOR\")")
+            .addStatement("sb.append('E')")
         .endControlFlow();
     return this;
   }
 
   private CacheSelectorCode stats() {
     name.beginControlFlow("if (builder.isRecordingStats())")
-            .addStatement("sb.append(\"_STATS\")")
+            .addStatement("sb.append('S')")
         .endControlFlow();
     return this;
   }
 
   private CacheSelectorCode maximum() {
     name.beginControlFlow("if (builder.evicts())")
-            .addStatement("sb.append(\"_MAXIMUM\")")
+            .addStatement("sb.append('M')")
             .beginControlFlow("if (builder.isWeighted())")
-                .addStatement("sb.append(\"_WEIGHT\")")
+                .addStatement("sb.append('W')")
             .nextControlFlow("else")
-                .addStatement("sb.append(\"_SIZE\")")
+                .addStatement("sb.append('S')")
             .endControlFlow()
         .endControlFlow();
     return this;
@@ -88,26 +90,36 @@ public final class CacheSelectorCode {
 
   private CacheSelectorCode expires() {
     name.beginControlFlow("if (builder.expiresAfterAccess())")
-            .addStatement("sb.append(\"_EXPIRE_ACCESS\")")
+            .addStatement("sb.append('A')")
         .endControlFlow()
         .beginControlFlow("if (builder.expiresAfterWrite())")
-            .addStatement("sb.append(\"_EXPIRE_WRITE\")")
+            .addStatement("sb.append('W')")
         .endControlFlow()
         .beginControlFlow("if (builder.refreshes())")
-            .addStatement("sb.append(\"_REFRESH_WRITE\")")
+            .addStatement("sb.append('R')")
         .endControlFlow();
     return this;
   }
 
-  private CodeBlock build() {
-    return name
-        .addStatement("LocalCacheFactory factory = valueOf(sb.toString())")
-        .addStatement("return factory.create(builder, cacheLoader, async)")
-        .build();
+  private CacheSelectorCode selector(Set<String> classNames) {
+    CodeBlock.Builder switchBuilder = CodeBlock.builder();
+    switchBuilder.beginControlFlow("switch (sb.toString())");
+    for (String className : classNames) {
+      switchBuilder.addStatement(
+          "case $S: return new $N<>(builder, cacheLoader, async)", className, className);
+    }
+    switchBuilder.endControlFlow();
+    switchBuilder.addStatement("throw new $T()", IllegalStateException.class);
+    name.add(switchBuilder.build());
+    return this;
   }
 
-  public static CodeBlock get(int bufferSize) {
-    return new CacheSelectorCode(bufferSize)
+  private CodeBlock build() {
+    return name.build();
+  }
+
+  public static CodeBlock get(Set<String> classNames) {
+    return new CacheSelectorCode()
         .keys()
         .values()
         .cacheLoader()
@@ -116,6 +128,7 @@ public final class CacheSelectorCode {
         .stats()
         .maximum()
         .expires()
+        .selector(classNames)
         .build();
   }
 }
