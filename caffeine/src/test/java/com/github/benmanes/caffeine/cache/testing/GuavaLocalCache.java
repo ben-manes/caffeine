@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InvalidObjectException;
@@ -64,6 +65,8 @@ public final class GuavaLocalCache {
   /** Returns a Guava-backed cache. */
   @SuppressWarnings("CheckReturnValue")
   public static <K, V> Cache<K, V> newGuavaCache(CacheContext context) {
+    checkState(!context.isAsync(), "Guava caches are synchronous only");
+
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());

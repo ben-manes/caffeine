@@ -13,6 +13,7 @@ def testNames = [
   .collectNested { it.contains('StrongValues') ? [it + 'Sync', it + 'Async'] : (it + 'Sync') }
   .plus('slow')
   .collectNested { type -> implementations.collect { type + it + 'Test' } }.flatten()
+  .findAll { !(it.contains('Guava') && it.contains('Async')) }
 
 testNames.each { testName ->
   def isAsync = testName.contains('Async')
