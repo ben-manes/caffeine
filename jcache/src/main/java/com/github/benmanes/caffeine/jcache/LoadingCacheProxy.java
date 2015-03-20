@@ -15,12 +15,11 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
@@ -126,9 +125,10 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   public void loadAll(Set<? extends K> keys, boolean replaceExistingValues,
       CompletionListener completionListener) {
     requireNotClosed();
-    for (K key : keys) {
-      requireNonNull(key);
-    }
+    keys.forEach(Objects::requireNonNull);
+    CompletionListener listener = (completionListener == null)
+        ? NullCompletionListener.INSTANCE
+        : completionListener;
 
     ForkJoinPool.commonPool().execute(() -> {
       try {
@@ -138,13 +138,13 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
           for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
             putNoCopyOrAwait(entry.getKey(), entry.getValue(), false, ignored);
           }
-          completionListener.onCompletion();
+          listener.onCompletion();
         } else {
           getAll(keys);
         }
-        completionListener.onCompletion();
+        listener.onCompletion();
       } catch (Exception e) {
-        completionListener.onException(e);
+        listener.onException(e);
       } finally {
         dispatcher.ignoreSynchronous();
       }

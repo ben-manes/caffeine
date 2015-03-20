@@ -110,7 +110,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public boolean containsKey(K key) {
     requireNotClosed();
-    Expirable<V> expirable = cache.asMap().get(key);
+    Expirable<V> expirable = cache.getIfPresent(key);
     if (expirable == null) {
       return false;
     }
@@ -169,8 +169,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       CompletionListener completionListener) {
     requireNotClosed();
     keys.forEach(Objects::requireNonNull);
+    CompletionListener listener = (completionListener == null)
+        ? NullCompletionListener.INSTANCE
+        : completionListener;
 
     if (!cacheLoader.isPresent()) {
+      listener.onCompletion();
       return;
     }
     ForkJoinPool.commonPool().execute(() -> {
@@ -180,11 +184,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         } else {
           loadAllAndKeepExisting(keys);
         }
-        completionListener.onCompletion();
+        listener.onCompletion();
       } catch (CacheLoaderException e) {
-        completionListener.onException(e);
+        listener.onException(e);
       } catch (Exception e) {
-        completionListener.onException(new CacheLoaderException(e));
+        listener.onException(new CacheLoaderException(e));
       } finally {
         dispatcher.ignoreSynchronous();
       }
@@ -981,5 +985,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       CacheProxy.this.remove(current.getKey(), current.getValue().get());
       current = null;
     }
+  }
+
+  enum NullCompletionListener implements CompletionListener {
+    INSTANCE;
+
+    @Override
+    public void onCompletion() {}
+
+    @Override
+    public void onException(Exception e) {}
   }
 }

@@ -52,7 +52,7 @@ public final class MemoryBenchmark {
   static final Map<Integer, Integer> workingSet = IntStream.range(0, FUZZY_SIZE)
       .boxed().collect(Collectors.toMap(identity(), i -> -i));
 
-  final MemoryMeter meter = new MemoryMeter().withGuessing(Guess.ALWAYS_SPEC);
+  final MemoryMeter meter = new MemoryMeter().withGuessing(Guess.FALLBACK_BEST);
   final PrintStream out = System.out;
 
   public void run() throws Exception {

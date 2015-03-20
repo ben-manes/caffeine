@@ -30,12 +30,25 @@ test {
   useTestNG()
 }
 
+// Executed separately to minimize races due to poor test practices 
+task testJCacheLoader(type: Test) {
+  include "**/CacheLoader*"
+}
+
+task testCompatibilityKit(type: Test, description: "Runs the JCache TCK") {
+  dependsOn(testJCacheLoader)
+  exclude "**/CacheLoader*"
+}
+
 task unzipTestKit(type: Copy, group: 'Build', description: 'Unzips the JCache TCK') {
   from configurations.tck.collect { zipTree(it) }
   into { "${buildDir}/tck" }
 }
 
-task testCompatibilityKit(type: Test, group: "Build", description: "Runs the JCache TCK") {
+[testJCacheLoader, testCompatibilityKit]*.with {
+  group = "Build"
+
+  check.dependsOn(it)
   dependsOn(unzipTestKit)
 
   useJUnit()
@@ -49,4 +62,3 @@ task testCompatibilityKit(type: Test, group: "Build", description: "Runs the JCa
   systemProperty 'org.jsr107.tck.management.agentId', 'CaffeineMBeanServer'
   systemProperty 'javax.management.builder.initial', "${pkg}.management.JCacheMBeanServerBuilder"
 }
-check.dependsOn(testCompatibilityKit)
