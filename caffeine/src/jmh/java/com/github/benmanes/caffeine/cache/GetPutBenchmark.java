@@ -39,7 +39,6 @@ public class GetPutBenchmark {
 
   @Param({
     "LinkedHashMap_Lru",
-//    "ConcurrentHashMap",
     "ConcurrentLinkedHashMap",
     "Caffeine",
     "Guava",

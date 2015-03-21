@@ -33,27 +33,12 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  */
 @State(Scope.Benchmark)
 public class SynchronizedBenchmark {
-  Lock nrlock = new NonReentrantLock();
-  Lock rlock = new ReentrantLock();
-  Object olock = new Object();
+  final Lock nrlock = new NonReentrantLock();
+  final Lock rlock = new ReentrantLock();
+  final Object olock = new Object();
   int counter;
 
-  @Benchmark  @Group("mixed") @GroupThreads(1)
-  public void mixed_monitor() {
-    UnsafeAccess.UNSAFE.monitorEnter(olock);
-    try {
-      counter++;
-    } finally {
-      UnsafeAccess.UNSAFE.monitorExit(olock);
-    }
-  }
-
-  @Benchmark  @Group("mixed") @GroupThreads(3)
-  public void mixed_sync() {
-    synchronized (olock) {
-      counter++;
-    }
-  }
+  /* ---------------- synchronized -------------- */
 
   @Benchmark @Threads(1)
   public void synchronized_noContention() {
@@ -68,6 +53,8 @@ public class SynchronizedBenchmark {
       counter++;
     }
   }
+
+  /* ---------------- monitor byte code -------------- */
 
   @Benchmark @Threads(1)
   public void monitor_noContention() {
@@ -89,6 +76,27 @@ public class SynchronizedBenchmark {
     }
   }
 
+  /* ---------------- mixed -------------- */
+
+  @Benchmark  @Group("mixed") @GroupThreads(1)
+  public void mixed_monitor() {
+    UnsafeAccess.UNSAFE.monitorEnter(olock);
+    try {
+      counter++;
+    } finally {
+      UnsafeAccess.UNSAFE.monitorExit(olock);
+    }
+  }
+
+  @Benchmark  @Group("mixed") @GroupThreads(3)
+  public void mixed_sync() {
+    synchronized (olock) {
+      counter++;
+    }
+  }
+
+  /* ---------------- ReentrantLock -------------- */
+
   @Benchmark @Threads(1)
   public void reentrantLock_noContention() {
     rlock.lock();
@@ -108,6 +116,8 @@ public class SynchronizedBenchmark {
       rlock.unlock();
     }
   }
+
+  /* ---------------- NonReentrantLock -------------- */
 
   @Benchmark @Threads(1)
   public void nonReentrantLock_noContention() {

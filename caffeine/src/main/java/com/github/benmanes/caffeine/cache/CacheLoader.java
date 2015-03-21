@@ -47,6 +47,7 @@ public interface CacheLoader<K, V> {
    *
    * @param key the non-null key whose value should be loaded
    * @return the value associated with {@code key} or {@code null} if not found
+   * @throws RuntimeException or Error, in which case the mapping is unchanged
    */
   @CheckForNull
   V load(@Nonnull K key);
@@ -67,7 +68,7 @@ public interface CacheLoader<K, V> {
    * @param keys the unique, non-null keys whose values should be loaded
    * @return a map from each key in {@code keys} to the value associated with that key; <b>may not
    *         contain null values</b>
-   * @throws UnsupportedOperationException if bulk loading is not implemented
+   * @throws RuntimeException or Error, in which case the mappings are unchanged
    */
   @Nonnull
   default Map<K, V> loadAll(@Nonnull Iterable<? extends K> keys) {
@@ -79,9 +80,9 @@ public interface CacheLoader<K, V> {
    *
    * @param key the non-null key whose value should be loaded
    * @param executor the executor that asynchronously loads the entry
-   * @return the future value associated with {@code key}
+   * @return the future value associated with {@code key} or {@code null} if not computable
    */
-  @Nonnull
+  @CheckForNull
   default CompletableFuture<V> asyncLoad(@Nonnull K key, @Nonnull Executor executor) {
     requireNonNull(key);
     requireNonNull(executor);
@@ -105,7 +106,6 @@ public interface CacheLoader<K, V> {
    * @param executor the executor that with asynchronously loads the entries
    * @return a future containing the map from each key in {@code keys} to the value associated with
    *         that key; <b>may not contain null values</b>
-   * @throws UnsupportedOperationException if bulk loading is not implemented
    */
   @Nonnull
   default CompletableFuture<Map<K, V>> asyncLoadAll(

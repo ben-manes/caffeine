@@ -30,33 +30,41 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum CacheType {
-  Caffeine() {
-    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+  Caffeine {
+    @Override public <K, V> Map<K, V> create(int maximumSize) {
       return com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
           .maximumSize(maximumSize)
           .<K, V>build()
           .asMap();
     }
   },
-  ConcurrentHashMapV7() { // unbounded, see OpenJDK/7u40-b43
+  ConcurrentHashMapV7 { // unbounded, see OpenJDK/7u40-b43
+    @Override public <K, V> Map<K, V> create(int maximumSize) {
+      return new ConcurrentHashMapV7<K, V>(maximumSize);
+    }
     @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
       return new ConcurrentHashMapV7<K, V>(maximumSize, 0.75f, concurrencyLevel);
     }
   },
-  ConcurrentHashMap() { // unbounded
+  ConcurrentHashMap { // unbounded
+    @Override public <K, V> Map<K, V> create(int maximumSize) {
+      return new ConcurrentHashMap<K, V>(maximumSize);
+    }
     @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
       return new ConcurrentHashMap<K, V>(maximumSize, 0.75f, concurrencyLevel);
     }
   },
-  ConcurrentLinkedHashMap() {
-    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+  ConcurrentLinkedHashMap {
+    @Override public <K, V> Map<K, V> create(int maximumSize) {
       return new ConcurrentLinkedHashMap.Builder<K, V>()
         .maximumWeightedCapacity(maximumSize)
-        .concurrencyLevel(concurrencyLevel)
         .build();
     }
   },
-  Guava() {
+  Guava {
+    @Override public <K, V> Map<K, V> create(int maximumSize) {
+      return CacheBuilder.newBuilder().<K, V>build().asMap();
+    }
     @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
       return CacheBuilder.newBuilder()
           .concurrencyLevel(concurrencyLevel)
@@ -65,16 +73,20 @@ public enum CacheType {
           .asMap();
     }
   },
-  LinkedHashMap_Lru() {
-    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+  LinkedHashMap_Lru {
+    @Override public <K, V> Map<K, V> create(int maximumSize) {
       return Collections.synchronizedMap(new BoundedLinkedHashMap<K, V>(true, maximumSize));
     }
   },
-  NonBlockingHashMap() { // unbounded
-    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+  NonBlockingHashMap { // unbounded
+    @Override public <K, V> Map<K, V> create(int maximumSize) {
       return new NonBlockingHashMap<K, V>(maximumSize);
     }
   };
 
-  public abstract <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel);
+  public abstract <K, V> Map<K, V> create(int maximumSize);
+
+  public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
+    return create(maximumSize);
+  }
 }

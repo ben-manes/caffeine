@@ -63,6 +63,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * @see <a href="https://github.com/ben-manes/caffeine">Caffeine</a>
  * @param <E> the type of elements held in this collection
  */
+@Beta
 @ThreadSafe
 public final class EliminationStack<E> extends AbstractCollection<E> implements Serializable {
 

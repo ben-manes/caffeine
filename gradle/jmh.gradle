@@ -24,10 +24,12 @@ tasks.jmh {
 }
 
 jmh {
-  jmhVersion = '1.6.3'
+  jmhVersion = '1.7'
 
   if (project.hasProperty('includePattern')) {
     include = project.includePattern
+  } else {
+    tasks.jmh.doFirst { throw new GradleException("jmh: includePattern expected") }
   }
   // Benchmark parameters: Seperated by '&' for parameter types, and ',' for multiple values
   if (project.hasProperty('benchmarkParameters')) {
@@ -45,7 +47,7 @@ jmh {
   resultFormat = 'json'
   resultsFile = file("${buildDir}/reports/jmh/results.json")
 
-  jvmArgs = '-server -Xmx512m -XX:+UseG1GC'
+  jvmArgs = '-server -Xmx512m -XX:+UseG1GC -XX:-UseBiasedLocking'
   warmupIterations = 10
   failOnError = true
   iterations = 10

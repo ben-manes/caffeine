@@ -70,6 +70,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @see <a href="https://github.com/ben-manes/caffeine">Caffeine</a>
  * @param <E> the type of elements held in this collection
  */
+@Beta
 public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   /*

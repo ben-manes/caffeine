@@ -9,8 +9,7 @@ Concurrent data-structures for Java 8.
 
 The core is stable, feature complete, and well tested. There is no release yet as focus shifts to 
 performance, code readability, and iterations based on external reviews. Feedback on API design,
-missing features, or implementation code is welcome and appreciated. The extensions providing cache
-tracing, simulator, and JCache adapter are in active development.
+missing features, or implementation code is welcome and appreciated.
 
 Snapshots of the development version is available in 
 [Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots/).
@@ -83,10 +82,10 @@ properties or an `application.conf` file. It can be run locally using
 
 ```gradle
 # Run a simulation against a local trace file
-gradlew simulate -Dcaffeine.simulator.source=file -Dcaffeine.simulator.file.path=trace.log
+gradlew simulator:run -Dcaffeine.simulator.source=file -Dcaffeine.simulator.file.path=trace.log
 
 # Run a simulation against a generated data set
-gradlew simulate -Dcaffeine.simulator.source=synthetic -Dcaffeine.simulator.synthetic.size=1000
+gradlew simulator:run -Dcaffeine.simulator.source=synthetic -Dcaffeine.simulator.synthetic.size=1000
 ```
 
 #### JCache (JSR-107)
