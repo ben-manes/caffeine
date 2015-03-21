@@ -37,12 +37,13 @@ caused by multiple producers. (TBD: combining arena not yet implemented)
 ## Caching
 
 #### In-Memory
-A high-performance cache with a Guava inspired API. This implementation draws on the author's 
-experience designing [ConcurrentLinkedHashMap](https://code.google.com/p/concurrentlinkedhashmap/)
-and co-authoring [Guava's Cache](https://code.google.com/p/guava-libraries/wiki/CachesExplained).
-The API is extended to include an asynchronous cache and to expose low-level options like changing
-the maximum size, expiration timeouts, and traversing in retention order. To simplify integration,
-a Guava compatible adapter is available (see [migration guide](https://github.com/ben-manes/caffeine/wiki/Guava)).
+A [high performance cache](https://github.com/ben-manes/caffeine/wiki/Benchmarks) with a Guava 
+inspired API. This implementation draws on the author's experience designing 
+[ConcurrentLinkedHashMap](https://code.google.com/p/concurrentlinkedhashmap/) and co-authoring
+[Guava's Cache](https://code.google.com/p/guava-libraries/wiki/CachesExplained). The API is extended
+to include an asynchronous cache and to expose low-level options like changing the maximum size,
+expiration timeouts, and traversing in retention order. To simplify integration, a Guava compatible
+adapter is available (see [migration guide](https://github.com/ben-manes/caffeine/wiki/Guava)).
 
 | Interface | Description |
 | --------- | ----------- |
