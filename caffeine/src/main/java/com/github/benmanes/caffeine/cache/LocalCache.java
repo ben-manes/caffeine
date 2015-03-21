@@ -75,7 +75,6 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Nonnull
   Map<K, V> getAllPresent(@Nonnull Iterable<?> keys);
 
-  /** See {@link ConcurrentMap#compute}. */
   @Override
   default V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     return compute(key, remappingFunction, false, false);
@@ -89,7 +88,6 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       boolean recordMiss, boolean isAsync);
 
-  /** See {@link ConcurrentMap#computeIfAbsent}. */
   @Override
   default V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
     return computeIfAbsent(key, mappingFunction, false);

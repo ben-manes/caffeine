@@ -1145,6 +1145,17 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       boolean recordMiss, boolean isAsync) {
+    return remap(key, statsAware(remappingFunction, recordMiss, isAsync));
+  }
+
+  /**
+   * A {@link Map#compute(Object, BiFunction)} that does not directly record any cache statistics.
+   *
+   * @param key key with which the specified value is to be associated
+   * @param remappingFunction the function to compute a value
+   * @return the new value associated with the specified key, or null if none
+   */
+  private V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
@@ -1154,7 +1165,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     Runnable[] task = new Runnable[2];
     Node<K, V> node = data.compute(keyRef, (k, prior) -> {
       if (prior == null) {
-        newValue[0] = statsAware(remappingFunction, recordMiss, isAsync).apply(key, null);
+        newValue[0] = remappingFunction.apply(key, null);
         if (newValue[0] == null) {
           tracer().recordDelete(id, key);
           return null;
@@ -1184,7 +1195,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
             }
           }
         }
-        newValue[0] = statsAware(remappingFunction, recordMiss, isAsync).apply(key, oldValue);
+        newValue[0] = remappingFunction.apply(key, oldValue);
         if ((newValue[0] == null) && (oldValue != null)) {
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
@@ -1227,12 +1238,11 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   @Override
   public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-    requireNonNull(key);
-    requireNonNull(value);
     requireNonNull(remappingFunction);
+    requireNonNull(value);
 
-    // FIXME(ben): Flush out an atomic implementation instead of using the default version
-    return super.merge(key, value, statsAware(remappingFunction));
+    return remap(key, (k, oldValue) ->
+        (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value));
   }
 
   @Override
