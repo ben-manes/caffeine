@@ -129,9 +129,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   final long id;
 
   // The policy management
-  final NonReentrantLock evictionLock;
-  final BoundedBuffer<Node<K, V>> readBuffer;
   final AtomicReference<DrainStatus> drainStatus;
+  final BoundedBuffer<Node<K, V>> readBuffer;
+  final NonReentrantLock evictionLock;
+  final boolean isAsync;
 
   // The collection views
   transient Set<K> keySet;
@@ -141,6 +142,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   /** Creates an instance based on the builder's configuration. */
   protected BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
+    this.isAsync = isAsync;
     evictionLock = new NonReentrantLock();
     id = tracer().register(builder.name());
     drainStatus = new AtomicReference<DrainStatus>(IDLE);
@@ -150,6 +152,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
         builder.evicts(), (isAsync && builder.evicts()) || builder.isWeighted());
+  }
+
+  final boolean isComputingAsync(Node<?, ?> node) {
+    return isAsync && !Async.isReady((CompletableFuture<?>) node.getValue());
   }
 
   @GuardedBy("evictionLock")
@@ -438,6 +444,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   }
 
   boolean hasExpired(Node<K, V> node, long now) {
+    if (isComputingAsync(node)) {
+      return false;
+    }
     return (expiresAfterAccess() && (now - node.getAccessTime() >= expiresAfterAccessNanos()))
         || (expiresAfterWrite() && (now - node.getWriteTime() >= expiresAfterWriteNanos()));
   }
@@ -644,6 +653,17 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           accessOrderDeque().add(node);
         }
         evict();
+      }
+
+      // Ensure that in-flight async computation cannot expire
+      if (isComputingAsync(node)) {
+        node.setAccessTime(Long.MAX_VALUE);
+        node.setWriteTime(Long.MAX_VALUE);
+        ((CompletableFuture<?>) node.getValue()).thenRun(() -> {
+          long now = ticker().read();
+          node.setAccessTime(now);
+          node.setWriteTime(now);
+        });
       }
     }
   }

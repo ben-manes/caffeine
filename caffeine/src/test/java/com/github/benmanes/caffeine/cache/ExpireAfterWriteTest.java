@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -197,6 +198,29 @@ public final class ExpireAfterWriteTest {
         is(ImmutableMap.of(context.firstKey(), context.firstKey(),
             context.absentKey(), context.absentKey())));
     assertThat(cache.estimatedSize(), is(2L));
+  }
+
+  /* ---------------- AsyncLoadingCache -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE,
+      population = Population.EMPTY, removalListener = Listener.CONSUMING)
+  public void async(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    CompletableFuture<Integer> future = new CompletableFuture<Integer>();
+    cache.get(context.absentKey(), (k, e) -> future);
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    cache.synchronous().cleanUp();
+
+    assertThat(cache, hasRemovalNotifications(context, 0, RemovalCause.EXPIRED));
+    future.complete(context.absentValue());
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    assertThat(cache.getIfPresent(context.absentKey()), is(future));
+
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
+
+    cache.synchronous().cleanUp();
+    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPIRED));
   }
 
   /* ---------------- Policy -------------- */
