@@ -40,7 +40,7 @@ public final class OneShotBuffer implements Buffer {
 
   private long readCounter;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   public OneShotBuffer() {
     writeCounter = new AtomicLong();
     evictionLock = new NonReentrantLock();

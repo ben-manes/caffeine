@@ -82,12 +82,12 @@ public final class AsyncTracerTest {
 
   @Test(expectedExceptions = UncheckedIOException.class)
   public void badFilePath_text() throws IOException {
-    try (LogEventHandler handler = new TextLogEventHandler(badPath)) {}
+    new TextLogEventHandler(badPath).close();
   }
 
   @Test(expectedExceptions = UncheckedIOException.class)
   public void badFilePath_binary() throws IOException {
-    try (LogEventHandler handler = new BinaryLogEventHandler(badPath)) {}
+    new BinaryLogEventHandler(badPath).close();
   }
 
   @Test(expectedExceptions = IllegalStateException.class)

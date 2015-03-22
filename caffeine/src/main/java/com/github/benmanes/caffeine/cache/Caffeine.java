@@ -595,7 +595,7 @@ public final class Caffeine<K, V> {
     }
     return expiresAfterAccess() || expiresAfterWrite() || refreshes() || isRecordingStats()
         ? Ticker.systemTicker()
-        : DisabledTicker.INSTANCE;
+        : Ticker.disabledTicker();
   }
 
   /**

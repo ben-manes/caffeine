@@ -103,7 +103,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   public CompletableFuture<V> get(K key,
       BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction) {
     long now = cache.ticker().read();
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     CompletableFuture<V>[] result = new CompletableFuture[1];
     CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
       result[0] = mappingFunction.apply(key, cache.executor());
@@ -182,6 +182,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     if (futures.isEmpty()) {
       return CompletableFuture.completedFuture(Collections.emptyMap());
     }
+    @SuppressWarnings("rawtypes")
     CompletableFuture<?>[] array = futures.values().toArray(
         new CompletableFuture[futures.size()]);
     return CompletableFuture.allOf(array).thenApply(ignored -> {

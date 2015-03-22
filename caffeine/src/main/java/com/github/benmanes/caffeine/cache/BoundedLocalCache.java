@@ -188,7 +188,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   @Override
   public Ticker ticker() {
-    return DisabledTicker.INSTANCE;
+    return Ticker.disabledTicker();
   }
 
   /* ---------------- Stats Support -------------- */

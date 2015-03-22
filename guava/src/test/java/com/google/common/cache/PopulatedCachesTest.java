@@ -243,6 +243,7 @@ public class PopulatedCachesTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("rawtypes")
   public void testEntrySet_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
       Set<Entry<Object, Object>> entries = cache.asMap().entrySet();

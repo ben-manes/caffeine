@@ -176,7 +176,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     data.replaceAll((key, value) -> {
       tracer().recordWrite(id, key, 1);
@@ -235,7 +235,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return data.computeIfPresent(key, statsAware(remappingFunction, false, false));
     }
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = data.computeIfPresent(key, (K k, V oldValue) -> {
       V newValue = statsAware(remappingFunction, false, false).apply(k, oldValue);
@@ -259,7 +259,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = data.compute(key, (K k, V oldValue) -> {
       V newValue = statsAware(remappingFunction, recordMiss, isAsync).apply(k, oldValue);
@@ -285,7 +285,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = data.merge(key, value, (V oldValue, V val) -> {
       V newValue = statsAware(remappingFunction).apply(oldValue, val);

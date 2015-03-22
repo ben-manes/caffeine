@@ -15,6 +15,11 @@ dependencies {
   checkstyleConfig gradle_plugins.checkstyle
 }
 
+tasks.withType(JavaCompile) {
+  options.encoding = 'UTF-8'
+  options.compilerArgs << '-Xlint:all'
+}
+
 javadoc.options.links('http://docs.oracle.com/javase/8/docs/api/');
 
 checkstyle {

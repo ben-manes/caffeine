@@ -196,7 +196,7 @@ public final class MultiThreadedTest{
     void execute(LoadingCache<Integer, Integer> cache, Integer key, Integer value);
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   CacheOperation<Integer, Integer>[] operations = new CacheOperation[] {
       // LoadingCache
       (cache, key, value) -> cache.get(key),
@@ -291,7 +291,7 @@ public final class MultiThreadedTest{
     void execute(AsyncLoadingCache<Integer, Integer> cache, Integer key, Integer value);
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   AsyncCacheOperation<Integer, Integer>[] asyncOperations = new AsyncCacheOperation[] {
     (cache, key, value) -> cache.getIfPresent(key),
     (cache, key, value) -> cache.get(key, k -> value),

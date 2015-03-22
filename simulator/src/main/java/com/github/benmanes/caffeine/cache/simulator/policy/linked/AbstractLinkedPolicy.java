@@ -79,6 +79,7 @@ abstract class AbstractLinkedPolicy extends UntypedActor
         } else {
           onCreateOrUpdate(event);
         }
+        break;
       case READ:
         onRead(event);
         break;

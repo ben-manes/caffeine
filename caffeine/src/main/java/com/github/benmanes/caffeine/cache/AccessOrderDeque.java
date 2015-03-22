@@ -19,6 +19,8 @@ import java.util.Deque;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
+import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
+
 /**
  * A linked deque implementation used to represent an access-order queue.
  *
@@ -29,9 +31,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeque<E> {
 
   @Override
-  @SuppressWarnings("unchecked")
   public boolean contains(Object o) {
-    return (o instanceof AccessOrder<?>) && contains((E) o);
+    return (o instanceof AccessOrder<?>) && contains((AccessOrder<?>) o);
   }
 
   // A fast-path containment check
@@ -75,28 +76,28 @@ final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeq
   public void setNext(E e, E next) {
     e.setNextInAccessOrder(next);
   }
-}
-
-/**
- * An element that is linked on the {@link Deque}.
- */
-interface AccessOrder<T extends AccessOrder<T>> {
 
   /**
-   * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
-   * element on the deque.
+   * An element that is linked on the {@link Deque}.
    */
-  T getPreviousInAccessOrder();
+  interface AccessOrder<T extends AccessOrder<T>> {
 
-  /** Sets the previous element or <tt>null</tt> if there is no link. */
-  void setPreviousInAccessOrder(T prev);
+    /**
+     * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
+     * element on the deque.
+     */
+    T getPreviousInAccessOrder();
 
-  /**
-   * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
-   * element on the deque.
-   */
-  T getNextInAccessOrder();
+    /** Sets the previous element or <tt>null</tt> if there is no link. */
+    void setPreviousInAccessOrder(T prev);
 
-  /** Sets the next element or <tt>null</tt> if there is no link. */
-  void setNextInAccessOrder(T next);
+    /**
+     * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
+     * element on the deque.
+     */
+    T getNextInAccessOrder();
+
+    /** Sets the next element or <tt>null</tt> if there is no link. */
+    void setNextInAccessOrder(T next);
+  }
 }

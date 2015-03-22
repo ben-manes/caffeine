@@ -78,7 +78,7 @@ final class BoundedBuffer<E> {
   final AtomicLong[] writeCount;
   final AtomicReference<Object>[][] table;
 
-  @SuppressWarnings({"unchecked", "cast"})
+  @SuppressWarnings({"unchecked", "cast", "rawtypes"})
   public BoundedBuffer() {
     readCount = new long[NUMBER_OF_SEGMENTS];
     writeCount = new AtomicLong[NUMBER_OF_SEGMENTS];

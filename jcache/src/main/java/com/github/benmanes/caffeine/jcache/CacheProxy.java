@@ -658,6 +658,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Returns the updated expirable value after performing the post processing actions. */
+  @SuppressWarnings("fallthrough")
   private Expirable<V> postProcess(Expirable<V> expirable, EntryProcessorEntry<K, V> entry) {
     switch (entry.getAction()) {
       case NONE:

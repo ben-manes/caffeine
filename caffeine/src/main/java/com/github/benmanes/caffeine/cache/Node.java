@@ -22,6 +22,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
+import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
+import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
+
 /**
  * An entry in the cache containing the key, value, weight, access, and write metadata. The key
  * or value may be held weakly or softly requiring identity comparison.

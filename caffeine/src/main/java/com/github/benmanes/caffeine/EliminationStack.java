@@ -137,7 +137,7 @@ public final class EliminationStack<E> extends AbstractCollection<E> implements 
   final AtomicReference<Object>[] arena;
 
   /** Creates a {@code EliminationStack} that is initially empty. */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   public EliminationStack() {
     top = new AtomicReference<>();
     arena = new AtomicReference[ARENA_LENGTH];

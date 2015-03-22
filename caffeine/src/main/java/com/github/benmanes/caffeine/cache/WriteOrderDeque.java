@@ -19,6 +19,8 @@ import java.util.Deque;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
+import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
+
 /**
  * A linked deque implementation used to represent a write-order queue.
  *
@@ -29,9 +31,8 @@ import javax.annotation.concurrent.NotThreadSafe;
 final class WriteOrderDeque<E extends WriteOrder<E>> extends AbstractLinkedDeque<E> {
 
   @Override
-  @SuppressWarnings("unchecked")
   public boolean contains(Object o) {
-    return (o instanceof WriteOrder<?>) && contains((E) o);
+    return (o instanceof WriteOrder<?>) && contains((WriteOrder<?>) o);
   }
 
   // A fast-path containment check
@@ -75,28 +76,28 @@ final class WriteOrderDeque<E extends WriteOrder<E>> extends AbstractLinkedDeque
   public void setNext(E e, E next) {
     e.setNextInWriteOrder(next);
   }
-}
-
-/**
- * An element that is linked on the {@link Deque}.
- */
-interface WriteOrder<T extends WriteOrder<T>> {
 
   /**
-   * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
-   * element on the deque.
+   * An element that is linked on the {@link Deque}.
    */
-  T getPreviousInWriteOrder();
+  interface WriteOrder<T extends WriteOrder<T>> {
 
-  /** Sets the previous element or <tt>null</tt> if there is no link. */
-  void setPreviousInWriteOrder(T prev);
+    /**
+     * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
+     * element on the deque.
+     */
+    T getPreviousInWriteOrder();
 
-  /**
-   * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
-   * element on the deque.
-   */
-  T getNextInWriteOrder();
+    /** Sets the previous element or <tt>null</tt> if there is no link. */
+    void setPreviousInWriteOrder(T prev);
 
-  /** Sets the next element or <tt>null</tt> if there is no link. */
-  void setNextInWriteOrder(T next);
+    /**
+     * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
+     * element on the deque.
+     */
+    T getNextInWriteOrder();
+
+    /** Sets the next element or <tt>null</tt> if there is no link. */
+    void setNextInWriteOrder(T next);
+  }
 }

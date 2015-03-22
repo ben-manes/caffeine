@@ -33,6 +33,8 @@ import java.util.NoSuchElementException;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
+import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
