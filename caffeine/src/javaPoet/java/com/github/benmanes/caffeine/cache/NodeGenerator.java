@@ -132,8 +132,8 @@ public final class NodeGenerator {
     nodeSubtype
         .addField(newFieldOffset(className, "key"))
         .addField(newKeyField())
-        .addMethod(newGetter(keyStrength, kTypeVar, "key", Visibility.IMMEDIATE))
-        .addMethod(newGetterRef("key"));
+        .addMethod(newGetter(keyStrength, kTypeVar, "key", Visibility.LAZY))
+        .addMethod(newGetKeyRef());
     addKeyConstructorAssignment(constructorByKey, false);
     addKeyConstructorAssignment(constructorByKeyRef, true);
   }
@@ -361,14 +361,14 @@ public final class NodeGenerator {
         : baseClassName() + '.' + offsetName("key");
 
     nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
-        .addStatement("Object key = this.key")
+        .addStatement("Object key = getKeyReference()")
         .addStatement("return (key != $L) && (key != $L)", retiredArg, deadArg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
 
     nodeSubtype.addMethod(MethodSpec.methodBuilder("isRetired")
-        .addStatement("return (key == $L)", retiredArg)
+        .addStatement("return (getKeyReference() == $L)", retiredArg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
@@ -379,7 +379,7 @@ public final class NodeGenerator {
         .build());
 
     nodeSubtype.addMethod(MethodSpec.methodBuilder("isDead")
-        .addStatement("return (key == $L)", deadArg)
+        .addStatement("return (getKeyReference() == $L)", deadArg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
@@ -397,14 +397,13 @@ public final class NodeGenerator {
     return Feature.makeClassName(keyAndValue);
   }
 
-  /** Creates an accessor that returns the reference holding the variable. */
-  private MethodSpec newGetterRef(String varName) {
-    String methodName = String.format("get%sReference",
-        Character.toUpperCase(varName.charAt(0)) + varName.substring(1));
-    MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
+  /** Creates an accessor that returns the key reference. */
+  private MethodSpec newGetKeyRef() {
+    MethodSpec.Builder getter = MethodSpec.methodBuilder("getKeyReference")
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(Object.class);
-    getter.addStatement("return $N", varName);
+    getter.addStatement("return $T.UNSAFE.getObject(this, $N)",
+        UNSAFE_ACCESS, offsetName("key"));
     return getter.build();
   }
 

@@ -73,22 +73,6 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   /** If the entry was removed from the hash-table and the page replacement policy. */
   boolean isDead();
 
-  /**
-   * Atomically transitions the node from the <tt>alive</tt> state to the <tt>retired</tt> state, if
-   * a valid transition.
-   *
-   * @return the retired weighted value if the transition was successful or null otherwise
-   */
-  default @Nullable V makeRetired() {
-    synchronized (this) {
-      if (!isAlive()) {
-        return null;
-      }
-      retire();
-      return getValue();
-    }
-  }
-
   /** Sets the node to the <tt>retired</tt> state. */
   @GuardedBy("this")
   void retire();

@@ -108,16 +108,21 @@ public final class BoundedLocalCacheTest {
     try {
       Object keyRef = localCache.nodeFactory.newLookupKey(oldEntry.getKey());
       Node<Integer, Integer> node = localCache.data.get(keyRef);
-      checkStatus(localCache, node, Status.ALIVE);
+      checkStatus(node, Status.ALIVE);
       ConcurrentTestHarness.execute(() -> {
         localCache.put(newEntry.getKey(), newEntry.getValue());
         assertThat(localCache.remove(oldEntry.getKey()), is(oldEntry.getValue()));
       });
       Awaits.await().until(() -> localCache.containsKey(oldEntry.getKey()), is(false));
-      checkStatus(localCache, node, Status.RETIRED);
+      Awaits.await().until(() -> {
+        synchronized (node) {
+          return !node.isAlive();
+        }
+      });
+      checkStatus(node, Status.RETIRED);
       localCache.drainBuffers();
 
-      checkStatus(localCache, node, Status.DEAD);
+      checkStatus(node, Status.DEAD);
       assertThat(localCache.containsKey(newEntry.getKey()), is(true));
       assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
     } finally {
@@ -127,15 +132,11 @@ public final class BoundedLocalCacheTest {
 
   enum Status { ALIVE, RETIRED, DEAD }
 
-  static void checkStatus(BoundedLocalCache<Integer, Integer> localCache,
-      Node<Integer, Integer> node, Status expected) {
-    assertThat(node.isAlive(), is(expected == Status.ALIVE));
-    assertThat(node.isRetired(), is(expected == Status.RETIRED));
-    assertThat(node.isDead(), is(expected == Status.DEAD));
-
-    if (node.isDead()) {
-      node.makeRetired();
-      assertThat(node.isRetired(), is(false));
+  static void checkStatus(Node<Integer, Integer> node, Status expected) {
+    synchronized (node) {
+      assertThat(node.isAlive(), is(expected == Status.ALIVE));
+      assertThat(node.isRetired(), is(expected == Status.RETIRED));
+      assertThat(node.isDead(), is(expected == Status.DEAD));
     }
   }
 

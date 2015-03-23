@@ -470,7 +470,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (((now - writeTime) > refreshAfterWriteNanos()) && node.casWriteTime(writeTime, now)) {
         executor().execute(() -> {
           K key = node.getKey();
-          if (key != null) {
+          if ((key != null) && node.isAlive()) {
             try {
               computeIfPresent(key, cacheLoader()::reload);
             } catch (Throwable t) {
@@ -943,13 +943,23 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       return null;
     }
 
-    V oldValue = node.makeRetired();
-    if (oldValue != null) {
+    boolean retired = false;
+    synchronized (node) {
+      if (node.isAlive()) {
+        retired = true;
+        node.retire();
+      }
+    }
+    V oldValue = node.getValue();
+    if (retired) {
       afterWrite(node, new RemovalTask(node));
       if (hasRemovalListener()) {
         @SuppressWarnings("unchecked")
         K castKey = (K) key;
-        notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);
+        RemovalCause cause = (oldValue == null)
+            ? RemovalCause.COLLECTED
+            : RemovalCause.EXPLICIT;
+        notifyRemoval(castKey, oldValue, cause);
       }
     }
     return oldValue;
@@ -958,26 +968,31 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   @Override
   public boolean remove(Object key, Object value) {
     Object keyRef = nodeFactory.newLookupKey(key);
-    final Node<K, V> node = data.get(keyRef);
     tracer().recordDelete(id, key);
-    if ((node == null) || (value == null)) {
+    if ((data.get(keyRef) == null) || (value == null)) {
       return false;
     }
-    V oldValue;
-    synchronized (node) {
-      oldValue = node.getValue();
-      if (node.isAlive() && node.containsValue(value)) {
-        node.retire();
-      } else {
-        return false;
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    Node<K, V> removed[] = new Node[1];
+    data.computeIfPresent(keyRef, (k, node) -> {
+      synchronized (node) {
+        if (node.isAlive() && node.containsValue(value)) {
+          node.retire();
+        } else {
+          return node;
+        }
       }
-    }
-    if (data.remove(keyRef, node) && hasRemovalListener()) {
+      removed[0] = node;
+      return null;
+    });
+    if (removed[0] == null) {
+      return false;
+    } else if (hasRemovalListener()) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
-      notifyRemoval(castKey, oldValue, RemovalCause.EXPLICIT);
+      notifyRemoval(castKey, removed[0].getValue(), RemovalCause.EXPLICIT);
     }
-    afterWrite(node, new RemovalTask(node));
+    afterWrite(removed[0], new RemovalTask(removed[0]));
     return true;
   }
 
@@ -1128,7 +1143,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         V oldValue = prior.getValue();
         newValue[0] = statsAware(remappingFunction, false, false).apply(key, oldValue);
         if (newValue[0] == null) {
-          prior.makeRetired();
+          prior.retire();
           task[0] = new RemovalTask(prior);
           if (hasRemovalListener()) {
             notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
@@ -1312,7 +1327,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         Node<K, V> node = iterator.next();
         K key = node.getKey();
         V value = transformer.apply(node.getValue());
-        if ((key != null) && (value != null)) {
+        if ((key != null) && (value != null) && node.isAlive()) {
           map.put(key, value);
         }
       }
@@ -1537,7 +1552,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           next = iterator.next();
           value = next.getValue();
           key = next.getKey();
-          if (hasExpired(next, now) || (key == null) || (value == null)) {
+          if (hasExpired(next, now) || (key == null) || (value == null) || !next.isAlive()) {
             value = null;
             next = null;
             key = null;
@@ -1808,7 +1823,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           Node<K, V> node = iterator.next();
           K key = node.getKey();
           V value = transformer.apply(node.getValue());
-          if ((key != null) && (value != null)) {
+          if ((key != null) && (value != null) && node.isAlive()) {
             map.put(key, value);
           }
         }
