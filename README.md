@@ -3,16 +3,10 @@
 [![Stories in Ready](https://badge.waffle.io/ben-manes/caffeine.png?label=ready&title=Ready)](https://waffle.io/ben-manes/caffeine)
 [![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-# Caffeine
+Caffeine is a Java 8 based concurrency library that provides specialized data structures, such as a
+[high performance cache][1]. Please see our [documentation][2] for more details.
 
-Concurrent data-structures for Java 8.
-
-The core is stable, feature complete, and well tested. There is no release yet as focus shifts to 
-performance, code readability, and iterations based on external reviews. Feedback on API design,
-missing features, or implementation code is welcome and appreciated.
-
-Snapshots of the development version is available in 
-[Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots/).
+The core is stable, feature complete, and well tested. We expect to release early next week.
 
 ```gradle
 compile 'com.github.ben-manes.caffeine:caffeine:1.0.0-SNAPSHOT'
@@ -23,148 +17,25 @@ compile 'com.github.ben-manes.caffeine:jcache:1.0.0-SNAPSHOT'
 compile 'com.github.ben-manes.caffeine:tracing-async:1.0.0-SNAPSHOT'
 ```
 
-## Collections
+Snapshots of the development version is available in 
+[Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots/).
 
-#### [EliminationStack](caffeine/src/main/java/com/github/benmanes/caffeine/EliminationStack.java)
-A lock-free stack that employs an elimination backoff arena to cancel operations with reverse
-semantics.
+### Cache: Features at a Glance
 
-#### [SingleConsumerQueue](caffeine/src/main/java/com/github/benmanes/caffeine/SingleConsumerQueue.java)
-A lock-free queue that supports concurrent producers and is restricted to a single consumer. This
-implementation employs a combining backoff arena, the inverse of elimination, to reduce contention
-caused by multiple producers. (TBD: combining arena not yet implemented)
+ * automatic loading of entries into the cache, optionally asynchronously
+ * least-recently-used eviction when a maximum size is exceeded
+ * time-based expiration of entries, measured since last access or last write
+ * keys automatically wrapped in weak references
+ * values automatically wrapped in weak or soft references
+ * notification of evicted (or otherwise removed) entries
+ * accumulation of cache access statistics
 
-## Caching
+In addition Caffeine offers extensions for [tracing][3], [simulation][4], [JSR-107 JCache][5] 
+integration, and [Guava][6] adapters.
 
-#### In-Memory
-A [high performance cache](https://github.com/ben-manes/caffeine/wiki/Benchmarks) with a Guava 
-inspired API. This implementation draws on the author's experience designing 
-[ConcurrentLinkedHashMap](https://code.google.com/p/concurrentlinkedhashmap/) and co-authoring
-[Guava's Cache](https://code.google.com/p/guava-libraries/wiki/CachesExplained). The API is extended
-to include an asynchronous cache and to expose low-level options like changing the maximum size,
-expiration timeouts, and traversing in retention order. To simplify integration, a Guava compatible
-adapter is available (see [migration guide](https://github.com/ben-manes/caffeine/wiki/Guava)).
-
-| Interface | Description |
-| --------- | ----------- |
-| [Caffeine](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Caffeine.java) | Builds cache instances based on a wide range of features |
-| [Cache](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Cache.java) | Synchronous cache that allows entries to be manually added |
-| [LoadingCache](caffeine/src/main/java/com/github/benmanes/caffeine/cache/LoadingCache.java) | Synchronous cache that automatically loads entries when not present |
-| [AsyncLoadingCache](caffeine/src/main/java/com/github/benmanes/caffeine/cache/AsyncLoadingCache.java) |Asynchronous cache that automatically loads entries when not present and returns a [CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html) |
-| [CacheLoader](caffeine/src/main/java/com/github/benmanes/caffeine/cache/CacheLoader.java) | Computes or retrieves values, based on a key, for use in populating a cache |
-| [Weigher](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Weigher.java) | Calculates the size of entries relative to each other; used if a maximum weight is specified |
-| [RemovalListener](caffeine/src/main/java/com/github/benmanes/caffeine/cache/RemovalListener.java) | Listens for notifications when an entry is removed from a cache |
-| [CacheStats](caffeine/src/main/java/com/github/benmanes/caffeine/cache/stats/CacheStats.java) | Statistics about the performance of a cache |
-| [Policy](caffeine/src/main/java/com/github/benmanes/caffeine/cache/Policy.java) | Access to inspect and perform low-level cache operations based on its constructed configuration |
-| [CaffeinatedGuava](guava/src/main/java/com/github/benmanes/caffeine/guava/CaffeinatedGuava.java) | An adapter that exposes a Caffeine cache through Guava facades |
-
-#### Tracing
-A cache tracing API can be enabled to capture information on how well an application
-utilizes its caches. Typically caches are either too small due to statistics not being monitored, or
-too large due to over sizing to increase the hit rate. Running the simulator on traced data enables
-adjusting the cache size based on both the hit rate and active content ratio.
-
-The tracing package is enabled if a Java [ServiceLoader](http://docs.oracle.com/javase/8/docs/api/java/util/ServiceLoader.html)
-service is registered with the application in a resource file located at `META-INF/services` in one
-of its jars. [AsyncTracer](tracing/async/src/main/java/com/github/benmanes/caffeine/cache/tracing/async/AsyncTracer.java)
-is a lightweight implementation based on the [LMAX Disruptor](https://lmax-exchange.github.io/disruptor/)
-library that logs the events to a local file.
-
-#### Simulator
-The simulator includes a family of eviction policies and distribution generators. As each policy is
-a decision of trade-offs, the simulator allows developers to determine which policy is best for
-their usage scenario. A general purpose cache, like the one provided by this project, should
-evaluate policies that improve upon LRU. Specialized application-specific caches, such as off-heap,
-can utilize this infrastructure as well.
-
-The simulator is implemented using [Akka](http://akka.io/) where each policy is an actor. The
-default [configuration](simulator/src/main/resources/reference.conf) can be overridden by system
-properties or an `application.conf` file. It can be run locally using
-
-```gradle
-# Run a simulation against a local trace file
-gradlew simulator:run -Dcaffeine.simulator.source=file -Dcaffeine.simulator.file.path=trace.log
-
-# Run a simulation against a generated data set
-gradlew simulator:run -Dcaffeine.simulator.source=synthetic -Dcaffeine.simulator.synthetic.size=1000
-```
-
-#### JCache (JSR-107)
-JCache is a standardized caching API that is Java 6 compatible and introduced in JEE 8. The intent
-of this JSR was to ease adoption of commercial distributed caching products and therefore makes many
-design decisions that are beneficial for vendors but poorly thought out for users. While **we do
-not recommend or encourage adopting JCache** for local in-memory caches, an implementation is
-provided. The JCache provider is configured using [Typesafe's Config](https://github.com/typesafehub/config)
-library. See the [reference.conf](jcache/src/main/resources/reference.conf) for more details.
-
-Integration with Guice, Spring, and CDI dependency injectors is provided by the 
-[reference implementation](https://github.com/jsr107/RI), which proxies to the default JCache
-provider.
-
-```gradle
-compile 'org.jsr107.ri:cache-annotations-ri-spring:1.0.0'
-compile 'org.jsr107.ri:cache-annotations-ri-guice:1.0.0'
-compile 'org.jsr107.ri:cache-annotations-ri-cdi:1.0.0'
-```
-
-## Development Notes
-To get started, [sign the Contributor License Agreement](https://www.clahub.com/agreements/ben-manes/caffeine).
-
-#### Java Microbenchmark Harness
-[JMH](https://github.com/melix/jmh-gradle-plugin) benchmarks can be run using
-
-```gradle
-gradlew jmh -PincludePattern=[class-name pattern]
-```
-
-#### Java Object Layout
-[JOL](http://openjdk.java.net/projects/code-tools/jol) inspectors can be run using
-
-```gradle
-gradlew [object-layout task] -PclassName=[class-name]
-```
-
-For convenience, the project's package is prepended to the supplied class name.
-
-#### Static analysis
-Static code analysis tasks are not enabled by default and can be run using
-
-```gradle
-gradlew clean build -Dcheckstyle -Dfindbugs -Dpmd
-```
-
-#### Parameterized testing
-Cache unit tests can opt into being run against all cache configurations that meet a specification
-constraint. A test method annotated with a configured `@CacheSpec` and using the `CacheProvider`
-will be executed with all possible combinations. The test case can inspect the execution
-configuration by accepting the `CacheContext` as a parameter.
-
-Parameterized tests can take advantage of automatic validation of the cache's internal data
-structures to detect corruption. The `CacheValidationListener` is run after a successful test case
-and if an error is detected then the test is set with the failure information.
-
-```java
-@Listeners(CacheValidationListener.class)
-@Test(dataProviderClass = CacheProvider.class)
-public final class CacheTest {
-
-  @CacheSpec(
-    keys = { ReferenceType.STRONG, ReferenceType.WEAK },
-    values = { ReferenceType.STRONG, ReferenceType.WEAK, ReferenceType.SOFT },
-    maximumSize = { MaximumSize.DISABLED, MaximumSize.FULL, MaximumSize.UNREACHABLE })
-  @Test(dataProvider = "caches")
-  public void getIfPresent_notFound(
-      Cache<Integer, Integer> cache, CacheContext context) {
-    // This test is run against at least 72 different cache configurations
-    // (2 key types) * (3 value types) * (3 max sizes) * (4 population modes)
-    assertThat(cache.getIfPresent(context.getAbsentKey()), is(nullValue());
-    assertThat(cache.stats(), both(hasMissCount(1)).and(hasHitCount(0)));
-  }
-}
-```
-
-#### A special thanks to...
-![YourKit](http://www.yourkit.com/images/yklogo.png)
-
-[YourKit](http://www.yourkit.com) supports open source projects with its full-featured Java 
-Profiler.
+[1]: https://github.com/ben-manes/caffeine/wiki
+[2]: https://github.com/ben-manes/caffeine/wiki/Benchmarks
+[3]: https://github.com/ben-manes/caffeine/wiki/Tracing
+[4]: https://github.com/ben-manes/caffeine/wiki/Simulator
+[5]: https://github.com/ben-manes/caffeine/wiki/JCache
+[6]: https://github.com/ben-manes/caffeine/wiki/Guava

@@ -61,7 +61,7 @@ ext {
     coveralls: '2.3.1',
     error_prone: '0.0.6',
     jmh: '0.2.0',
-    nexus: '2.3',
+    nexus: '2.3.1',
     versions: '0.8',
     semantic_versioning: '1.1.0',
     stats: '0.1.3',
