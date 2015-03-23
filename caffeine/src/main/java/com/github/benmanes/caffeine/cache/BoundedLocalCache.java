@@ -54,7 +54,6 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
@@ -132,6 +131,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   final AtomicReference<DrainStatus> drainStatus;
   final BoundedBuffer<Node<K, V>> readBuffer;
   final NonReentrantLock evictionLock;
+  final Weigher<K, V> weigher;
   final boolean isAsync;
 
   // The collection views
@@ -143,6 +143,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   protected BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
     this.isAsync = isAsync;
+    weigher = builder.getWeigher(isAsync);
     evictionLock = new NonReentrantLock();
     id = tracer().register(builder.name());
     drainStatus = new AtomicReference<DrainStatus>(IDLE);
@@ -292,14 +293,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   protected boolean evicts() {
     return false;
-  }
-
-  protected boolean isWeighted() {
-    return false;
-  }
-
-  protected @Nonnull Weigher<? super K, ? super V> weigher() {
-    return Weigher.singleton();
   }
 
   /** Returns the maximum weighted size of the cache. */
@@ -899,7 +892,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     requireNonNull(value);
 
     final long now = ticker().read();
-    final int weight = weigher().weigh(key, value);
+    final int weight = weigher.weigh(key, value);
     final Node<K, V> node = nodeFactory.newNode(key, keyReferenceQueue(),
         value, valueReferenceQueue(), weight, now);
 
@@ -989,7 +982,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     requireNonNull(key);
     requireNonNull(value);
 
-    final int weight = weigher().weigh(key, value);
+    final int weight = weigher.weigh(key, value);
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     tracer().recordWrite(id, key, weight);
     if (node == null) {
@@ -1025,7 +1018,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     requireNonNull(oldValue);
     requireNonNull(newValue);
 
-    final int weight = weigher().weigh(key, newValue);
+    final int weight = weigher.weigh(key, newValue);
     final Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     tracer().recordWrite(id, key, weight);
     if (node == null) {
@@ -1076,7 +1069,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         afterRead(node, true);
         V value = node.getValue();
         if (Tracer.isEnabled() && (value != null)) {
-          tracer().recordWrite(id, key, weigher().weigh(key, value));
+          tracer().recordWrite(id, key, weigher.weigh(key, value));
         }
         return value;
       }
@@ -1091,7 +1084,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (value[0] == null) {
         return null;
       }
-      weight[0] = weigher().weigh(key, value[0]);
+      weight[0] = weigher.weigh(key, value[0]);
       return nodeFactory.newNode(key, keyReferenceQueue(),
           value[0], valueReferenceQueue(), weight[0], now);
     });
@@ -1107,7 +1100,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       afterWrite(node, new AddTask(node, weight[0]));
     }
     if (Tracer.isEnabled() && (val != null)) {
-      tracer().recordWrite(id, key, weigher().weigh(key, val));
+      tracer().recordWrite(id, key, weigher.weigh(key, val));
     }
     return val;
   }
@@ -1140,7 +1133,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         }
         prior.setValue(newValue[0], valueReferenceQueue());
         int oldWeight = prior.getWeight();
-        int newWeight = weigher().weigh(key, newValue[0]);
+        int newWeight = weigher.weigh(key, newValue[0]);
         prior.setWeight(newWeight);
 
         final int weightedDifference = newWeight - oldWeight;
@@ -1191,7 +1184,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           return null;
         }
         final long now = ticker().read();
-        final int weight = weigher().weigh(key, newValue[0]);
+        final int weight = weigher.weigh(key, newValue[0]);
         final Node<K, V> newNode = nodeFactory.newNode(
             keyRef, newValue[0], valueReferenceQueue(), weight, now);
         task[0] = new AddTask(newNode, weight);
@@ -1225,7 +1218,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           return null;
         }
         final int oldWeight = prior.getWeight();
-        final int newWeight = weigher().weigh(key, newValue[0]);
+        final int newWeight = weigher.weigh(key, newValue[0]);
         if (task[1] == null) {
           prior.setWeight(newWeight);
           prior.setValue(newValue[0], valueReferenceQueue());
@@ -1304,7 +1297,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     try {
       drainBuffers();
 
-      final int initialCapacity = (weigher() == Weigher.singleton())
+      final int initialCapacity = (weigher == Weigher.singleton())
           ? Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size())
           : 16;
       final Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
@@ -1589,10 +1582,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       proxy.expiresAfterWriteNanos = cache.expiresAfterWriteNanos();
     }
     if (cache.evicts()) {
-      if (cache.weigher() == Weigher.singleton()) {
+      if (cache.weigher == Weigher.singleton()) {
         proxy.maximumSize = cache.maximum();
       } else {
-        proxy.weigher = cache.weigher();
+        proxy.weigher = cache.weigher;
         proxy.maximumWeight = cache.maximum();
       }
     }
@@ -1626,7 +1619,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     @Override
     public Policy<K, V> policy() {
       return (policy == null)
-          ? (policy = new BoundedPolicy<K, V>(cache, Function.identity()))
+          ? (policy = new BoundedPolicy<K, V>(cache, Function.identity(), isWeighted))
           : policy;
     }
 
@@ -1642,15 +1635,17 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   static final class BoundedPolicy<K, V> implements Policy<K, V> {
     final BoundedLocalCache<K, V> cache;
     final Function<V, V> transformer;
+    final boolean isWeighted;
 
     Optional<Eviction<K, V>> eviction;
     Optional<Expiration<K, V>> refreshes;
     Optional<Expiration<K, V>> afterWrite;
     Optional<Expiration<K, V>> afterAccess;
 
-    BoundedPolicy(BoundedLocalCache<K, V> cache, Function<V, V> transformer) {
-      this.cache = cache;
+    BoundedPolicy(BoundedLocalCache<K, V> cache, Function<V, V> transformer, boolean isWeighted) {
       this.transformer = transformer;
+      this.isWeighted = isWeighted;
+      this.cache = cache;
     }
 
     @Override public Optional<Eviction<K, V>> eviction() {
@@ -1686,7 +1681,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
     final class BoundedEviction implements Eviction<K, V> {
       @Override public boolean isWeighted() {
-        return cache.isWeighted();
+        return isWeighted;
       }
       @Override public OptionalLong weightedSize() {
         if (cache.evicts() && isWeighted()) {
@@ -1797,7 +1792,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
       private Map<K, V> sortedByWriteTime(boolean ascending, int limit) {
         Caffeine.requireArgument(limit >= 0);
-        final int initialCapacity = (cache.weigher() == Weigher.singleton())
+        final int initialCapacity = (cache.weigher == Weigher.singleton())
             ? Math.min(limit, cache.evicts() ? (int) cache.adjustedWeightedSize() : cache.size())
             : 16;
         final Map<K, V> map = new LinkedHashMap<>(initialCapacity);
@@ -1865,12 +1860,14 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       implements Serializable {
     private static final long serialVersionUID = 1;
 
+    final boolean isWeighted;
     transient Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
     BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(LocalCacheFactory.newBoundedLocalCache((Caffeine<K, CompletableFuture<V>>) builder,
           asyncLoader(loader, builder), true), loader);
+      isWeighted = builder.isWeighted();
     }
 
     private static <K, V> CacheLoader<? super K, CompletableFuture<V>> asyncLoader(
@@ -1887,7 +1884,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         Function<V, V> castedTransformer = (Function<V, V>) transformer;
-        policy = new BoundedPolicy<K, V>(castedCache, castedTransformer);
+        policy = new BoundedPolicy<K, V>(castedCache, castedTransformer, isWeighted);
       }
       return policy;
     }

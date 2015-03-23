@@ -30,8 +30,8 @@ Snapshots of the development version is available in
  * notification of evicted (or otherwise removed) entries
  * accumulation of cache access statistics
 
-In addition Caffeine offers extensions for [tracing][3], [simulation][4], [JSR-107 JCache][5] 
-integration, and [Guava][6] adapters.
+In addition Caffeine offers extensions for [tracing][3], [simulation][4], [JSR-107 JCache][5],
+and [Guava][6] adapters.
 
 [1]: https://github.com/ben-manes/caffeine/wiki
 [2]: https://github.com/ben-manes/caffeine/wiki/Benchmarks

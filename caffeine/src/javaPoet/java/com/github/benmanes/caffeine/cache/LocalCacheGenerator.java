@@ -23,7 +23,6 @@ import static com.github.benmanes.caffeine.cache.Specifications.REMOVAL_LISTENER
 import static com.github.benmanes.caffeine.cache.Specifications.STATS_COUNTER;
 import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
-import static com.github.benmanes.caffeine.cache.Specifications.WEIGHER;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_ORDER_DEQUE;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_QUEUE;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
@@ -93,7 +92,6 @@ public final class LocalCacheGenerator {
     addStats();
     addTicker();
     addMaximum();
-    addWeigher();
     addAccessOrderDeque();
     addExpireAfterAccess();
     addExpireAfterWrite();
@@ -230,24 +228,6 @@ public final class LocalCacheGenerator {
         .addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
             UNSAFE_ACCESS, offsetName("weightedSize"), "weightedSize")
         .addParameter(long.class, "weightedSize")
-        .build());
-  }
-
-  private void addWeigher() {
-    if (!generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
-      return;
-    }
-    constructor.addStatement("this.weigher = builder.getWeigher(async)");
-    cache.addField(FieldSpec.builder(WEIGHER, "weigher", privateFinalModifiers).build());
-    cache.addMethod(MethodSpec.methodBuilder("weigher")
-        .addModifiers(protectedFinalModifiers)
-        .addStatement("return weigher")
-        .returns(WEIGHER)
-        .build());
-    cache.addMethod(MethodSpec.methodBuilder("isWeighted")
-        .addModifiers(protectedFinalModifiers)
-        .addStatement("return true")
-        .returns(boolean.class)
         .build());
   }
 

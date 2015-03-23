@@ -108,8 +108,8 @@ public final class CacheSelectorCode {
       switchBuilder.addStatement(
           "case $S: return new $N<>(builder, cacheLoader, async)", className, className);
     }
+    switchBuilder.addStatement("default: throw new $T(sb.toString())", IllegalStateException.class);
     switchBuilder.endControlFlow();
-    switchBuilder.addStatement("throw new $T()", IllegalStateException.class);
     name.add(switchBuilder.build());
     return this;
   }

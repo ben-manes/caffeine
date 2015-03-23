@@ -53,6 +53,10 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
+  final Feature[] featureByIndex = new Feature[] { null, null,
+      Feature.LOADING, Feature.LISTENING, Feature.EXECUTOR, Feature.STATS, Feature.MAXIMUM_SIZE,
+      Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
+  };
   final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
   final Path directory;
 
@@ -114,11 +118,6 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private void fillClassNameToFeatures() {
-    Feature[] featureByIndex = new Feature[] { null, null,
-        Feature.LOADING, Feature.LISTENING, Feature.EXECUTOR, Feature.STATS, Feature.MAXIMUM_SIZE,
-        Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
-    };
-
     for (List<Object> combination : combinations()) {
       Set<Feature> features = new LinkedHashSet<>();
 
@@ -141,7 +140,7 @@ public final class LocalCacheFactoryGenerator {
   private Set<List<Object>> combinations() {
     Set<Boolean> options = ImmutableSet.of(true, false);
     List<Set<Boolean>> sets = new ArrayList<>();
-    for (int i = 0; i < 11; i++) {
+    for (int i = 0; i < featureByIndex.length; i++) {
       sets.add(options);
     }
     return Sets.cartesianProduct(sets);

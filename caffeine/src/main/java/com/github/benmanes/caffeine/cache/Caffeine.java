@@ -139,8 +139,8 @@ public final class Caffeine<K, V> {
   long expireAfterAccessNanos = UNSET_INT;
 
   RemovalListener<? super K, ? super V> removalListener;
-  Weigher<? super K, ? super V> weigher;
   Supplier<StatsCounter> statsCounterSupplier;
+  Weigher<? super K, ? super V> weigher;
   Supplier<String> nameSupplier;
   Executor executor;
   Ticker ticker;
