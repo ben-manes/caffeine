@@ -15,10 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Map;
-import java.util.Objects;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -46,10 +43,9 @@ public class ComputeBenchmark {
   static final Integer COMPUTE_KEY = SIZE / 2;
 
   @Param({"ConcurrentHashMap", "Caffeine", "Guava"})
-  String computingType;
+  String computeType;
 
   Function<Integer, Boolean> benchmarkFunction;
-  Map<Integer, Boolean> cache;
   Integer[] ints;
 
   @State(Scope.Thread)
@@ -57,24 +53,26 @@ public class ComputeBenchmark {
     int index = ThreadLocalRandom.current().nextInt();
   }
 
-  @Setup
-  public void setup() throws Exception {
-    if (Objects.equals(computingType, "ConcurrentHashMap")) {
-      setupConcurrentHashMap();
-    } else if (Objects.equals(computingType, "Caffeine")) {
-      setupCaffeine();
-    } else if (Objects.equals(computingType, "Guava")) {
-      setupGuava();
-    } else {
-      throw new AssertionError("Unknown computingType: " + computingType);
-    }
-    requireNonNull(benchmarkFunction);
-
+  public ComputeBenchmark() {
     ints = new Integer[SIZE];
     IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextInt();
     }
+  }
+
+  @Setup
+  public void setup() {
+    if (computeType.equals("ConcurrentHashMap")) {
+      setupConcurrentHashMap();
+    } else if (computeType.equals("Caffeine")) {
+      setupCaffeine();
+    } else if (computeType.equals("Guava")) {
+      setupGuava();
+    } else {
+      throw new AssertionError("Unknown computingType: " + computeType);
+    }
+    Arrays.stream(ints).forEach(benchmarkFunction::apply);
   }
 
   @Benchmark @Threads(32)
@@ -93,7 +91,7 @@ public class ComputeBenchmark {
   }
 
   private void setupCaffeine() {
-    Cache<Integer, Boolean> cache = Caffeine.newBuilder().build();
+    Cache<Integer, Boolean> cache = Caffeine.newBuilder().initialCapacity(SIZE).build();
     benchmarkFunction = key -> cache.get(key, any -> Boolean.TRUE);
   }
 
