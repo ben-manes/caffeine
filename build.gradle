@@ -30,7 +30,6 @@ subprojects { proj ->
   if (proj.name == 'tracing') {
     return
   }
-
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'org.dm.bundle'
   apply plugin: 'errorprone'

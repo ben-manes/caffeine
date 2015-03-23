@@ -683,7 +683,7 @@ public final class Caffeine<K, V> {
    * @throws NullPointerException if the specified supplier is null
    */
   @Nonnull
-  public Caffeine<K, V> named(@Nonnull Supplier<String> nameSupplier) {
+  public Caffeine<K, V> name(@Nonnull Supplier<String> nameSupplier) {
     requireState(this.nameSupplier == null);
     this.nameSupplier = requireNonNull(nameSupplier);
     return this;

@@ -219,13 +219,17 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   /** Asynchronously sends a removal notification to the listener. */
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
     requireState(hasRemovalListener(), "Notification should be guarded with a check");
-    executor().execute(() -> {
-      try {
-        removalListener().onRemoval(new RemovalNotification<K, V>(key, value, cause));
-      } catch (Throwable t) {
-        logger.log(Level.WARNING, "Exception thrown by removal listener", t);
-      }
-    });
+    try {
+      executor().execute(() -> {
+        try {
+          removalListener().onRemoval(new RemovalNotification<K, V>(key, value, cause));
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown by removal listener", t);
+        }
+      });
+    } catch (Throwable t) {
+      logger.log(Level.SEVERE, "Exception thrown when submitting removal listener", t);
+    }
   }
 
   /* ---------------- Reference Support -------------- */

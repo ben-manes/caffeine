@@ -33,8 +33,8 @@ Snapshots of the development version is available in
 In addition Caffeine offers extensions for [tracing][3], [simulation][4], [JSR-107 JCache][5],
 and [Guava][6] adapters.
 
-[1]: https://github.com/ben-manes/caffeine/wiki
-[2]: https://github.com/ben-manes/caffeine/wiki/Benchmarks
+[1]: https://github.com/ben-manes/caffeine/wiki/Benchmarks
+[2]: https://github.com/ben-manes/caffeine/wiki
 [3]: https://github.com/ben-manes/caffeine/wiki/Tracing
 [4]: https://github.com/ben-manes/caffeine/wiki/Simulator
 [5]: https://github.com/ben-manes/caffeine/wiki/JCache

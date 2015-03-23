@@ -411,19 +411,19 @@ public final class CaffeineTest {
   /* ---------------- named -------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
-  public void named_null() {
-    Caffeine.newBuilder().named(null);
+  public void name_null() {
+    Caffeine.newBuilder().name(null);
   }
 
   @Test(expectedExceptions = IllegalStateException.class)
-  public void named_twice() {
-    Caffeine.newBuilder().named(() -> "a").named(() -> "b");
+  public void name_twice() {
+    Caffeine.newBuilder().name(() -> "a").name(() -> "b");
   }
 
   @Test
-  public void named() {
+  public void name() {
     Supplier<String> nameSupplier = () -> "a";
-    Caffeine<?, ?> builder = Caffeine.newBuilder().named(nameSupplier);
+    Caffeine<?, ?> builder = Caffeine.newBuilder().name(nameSupplier);
     assertThat(builder.nameSupplier, is(nameSupplier));
     builder.build();
   }

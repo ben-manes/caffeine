@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.annotations.Listeners;
@@ -88,7 +87,7 @@ public final class BoundedLocalCacheTest {
     assertThat(map.adjustedWeightedSize(), is(BoundedLocalCache.MAXIMUM_CAPACITY));
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = RejectedExecutionException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL,
       executor = CacheExecutor.REJECTING, removalListener = Listener.CONSUMING)
