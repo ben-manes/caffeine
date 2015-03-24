@@ -27,6 +27,7 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.CacheTesting.Receiver;
 import com.google.common.cache.LocalCache.ReferenceEntry;
@@ -101,6 +102,56 @@ public class CacheEvictionTest extends TestCase {
 
     assertEquals(MAX_SIZE, cache.size());
     assertEquals(MAX_SIZE, removalListener.getCount());
+    CacheTesting.checkValidState(cache);
+  }
+
+  /**
+   * With an unlimited-size cache with maxWeight of 0, entries weighing 0 should still be cached.
+   * Entries with positive weight should not be cached (nor dump existing cache).
+   */
+  public void testEviction_maxWeight_zero() {
+    CountingRemovalListener<Integer, Integer> removalListener = countingRemovalListener();
+    IdentityLoader<Integer> loader = identityLoader();
+
+    // Even numbers are free, odd are too expensive
+    Weigher<Integer, Integer> evensOnly = (k, v) -> k % 2;
+
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .maximumWeight(0)
+        .weigher(evensOnly)
+        .removalListener(removalListener),
+        loader);
+
+    // 1 won't be cached
+    assertThat(cache.getUnchecked(1)).isEqualTo(1);
+    assertThat(cache.asMap().keySet()).isEmpty();
+
+    cache.cleanUp();
+    assertThat(removalListener.getCount()).isEqualTo(1);
+
+    // 2 will be cached
+    assertThat(cache.getUnchecked(2)).isEqualTo(2);
+    assertThat(cache.asMap().keySet()).containsExactly(2);
+
+    cache.cleanUp();
+    CacheTesting.checkValidState(cache);
+    assertThat(removalListener.getCount()).isEqualTo(1);
+
+    // 4 will be cached
+    assertThat(cache.getUnchecked(4)).isEqualTo(4);
+    assertThat(cache.asMap().keySet()).containsExactly(2, 4);
+
+    cache.cleanUp();
+    assertThat(removalListener.getCount()).isEqualTo(1);
+
+    // 5 won't be cached, won't dump cache
+    assertThat(cache.getUnchecked(5)).isEqualTo(5);
+    assertThat(cache.asMap().keySet()).containsExactly(2, 4);
+
+    cache.cleanUp();
+    assertThat(removalListener.getCount()).isEqualTo(2);
+
+    // Should we pepper more of these calls throughout the above? Where?
     CacheTesting.checkValidState(cache);
   }
 
