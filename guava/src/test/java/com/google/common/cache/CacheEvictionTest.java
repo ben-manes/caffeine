@@ -119,7 +119,8 @@ public class CacheEvictionTest extends TestCase {
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .maximumWeight(0)
         .weigher(evensOnly)
-        .removalListener(removalListener),
+        .removalListener(removalListener)
+        .executor(MoreExecutors.directExecutor()),
         loader);
 
     // 1 won't be cached

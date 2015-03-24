@@ -44,7 +44,7 @@ subprojects { proj ->
 
   tasks.withType(JavaCompile) {
     if (!System.env.'CI') {
-      options.incremental = true
+      options.incremental = !rootProject.hasProperty('release')
     }
   }
 
