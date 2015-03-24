@@ -50,7 +50,7 @@ subprojects { proj ->
 
   group = 'com.github.ben-manes.caffeine'
   version.with {
-    major = 1 // incompatible API changes
+    major = 2 // incompatible API changes
     minor = 0 // backwards-compatible additions
     patch = 0 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
