@@ -143,18 +143,19 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   protected BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
     this.isAsync = isAsync;
+    readBuffer = new BoundedBuffer<>();
     weigher = builder.getWeigher(isAsync);
     evictionLock = new NonReentrantLock();
     id = tracer().register(builder.name());
     drainStatus = new AtomicReference<DrainStatus>(IDLE);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
-    readBuffer = (evicts() || expiresAfterAccess()) ? new BoundedBuffer<>() : null;
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
         builder.evicts(), (isAsync && builder.evicts()) || builder.isWeighted());
   }
 
+  /** Returns if the node's value is currently being computed, asynchronously. */
   final boolean isComputingAsync(Node<?, ?> node) {
     return isAsync && !Async.isReady((CompletableFuture<?>) node.getValue());
   }
@@ -234,10 +235,12 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   /* ---------------- Reference Support -------------- */
 
+  /** Returns if the keys are weak reference garbage collected. */
   protected boolean collectKeys() {
     return false;
   }
 
+  /** Returns if the values are weak or soft reference garbage collected. */
   protected boolean collectValues() {
     return false;
   }
@@ -254,6 +257,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   /* ---------------- Expiration Support -------------- */
 
+  /** Returns if the cache expires entries after an access time threshold. */
   protected boolean expiresAfterAccess() {
     return false;
   }
@@ -267,6 +271,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     throw new UnsupportedOperationException();
   }
 
+  /** Returns if the cache expires entries after an write time threshold. */
   protected boolean expiresAfterWrite() {
     return false;
   }
@@ -280,6 +285,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     throw new UnsupportedOperationException();
   }
 
+  /** Returns if the cache refreshes entries after an write time threshold. */
   protected boolean refreshAfterWrite() {
     return false;
   }
@@ -295,6 +301,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   /* ---------------- Eviction Support -------------- */
 
+  /** Returns if the cache evicts entries due to a maximum size or weight threshold. */
   protected boolean evicts() {
     return false;
   }
@@ -460,10 +467,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     }
     long now = ticker().read();
     node.setAccessTime(now);
-    if (evicts() || expiresAfterAccess()) {
-      boolean delayable = !readBuffer.submit(node);
-      drainOnReadIfNeeded(delayable);
-    }
+
+    boolean delayable = !readBuffer.submit(node);
+    drainOnReadIfNeeded(delayable);
 
     if (refreshAfterWrite()) {
       long writeTime = node.getWriteTime();
@@ -573,10 +579,11 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   /** Drains the read buffers */
   @GuardedBy("evictionLock")
   void drainReadBuffer() {
-    if (!evicts() && !expiresAfterAccess()) {
-      return;
+    if (evicts() || expiresAfterAccess()) {
+      readBuffer.drain(node -> reorder(accessOrderDeque(), node));
+    } else {
+      readBuffer.drain(e -> {});
     }
-    readBuffer.drain(node -> reorder(accessOrderDeque(), node));
   }
 
   /** Updates the node's location in the page replacement policy. */
@@ -762,9 +769,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
           }
           makeDead(node);
         }
-
-        // Discard all pending reads
-        readBuffer.drain(e -> {});
       }
 
       if (expiresAfterWrite()) {
@@ -798,6 +802,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         }
         makeDead(node);
       }
+
+      // Discard all pending reads
+      readBuffer.drain(e -> {});
     } finally {
       evictionLock.unlock();
     }

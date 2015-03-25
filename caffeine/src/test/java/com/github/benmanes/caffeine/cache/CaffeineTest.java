@@ -29,6 +29,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.Expiration;
 import com.github.benmanes.caffeine.cache.testing.FakeTicker;
+import com.google.common.base.Suppliers;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -426,5 +427,11 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder().name(nameSupplier);
     assertThat(builder.nameSupplier, is(nameSupplier));
     builder.build();
+  }
+
+  @Test
+  public void name_caller() {
+    String name = Suppliers.memoize(Caffeine::callerClassName).get();
+    assertThat(name, is("MemoizingSupplier"));
   }
 }

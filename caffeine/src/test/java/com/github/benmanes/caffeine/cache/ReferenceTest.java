@@ -16,8 +16,10 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.google.common.base.Preconditions.checkState;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -37,6 +39,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.google.common.collect.Iterators;
 import com.google.common.testing.GcFinalization;
 
 /**
@@ -45,6 +48,32 @@ import com.google.common.testing.GcFinalization;
 @Listeners(CacheValidationListener.class)
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG, population = Population.FULL)
+  public void cleanup_keys(Cache<Integer, Integer> cache, CacheContext context) {
+    runCleanupTest(cache, context);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK, population = Population.FULL)
+  public void cleanup_values(Cache<Integer, Integer> cache, CacheContext context) {
+    runCleanupTest(cache, context);
+  }
+
+  // FIXME(ben): We can't test soft values since they are not predictably GC'd
+  static void runCleanupTest(Cache<Integer, Integer> cache, CacheContext context) {
+    Integer key = context.firstKey();
+    Integer value = context.original().get(key);
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(Iterators.size(cache.asMap().keySet().iterator()), is(1));
+    for (int i = 0; i < 1000; i++) {
+      // Trigger enough reads to perform a cleanup
+      checkState(cache.getIfPresent(key) == value);
+    }
+    assertThat(cache.estimatedSize(), lessThan(Population.FULL.size()));
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.EMPTY)

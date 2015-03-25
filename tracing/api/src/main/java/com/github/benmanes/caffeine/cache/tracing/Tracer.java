@@ -48,12 +48,12 @@ public interface Tracer {
   void recordRead(long id, @Nonnull Object key);
 
   /**
-   * Records a write operation that results in an entry existing in the cache. A write should be
-   * recorded for the following operations:
+   * Records a write operation for the insertion or update of an entry in the cache. A write should
+   * be recorded for the following operations:
    * <ul>
    *   <li>a read that triggers computing the entry if not present</li>
    *   <li>insertion of a new entry</li>
-   *   <li>insertion of a new entry if a mapping for the key is absent<li>
+   *   <li>insertion of a new entry if a mapping for the key is absent</li>
    *   <li>replacement of an existing entry</li>
    * </ul>
    * The cache operation should be recorded regardless of whether the cache was mutated, as

@@ -124,7 +124,7 @@ final class BoundedBuffer<E> {
   }
 
   /**
-   * Drains the buffer, sending each element to the consumer for processing. The caller to ensure
+   * Drains the buffer, sending each element to the consumer for processing. The caller must ensure
    * that a consumer has exclusive read access to the buffer.
    *
    * @param consumer the action to perform on each element
