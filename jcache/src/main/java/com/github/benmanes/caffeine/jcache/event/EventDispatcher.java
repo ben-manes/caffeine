@@ -18,14 +18,16 @@ package com.github.benmanes.caffeine.jcache.event;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.cache.Cache;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -51,13 +53,16 @@ import javax.cache.event.EventType;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EventDispatcher<K, V> {
+  private static final Logger logger = Logger.getLogger(EventDispatcher.class.getName());
   private static final ThreadLocal<List<CompletableFuture<Void>>> pending =
       ThreadLocal.withInitial(ArrayList::new);
 
+  private final Executor exectuor;
   private final Map<Registration<K, V>, CompletableFuture<Void>> dispatchQueues;
 
-  public EventDispatcher() {
+  public EventDispatcher(Executor exectuor) {
     dispatchQueues = new ConcurrentHashMap<>();
+    this.exectuor = exectuor;
   }
 
   /**
@@ -72,7 +77,7 @@ public final class EventDispatcher<K, V> {
     EventTypeAwareListener<K, V> listener = new EventTypeAwareListener<>(
         configuration.getCacheEntryListenerFactory().create());
 
-    CacheEntryEventFilter<K, V> filter = (event) -> true;
+    CacheEntryEventFilter<K, V> filter = event -> true;
     if (configuration.getCacheEntryEventFilterFactory() != null) {
       filter = new EventTypeFilter<K, V>(listener,
           configuration.getCacheEntryEventFilterFactory().create());
@@ -101,9 +106,9 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishCreated(Cache<K, V> cache, K key, V value) {
-    CacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
+    JCacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
         cache, EventType.CREATED, key, null, value);
-    publish(event, listener -> listener.onCreated(Collections.singleton(event)));
+    publish(event, listener -> listener.onCreated(event));
   }
 
   /**
@@ -115,9 +120,9 @@ public final class EventDispatcher<K, V> {
    * @param newValue the entry's new value
    */
   public void publishUpdated(Cache<K, V> cache, K key, V oldValue, V newValue) {
-    CacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
+    JCacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
         cache, EventType.UPDATED, key, oldValue, newValue);
-    publish(event, listener -> listener.onUpdated(Collections.singleton(event)));
+    publish(event, listener -> listener.onUpdated(event));
   }
 
   /**
@@ -128,9 +133,9 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemoved(Cache<K, V> cache, K key, V value) {
-    CacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
+    JCacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
         cache, EventType.REMOVED, key, null, value);
-    publish(event, listener -> listener.onRemoved(Collections.singleton(event)));
+    publish(event, listener -> listener.onRemoved(event));
   }
 
   /**
@@ -141,9 +146,9 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpired(Cache<K, V> cache, K key, V value) {
-    CacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
+    JCacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
         cache, EventType.EXPIRED, key, value, null);
-    publish(event, listener -> listener.onExpired(Collections.singleton(event)));
+    publish(event, listener -> listener.onExpired(event));
   }
 
   /**
@@ -157,7 +162,7 @@ public final class EventDispatcher<K, V> {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])).join();
       }
     } catch (CompletionException e) {
-      // ignored
+      logger.log(Level.WARNING, null, e);
     } finally {
       futures.clear();
     }
@@ -179,7 +184,7 @@ public final class EventDispatcher<K, V> {
         .map(registration -> {
           Runnable action = () -> operation.accept(registration.getCacheEntryListener());
           CompletableFuture<Void> future = dispatchQueues.computeIfPresent(
-              registration, (key, queue) -> queue.thenRunAsync(action));
+              registration, (key, queue) -> queue.thenRunAsync(action, exectuor));
           return ((future != null) && registration.isSynchronous()) ? future : null;
         }).filter(Objects::nonNull).forEach(pending.get()::add);
   }

@@ -17,6 +17,9 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.EventType;
@@ -26,7 +29,8 @@ import javax.cache.event.EventType;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V> {
+final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V>
+    implements Iterable<CacheEntryEvent<? extends K, ? extends V>> {
   private static final long serialVersionUID = 1L;
 
   private final K key;
@@ -68,5 +72,26 @@ final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V> {
     @SuppressWarnings("unchecked")
     T castedEntry = (T) this;
     return castedEntry;
+  }
+
+  @Override
+  public Iterator<CacheEntryEvent<? extends K, ? extends V>> iterator() {
+    return new Iterator<CacheEntryEvent<? extends K, ? extends V>>() {
+      boolean hasNext = true;
+
+      @Override
+      public boolean hasNext() {
+        return hasNext;
+      }
+
+      @Override
+      public CacheEntryEvent<K, V> next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        hasNext = false;
+        return JCacheEntryEvent.this;
+      }
+    };
   }
 }

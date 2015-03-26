@@ -49,7 +49,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   @Override
   @SuppressWarnings("unchecked")
   public void onUpdated(Iterable<CacheEntryEvent<? extends K, ? extends V>> events) {
-    if (listener instanceof CacheEntryCreatedListener<?, ?>) {
+    if (listener instanceof CacheEntryUpdatedListener<?, ?>) {
       ((CacheEntryUpdatedListener<K, V>) listener).onUpdated(events);
     }
   }
@@ -57,7 +57,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   @Override
   @SuppressWarnings("unchecked")
   public void onRemoved(Iterable<CacheEntryEvent<? extends K, ? extends V>> events) {
-    if (listener instanceof CacheEntryCreatedListener<?, ?>) {
+    if (listener instanceof CacheEntryRemovedListener<?, ?>) {
       ((CacheEntryRemovedListener<K, V>) listener).onRemoved(events);
     }
   }
@@ -65,7 +65,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   @Override
   @SuppressWarnings("unchecked")
   public void onExpired(Iterable<CacheEntryEvent<? extends K, ? extends V>> events) {
-    if (listener instanceof CacheEntryCreatedListener<?, ?>) {
+    if (listener instanceof CacheEntryExpiredListener<?, ?>) {
       ((CacheEntryExpiredListener<K, V>) listener).onExpired(events);
     }
   }

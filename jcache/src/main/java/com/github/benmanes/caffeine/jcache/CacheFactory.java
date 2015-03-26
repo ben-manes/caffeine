@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -113,9 +114,9 @@ final class CacheFactory {
       this.cacheName = cacheName;
       this.ticker = Ticker.systemTicker();
       this.caffeine = Caffeine.newBuilder();
-      this.dispatcher = new EventDispatcher<>();
       this.statistics = new JCacheStatisticsMXBean();
       this.expiry = config.getExpiryPolicyFactory().create();
+      this.dispatcher = new EventDispatcher<>(ForkJoinPool.commonPool());
 
       caffeine.name(cacheName::toString);
       if (config.getCacheLoaderFactory() != null) {
