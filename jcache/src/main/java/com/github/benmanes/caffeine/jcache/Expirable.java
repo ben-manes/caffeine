@@ -32,32 +32,19 @@ public final class Expirable<V> {
     this.expireTimeMS = expireTimeMS;
   }
 
+  /** Returns the value. */
   public V get() {
     return value;
   }
 
+  /** Specifies the time, in milliseconds, when the value will expire. */
   public void setExpireTimeMS(long expireTimeMS) {
     this.expireTimeMS = expireTimeMS;
   }
 
+  /** Returns if the value has expired and is eligible for eviction. */
   public boolean hasExpired(long currentTimeMS) {
     return (expireTimeMS <= currentTimeMS);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (o == this) {
-      return true;
-    } else if (!(o instanceof Expirable<?>)) {
-      return false;
-    }
-    Expirable<?> expirable = (Expirable<?>) o;
-    return value.equals(expirable.value);
-  }
-
-  @Override
-  public int hashCode() {
-    return value.hashCode();
   }
 
   @Override

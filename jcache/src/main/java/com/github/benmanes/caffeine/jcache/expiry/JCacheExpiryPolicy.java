@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.expiry;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
@@ -51,5 +52,23 @@ public final class JCacheExpiryPolicy implements ExpiryPolicy, Serializable {
   @Override
   public Duration getExpiryForAccess() {
     return access;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    } else if (!(o instanceof ExpiryPolicy)) {
+      return false;
+    }
+    ExpiryPolicy policy = (ExpiryPolicy) o;
+    return Objects.equals(creation, policy.getExpiryForCreation())
+        && Objects.equals(update, policy.getExpiryForUpdate())
+        && Objects.equals(access, policy.getExpiryForAccess());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(creation, update, access);
   }
 }

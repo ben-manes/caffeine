@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
+import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -56,7 +57,7 @@ public class SerializationAwareCopyStrategy extends AbstractCopyStrategy<byte[]>
     try (ObjectOutputStream output = new ObjectOutputStream(bytes)) {
       output.writeObject(object);
     } catch (IOException e) {
-      throw new IllegalArgumentException("Failed to serialize " + e.getClass(), e);
+      throw new UncheckedIOException("Failed to serialize " + e.getClass(), e);
     }
     return bytes.toByteArray();
   }

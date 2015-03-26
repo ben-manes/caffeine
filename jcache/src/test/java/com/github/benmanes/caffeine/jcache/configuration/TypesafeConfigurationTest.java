@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.jcache.configuration;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -45,6 +46,8 @@ public final class TypesafeConfigurationTest {
   public void configuration() {
     Optional<CaffeineConfiguration<Integer, Integer>> config =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
+    assertThat(config.get(), is(equalTo(TypesafeConfigurator.from(
+        ConfigFactory.load(), "test-cache").get())));
     checkConfig(config.get());
   }
 

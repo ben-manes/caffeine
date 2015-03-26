@@ -61,7 +61,7 @@ public abstract class AbstractCopyStrategy<A> implements CopyStrategy {
         InetSocketAddress.class, LocalDate.class, LocalTime.class, LocalDateTime.class,
         Instant.class, Duration.class)));
     Map<Class<?>, Function<Object, Object>> strategies = new HashMap<>();
-    strategies.put(Date.class, o -> ((Calendar) o).clone());
+    strategies.put(Calendar.class, o -> ((Calendar) o).clone());
     strategies.put(Date.class, o -> ((Date) o).clone());
     JAVA_DEEP_COPY = Collections.unmodifiableMap(strategies);
   }
@@ -70,7 +70,7 @@ public abstract class AbstractCopyStrategy<A> implements CopyStrategy {
   private final Map<Class<?>, Function<Object, Object>> deepCopyStrategies;
 
   public AbstractCopyStrategy() {
-    this(JAVA_IMMUTABLE, JAVA_DEEP_COPY);
+    this(javaImmutableClasses(), javaDeepCopyStrategies());
   }
 
   public AbstractCopyStrategy(Set<Class<?>> immutableClasses,
@@ -91,6 +91,8 @@ public abstract class AbstractCopyStrategy<A> implements CopyStrategy {
 
   @Override
   public <T> T copy(T object, ClassLoader classLoader) {
+    requireNonNull(object);
+    requireNonNull(classLoader);
     if (isImmutable(object.getClass())) {
       return object;
     } else if (canDeeplyCopy(object.getClass())) {

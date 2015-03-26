@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Objects;
-
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListener;
@@ -63,23 +61,5 @@ final class Registration<K, V> {
   /** See {@link CacheEntryListenerConfiguration#isSynchronous()}. */
   public boolean isSynchronous() {
     return configuration.isSynchronous();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (o == this) {
-      return true;
-    } else if (!(o instanceof Registration<?, ?>)) {
-      return false;
-    }
-    Registration<?, ?> other = (Registration<?, ?>) o;
-    return Objects.equals(listener, other.listener)
-        && Objects.equals(filter, other.filter)
-        && Objects.equals(configuration, other.configuration);
-  }
-
-  @Override
-  public int hashCode() {
-    return listener.hashCode();
   }
 }
