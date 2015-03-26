@@ -28,7 +28,7 @@ Snapshots of the development version is available in
  * notification of evicted (or otherwise removed) entries
  * accumulation of cache access statistics
 
-In addition Caffeine ([javadoc][3]) offers the following extensions:
+In addition, Caffeine ([javadoc][3]) offers the following extensions:
  * [tracing][4] ([api javadoc][5], [async javadoc][6])
  * [simulation][7] ([javadoc][8])
  * [JSR-107 JCache][9] ([javadoc][10])

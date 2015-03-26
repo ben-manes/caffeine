@@ -54,7 +54,13 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     this();
     delegate = new MutableConfiguration<>(configuration);
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
-      copyStrategyFactory = ((CaffeineConfiguration<K, V>) configuration).getCopyStrategyFactory();
+      CaffeineConfiguration<K, V> config = (CaffeineConfiguration<K, V>) configuration;
+      expireAfterAccessNanos = config.expireAfterAccessNanos;
+      expireAfterWriteNanos = config.expireAfterWriteNanos;
+      copyStrategyFactory = config.copyStrategyFactory;
+      weigherFactory = config.weigherFactory;
+      maximumWeight = config.maximumWeight;
+      maximumSize = config.maximumSize;
     }
   }
 

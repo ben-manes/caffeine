@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
@@ -41,6 +43,7 @@ import com.typesafe.config.ConfigException;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TypesafeConfigurator {
+  static final Logger logger = Logger.getLogger(TypesafeConfigurator.class.getName());
 
   private TypesafeConfigurator() {}
 
@@ -71,7 +74,9 @@ public final class TypesafeConfigurator {
       if (config.hasPath("caffeine.jcache." + cacheName)) {
         configuration = new Configurator<K, V>(config, cacheName).configure();
       }
-    } catch (ConfigException.BadPath ignored) {}
+    } catch (ConfigException.BadPath e) {
+      logger.log(Level.WARNING, "Failed to load cache configuration", e);
+    }
     return Optional.ofNullable(configuration);
   }
 
@@ -174,8 +179,8 @@ public final class TypesafeConfigurator {
     /** Returns the duration for the expiration time. */
     private Duration getDurationFor(String path) {
       if (config.hasPath(path)) {
-        long nanos = config.getDuration(path, TimeUnit.NANOSECONDS);
-        return new Duration(TimeUnit.NANOSECONDS, nanos);
+        long nanos = config.getDuration(path, TimeUnit.MILLISECONDS);
+        return new Duration(TimeUnit.MILLISECONDS, nanos);
       }
       return Duration.ETERNAL;
     }
@@ -184,11 +189,11 @@ public final class TypesafeConfigurator {
     public void addEagerExpiration() {
       Config expiration = config.getConfig("policy.eager-expiration");
       if (expiration.hasPath("after-write")) {
-        long nanos = config.getDuration("after-write", TimeUnit.NANOSECONDS);
+        long nanos = expiration.getDuration("after-write", TimeUnit.NANOSECONDS);
         configuration.setExpireAfterWrite(OptionalLong.of(nanos));
       }
       if (expiration.hasPath("after-access")) {
-        long nanos = config.getDuration("after-access", TimeUnit.NANOSECONDS);
+        long nanos = expiration.getDuration("after-access", TimeUnit.NANOSECONDS);
         configuration.setExpireAfterAccess(OptionalLong.of(nanos));
       }
     }

@@ -175,7 +175,7 @@ final class CacheFactory {
     /** Configures the maximum weight and returns if set. */
     private boolean configureMaximumWeight() {
       if (config.getMaximumWeight().isPresent()) {
-        caffeine.maximumSize(config.getMaximumWeight().getAsLong());
+        caffeine.maximumWeight(config.getMaximumWeight().getAsLong());
         caffeine.weigher(config.getWeigherFactory().create());
       }
       return config.getMaximumWeight().isPresent();

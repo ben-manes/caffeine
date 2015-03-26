@@ -326,7 +326,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     try {
       lazySetMaximum(Math.min(maximum, MAXIMUM_CAPACITY));
       drainBuffers();
-      evict();
+      evictEntries();
     } finally {
       evictionLock.unlock();
     }
@@ -366,7 +366,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
    * notification queue for processing.
    */
   @GuardedBy("evictionLock")
-  void evict() {
+  void evictEntries() {
     if (!evicts()) {
       return;
     }
@@ -385,14 +385,14 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
       Node<K, V> next = node.getNextInAccessOrder();
       if (node.getWeight() != 0) {
-        evict(node, RemovalCause.SIZE);
+        evictEntry(node, RemovalCause.SIZE);
       }
       node = next;
     }
   }
 
   @GuardedBy("evictionLock")
-  void evict(Node<K, V> node, RemovalCause cause) {
+  void evictEntry(Node<K, V> node, RemovalCause cause) {
     boolean removed = data.remove(node.getKeyReference(), node);
     K key = node.getKey();
 
@@ -428,7 +428,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         if (expiresAfterWrite()) {
           writeOrderDeque().remove(node);
         }
-        evict(node, RemovalCause.EXPIRED);
+        evictEntry(node, RemovalCause.EXPIRED);
       }
     }
     if (expiresAfterWrite()) {
@@ -442,11 +442,12 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         if (evicts() || expiresAfterAccess()) {
           accessOrderDeque().remove(node);
         }
-        evict(node, RemovalCause.EXPIRED);
+        evictEntry(node, RemovalCause.EXPIRED);
       }
     }
   }
 
+  /** Returns if the entry has expired. */
   boolean hasExpired(Node<K, V> node, long now) {
     if (isComputingAsync(node)) {
       return false;
@@ -555,7 +556,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     while ((keyRef = keyReferenceQueue().poll()) != null) {
       Node<K, V> node = data.get(keyRef);
       if (node != null) {
-        evict(node, RemovalCause.COLLECTED);
+        evictEntry(node, RemovalCause.COLLECTED);
       }
     }
   }
@@ -571,7 +572,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       InternalReference<V> ref = (InternalReference<V>) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
       if (node != null) {
-        evict(node, RemovalCause.COLLECTED);
+        evictEntry(node, RemovalCause.COLLECTED);
       }
     }
   }
@@ -656,7 +657,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         if (evicts() || expiresAfterAccess()) {
           accessOrderDeque().add(node);
         }
-        evict();
+        evictEntries();
       }
 
       // Ensure that in-flight async computation cannot expire
@@ -716,7 +717,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (expiresAfterWrite()) {
         reorder(writeOrderDeque(), node);
       }
-      evict();
+      evictEntries();
     }
   }
 
@@ -906,10 +907,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     final int weight = weigher.weigh(key, value);
     final Node<K, V> node = nodeFactory.newNode(key, keyReferenceQueue(),
         value, valueReferenceQueue(), weight, now);
+    tracer().recordWrite(id, key, weight);
 
     for (;;) {
       final Node<K, V> prior = data.putIfAbsent(node.getKeyReference(), node);
-      tracer().recordWrite(id, key, weight);
       if (prior == null) {
         afterWrite(node, new AddTask(node, weight));
         return null;
@@ -1316,6 +1317,17 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     return (es == null) ? (entrySet = new EntrySet()) : es;
   }
 
+  /**
+   * Returns an unmodifiable snapshot map whose order of iteration matches the deque's, in either
+   * ascending or descending mode. Beware that obtaining the mappings is <em>NOT</em> a
+   * constant-time operation.
+   *
+   * @param deque the access or write order deques
+   * @param transformer a function that unwraps the value
+   * @param ascending the iteration order
+   * @param limit the maximum number of entries
+   * @return an unmodifiable snapshot in a specified order
+   */
   Map<K, V> orderedMap(LinkedDeque<Node<K, V>> deque, Function<V, V> transformer,
       boolean ascending, int limit) {
     Caffeine.requireArgument(limit >= 0);
