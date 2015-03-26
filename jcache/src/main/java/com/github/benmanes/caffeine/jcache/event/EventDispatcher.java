@@ -25,13 +25,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.cache.Cache;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
-import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListener;
 import javax.cache.event.EventType;
@@ -48,20 +46,20 @@ import javax.cache.event.EventType;
  * Some listeners may be configured as <tt>synchronous</tt>, meaning that the publishing thread
  * should wait until the listener has processed the event. The calling thread should publish within
  * an atomic block that mutates the entry, and complete the operation by calling
- * {@link #awaitSynchronous()}.
+ * {@link #awaitSynchronous()} or {@link #ignoreSynchronous()}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EventDispatcher<K, V> {
-  private static final Logger logger = Logger.getLogger(EventDispatcher.class.getName());
-  private static final ThreadLocal<List<CompletableFuture<Void>>> pending =
+  static final Logger logger = Logger.getLogger(EventDispatcher.class.getName());
+  static final ThreadLocal<List<CompletableFuture<Void>>> pending =
       ThreadLocal.withInitial(ArrayList::new);
 
-  private final Executor exectuor;
-  private final Map<Registration<K, V>, CompletableFuture<Void>> dispatchQueues;
+  final Executor exectuor;
+  final Map<Registration<K, V>, CompletableFuture<Void>> dispatchQueues;
 
   public EventDispatcher(Executor exectuor) {
-    dispatchQueues = new ConcurrentHashMap<>();
+    this.dispatchQueues = new ConcurrentHashMap<>();
     this.exectuor = exectuor;
   }
 
@@ -106,9 +104,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishCreated(Cache<K, V> cache, K key, V value) {
-    JCacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
-        cache, EventType.CREATED, key, null, value);
-    publish(event, listener -> listener.onCreated(event));
+    publish(new JCacheEntryEvent<>(cache, EventType.CREATED, key, null, value));
   }
 
   /**
@@ -120,9 +116,7 @@ public final class EventDispatcher<K, V> {
    * @param newValue the entry's new value
    */
   public void publishUpdated(Cache<K, V> cache, K key, V oldValue, V newValue) {
-    JCacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
-        cache, EventType.UPDATED, key, oldValue, newValue);
-    publish(event, listener -> listener.onUpdated(event));
+    publish(new JCacheEntryEvent<>(cache, EventType.UPDATED, key, oldValue, newValue));
   }
 
   /**
@@ -133,9 +127,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemoved(Cache<K, V> cache, K key, V value) {
-    JCacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
-        cache, EventType.REMOVED, key, null, value);
-    publish(event, listener -> listener.onRemoved(event));
+    publish(new JCacheEntryEvent<>(cache, EventType.REMOVED, key, null, value));
   }
 
   /**
@@ -146,9 +138,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpired(Cache<K, V> cache, K key, V value) {
-    JCacheEntryEvent<K, V> event = new JCacheEntryEvent<>(
-        cache, EventType.EXPIRED, key, value, null);
-    publish(event, listener -> listener.onExpired(event));
+    publish(new JCacheEntryEvent<>(cache, EventType.EXPIRED, key, value, null));
   }
 
   /**
@@ -177,14 +167,16 @@ public final class EventDispatcher<K, V> {
   }
 
   /** Broadcasts the event to all of the interested listener's dispatch queues. */
-  private void publish(CacheEntryEvent<K, V> event,
-      Consumer<EventTypeAwareListener<K, V>> operation) {
+  private void publish(JCacheEntryEvent<K, V> event) {
     dispatchQueues.keySet().stream()
         .filter(registration -> registration.getCacheEntryFilter().evaluate(event))
+        .filter(registration -> registration.getCacheEntryListener().isCompatible(event))
         .map(registration -> {
-          Runnable action = () -> operation.accept(registration.getCacheEntryListener());
-          CompletableFuture<Void> future = dispatchQueues.computeIfPresent(
-              registration, (key, queue) -> queue.thenRunAsync(action, exectuor));
+          CompletableFuture<Void> future = dispatchQueues.computeIfPresent(registration,
+              (key, queue) -> {
+                Runnable action = () -> registration.getCacheEntryListener().dispatch(event);
+                return queue.thenRunAsync(action, exectuor);
+              });
           return ((future != null) && registration.isSynchronous()) ? future : null;
         }).filter(Objects::nonNull).forEach(pending.get()::add);
   }

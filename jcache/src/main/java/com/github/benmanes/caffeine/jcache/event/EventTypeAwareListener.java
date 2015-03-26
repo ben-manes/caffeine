@@ -38,6 +38,40 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
     this.listener = requireNonNull(listener);
   }
 
+  /** Returns if the backing listener consumes this type of event. */
+  public boolean isCompatible(JCacheEntryEvent<K, V> event) {
+    switch (event.getEventType()) {
+      case CREATED:
+        return (listener instanceof CacheEntryCreatedListener<?, ?>);
+      case UPDATED:
+        return (listener instanceof CacheEntryUpdatedListener<?, ?>);
+      case REMOVED:
+        return (listener instanceof CacheEntryRemovedListener<?, ?>);
+      case EXPIRED:
+        return (listener instanceof CacheEntryExpiredListener<?, ?>);
+      default:
+        throw new IllegalStateException("Unknown event type: " + event.getEventType());
+    }
+  }
+
+  /** Processes the event, or ignores if if the listener is not compatible. */
+  public void dispatch(JCacheEntryEvent<K, V> event) {
+    switch (event.getEventType()) {
+      case CREATED:
+        onCreated(event);
+        break;
+      case UPDATED:
+        onUpdated(event);
+        break;
+      case REMOVED:
+        onRemoved(event);
+        break;
+      case EXPIRED:
+        onExpired(event);
+        break;
+    }
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public void onCreated(Iterable<CacheEntryEvent<? extends K, ? extends V>> events) {
