@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.expiry;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
@@ -47,5 +48,25 @@ public final class JCacheExpiryPolicyTest {
   public void access() {
     assertThat(eternal.getExpiryForAccess(), is(Duration.ETERNAL));
     assertThat(temporal.getExpiryForAccess(), is(Duration.ONE_MINUTE));
+  }
+
+  @Test
+  public void equals_wrongType() {
+    assertThat(eternal, is(not(1)));
+  }
+
+  @Test
+  public void equals_wrongValue() {
+    assertThat(eternal, is(not(temporal)));
+  }
+
+  @Test
+  public void equals() {
+    assertThat(eternal, is(eternal));
+  }
+
+  @Test
+  public void hash() {
+    assertThat(eternal.hashCode(), is(not(temporal.hashCode())));
   }
 }

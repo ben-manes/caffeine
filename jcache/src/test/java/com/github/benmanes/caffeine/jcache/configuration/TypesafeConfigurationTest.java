@@ -48,6 +48,8 @@ public final class TypesafeConfigurationTest {
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
     assertThat(config.get(), is(equalTo(TypesafeConfigurator.from(
         ConfigFactory.load(), "test-cache").get())));
+    assertThat(config.get(), is(not(equalTo(TypesafeConfigurator.from(
+        ConfigFactory.load(), "test-cache-2").get()))));
     checkConfig(config.get());
   }
 

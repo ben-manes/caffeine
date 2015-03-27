@@ -342,7 +342,7 @@ public class NonReentrantLock implements Lock, Serializable {
 
     @Override
     protected boolean tryAcquire(int acquires) {
-      if (compareAndSetState(UNLOCKED, LOCKED)) {
+      if ((getState() == UNLOCKED) && compareAndSetState(UNLOCKED, LOCKED)) {
         setExclusiveOwnerThread(Thread.currentThread());
         return true;
       }

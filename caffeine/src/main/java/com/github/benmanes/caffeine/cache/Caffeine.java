@@ -60,7 +60,7 @@ import com.github.benmanes.caffeine.cache.tracing.Tracer;
  * Usage example:
  * <pre>{@code
  *   LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
- *       .maximumSize(10000)
+ *       .maximumSize(10_000)
  *       .expireAfterWrite(10, TimeUnit.MINUTES)
  *       .removalListener(MY_LISTENER)
  *       .build(key -> createExpensiveGraph(key));
