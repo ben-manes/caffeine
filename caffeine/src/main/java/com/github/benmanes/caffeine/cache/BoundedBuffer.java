@@ -118,7 +118,7 @@ final class BoundedBuffer<E> {
       // Ensures CAS reference equality, race should rarely occur
       return false;
     } else if (slot.compareAndSet(value, e)) {
-      counter.lazySet(writes + 1);
+      counter.lazySet(new Long(writes + 1));
     }
     return false;
   }

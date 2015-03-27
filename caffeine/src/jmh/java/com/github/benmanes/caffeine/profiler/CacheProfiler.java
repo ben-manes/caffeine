@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.profiler;
 import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.CacheType;
+import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
 /**
  * A hook for profiling caches.
@@ -32,6 +33,7 @@ public final class CacheProfiler extends ProfilerHook {
   final Map<Long, Long> map;
 
   CacheProfiler() {
+    System.setProperty(Tracer.TRACING_ENABLED, "false");
     map = type.create(MAX_SIZE, NUM_THREADS);
   }
 

@@ -26,6 +26,8 @@ import javax.annotation.Nonnull;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Tracer {
+  /** The system property string to disable tracing if a provider is available. */
+  static final String TRACING_ENABLED = "caffeine.tracing.enabled";
 
   /**
    * Registers a cache by name for identifying the cache during simulation. The name is not required
@@ -111,7 +113,7 @@ final class TracerHolder {
   static final Tracer INSTANCE = load();
 
   private static Tracer load() {
-    String property = System.getProperty("caffeine.tracing.enabled");
+    String property = System.getProperty(Tracer.TRACING_ENABLED);
     if ((property == null) || Boolean.parseBoolean(property)) {
       for (Tracer tracer : ServiceLoader.load(Tracer.class)) {
         return tracer;
