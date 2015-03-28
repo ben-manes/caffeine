@@ -246,12 +246,13 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.hitCount());
 
     ticker.advance(1, MILLISECONDS);
+    cache.getUnchecked(key); // Allow refresh to return old value while refreshing
     assertSame(two, cache.getUnchecked(key));
     stats = cache.stats();
     assertEquals(1, stats.missCount());
     assertEquals(2, stats.loadSuccessCount());
     assertEquals(0, stats.loadExceptionCount());
-    assertEquals(2, stats.hitCount());
+    assertEquals(3, stats.hitCount());
 
     ticker.advance(1, MILLISECONDS);
     assertSame(two, cache.getUnchecked(key));
@@ -259,7 +260,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.missCount());
     assertEquals(2, stats.loadSuccessCount());
     assertEquals(0, stats.loadExceptionCount());
-    assertEquals(3, stats.hitCount());
+    assertEquals(4, stats.hitCount());
   }
 
   public void testRefresh_getIfPresent() {

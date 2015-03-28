@@ -6,6 +6,7 @@ buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
 
   repositories {
+    mavenCentral()
     jcenter()
   }
 
@@ -83,6 +84,7 @@ subprojects { proj ->
 }
 
 repositories {
+  mavenCentral()
   jcenter()
 }
 

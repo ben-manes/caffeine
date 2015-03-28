@@ -758,57 +758,37 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (evicts() || expiresAfterAccess()) {
         Node<K, V> node;
         while ((node = accessOrderDeque().poll()) != null) {
-          if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
-            K key = node.getKey();
-            V value = node.getValue();
-            if ((key == null) || (value == null)) {
-              notifyRemoval(key, value, RemovalCause.COLLECTED);
-            } else {
-              notifyRemoval(key, value, RemovalCause.EXPLICIT);
-            }
-            tracer().recordDelete(id, node.getKeyReference());
-          }
-          makeDead(node);
+          removeNode(node);
         }
       }
-
       if (expiresAfterWrite()) {
         Node<K, V> node;
         while ((node = writeOrderDeque().poll()) != null) {
-          if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
-            K key = node.getKey();
-            V value = node.getValue();
-            if ((key == null) || (value == null)) {
-              notifyRemoval(key, value, RemovalCause.COLLECTED);
-            } else {
-              notifyRemoval(key, value, RemovalCause.EXPLICIT);
-            }
-            tracer().recordDelete(id, node.getKeyReference());
-          }
-          makeDead(node);
+          removeNode(node);
         }
       }
-
-      for (Entry<Object, Node<K, V>> entry : data.entrySet()) {
-        Node<K, V> node = entry.getValue();
-        if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
-          K key = node.getKey();
-          V value = node.getValue();
-          if ((key == null) || (value == null)) {
-            notifyRemoval(key, value, RemovalCause.COLLECTED);
-          } else {
-            notifyRemoval(key, value, RemovalCause.EXPLICIT);
-          }
-          tracer().recordDelete(id, node.getKeyReference());
-        }
-        makeDead(node);
-      }
+      data.values().forEach(this::removeNode);
 
       // Discard all pending reads
       readBuffer.drain(e -> {});
     } finally {
       evictionLock.unlock();
     }
+  }
+
+  @GuardedBy("evictionLock")
+  void removeNode(Node<K, V> node) {
+    if (data.remove(node.getKeyReference(), node) && hasRemovalListener()) {
+      K key = node.getKey();
+      V value = node.getValue();
+      if ((key == null) || (value == null)) {
+        notifyRemoval(key, value, RemovalCause.COLLECTED);
+      } else {
+        notifyRemoval(key, value, RemovalCause.EXPLICIT);
+      }
+      tracer().recordDelete(id, node.getKeyReference());
+    }
+    makeDead(node);
   }
 
   @Override
@@ -1079,34 +1059,50 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     requireNonNull(key);
     requireNonNull(mappingFunction);
 
-    // An optimistic fast path due to computeIfAbsent always locking. This is leveraged to evict
-    // if the entry is present but has expired.
     long now = ticker().read();
+    V value = prescreen(key, mappingFunction, now);
+    return (value == null) ? doComputeIfAbsent(key, mappingFunction, isAsync, now) : value;
+  }
+
+  /**
+   * An optimistic fast path due to computeIfAbsent always locking. This is leveraged to evict
+   * if the entry is present but has expired or its key/value has been garbage collected.
+   */
+  V prescreen(K key, Function<? super K, ? extends V> mappingFunction, long now) {
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if ((node != null)) {
-      if (hasExpired(node, now)) {
-        if (data.remove(node.getKeyReference(), node)) {
-          afterWrite(node, new RemovalTask(node));
-          if (hasRemovalListener()) {
-            notifyRemoval(key, node.getValue(), RemovalCause.EXPIRED);
-          }
-          statsCounter().recordEviction();
-        }
-      } else {
+      V value = node.getValue();
+      RemovalCause cause = null;
+      if ((node.getKey() == null) || (value == null)) {
+        cause = RemovalCause.COLLECTED;
+      } else if (hasExpired(node, now)) {
+        cause = RemovalCause.EXPIRED;
+      }
+      if (cause == null) {
         afterRead(node, true);
-        V value = node.getValue();
-        if (Tracer.isEnabled() && (value != null)) {
+        if (Tracer.isEnabled()) {
           tracer().recordWrite(id, key, weigher.weigh(key, value));
         }
         return value;
+      } else if (data.remove(node.getKeyReference(), node)) {
+        afterWrite(node, new RemovalTask(node));
+        if (hasRemovalListener()) {
+          notifyRemoval(key, node.getValue(), cause);
+        }
+        statsCounter().recordEviction();
       }
     }
+    return null;
+  }
 
+  /** Returns the current value from a computeIfAbsent invocation. */
+  V doComputeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
+      boolean isAsync, long now) {
     int[] weight = new int[1];
     @SuppressWarnings("unchecked")
     V[] value = (V[]) new Object[1];
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    node = data.computeIfAbsent(keyRef, k -> {
+    Node<K, V> node = data.computeIfAbsent(keyRef, k -> {
       value[0] = statsAware(mappingFunction, isAsync).apply(key);
       if (value[0] == null) {
         return null;

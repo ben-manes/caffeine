@@ -1,6 +1,7 @@
 bin
 build
 test-output
+jitwatch.out
 .DS_Store
 .classpath
 .settings

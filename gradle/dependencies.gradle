@@ -34,7 +34,7 @@ ext {
     jcache: '1.0.0',
     joor: '0.9.5',
     jsr305: '3.0.0',
-    univocity_parsers: '1.4.0',
+    univocity_parsers: '1.5.0',
   ]
   test_versions = [
     awaitility: '1.6.3',
@@ -52,7 +52,7 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     high_scale_lib: '1.0.6',
     jamm: '0.3.0',
-    java_object_layout: '0.3',
+    java_object_layout: '0.3.1',
     koloboke: '0.6.6',
   ]
   plugin_versions = [

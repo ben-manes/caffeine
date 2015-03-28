@@ -56,6 +56,7 @@ public class CacheRefreshTest extends TestCase {
 
     // refresh 0
     ticker.advance(1, MILLISECONDS);
+    cache.getUnchecked(0); // Allow refresh to return old value while refreshing
     assertEquals(Integer.valueOf(1), cache.getUnchecked(0));
     expectedReloads++;
     assertEquals(Integer.valueOf(1), cache.getUnchecked(1));
@@ -74,6 +75,7 @@ public class CacheRefreshTest extends TestCase {
 
     // refresh 2
     ticker.advance(1, MILLISECONDS);
+    cache.getUnchecked(2); // Allow refresh to return old value while refreshing
     assertEquals(Integer.valueOf(1), cache.getUnchecked(0));
     assertEquals(Integer.valueOf(-1), cache.getUnchecked(1));
     assertEquals(Integer.valueOf(3), cache.getUnchecked(2));
@@ -90,6 +92,8 @@ public class CacheRefreshTest extends TestCase {
 
     // refresh 0 and 1
     ticker.advance(1, MILLISECONDS);
+    cache.getUnchecked(0); // Allow refresh to return old value while refreshing
+    cache.getUnchecked(1); // Allow refresh to return old value while refreshing
     assertEquals(Integer.valueOf(2), cache.getUnchecked(0));
     expectedReloads++;
     assertEquals(Integer.valueOf(0), cache.getUnchecked(1));

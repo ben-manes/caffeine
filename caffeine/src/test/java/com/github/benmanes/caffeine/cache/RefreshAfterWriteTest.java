@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -113,16 +114,18 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })
   public void getAll(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = ImmutableList.of(context.firstKey(), context.absentKey());
     context.ticker().advance(30, TimeUnit.SECONDS);
-    assertThat(cache.getAll(ImmutableList.of(context.firstKey(), context.absentKey())),
-        is(ImmutableMap.of(context.firstKey(), -context.firstKey(),
-            context.absentKey(), context.absentKey())));
+    assertThat(cache.getAll(keys), is(ImmutableMap.of(context.firstKey(), -context.firstKey(),
+        context.absentKey(), context.absentKey())));
 
+    // Trigger a refresh, may return old values
     context.ticker().advance(45, TimeUnit.SECONDS);
+    cache.getAll(keys);
 
-    assertThat(cache.getAll(ImmutableList.of(context.firstKey(), context.absentKey())),
-        is(ImmutableMap.of(context.firstKey(), context.firstKey(),
-            context.absentKey(), context.absentKey())));
+    // Ensure new values are present
+    assertThat(cache.getAll(keys), is(ImmutableMap.of(context.firstKey(), context.firstKey(),
+        context.absentKey(), context.absentKey())));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
