@@ -24,6 +24,7 @@ import java.util.function.Supplier;
  */
 public enum BufferType {
   Ticket(TicketBuffer::new),
+  FastFlow(FastFlowBuffer::new),
   ManyToOne(ManyToOneBuffer::new),
   MpscArray(MpscArrayBuffer::new),
   MpmcArray(MpmcArrayBuffer::new),
