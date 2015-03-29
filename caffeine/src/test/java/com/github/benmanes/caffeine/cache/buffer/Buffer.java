@@ -16,7 +16,8 @@
 package com.github.benmanes.caffeine.cache.buffer;
 
 /**
- * A read buffer strategy.
+ * A read buffer strategy. The implementations should prefer failing a one-shot append rather than
+ * waiting until the entry has been successfully recorded.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

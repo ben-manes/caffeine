@@ -15,32 +15,28 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
+import java.util.function.Supplier;
+
 /**
  * The different read buffer strategies.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum BufferType {
-  OneShotBuffer {
-    @Override public Buffer create() {
-      return new OneShotBuffer();
-    }
-  },
-  MpscArrayBuffer {
-    @Override public Buffer create() {
-      return new MpscArrayBuffer();
-    }
-  },
-  MpmcArrayBuffer {
-    @Override public Buffer create() {
-      return new MpmcArrayBuffer();
-    }
-  },
-  MpscCompoundBuffer {
-    @Override public Buffer create() {
-      return new MpscCompoundBuffer();
-    }
-  };
+  Ticket(TicketBuffer::new),
+  ManyToOne(ManyToOneBuffer::new),
+  MpscArray(MpscArrayBuffer::new),
+  MpmcArray(MpmcArrayBuffer::new),
+  MpscCompound(MpscCompoundBuffer::new);
 
-  public abstract Buffer create();
+  private final Supplier<Buffer> factory;
+
+  private BufferType(Supplier<Buffer> factory) {
+    this.factory = factory;
+  }
+
+  /** Returns a new buffer instance. */
+  public Buffer create() {
+    return factory.get();
+  }
 }

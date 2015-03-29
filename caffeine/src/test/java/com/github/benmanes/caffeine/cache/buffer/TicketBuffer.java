@@ -33,15 +33,15 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class OneShotBuffer implements Buffer {
-  private final Lock evictionLock;
-  private final AtomicLong writeCounter;
-  private final AtomicReference<Object>[] buffer;
+final class TicketBuffer implements Buffer {
+  final Lock evictionLock;
+  final AtomicLong writeCounter;
+  final AtomicReference<Object>[] buffer;
 
-  private long readCounter;
+  long readCounter;
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public OneShotBuffer() {
+  TicketBuffer() {
     writeCounter = new AtomicLong();
     evictionLock = new NonReentrantLock();
     buffer = new AtomicReference[MAX_SIZE];
