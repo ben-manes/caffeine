@@ -38,7 +38,7 @@ public final class CacheProfiler extends ProfilerHook {
   CacheProfiler() {
     System.setProperty(Tracer.TRACING_ENABLED, "false");
     map = type.create(MAX_SIZE, NUM_THREADS);
-    reads = false;
+    reads = true;
   }
 
   @Override

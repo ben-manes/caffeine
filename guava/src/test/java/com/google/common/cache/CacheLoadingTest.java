@@ -2082,7 +2082,7 @@ public class CacheLoadingTest extends TestCase {
     };
 
     final LoadingCache<String, String> cache = CaffeinatedGuava.build(
-        Caffeine.newBuilder(), computeFunction);
+        Caffeine.newBuilder().executor(MoreExecutors.directExecutor()), computeFunction);
     ConcurrentMap<String,String> map = cache.asMap();
     map.put(refreshKey, refreshKey);
     assertEquals(1, map.size());

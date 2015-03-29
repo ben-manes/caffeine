@@ -97,7 +97,7 @@ final class BoundedBuffer<E> {
    * threads insert concurrently.
    *
    * @param e the element to add
-   * @return {@code true} if the element was or could have been added to; {@code false} if full
+   * @return {@code true} if the element was or could have been added; {@code false} if full
    */
   public boolean submit(E e) {
     final int segmentIndex = segmentIndex();
