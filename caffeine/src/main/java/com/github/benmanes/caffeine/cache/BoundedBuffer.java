@@ -22,36 +22,34 @@ import java.util.function.Consumer;
 /**
  * A multiple-producer / single-consumer bounded buffer that rejects new elements if it is full or
  * fails spuriously due to contention. Unlike a queue and stack, a buffer does not guarantee an
- * ordering of elements either in FIFO or LIFO order.
+ * ordering of elements in either FIFO or LIFO order.
  * <p>
  * Beware that it is the responsibility of the caller to ensure that a consumer has exclusive read
  * access to the buffer. This implementation does <em>not</em> include fail-fast behavior to guard
  * against incorrect consumer usage.
- * <p>
- * This implementation does <em>not</em> support elements of type {@link Long}.
  *
- * @param <E> the type of elements maintained by this buffer; may not be a long
+ * @param <E> the type of elements maintained by this buffer
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class BoundedBuffer<E> {
 
   /*
-   * A segmented, non-blocking, bounded buffer variant of the Partitioned Ticket Lock queue.
+   * A segmented, non-blocking, circular ring buffer is used to store the elements being transfered
+   * by the producers to the consumer. The monotonically increasing count of reads and writes allow
+   * indexing sequentially to the next element location. The arrays use power-of-two sizing for
+   * quickly determining to the proper location.
    *
-   * A circular ring buffer is used to store the elements being transfered by the producers to the
-   * consumer. The monotonically increasing count of reads and writes are used to index sequentially
-   * to the next element location. A free location holds a ticket corresponding to the write count
-   * that should acquire it. The producers race to read the next write count and CAS the ticket to
-   * the offered element. The addition may be unsuccessful due to the buffer being full or another
-   * producer successfully acquiring the location. When the consumer takes the element, it places
-   * the next write ticket into the location by adding the array length to the current read count.
+   * The producers race to read the counts, check if there is available capacity, and if so then try
+   * once to CAS to the next write count. If the increment is successful then the producer lazily
+   * publishes the next element. The producer does not retry or block when unsuccessful due to a
+   * failed CAS or the buffer being full.
+   *
+   * The consumer reads the counts and takes the available elements. The clearing of the elements
+   * and the next read count are lazily set.
    *
    * To further increase concurrency the buffer is internally segmented into multiple ring buffers.
-   * The thread id is used as a hash with power-of-two sizing to quickly index to the preferred
-   * ring buffer. The number of segments is chosen to minimize contention that may cause spurious
-   * failures for producers.
-   *
-   * https://blogs.oracle.com/dave/entry/ptlqueue_a_scalable_bounded_capacity
+   * The number of segments is determined as a size that minimize contention that may cause spurious
+   * failures for producers. The segment is chosen by a hash of the thread's id.
    */
 
   /** The number of CPUs */
@@ -74,20 +72,21 @@ final class BoundedBuffer<E> {
     return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
   }
 
-  final long[] readCount;
+  final AtomicLong[] readCount;
   final AtomicLong[] writeCount;
-  final AtomicReference<Object>[][] table;
+  final AtomicReference<E>[][] table;
 
   @SuppressWarnings({"unchecked", "cast", "rawtypes"})
   public BoundedBuffer() {
-    readCount = new long[NUMBER_OF_SEGMENTS];
+    readCount = new AtomicLong[NUMBER_OF_SEGMENTS];
     writeCount = new AtomicLong[NUMBER_OF_SEGMENTS];
     table = new AtomicReference[NUMBER_OF_SEGMENTS][RING_BUFFER_SIZE];
     for (int i = 0; i < NUMBER_OF_SEGMENTS; i++) {
       table[i] = new AtomicReference[RING_BUFFER_SIZE];
       for (int j = 0; j < RING_BUFFER_SIZE; j++) {
-        table[i][j] = new AtomicReference<>((long) j);
+        table[i][j] = new AtomicReference<>();
       }
+      readCount[i] = new AtomicLong();
       writeCount[i] = new AtomicLong();
     }
   }
@@ -98,29 +97,24 @@ final class BoundedBuffer<E> {
    * threads insert concurrently.
    *
    * @param e the element to add
-   * @return {@code true} if the element could not be added because the buffer needs to be drained
+   * @return {@code true} if the element was or could have been added to; {@code false} if full
    */
   public boolean submit(E e) {
     final int segmentIndex = segmentIndex();
-    final AtomicLong counter = writeCount[segmentIndex];
-    final long writes = counter.get();
+    final AtomicLong readCounter = readCount[segmentIndex];
+    final AtomicLong writeCounter = writeCount[segmentIndex];
 
-    final int index = (int) (writes & RING_BUFFER_MASK);
-    final AtomicReference<Object> slot = table[segmentIndex][index];
-    final Object value = slot.get();
-    if (!(value instanceof Long)) {
-      // FIXME(ben): The slot was taken due to either the buffer being full or concurrent readers.
-      // The contention is exasperated by lazy writing to the counter so a stale index may be
-      // chosen. This may cause premature drains by not detecting the distinctions. When the
-      // buffers are dynamically sized (see Striped64) this ignorance will be more acceptable.
-      return true;
-    } else if (((Long) value).longValue() != writes) {
-      // Ensures CAS reference equality, race should rarely occur
+    long head = readCounter.get();
+    long tail = writeCounter.get();
+    long size = (tail - head);
+    if (size >= RING_BUFFER_SIZE) {
       return false;
-    } else if (slot.compareAndSet(value, e)) {
-      counter.lazySet(new Long(writes + 1));
     }
-    return false;
+    if (writeCounter.compareAndSet(tail, tail + 1)) {
+      int index = (int) (tail & RING_BUFFER_MASK);
+      table[segmentIndex][index].lazySet(e);
+    }
+    return true;
   }
 
   /**
@@ -144,40 +138,37 @@ final class BoundedBuffer<E> {
    * @param segmentIndex the segment index in the table
    */
   private void drainSegment(Consumer<E> consumer, int segmentIndex) {
-    long reads = readCount[segmentIndex];
-    for (int i = 0; i < RING_BUFFER_SIZE; i++) {
-      final int index = (int) (reads & RING_BUFFER_MASK);
-      final AtomicReference<Object> slot = table[segmentIndex][index];
-      final Object value = slot.get();
-      if (value instanceof Long) {
+    final AtomicLong readCounter = readCount[segmentIndex];
+    final AtomicLong writeCounter = writeCount[segmentIndex];
+
+    long head = readCounter.get();
+    long tail = writeCounter.get();
+    long size = (tail - head);
+    if (size == 0) {
+      return;
+    }
+    do {
+      int index = (int) (head & RING_BUFFER_MASK);
+      AtomicReference<E> slot = table[segmentIndex][index];
+      E e = slot.get();
+      if (e == null) {
+        // not published yet
         break;
       }
-      slot.lazySet(reads + RING_BUFFER_SIZE);
-      reads++;
-
-      @SuppressWarnings("unchecked")
-      E e = (E) value;
+      slot.lazySet(null);
       consumer.accept(e);
-    }
-    readCount[segmentIndex] = reads;
+      head++;
+    } while (head != tail);
+    readCounter.lazySet(head);
   }
 
   /**
-   * Returns the number of elements residing in the buffer. Beware that this method is <em>NOT</em>
-   * a constant-time operation.
+   * Returns the number of elements residing in the buffer.
    *
    * @return the number of elements in this buffer
    */
   public int size() {
-    int size = 0;
-    for (AtomicReference<?>[] segment : table) {
-      for (AtomicReference<?> slot : segment) {
-        if (!(slot.get() instanceof Long)) {
-          size++;
-        }
-      }
-    }
-    return size;
+    return writes() - reads();
   }
 
   /**
@@ -200,8 +191,8 @@ final class BoundedBuffer<E> {
    */
   public int reads() {
     int reads = 0;
-    for (long counter : readCount) {
-      reads += counter;
+    for (AtomicLong counter : readCount) {
+      reads += counter.intValue();
     }
     return reads;
   }

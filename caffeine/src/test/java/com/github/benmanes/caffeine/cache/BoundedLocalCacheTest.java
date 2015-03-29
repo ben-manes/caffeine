@@ -257,10 +257,10 @@ public final class BoundedLocalCacheTest {
     for (int i = 0; i < BoundedBuffer.RING_BUFFER_SIZE; i++) {
       buffer.submit(dummy);
     }
-    assertThat(buffer.submit(dummy), is(true));
+    assertThat(buffer.submit(dummy), is(false));
 
     localCache.afterRead(dummy, true);
-    assertThat(buffer.submit(dummy), is(false));
+    assertThat(buffer.submit(dummy), is(true));
   }
 
   @Test(dataProvider = "caches")

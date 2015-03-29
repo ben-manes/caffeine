@@ -469,7 +469,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     long now = ticker().read();
     node.setAccessTime(now);
 
-    boolean delayable = !readBuffer.submit(node);
+    boolean delayable = readBuffer.submit(node);
     drainOnReadIfNeeded(delayable);
 
     if (refreshAfterWrite()) {

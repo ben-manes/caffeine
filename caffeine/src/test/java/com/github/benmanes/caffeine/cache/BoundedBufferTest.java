@@ -69,7 +69,7 @@ public final class BoundedBufferTest {
     AtomicInteger reads = new AtomicInteger();
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 1000; i++) {
-        boolean shouldDrain = buffer.submit(DUMMY);
+        boolean shouldDrain = !buffer.submit(DUMMY);
         if (shouldDrain && lock.tryLock()) {
           buffer.drain(e -> reads.incrementAndGet());
           lock.unlock();
