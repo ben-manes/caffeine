@@ -234,10 +234,11 @@ public final class NodeGenerator {
       String refAssignment = isStrongKeys()
           ? "(K) keyReference"
           : "(WeakKeyReference<K>) keyReference";
-      constructor.addStatement("this.$N = $N", "key", isReference ? refAssignment : "key");
+      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+          UNSAFE_ACCESS, offsetName("key"), isReference ? refAssignment : "key");
     } else {
-      constructor.addStatement("this.$N = new $T($N, $N)",
-          "key", keyReferenceType(), "key", "keyReferenceQueue");
+      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($N, $N))",
+          UNSAFE_ACCESS, offsetName("key"), keyReferenceType(), "key", "keyReferenceQueue");
     }
   }
 

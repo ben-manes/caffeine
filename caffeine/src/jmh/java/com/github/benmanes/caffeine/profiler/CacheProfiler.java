@@ -16,6 +16,8 @@
 package com.github.benmanes.caffeine.profiler;
 
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.github.benmanes.caffeine.cache.CacheType;
 import com.github.benmanes.caffeine.cache.tracing.Tracer;
@@ -31,18 +33,39 @@ public final class CacheProfiler extends ProfilerHook {
   static final CacheType type = CacheType.Caffeine;
 
   final Map<Long, Long> map;
+  final boolean reads;
 
   CacheProfiler() {
     System.setProperty(Tracer.TRACING_ENABLED, "false");
     map = type.create(MAX_SIZE, NUM_THREADS);
+    reads = false;
   }
 
   @Override
   protected void profile() {
+    if (reads) {
+      reads();
+    } else {
+      writes();
+    }
+  }
+
+  /** Spins forever reading from the cache. */
+  private void reads() {
     Long id = Thread.currentThread().getId();
     map.put(id, id);
     for (;;) {
       map.get(id);
+      calls.increment();
+    }
+  }
+
+  /** Spins forever writing into the cache. */
+  private void writes() {
+    Random random = ThreadLocalRandom.current();
+    for (;;) {
+      Long key = new Long(random.nextLong());
+      map.put(key, key);
       calls.increment();
     }
   }
