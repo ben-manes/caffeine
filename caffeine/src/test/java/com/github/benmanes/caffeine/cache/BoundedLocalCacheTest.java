@@ -69,9 +69,7 @@ public final class BoundedLocalCacheTest {
     return (BoundedLocalCache<Integer, Integer>) cache.asMap();
   }
 
-  @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      maximumSize = MaximumSize.UNREACHABLE, weigher = CacheWeigher.MAX_VALUE)
+  @Test
   public void putWeighted_noOverflow() {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
         .weigher(CacheWeigher.MAX_VALUE)
@@ -333,7 +331,7 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
   public void drain_blocksClear(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    checkDrainBlocks(localCache, () -> localCache.clear());
+    checkDrainBlocks(localCache, localCache::clear);
   }
 
   @Test(dataProvider = "caches")
@@ -363,7 +361,7 @@ public final class BoundedLocalCacheTest {
         task.run();
         done.set(true);
       });
-      Awaits.await().until(() -> lock.hasQueuedThreads());
+      Awaits.await().until(lock::hasQueuedThreads);
     } finally {
       lock.unlock();
     }

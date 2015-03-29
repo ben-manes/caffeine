@@ -190,7 +190,7 @@ public final class TraceEvent {
     output.append(action.name());
     output.append(' ');
     if (action == Action.REGISTER) {
-      output.append(name);
+      output.append(name.replace(' ', '_'));
       output.append(' ');
     }
     output.append(Long.toString(id));

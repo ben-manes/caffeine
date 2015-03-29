@@ -223,7 +223,7 @@ public final class AsyncLoadingCacheTest {
     Integer key = context.absentKey();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
-      Awaits.await().until(() -> done.get());
+      Awaits.await().until(done::get);
       return null;
     });
     valueFuture.whenComplete((r, e) -> done.set(true));

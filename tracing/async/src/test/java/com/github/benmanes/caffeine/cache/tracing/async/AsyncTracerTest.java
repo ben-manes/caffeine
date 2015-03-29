@@ -92,7 +92,7 @@ public final class AsyncTracerTest {
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void badFileFormat() {
-    runWithFormat("braille", () -> new AsyncTracer());
+    runWithFormat("braille", AsyncTracer::new);
   }
 
   private static void runWithFormat(String format, Runnable action) {

@@ -19,6 +19,10 @@ bundle {
   instruction 'Export-Package', 'com.github.benmanes.caffeine.guava.*'
 }
 
+test {
+  systemProperty 'caffeine.tracing.enabled', 'false'
+}
+
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
 }

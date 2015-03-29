@@ -85,7 +85,7 @@ public final class JCacheLoaderAdapter<K, V>
       long start = ticker.read();
       Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
           .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
-          .collect(Collectors.toMap(entry -> entry.getKey(),
+          .collect(Collectors.toMap(Map.Entry::getKey,
               entry -> new Expirable<>(entry.getValue(), expireTimeMS(start))));
       for (Map.Entry<K, Expirable<V>> entry : result.entrySet()) {
         dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());

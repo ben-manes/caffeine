@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
@@ -24,7 +25,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.LogManager;
 import java.util.stream.Stream;
@@ -35,12 +35,7 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
-import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
-import com.google.common.base.Enums;
 
 /**
  * A data provider that generates caches based on the {@link CacheSpec} configuration.
@@ -56,48 +51,33 @@ public final class CacheProvider {
 
   private CacheProvider() {}
 
-  /**
-   * The provided test parameters are optional and may be specified in any order. Supports injecting
-   * {@link LoadingCache}, {@link Cache}, {@link CacheContext}, the {@link ConcurrentMap}
-   * {@link Cache#asMap()} view, {@link Policy.Eviction}, {@link Policy.Expiration},
-   * and {@link FakeTicker}.
-   */
+  /** Returns the lazily generated test scenarios. */
   @DataProvider(name = "caches")
   public static Iterator<Object[]> providesCaches(Method testMethod) throws Exception {
+    CacheGenerator generator = newCacheGenerator(testMethod);
+    return asTestCases(testMethod, generator.generate());
+  }
+
+  /** Returns a new cache generator. */
+  private static CacheGenerator newCacheGenerator(Method testMethod) {
     CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
     requireNonNull(cacheSpec, "@CacheSpec not found");
+    Options options = Options.fromSystemProperties();
 
-    // compute indicates if an async or sync cache variation should be use, or both if unset
-    Optional<Compute> compute = Optional.ofNullable(Enums.getIfPresent(
-        Compute.class, System.getProperty("compute", "").toUpperCase()).orNull());
-
-    // implementation variation to use, or all if unset
-    Optional<Implementation> implementation = Optional.ofNullable(Enums.getIfPresent(
-        Implementation.class, System.getProperty("implementation", "")).orNull());
-
-    // compute indicates if an async or sync cache variation should be use, or both if unset
-    Optional<Stats> stats = Optional.ofNullable(Enums.getIfPresent(
-        Stats.class, System.getProperty("stats", "").toUpperCase()).orNull());
-
-    // key/value reference combination to use, or all if unset
-    Optional<ReferenceType> keys = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
-        System.getProperty("keys", "").toUpperCase()).orNull());
-    Optional<ReferenceType> values = Optional.ofNullable(Enums.getIfPresent(ReferenceType.class,
-        System.getProperty("values", "").toUpperCase()).orNull());
-
-    // Inspect the test parameters for interface contraints (loading, async)
+    // Inspect the test parameters for interface constraints (loading, async)
     boolean isAsyncLoadingOnly = hasCacheOfType(testMethod, AsyncLoadingCache.class);
     boolean isLoadingOnly = isAsyncLoadingOnly
         || hasCacheOfType(testMethod, LoadingCache.class)
-        || compute.filter(Compute.ASYNC::equals).isPresent();
+        || options.compute().filter(Compute.ASYNC::equals).isPresent();
 
-    // Lazily generate the test scenarios
-    CacheGenerator generator = new CacheGenerator(cacheSpec, isLoadingOnly, isAsyncLoadingOnly);
-    return asTestCases(testMethod, generator.generate(
-        compute, implementation, stats, keys, values));
+    return new CacheGenerator(cacheSpec, options, isLoadingOnly, isAsyncLoadingOnly);
   }
 
-  /** Converts each scenario into test case parameters. */
+  /**
+   * Converts each scenario into test case parameters. Supports injecting {@link LoadingCache},
+   * {@link Cache}, {@link CacheContext}, the {@link ConcurrentMap} {@link Cache#asMap()} view,
+   * {@link Policy.Eviction}, and {@link Policy.Expiration}.
+   */
   private static Iterator<Object[]> asTestCases(Method testMethod,
       Stream<Entry<CacheContext, Cache<Integer, Integer>>> scenarios) {
     Parameter[] parameters = testMethod.getParameters();
@@ -112,41 +92,40 @@ public final class CacheProvider {
         Class<?> clazz = parameters[i].getType();
         if (clazz.isAssignableFrom(CacheContext.class)) {
           params[i] = entry.getKey();
-          stashed[0] = null;
         } else if (clazz.isAssignableFrom(entry.getValue().getClass())) {
           params[i] = entry.getValue(); // Cache or LoadingCache
         } else if (clazz.isAssignableFrom(AsyncLoadingCache.class)) {
-          // FIXME(ben): Hack to filter intermediate async support
-          if (entry.getKey().asyncCache == null) {
-            return null;
-          }
           params[i] = entry.getKey().asyncCache;
         } else if (clazz.isAssignableFrom(Map.class)) {
           params[i] = entry.getValue().asMap();
         } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
           params[i] = entry.getValue().policy().eviction().get();
         } else if (clazz.isAssignableFrom(Policy.Expiration.class)) {
-          if (parameters[i].isAnnotationPresent(ExpireAfterAccess.class)) {
-            params[i] = entry.getValue().policy().expireAfterAccess().get();
-          } else if (parameters[i].isAnnotationPresent(ExpireAfterWrite.class)) {
-            params[i] = entry.getValue().policy().expireAfterWrite().get();
-          } else if (parameters[i].isAnnotationPresent(RefreshAfterWrite.class)) {
-            params[i] = entry.getValue().policy().refreshAfterWrite().get();
-          } else {
-            throw new AssertionError("Expiration parameter must have a qualifier annotation");
-          }
-        } else if (clazz.isAssignableFrom(Ticker.class)) {
-          params[i] = entry.getKey().ticker();
-        } else {
-          throw new AssertionError("Unknown parameter type: " + clazz);
+          params[i] = expirationPolicy(parameters[i], entry);
+        }
+        if (params[i] == null) {
+          checkNotNull(params[i], "Unknown parameter type: %s", clazz);
         }
       }
       return params;
     }).filter(Objects::nonNull).iterator();
   }
 
+  /** Returns the expiration policy for the given parameter. */
+  private static Policy.Expiration<Integer, Integer> expirationPolicy(
+      Parameter parameter, Entry<CacheContext, Cache<Integer, Integer>> entry) {
+    if (parameter.isAnnotationPresent(ExpireAfterAccess.class)) {
+      return entry.getValue().policy().expireAfterAccess().get();
+    } else if (parameter.isAnnotationPresent(ExpireAfterWrite.class)) {
+      return entry.getValue().policy().expireAfterWrite().get();
+    } else if (parameter.isAnnotationPresent(RefreshAfterWrite.class)) {
+      return entry.getValue().policy().refreshAfterWrite().get();
+    }
+    throw new AssertionError("Expiration parameter must have a qualifier annotation");
+  }
+
+  /** Returns if the required cache matches the provided type. */
   private static boolean hasCacheOfType(Method testMethod, Class<?> cacheType) {
-    return Arrays.stream(testMethod.getParameterTypes()).anyMatch(param ->
-        cacheType.isAssignableFrom(param));
+    return Arrays.stream(testMethod.getParameterTypes()).anyMatch(cacheType::isAssignableFrom);
   }
 }

@@ -332,7 +332,7 @@ public @interface CacheSpec {
 
   // FIXME: A hack to allow the NEGATIVE loader's return value to be retained on refresh
   static final ThreadLocal<Interner<Integer>> interner =
-      ThreadLocal.withInitial(() -> Interners.newStrongInterner());
+      ThreadLocal.withInitial(Interners::newStrongInterner);
 
   Loader[] loader() default {
     Loader.NEGATIVE,

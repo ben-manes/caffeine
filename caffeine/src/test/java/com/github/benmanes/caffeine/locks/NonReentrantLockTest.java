@@ -74,13 +74,13 @@ public final class NonReentrantLockTest {
     Thread testThread = Thread.currentThread();
     ConcurrentTestHarness.execute(() -> {
       lock.lock();
-      Awaits.await().until(() -> lock.hasQueuedThreads());
+      Awaits.await().until(lock::hasQueuedThreads);
       assertThat(lock.getQueueLength(), is(1));
       assertThat(lock.getQueuedThreads(), contains(testThread));
       assertThat(lock.hasQueuedThread(testThread), is(true));
       lock.unlock();
     });
-    Awaits.await().until(() -> lock.isLocked());
+    Awaits.await().until(lock::isLocked);
     assertThat(lock.tryLock(), is(false));
     lock.lock();
     lock.unlock();

@@ -22,6 +22,7 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
@@ -29,7 +30,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.StreamSupport;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -169,9 +169,8 @@ public final class GuavaLocalCache {
     @Override
     public Map<K, V> getAllPresent(Iterable<?> keys) {
       requireNonNull(keys);
-      Iterable<?> iterable = () -> StreamSupport.stream(keys.spliterator(), false)
-            .map(key -> requireNonNull((Object) key)).iterator();
-      return cache.getAllPresent(iterable);
+      keys.forEach(Objects::requireNonNull);
+      return cache.getAllPresent(keys);
     }
 
     @Override

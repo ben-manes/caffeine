@@ -212,7 +212,7 @@ public final class CacheContext {
   }
 
   public boolean isUnbounded() {
-    return (maximumSize == MaximumSize.DISABLED) || (maximumSize == MaximumSize.UNREACHABLE);
+    return (maximumSize == MaximumSize.DISABLED);
   }
 
   public boolean refreshes() {

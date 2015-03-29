@@ -42,7 +42,7 @@ public final class LogReaderTest {
   @Test
   public void readTextLog() throws Exception {
     List<TraceEvent> events = makeEvents();
-    Path filePath = eventsAsLogFile(events, path -> new TextLogEventHandler(path));
+    Path filePath = eventsAsLogFile(events, TextLogEventHandler::new);
     List<TraceEvent> read = LogReader.textLogStream(filePath).collect(Collectors.toList());
     assertThat(read, is(equalTo(events)));
   }
@@ -50,7 +50,7 @@ public final class LogReaderTest {
   @Test
   public void readBinaryLog() throws Exception {
     List<TraceEvent> events = makeEvents();
-    Path filePath = eventsAsLogFile(events, path -> new BinaryLogEventHandler(path));
+    Path filePath = eventsAsLogFile(events, BinaryLogEventHandler::new);
     List<TraceEvent> read = LogReader.binaryLogStream(filePath).collect(Collectors.toList());
     assertThat(read, is(equalTo(events)));
   }

@@ -58,6 +58,7 @@ task unzipTestKit(type: Copy, group: 'Build', description: 'Unzips the JCache TC
 
   def pkg = 'com.github.benmanes.caffeine.jcache'
   systemProperty 'java.net.preferIPv4Stack', 'true'
+  systemProperty 'caffeine.tracing.enabled', 'false'
   systemProperty 'javax.cache.Cache', "${pkg}.CacheProxy"
   systemProperty 'javax.cache.Cache.Entry', "${pkg}.EntryProxy"
   systemProperty 'javax.cache.CacheManager', "${pkg}.CacheManagerImpl"

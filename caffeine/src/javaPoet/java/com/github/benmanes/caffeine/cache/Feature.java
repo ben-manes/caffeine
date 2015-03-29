@@ -49,7 +49,7 @@ enum Feature {
 
   public static String makeEnumName(Iterable<Feature> features) {
     return StreamSupport.stream(features.spliterator(), false)
-        .map(feature -> feature.name())
+        .map(Feature::name)
         .collect(Collectors.joining("_"));
   }
 

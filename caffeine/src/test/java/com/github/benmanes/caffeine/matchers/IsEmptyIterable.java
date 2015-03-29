@@ -97,8 +97,8 @@ public final class IsEmptyIterable<E> extends TypeSafeDiagnosingMatcher<Iterable
 
   private void checkQueue(Queue<? extends E> queue, DescriptionBuilder builder) {
     builder.expectThat("empty queue", queue.peek(), is(nullValue()));
-    checkNoSuchElementException("remove", builder, () -> queue.remove());
-    checkNoSuchElementException("element", builder, () -> queue.element());
+    checkNoSuchElementException("remove", builder, queue::remove);
+    checkNoSuchElementException("element", builder, queue::element);
   }
 
   private void checkDeque(Deque<? extends E> deque, DescriptionBuilder builder) {

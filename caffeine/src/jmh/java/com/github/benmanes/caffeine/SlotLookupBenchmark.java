@@ -70,7 +70,7 @@ public class SlotLookupBenchmark {
     threadLocal = ThreadLocal.withInitial(() -> {
       for (int i = 0; i < ARENA_SIZE; i++) {
         // Populates the internal hashmap to emulate other thread local usages
-        ThreadLocal.withInitial(() -> Thread.currentThread().getId());
+        ThreadLocal.withInitial(Thread.currentThread()::getId);
       }
       return selectSlot(ThreadLocalRandom.current().nextInt());
     });

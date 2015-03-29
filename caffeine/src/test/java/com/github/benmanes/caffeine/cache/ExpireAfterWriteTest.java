@@ -84,7 +84,7 @@ public final class ExpireAfterWriteTest {
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
   public void get(Cache<Integer, Integer> cache, CacheContext context) {
-    Function<Integer, Integer> mappingFunction = key -> context.original().get(key);
+    Function<Integer, Integer> mappingFunction = context.original()::get;
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.get(context.firstKey(), mappingFunction);
     context.ticker().advance(45, TimeUnit.SECONDS);
