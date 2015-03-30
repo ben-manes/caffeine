@@ -51,13 +51,13 @@ ext {
   benchmark_versions = [
     concurrentlinkedhashmap: '1.4.2',
     high_scale_lib: '1.0.6',
-    jamm: '0.3.0',
+    jamm: '0.3.1',
     java_object_layout: '0.3.1',
     koloboke: '0.6.6',
   ]
   plugin_versions = [
     bundle: '0.6.2',
-    checkstyle: '6.4.1',
+    checkstyle: '6.5',
     coveralls: '2.3.1',
     error_prone: '0.0.6',
     jmh: '0.2.0',

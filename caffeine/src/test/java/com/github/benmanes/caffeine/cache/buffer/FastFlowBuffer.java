@@ -33,7 +33,7 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class FastFlowBuffer implements Buffer {
+final class FastFlowBuffer implements ReadBuffer {
   final Lock evictionLock;
 
   final AtomicLong readCache;

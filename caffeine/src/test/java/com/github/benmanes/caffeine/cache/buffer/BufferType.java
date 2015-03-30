@@ -30,14 +30,14 @@ public enum BufferType {
   MpmcArray(MpmcArrayBuffer::new),
   MpscCompound(MpscCompoundBuffer::new);
 
-  private final Supplier<Buffer> factory;
+  private final Supplier<ReadBuffer> factory;
 
-  private BufferType(Supplier<Buffer> factory) {
+  private BufferType(Supplier<ReadBuffer> factory) {
     this.factory = factory;
   }
 
   /** Returns a new buffer instance. */
-  public Buffer create() {
+  public ReadBuffer create() {
     return factory.get();
   }
 }

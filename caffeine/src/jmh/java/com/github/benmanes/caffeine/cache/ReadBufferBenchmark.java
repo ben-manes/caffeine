@@ -23,7 +23,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import com.github.benmanes.caffeine.cache.buffer.Buffer;
+import com.github.benmanes.caffeine.cache.buffer.ReadBuffer;
 import com.github.benmanes.caffeine.cache.buffer.BufferType;
 
 /**
@@ -46,7 +46,7 @@ import com.github.benmanes.caffeine.cache.buffer.BufferType;
 public class ReadBufferBenchmark {
 
   @Param BufferType bufferType;
-  Buffer buffer;
+  ReadBuffer buffer;
 
   @Setup
   public void setup() {

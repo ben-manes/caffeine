@@ -21,7 +21,7 @@ package com.github.benmanes.caffeine.cache.buffer;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface Buffer {
+public interface ReadBuffer {
   static final int MAX_SIZE = 32; // power of 2
   static final int MAX_SIZE_MASK = MAX_SIZE - 1;
 

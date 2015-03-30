@@ -33,7 +33,7 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class TicketBuffer implements Buffer {
+final class TicketBuffer implements ReadBuffer {
   final Lock evictionLock;
   final AtomicLong writeCounter;
   final AtomicReference<Object>[] buffer;

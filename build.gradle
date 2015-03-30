@@ -43,12 +43,6 @@ subprojects { proj ->
 
   sourceCompatibility = JavaVersion.VERSION_1_8
 
-  tasks.withType(JavaCompile) {
-    if (!System.env.'CI') {
-      options.incremental = !rootProject.hasProperty('release')
-    }
-  }
-
   group = 'com.github.ben-manes.caffeine'
   version.with {
     major = 1 // incompatible API changes

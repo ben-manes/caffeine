@@ -42,7 +42,7 @@ public final class BufferTest {
   }
 
   @Test(dataProvider = "buffers")
-  public void record(Buffer buffer) {
+  public void record(ReadBuffer buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
         buffer.record();
@@ -50,12 +50,12 @@ public final class BufferTest {
       }
     });
     long recorded = buffer.recorded();
-    assertThat(recorded, is((long) Buffer.MAX_SIZE));
+    assertThat(recorded, is((long) ReadBuffer.MAX_SIZE));
   }
 
   @Test(dataProvider = "buffers")
-  public void drain(Buffer buffer) {
-    for (int i = 0; i < 2 * Buffer.MAX_SIZE; i++) {
+  public void drain(ReadBuffer buffer) {
+    for (int i = 0; i < 2 * ReadBuffer.MAX_SIZE; i++) {
       buffer.record();
     }
     buffer.drain();
@@ -65,7 +65,7 @@ public final class BufferTest {
   }
 
   @Test(dataProvider = "buffers")
-  public void recordAndDrain(Buffer buffer) {
+  public void recordAndDrain(ReadBuffer buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
         boolean shouldDrain = buffer.record();

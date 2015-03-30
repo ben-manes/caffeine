@@ -29,7 +29,7 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class ManyToOneBuffer implements Buffer {
+final class ManyToOneBuffer implements ReadBuffer {
   final Lock evictionLock;
   final AtomicLong readCounter;
   final AtomicLong writeCounter;

@@ -129,7 +129,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   // The policy management
   final AtomicReference<DrainStatus> drainStatus;
-  final BoundedBuffer<Node<K, V>> readBuffer;
+  final Buffer<Node<K, V>> readBuffer;
   final NonReentrantLock evictionLock;
   final Weigher<K, V> weigher;
   final boolean isAsync;
@@ -143,7 +143,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   protected BoundedLocalCache(Caffeine<K, V> builder,
       @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
     this.isAsync = isAsync;
-    readBuffer = new BoundedBuffer<>();
     weigher = builder.getWeigher(isAsync);
     evictionLock = new NonReentrantLock();
     id = tracer().register(builder.name());
@@ -153,6 +152,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
         builder.evicts(), (isAsync && builder.evicts()) || builder.isWeighted());
+    readBuffer = evicts() || collectKeys() || collectValues() || expiresAfterAccess()
+        ? new BoundedBuffer<>()
+        : Buffer.disabled();
   }
 
   /** Returns if the node's value is currently being computed, asynchronously. */
@@ -469,23 +471,28 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     long now = ticker().read();
     node.setAccessTime(now);
 
-    boolean delayable = readBuffer.submit(node);
+    boolean delayable = (readBuffer.offer(node) != Buffer.FULL);
     drainOnReadIfNeeded(delayable);
+    refreshIfNeeded(node, now);
+  }
 
-    if (refreshAfterWrite()) {
-      long writeTime = node.getWriteTime();
-      if (((now - writeTime) > refreshAfterWriteNanos()) && node.casWriteTime(writeTime, now)) {
-        executor().execute(() -> {
-          K key = node.getKey();
-          if ((key != null) && node.isAlive()) {
-            try {
-              computeIfPresent(key, cacheLoader()::reload);
-            } catch (Throwable t) {
-              logger.log(Level.WARNING, "Exception thrown during reload", t);
-            }
+  /** Asynchronously refreshes the entry if eligible. */
+  void refreshIfNeeded(Node<K, V> node, long now) {
+    if (!refreshAfterWrite()) {
+      return;
+    }
+    long writeTime = node.getWriteTime();
+    if (((now - writeTime) > refreshAfterWriteNanos()) && node.casWriteTime(writeTime, now)) {
+      executor().execute(() -> {
+        K key = node.getKey();
+        if ((key != null) && node.isAlive()) {
+          try {
+            computeIfPresent(key, cacheLoader()::reload);
+          } catch (Throwable t) {
+            logger.log(Level.WARNING, "Exception thrown during reload", t);
           }
-        });
-      }
+        }
+      });
     }
   }
 

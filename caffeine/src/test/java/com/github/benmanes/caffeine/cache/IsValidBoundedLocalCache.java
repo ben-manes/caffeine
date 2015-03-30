@@ -72,7 +72,7 @@ public final class IsValidBoundedLocalCache<K, V>
     if (!cache.evicts() && !cache.expiresAfterAccess()) {
       return;
     }
-    BoundedBuffer<?> buffer = cache.readBuffer;
+    Buffer<?> buffer = cache.readBuffer;
     desc.expectThat("buffer is empty", buffer.size(), is(0));
     desc.expectThat("buffer reads = writes", buffer.reads(), is(buffer.writes()));
   }

@@ -42,10 +42,10 @@ public final class BoundedBufferTest {
   }
 
   @Test(dataProvider = "buffer")
-  public void submit(BoundedBuffer<String> buffer) {
+  public void offer(BoundedBuffer<String> buffer) {
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 100; i++) {
-        buffer.submit(DUMMY);
+        buffer.offer(DUMMY);
       }
     });
     assertThat(buffer.writes(), is(greaterThan(0)));
@@ -54,8 +54,8 @@ public final class BoundedBufferTest {
 
   @Test(dataProvider = "buffer")
   public void drain(BoundedBuffer<String> buffer) {
-    for (int i = 0; i < BoundedBuffer.RING_BUFFER_SIZE; i++) {
-      buffer.submit(DUMMY);
+    for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
+      buffer.offer(DUMMY);
     }
     int[] read = new int[1];
     buffer.drain(e -> read[0]++);
@@ -64,12 +64,12 @@ public final class BoundedBufferTest {
   }
 
   @Test(dataProvider = "buffer")
-  public void submitAndDrain(BoundedBuffer<String> buffer) {
+  public void offerAndDrain(BoundedBuffer<String> buffer) {
     Lock lock = new ReentrantLock();
     AtomicInteger reads = new AtomicInteger();
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 1000; i++) {
-        boolean shouldDrain = !buffer.submit(DUMMY);
+        boolean shouldDrain = (buffer.offer(DUMMY) == Buffer.FULL);
         if (shouldDrain && lock.tryLock()) {
           buffer.drain(e -> reads.incrementAndGet());
           lock.unlock();

@@ -253,14 +253,14 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
-    BoundedBuffer<Node<Integer, Integer>> buffer = localCache.readBuffer;
-    for (int i = 0; i < BoundedBuffer.RING_BUFFER_SIZE; i++) {
-      buffer.submit(dummy);
+    Buffer<Node<Integer, Integer>> buffer = localCache.readBuffer;
+    for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
+      buffer.offer(dummy);
     }
-    assertThat(buffer.submit(dummy), is(false));
+    assertThat(buffer.offer(dummy), is(Buffer.FULL));
 
     localCache.afterRead(dummy, true);
-    assertThat(buffer.submit(dummy), is(true));
+    assertThat(buffer.offer(dummy), is(not(Buffer.FULL)));
   }
 
   @Test(dataProvider = "caches")
@@ -283,14 +283,14 @@ public final class BoundedLocalCacheTest {
   public void drain_onRead(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
 
-    BoundedBuffer<Node<Integer, Integer>> buffer = localCache.readBuffer;
-    for (int i = 0; i < BoundedBuffer.RING_BUFFER_SIZE; i++) {
+    Buffer<Node<Integer, Integer>> buffer = localCache.readBuffer;
+    for (int i = 0; i < BoundedBuffer.BUFFER_SIZE; i++) {
       localCache.get(context.firstKey());
     }
 
     int pending = buffer.size();
     assertThat(buffer.writes(), is(equalTo(pending)));
-    assertThat(pending, is(BoundedBuffer.RING_BUFFER_SIZE));
+    assertThat(pending, is(BoundedBuffer.BUFFER_SIZE));
 
     localCache.get(context.firstKey());
     assertThat(buffer.size(), is(0));
