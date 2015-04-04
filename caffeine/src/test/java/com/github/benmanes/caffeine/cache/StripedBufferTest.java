@@ -56,12 +56,12 @@ public final class StripedBufferTest {
 
   @Test(dataProvider = "buffers")
   public void drain(FakeBuffer<Integer> buffer) {
-    buffer.drain(e -> {});
+    buffer.drainTo(e -> {});
     assertThat(buffer.drains, is(0));
 
     // Expand and drain
     buffer.offer(ELEMENT);
-    buffer.drain(e -> {});
+    buffer.drainTo(e -> {});
     assertThat(buffer.drains, is(1));
   }
 
@@ -91,7 +91,7 @@ public final class StripedBufferTest {
         @Override public int offer(E e) {
           return result;
         }
-        @Override public void drain(Consumer<E> consumer) {
+        @Override public void drainTo(Consumer<E> consumer) {
           drains++;
         }
         @Override public int size() {

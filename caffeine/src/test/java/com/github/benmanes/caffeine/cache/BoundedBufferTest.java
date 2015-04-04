@@ -58,7 +58,7 @@ public final class BoundedBufferTest {
       buffer.offer(DUMMY);
     }
     int[] read = new int[1];
-    buffer.drain(e -> read[0]++);
+    buffer.drainTo(e -> read[0]++);
     assertThat(read[0], is(buffer.reads()));
     assertThat(read[0], is(buffer.writes()));
   }
@@ -71,13 +71,13 @@ public final class BoundedBufferTest {
       for (int i = 0; i < 1000; i++) {
         boolean shouldDrain = (buffer.offer(DUMMY) == Buffer.FULL);
         if (shouldDrain && lock.tryLock()) {
-          buffer.drain(e -> reads.incrementAndGet());
+          buffer.drainTo(e -> reads.incrementAndGet());
           lock.unlock();
         }
         Thread.yield();
       }
     });
-    buffer.drain(e -> reads.incrementAndGet());
+    buffer.drainTo(e -> reads.incrementAndGet());
     assertThat(reads.intValue(), is(buffer.reads()));
     assertThat(reads.intValue(), is(buffer.writes()));
   }

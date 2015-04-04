@@ -51,7 +51,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
-    this();
     delegate = new MutableConfiguration<>(configuration);
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       CaffeineConfiguration<K, V> config = (CaffeineConfiguration<K, V>) configuration;

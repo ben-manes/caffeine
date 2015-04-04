@@ -58,7 +58,7 @@ interface Buffer<E> {
    *
    * @param consumer the action to perform on each element
    */
-  void drain(@Nonnull Consumer<E> consumer);
+  void drainTo(@Nonnull Consumer<E> consumer);
 
   /**
    * Returns the number of elements residing in the buffer.
@@ -86,7 +86,7 @@ enum DisabledBuffer implements Buffer<Object> {
   INSTANCE;
 
   @Override public int offer(Object e) { return Buffer.SUCCESS; }
-  @Override public void drain(Consumer<Object> consumer) {}
+  @Override public void drainTo(Consumer<Object> consumer) {}
   @Override public int size() { return 0; }
   @Override public int reads() { return 0; }
   @Override public int writes() { return 0; }

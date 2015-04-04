@@ -149,14 +149,14 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   }
 
   @Override
-  public void drain(Consumer<E> consumer) {
+  public void drainTo(Consumer<E> consumer) {
     Buffer<E>[] buffers = table;
     if (buffers == null) {
       return;
     }
     for (Buffer<E> buffer : buffers) {
       if (buffer != null) {
-        buffer.drain(consumer);
+        buffer.drainTo(consumer);
       }
     }
   }

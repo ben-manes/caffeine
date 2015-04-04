@@ -50,6 +50,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -118,21 +119,15 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
   static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
 
-  // The backing data store holding the key-value associations
   final ConcurrentHashMap<Object, Node<K, V>> data;
-
-  // The factory for creating cache entries
-  final NodeFactory nodeFactory;
-
-  // The tracer id
-  final long id;
-
-  // The policy management
   final AtomicReference<DrainStatus> drainStatus;
+  final Consumer<Node<K, V>> accessPolicy;
   final Buffer<Node<K, V>> readBuffer;
   final NonReentrantLock evictionLock;
+  final NodeFactory nodeFactory;
   final Weigher<K, V> weigher;
   final boolean isAsync;
+  final long id;
 
   // The collection views
   transient Set<K> keySet;
@@ -155,6 +150,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     readBuffer = evicts() || collectKeys() || collectValues() || expiresAfterAccess()
         ? new BoundedBuffer<>()
         : Buffer.disabled();
+    accessPolicy = (evicts() || expiresAfterAccess())
+        ? node -> reorder(accessOrderDeque(), node)
+        : e -> {};
   }
 
   /** Returns if the node's value is currently being computed, asynchronously. */
@@ -587,11 +585,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   /** Drains the read buffers */
   @GuardedBy("evictionLock")
   void drainReadBuffer() {
-    if (evicts() || expiresAfterAccess()) {
-      readBuffer.drain(node -> reorder(accessOrderDeque(), node));
-    } else {
-      readBuffer.drain(e -> {});
-    }
+    readBuffer.drainTo(accessPolicy);
   }
 
   /** Updates the node's location in the page replacement policy. */
@@ -777,7 +771,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       data.values().forEach(this::removeNode);
 
       // Discard all pending reads
-      readBuffer.drain(e -> {});
+      readBuffer.drainTo(e -> {});
     } finally {
       evictionLock.unlock();
     }

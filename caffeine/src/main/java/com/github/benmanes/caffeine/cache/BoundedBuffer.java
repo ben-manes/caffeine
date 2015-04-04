@@ -89,7 +89,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
     }
 
     @Override
-    public void drain(Consumer<E> consumer) {
+    public void drainTo(Consumer<E> consumer) {
       long head = readCounter.get();
       long tail = writeCounter.get();
       long size = (tail - head);
