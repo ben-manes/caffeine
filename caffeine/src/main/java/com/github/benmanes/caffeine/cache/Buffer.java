@@ -65,7 +65,9 @@ interface Buffer<E> {
    *
    * @return the number of elements in this buffer
    */
-  int size();
+  default int size() {
+    return writes() - reads();
+  }
 
   /**
    * Returns the number of elements that have been read from the buffer.

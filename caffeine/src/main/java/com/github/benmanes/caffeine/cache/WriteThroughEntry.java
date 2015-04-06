@@ -41,12 +41,6 @@ final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
     return super.setValue(value);
   }
 
-  @Override
-  public boolean equals(Object o) {
-    // suppress Findbugs warning
-    return super.equals(o);
-  }
-
   Object writeReplace() {
     return new SimpleEntry<K, V>(this);
   }

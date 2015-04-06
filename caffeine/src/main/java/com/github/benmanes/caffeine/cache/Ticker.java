@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -32,12 +33,12 @@ public interface Ticker {
   long read();
 
   /** @return a ticker that reads the current time using {@link System#nanoTime} */
-  static Ticker systemTicker() {
+  static @Nonnull Ticker systemTicker() {
     return SystemTicker.INSTANCE;
   }
 
   /** @return a ticker that always returns {@code 0} */
-  static Ticker disabledTicker() {
+  static @Nonnull Ticker disabledTicker() {
     return DisabledTicker.INSTANCE;
   }
 }

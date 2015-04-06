@@ -162,11 +162,6 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   }
 
   @Override
-  public int size() {
-    return writes() - reads();
-  }
-
-  @Override
   public int reads() {
     Buffer<E>[] buffers = table;
     if (buffers == null) {

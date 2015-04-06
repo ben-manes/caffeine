@@ -82,7 +82,9 @@ public final class LocalCacheGenerator {
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
-        .addStatement("super(builder, cacheLoader, async)");
+        .addStatement(parentFeatures.isEmpty()
+            ? "super(builder, async)"
+            : "super(builder, cacheLoader, async)");
 
     addKeyStrength();
     addValueStrength();

@@ -147,7 +147,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
     cache().executor().execute(() -> {
       try {
         BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
-            (oldValue == null)  ? cacheLoader().load(key) : cacheLoader().reload(key, oldValue);
+            (oldValue == null) ? cacheLoader().load(key) : cacheLoader().reload(key, oldValue);
         cache().compute(key, refreshFunction, false, false);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown during refresh", t);

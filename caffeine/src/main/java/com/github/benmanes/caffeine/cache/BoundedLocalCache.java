@@ -135,8 +135,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   transient Set<Entry<K, V>> entrySet;
 
   /** Creates an instance based on the builder's configuration. */
-  protected BoundedLocalCache(Caffeine<K, V> builder,
-      @Nullable CacheLoader<? super K, V> loader, boolean isAsync) {
+  protected BoundedLocalCache(Caffeine<K, V> builder, boolean isAsync) {
     this.isAsync = isAsync;
     weigher = builder.getWeigher(isAsync);
     evictionLock = new NonReentrantLock();
@@ -1643,7 +1642,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
     BoundedLocalManualCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       cache = LocalCacheFactory.newBoundedLocalCache(builder, loader, false);
-      isWeighted = (builder.weigher != null);
+      isWeighted = builder.isWeighted();
     }
 
     @Override
@@ -1832,9 +1831,9 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
             : 16;
         final Map<K, V> map = new LinkedHashMap<>(initialCapacity);
         Iterator<Node<K, V>> iterator = cache.data.values().stream().sorted((a, b) -> {
-              int comparison = Long.compare(a.getWriteTime(), b.getWriteTime());
-              return ascending ? comparison : -comparison;
-            }).iterator();
+          int comparison = Long.compare(a.getWriteTime(), b.getWriteTime());
+          return ascending ? comparison : -comparison;
+        }).iterator();
         while (iterator.hasNext() && (limit > map.size())) {
           Node<K, V> node = iterator.next();
           K key = node.getKey();

@@ -112,11 +112,6 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
     }
 
     @Override
-    public int size() {
-      return writes() - reads();
-    }
-
-    @Override
     public int reads() {
       return readCounter.intValue();
     }

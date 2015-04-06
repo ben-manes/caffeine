@@ -17,6 +17,9 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
@@ -32,7 +35,9 @@ import javax.cache.event.CacheEntryUpdatedListener;
 final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K, V>,
     CacheEntryUpdatedListener<K, V>, CacheEntryRemovedListener<K, V>,
     CacheEntryExpiredListener<K, V> {
-  private final CacheEntryListener<? super K, ? super V> listener;
+  static final Logger logger = Logger.getLogger(EventTypeAwareListener.class.getName());
+
+  final CacheEntryListener<? super K, ? super V> listener;
 
   public EventTypeAwareListener(CacheEntryListener<? super K, ? super V> listener) {
     this.listener = requireNonNull(listener);
@@ -54,21 +59,27 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
     }
   }
 
-  /** Processes the event, or ignores if if the listener is not compatible. */
+  /** Processes the event and logs if an exception is thrown. */
   public void dispatch(JCacheEntryEvent<K, V> event) {
-    switch (event.getEventType()) {
-      case CREATED:
-        onCreated(event);
-        break;
-      case UPDATED:
-        onUpdated(event);
-        break;
-      case REMOVED:
-        onRemoved(event);
-        break;
-      case EXPIRED:
-        onExpired(event);
-        break;
+    try {
+      switch (event.getEventType()) {
+        case CREATED:
+          onCreated(event);
+          break;
+        case UPDATED:
+          onUpdated(event);
+          break;
+        case REMOVED:
+          onRemoved(event);
+          break;
+        case EXPIRED:
+          onExpired(event);
+          break;
+      }
+    } catch (Exception e) {
+      logger.log(Level.WARNING, null, e);
+    } catch (Throwable t) {
+      logger.log(Level.SEVERE, null, t);
     }
   }
 
