@@ -32,8 +32,10 @@ import org.openjdk.jmh.annotations.State;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
-public class SingleConsumerBenchmark {
-  @Param({"SingleConsumerQueue", "ConcurrentLinkedQueue"})
+public class SingleConsumerQueueBenchmark {
+  @Param({"SingleConsumerQueue_optimistic",
+    "SingleConsumerQueue_linearizable",
+    "ConcurrentLinkedQueue"})
   QueueType queueType;
 
   Queue<Boolean> queue;
@@ -53,7 +55,7 @@ public class SingleConsumerBenchmark {
     queue.poll();
   }
 
-  @Benchmark @Group("mild_contention") @GroupThreads(4)
+  @Benchmark @Group("mild_contention") @GroupThreads(2)
   public void mild_contention_offer() {
     queue.offer(Boolean.TRUE);
   }
@@ -70,6 +72,6 @@ public class SingleConsumerBenchmark {
 
   @Benchmark @Group("high_contention") @GroupThreads(1)
   public void high_contention_poll() {
-    queue.poll();
+    queue.clear();
   }
 }

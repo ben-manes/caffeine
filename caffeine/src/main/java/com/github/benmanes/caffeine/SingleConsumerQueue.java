@@ -27,7 +27,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
@@ -62,12 +67,11 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * against incorrect consumer usage.
  * <p>
  * Beware that, unlike in most collections, the {@code size} method is <em>NOT</em> a
- * constant-time operation. Because of the asynchronous nature of these stacks, determining the
+ * constant-time operation. Because of the asynchronous nature of these queues, determining the
  * current number of elements requires a traversal of the elements, and so may report inaccurate
  * results if this collection is modified during traversal.
  *
  * @author ben.manes@gmail.com (Ben Manes)
- * @see <a href="https://github.com/ben-manes/caffeine">Caffeine</a>
  * @param <E> the type of elements held in this collection
  */
 @Beta
@@ -79,15 +83,13 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
    * Dmitriy Vyukov [1].
    *
    * The backoff strategy of combining operations with identical semantics is based on inverting
-   * the elimination technique [1]. Elimination allows pairs of operations with reverse semantics,
+   * the elimination technique [2]. Elimination allows pairs of operations with reverse semantics,
    * like pushes and pops on a stack, to complete without any central coordination and therefore
    * substantially aids scalability. The approach of applying elimination and reversing its
    * semantics was explored in [3, 4].
    *
    * This implementation borrows optimizations from {@link java.util.concurrent.Exchanger} for
-   * choosing an arena location and awaiting a match [5]. To improve memory usage for scenarios
-   * that may create thousands of queue instances, such as actor mailboxes, the arena is lazily
-   * initialized when contention is detected.
+   * choosing an arena location and awaiting a match [5].
    *
    * [1] Non-intrusive MPSC node-based queue
    * http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
@@ -101,43 +103,108 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.59.7396
    */
 
-  final static long HEAD_OFFSET =
+  /** The number of CPUs */
+  static final int NCPU = Runtime.getRuntime().availableProcessors();
+
+  /** The number of slots in the elimination array. */
+  static final int ARENA_LENGTH = ceilingNextPowerOfTwo((NCPU + 1) / 2);
+
+  /** The mask value for indexing into the arena. */
+  static final int ARENA_MASK = ARENA_LENGTH - 1;
+
+  /**
+   * The number of times to spin (doing nothing except polling a memory location) before giving up
+   * while waiting to eliminate an operation. Should be zero on uniprocessors. On multiprocessors,
+   * this value should be large enough so that two threads exchanging items as fast as possible
+   * block only when one of them is stalled (due to GC or preemption), but not much longer, to avoid
+   * wasting CPU resources. Seen differently, this value is a little over half the number of cycles
+   * of an average context switch time on most systems. The value here is approximately the average
+   * of those across a range of tested systems.
+   */
+  static final int SPINS = (NCPU == 1) ? 0 : 2000;
+
+  /** The offset to the thread-specific probe field. */
+  static final long PROBE = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
+
+  static final long HEAD_OFFSET =
       UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "head");
 
-  final static long TAIL_OFFSET =
+  static final long TAIL_OFFSET =
       UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "tail");
 
-  transient volatile Node<E> head;
-
-  transient volatile Node<E> tail;
-
-  public SingleConsumerQueue(Collection<E> c) {
-    this();
-    addAll(c);
+  static int ceilingNextPowerOfTwo(int x) {
+    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
+    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
   }
 
-  public SingleConsumerQueue() {
-    // Uses relaxed writes because these fields can only be seen after publication
+  /** Returns the arena index for the current thread. */
+  static final int index() {
+    int probe = UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), PROBE);
+    if (probe == 0) {
+      ThreadLocalRandom.current(); // force initialization
+      probe = UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), PROBE);
+    }
+    return (probe & ARENA_MASK);
+  }
+
+  volatile Node<E> head;
+  final AtomicReference<Node<E>>[] arena;
+  final Function<E, Node<E>> factory;
+  volatile Node<E> tail;
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private SingleConsumerQueue(Function<E, Node<E>> factory) {
+    arena = new AtomicReference[ARENA_LENGTH];
+    for (int i = 0; i < ARENA_LENGTH; i++) {
+      arena[i] = new AtomicReference<>();
+    }
     Node<E> node = new Node<E>(null);
+    this.factory = factory;
     lazySetHead(node);
     lazySetTail(node);
+  }
+
+  /**
+   * Creates a queue that with an optimistic backoff strategy. A thread completes its operation
+   * without waiting after it successfully hands off the additional element(s) to another producing
+   * thread for batch insertion.
+   *
+   * @param <E> the type of elements held in this collection
+   * @return a new queue where producers complete their operation immediately if combined with
+   *         another producing thread's
+   */
+  public static <E> SingleConsumerQueue<E> optimistic() {
+    return new SingleConsumerQueue<>(Node<E>::new);
+  }
+
+  /**
+   * Creates a queue that with a linearizable backoff strategy. A thread waits for a completion
+   * signal if it successfully hands off the additional element(s) to another producing
+   * thread for batch insertion.
+   *
+   * @param <E> the type of elements held in this collection
+   * @return a new queue where producers wait for a completion signal after combining its addition
+   *         with another producing thread's
+   */
+  public static <E> SingleConsumerQueue<E> linearizable() {
+    return new SingleConsumerQueue<>(LinearizableNode<E>::new);
+  }
+
+  @SuppressWarnings("unchecked")
+  Node<E> getHeadRelaxed() {
+    return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, HEAD_OFFSET);
   }
 
   void lazySetHead(Node<E> next) {
     UnsafeAccess.UNSAFE.putOrderedObject(this, HEAD_OFFSET, next);
   }
 
-  boolean casHead(Node<E> expect, Node<E> update) {
-    return UnsafeAccess.UNSAFE.compareAndSwapObject(this, HEAD_OFFSET, expect, update);
-  }
-
-  @SuppressWarnings("unchecked")
-  Node<E> getTailRelaxed() {
-    return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, TAIL_OFFSET);
-  }
-
   void lazySetTail(Node<E> next) {
     UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
+  }
+
+  boolean casTail(Node<E> expect, Node<E> update) {
+    return UnsafeAccess.UNSAFE.compareAndSwapObject(this, TAIL_OFFSET, expect, update);
   }
 
   @Override
@@ -147,10 +214,8 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   @Override
   public int size() {
-    Node<E> t = tail;
-
-    // Uses relaxed reads as `next` is lazily set and accessing the tail issued a load barrier
-    Node<E> cursor = t.getNextRelaxed();
+    Node<E> h = head;
+    Node<E> cursor = h.getNextRelaxed();
     int size = 0;
     while (cursor != null) {
       cursor = cursor.getNextRelaxed();
@@ -161,7 +226,7 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   @Override
   public void clear() {
-    lazySetTail(head);
+    lazySetHead(tail);
   }
 
   @Override
@@ -170,7 +235,7 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
       return false;
     }
 
-    Node<E> cursor = tail.getNextRelaxed();
+    Node<E> cursor = head.getNextRelaxed();
     while (cursor != null) {
       if (o.equals(cursor.value)) {
         return true;
@@ -193,7 +258,7 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   @Override
   public E peek() {
-    Node<E> next = tail.getNextRelaxed();
+    Node<E> next = head.getNextRelaxed();
     return (next == null) ? null : next.value;
   }
 
@@ -210,25 +275,18 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   public boolean offer(E e) {
     Objects.requireNonNull(e);
 
-    Node<E> node = new Node<E>(e);
-    for (;;) {
-      Node<E> h = head;
-      if (casHead(h, node)) {
-        h.lazySetNext(node);
-        return true;
-      }
-
-      // TODO(ben): Add combining backoff
-    }
+    Node<E> node = factory.apply(e);
+    append(node, node);
+    return true;
   }
 
   @Override
   public E poll() {
-    Node<E> next = tail.getNextRelaxed();
+    Node<E> next = head.getNextRelaxed();
     if (next == null) {
       return null;
     }
-    lazySetTail(next);
+    lazySetHead(next);
     E e = next.value;
     next.value = null;
     return e;
@@ -248,10 +306,10 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     for (E e : c) {
       requireNonNull(e);
       if (first == null) {
-        first = new Node<E>(e);
+        first = factory.apply(e);
         last = first;
       } else {
-        Node<E> newLast = new Node<E>(e);
+        Node<E> newLast = factory.apply(e);
         last.lazySetNext(newLast);
         last = newLast;
       }
@@ -259,16 +317,81 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     if (first == null) {
       return false;
     }
+    append(first, last);
+    return true;
+  }
+
+  /** Adds the linked list of nodes to the queue. */
+  void append(Node<E> first, Node<E> last) {
+    for (;;) {
+      Node<E> t = tail;
+      if (casTail(t, last)) {
+        t.next = first;
+        for (;;) {
+          first.complete();
+          if (first == last) {
+            return;
+          }
+          first = first.getNextRelaxed();
+        }
+      }
+      Node<E> node = transferOrCombine(first, last);
+      if (node == null) {
+        first.await();
+        return;
+      } else if (node != first) {
+        last = node;
+      }
+    }
+  }
+
+  /**
+   * Attempts to transfer the linked list to a waiting consumer or receive a linked list from a
+   * waiting producer.
+   *
+   * @param first the first node in the linked list to try to transfer
+   * @param last the last node in the linked list to try to transfer
+   * @return either {@code null} if the element was transferred, the first node if neither a
+   *         transfer or receive were successful, or the received last element from a producer
+   */
+  @Nullable Node<E> transferOrCombine(@Nonnull Node<E> first, Node<E> last) {
+    int index = index();
+    AtomicReference<Node<E>> slot = arena[index];
 
     for (;;) {
-      Node<E> h = head;
-      if (casHead(h, last)) {
-        h.lazySetNext(first);
-        return true;
+      Node<E> found = slot.get();
+      if (found == null) {
+        if (slot.compareAndSet(null, first)) {
+          for (int spin = 0; spin < SPINS; spin++) {
+            if (slot.get() != first) {
+              return null;
+            }
+          }
+          return slot.compareAndSet(first, null) ? first : null;
+        }
+      } else if (slot.compareAndSet(found, null)) {
+        last.lazySetNext(found);
+        last = findLast(found);
+        for (int i = 1; i < ARENA_LENGTH; i++) {
+          slot = arena[(i + index) & ARENA_MASK];
+          found = slot.get();
+          if ((found != null) && slot.compareAndSet(found, null)) {
+            last.lazySetNext(found);
+            last = findLast(found);
+          }
+        }
+        return last;
       }
-
-      // TODO(ben): Add combining backoff
     }
+  }
+
+  /** Returns the last node in the linked list. */
+  static <E> Node<E> findLast(Node<E> node) {
+    Node<E> next;
+    while ((next = node.getNextRelaxed()) != null) {
+      node = next;
+    }
+    return node;
   }
 
   @Override
@@ -284,14 +407,14 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   public boolean remove(Object o) {
     Objects.requireNonNull(o);
 
-    Node<E> h = head;
-    Node<E> prev = getTailRelaxed();
+    Node<E> t = tail;
+    Node<E> prev = getHeadRelaxed();
     Node<E> cursor = prev.getNextRelaxed();
     while (cursor != null) {
       Node<E> next = cursor.getNextRelaxed();
       if (o.equals(cursor.value)) {
-        if ((h == cursor) && !casHead(h, prev) && (next == null)) {
-          next = h.next;
+        if ((t == cursor) && !casTail(t, prev) && (next == null)) {
+          next = t.next;
         }
         prev.lazySetNext(next);
         return true;
@@ -321,16 +444,16 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   boolean removeByPresentce(Collection<?> c, boolean retain) {
     Objects.requireNonNull(c);
 
-    Node<E> h = head;
-    Node<E> prev = getTailRelaxed();
+    Node<E> t = tail;
+    Node<E> prev = getHeadRelaxed();
     Node<E> cursor = prev.getNextRelaxed();
     boolean modified = false;
     while (cursor != null) {
       boolean present = c.contains(cursor.value);
       Node<E> next = cursor.getNextRelaxed();
       if (present != retain) {
-        if ((h == cursor) && !casHead(h, prev) && (next == null)) {
-          next = h.next;
+        if ((t == cursor) && !casTail(t, prev) && (next == null)) {
+          next = t.next;
         }
         prev.lazySetNext(next);
         modified = true;
@@ -345,14 +468,14 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   @Override
   public Iterator<E> iterator() {
     return new Iterator<E>() {
-      Node<E> h = head;
+      Node<E> t = tail;
       Node<E> prev = null;
-      Node<E> cursor = getTailRelaxed();
+      Node<E> cursor = getHeadRelaxed();
       boolean failOnRemoval = true;
 
       @Override
       public boolean hasNext() {
-        return (cursor != h);
+        return (cursor != t);
       }
 
       @Override
@@ -377,8 +500,8 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
         if (failOnRemoval) {
           throw new IllegalStateException();
         }
-        if ((h == cursor) && !casHead(h, prev) && (cursor.getNextRelaxed() == null)) {
-          prev.lazySetNext(h.next);
+        if ((t == cursor) && !casTail(t, prev) && (cursor.getNextRelaxed() == null)) {
+          prev.lazySetNext(t.next);
         } else {
           prev.lazySetNext(cursor.getNextRelaxed());
         }
@@ -389,42 +512,17 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   @Override
   public Object[] toArray() {
-    List<E> list = new ArrayList<E>();
-    for (E e : this) {
-      list.add(e);
-    }
-    return list.toArray();
+    return stream().toArray();
   }
 
   @Override
   public <T> T[] toArray(T[] a) {
-    List<E> list = new ArrayList<E>();
-    for (E e : this) {
-      list.add(e);
-    }
-    return list.toArray(a);
+    return stream().collect(Collectors.toList()).toArray(a);
   }
 
   @Override
   public String toString() {
-    if (isEmpty()) {
-      return "[]";
-    }
-
-    Node<E> t = tail;
-    Node<E> cursor = t.getNextRelaxed();
-    StringBuilder sb = new StringBuilder();
-    sb.append('[');
-    for (;;) {
-      sb.append(cursor.value);
-      cursor = cursor.getNextRelaxed();
-      if (cursor == null) {
-        break;
-      }
-      sb.append(',').append(' ');
-    }
-    sb.append(']');
-    return sb.toString();
+    return stream().map(Object::toString).collect(Collectors.joining(", ", "[", "]"));
   }
 
   /* ---------------- Serialization Support -------------- */
@@ -441,27 +539,28 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
 
   /** A proxy that is serialized instead of the queue. */
   static final class SerializationProxy<E> implements Serializable {
+    final boolean linearizable;
     final List<E> list;
 
     SerializationProxy(SingleConsumerQueue<E> queue) {
-      this.list = new ArrayList<>(queue);
+      linearizable = (queue.factory.apply(null) instanceof LinearizableNode<?>);
+      list = new ArrayList<>(queue);
     }
 
     Object readResolve() {
-      return new SingleConsumerQueue<E>(list);
+      SingleConsumerQueue<E> queue = linearizable ? linearizable() : optimistic();
+      queue.addAll(list);
+      return queue;
     }
 
     static final long serialVersionUID = 1;
   }
 
-  static final class Node<E> {
+  static class Node<E> {
     final static long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
 
-    // Improve likelihood of isolation on <= 64 byte cache lines (volatile to avoid reordering)
-    transient volatile long q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, qa, qb, qc, qd, qe;
-
-    volatile Node<E> next;
     E value;
+    volatile Node<E> next;
 
     Node(@Nullable E value) {
       this.value = value;
@@ -476,9 +575,35 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
       UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, newNext);
     }
 
+    /** A no-op notification that the element was added to the queue. */
+    void complete() {}
+
+    /** A no-op wait until the operation has completed. */
+    void await() {}
+
     @Override
     public String toString() {
-      return "Node[" + value + "]";
+      return getClass().getSimpleName() + "[" + value + "]";
+    }
+  }
+
+  static final class LinearizableNode<E> extends Node<E> {
+    volatile boolean done;
+
+    LinearizableNode(@Nullable E value) {
+      super(value);
+    }
+
+    /** A notification that the element was added to the queue. */
+    @Override
+    void complete() {
+      done = true;
+    }
+
+    /** A busy wait until the operation has completed. */
+    @Override
+    void await() {
+      while (!done) {};
     }
   }
 }

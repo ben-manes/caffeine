@@ -17,14 +17,15 @@ package com.github.benmanes.caffeine;
 
 import java.util.Queue;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-
 import com.google.common.collect.testing.MinimalCollection;
 import com.google.common.collect.testing.QueueTestSuiteBuilder;
 import com.google.common.collect.testing.TestStringQueueGenerator;
 import com.google.common.collect.testing.features.CollectionFeature;
 import com.google.common.collect.testing.features.CollectionSize;
+
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
 
 /**
  * Guava testlib map tests for {@link SingleConsumerQueue}.
@@ -34,10 +35,20 @@ import com.google.common.collect.testing.features.CollectionSize;
 public final class SingleConsumerQueueTests extends TestCase {
 
   public static Test suite() throws NoSuchMethodException, SecurityException {
+    TestSuite suite = queueTest(true);
+    suite.addTest(queueTest(false));
+    return suite;
+  }
+
+  private static TestSuite queueTest(boolean optimistic) {
     return QueueTestSuiteBuilder
         .using(new TestStringQueueGenerator() {
             @Override public Queue<String> create(String[] elements) {
-              return new SingleConsumerQueue<>(MinimalCollection.of(elements));
+              Queue<String> queue = optimistic
+                  ? SingleConsumerQueue.optimistic()
+                  : SingleConsumerQueue.linearizable();
+              queue.addAll(MinimalCollection.of(elements));
+              return queue;
             }
           })
         .named(SingleConsumerQueue.class.getSimpleName())

@@ -60,7 +60,6 @@ import javax.annotation.concurrent.ThreadSafe;
  * results if this collection is modified during traversal.
  *
  * @author ben.manes@gmail.com (Ben Manes)
- * @see <a href="https://github.com/ben-manes/caffeine">Caffeine</a>
  * @param <E> the type of elements held in this collection
  */
 @Beta

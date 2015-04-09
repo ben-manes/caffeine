@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,6 +44,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.SingleConsumerQueue.LinearizableNode;
 import com.github.benmanes.caffeine.SingleConsumerQueueTest.ValidatingListener;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -53,6 +55,7 @@ import com.google.common.testing.SerializableTester;
  */
 @Listeners(ValidatingListener.class)
 public class SingleConsumerQueueTest {
+  private static final int PRODUCE = 10_000;
   private static final int NUM_PRODUCERS = 10;
   private static final int POPULATED_SIZE = 10;
 
@@ -135,7 +138,7 @@ public class SingleConsumerQueueTest {
 
   @Test(dataProvider = "populated")
   public void peek_whenPopulated(SingleConsumerQueue<Integer> queue) {
-    Integer first = queue.tail.next.value;
+    Integer first = queue.head.next.value;
     assertThat(queue.peek(), is(first));
     assertThat(queue, hasSize(POPULATED_SIZE));
     assertThat(queue.contains(first), is(true));
@@ -150,7 +153,7 @@ public class SingleConsumerQueueTest {
 
   @Test(dataProvider = "populated")
   public void element_whenPopulated(SingleConsumerQueue<Integer> queue) {
-    Integer first = queue.tail.next.value;
+    Integer first = queue.head.next.value;
     assertThat(queue.element(), is(first));
     assertThat(queue, hasSize(POPULATED_SIZE));
     assertThat(queue.contains(first), is(true));
@@ -413,14 +416,14 @@ public class SingleConsumerQueueTest {
   /* ---------------- Concurrency -------------- */
 
   @Test(dataProvider = "empty")
-  public void singleProducerSingleConsumer(Queue<Integer> queue) {
+  public void oneProducer_oneConsumer(Queue<Integer> queue) {
     AtomicInteger started = new AtomicInteger();
     AtomicInteger finished = new AtomicInteger();
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
       Awaits.await().untilAtomic(started, is(2));
-      for (int i = 0; i < POPULATED_SIZE; i++) {
+      for (int i = 0; i < PRODUCE; i++) {
         queue.add(i);
       }
       finished.incrementAndGet();
@@ -428,7 +431,7 @@ public class SingleConsumerQueueTest {
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
       Awaits.await().untilAtomic(started, is(2));
-      for (int i = 0; i < POPULATED_SIZE; i++) {
+      for (int i = 0; i < PRODUCE; i++) {
         while (queue.poll() == null) {}
       }
       finished.incrementAndGet();
@@ -439,25 +442,25 @@ public class SingleConsumerQueueTest {
   }
 
   @Test(dataProvider = "empty")
-  public void multipleProducers_noConsumer(Queue<Integer> queue) {
+  public void manyProducers_noConsumer(Queue<Integer> queue) {
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
-      for (int i = 0; i < POPULATED_SIZE; i++) {
+      for (int i = 0; i < PRODUCE; i++) {
         queue.add(i);
       }
     });
-    assertThat(queue, hasSize(NUM_PRODUCERS * POPULATED_SIZE));
+    assertThat(queue, hasSize(NUM_PRODUCERS * PRODUCE));
     assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
   }
 
   @Test(dataProvider = "empty")
-  public void multipleProducers_singleConsumer(Queue<Integer> queue) {
+  public void manyProducers_oneConsumer(Queue<Integer> queue) {
     AtomicInteger started = new AtomicInteger();
     AtomicInteger finished = new AtomicInteger();
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
       Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
-      for (int i = 0; i < (NUM_PRODUCERS * POPULATED_SIZE); i++) {
+      for (int i = 0; i < (NUM_PRODUCERS * PRODUCE); i++) {
         while (queue.poll() == null) {}
       }
       finished.incrementAndGet();
@@ -466,7 +469,7 @@ public class SingleConsumerQueueTest {
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       started.incrementAndGet();
       Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
-      for (int i = 0; i < POPULATED_SIZE; i++) {
+      for (int i = 0; i < PRODUCE; i++) {
         queue.add(i);
       }
       finished.incrementAndGet();
@@ -480,36 +483,40 @@ public class SingleConsumerQueueTest {
 
   @DataProvider(name = "empty")
   public Object[][] providesEmpty() {
-    return new Object[][] {{ makePopulated(0) }};
+    return new Object[][] {{ makePopulated(0, true) }, { makePopulated(0, false) }};
   }
 
   @DataProvider(name = "singleton")
   public Object[][] providesSingleton() {
-    return new Object[][] {{ makePopulated(1) }};
+    return new Object[][] {{ makePopulated(1, true) }, { makePopulated(1, false) }};
   }
 
   @DataProvider(name = "populated")
   public Object[][] providesPopulated() {
-    return new Object[][] {{ makePopulated(POPULATED_SIZE) }};
+    return new Object[][] {
+        { makePopulated(POPULATED_SIZE, true) },
+        { makePopulated(POPULATED_SIZE, false) }};
   }
 
   @DataProvider(name = "singleton,populated")
   public Object[][] providesSingletonAndPopulated() {
     return new Object[][] {
-        { makePopulated(1) },
-        { makePopulated(POPULATED_SIZE) }};
+        { makePopulated(1, true) }, { makePopulated(1, false) },
+        { makePopulated(POPULATED_SIZE, true) }, { makePopulated(POPULATED_SIZE, false) }};
   }
 
   @DataProvider(name = "empty,singleton,populated")
   public Object[][] providesEmptyAndSingletonAndPopulated() {
     return new Object[][] {
-        { makePopulated(0) },
-        { makePopulated(1) },
-        { makePopulated(POPULATED_SIZE) }};
+        { makePopulated(0, true) }, { makePopulated(0, false) },
+        { makePopulated(1, true) }, { makePopulated(1, false) },
+        { makePopulated(POPULATED_SIZE, true) }, { makePopulated(POPULATED_SIZE, false) }};
   }
 
-  static SingleConsumerQueue<Integer> makePopulated(int size) {
-    SingleConsumerQueue<Integer> queue = new SingleConsumerQueue<>();
+  static SingleConsumerQueue<Integer> makePopulated(int size, boolean optimistic) {
+    SingleConsumerQueue<Integer> queue = optimistic
+        ? SingleConsumerQueue.optimistic()
+        : SingleConsumerQueue.linearizable();
     populate(queue, size);
     return queue;
   }
@@ -538,6 +545,24 @@ public class SingleConsumerQueueTest {
       } catch (AssertionError caught) {
         testResult.setStatus(ITestResult.FAILURE);
         testResult.setThrowable(caught);
+      } finally {
+        cleanUp(testResult);
+      }
+    }
+  }
+
+  /** Free memory by clearing unused resources after test execution. */
+  static void cleanUp(ITestResult testResult) {
+    Object[] params = testResult.getParameters();
+    for (int i = 0; i < params.length; i++) {
+      Object param = params[i];
+      if ((param instanceof SingleConsumerQueue<?>)) {
+        boolean linearizable =
+            (((SingleConsumerQueue<?>) param).factory.apply(null) instanceof LinearizableNode<?>);
+        params[i] = param.getClass().getSimpleName() + "_"
+            + (linearizable ? "linearizable" : "optimistic");
+      } else {
+        params[i] = Objects.toString(param);
       }
     }
   }

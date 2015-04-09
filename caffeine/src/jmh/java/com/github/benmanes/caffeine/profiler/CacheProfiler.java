@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.cache.tracing.Tracer;
 public final class CacheProfiler extends ProfilerHook {
   static final int NUM_THREADS = 25;
   static final int MAX_SIZE = 2 * NUM_THREADS;
-  static final CacheType type = CacheType.ConcurrentLinkedHashMap;
+  static final CacheType type = CacheType.Caffeine;
 
   final Map<Long, Long> map;
   final boolean reads;

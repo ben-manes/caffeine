@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.SynchronousQueue;
+import java.util.function.Supplier;
 
 import com.google.common.collect.Queues;
 
@@ -29,46 +30,24 @@ import com.google.common.collect.Queues;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum QueueType {
-  SingleConsumerQueue() {
-    @Override public <E> Queue<E> create() {
-      return new SingleConsumerQueue<E>();
-    }
-  },
-  EliminationStack() {
-    @Override public <E> Queue<E> create() {
-      return new EliminationStack<E>().asLifoQueue();
-    }
-  },
-  ConcurrentLinkedQueue() {
-    @Override public <E> Queue<E> create() {
-      return new ConcurrentLinkedQueue<E>();
-    }
-  },
-  ArrayBlockingQueue() {
-    @Override public <E> Queue<E> create() {
-      return new ArrayBlockingQueue<E>(10000);
-    }
-  },
-  LinkedBlockingQueueBenchmark() {
-    @Override public <E> Queue<E> create() {
-      return new LinkedBlockingQueue<E>();
-    }
-  },
-  LinkedTransferQueue() {
-    @Override public <E> Queue<E> create() {
-      return new LinkedTransferQueue<E>();
-    }
-  },
-  SynchronousQueue() {
-    @Override public <E> Queue<E> create() {
-      return new SynchronousQueue<E>();
-    }
-  },
-  SynchronizedArrayDeque() {
-    @Override public <E> Queue<E> create() {
-      return Queues.synchronizedDeque(new ArrayDeque<E>(10000));
-    }
-  };
+  SingleConsumerQueue_optimistic(SingleConsumerQueue::optimistic),
+  SingleConsumerQueue_linearizable(SingleConsumerQueue::linearizable),
+  EliminationStack(() -> new EliminationStack<>().asLifoQueue()),
+  ConcurrentLinkedQueue(ConcurrentLinkedQueue<Object>::new),
+  ArrayBlockingQueue(() -> new ArrayBlockingQueue<>(10000)),
+  LinkedBlockingQueueBenchmark(LinkedBlockingQueue<Object>::new),
+  LinkedTransferQueue(LinkedTransferQueue<Object>::new),
+  SynchronousQueue(SynchronousQueue<Object>::new),
+  SynchronizedArrayDeque(() -> Queues.synchronizedDeque(new ArrayDeque<>(10000)));
 
-  public abstract <E> Queue<E> create();
+  private final Supplier<Queue<Object>> factory;
+
+  private QueueType(Supplier<Queue<Object>> factory) {
+    this.factory = factory;
+  }
+
+  @SuppressWarnings("unchecked")
+  public <E> Queue<E> create() {
+    return (Queue<E>) factory.get();
+  }
 }

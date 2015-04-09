@@ -22,11 +22,14 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
+import com.github.benmanes.caffeine.SingleConsumerQueue.Node;
 import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 import com.google.common.collect.Sets;
 
@@ -36,7 +39,7 @@ import com.google.common.collect.Sets;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsValidSingleConsumerQueue<E>
-    extends TypeSafeDiagnosingMatcher<SingleConsumerQueue<? extends E>> {
+    extends TypeSafeDiagnosingMatcher<SingleConsumerQueue<E>> {
 
   @Override
   public void describeTo(Description description) {
@@ -44,32 +47,39 @@ public final class IsValidSingleConsumerQueue<E>
   }
 
   @Override
-  protected boolean matchesSafely(SingleConsumerQueue<? extends E> queue, Description description) {
+  protected boolean matchesSafely(SingleConsumerQueue<E> queue, Description description) {
     DescriptionBuilder builder = new DescriptionBuilder(description);
 
     if (queue.isEmpty()) {
       builder.expectThat("empty queue", queue, is(deeplyEmpty()));
-      builder.expectThat("empty queue", queue.tail, is(queue.head));
-      builder.expectThat("empty queue", queue.tail.next, is(nullValue()));
+      builder.expectThat("empty queue", queue.head, is(queue.tail));
+      builder.expectThat("empty queue", queue.head.next, is(nullValue()));
     }
-    builder.expectThat("corrupted queue node", queue.head.next, is(nullValue()));
+    builder.expectThat("corrupted queue node", queue.tail.next, is(nullValue()));
     checkForLoop(queue, builder);
+    checkArena(queue, builder);
 
     return builder.matches();
   }
 
-  void checkForLoop(SingleConsumerQueue<? extends E> queue, DescriptionBuilder builder) {
-    Set<SingleConsumerQueue.Node<? extends E>> seen = Sets.newIdentityHashSet();
-    SingleConsumerQueue.Node<? extends E> node = queue.tail;
-    while (node.next != null) {
-      String errorMsg = String.format("Loop detected: %s in %s", node, seen);
+  void checkForLoop(SingleConsumerQueue<E> queue, DescriptionBuilder builder) {
+    Set<Node<E>> seen = Sets.newIdentityHashSet();
+    Node<E> node = queue.head.next;
+    while (node != null) {
+      Node<E> current = node;
+      Supplier<String> errorMsg = () -> String.format("Loop detected: %s in %s", current, seen);
       builder.expectThat(errorMsg, seen.add(node), is(true));
-      if (node != queue.tail) {
-        builder.expectThat("not null value", node.value, is(not(nullValue())));
-      }
+      builder.expectThat("not tail", node, is(not(queue.head)));
+      builder.expectThat("not null value", node.value, is(not(nullValue())));
       node = node.next;
     }
     builder.expectThat("queue size", queue, hasSize(seen.size()));
+  }
+
+  void checkArena(SingleConsumerQueue<E> queue, DescriptionBuilder builder) {
+    for (AtomicReference<?> slot : queue.arena) {
+      builder.expectThat("not null arena slot", slot.get(), is(nullValue()));
+    }
   }
 
   @Factory

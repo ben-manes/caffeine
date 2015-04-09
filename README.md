@@ -15,7 +15,7 @@ compile 'com.github.ben-manes.caffeine:jcache:1.0.1'
 compile 'com.github.ben-manes.caffeine:tracing-async:1.0.1'
 ```
 
-Snapshots of the development version is available in 
+Snapshots of the development version are available in 
 [Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots).
 
 ### Cache: Features at a Glance
