@@ -15,9 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
+import com.github.benmanes.caffeine.base.UnsafeAccess;
 
 /**
  * A striped, non-blocking, bounded buffer.
@@ -56,15 +57,12 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
     return new RingBuffer<>(e);
   }
 
-  static final class RingBuffer<E> implements Buffer<E> {
-    final AtomicLong readCounter;
-    final AtomicLong writeCounter;
+  static final class RingBuffer<E> extends ReadAndWriteCounterRef implements Buffer<E> {
     final AtomicReference<E>[] buffer;
 
     @SuppressWarnings({"unchecked", "cast", "rawtypes"})
     public RingBuffer(E e) {
-      readCounter = new AtomicLong();
-      writeCounter = new AtomicLong(1);
+      super(1);
       buffer = new AtomicReference[BUFFER_SIZE];
       for (int i = 0; i < BUFFER_SIZE; i++) {
         buffer[i] = new AtomicReference<>();
@@ -74,13 +72,13 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
 
     @Override
     public int offer(E e) {
-      long head = readCounter.get();
-      long tail = writeCounter.get();
+      long head = readCounter;
+      long tail = relaxedTail();
       long size = (tail - head);
       if (size >= BUFFER_SIZE) {
         return Buffer.FULL;
       }
-      if (writeCounter.compareAndSet(tail, tail + 1)) {
+      if (casWriteCounter(tail, tail + 1)) {
         int index = (int) (tail & BUFFER_MASK);
         buffer[index].lazySet(e);
         return Buffer.SUCCESS;
@@ -90,8 +88,8 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
 
     @Override
     public void drainTo(Consumer<E> consumer) {
-      long head = readCounter.get();
-      long tail = writeCounter.get();
+      long head = readCounter;
+      long tail = relaxedTail();
       long size = (tail - head);
       if (size == 0) {
         return;
@@ -108,17 +106,59 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
         consumer.accept(e);
         head++;
       } while (head != tail);
-      readCounter.lazySet(head);
+      lazySetReadCounter(head);
     }
 
     @Override
     public int reads() {
-      return readCounter.intValue();
+      return (int) readCounter;
     }
 
     @Override
     public int writes() {
-      return writeCounter.intValue();
+      return (int) writeCounter;
     }
+  }
+}
+
+abstract class PadReadCounter {
+  long p00, p01, p02, p03, p04, p05, p06, p07;
+  long p30, p31, p32, p33, p34, p35, p36, p37;
+}
+
+/** Enforces a memory layout to avoid false sharing by padding the read count. */
+abstract class ReadCounterRef extends PadReadCounter {
+  static final long READ_OFFSET =
+      UnsafeAccess.objectFieldOffset(ReadCounterRef.class, "readCounter");
+
+  volatile long readCounter;
+
+  void lazySetReadCounter(long count) {
+    UnsafeAccess.UNSAFE.putOrderedLong(this, READ_OFFSET, count);
+  }
+}
+
+abstract class PadWriteCounter extends ReadCounterRef {
+  long p00, p01, p02, p03, p04, p05, p06, p07;
+  long p30, p31, p32, p33, p34, p35, p36, p37;
+}
+
+/** Enforces a memory layout to avoid false sharing by padding the write count. */
+abstract class ReadAndWriteCounterRef extends PadWriteCounter {
+  static final long WRITE_OFFSET =
+      UnsafeAccess.objectFieldOffset(ReadAndWriteCounterRef.class, "writeCounter");
+
+  volatile long writeCounter;
+
+  ReadAndWriteCounterRef(int writes) {
+    UnsafeAccess.UNSAFE.putOrderedLong(this, WRITE_OFFSET, writes);
+  }
+
+  long relaxedTail() {
+    return UnsafeAccess.UNSAFE.getLong(this, WRITE_OFFSET);
+  }
+
+  boolean casWriteCounter(long expect, long update) {
+    return UnsafeAccess.UNSAFE.compareAndSwapLong(this, WRITE_OFFSET, expect, update);
   }
 }

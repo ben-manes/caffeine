@@ -601,7 +601,7 @@ abstract class PadHead {
   long p30, p31, p32, p33, p34, p35, p36, p37;
 }
 
-/** Enforces a memory layout that to avoid false sharing by padding the head node. */
+/** Enforces a memory layout to avoid false sharing by padding the head node. */
 abstract class HeadRef<E> extends PadHead {
   static final long HEAD_OFFSET = UnsafeAccess.objectFieldOffset(HeadRef.class, "head");
 
@@ -622,7 +622,7 @@ abstract class PadTail<E> extends HeadRef<E> {
   long p30, p31, p32, p33, p34, p35, p36, p37;
 }
 
-/** Enforces a memory layout that to avoid false sharing by padding the tail node. */
+/** Enforces a memory layout to avoid false sharing by padding the tail node. */
 abstract class HeadAndTailRef<E> extends PadTail<E> {
   static final long TAIL_OFFSET = UnsafeAccess.objectFieldOffset(HeadAndTailRef.class, "tail");
 
