@@ -70,6 +70,7 @@ public final class IsValidSingleConsumerQueue<E>
       Supplier<String> errorMsg = () -> String.format("Loop detected: %s in %s", current, seen);
       builder.expectThat(errorMsg, seen.add(node), is(true));
       builder.expectThat("not tail", node, is(not(queue.head)));
+      builder.expectThat("not completed", node.isDone(), is(true));
       builder.expectThat("not null value", node.value, is(not(nullValue())));
       node = node.next;
     }

@@ -22,7 +22,7 @@ import com.github.benmanes.caffeine.EliminationStack;
 /**
  * @author Ben Manes (ben.manes@gmail.com)
  */
-public final class EliminationProfiler extends ProfilerHook {
+public final class EliminationStackProfiler extends ProfilerHook {
   static final Integer ELEMENT = 1;
 
   final EliminationStack<Integer> stack = new EliminationStack<>();
@@ -41,7 +41,7 @@ public final class EliminationProfiler extends ProfilerHook {
   }
 
   public static void main(String[] args) {
-    EliminationProfiler profile = new EliminationProfiler();
+    ProfilerHook profile = new EliminationStackProfiler();
     profile.run();
   }
 }

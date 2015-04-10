@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.SingleConsumerQueue.Node;
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 
 /**
@@ -75,7 +76,8 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @param <E> the type of elements held in this collection
  */
 @Beta
-public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
+public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
+    implements Queue<E>, Serializable {
 
   /*
    * The queue is represented as a singly-linked list with an atomic head and tail reference. It is
@@ -126,12 +128,6 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
   /** The offset to the thread-specific probe field. */
   static final long PROBE = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
 
-  static final long HEAD_OFFSET =
-      UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "head");
-
-  static final long TAIL_OFFSET =
-      UnsafeAccess.objectFieldOffset(SingleConsumerQueue.class, "tail");
-
   static int ceilingNextPowerOfTwo(int x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
     return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
@@ -147,10 +143,8 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     return (probe & ARENA_MASK);
   }
 
-  volatile Node<E> head;
   final AtomicReference<Node<E>>[] arena;
   final Function<E, Node<E>> factory;
-  volatile Node<E> tail;
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   private SingleConsumerQueue(Function<E, Node<E>> factory) {
@@ -188,23 +182,6 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
    */
   public static <E> SingleConsumerQueue<E> linearizable() {
     return new SingleConsumerQueue<>(LinearizableNode<E>::new);
-  }
-
-  @SuppressWarnings("unchecked")
-  Node<E> getHeadRelaxed() {
-    return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, HEAD_OFFSET);
-  }
-
-  void lazySetHead(Node<E> next) {
-    UnsafeAccess.UNSAFE.putOrderedObject(this, HEAD_OFFSET, next);
-  }
-
-  void lazySetTail(Node<E> next) {
-    UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
-  }
-
-  boolean casTail(Node<E> expect, Node<E> update) {
-    return UnsafeAccess.UNSAFE.compareAndSwapObject(this, TAIL_OFFSET, expect, update);
   }
 
   @Override
@@ -581,6 +558,11 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     /** A no-op wait until the operation has completed. */
     void await() {}
 
+    /** Always returns that the operation completed. */
+    boolean isDone() {
+      return true;
+    }
+
     @Override
     public String toString() {
       return getClass().getSimpleName() + "[" + value + "]";
@@ -605,5 +587,52 @@ public final class SingleConsumerQueue<E> implements Queue<E>, Serializable {
     void await() {
       while (!done) {};
     }
+
+    /** Returns whether the operation completed. */
+    @Override
+    boolean isDone() {
+      return done;
+    }
+  }
+}
+
+abstract class PadHead {
+  long p00, p01, p02, p03, p04, p05, p06, p07;
+  long p30, p31, p32, p33, p34, p35, p36, p37;
+}
+
+/** Enforces a memory layout that to avoid false sharing by padding the head node. */
+abstract class HeadRef<E> extends PadHead {
+  static final long HEAD_OFFSET = UnsafeAccess.objectFieldOffset(HeadRef.class, "head");
+
+  volatile Node<E> head;
+
+  @SuppressWarnings("unchecked")
+  Node<E> getHeadRelaxed() {
+    return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, HEAD_OFFSET);
+  }
+
+  void lazySetHead(Node<E> next) {
+    UnsafeAccess.UNSAFE.putOrderedObject(this, HEAD_OFFSET, next);
+  }
+}
+
+abstract class PadTail<E> extends HeadRef<E> {
+  long p00, p01, p02, p03, p04, p05, p06, p07;
+  long p30, p31, p32, p33, p34, p35, p36, p37;
+}
+
+/** Enforces a memory layout that to avoid false sharing by padding the tail node. */
+abstract class HeadAndTailRef<E> extends PadTail<E> {
+  static final long TAIL_OFFSET = UnsafeAccess.objectFieldOffset(HeadAndTailRef.class, "tail");
+
+  volatile Node<E> tail;
+
+  void lazySetTail(Node<E> next) {
+    UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
+  }
+
+  boolean casTail(Node<E> expect, Node<E> update) {
+    return UnsafeAccess.UNSAFE.compareAndSwapObject(this, TAIL_OFFSET, expect, update);
   }
 }

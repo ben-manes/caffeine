@@ -28,7 +28,6 @@ import com.github.benmanes.caffeine.cache.tracing.Tracer;
  * @author Ben Manes (ben.manes@gmail.com)
  */
 public final class CacheProfiler extends ProfilerHook {
-  static final int NUM_THREADS = 25;
   static final int MAX_SIZE = 2 * NUM_THREADS;
   static final CacheType type = CacheType.Caffeine;
 
