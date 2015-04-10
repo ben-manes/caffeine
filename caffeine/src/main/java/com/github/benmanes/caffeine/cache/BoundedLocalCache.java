@@ -41,10 +41,10 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -169,7 +169,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     throw new UnsupportedOperationException();
   }
 
-  protected ConcurrentLinkedQueue<Runnable> writeQueue() {
+  protected Queue<Runnable> writeQueue() {
     throw new UnsupportedOperationException();
   }
 

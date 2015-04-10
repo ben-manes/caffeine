@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.lang.ref.ReferenceQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.lang.model.element.Modifier;
 
@@ -99,8 +98,10 @@ public final class Specifications {
   static final TypeName WRITE_ORDER_DEQUE = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "WriteOrderDeque"), NODE);
 
+  static final ClassName WRITE_QUEUE_TYPE =
+      ClassName.get("com.github.benmanes.caffeine", "SingleConsumerQueue");
   static final TypeName WRITE_QUEUE = ParameterizedTypeName.get(
-      ClassName.get(ConcurrentLinkedQueue.class), ClassName.get(Runnable.class));
+      WRITE_QUEUE_TYPE, ClassName.get(Runnable.class));
 
   private Specifications() {}
 

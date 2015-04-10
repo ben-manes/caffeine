@@ -25,6 +25,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_ORDER_DEQUE;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_QUEUE;
+import static com.github.benmanes.caffeine.cache.Specifications.WRITE_QUEUE_TYPE;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
@@ -340,7 +341,7 @@ public final class LocalCacheGenerator {
         || !Feature.usesWriteQueue(generateFeatures)) {
       return;
     }
-    constructor.addStatement("this.writeQueue = new $T()", WRITE_QUEUE);
+    constructor.addStatement("this.writeQueue = $T.optimistic()", WRITE_QUEUE_TYPE);
     cache.addField(FieldSpec.builder(WRITE_QUEUE, "writeQueue", privateFinalModifiers).build());
     cache.addMethod(MethodSpec.methodBuilder("writeQueue")
         .addModifiers(protectedFinalModifiers)
