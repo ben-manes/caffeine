@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
+import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -27,7 +27,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 
 /**
  * A matcher that evaluates a {@link UnboundedLocalCache} to determine if it is in a valid state.

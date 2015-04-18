@@ -6,6 +6,7 @@ buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
 
   repositories {
+    mavenCentral()
     jcenter()
   }
 
@@ -24,6 +25,13 @@ buildscript {
 task testReport(type: TestReport, group: 'Build') {
   description = 'Generates an aggregate test report'
   destinationDir = file("${buildDir}/reports/allTests")
+}
+
+allprojects {
+  repositories {
+    mavenCentral()
+    jcenter()
+  }
 }
 
 subprojects { proj ->
@@ -51,10 +59,6 @@ subprojects { proj ->
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
 
-  repositories {
-    jcenter()
-  }
-  
   configurations {
     testArtifacts
   }

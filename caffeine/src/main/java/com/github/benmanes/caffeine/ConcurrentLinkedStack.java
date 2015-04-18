@@ -51,10 +51,10 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * This implementation employs elimination and combination to transfer elements between threads that
  * are pushing and popping concurrently. This technique avoids contention on the stack by attempting
  * to cancel opposing operations and merge additive operations if an immediate update to the stack
- * is not successful. When a pair of operations collide, the task of performing the combined set of
- * operations is delegated to one of the threads and the other thread optionally waits for its
- * operation to be completed. This decision of whether to wait for completion is determined by
- * constructing either a <em>linearizable</em> or <em>optimistic</em> stack.
+ * is not successful. When a pair of additive operations collide, the task of performing the
+ * combined set of operations is delegated to one of the threads and the other thread optionally
+ * waits for its operation to be completed. This decision of whether to wait for completion is
+ * determined by constructing either a <em>linearizable</em> or <em>optimistic</em> stack.
  * <p>
  * Iterators are <i>weakly consistent</i>, returning elements reflecting the state of the stack at
  * some point at or since the creation of the iterator. They do <em>not</em> throw

@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.Awaits;
+import com.github.benmanes.caffeine.testing.Awaits;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

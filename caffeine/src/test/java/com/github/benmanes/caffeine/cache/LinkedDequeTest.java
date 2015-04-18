@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
+import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;

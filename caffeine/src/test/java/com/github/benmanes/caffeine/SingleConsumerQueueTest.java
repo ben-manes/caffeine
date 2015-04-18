@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine;
 
 import static com.github.benmanes.caffeine.IsValidSingleConsumerQueue.validate;
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
+import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContaining;
@@ -46,6 +46,7 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.SingleConsumerQueue.LinearizableNode;
 import com.github.benmanes.caffeine.SingleConsumerQueueTest.ValidatingQueueListener;
+import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.SerializableTester;

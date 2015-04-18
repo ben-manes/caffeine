@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
+import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -29,7 +29,7 @@ import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.ConcurrentLinkedStack.Node;
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.collect.Sets;
 
 /**

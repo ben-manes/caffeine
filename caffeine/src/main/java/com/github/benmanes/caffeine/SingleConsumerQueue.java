@@ -446,7 +446,7 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
   }
 
   static class Node<E> {
-    final static long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
+    static final long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
 
     E value;
     volatile Node<E> next;

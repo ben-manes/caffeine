@@ -25,7 +25,7 @@ import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 
 /**
  * A matcher that evaluates if the {@link CacheStats} recorded all of the statistical events.

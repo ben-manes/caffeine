@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.matchers;
+package com.github.benmanes.caffeine.testing;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
+import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
 

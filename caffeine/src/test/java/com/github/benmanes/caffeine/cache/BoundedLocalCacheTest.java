@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.Awaits;
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
@@ -50,6 +49,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
+import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;

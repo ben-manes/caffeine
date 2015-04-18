@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.matchers;
+package com.github.benmanes.caffeine.testing;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;

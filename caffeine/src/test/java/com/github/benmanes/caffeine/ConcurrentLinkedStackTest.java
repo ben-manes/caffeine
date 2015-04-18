@@ -50,6 +50,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.ConcurrentLinkedStack.Node;
 import com.github.benmanes.caffeine.ConcurrentLinkedStackTest.ValidatingStackListener;
 import com.github.benmanes.caffeine.base.UnsafeAccess;
+import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.SerializableTester;
 

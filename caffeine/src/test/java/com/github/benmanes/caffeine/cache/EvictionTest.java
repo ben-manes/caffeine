@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
-import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
+import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -37,7 +37,6 @@ import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.Awaits;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
@@ -52,6 +51,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
+import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;

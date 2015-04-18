@@ -25,7 +25,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.testing.SerializableTester;
 
 /**

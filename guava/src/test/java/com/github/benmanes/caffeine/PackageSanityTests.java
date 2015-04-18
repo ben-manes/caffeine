@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine;
 
+import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.testing.AbstractPackageSanityTests;
 
 /**

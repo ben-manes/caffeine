@@ -36,7 +36,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 
 /**
  * A matcher that evaluates the {@link ConsumingRemovalListener} recorded all of the removal

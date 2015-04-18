@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
+import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -30,7 +30,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
