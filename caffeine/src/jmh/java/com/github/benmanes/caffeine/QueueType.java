@@ -32,7 +32,8 @@ import com.google.common.collect.Queues;
 public enum QueueType {
   SingleConsumerQueue_optimistic(SingleConsumerQueue::optimistic),
   SingleConsumerQueue_linearizable(SingleConsumerQueue::linearizable),
-  EliminationStack(() -> new EliminationStack<>().asLifoQueue()),
+  ConcurrentLinkedStack_optimistic(() -> ConcurrentLinkedStack.optimistic().asLifoQueue()),
+  ConcurrentLinkedStack_linearizable(() -> ConcurrentLinkedStack.linearizable().asLifoQueue()),
   ConcurrentLinkedQueue(ConcurrentLinkedQueue<Object>::new),
   ArrayBlockingQueue(() -> new ArrayBlockingQueue<>(10000)),
   LinkedBlockingQueueBenchmark(LinkedBlockingQueue<Object>::new),

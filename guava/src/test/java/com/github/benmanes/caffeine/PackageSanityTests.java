@@ -28,6 +28,8 @@ public class PackageSanityTests extends AbstractPackageSanityTests {
     publicApiOnly();
     ignoreClasses(clazz ->
         clazz == Awaits.class ||
+        clazz == SingleConsumerQueue.class ||
+        clazz == ConcurrentLinkedStack.class ||
         clazz.getSimpleName().startsWith("Is") ||
         clazz.getSimpleName().contains("Test") ||
         clazz.getSimpleName().contains("Stresser") ||

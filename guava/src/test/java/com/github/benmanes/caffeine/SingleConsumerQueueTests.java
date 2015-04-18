@@ -53,7 +53,9 @@ public final class SingleConsumerQueueTests extends TestCase {
           })
         .named(SingleConsumerQueue.class.getSimpleName())
         .withFeatures(
+            CollectionFeature.ALLOWS_NULL_QUERIES,
             CollectionFeature.GENERAL_PURPOSE,
+            CollectionFeature.SERIALIZABLE,
             CollectionFeature.KNOWN_ORDER,
             CollectionSize.ANY)
         .createTestSuite();

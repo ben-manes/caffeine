@@ -148,10 +148,10 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
   }
 
   /**
-   * Creates a queue that with an optimistic backoff strategy. A thread completes its operation
+   * Creates a queue with an optimistic backoff strategy. A thread completes its operation
    * without waiting after it successfully hands off the additional element(s) to another producing
    * thread for batch insertion. This optimistic behavior may result in additions not appearing in
-   * FIFO order due to the backoff strategy trying to compensate for stack contention.
+   * FIFO order due to the backoff strategy trying to compensate for queue contention.
    *
    * @param <E> the type of elements held in this collection
    * @return a new queue where producers complete their operation immediately if combined with
@@ -162,7 +162,7 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
   }
 
   /**
-   * Creates a queue that with a linearizable backoff strategy. A thread waits for a completion
+   * Creates a queue with a linearizable backoff strategy. A thread waits for a completion
    * signal if it successfully hands off the additional element(s) to another producing
    * thread for batch insertion.
    *
@@ -189,8 +189,8 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
       if (next == null) {
         while ((next = cursor.next) == null) {}
       }
-      size++;
       cursor = next;
+      size++;
     }
     return size;
   }
@@ -198,6 +198,19 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
   @Override
   public void clear() {
     lazySetHead(tail);
+  }
+
+  @Override
+  public boolean contains(Object o) {
+    if (o == null) {
+      return false;
+    }
+    for (Iterator<E> it = iterator(); it.hasNext();) {
+      if (o.equals(it.next())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -228,8 +241,7 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
     Node<E> h = head;
     Node<E> next = h.getNextRelaxed();
     if (next == null) {
-      Node<E> t = tail;
-      if (h == t) {
+      if (h == tail) {
         return null;
       } else {
         while ((next = h.next) == null) {}
@@ -417,16 +429,16 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
   /** A proxy that is serialized instead of the queue. */
   static final class SerializationProxy<E> implements Serializable {
     final boolean linearizable;
-    final List<E> list;
+    final List<E> elements;
 
     SerializationProxy(SingleConsumerQueue<E> queue) {
       linearizable = (queue.factory.apply(null) instanceof LinearizableNode<?>);
-      list = new ArrayList<>(queue);
+      elements = new ArrayList<>(queue);
     }
 
     Object readResolve() {
       SingleConsumerQueue<E> queue = linearizable ? linearizable() : optimistic();
-      queue.addAll(list);
+      queue.addAll(elements);
       return queue;
     }
 

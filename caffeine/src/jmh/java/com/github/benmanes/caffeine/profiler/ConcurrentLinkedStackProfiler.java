@@ -17,15 +17,15 @@ package com.github.benmanes.caffeine.profiler;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.github.benmanes.caffeine.EliminationStack;
+import com.github.benmanes.caffeine.ConcurrentLinkedStack;
 
 /**
  * @author Ben Manes (ben.manes@gmail.com)
  */
-public final class EliminationStackProfiler extends ProfilerHook {
+public final class ConcurrentLinkedStackProfiler extends ProfilerHook {
   static final Integer ELEMENT = 1;
 
-  final EliminationStack<Integer> stack = new EliminationStack<>();
+  final ConcurrentLinkedStack<Integer> stack = ConcurrentLinkedStack.linearizable();
 
   @Override
   protected void profile() {
@@ -41,7 +41,7 @@ public final class EliminationStackProfiler extends ProfilerHook {
   }
 
   public static void main(String[] args) {
-    ProfilerHook profile = new EliminationStackProfiler();
+    ProfilerHook profile = new ConcurrentLinkedStackProfiler();
     profile.run();
   }
 }

@@ -45,7 +45,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.SingleConsumerQueue.LinearizableNode;
-import com.github.benmanes.caffeine.SingleConsumerQueueTest.ValidatingListener;
+import com.github.benmanes.caffeine.SingleConsumerQueueTest.ValidatingQueueListener;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.testing.SerializableTester;
@@ -53,7 +53,7 @@ import com.google.common.testing.SerializableTester;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Listeners(ValidatingListener.class)
+@Listeners(ValidatingQueueListener.class)
 public class SingleConsumerQueueTest {
   private static final int PRODUCE = 10_000;
   private static final int NUM_PRODUCERS = 10;
@@ -528,7 +528,7 @@ public class SingleConsumerQueueTest {
   }
 
   /** A listener that validates the internal structure after a successful test execution. */
-  public static final class ValidatingListener implements IInvokedMethodListener {
+  public static final class ValidatingQueueListener implements IInvokedMethodListener {
     @Override
     public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
 

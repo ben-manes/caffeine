@@ -31,10 +31,8 @@ import org.openjdk.jmh.annotations.State;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
-public class EliminationStackBenchmark {
-  @Param({"EliminationStack", "ConcurrentLinkedQueue", "ArrayBlockingQueue",
-    "LinkedBlockingQueueBenchmark", "LinkedTransferQueue", "SynchronousQueue",
-    "SynchronizedArrayDeque"})
+public class ConcurrentLinkedStackBenchmark {
+  @Param({"ConcurrentLinkedStack_linearizable", "ConcurrentLinkedQueue"})
   QueueType queueType;
 
   Queue<Boolean> queue;
@@ -44,23 +42,23 @@ public class EliminationStackBenchmark {
     queue = queueType.create();
   }
 
-  @Benchmark @Group("no_contention") @GroupThreads(1)
-  public void no_contention_offer() {
+  @Benchmark @Group("low_contention") @GroupThreads(1)
+  public void low_contention_offer() {
     queue.offer(Boolean.TRUE);
   }
 
-  @Benchmark @Group("no_contention") @GroupThreads(1)
-  public void no_contention_poll() {
+  @Benchmark @Group("low_contention") @GroupThreads(1)
+  public void low_contention_poll() {
     queue.poll();
   }
 
-  @Benchmark @Group("mild_contention") @GroupThreads(4)
-  public void mild_contention_offer() {
+  @Benchmark @Group("medium_contention") @GroupThreads(4)
+  public void medium_contention_offer() {
     queue.offer(Boolean.TRUE);
   }
 
-  @Benchmark @Group("mild_contention") @GroupThreads(4)
-  public void mild_contention_poll() {
+  @Benchmark @Group("medium_contention") @GroupThreads(4)
+  public void medium_contention_poll() {
     queue.poll();
   }
 
