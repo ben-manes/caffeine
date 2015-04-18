@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Ben Manes. All Rights Reserved.
+ * Copyright 2015 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -276,7 +276,11 @@ public final class ConcurrentLinkedStack<E> extends TopRef<E> implements Seriali
       }
 
       if (casTop(current, current.next)) {
-        return current.get();
+        E e = current.get();
+        if (e == null) {
+          continue;
+        }
+        return e;
       }
       Node<E> node = tryReceive();
       if (node != null) {
@@ -315,6 +319,7 @@ public final class ConcurrentLinkedStack<E> extends TopRef<E> implements Seriali
     append(node, node);
   }
 
+  /** Adds the linked list of nodes to the stack. */
   void append(Node<E> first, Node<E> last) {
     for (;;) {
       last.next = top;

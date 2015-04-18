@@ -52,6 +52,7 @@ import com.github.benmanes.caffeine.ConcurrentLinkedStackTest.ValidatingStackLis
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -140,7 +141,7 @@ public final class ConcurrentLinkedStackTest {
   }
 
   @Test(dataProvider = "populated")
-  public void peek_deadNode(ConcurrentLinkedStack<Integer> stack) {
+  public void peek_bubble(ConcurrentLinkedStack<Integer> stack) {
     Iterator<Integer> it = stack.iterator();
     it.next();
     it.remove();
@@ -167,6 +168,19 @@ public final class ConcurrentLinkedStackTest {
       assertThat(stack.contains(value), is(false));
     }
     assertThat(stack.isEmpty(), is(true));
+  }
+
+  @Test(dataProvider = "populated")
+  public void pop_bubbles(ConcurrentLinkedStack<Integer> stack) {
+    // remove odd numbers
+    stack.removeIf(i -> ((i % 2) == 1));
+
+    int newSize = stack.size();
+    int popped = 0;
+    while (stack.pop() != null) {
+      popped++;
+    }
+    assertThat(popped, is(newSize));
   }
 
   @Test(dataProvider = "empty")
@@ -274,7 +288,7 @@ public final class ConcurrentLinkedStackTest {
     });
   }
 
-  private static void setThreadIndex() {
+  static void setThreadIndex() {
     UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), ConcurrentLinkedStack.PROBE, 1);
   }
 
@@ -372,6 +386,23 @@ public final class ConcurrentLinkedStackTest {
     it.remove();
     assertThat(stack, not(contains(first)));
     assertThat(stack.size(), is(POPULATED_SIZE - 1));
+  }
+
+  @Test(dataProvider = "populated")
+  public void iterator_bubbles(ConcurrentLinkedStack<Integer> stack) {
+    // remove odd numbers
+    stack.removeIf(i -> ((i % 2) == 1));
+
+    int newSize = stack.size();
+    assertThat(Iterators.size(stack.iterator()), is(newSize));
+
+    int removed = 0;
+    for (Iterator<Integer> it = stack.iterator(); it.hasNext();) {
+      it.next();
+      it.remove();
+      removed++;
+    }
+    assertThat(removed, is(newSize));
   }
 
   @Test(dataProvider = "empty")
