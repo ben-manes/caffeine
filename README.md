@@ -7,12 +7,12 @@ Caffeine is a Java 8 based concurrency library that provides specialized data st
 [high performance cache][1]. Please see our [documentation][2] for more details.
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:1.0.1'
+compile 'com.github.ben-manes.caffeine:caffeine:1.1.0'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:1.0.1'
-compile 'com.github.ben-manes.caffeine:jcache:1.0.1'
-compile 'com.github.ben-manes.caffeine:tracing-async:1.0.1'
+compile 'com.github.ben-manes.caffeine:guava:1.1.0'
+compile 'com.github.ben-manes.caffeine:jcache:1.1.0'
+compile 'com.github.ben-manes.caffeine:tracing-async:1.1.0'
 ```
 
 Snapshots of the development version are available in 
