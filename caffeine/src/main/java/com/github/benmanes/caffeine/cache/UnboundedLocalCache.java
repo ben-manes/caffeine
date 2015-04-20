@@ -209,11 +209,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     boolean[] missed = new boolean[1];
     value = data.computeIfAbsent(key, k -> {
       missed[0] = true;
-      try {
-        return statsAware(mappingFunction, isAsync).apply(key);
-      } catch (RuntimeException | Error e) {
-        throw e;
-      }
+      return statsAware(mappingFunction, isAsync).apply(key);
     });
     if (!missed[0]) {
       statsCounter.recordHits(1);

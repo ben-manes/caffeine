@@ -83,21 +83,25 @@ public final class ConcurrentLinkedStack<E> extends TopRef<E> implements Seriali
    * semantics, like pushes and pops on a stack, to complete without any central coordination, and
    * therefore substantially aids scalability [1, 2, 3]. Combining allows pairs of operations with
    * identical semantics, specifically pushes on a stack, to batch the work and therefore reduces
-   * the number of threads updating the top reference. The aproach to dynamically eliminate and
-   * combine operations is explored in [4].
+   * the number of threads updating the top reference. The approach to dynamically eliminate and
+   * combine operations is explored in [4, 5]. Unlike other approaches, this implementation does
+   * not use opcodes or a background thread and instead allows consumers to assist in adding to the
+   * stack.
    *
    * This implementation borrows optimizations from {@link java.util.concurrent.Exchanger} for
-   * choosing an arena location and awaiting a match [5].
+   * choosing an arena location and awaiting a match [6].
    *
    * [1] A Scalable Lock-free Stack Algorithm
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.156.8728
    * [2] Concurrent Data Structures
    * http://www.cs.tau.ac.il/~shanir/concurrent-data-structures.pdf
-   * [3] Using elimination to implement scalable and lock-free fifo queues
+   * [3] Using Elimination to Implement Scalable and Lock-Free FIFO Queues
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.108.6422
    * [4] A Dynamic Elimination-Combining Stack Algorithm
    * http://www.cs.bgu.ac.il/~hendlerd/papers/DECS.pdf
-   * [5] A Scalable Elimination-based Exchange Channel
+   * [5] Using Elimination and Delegation to Implement a Scalable NUMA-Friendly Stack
+   * http://cs.brown.edu/~irina/papers/11431-hotpar13-calciu.pdf
+   * [6] A Scalable Elimination-based Exchange Channel
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.59.7396
    */
 
@@ -605,8 +609,8 @@ public final class ConcurrentLinkedStack<E> extends TopRef<E> implements Seriali
     }
 
     Object readResolve() {
-      Collections.reverse(elements);
       ConcurrentLinkedStack<E> stack = linearizable ? linearizable() : optimistic();
+      Collections.reverse(elements);
       stack.addAll(elements);
       return stack;
     }
