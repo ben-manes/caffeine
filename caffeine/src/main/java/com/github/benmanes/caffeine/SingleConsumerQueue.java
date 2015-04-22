@@ -87,7 +87,8 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
    * the elimination technique [2]. Elimination allows pairs of operations with reverse semantics,
    * like pushes and pops on a stack, to complete without any central coordination and therefore
    * substantially aids scalability. The approach of applying elimination and reversing its
-   * semantics was explored in [3, 4].
+   * semantics was explored in [3, 4]. Unlike other approaches, this implementation does not use
+   * opcodes or a background thread.
    *
    * This implementation borrows optimizations from {@link java.util.concurrent.Exchanger} for
    * choosing an arena location and awaiting a match [5].
@@ -143,8 +144,8 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
     }
     Node<E> node = new Node<E>(null);
     this.factory = factory;
-    lazySetHead(node);
     lazySetTail(node);
+    head = node;
   }
 
   /**
@@ -197,7 +198,7 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
 
   @Override
   public void clear() {
-    lazySetHead(tail);
+    head = tail;
   }
 
   @Override
@@ -247,9 +248,9 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
         while ((next = h.next) == null) {}
       }
     }
-    lazySetHead(next);
     E e = next.value;
     next.value = null;
+    head = next;
     return e;
   }
 
@@ -287,7 +288,7 @@ public final class SingleConsumerQueue<E> extends HeadAndTailRef<E>
     for (;;) {
       Node<E> t = tail;
       if (casTail(t, last)) {
-        t.next = first;
+        t.lazySetNext(first);
         for (;;) {
           first.complete();
           if (first == last) {
@@ -515,13 +516,7 @@ abstract class PadHead<E> extends AbstractQueue<E> {
 
 /** Enforces a memory layout to avoid false sharing by padding the head node. */
 abstract class HeadRef<E> extends PadHead<E> {
-  static final long HEAD_OFFSET = UnsafeAccess.objectFieldOffset(HeadRef.class, "head");
-
-  volatile Node<E> head;
-
-  void lazySetHead(Node<E> next) {
-    UnsafeAccess.UNSAFE.putOrderedObject(this, HEAD_OFFSET, next);
-  }
+  Node<E> head;
 }
 
 abstract class PadTail<E> extends HeadRef<E> {

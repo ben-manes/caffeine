@@ -46,10 +46,10 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
    * whether it found a satisfactory buffer or if resizing is necessary.
    */
 
-  /** The maximum number of pending reads per buffer. */
+  /** The maximum number of elements per buffer. */
   static final int BUFFER_SIZE = 32;
 
-  /** Mask value for indexing into the read buffer. */
+  /** Mask value for indexing into the ring buffer. */
   static final int BUFFER_MASK = BUFFER_SIZE - 1;
 
   @Override

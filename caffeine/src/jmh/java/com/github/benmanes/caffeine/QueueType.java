@@ -36,7 +36,7 @@ public enum QueueType {
   ConcurrentLinkedStack_linearizable(() -> ConcurrentLinkedStack.linearizable().asLifoQueue()),
   ConcurrentLinkedQueue(ConcurrentLinkedQueue<Object>::new),
   ArrayBlockingQueue(() -> new ArrayBlockingQueue<>(10000)),
-  LinkedBlockingQueueBenchmark(LinkedBlockingQueue<Object>::new),
+  LinkedBlockingQueue(LinkedBlockingQueue<Object>::new),
   LinkedTransferQueue(LinkedTransferQueue<Object>::new),
   SynchronousQueue(SynchronousQueue<Object>::new),
   SynchronizedArrayDeque(() -> Queues.synchronizedDeque(new ArrayDeque<>(10000)));
