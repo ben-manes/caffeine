@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Ben Manes. All Rights Reserved.
+ * Copyright 2015 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,11 @@ import static java.util.Objects.requireNonNull;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.AbstractCollection;
 import java.util.AbstractQueue;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -34,54 +36,45 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.github.benmanes.caffeine.SingleConsumerQueue.Node;
+import com.github.benmanes.caffeine.ConcurrentLinkedLazyQueue.Node;
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 
 /**
- * A lock-free unbounded queue based on linked nodes that supports concurrent producers and is
- * restricted to a single consumer. This queue orders elements FIFO (first-in-first-out). The
- * <em>head</em> of the queue is that element that has been on the queue the longest time. The
- * <em>tail</em> of the queue is that element that has been on the queue the shortest time. New
- * elements are inserted at the tail of the queue, and the queue retrieval operations obtain
- * elements at the head of the queue. Like most other concurrent collection implementations, this
- * class does not permit the use of {@code null} elements.
- * <p>
- * A {@code SingleConsumerQueue} is an appropriate choice when many producer threads will share
- * access to a common collection and a single consumer thread drains it. This collection is useful
- * in scenarios such as implementing flat combining, actors, or lock amortization.
+ * A lock-free unbounded queue based on linked nodes. This queue orders elements FIFO
+ * (first-in-first-out). The <em>head</em> of the queue is that element that has been on the queue
+ * the longest time. The <em>tail</em> of the queue is that element that has been on the queue the
+ * shortest time. New elements are inserted at the tail of the queue, and the queue retrieval
+ * operations obtain elements at the head of the queue. Like most other concurrent collection
+ * implementations, this class does not permit the use of {@code null} elements.
  * <p>
  * This implementation employs combination to transfer elements between threads that are producing
- * concurrently. This approach avoids contention on the queue by combining colliding operations
- * that have identical semantics. When a pair of producers collide, the task of performing the
- * combined set of operations is delegated to one of the threads and the other thread optionally
- * waits for its operation to be completed. This decision of whether to wait for completion is
- * determined by constructing either a <em>linearizable</em> or <em>optimistic</em> queue.
+ * concurrently. This approach avoids contention on the queue by combining colliding operations that
+ * have identical semantics. When a pair of producers collide, the task of performing the combined
+ * set of operations is delegated to one of the threads and the other thread optionally waits for
+ * its operation to be completed. This decision of whether to wait for completion is determined by
+ * constructing either a <em>linearizable</em> or <em>optimistic</em> queue.
  * <p>
  * Iterators are <i>weakly consistent</i>, returning elements reflecting the state of the queue at
- * some point at or since the creation of the iterator. They do <em>not</em> throw {@link
- * java.util.ConcurrentModificationException}, and may proceed concurrently with other operations.
- * Elements contained in the queue since the creation of the iterator will be returned exactly once.
+ * some point at or since the creation of the iterator. They do <em>not</em> throw
+ * {@link java.util.ConcurrentModificationException}, and may proceed concurrently with other
+ * operations. Elements contained in the queue since the creation of the iterator will be returned
+ * exactly once.
  * <p>
- * Beware that it is the responsibility of the caller to ensure that a consumer has exclusive read
- * access to the queue. This implementation does <em>not</em> include fail-fast behavior to guard
- * against incorrect consumer usage.
- * <p>
- * Beware that, unlike in most collections, the {@code size} method is <em>NOT</em> a
- * constant-time operation. Because of the asynchronous nature of these queues, determining the
- * current number of elements requires a traversal of the elements, and so may report inaccurate
- * results if this collection is modified during traversal.
+ * Beware that, unlike in most collections, the {@code size} method is <em>NOT</em> a constant-time
+ * operation. Because of the asynchronous nature of these queues, determining the current number of
+ * elements requires a traversal of the elements, and so may report inaccurate results if this
+ * collection is modified during traversal.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
  */
 @Beta
-public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
+public final class ConcurrentLinkedLazyQueue<E> extends CLLQHeader.HeadAndTailRef<E>
     implements Queue<E>, Serializable {
 
   /*
-   * The queue is represented as a singly-linked list with an atomic head and tail reference. It is
-   * based on the non-intrusive multi-producer / single-consumer node queue described by
-   * Dmitriy Vyukov [1].
+   * The queue is represented as a doubly-linked list with an atomic head and tail reference. It is
+   * based on the optimistic linked queue algorithm [1].
    *
    * The backoff strategy of combining operations with identical semantics is based on inverting
    * the elimination technique [2]. Elimination allows pairs of operations with reverse semantics,
@@ -93,8 +86,8 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
    * This implementation borrows optimizations from {@link java.util.concurrent.Exchanger} for
    * choosing an arena location and awaiting a match [5].
    *
-   * [1] Non-intrusive MPSC node-based queue
-   * http://www.1024cores.net/home/lock-free-algorithms/queues/non-intrusive-mpsc-node-based-queue
+   * [1] An Optimistic Approach to Lock-Free FIFO Queues
+   * http://people.csail.mit.edu/edya/publications/OptimisticFIFOQueue-journal.pdf
    * [2] A Scalable Lock-free Stack Algorithm
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.156.8728
    * [3] Using Elimination to Implement Scalable and Lock-Free FIFO Queues
@@ -137,15 +130,15 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   final Function<E, Node<E>> factory;
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private SingleConsumerQueue(Function<E, Node<E>> factory) {
+  private ConcurrentLinkedLazyQueue(Function<E, Node<E>> factory) {
     arena = new AtomicReference[ARENA_LENGTH];
     for (int i = 0; i < ARENA_LENGTH; i++) {
       arena[i] = new AtomicReference<>();
     }
     Node<E> node = new Node<E>(null);
     this.factory = factory;
+    lazySetHead(node);
     lazySetTail(node);
-    head = node;
   }
 
   /**
@@ -158,8 +151,8 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
    * @return a new queue where producers complete their operation immediately if combined with
    *         another producing thread's
    */
-  public static <E> SingleConsumerQueue<E> optimistic() {
-    return new SingleConsumerQueue<>(Node<E>::new);
+  public static <E> ConcurrentLinkedLazyQueue<E> optimistic() {
+    return new ConcurrentLinkedLazyQueue<>(Node<E>::new);
   }
 
   /**
@@ -171,8 +164,8 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
    * @return a new queue where producers wait for a completion signal after combining its addition
    *         with another producing thread's
    */
-  public static <E> SingleConsumerQueue<E> linearizable() {
-    return new SingleConsumerQueue<>(LinearizableNode<E>::new);
+  public static <E> ConcurrentLinkedLazyQueue<E> linearizable() {
+    return new ConcurrentLinkedLazyQueue<>(LinearizableNode<E>::new);
   }
 
   @Override
@@ -182,15 +175,15 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
 
   @Override
   public int size() {
-    Node<E> cursor = head;
-    Node<E> t = tail;
     int size = 0;
-    while ((cursor != t) && (size != Integer.MAX_VALUE)) {
-      Node<E> next = cursor.getNextRelaxed();
-      if (next == null) {
-        while ((next = cursor.next) == null) {}
-      }
-      cursor = next;
+    Node<E> h = head;
+    Node<E> cursor = tail;
+    while ((cursor != h) && (size != Integer.MAX_VALUE)) {
+      Node<E> prev = cursor.getPrevRelaxed();
+//      if (prev.getNextRelaxed() == null) {
+//        prev.lazySetNext(cursor);
+//      }
+      cursor = prev;
       size++;
     }
     return size;
@@ -239,19 +232,59 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
 
   @Override
   public E poll() {
-    Node<E> h = head;
-    Node<E> next = h.getNextRelaxed();
-    if (next == null) {
-      if (h == tail) {
+    for (;;) {
+      Node<E> h = head;
+      Node<E> t = tail;
+      Node<E> next = h.getNextRelaxed();
+      if (h == t) {
         return null;
-      } else {
-        while ((next = h.next) == null) {}
+      }
+      if (next == null) {
+        fixup(h, t);
+        continue;
+      }
+      if (casHead(h, next)) {
+        E e = next.value;
+        next.value = null;
+        h.lazySetPrev(null);
+        h.lazySetNext(null);
+        h.complete();
+        return e;
       }
     }
-    E e = next.value;
-    next.value = null;
-    head = next;
-    return e;
+  }
+
+  /** Fix the backwords pointers when needed. */
+  static <E> void fixup(Node<E> h, Node<E> t) {
+    Node<E> node;
+    Node<E> cursor = t;
+    for (;;) {
+      node = cursor.prev;
+      if (node == null) {
+        break;
+      }
+      node.next = cursor;
+      cursor = node;
+    }
+  }
+
+  /**
+   * Removes all available elements from this queue and returns an unmodifiable view of the removed
+   * elements. This operation is more efficient than repeatedly polling this queue.
+   *
+   * @return the elements removed from the queue
+   */
+  public Collection<E> drain() {
+    for (;;) {
+      Node<E> h = head;
+      Node<E> t = tail;
+
+      if (h == t) {
+        return Collections.emptyList();
+      } else if (casHead(h, t)) {
+        return new CollectionView<E>(h, t);
+      }
+    }
   }
 
   @Override
@@ -272,6 +305,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
         last = first;
       } else {
         Node<E> newLast = new Node<E>(e);
+        newLast.lazySetPrev(last);
         last.lazySetNext(newLast);
         last = newLast;
       }
@@ -287,6 +321,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   void append(@Nonnull Node<E> first, @Nonnull Node<E> last) {
     for (;;) {
       Node<E> t = tail;
+      first.lazySetPrev(t);
       if (casTail(t, last)) {
         t.lazySetNext(first);
         for (;;) {
@@ -294,9 +329,14 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
           if (first == last) {
             return;
           }
-          first = first.getNextRelaxed();
+          Node<E> next = first.getNextRelaxed();
+          if (next == null) {
+            break;
+          }
+          first = next;
         }
       }
+      first.lazySetPrev(null);
       Node<E> node = transferOrCombine(first, last);
       if (node == null) {
         first.await();
@@ -332,12 +372,14 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
           return slot.compareAndSet(first, null) ? first : null;
         }
       } else if (slot.compareAndSet(found, null)) {
+        found.lazySetPrev(last);
         last.lazySetNext(found);
         last = findLast(found);
         for (int i = 1; i < ARENA_LENGTH; i++) {
           slot = arena[(i + index) & ARENA_MASK];
           found = slot.get();
           if ((found != null) && slot.compareAndSet(found, null)) {
+            found.lazySetPrev(last);
             last.lazySetNext(found);
             last = findLast(found);
           }
@@ -405,10 +447,26 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
         if (failOnRemoval) {
           throw new IllegalStateException();
         }
-        if ((t == cursor) && !casTail(t, prev) && (cursor.getNextRelaxed() == null)) {
-          prev.lazySetNext(t.next);
-        } else {
-          prev.lazySetNext(cursor.getNextRelaxed());
+        for (;;) {
+          if (cursor == tail) {
+            Node<E> p = cursor.prev;
+            if (casTail(cursor, p)) {
+              p.lazySetNext(null);
+              cursor = t;
+              break;
+            }
+          } else if (cursor.getNextRelaxed() == null) {
+            fixup(head, tail);
+          } else {
+            Node<E> p = cursor.prev;
+            Node<E> n = cursor.next;
+            if (n.casPrev(cursor, p)) {
+              if (!p.casNext(cursor, n)) {
+                p.lazySetNext(null);
+              }
+            }
+            break;
+          }
         }
         failOnRemoval = true;
       }
@@ -432,13 +490,13 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     final boolean linearizable;
     final List<E> elements;
 
-    SerializationProxy(SingleConsumerQueue<E> queue) {
+    SerializationProxy(ConcurrentLinkedLazyQueue<E> queue) {
       linearizable = (queue.factory.apply(null) instanceof LinearizableNode<?>);
       elements = new ArrayList<>(queue);
     }
 
     Object readResolve() {
-      SingleConsumerQueue<E> queue = linearizable ? linearizable() : optimistic();
+      ConcurrentLinkedLazyQueue<E> queue = linearizable ? linearizable() : optimistic();
       queue.addAll(elements);
       return queue;
     }
@@ -446,14 +504,89 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     static final long serialVersionUID = 1;
   }
 
+  /** A view of the linked nodes as an unmodifiable collection. */
+  static final class CollectionView<E> extends AbstractCollection<E> implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    final Node<E> h;
+    final Node<E> t;
+
+    CollectionView(Node<E> h, Node<E> t) {
+      this.h = h;
+      this.t = t;
+    }
+
+    @Override
+    public int size() {
+      int size = 0;
+      Node<E> cursor = t;
+      while (cursor != h) {
+        cursor = cursor.prev;
+        size++;
+      }
+      return size;
+    }
+
+    @Override
+    public Iterator<E> iterator() {
+      return new Iterator<E>() {
+        Node<E> cursor = h;
+
+        @Override
+        public boolean hasNext() {
+          return (cursor != t);
+        }
+
+        @Override
+        public E next() {
+          if (!hasNext()) {
+            throw new NoSuchElementException();
+          }
+          advance();
+          return cursor.value;
+        }
+
+        private void advance() {
+          if (cursor.next == null) {
+            fixup(h, t);
+          }
+          cursor = cursor.getNextRelaxed();
+        }
+      };
+    }
+
+    Object writeReplace() {
+      return Collections.unmodifiableCollection(new ArrayList<>(this));
+    }
+
+    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+      throw new InvalidObjectException("Proxy required");
+    }
+  }
+
   static class Node<E> {
+    static final long PREV_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "prev");
     static final long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
 
-    E value;
+    volatile Node<E> prev;
     volatile Node<E> next;
+    E value;
 
     Node(@Nullable E value) {
       this.value = value;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable Node<E> getPrevRelaxed() {
+      return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, PREV_OFFSET);
+    }
+
+    void lazySetPrev(@Nullable Node<E> node) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, PREV_OFFSET, node);
+    }
+
+    boolean casPrev(@Nullable Node<E> expect, @Nullable Node<E> update) {
+      return UnsafeAccess.UNSAFE.compareAndSwapObject(this, PREV_OFFSET, expect, update);
     }
 
     @SuppressWarnings("unchecked")
@@ -461,8 +594,12 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
       return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, NEXT_OFFSET);
     }
 
-    void lazySetNext(@Nullable Node<E> newNext) {
-      UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, newNext);
+    void lazySetNext(@Nullable Node<E> node) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, node);
+    }
+
+    boolean casNext(@Nullable Node<E> expect, @Nullable Node<E> update) {
+      return UnsafeAccess.UNSAFE.compareAndSwapObject(this, NEXT_OFFSET, expect, update);
     }
 
     /** A no-op notification that the element was added to the queue. */
@@ -510,7 +647,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
 }
 
 /** The namespace for field padding through inheritance. */
-final class SCQHeader {
+final class CLLQHeader {
   abstract static class PadHead<E> extends AbstractQueue<E> {
     long p00, p01, p02, p03, p04, p05, p06, p07;
     long p30, p31, p32, p33, p34, p35, p36, p37;
@@ -518,7 +655,17 @@ final class SCQHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the head node. */
   abstract static class HeadRef<E> extends PadHead<E> {
-    Node<E> head;
+    static final long HEAD_OFFSET = UnsafeAccess.objectFieldOffset(HeadRef.class, "head");
+
+    volatile Node<E> head;
+
+    void lazySetHead(Node<E> node) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, HEAD_OFFSET, node);
+    }
+
+    boolean casHead(Node<E> expect, Node<E> update) {
+      return UnsafeAccess.UNSAFE.compareAndSwapObject(this, HEAD_OFFSET, expect, update);
+    }
   }
 
   abstract static class PadHeadAndTail<E> extends HeadRef<E> {
@@ -532,8 +679,8 @@ final class SCQHeader {
 
     volatile Node<E> tail;
 
-    void lazySetTail(Node<E> next) {
-      UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
+    void lazySetTail(Node<E> node) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, node);
     }
 
     boolean casTail(Node<E> expect, Node<E> update) {

@@ -25,7 +25,7 @@
  */
 ext {
   versions = [
-    akka: '2.3.9',
+    akka: '2.3.10',
     config: '1.2.1',
     disruptor: '3.3.2',
     flip_tables: '1.0.2',
@@ -34,7 +34,7 @@ ext {
     jcache: '1.0.0',
     joor: '0.9.5',
     jsr305: '3.0.0',
-    univocity_parsers: '1.5.1',
+    univocity_parsers: '1.5.2',
   ]
   test_versions = [
     awaitility: '1.6.3',
@@ -53,16 +53,16 @@ ext {
     high_scale_lib: '1.0.6',
     jamm: '0.3.1',
     java_object_layout: '0.3.1',
-    koloboke: '0.6.6',
+    koloboke: '0.6.7',
   ]
   plugin_versions = [
     bundle: '0.6.2',
-    checkstyle: '6.5',
+    checkstyle: '6.6',
     coveralls: '2.3.1',
-    error_prone: '0.0.6',
+    error_prone: '0.0.7-SNAPSHOT',
     jmh: '0.2.0',
     nexus: '2.3.1',
-    versions: '0.8',
+    versions: '0.9',
     semantic_versioning: '1.1.0',
     stats: '0.1.3',
   ]

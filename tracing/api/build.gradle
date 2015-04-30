@@ -5,6 +5,7 @@ dependencies {
   testCompile libraries.guava
   testCompile test_libraries.testng
   testCompile test_libraries.hamcrest
+  testCompile test_libraries.awaitility
 }
 
 test {

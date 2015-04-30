@@ -72,7 +72,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  */
 @Beta
 @ThreadSafe
-public final class ConcurrentLinkedStack<E> extends TopRef<E> implements Serializable {
+public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implements Serializable {
 
   /*
    * A Treiber's stack is represented as a singly-linked list with an atomic top reference and uses
@@ -678,18 +678,21 @@ public final class ConcurrentLinkedStack<E> extends TopRef<E> implements Seriali
   }
 }
 
-abstract class PadTop<E> extends AbstractCollection<E> {
-  long p00, p01, p02, p03, p04, p05, p06, p07;
-  long p30, p31, p32, p33, p34, p35, p36, p37;
-}
+/** The namespace for field padding through inheritance. */
+final class CLSHeader {
+  abstract static class PadTop<E> extends AbstractCollection<E> {
+    long p00, p01, p02, p03, p04, p05, p06, p07;
+    long p30, p31, p32, p33, p34, p35, p36, p37;
+  }
 
-/** Enforces a memory layout to avoid false sharing by padding the top of the stack. */
-abstract class TopRef<E> extends PadTop<E> {
-  static final long TOP_OFFSET = UnsafeAccess.objectFieldOffset(TopRef.class, "top");
+  /** Enforces a memory layout to avoid false sharing by padding the top of the stack. */
+  abstract static class TopRef<E> extends PadTop<E> {
+    static final long TOP_OFFSET = UnsafeAccess.objectFieldOffset(TopRef.class, "top");
 
-  volatile Node<E> top;
+    volatile Node<E> top;
 
-  boolean casTop(Node<E> expect, Node<E> update) {
-    return UnsafeAccess.UNSAFE.compareAndSwapObject(this, TOP_OFFSET, expect, update);
+    boolean casTop(Node<E> expect, Node<E> update) {
+      return UnsafeAccess.UNSAFE.compareAndSwapObject(this, TOP_OFFSET, expect, update);
+    }
   }
 }

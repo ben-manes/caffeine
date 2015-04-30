@@ -31,8 +31,11 @@ import org.openjdk.jmh.annotations.State;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
-public class ConcurrentLinkedStackBenchmark {
-  @Param({"ConcurrentLinkedStack_linearizable", "ConcurrentLinkedQueue"})
+public class ConcurrentQueueBenchmark {
+  @Param({
+    "ConcurrentLinkedLazyQueue_linearizable",
+    "ConcurrentLinkedStack_linearizable",
+    "ConcurrentLinkedQueue"})
   QueueType queueType;
 
   Queue<Boolean> queue;

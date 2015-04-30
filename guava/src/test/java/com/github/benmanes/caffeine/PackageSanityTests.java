@@ -31,6 +31,7 @@ public class PackageSanityTests extends AbstractPackageSanityTests {
         clazz == Awaits.class ||
         clazz == SingleConsumerQueue.class ||
         clazz == ConcurrentLinkedStack.class ||
+        clazz == ConcurrentLinkedLazyQueue.class ||
         clazz.getSimpleName().startsWith("Is") ||
         clazz.getSimpleName().contains("Test") ||
         clazz.getSimpleName().contains("Stresser") ||
