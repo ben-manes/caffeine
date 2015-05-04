@@ -69,7 +69,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @param <E> the type of elements held in this collection
  */
 @Beta
-public final class ConcurrentLinkedLazyQueue<E> extends CLLQHeader.HeadAndTailRef<E>
+final class ConcurrentLinkedLazyQueue<E> extends CLLQHeader.HeadAndTailRef<E>
     implements Queue<E>, Serializable {
 
   /*

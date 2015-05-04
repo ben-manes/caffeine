@@ -75,33 +75,34 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
 public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implements Serializable {
 
   /*
-   * A Treiber's stack is represented as a singly-linked list with an atomic top reference and uses
-   * compare-and-swap to modify the value atomically.
+   * A Treiber's stack is represented as a singly-linked list with an atomic top reference. To
+   * support arbitrary deletion (remove(Object x)), rather than just lazily nulling out nodes and
+   * skipping them when they reach top, we detect and relink around nodes as they are removed. This
+   * is still partially lazy and multiple adjacent concurrent relinks may leave nulls in place, so
+   * all traversals must detect and relink lingering nulls.
    *
-   * The stack is augmented with an elimination-combining array to minimize the top reference
+   * The stack is augmented with an elimination-combining array to minimize the top reference from
    * becoming a sequential bottleneck. Elimination allows pairs of operations with reverse
    * semantics, like pushes and pops on a stack, to complete without any central coordination, and
-   * therefore substantially aids scalability [1, 2, 3]. Combining allows pairs of operations with
+   * therefore substantially aids scalability [1, 2]. Combining allows pairs of operations with
    * identical semantics, specifically pushes on a stack, to batch the work and therefore reduces
    * the number of threads updating the top reference. The approach to dynamically eliminate and
-   * combine operations is explored in [4, 5]. Unlike other approaches, this implementation does
-   * not use opcodes or a background thread and instead allows consumers to assist in adding to the
+   * combine operations is explored in [3, 4]. Unlike other approaches, this implementation does not
+   * use opcodes or a background thread and instead allows consumers to assist in adding to the
    * stack.
    *
    * This implementation borrows optimizations from {@link java.util.concurrent.Exchanger} for
-   * choosing an arena location and awaiting a match [6].
+   * choosing an arena location and awaiting a match [5].
    *
    * [1] A Scalable Lock-free Stack Algorithm
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.156.8728
    * [2] Concurrent Data Structures
    * http://www.cs.tau.ac.il/~shanir/concurrent-data-structures.pdf
-   * [3] Using Elimination to Implement Scalable and Lock-Free FIFO Queues
-   * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.108.6422
-   * [4] A Dynamic Elimination-Combining Stack Algorithm
+   * [3] A Dynamic Elimination-Combining Stack Algorithm
    * http://www.cs.bgu.ac.il/~hendlerd/papers/DECS.pdf
-   * [5] Using Elimination and Delegation to Implement a Scalable NUMA-Friendly Stack
+   * [4] Using Elimination and Delegation to Implement a Scalable NUMA-Friendly Stack
    * http://cs.brown.edu/~irina/papers/11431-hotpar13-calciu.pdf
-   * [6] A Scalable Elimination-based Exchange Channel
+   * [5] A Scalable Elimination-based Exchange Channel
    * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.59.7396
    */
 
@@ -173,11 +174,6 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
     return new ConcurrentLinkedStack<>(LinearizableNode<E>::new);
   }
 
-  /**
-   * Returns <tt>true</tt> if this stack contains no elements.
-   *
-   * @return <tt>true</tt> if this stack contains no elements
-   */
   @Override
   public boolean isEmpty() {
     for (;;) {
@@ -208,47 +204,58 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
   @Override
   public int size() {
     int size = 0;
-    for (Node<E> node = top; node != null; node = node.next) {
-      if (node.get() != null) {
+    Node<E> node = top;
+    Node<E> prev = null;
+    while (node != null) {
+      if (node.get() == null) {
+        unlink(prev, node);
+      } else {
+        prev = node;
         size++;
       }
+      node = node.next;
     }
     return size;
   }
 
-  /** Removes all of the elements from this stack. */
   @Override
   public void clear() {
+    Node<E> t = top;
     top = null;
+
+    while (t != null) {
+      t.lazySet(null);
+      t = t.next;
+    }
   }
 
-  /**
-   * Returns {@code true} if this stack contains the specified element. More formally, returns
-   * {@code true} if and only if this stack contains at least one element {@code e} such that
-   * {@code o.equals(e)}.
-   *
-   * @param o object to be checked for containment in this stack
-   * @return {@code true} if this stack contains the specified element
-   */
   @Override
   public boolean contains(@Nullable Object o) {
     if (o == null) {
       return false;
     }
-    for (Node<E> node = top; node != null; node = node.next) {
+
+    Node<E> node = top;
+    Node<E> prev = null;
+    while (node != null) {
       E value = node.get();
-      if (o.equals(value)) {
+      if (value == null) {
+        unlink(prev, node);
+      } else if (o.equals(value)) {
         return true;
+      } else {
+        prev = node;
       }
+      node = node.next;
     }
     return false;
   }
 
   /**
    * Retrieves, but does not remove, the top of the stack (in other words, the last element pushed),
-   * or returns <tt>null</tt> if this stack is empty.
+   * or returns {@code null} if this stack is empty.
    *
-   * @return the top of the stack or <tt>null</tt> if this stack is empty
+   * @return the top of the stack or {@code null} if this stack is empty
    */
   @Nullable
   public E peek() {
@@ -267,9 +274,9 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
   }
 
   /**
-   * Removes and returns the top element or returns <tt>null</tt> if this stack is empty.
+   * Removes and returns the top element or returns {@code null} if this stack is empty.
    *
-   * @return the top of this stack, or <tt>null</tt> if this stack is empty
+   * @return the top of this stack, or {@code null} if this stack is empty
    */
   @Nullable
   public E pop() {
@@ -284,6 +291,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
         if (e == null) {
           continue;
         }
+        current.lazySet(null);
         return e;
       }
       Node<E> node = tryReceive();
@@ -293,7 +301,14 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
     }
   }
 
-  Node<E> tryReceive() {
+  /**
+   * Attempts to receive a node from a waiting producer, spinning until one arrives within a fixed
+   * duration. If the producer transfers a linked list of nodes, the first is consumed and the
+   * remainder is produced back to the list.
+   *
+   * @return the consumed node or {@code null} if none was received
+   */
+  @Nullable Node<E> tryReceive() {
     int index = index();
     AtomicReference<Node<E>> slot = arena[index];
 
@@ -357,7 +372,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
    * @return either {@code null} if the element was transferred, the first node if neither a
    *         transfer nor receive were successful, or the received last element from a producer
    */
-  Node<E> transferOrCombine(Node<E> first, Node<E> last) {
+  @Nullable Node<E> transferOrCombine(Node<E> first, Node<E> last) {
     int index = index();
     AtomicReference<Node<E>> slot = arena[index];
 
@@ -443,13 +458,40 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
       return false;
     }
 
-    for (Node<E> node = top; node != null; node = node.next) {
+    Node<E> node = top;
+    Node<E> prev = null;
+    while (node != null) {
       E value = node.get();
-      if (o.equals(value) && node.compareAndSet(value, null)) {
+      if (value == null) {
+        unlink(prev, node);
+      } else if (o.equals(value) && node.compareAndSet(value, null)) {
+        unlink(prev, node);
         return true;
+      } else {
+        prev = node;
       }
+      node = node.next;
     }
     return false;
+  }
+
+  /**
+   * Unlinks the deleted node, given its predecessor node. This is called whenever a null value is
+   * encountered during a traversal. This is necessary (although rare) because a previous removal
+   * may have linked one node to another node that was also in the process of being removed. The
+   * iterator's removal exploits the fact that nulls are cleaned out later to allow for lazy
+   * deletion that would otherwise be O(n).
+   *
+   * @param previous the node before deleted, or null if deleted is first node
+   * @param deleted the deleted node
+   */
+  void unlink(@Nullable Node<E> previous, Node<E> deleted) {
+    if (previous == null) {
+      casTop(deleted, deleted.next);
+    } else {
+      previous.next = deleted.next;
+    }
+    deleted.complete();
   }
 
   @Override
@@ -475,34 +517,12 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
     E nextValue;
 
     StackIterator() {
-      next = top;
-      if (next != null) {
-        nextValue = next.get();
-      }
+      advance();
     }
 
     @Override
     public boolean hasNext() {
-      if (nextValue != null) {
-        return true;
-      } else if (next == null) {
-        return false;
-      }
-      computeNext();
-      return (nextValue != null);
-    }
-
-    void computeNext() {
-      for (;;) {
-        next = next.next;
-        if (next == null) {
-          break;
-        }
-        nextValue = next.get();
-        if (nextValue != null) {
-          break;
-        }
-      }
+      return (next != null);
     }
 
     @Override
@@ -510,10 +530,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      cursor = next;
-      E value = nextValue;
-      nextValue = null;
-      return value;
+      return advance();
     }
 
     @Override
@@ -523,6 +540,33 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
       }
       cursor.lazySet(null);
       cursor = null;
+    }
+
+    /**
+     * Advances the cursor to the next valid node.
+     *
+     * @return the next value or {@code null} if there is none
+     */
+    @Nullable E advance() {
+      E value = nextValue;
+      cursor = next;
+
+      Node<E> node = (cursor == null) ? top : next.next;
+      for (;;) {
+        if (node == null) {
+          nextValue = null;
+          next = null;
+          return value;
+        }
+        nextValue = node.get();
+        if (nextValue == null) {
+          unlink(cursor, node);
+          node = node.next;
+        } else {
+          next = node;
+          return value;
+        }
+      }
     }
   }
 
@@ -626,7 +670,6 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
     private static final long serialVersionUID = 1L;
 
     Node<E> next;
-    volatile boolean done;
 
     Node(E value) {
       super(value);
