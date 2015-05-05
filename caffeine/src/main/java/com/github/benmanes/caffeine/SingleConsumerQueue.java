@@ -197,11 +197,6 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   }
 
   @Override
-  public void clear() {
-    head = tail;
-  }
-
-  @Override
   public boolean contains(Object o) {
     if (o == null) {
       return false;
@@ -390,14 +385,10 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
       }
 
       private void advance() {
-        if (cursor.getNextRelaxed() == null) {
-          while (cursor.next == null) {}
-        }
-
         if ((prev == null) || !failOnRemoval) {
           prev = cursor;
         }
-        cursor = cursor.getNextRelaxed();
+        cursor = awaitNext();
       }
 
       @Override
@@ -405,12 +396,23 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
         if (failOnRemoval) {
           throw new IllegalStateException();
         }
-        if ((t == cursor) && !casTail(t, prev) && (cursor.getNextRelaxed() == null)) {
-          prev.lazySetNext(t.next);
-        } else {
-          prev.lazySetNext(cursor.getNextRelaxed());
-        }
         failOnRemoval = true;
+        cursor.value = null;
+
+        if (t == cursor) {
+          prev.lazySetNext(null);
+          if (casTail(t, prev)) {
+            return;
+          }
+        }
+        prev.lazySetNext(awaitNext());
+      }
+
+      Node<E> awaitNext() {
+        if (cursor.getNextRelaxed() == null) {
+          while (cursor.next == null) {}
+        }
+        return cursor.getNextRelaxed();
       }
     };
   }

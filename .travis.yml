@@ -18,3 +18,7 @@ after_success:
 
 matrix:
   fast_finish: true
+
+cache:
+  directories:
+    - $HOME/.gradle

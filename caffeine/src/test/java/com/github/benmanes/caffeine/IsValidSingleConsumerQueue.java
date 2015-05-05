@@ -63,6 +63,7 @@ public final class IsValidSingleConsumerQueue<E>
   }
 
   void checkForLoop(SingleConsumerQueue<E> queue, DescriptionBuilder builder) {
+    builder.expectThat("Expected sentinel node", queue.head.value, is(nullValue()));
     Set<Node<E>> seen = Sets.newIdentityHashSet();
     Node<E> node = queue.head.next;
     while (node != null) {
