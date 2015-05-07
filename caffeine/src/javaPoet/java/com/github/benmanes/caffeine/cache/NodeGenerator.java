@@ -161,10 +161,10 @@ public final class NodeGenerator {
         .addParameter(vRefQueueType, "referenceQueue");
 
     if (isStrongValues()) {
-      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+      setter.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
-      setter.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($L, $N, referenceQueue))",
+      setter.addStatement("$T.UNSAFE.putObject(this, $N, new $T($L, $N, referenceQueue))",
           UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "key", "value");
     }
 
@@ -234,10 +234,10 @@ public final class NodeGenerator {
       String refAssignment = isStrongKeys()
           ? "(K) keyReference"
           : "(WeakKeyReference<K>) keyReference";
-      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+      constructor.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("key"), isReference ? refAssignment : "key");
     } else {
-      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T($N, $N))",
+      constructor.addStatement("$T.UNSAFE.putObject(this, $N, new $T($N, $N))",
           UNSAFE_ACCESS, offsetName("key"), keyReferenceType(), "key", "keyReferenceQueue");
     }
   }
@@ -245,10 +245,10 @@ public final class NodeGenerator {
   /** Adds a constructor assignment. */
   private void addValueConstructorAssignment(MethodSpec.Builder constructor) {
     if (isStrongValues()) {
-      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+      constructor.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
-      constructor.addStatement("$T.UNSAFE.putOrderedObject(this, $N, new $T(this.$N, $N, $N))",
+      constructor.addStatement("$T.UNSAFE.putObject(this, $N, new $T(this.$N, $N, $N))",
           UNSAFE_ACCESS, offsetName("value"), valueReferenceType(),
           "key", "value", "valueReferenceQueue");
     }
@@ -302,7 +302,7 @@ public final class NodeGenerator {
   private void addIntConstructorAssignment(MethodSpec.Builder constructor,
       String param, String field, Visibility visibility) {
     if (visibility.isRelaxed) {
-      constructor.addStatement("$T.UNSAFE.putOrderedInt(this, $N, $N)",
+      constructor.addStatement("$T.UNSAFE.putInt(this, $N, $N)",
           UNSAFE_ACCESS, offsetName(field), param);
       constructor.addStatement("this.$N = $N", field, param);
     } else {
@@ -314,7 +314,7 @@ public final class NodeGenerator {
   private void addLongConstructorAssignment(MethodSpec.Builder constructor,
       String param, String field, Visibility visibility) {
     if (visibility.isRelaxed) {
-      constructor.addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
+      constructor.addStatement("$T.UNSAFE.putLong(this, $N, $N)",
           UNSAFE_ACCESS, offsetName(field), param);
     } else {
       constructor.addStatement("this.$N = $N", field, param);
@@ -374,7 +374,7 @@ public final class NodeGenerator {
         .returns(boolean.class)
         .build());
     nodeSubtype.addMethod(MethodSpec.methodBuilder("retire")
-        .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+        .addStatement("$T.UNSAFE.putObject(this, $N, $N)",
             UNSAFE_ACCESS, keyOffset, retiredArg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .build());
@@ -385,7 +385,7 @@ public final class NodeGenerator {
         .returns(boolean.class)
         .build());
     nodeSubtype.addMethod(MethodSpec.methodBuilder("die")
-        .addStatement("$T.UNSAFE.putOrderedObject(this, $N, $N)",
+        .addStatement("$T.UNSAFE.putObject(this, $N, $N)",
             UNSAFE_ACCESS, keyOffset, deadArg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .build());
@@ -457,7 +457,7 @@ public final class NodeGenerator {
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .addParameter(varType, varName);
     if (visibility.isRelaxed) {
-      setter.addStatement("$T.UNSAFE.putOrdered$L(this, $N, $N)",
+      setter.addStatement("$T.UNSAFE.put$L(this, $N, $N)",
           UNSAFE_ACCESS, type, offsetName(varName), varName);
     } else {
       setter.addStatement("this.$N = $N", varName, varName);

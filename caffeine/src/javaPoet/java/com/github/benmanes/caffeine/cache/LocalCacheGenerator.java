@@ -213,7 +213,7 @@ public final class LocalCacheGenerator {
         .build());
     cache.addMethod(MethodSpec.methodBuilder("lazySetMaximum")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
+        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
             UNSAFE_ACCESS, offsetName("maximum"), "maximum")
         .addParameter(long.class, "maximum")
         .build());
@@ -228,7 +228,7 @@ public final class LocalCacheGenerator {
         .build());
     cache.addMethod(MethodSpec.methodBuilder("lazySetWeightedSize")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
+        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
             UNSAFE_ACCESS, offsetName("weightedSize"), "weightedSize")
         .addParameter(long.class, "weightedSize")
         .build());
