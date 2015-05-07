@@ -163,21 +163,11 @@ public final class TraceEvent {
    *
    * @param record the columns in the text record
    * @return the event that the record represents
+   * @deprecated use {@link TraceEventFormats#readTextRecord(String[])}
    */
+  @Deprecated
   public static TraceEvent fromTextRecord(@Nonnull String[] record) {
-    TraceEvent event = new TraceEvent();
-    int index = 0;
-    event.action = Action.valueOf(record[index++]);
-    if (event.action == Action.REGISTER) {
-      event.name = record[index++];
-    }
-    event.id = Long.parseLong(record[index++]);
-    if (event.action != Action.REGISTER) {
-      event.keyHash = Integer.parseInt(record[index++]);
-      event.weight = Integer.parseInt(record[index++]);
-    }
-    event.timestamp = Long.parseLong(record[index++]);
-    return event;
+    return TraceEventFormats.readTextRecord(record);
   }
 
   /**
@@ -185,23 +175,11 @@ public final class TraceEvent {
    *
    * @param output the text sink
    * @throws IOException if the output cannot be written
+   * @deprecated use {@link TraceEventFormats#writeTextRecord(TraceEvent, Appendable)}
    */
+  @Deprecated
   public void appendTextRecord(@Nonnull Appendable output) throws IOException {
-    output.append(action.name());
-    output.append(' ');
-    if (action == Action.REGISTER) {
-      output.append(name.replace(' ', '_'));
-      output.append(' ');
-    }
-    output.append(Long.toString(id));
-    output.append(' ');
-    if (action != Action.REGISTER) {
-      output.append(Integer.toString(keyHash));
-      output.append(' ');
-      output.append(Integer.toString(weight));
-      output.append(' ');
-    }
-    output.append(Long.toString(timestamp));
+    TraceEventFormats.writeTextRecord(this, output);
   }
 
   /**
@@ -210,25 +188,11 @@ public final class TraceEvent {
    * @param input the binary data stream
    * @return the event that the next record represents
    * @throws IOException if the input cannot be read
+   * @deprecated use {@link TraceEventFormats#readBinaryRecord(DataInputStream)}
    */
+  @Deprecated
   public static TraceEvent fromBinaryRecord(@Nonnull DataInputStream input) throws IOException {
-    TraceEvent event = new TraceEvent();
-    event.action = Action.values()[input.readShort()];
-    if (event.action == Action.REGISTER) {
-      int length = input.readInt();
-      char[] chars = new char[length];
-      for (int i = 0; i < length; i++) {
-        chars[i] = input.readChar();
-      }
-      event.name = String.valueOf(chars);
-    }
-    event.id = input.readLong();
-    if (event.action != Action.REGISTER) {
-      event.keyHash = input.readInt();
-      event.weight = input.readInt();
-    }
-    event.timestamp = input.readLong();
-    return event;
+    return TraceEventFormats.readBinaryRecord(input);
   }
 
   /**
@@ -236,19 +200,11 @@ public final class TraceEvent {
    *
    * @param output the binary sink
    * @throws IOException if the output cannot be written
+   * @deprecated use {@link TraceEventFormats#writeBinaryRecord(TraceEvent, DataOutputStream)}
    */
+  @Deprecated
   public void appendBinaryRecord(@Nonnull DataOutputStream output) throws IOException {
-    output.writeShort(action.ordinal());
-    if (action == Action.REGISTER) {
-      output.writeInt(name.length());
-      output.writeChars(name);
-    }
-    output.writeLong(id);
-    if (action != Action.REGISTER) {
-      output.writeInt(keyHash);
-      output.writeInt(weight);
-    }
-    output.writeLong(timestamp);
+    TraceEventFormats.writeBinaryRecord(this, output);
   }
 
   @Override
@@ -276,7 +232,7 @@ public final class TraceEvent {
   public String toString() {
     try {
       StringBuilder output = new StringBuilder();
-      appendTextRecord(output);
+      TraceEventFormats.writeTextRecord(this, output);
       return output.toString();
     } catch (IOException e) {
       throw new UncheckedIOException(e);

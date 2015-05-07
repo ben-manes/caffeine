@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEventFormats;
 import com.univocity.parsers.csv.CsvFormat;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
@@ -102,7 +103,7 @@ public final class LogReader {
         throw new NoSuchElementException();
       }
       try {
-        return TraceEvent.fromBinaryRecord(input);
+        return TraceEventFormats.readBinaryRecord(input);
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -136,7 +137,7 @@ public final class LogReader {
         parser.stopParsing();
         return false;
       }
-      next = TraceEvent.fromTextRecord(record);
+      next = TraceEventFormats.readTextRecord(record);
       return true;
     }
 

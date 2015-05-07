@@ -43,8 +43,8 @@ public final class TraceEventTest {
   @Test(dataProvider = "events")
   public void text(TraceEvent event) throws IOException {
     StringBuilder output = new StringBuilder();
-    event.appendTextRecord(output);
-    TraceEvent recorded = TraceEvent.fromTextRecord(output.toString().trim().split(" "));
+    TraceEventFormats.writeTextRecord(event, output);
+    TraceEvent recorded = TraceEventFormats.readTextRecord(output.toString().trim().split(" "));
 
     assertEqualEvents(recorded, event);
   }
@@ -53,10 +53,10 @@ public final class TraceEventTest {
   public void binary(TraceEvent event) throws IOException {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     DataOutputStream output = new DataOutputStream(bytes);
-    event.appendBinaryRecord(output);
+    TraceEventFormats.writeBinaryRecord(event, output);
 
     DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes.toByteArray()));
-    TraceEvent recorded = TraceEvent.fromBinaryRecord(input);
+    TraceEvent recorded = TraceEventFormats.readBinaryRecord(input);
 
     assertEqualEvents(recorded, event);
   }

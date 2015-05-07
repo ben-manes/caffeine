@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEventFormats;
 
 /**
  * A handler that records events to a log file in the binary format.
@@ -45,7 +46,7 @@ public final class BinaryLogEventHandler implements LogEventHandler {
 
   @Override
   public void onEvent(TraceEvent event, long sequence, boolean endOfBatch) throws IOException {
-    event.appendBinaryRecord(output);
+    TraceEventFormats.writeBinaryRecord(event, output);
     if (endOfBatch) {
       output.flush();
     }

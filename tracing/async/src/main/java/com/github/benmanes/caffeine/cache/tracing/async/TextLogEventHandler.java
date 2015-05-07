@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEventFormats;
 
 /**
  * A handler that records events to a log file in the plain text format.
@@ -44,7 +45,7 @@ public final class TextLogEventHandler implements LogEventHandler {
 
   @Override
   public void onEvent(TraceEvent event, long sequence, boolean endOfBatch) throws IOException {
-    event.appendTextRecord(writer);
+    TraceEventFormats.writeTextRecord(event, writer);
     writer.write(System.lineSeparator());
     if (endOfBatch) {
       writer.flush();
