@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
@@ -32,6 +33,7 @@ import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
+import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -84,8 +86,12 @@ public final class IsValidBoundedLocalCache<K, V>
     if (cache.evicts()) {
       desc.expectThat("overflow", cache.maximum(),
           is(greaterThanOrEqualTo(cache.adjustedWeightedSize())));
-      desc.expectThat("unlocked", cache.evictionLock.isLocked(), is(false));
     }
+
+    boolean locked = (cache.evictionLock instanceof NonReentrantLock)
+        ? ((NonReentrantLock) cache.evictionLock).isLocked()
+        : ((ReentrantLock) cache.evictionLock).isLocked();
+    desc.expectThat("locked", locked, is(false));
 
     if (cache.isEmpty()) {
       desc.expectThat("empty map", cache, emptyMap());

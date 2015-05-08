@@ -49,6 +49,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -111,21 +113,19 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
    * time-to-live policy.
    */
 
+  static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
+
   /** The maximum weighted capacity of the map. */
   static final long MAXIMUM_CAPACITY = Long.MAX_VALUE - Integer.MAX_VALUE;
-
-  /** The maximum number of write operations to perform per amortized drain. */
-  static final int WRITE_BUFFER_DRAIN_THRESHOLD = 16;
-
-  static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
   final AtomicReference<DrainStatus> drainStatus;
   final Consumer<Node<K, V>> accessPolicy;
   final Buffer<Node<K, V>> readBuffer;
-  final NonReentrantLock evictionLock;
+  final Runnable drainBuffersTask;
   final NodeFactory nodeFactory;
   final Weigher<K, V> weigher;
+  final Lock evictionLock;
   final boolean isAsync;
   final long id;
 
@@ -138,10 +138,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   protected BoundedLocalCache(Caffeine<K, V> builder, boolean isAsync) {
     this.isAsync = isAsync;
     weigher = builder.getWeigher(isAsync);
-    evictionLock = new NonReentrantLock();
     id = tracer().register(builder.name());
     drainStatus = new AtomicReference<DrainStatus>(IDLE);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
+    evictionLock = builder.hasExecutor() ? new ReentrantLock() : new NonReentrantLock();
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
@@ -152,6 +152,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     accessPolicy = (evicts() || expiresAfterAccess())
         ? node -> reorder(accessOrderDeque(), node)
         : e -> {};
+    drainBuffersTask = this::cleanUp;
   }
 
   /** Returns if the node's value is currently being computed, asynchronously. */
@@ -324,8 +325,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     evictionLock.lock();
     try {
       lazySetMaximum(Math.min(maximum, MAXIMUM_CAPACITY));
-      drainBuffers();
-      evictEntries();
+      maintenance();
     } finally {
       evictionLock.unlock();
     }
@@ -344,14 +344,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   @GuardedBy("evictionLock") // must write under lock
   protected void lazySetWeightedSize(long weightedSize) {
     throw new UnsupportedOperationException();
-  }
-
-  void lazySetDrainStatus(DrainStatus drainStatus) {
-    this.drainStatus.lazySet(drainStatus);
-  }
-
-  void compareAndSetDrainStatus(DrainStatus expect, DrainStatus update) {
-    drainStatus.compareAndSet(expect, update);
   }
 
   /** Determines whether the map has exceeded its capacity. */
@@ -480,16 +472,20 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     }
     long writeTime = node.getWriteTime();
     if (((now - writeTime) > refreshAfterWriteNanos()) && node.casWriteTime(writeTime, now)) {
-      executor().execute(() -> {
-        K key = node.getKey();
-        if ((key != null) && node.isAlive()) {
-          try {
-            computeIfPresent(key, cacheLoader()::reload);
-          } catch (Throwable t) {
-            logger.log(Level.WARNING, "Exception thrown during reload", t);
+      try {
+        executor().execute(() -> {
+          K key = node.getKey();
+          if ((key != null) && node.isAlive()) {
+            try {
+              computeIfPresent(key, cacheLoader()::reload);
+            } catch (Throwable t) {
+              logger.log(Level.WARNING, "Exception thrown during reload", t);
+            }
           }
-        }
-      });
+        });
+      } catch (Throwable t) {
+        logger.log(Level.SEVERE, "Exception thrown when submitting refresh task", t);
+      }
     }
   }
 
@@ -501,7 +497,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   void drainOnReadIfNeeded(boolean delayable) {
     final DrainStatus status = drainStatus.get();
     if (status.shouldDrainBuffers(delayable)) {
-      tryToDrainBuffers();
+      scheduleDrainBuffers();
     }
   }
 
@@ -520,35 +516,53 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     if (buffersWrites()) {
       writeQueue().add(task);
     }
-    lazySetDrainStatus(REQUIRED);
-    tryToDrainBuffers();
+    drainStatus.lazySet(REQUIRED);
+    scheduleDrainBuffers();
   }
 
   /**
-   * Attempts to acquire the eviction lock and apply the pending operations, up to the amortized
-   * threshold, to the page replacement policy.
+   * Attempts to schedule an asynchronous task to apply the pending operations to the page
+   * replacement policy. If the executor rejects the task then it is run directly.
    */
-  void tryToDrainBuffers() {
+  void scheduleDrainBuffers() {
     if (evictionLock.tryLock()) {
       try {
-        lazySetDrainStatus(PROCESSING);
-        drainBuffers();
+        drainStatus.lazySet(PROCESSING);
+        executor().execute(drainBuffersTask);
+      } catch (Throwable t) {
+        cleanUp();
+        logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
       } finally {
-        compareAndSetDrainStatus(PROCESSING, IDLE);
         evictionLock.unlock();
       }
     }
   }
 
-  /** Drains the read and write buffers up to an amortized threshold. */
+  @Override
+  public void cleanUp() {
+    evictionLock.lock();
+    try {
+      drainStatus.lazySet(PROCESSING);
+      maintenance();
+    } finally {
+      drainStatus.compareAndSet(PROCESSING, IDLE);
+      evictionLock.unlock();
+    }
+  }
+
+  /**
+   * Performs the pending maintenance work. The read buffer, write buffer, and reference queues are
+   * drained, followed by expiration, and size-based eviction.
+   */
   @GuardedBy("evictionLock")
-  void drainBuffers() {
+  void maintenance() {
     drainReadBuffer();
     drainWriteBuffer();
-    expire();
-
     drainKeyReferences();
     drainValueReferences();
+
+    expire();
+    evictEntries();
   }
 
   /** Drains the weak key references queue. */
@@ -598,17 +612,14 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     }
   }
 
-  /** Drains the read buffer up to an amortized threshold. */
+  /** Drains the write buffer. */
   @GuardedBy("evictionLock")
   void drainWriteBuffer() {
     if (!buffersWrites()) {
       return;
     }
-    for (int i = 0; i < WRITE_BUFFER_DRAIN_THRESHOLD; i++) {
-      final Runnable task = writeQueue().poll();
-      if (task == null) {
-        break;
-      }
+    Runnable task;
+    while ((task = writeQueue().poll()) != null) {
       task.run();
     }
   }
@@ -657,7 +668,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
         if (evicts() || expiresAfterAccess()) {
           accessOrderDeque().add(node);
         }
-        evictEntries();
       }
 
       // Ensure that in-flight async computation cannot expire
@@ -717,7 +727,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (expiresAfterWrite()) {
         reorder(writeOrderDeque(), node);
       }
-      evictEntries();
     }
   }
 
@@ -828,7 +837,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       if (recordStats) {
         statsCounter().recordMisses(1);
       }
-      tryToDrainBuffers();
+      scheduleDrainBuffers();
       return null;
     }
     afterRead(node, recordStats);
@@ -1282,20 +1291,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   }
 
   @Override
-  public void cleanUp() {
-    evictionLock.lock();
-    try {
-      drainBuffers();
-    } finally {
-      evictionLock.unlock();
-    }
-  }
-
-  void asyncCleanup() {
-    executor().execute(this::cleanUp);
-  }
-
-  @Override
   public Set<K> keySet() {
     final Set<K> ks = keySet;
     return (ks == null) ? (keySet = new KeySet()) : ks;
@@ -1329,7 +1324,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     Caffeine.requireArgument(limit >= 0);
     evictionLock.lock();
     try {
-      drainBuffers();
+      maintenance();
 
       final int initialCapacity = (weigher == Weigher.singleton())
           ? Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size())
@@ -1755,7 +1750,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setExpiresAfterAccessNanos(unit.toNanos(duration));
-        cache.asyncCleanup();
+        cache.executor().execute(cache.drainBuffersTask);
       }
       @Override public Map<K, V> oldest(int limit) {
         return cache.orderedMap(cache.accessOrderDeque(), transformer, true, limit);
@@ -1783,7 +1778,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setExpiresAfterWriteNanos(unit.toNanos(duration));
-        cache.asyncCleanup();
+        cache.executor().execute(cache.drainBuffersTask);
       }
       @Override public Map<K, V> oldest(int limit) {
         return cache.orderedMap(cache.writeOrderDeque(), transformer, true, limit);
@@ -1811,7 +1806,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setRefreshAfterWriteNanos(unit.toNanos(duration));
-        cache.asyncCleanup();
+        cache.executor().execute(cache.drainBuffersTask);
       }
       @Override public Map<K, V> oldest(int limit) {
         return cache.expiresAfterWrite()

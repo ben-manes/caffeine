@@ -36,8 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.TestCase;
-
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -53,6 +51,8 @@ import com.google.common.collect.Sets;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
+
+import junit.framework.TestCase;
 
 /**
  * Unit tests for Caffeine.
@@ -145,6 +145,7 @@ public class CacheBuilderTest extends TestCase {
   @GwtIncompatible("maximumWeight")
   public void testMaximumWeight_withoutWeigher() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder()
+        .executor(MoreExecutors.directExecutor())
         .maximumWeight(1);
     try {
       CaffeinatedGuava.build(builder, identityLoader());

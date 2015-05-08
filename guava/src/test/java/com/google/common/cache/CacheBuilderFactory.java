@@ -30,6 +30,7 @@ import com.google.common.cache.LocalCache.Strength;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Helper class for creating {@link CacheBuilder} instances with all combinations of several sets of
@@ -179,6 +180,7 @@ class CacheBuilderFactory {
     } else if (valueStrength == Strength.SOFT) {
       builder.softValues();
     }
+    builder.executor(MoreExecutors.directExecutor());
     return builder;
   }
 

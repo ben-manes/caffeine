@@ -25,8 +25,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import junit.framework.TestCase;
-
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
@@ -38,6 +36,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
+
+import junit.framework.TestCase;
 
 /**
  * Test suite for {@link CacheBuilder}.
@@ -85,8 +85,9 @@ public class CacheBuilderGwtTest extends TestCase {
   }
 
   public void testSizeConstraint() {
-    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(
-        Caffeine.newBuilder().maximumSize(4));
+    final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .executor(MoreExecutors.directExecutor())
+        .maximumSize(4));
 
     cache.put(1, 10);
     cache.put(2, 20);
@@ -139,6 +140,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testExpireAfterAccess() {
     final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(1000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(0, 10);
@@ -155,6 +157,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testExpireAfterWrite() {
     final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(10, 100);
@@ -182,6 +185,7 @@ public class CacheBuilderGwtTest extends TestCase {
     final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .expireAfterAccess(500, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(10, 100);
@@ -372,6 +376,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testAsMap_containsValue() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(20000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(654, 2675);
@@ -389,6 +394,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testAsMap_containsKey() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(20000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(654, 2675);
@@ -406,6 +412,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testAsMapValues_contains() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(10, 20);
@@ -423,6 +430,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testAsMapKeySet() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(10, 20);
@@ -444,6 +452,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testAsMapKeySet_contains() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(10, 20);
@@ -461,6 +470,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testAsMapEntrySet() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(10, 20);
@@ -480,6 +490,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testAsMapValues_iteratorRemove() {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .ticker(fakeTicker));
 
     cache.put(10, 20);

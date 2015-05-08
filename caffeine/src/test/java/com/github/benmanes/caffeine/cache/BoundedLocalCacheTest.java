@@ -30,6 +30,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -72,6 +74,7 @@ public final class BoundedLocalCacheTest {
   @Test
   public void putWeighted_noOverflow() {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .executor(CacheExecutor.DIRECT.get())
         .weigher(CacheWeigher.MAX_VALUE)
         .maximumWeight(Long.MAX_VALUE)
         .build();
@@ -118,7 +121,7 @@ public final class BoundedLocalCacheTest {
         }
       });
       checkStatus(node, Status.RETIRED);
-      localCache.drainBuffers();
+      localCache.maintenance();
 
       checkStatus(node, Status.DEAD);
       assertThat(localCache.containsKey(newEntry.getKey()), is(true));
@@ -178,7 +181,7 @@ public final class BoundedLocalCacheTest {
 
   private void checkContainsInOrder(BoundedLocalCache<Integer, Integer> localCache,
       Integer... expect) {
-    localCache.drainBuffers();
+    localCache.maintenance();
     List<Integer> evictionList = Lists.newArrayList();
     localCache.accessOrderDeque().forEach(
         node -> evictionList.add(node.getKey()));
@@ -240,7 +243,7 @@ public final class BoundedLocalCacheTest {
     Node<Integer, Integer> first = cache.accessOrderDeque().peek();
 
     operation.run();
-    cache.drainBuffers();
+    cache.maintenance();
 
     assertThat(cache.accessOrderDeque().peekFirst(), is(not(first)));
     assertThat(cache.accessOrderDeque().peekLast(), is(first));
@@ -313,8 +316,8 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     AtomicBoolean done = new AtomicBoolean();
     Runnable task = () -> {
-      localCache.lazySetDrainStatus(DrainStatus.REQUIRED);
-      localCache.tryToDrainBuffers();
+      localCache.drainStatus.lazySet(DrainStatus.REQUIRED);
+      localCache.scheduleDrainBuffers();
       done.set(true);
     };
     localCache.evictionLock.lock();
@@ -352,19 +355,25 @@ public final class BoundedLocalCacheTest {
   }
 
   void checkDrainBlocks(BoundedLocalCache<Integer, Integer> localCache, Runnable task) {
-    NonReentrantLock lock = localCache.evictionLock;
     AtomicBoolean done = new AtomicBoolean();
+    Lock lock = localCache.evictionLock;
     lock.lock();
     try {
       executor.execute(() -> {
-        localCache.lazySetDrainStatus(DrainStatus.REQUIRED);
+        localCache.drainStatus.lazySet(DrainStatus.REQUIRED);
         task.run();
         done.set(true);
       });
-      Awaits.await().until(lock::hasQueuedThreads);
+      Awaits.await().until(() -> hasQueuedThreads(lock));
     } finally {
       lock.unlock();
     }
     Awaits.await().untilTrue(done);
+  }
+
+  private boolean hasQueuedThreads(Lock lock) {
+    return (lock instanceof NonReentrantLock)
+        ? ((NonReentrantLock) lock).hasQueuedThreads()
+        : ((ReentrantLock) lock).hasQueuedThreads();
   }
 }

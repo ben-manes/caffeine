@@ -99,8 +99,8 @@ public final class Stresser {
         System.out.printf("Pending reads = %s%n", pendingReads);
         System.out.printf("Pending write = %s%n", pendingWrites);
         System.out.printf("Drain status = %s%n", local.drainStatus.get());
-        System.out.printf("Lock status = %s%n", local.evictionLock.isLocked());
         System.out.printf("Evictions = %,d%n", evictions.intValue());
+        System.out.printf("Lock = %s%n", local.evictionLock);
       }
     };
   }
