@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -30,6 +31,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
+import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -157,6 +159,8 @@ public final class IsValidBoundedLocalCache<K, V>
       if ((key != null) && (value != null)) {
         desc.expectThat("inconsistent", cache.containsKey(key), is(true));
       }
+      desc.expectThat("Invalid reference type",
+          node.getKeyReference(), instanceOf(WeakKeyReference.class));
     } else {
       desc.expectThat("not null key", key, is(not(nullValue())));
     }
