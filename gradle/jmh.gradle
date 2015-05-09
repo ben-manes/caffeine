@@ -24,7 +24,7 @@ tasks.jmh {
 }
 
 jmh {
-  jmhVersion = '1.9'
+  jmhVersion = '1.9.2'
 
   if (project.hasProperty('includePattern')) {
     include = project.includePattern
