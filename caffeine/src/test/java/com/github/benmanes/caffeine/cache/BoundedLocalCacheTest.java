@@ -316,7 +316,7 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     AtomicBoolean done = new AtomicBoolean();
     Runnable task = () -> {
-      localCache.drainStatus.lazySet(DrainStatus.REQUIRED);
+      localCache.lazySetDrainStatus(DrainStatus.REQUIRED);
       localCache.scheduleDrainBuffers();
       done.set(true);
     };
@@ -360,7 +360,7 @@ public final class BoundedLocalCacheTest {
     lock.lock();
     try {
       executor.execute(() -> {
-        localCache.drainStatus.lazySet(DrainStatus.REQUIRED);
+        localCache.lazySetDrainStatus(DrainStatus.REQUIRED);
         task.run();
         done.set(true);
       });

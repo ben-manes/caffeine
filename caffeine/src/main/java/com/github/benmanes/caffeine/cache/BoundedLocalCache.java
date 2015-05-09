@@ -48,7 +48,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
@@ -61,6 +60,8 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.github.benmanes.caffeine.base.UnsafeAccess;
+import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -80,7 +81,8 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  * @param <V> the type of mapped values
  */
 @ThreadSafe
-abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements LocalCache<K, V> {
+abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
+    implements LocalCache<K, V> {
 
   /*
    * This class performs a best-effort bounding of a ConcurrentHashMap using a page-replacement
@@ -119,7 +121,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   static final long MAXIMUM_CAPACITY = Long.MAX_VALUE - Integer.MAX_VALUE;
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
-  final AtomicReference<DrainStatus> drainStatus;
   final Consumer<Node<K, V>> accessPolicy;
   final Buffer<Node<K, V>> readBuffer;
   final Runnable drainBuffersTask;
@@ -139,7 +140,6 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     this.isAsync = isAsync;
     weigher = builder.getWeigher(isAsync);
     id = tracer().register(builder.name());
-    drainStatus = new AtomicReference<DrainStatus>(IDLE);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     evictionLock = builder.hasExecutor() ? new ReentrantLock() : new NonReentrantLock();
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
@@ -495,7 +495,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
    * @param delayable if draining the read buffer can be delayed
    */
   void drainOnReadIfNeeded(boolean delayable) {
-    final DrainStatus status = drainStatus.get();
+    final DrainStatus status = drainStatus;
     if (status.shouldDrainBuffers(delayable)) {
       scheduleDrainBuffers();
     }
@@ -516,7 +516,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
     if (buffersWrites()) {
       writeQueue().add(task);
     }
-    drainStatus.lazySet(REQUIRED);
+    lazySetDrainStatus(REQUIRED);
     scheduleDrainBuffers();
   }
 
@@ -527,7 +527,7 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   void scheduleDrainBuffers() {
     if (evictionLock.tryLock()) {
       try {
-        drainStatus.lazySet(PROCESSING);
+        lazySetDrainStatus(PROCESSING);
         executor().execute(drainBuffersTask);
       } catch (Throwable t) {
         cleanUp();
@@ -542,10 +542,10 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
   public void cleanUp() {
     evictionLock.lock();
     try {
-      drainStatus.lazySet(PROCESSING);
+      lazySetDrainStatus(PROCESSING);
       maintenance();
     } finally {
-      drainStatus.compareAndSet(PROCESSING, IDLE);
+      casDrainStatus(PROCESSING, IDLE);
       evictionLock.unlock();
     }
   }
@@ -1930,6 +1930,31 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
       proxy.loader = loader;
       proxy.async = true;
       return proxy;
+    }
+  }
+}
+
+/** The namespace for field padding through inheritance. */
+final class BLCHeader {
+
+  static abstract class PadDrainStatus<K, V> extends AbstractMap<K, V> {
+    long p00, p01, p02, p03, p04, p05, p06, p07;
+    long p30, p31, p32, p33, p34, p35, p36, p37;
+  }
+
+  /** Enforces a memory layout to avoid false sharing by padding the drain status. */
+  static abstract class DrainStatusRef<K, V> extends PadDrainStatus<K, V> {
+    static final long DRAIN_STATUS_OFFSET =
+        UnsafeAccess.objectFieldOffset(DrainStatusRef.class, "drainStatus");
+
+    volatile DrainStatus drainStatus = IDLE;
+
+    void lazySetDrainStatus(DrainStatus drainStatus) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, DRAIN_STATUS_OFFSET, drainStatus);
+    }
+
+    boolean casDrainStatus(DrainStatus expect, DrainStatus update) {
+      return UnsafeAccess.UNSAFE.compareAndSwapObject(this, DRAIN_STATUS_OFFSET, expect, update);
     }
   }
 }

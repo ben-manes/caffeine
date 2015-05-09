@@ -57,7 +57,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
     return new RingBuffer<>(e);
   }
 
-  static final class RingBuffer<E> extends ReadAndWriteCounterRef implements Buffer<E> {
+  static final class RingBuffer<E> extends BBHeader.ReadAndWriteCounterRef implements Buffer<E> {
     final AtomicReference<E>[] buffer;
 
     @SuppressWarnings({"unchecked", "cast", "rawtypes"})
@@ -121,44 +121,48 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
   }
 }
 
-abstract class PadReadCounter {
-  long p00, p01, p02, p03, p04, p05, p06, p07;
-  long p30, p31, p32, p33, p34, p35, p36, p37;
-}
+/** The namespace for field padding through inheritance. */
+final class BBHeader {
 
-/** Enforces a memory layout to avoid false sharing by padding the read count. */
-abstract class ReadCounterRef extends PadReadCounter {
-  static final long READ_OFFSET =
-      UnsafeAccess.objectFieldOffset(ReadCounterRef.class, "readCounter");
-
-  volatile long readCounter;
-
-  void lazySetReadCounter(long count) {
-    UnsafeAccess.UNSAFE.putOrderedLong(this, READ_OFFSET, count);
-  }
-}
-
-abstract class PadWriteCounter extends ReadCounterRef {
-  long p00, p01, p02, p03, p04, p05, p06, p07;
-  long p30, p31, p32, p33, p34, p35, p36, p37;
-}
-
-/** Enforces a memory layout to avoid false sharing by padding the write count. */
-abstract class ReadAndWriteCounterRef extends PadWriteCounter {
-  static final long WRITE_OFFSET =
-      UnsafeAccess.objectFieldOffset(ReadAndWriteCounterRef.class, "writeCounter");
-
-  volatile long writeCounter;
-
-  ReadAndWriteCounterRef(int writes) {
-    UnsafeAccess.UNSAFE.putOrderedLong(this, WRITE_OFFSET, writes);
+  static abstract class PadReadCounter {
+    long p00, p01, p02, p03, p04, p05, p06, p07;
+    long p30, p31, p32, p33, p34, p35, p36, p37;
   }
 
-  long relaxedTail() {
-    return UnsafeAccess.UNSAFE.getLong(this, WRITE_OFFSET);
+  /** Enforces a memory layout to avoid false sharing by padding the read count. */
+  static abstract class ReadCounterRef extends PadReadCounter {
+    static final long READ_OFFSET =
+        UnsafeAccess.objectFieldOffset(ReadCounterRef.class, "readCounter");
+
+    volatile long readCounter;
+
+    void lazySetReadCounter(long count) {
+      UnsafeAccess.UNSAFE.putOrderedLong(this, READ_OFFSET, count);
+    }
   }
 
-  boolean casWriteCounter(long expect, long update) {
-    return UnsafeAccess.UNSAFE.compareAndSwapLong(this, WRITE_OFFSET, expect, update);
+  static abstract class PadWriteCounter extends ReadCounterRef {
+    long p00, p01, p02, p03, p04, p05, p06, p07;
+    long p30, p31, p32, p33, p34, p35, p36, p37;
+  }
+
+  /** Enforces a memory layout to avoid false sharing by padding the write count. */
+  static abstract class ReadAndWriteCounterRef extends PadWriteCounter {
+    static final long WRITE_OFFSET =
+        UnsafeAccess.objectFieldOffset(ReadAndWriteCounterRef.class, "writeCounter");
+
+    volatile long writeCounter;
+
+    ReadAndWriteCounterRef(int writes) {
+      UnsafeAccess.UNSAFE.putOrderedLong(this, WRITE_OFFSET, writes);
+    }
+
+    long relaxedTail() {
+      return UnsafeAccess.UNSAFE.getLong(this, WRITE_OFFSET);
+    }
+
+    boolean casWriteCounter(long expect, long update) {
+      return UnsafeAccess.UNSAFE.compareAndSwapLong(this, WRITE_OFFSET, expect, update);
+    }
   }
 }
