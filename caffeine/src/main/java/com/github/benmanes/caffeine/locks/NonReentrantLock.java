@@ -332,7 +332,7 @@ public class NonReentrantLock implements Lock, Serializable {
 
     @Override
     public void unlock() {
-      release(1);
+      release(UNLOCKED);
     }
 
     @Override
@@ -375,7 +375,7 @@ public class NonReentrantLock implements Lock, Serializable {
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException {
       s.defaultReadObject();
-      setState(0); // reset to unlocked state
+      setState(UNLOCKED);
     }
   }
 }

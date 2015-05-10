@@ -63,7 +63,9 @@ public enum CacheType {
   },
   Guava {
     @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return CacheBuilder.newBuilder().<K, V>build().asMap();
+      return CacheBuilder.newBuilder()
+          .maximumSize(maximumSize).<K, V>build()
+          .asMap();
     }
     @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
       return CacheBuilder.newBuilder()

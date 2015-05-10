@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/ben-manes/caffeine.svg)](https://travis-ci.org/ben-manes/caffeine)
 [![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine)
+[![JavaDoc](https://img.shields.io/badge/javadoc-1.2.0-brightgreen.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
 [![License](http://img.shields.io/:license-apache-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 Caffeine is a Java 8 based concurrency library that provides specialized data structures, such as a
@@ -28,7 +29,7 @@ Snapshots of the development version are available in
  * notification of evicted (or otherwise removed) entries
  * accumulation of cache access statistics
 
-In addition, Caffeine ([javadoc][3]) offers the following extensions:
+In addition, Caffeine offers the following extensions:
  * [tracing][4] ([api javadoc][5], [async javadoc][6])
  * [simulation][7] ([javadoc][8])
  * [JSR-107 JCache][9] ([javadoc][10])
