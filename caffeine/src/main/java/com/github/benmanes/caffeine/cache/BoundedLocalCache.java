@@ -15,9 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.IDLE;
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.PROCESSING;
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus.REQUIRED;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
@@ -61,7 +58,6 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -461,7 +457,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     node.setAccessTime(now);
 
     boolean delayable = (readBuffer.offer(node) != Buffer.FULL);
-    drainOnReadIfNeeded(delayable);
+    if (shouldDrainBuffers(delayable)) {
+      scheduleDrainBuffers();
+    }
     refreshIfNeeded(node, now);
   }
 
@@ -486,18 +484,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       } catch (Throwable t) {
         logger.log(Level.SEVERE, "Exception thrown when submitting refresh task", t);
       }
-    }
-  }
-
-  /**
-   * Attempts to drain the buffers if it is determined to be needed when post-processing a read.
-   *
-   * @param delayable if draining the read buffer can be delayed
-   */
-  void drainOnReadIfNeeded(boolean delayable) {
-    final DrainStatus status = drainStatus;
-    if (status.shouldDrainBuffers(delayable)) {
-      scheduleDrainBuffers();
     }
   }
 
@@ -1354,39 +1340,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /** The draining status of the buffers. */
-  enum DrainStatus {
-
-    /** A drain is not taking place. */
-    IDLE {
-      @Override boolean shouldDrainBuffers(boolean delayable) {
-        return !delayable;
-      }
-    },
-
-    /** A drain is required due to a pending write modification. */
-    REQUIRED {
-      @Override boolean shouldDrainBuffers(boolean delayable) {
-        return true;
-      }
-    },
-
-    /** A drain is in progress. */
-    PROCESSING {
-      @Override boolean shouldDrainBuffers(boolean delayable) {
-        return false;
-      }
-    };
-
-    /**
-     * Determines whether the buffers should be drained.
-     *
-     * @param delayable if a drain should be delayed until required
-     * @return if a drain should be attempted
-     */
-    abstract boolean shouldDrainBuffers(boolean delayable);
-  }
-
   /** An adapter to safely externalize the keys. */
   final class KeySet extends AbstractSet<K> {
     final BoundedLocalCache<K, V> map = BoundedLocalCache.this;
@@ -1954,14 +1907,40 @@ final class BLCHeader {
     static final long DRAIN_STATUS_OFFSET =
         UnsafeAccess.objectFieldOffset(DrainStatusRef.class, "drainStatus");
 
-    volatile DrainStatus drainStatus = IDLE;
+    /** A drain is not taking place. */
+    static final int IDLE = 0;
+    /** A drain is required due to a pending write modification. */
+    static final int REQUIRED = 1;
+    /** A drain is in progress. */
+    static final int PROCESSING = 2;
 
-    void lazySetDrainStatus(DrainStatus drainStatus) {
-      UnsafeAccess.UNSAFE.putOrderedObject(this, DRAIN_STATUS_OFFSET, drainStatus);
+    /** The draining status of the buffers. */
+    volatile int drainStatus = IDLE;
+
+    /**
+     * Returns whether maintenance work is needed.
+     *
+     * @param delayable if draining the read buffer can be delayed
+     */
+    boolean shouldDrainBuffers(boolean delayable) {
+      switch (drainStatus) {
+        case IDLE:
+          return !delayable;
+        case REQUIRED:
+          return true;
+        case PROCESSING:
+          return false;
+        default:
+          throw new IllegalStateException();
+      }
     }
 
-    boolean casDrainStatus(DrainStatus expect, DrainStatus update) {
-      return UnsafeAccess.UNSAFE.compareAndSwapObject(this, DRAIN_STATUS_OFFSET, expect, update);
+    void lazySetDrainStatus(int drainStatus) {
+      UnsafeAccess.UNSAFE.putOrderedInt(this, DRAIN_STATUS_OFFSET, drainStatus);
+    }
+
+    boolean casDrainStatus(int expect, int update) {
+      return UnsafeAccess.UNSAFE.compareAndSwapInt(this, DRAIN_STATUS_OFFSET, expect, update);
     }
   }
 }

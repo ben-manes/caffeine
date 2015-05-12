@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static java.util.Arrays.asList;
@@ -37,7 +38,6 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.DrainStatus;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
@@ -316,7 +316,7 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     AtomicBoolean done = new AtomicBoolean();
     Runnable task = () -> {
-      localCache.lazySetDrainStatus(DrainStatus.REQUIRED);
+      localCache.lazySetDrainStatus(REQUIRED);
       localCache.scheduleDrainBuffers();
       done.set(true);
     };
@@ -360,7 +360,7 @@ public final class BoundedLocalCacheTest {
     lock.lock();
     try {
       executor.execute(() -> {
-        localCache.lazySetDrainStatus(DrainStatus.REQUIRED);
+        localCache.lazySetDrainStatus(REQUIRED);
         task.run();
         done.set(true);
       });
