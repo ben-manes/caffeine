@@ -892,14 +892,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     requireNonNull(key);
     requireNonNull(value);
 
-    final long now = ticker().read();
-    final int weight = weigher.weigh(key, value);
-    final Node<K, V> node = nodeFactory.newNode(key, keyReferenceQueue(),
-        value, valueReferenceQueue(), weight, now);
+    Node<K, V> node = null;
+    long now = ticker().read();
+    int weight = weigher.weigh(key, value);
     tracer().recordWrite(id, key, weight);
 
     for (;;) {
-      final Node<K, V> prior = data.putIfAbsent(node.getKeyReference(), node);
+      Node<K, V> prior = data.get(nodeFactory.newLookupKey(key));
+      if (prior == null) {
+        if (node == null) {
+          node = nodeFactory.newNode(key, keyReferenceQueue(),
+              value, valueReferenceQueue(), weight, now);
+        }
+        prior = data.putIfAbsent(node.getKeyReference(), node);
+      }
+
       if (prior == null) {
         afterWrite(node, new AddTask(node, weight));
         return null;

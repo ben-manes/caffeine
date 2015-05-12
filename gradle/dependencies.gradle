@@ -45,7 +45,7 @@ ext {
     jimfs: '1.0',
     junit: '4.12',
     mockito: '1.10.19',
-    testng: '6.8.21',
+    testng: '6.9.4',
     truth: '0.24',
   ]
   benchmark_versions = [
@@ -58,7 +58,7 @@ ext {
   plugin_versions = [
     bundle: '0.6.2',
     checkstyle: '6.6',
-    coveralls: '2.3.1',
+    coveralls: '2.4.0',
     error_prone: '0.0.7-SNAPSHOT',
     jmh: '0.2.0',
     nexus: '2.3.1',
