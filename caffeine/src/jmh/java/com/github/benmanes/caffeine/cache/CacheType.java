@@ -15,80 +15,121 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Collections;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
+import org.ehcache.config.Eviction.Prioritizer;
+import org.infinispan.commons.equivalence.IdentityEquivalence;
+import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8;
+import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.Eviction;
+import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.EvictionListener;
+import org.infinispan.util.concurrent.BoundedConcurrentHashMap;
 
-import com.github.benmanes.caffeine.cache.map.BoundedLinkedHashMap;
-import com.github.benmanes.caffeine.cache.map.ConcurrentHashMapV7;
+import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
+import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
+import com.github.benmanes.caffeine.cache.impl.Ehcache2;
+import com.github.benmanes.caffeine.cache.impl.Ehcache3;
+import com.github.benmanes.caffeine.cache.impl.LinkedHashMapCache;
+import com.github.benmanes.caffeine.cache.tracing.Tracer;
 import com.google.common.cache.CacheBuilder;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+
+import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum CacheType {
   Caffeine {
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
-          .maximumSize(maximumSize)
-          .<K, V>build()
-          .asMap();
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      System.setProperty(Tracer.TRACING_ENABLED, "false");
+      return new ConcurrentMapCache<>(
+          com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+              .maximumSize(maximumSize)
+              .<K, V>build()
+              .asMap());
     }
   },
   ConcurrentHashMapV7 { // unbounded, see OpenJDK/7u40-b43
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return new ConcurrentHashMapV7<K, V>(maximumSize);
-    }
-    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
-      return new ConcurrentHashMapV7<K, V>(maximumSize, 0.75f, concurrencyLevel);
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ConcurrentMapCache<>(
+          new ConcurrentHashMapV7<>(maximumSize, 0.75f, CONCURRENCY_LEVEL));
     }
   },
   ConcurrentHashMap { // unbounded
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return new ConcurrentHashMap<K, V>(maximumSize);
-    }
-    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
-      return new ConcurrentHashMap<K, V>(maximumSize, 0.75f, concurrencyLevel);
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ConcurrentMapCache<>(new ConcurrentHashMap<K, V>(maximumSize));
     }
   },
   ConcurrentLinkedHashMap {
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return new ConcurrentLinkedHashMap.Builder<K, V>()
-        .maximumWeightedCapacity(maximumSize)
-        .build();
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ConcurrentMapCache<>(
+          new ConcurrentLinkedHashMap.Builder<K, V>()
+            .maximumWeightedCapacity(maximumSize)
+            .build());
     }
   },
   Guava {
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return CacheBuilder.newBuilder()
-          .maximumSize(maximumSize).<K, V>build()
-          .asMap();
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ConcurrentMapCache<>(
+          CacheBuilder.newBuilder()
+              .concurrencyLevel(CONCURRENCY_LEVEL)
+              .maximumSize(maximumSize)
+              .<K, V>build()
+              .asMap());
     }
-    @Override public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
-      return CacheBuilder.newBuilder()
-          .concurrencyLevel(concurrencyLevel)
-          .maximumSize(maximumSize)
-          .<K, V>build()
-          .asMap();
+  },
+  Infinispan_Old_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ConcurrentMapCache<>(new BoundedConcurrentHashMap<>(
+          maximumSize, CONCURRENCY_LEVEL, BoundedConcurrentHashMap.Eviction.LRU,
+          new IdentityEquivalence<>(), new IdentityEquivalence<>()));
+    }
+  },
+  Infinispan_New_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      final class NullEvictionListener implements EvictionListener<K, V> {
+        @Override public void onEntryEviction(Map<K, V> evicted) {}
+        @Override public void onEntryChosenForEviction(Entry<K, V> entry) {}
+        @Override public void onEntryActivated(Object key) {}
+        @Override public void onEntryRemoved(Entry<K, V> entry) {}
+      };
+      return new ConcurrentMapCache<>(
+          new BoundedEquivalentConcurrentHashMapV8<>(
+              maximumSize, Eviction.LRU, new NullEvictionListener(),
+              new IdentityEquivalence<>(), new IdentityEquivalence<>()));
+    }
+  },
+  Ehcache2_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new Ehcache2<>(MemoryStoreEvictionPolicy.LRU, maximumSize);
+    }
+  },
+  Ehcache3_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new Ehcache3<>(Prioritizer.LRU, maximumSize);
     }
   },
   LinkedHashMap_Lru {
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return Collections.synchronizedMap(new BoundedLinkedHashMap<K, V>(true, maximumSize));
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new LinkedHashMapCache<K, V>(true, maximumSize);
     }
   },
   NonBlockingHashMap { // unbounded
-    @Override public <K, V> Map<K, V> create(int maximumSize) {
-      return new NonBlockingHashMap<K, V>(maximumSize);
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ConcurrentMapCache<>(
+          new NonBlockingHashMap<K, V>(maximumSize));
     }
   };
 
-  public abstract <K, V> Map<K, V> create(int maximumSize);
+  /** The number of hash table segments. */
+  static final int CONCURRENCY_LEVEL = 64;
 
-  public <K, V> Map<K, V> create(int maximumSize, int concurrencyLevel) {
-    return create(maximumSize);
-  }
+  /**
+   * Creates the cache with the maximum size. Note that some implementations may evict prior to
+   * this threshold and it is the caller's responsibility to adjust accordingly.
+   */
+  public abstract <K, V> BasicCache<K, V> create(int maximumSize);
 }

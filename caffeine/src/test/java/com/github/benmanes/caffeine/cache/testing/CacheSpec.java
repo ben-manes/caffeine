@@ -29,10 +29,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
-import scala.concurrent.forkjoin.ThreadLocalRandom;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -252,6 +251,7 @@ public @interface CacheSpec {
     }
   }
 
+  /** The time increment to advance by after each entry is added when populating the cache. */
   enum Advance {
     ZERO(0),
     ONE_MINUTE(TimeUnit.MINUTES.toNanos(1L));

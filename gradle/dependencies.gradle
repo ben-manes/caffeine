@@ -25,7 +25,7 @@
  */
 ext {
   versions = [
-    akka: '2.3.10',
+    akka: '2.3.11',
     config: '1.3.0',
     disruptor: '3.3.2',
     flip_tables: '1.0.2',
@@ -50,21 +50,25 @@ ext {
   ]
   benchmark_versions = [
     concurrentlinkedhashmap: '1.4.2',
+    ehcache2: '2.10.0',
+    ehcache3: '3.0.0.m1',
     high_scale_lib: '1.0.6',
+    infinispan: '7.2.1.Final',
     jamm: '0.3.1',
     java_object_layout: '0.3.1',
     koloboke: '0.6.7',
+    slf4j: '1.7.12',
   ]
   plugin_versions = [
     bundle: '0.6.2',
     checkstyle: '6.6',
     coveralls: '2.4.0',
-    error_prone: '0.0.7-SNAPSHOT',
+    error_prone: '0.0.7.1',
     jmh: '0.2.0',
     nexus: '2.3.1',
     versions: '0.9',
     semantic_versioning: '1.1.0',
-    stats: '0.1.3',
+    stats: '0.1.4',
   ]
 
   libraries = [
@@ -101,13 +105,17 @@ ext {
   ]
   benchmark_libraries = [
     concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmark_versions.concurrentlinkedhashmap}",
+    ehcache2: "net.sf.ehcache:ehcache:${benchmark_versions.ehcache2}",
+    ehcache3: "org.ehcache:ehcache:${benchmark_versions.ehcache3}",
     high_scale_lib: "com.boundary:high-scale-lib:${benchmark_versions.high_scale_lib}",
+    infinispan: "org.infinispan:infinispan-core:${benchmark_versions.infinispan}",
     jamm: "com.github.jbellis:jamm:${benchmark_versions.jamm}",
     java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
     koloboke: [
       "net.openhft:koloboke-api-jdk8:${benchmark_versions.koloboke}",
       "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",
-    ]
+    ],
+    slf4j_nop: "org.slf4j:slf4j-nop:${benchmark_versions.slf4j}",
   ]
   gradle_plugins = [
     bundle: "org.dm.gradle:gradle-bundle-plugin:${plugin_versions.bundle}",

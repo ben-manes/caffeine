@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Ben Manes. All Rights Reserved.
+ * Copyright 2015 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,27 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.map;
+package com.github.benmanes.caffeine.cache.impl;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import static java.util.Objects.requireNonNull;
 
-import javax.annotation.concurrent.NotThreadSafe;
+import java.util.concurrent.ConcurrentMap;
+
+import com.github.benmanes.caffeine.cache.BasicCache;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@NotThreadSafe
-public class BoundedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
-  private static final long serialVersionUID = 1L;
-  private final int maximumSize;
+public final class ConcurrentMapCache<K, V> implements BasicCache<K, V> {
+  private final ConcurrentMap<K, V> map;
 
-  public BoundedLinkedHashMap(boolean accessOrder, int maximumSize) {
-    super(maximumSize, 0.75f, accessOrder);
-    this.maximumSize = maximumSize;
+  public ConcurrentMapCache(ConcurrentMap<K, V> map) {
+    this.map = requireNonNull(map);
   }
 
-  @Override protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-    return size() > maximumSize;
+  @Override
+  public V get(K key) {
+    return map.get(key);
+  }
+
+  @Override
+  public void put(K key, V value) {
+    map.put(key, value);
   }
 }

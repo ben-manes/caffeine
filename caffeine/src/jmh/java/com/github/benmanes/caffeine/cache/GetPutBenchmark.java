@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Group;
@@ -39,31 +38,33 @@ public class GetPutBenchmark {
 
   @Param({
     "LinkedHashMap_Lru",
-    "ConcurrentLinkedHashMap",
     "Caffeine",
+    "ConcurrentLinkedHashMap",
     "Guava",
+    "Ehcache2_Lru",
+    "Ehcache3_Lru",
+    "Infinispan_Old_Lru",
+    "Infinispan_New_Lru",
   })
   CacheType cacheType;
 
-  Map<Integer, Boolean> cache;
+  BasicCache<Integer, Boolean> cache;
   Integer[] ints;
 
   @State(Scope.Thread)
   public static class ThreadState {
-    int index = ThreadLocalRandom.current().nextInt();
+    static final Random random = new Random();
+    int index = random.nextInt();
   }
 
   @Setup
   public void setup() {
-    cache = cacheType.create(2 * SIZE, 64);
-    for (int i = 0; i < SIZE; i++) {
-      cache.put(i, Boolean.TRUE);
-    }
-
     ints = new Integer[SIZE];
+    cache = cacheType.create(2 * SIZE);
     IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextInt();
+      cache.put(ints[i], Boolean.TRUE);
     }
   }
 

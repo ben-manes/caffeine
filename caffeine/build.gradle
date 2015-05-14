@@ -35,7 +35,11 @@ dependencies {
 
   jmh libraries.flip_tables
   jmh benchmark_libraries.jamm
+  jmh benchmark_libraries.ehcache2
+  jmh benchmark_libraries.ehcache3
   jmh benchmark_libraries.koloboke
+  jmh benchmark_libraries.slf4j_nop
+  jmh benchmark_libraries.infinispan
   jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.concurrentlinkedhashmap
   

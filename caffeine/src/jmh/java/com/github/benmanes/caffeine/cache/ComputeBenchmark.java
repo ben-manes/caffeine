@@ -16,9 +16,9 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -50,7 +50,8 @@ public class ComputeBenchmark {
 
   @State(Scope.Thread)
   public static class ThreadState {
-    int index = ThreadLocalRandom.current().nextInt();
+    static final Random random = new Random();
+    int index = random.nextInt();
   }
 
   public ComputeBenchmark() {

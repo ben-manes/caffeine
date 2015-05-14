@@ -15,12 +15,12 @@
  */
 package com.github.benmanes.caffeine.profiler;
 
-import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
+import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.CacheType;
-import com.github.benmanes.caffeine.cache.tracing.Tracer;
+import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 
 /**
  * A hook for profiling caches.
@@ -28,15 +28,25 @@ import com.github.benmanes.caffeine.cache.tracing.Tracer;
  * @author Ben Manes (ben.manes@gmail.com)
  */
 public final class CacheProfiler extends ProfilerHook {
+  static final CacheType cacheType = CacheType.Caffeine;
   static final int MAX_SIZE = 2 * NUM_THREADS;
-  static final CacheType type = CacheType.Caffeine;
+  static final int SIZE = (2 << 14);
+  static final int MASK = SIZE - 1;
 
-  final Map<Long, Long> map;
+  final BasicCache<Integer, Boolean> cache;
+  final Random random = new Random();
+  final Integer[] ints;
   final boolean reads;
 
   CacheProfiler() {
-    System.setProperty(Tracer.TRACING_ENABLED, "false");
-    map = type.create(MAX_SIZE, NUM_THREADS);
+    ints = new Integer[SIZE];
+    cache = cacheType.create(2 * SIZE);
+    IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
+    for (int i = 0; i < SIZE; i++) {
+      ints[i] = generator.nextInt();
+      cache.put(ints[i], Boolean.TRUE);
+    }
+
     reads = true;
   }
 
@@ -51,20 +61,20 @@ public final class CacheProfiler extends ProfilerHook {
 
   /** Spins forever reading from the cache. */
   private void reads() {
-    Long id = Thread.currentThread().getId();
-    map.put(id, id);
+    int index = random.nextInt();
     for (;;) {
-      map.get(id);
+      Integer key = ints[index++ & MASK];
+      cache.get(key);
       calls.increment();
     }
   }
 
   /** Spins forever writing into the cache. */
   private void writes() {
-    Random random = ThreadLocalRandom.current();
+    int index = random.nextInt();
     for (;;) {
-      Long key = new Long(random.nextLong());
-      map.put(key, key);
+      Integer key = ints[index++ & MASK];
+      cache.put(key, Boolean.TRUE);
       calls.increment();
     }
   }

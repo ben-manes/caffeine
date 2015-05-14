@@ -32,7 +32,7 @@
  * Expert Group and released to the public domain, as explained at
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
-package com.github.benmanes.caffeine.cache.map;
+package com.github.benmanes.caffeine.cache.impl;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
