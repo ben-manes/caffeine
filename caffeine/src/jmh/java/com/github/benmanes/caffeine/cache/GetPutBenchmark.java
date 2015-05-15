@@ -35,6 +35,7 @@ import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGe
 public class GetPutBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;
+  private static final int ITEMS = SIZE / 4;
 
   @Param({
     "LinkedHashMap_Lru",
@@ -61,7 +62,7 @@ public class GetPutBenchmark {
   public void setup() {
     ints = new Integer[SIZE];
     cache = cacheType.create(2 * SIZE);
-    IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
+    IntegerGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextInt();
       cache.put(ints[i], Boolean.TRUE);

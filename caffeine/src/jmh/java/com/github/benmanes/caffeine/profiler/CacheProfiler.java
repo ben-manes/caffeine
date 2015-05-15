@@ -32,6 +32,7 @@ public final class CacheProfiler extends ProfilerHook {
   static final int MAX_SIZE = 2 * NUM_THREADS;
   static final int SIZE = (2 << 14);
   static final int MASK = SIZE - 1;
+  static final int ITEMS = SIZE / 4;
 
   final BasicCache<Integer, Boolean> cache;
   final Random random = new Random();
@@ -41,7 +42,7 @@ public final class CacheProfiler extends ProfilerHook {
   CacheProfiler() {
     ints = new Integer[SIZE];
     cache = cacheType.create(2 * SIZE);
-    IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
+    IntegerGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextInt();
       cache.put(ints[i], Boolean.TRUE);
