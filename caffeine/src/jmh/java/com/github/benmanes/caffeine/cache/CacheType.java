@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.ehcache.config.Eviction.Prioritizer;
-import org.infinispan.commons.equivalence.IdentityEquivalence;
+import org.infinispan.commons.equivalence.AnyEquivalence;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.Eviction;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.EvictionListener;
@@ -85,21 +85,15 @@ public enum CacheType {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new ConcurrentMapCache<>(new BoundedConcurrentHashMap<>(
           maximumSize, CONCURRENCY_LEVEL, BoundedConcurrentHashMap.Eviction.LRU,
-          new IdentityEquivalence<>(), new IdentityEquivalence<>()));
+          AnyEquivalence.getInstance(), AnyEquivalence.getInstance()));
     }
   },
   Infinispan_New_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      final class NullEvictionListener implements EvictionListener<K, V> {
-        @Override public void onEntryEviction(Map<K, V> evicted) {}
-        @Override public void onEntryChosenForEviction(Entry<K, V> entry) {}
-        @Override public void onEntryActivated(Object key) {}
-        @Override public void onEntryRemoved(Entry<K, V> entry) {}
-      };
       return new ConcurrentMapCache<>(
           new BoundedEquivalentConcurrentHashMapV8<>(
-              maximumSize, Eviction.LRU, new NullEvictionListener(),
-              new IdentityEquivalence<>(), new IdentityEquivalence<>()));
+              maximumSize, Eviction.LRU, BoundedEquivalentConcurrentHashMapV8.getNullEvictionListener(),
+              AnyEquivalence.getInstance(), AnyEquivalence.getInstance()));
     }
   },
   Ehcache2_Lru {
