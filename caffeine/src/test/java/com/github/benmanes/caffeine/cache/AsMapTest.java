@@ -220,7 +220,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void forEach_scan(Map<Integer, Integer> map, CacheContext context) {
     Map<Integer, Integer> remaining = new HashMap<>(context.original());
-    map.forEach((key, value) -> remaining.remove(key, value));
+    map.forEach(remaining::remove);
     assertThat(remaining, is(emptyMap()));
   }
 

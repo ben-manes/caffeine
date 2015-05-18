@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
@@ -24,7 +22,6 @@ import org.ehcache.config.Eviction.Prioritizer;
 import org.infinispan.commons.equivalence.AnyEquivalence;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.Eviction;
-import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.EvictionListener;
 import org.infinispan.util.concurrent.BoundedConcurrentHashMap;
 
 import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
@@ -91,8 +88,8 @@ public enum CacheType {
   Infinispan_New_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new ConcurrentMapCache<>(
-          new BoundedEquivalentConcurrentHashMapV8<>(
-              maximumSize, Eviction.LRU, BoundedEquivalentConcurrentHashMapV8.getNullEvictionListener(),
+          new BoundedEquivalentConcurrentHashMapV8<>(maximumSize, Eviction.LRU,
+              BoundedEquivalentConcurrentHashMapV8.getNullEvictionListener(),
               AnyEquivalence.getInstance(), AnyEquivalence.getInstance()));
     }
   },
