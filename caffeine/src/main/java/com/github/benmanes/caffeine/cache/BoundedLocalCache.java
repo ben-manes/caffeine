@@ -552,6 +552,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /** Drains the weak key references queue. */
+  @GuardedBy("evictionLock")
   void drainKeyReferences() {
     if (!collectKeys()) {
       return;
@@ -566,6 +567,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /** Drains the weak / soft value references queue. */
+  @GuardedBy("evictionLock")
   void drainValueReferences() {
     if (!collectValues()) {
       return;
@@ -588,7 +590,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /** Updates the node's location in the page replacement policy. */
-  @GuardedBy("evictionLock")
   static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node) {
     // An entry may be scheduled for reordering despite having been removed. This can occur when the
     // entry was concurrently read while a writer was removing it. If the entry is no longer linked

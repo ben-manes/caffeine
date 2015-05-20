@@ -53,6 +53,7 @@ import com.google.common.testing.FakeTicker;
  *
  * @author mike nonemacher
  */
+@SuppressWarnings("GuardedByChecker")
 class CacheTesting {
 
   /**

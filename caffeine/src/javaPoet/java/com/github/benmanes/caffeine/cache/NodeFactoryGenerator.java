@@ -90,7 +90,7 @@ public final class NodeFactoryGenerator {
   void generate() throws IOException {
     nodeFactory = TypeSpec.enumBuilder("NodeFactory")
         .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-            .addMember("value", "$S", "unchecked")
+            .addMember("value", "{$S, $S}", "unchecked", "GuardedByChecker")
             .build());
     addClassJavaDoc();
     addNodeStateStatics();

@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings({"GuardedByChecker", "GuardedByValidator"})
 interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */

@@ -112,6 +112,7 @@ public final class NonReentrantLockTest {
   }
 
   @Test(dataProvider = "lock")
+  @SuppressWarnings("WaitNotInLoop")
   public void condition(NonReentrantLock lock) {
     Condition condition = lock.newCondition();
     AtomicBoolean ready = new AtomicBoolean();

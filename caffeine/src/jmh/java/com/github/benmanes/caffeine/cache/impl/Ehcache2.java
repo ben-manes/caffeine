@@ -33,12 +33,12 @@ public final class Ehcache2<K, V> implements BasicCache<K, V> {
   private final Ehcache cache;
 
   public Ehcache2(MemoryStoreEvictionPolicy evictionPolicy, int maximumSize) {
-    CacheConfiguration config = new CacheConfiguration(DEFAULT_CACHE_NAME, maximumSize);
+    CacheConfiguration config = new CacheConfiguration("benchmark", maximumSize);
     config.setMemoryStoreEvictionPolicyFromObject(evictionPolicy);
-    CacheManager cacheManager = new CacheManager();
     cache = new Cache(config);
-    cache.setCacheManager(cacheManager);
-    cache.initialise();
+
+    CacheManager cacheManager = new CacheManager();
+    cacheManager.addCache(cache);
   }
 
   @Override

@@ -64,8 +64,11 @@ final class ManyToOneBuffer implements ReadBuffer {
   @Override
   public void drain() {
     if (evictionLock.tryLock()) {
-      drainUnderLock();
-      evictionLock.unlock();
+      try {
+        drainUnderLock();
+      } finally {
+        evictionLock.unlock();
+      }
     }
   }
 
@@ -97,8 +100,11 @@ final class ManyToOneBuffer implements ReadBuffer {
   @Override
   public long drained() {
     evictionLock.lock();
-    drainUnderLock();
-    evictionLock.unlock();
+    try {
+      drainUnderLock();
+    } finally {
+      evictionLock.unlock();
+    }
     return readCounter.get();
   }
 }
