@@ -23,7 +23,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import com.github.benmanes.caffeine.cache.buffer.ReadBuffer;
 import com.github.benmanes.caffeine.cache.buffer.BufferType;
 
 /**
@@ -46,7 +45,7 @@ import com.github.benmanes.caffeine.cache.buffer.BufferType;
 public class ReadBufferBenchmark {
 
   @Param BufferType bufferType;
-  ReadBuffer buffer;
+  ReadBuffer<Boolean> buffer;
 
   @Setup
   public void setup() {
@@ -55,7 +54,7 @@ public class ReadBufferBenchmark {
 
   @Benchmark @Group @GroupThreads(8)
   public void record() {
-    buffer.record();
+    buffer.offer(Boolean.TRUE);
   }
 
   @Benchmark @Group @GroupThreads(1)

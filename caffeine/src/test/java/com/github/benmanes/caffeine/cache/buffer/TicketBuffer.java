@@ -17,9 +17,9 @@ package com.github.benmanes.caffeine.cache.buffer;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
-import com.github.benmanes.caffeine.locks.NonReentrantLock;
+import com.github.benmanes.caffeine.cache.ReadBuffer;
 
 /**
  * A bounded buffer that attempts to record once. This design has the benefit of retaining a
@@ -33,8 +33,7 @@ import com.github.benmanes.caffeine.locks.NonReentrantLock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class TicketBuffer implements ReadBuffer {
-  final Lock evictionLock;
+final class TicketBuffer<E> extends ReadBuffer<E> {
   final AtomicLong writeCounter;
   final AtomicReference<Object>[] buffer;
 
@@ -43,59 +42,69 @@ final class TicketBuffer implements ReadBuffer {
   @SuppressWarnings({"unchecked", "rawtypes"})
   TicketBuffer() {
     writeCounter = new AtomicLong();
-    evictionLock = new NonReentrantLock();
-    buffer = new AtomicReference[MAX_SIZE];
-    for (int i = 0; i < MAX_SIZE; i++) {
-      buffer[i] = new AtomicReference<>((long) i);
+    buffer = new AtomicReference[BUFFER_SIZE];
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+      buffer[i] = new AtomicReference<>(new Turn(i));
     }
   }
 
   @Override
-  public boolean record() {
+  public int offer(E e) {
     final long writeCount = writeCounter.get();
 
-    final int index = (int) (writeCount & MAX_SIZE_MASK);
+    final int index = (int) (writeCount & BUFFER_MASK);
     AtomicReference<Object> slot = buffer[index];
     Object value = slot.get();
-    if (!(value instanceof Long)) {
+    if (!(value instanceof Turn)) {
       // Either full or lost due to contention - try to drain
-      return true;
-    } else if (((Long) value).longValue() != writeCount) {
+      return FULL;
+    } else if (((Turn) value).id != writeCount) {
       // Ensures CAS reference equality, race should rarely occur
-      return false;
+      return FAILED;
     }
 
     // Try to record, but we don't care if we win or lose
-    if (slot.compareAndSet(value, Boolean.TRUE)) {
+    if (slot.compareAndSet(value, e)) {
       writeCounter.lazySet(writeCount + 1);
+      return SUCCESS;
     }
-    return false;
+    return FAILED;
   }
 
   @Override
-  public void drain() {
-    if (evictionLock.tryLock()) {
-      for (int i = 0; i < MAX_SIZE; i++) {
-        final int index = (int) (readCounter & MAX_SIZE_MASK);
-        final AtomicReference<Object> slot = buffer[index];
-        if (slot.get() instanceof Long) {
-          break;
-        }
-        Long next = readCounter + MAX_SIZE;
-        slot.lazySet(next);
-        readCounter++;
+  public void drainTo(Consumer<E> consumer) {
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+      final int index = (int) (readCounter & BUFFER_MASK);
+      final AtomicReference<Object> slot = buffer[index];
+      if (slot.get() instanceof Turn) {
+        break;
       }
-      evictionLock.unlock();
+      long next = readCounter + BUFFER_SIZE;
+      slot.lazySet(new Turn(next));
+      readCounter++;
     }
   }
 
   @Override
-  public long recorded() {
-    return writeCounter.get();
+  public int reads() {
+    return (int) readCounter;
   }
 
   @Override
-  public long drained() {
-    return readCounter;
+  public int writes() {
+    return writeCounter.intValue();
+  }
+
+  static final class Turn {
+    final long id;
+
+    Turn(long id) {
+      this.id = id;
+    }
+
+    @Override
+    public String toString() {
+      return Long.toString(id);
+    }
   }
 }

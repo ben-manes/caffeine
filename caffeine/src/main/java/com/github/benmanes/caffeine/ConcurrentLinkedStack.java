@@ -725,7 +725,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
 final class CLSHeader {
   abstract static class PadTop<E> extends AbstractCollection<E> {
     long p00, p01, p02, p03, p04, p05, p06, p07;
-    long p30, p31, p32, p33, p34, p35, p36, p37;
+    long p10, p11, p12, p13, p14, p15, p16, p17;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the top of the stack. */

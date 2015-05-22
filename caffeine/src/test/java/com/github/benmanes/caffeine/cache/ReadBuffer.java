@@ -13,31 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.buffer;
+package com.github.benmanes.caffeine.cache;
+
+import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
+
+import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**
- * A read buffer strategy. The implementations should prefer failing a one-shot append rather than
- * waiting until the entry has been successfully recorded.
+ * A skeletal implementation of a read buffer strategy.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface ReadBuffer {
-  static final int MAX_SIZE = 32; // power of 2
-  static final int MAX_SIZE_MASK = MAX_SIZE - 1;
+public abstract class ReadBuffer<E> implements Buffer<E> {
+  public static final int BUFFER_SIZE = 32;
+  public static final int BUFFER_MASK = BUFFER_SIZE - 1;
+
+  final Consumer<E> consumer = any -> {};
+  final Lock evictionLock = new NonReentrantLock();
 
   /**
    * Attempts to record an event.
    *
    * @return if a drain is needed
    */
-  boolean record();
+  public boolean record(E e) {
+    return offer(e) == Buffer.FULL;
+  }
 
-  /** Attempts to drain the events. */
-  void drain();
+  /** Drains the events. */
+  public void drain() {
+    if (evictionLock.tryLock()) {
+      try {
+        drainTo(consumer);
+      } finally {
+        evictionLock.unlock();
+      }
+    }
+  }
 
   /** Returns the total number of events recorded. */
-  long recorded();
+  public int recorded() {
+    return writes();
+  }
 
   /** Returns the total number of events consumed. */
-  long drained();
+  public int drained() {
+    drain();
+    return reads();
+  }
 }

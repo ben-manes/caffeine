@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.buffer;
 
 import java.util.function.Supplier;
 
+import com.github.benmanes.caffeine.cache.ReadBuffer;
+
 /**
  * The different read buffer strategies.
  *
@@ -30,14 +32,14 @@ public enum BufferType {
   MpmcArray(MpmcArrayBuffer::new),
   MpscCompound(MpscCompoundBuffer::new);
 
-  private final Supplier<ReadBuffer> factory;
+  private final Supplier<ReadBuffer<Boolean>> factory;
 
-  private BufferType(Supplier<ReadBuffer> factory) {
+  private BufferType(Supplier<ReadBuffer<Boolean>> factory) {
     this.factory = factory;
   }
 
   /** Returns a new buffer instance. */
-  public ReadBuffer create() {
+  public ReadBuffer<Boolean> create() {
     return factory.get();
   }
 }

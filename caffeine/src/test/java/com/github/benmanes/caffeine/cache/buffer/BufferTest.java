@@ -25,6 +25,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.cache.ReadBuffer;
 
 /**
  * The tests cases for a read buffer strategy. This validates an implementation approach which can
@@ -42,42 +43,42 @@ public final class BufferTest {
   }
 
   @Test(dataProvider = "buffers")
-  public void record(ReadBuffer buffer) {
+  public void record(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
-        buffer.record();
+        buffer.offer(Boolean.TRUE);
         Thread.yield();
       }
     });
-    long recorded = buffer.recorded();
-    assertThat(recorded, is((long) ReadBuffer.MAX_SIZE));
+    int recorded = buffer.recorded();
+    assertThat(recorded, is(ReadBuffer.BUFFER_SIZE));
   }
 
   @Test(dataProvider = "buffers")
-  public void drain(ReadBuffer buffer) {
-    for (int i = 0; i < 2 * ReadBuffer.MAX_SIZE; i++) {
-      buffer.record();
+  public void drain(ReadBuffer<Boolean> buffer) {
+    for (int i = 0; i < 2 * ReadBuffer.BUFFER_SIZE; i++) {
+      buffer.offer(Boolean.TRUE);
     }
     buffer.drain();
-    long drained = buffer.drained();
-    long recorded = buffer.recorded();
+    int drained = buffer.drained();
+    int recorded = buffer.recorded();
     assertThat(drained, is(recorded));
   }
 
   @Test(dataProvider = "buffers")
-  public void recordAndDrain(ReadBuffer buffer) {
+  public void recordAndDrain(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
-        boolean shouldDrain = buffer.record();
-        if (shouldDrain) {
+        int result = buffer.offer(Boolean.TRUE);
+        if (result == ReadBuffer.FULL) {
           buffer.drain();
         }
         Thread.yield();
       }
     });
     buffer.drain();
-    long drained = buffer.drained();
-    long recorded = buffer.recorded();
+    int drained = buffer.drained();
+    int recorded = buffer.recorded();
     assertThat(drained, is(recorded));
   }
 }

@@ -15,52 +15,44 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
 import org.jctools.queues.MpscCompoundQueue;
 
-import com.github.benmanes.caffeine.locks.NonReentrantLock;
+import com.github.benmanes.caffeine.cache.ReadBuffer;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class MpscCompoundBuffer implements ReadBuffer {
-  final MpscCompoundQueue<Boolean> queue;
-  final Lock evictionLock;
+final class MpscCompoundBuffer<E> extends ReadBuffer<E> {
+  final MpscCompoundQueue<E> queue;
   long drained;
 
   MpscCompoundBuffer() {
-    evictionLock = new NonReentrantLock();
-    queue = new MpscCompoundQueue<>(MAX_SIZE);
+    queue = new MpscCompoundQueue<>(BUFFER_SIZE);
   }
 
   @Override
-  public boolean record() {
-    return queue.offer(Boolean.TRUE);
+  public int offer(E e) {
+    return queue.offer(e) ? SUCCESS : FULL;
   }
 
   @Override
-  public void drain() {
-    if (evictionLock.tryLock()) {
-      while (queue.poll() != null) {
-        drained++;
-      }
-      evictionLock.unlock();
+  public void drainTo(Consumer<E> consumer) {
+    E e = null;
+    while ((e = queue.poll()) != null) {
+      consumer.accept(e);
+      drained++;
     }
   }
 
   @Override
-  public long recorded() {
+  public int reads() {
+    return (int) drained;
+  }
+
+  @Override
+  public int writes() {
     return drained() + queue.size();
-  }
-
-  @Override
-  public long drained() {
-    evictionLock.lock();
-    try {
-      return drained;
-    } finally {
-      evictionLock.unlock();
-    }
   }
 }
