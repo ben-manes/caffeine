@@ -33,8 +33,8 @@ subprojects { proj ->
     return
   }
   apply plugin: 'com.github.ethankhall.semantic-versioning'
+  apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'org.dm.bundle'
-  apply plugin: 'errorprone'
   apply plugin: 'java'
 
   apply from: "${rootDir}/gradle/publish.gradle"
@@ -76,7 +76,7 @@ subprojects { proj ->
 
 // Only report code coverage for projects that are distrubuted
 def publishedProjects = subprojects.findAll {
-  !it.path.startsWith(':simulator') && (it.path != ':tracing')
+  (it.path != ':simulator') && (it.path != ':tracing')
 }
 
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {

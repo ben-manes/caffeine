@@ -34,7 +34,7 @@ ext {
     jcache: '1.0.0',
     joor: '0.9.5',
     jsr305: '3.0.0',
-    univocity_parsers: '1.5.4',
+    univocity_parsers: '1.5.5',
   ]
   test_versions = [
     awaitility: '1.6.3',
@@ -50,12 +50,12 @@ ext {
   ]
   benchmark_versions = [
     concurrentlinkedhashmap: '1.4.2',
-    ehcache2: '2.10.0',
+    ehcache2: '2.10.0.0.26',
     ehcache3: '3.0.0.m1',
     high_scale_lib: '1.0.6',
     infinispan: '7.2.1.Final',
     jamm: '0.3.1',
-    java_object_layout: '0.3.1',
+    java_object_layout: '0.3.2',
     koloboke: '0.6.7',
     slf4j: '1.7.12',
   ]
