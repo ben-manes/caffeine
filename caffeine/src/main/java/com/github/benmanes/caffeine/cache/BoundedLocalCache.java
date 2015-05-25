@@ -137,7 +137,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     weigher = builder.getWeigher(isAsync);
     id = tracer().register(builder.name());
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
-    evictionLock = builder.hasExecutor() ? new ReentrantLock() : new NonReentrantLock();
+    evictionLock = (builder.getExecutor() instanceof ForkJoinPool)
+        ? new NonReentrantLock()
+        : new ReentrantLock();
     nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
         builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
         builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),

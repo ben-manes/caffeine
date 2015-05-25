@@ -20,10 +20,12 @@ import java.util.Random;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.GroupThreads;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 
 import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
@@ -35,7 +37,7 @@ import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGe
 public class GetPutBenchmark {
   private static final int SIZE = (2 << 14);
   private static final int MASK = SIZE - 1;
-  private static final int ITEMS = SIZE / 4;
+  private static final int ITEMS = SIZE / 3;
 
   @Param({
     "LinkedHashMap_Lru",
@@ -67,6 +69,11 @@ public class GetPutBenchmark {
       ints[i] = generator.nextInt();
       cache.put(ints[i], Boolean.TRUE);
     }
+  }
+
+  @TearDown(Level.Iteration)
+  public void tearDown() {
+    cache.cleanUp();
   }
 
   @Benchmark @Group("read_only") @GroupThreads(8)

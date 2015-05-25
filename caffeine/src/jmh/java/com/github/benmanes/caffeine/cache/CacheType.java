@@ -24,13 +24,13 @@ import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentCo
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.Eviction;
 import org.infinispan.util.concurrent.BoundedConcurrentHashMap;
 
+import com.github.benmanes.caffeine.cache.impl.CaffeineCache;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
 import com.github.benmanes.caffeine.cache.impl.Ehcache2;
 import com.github.benmanes.caffeine.cache.impl.Ehcache3;
+import com.github.benmanes.caffeine.cache.impl.GuavaCache;
 import com.github.benmanes.caffeine.cache.impl.LinkedHashMapCache;
-import com.github.benmanes.caffeine.cache.tracing.Tracer;
-import com.google.common.cache.CacheBuilder;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
@@ -41,12 +41,7 @@ import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 public enum CacheType {
   Caffeine {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      System.setProperty(Tracer.TRACING_ENABLED, "false");
-      return new ConcurrentMapCache<>(
-          com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
-              .maximumSize(maximumSize)
-              .<K, V>build()
-              .asMap());
+      return new CaffeineCache<>(maximumSize);
     }
   },
   ConcurrentHashMapV7 { // unbounded, see OpenJDK/7u40-b43
@@ -70,12 +65,7 @@ public enum CacheType {
   },
   Guava {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new ConcurrentMapCache<>(
-          CacheBuilder.newBuilder()
-              .concurrencyLevel(CONCURRENCY_LEVEL)
-              .maximumSize(maximumSize)
-              .<K, V>build()
-              .asMap());
+      return new GuavaCache<>(maximumSize);
     }
   },
   Infinispan_Old_Lru {
@@ -116,7 +106,7 @@ public enum CacheType {
   };
 
   /** The number of hash table segments. */
-  static final int CONCURRENCY_LEVEL = 64;
+  public static final int CONCURRENCY_LEVEL = 64;
 
   /**
    * Creates the cache with the maximum size. Note that some implementations may evict prior to

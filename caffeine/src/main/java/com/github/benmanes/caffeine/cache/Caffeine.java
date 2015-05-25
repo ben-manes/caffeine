@@ -236,10 +236,6 @@ public final class Caffeine<K, V> {
     return this;
   }
 
-  boolean hasExecutor() {
-    return getExecutor() != ForkJoinPool.commonPool();
-  }
-
   @Nonnull
   Executor getExecutor() {
     return (executor == null) ? ForkJoinPool.commonPool() : executor;
