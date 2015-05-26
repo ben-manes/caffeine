@@ -30,7 +30,7 @@ ext {
     disruptor: '3.3.2',
     flip_tables: '1.0.2',
     guava: '18.0',
-    javapoet: '1.0.0',
+    javapoet: '1.1.0',
     jcache: '1.0.0',
     joor: '0.9.5',
     jsr305: '3.0.0',
@@ -63,6 +63,7 @@ ext {
     bundle: '0.6.2',
     checkstyle: '6.6',
     coveralls: '2.4.0',
+    extra_conf: '2.2.2',
     error_prone: '0.0.7.1',
     jmh: '0.2.0',
     nexus: '2.3.1',
@@ -84,7 +85,7 @@ ext {
     univocity_parsers: "com.univocity:univocity-parsers:${versions.univocity_parsers}",
   ]
   test_libraries = [
-    awaitility: "com.jayway.awaitility:awaitility-scala:${test_versions.awaitility}",
+    awaitility: "com.jayway.awaitility:awaitility:${test_versions.awaitility}",
     easymock: "org.easymock:easymock:${test_versions.easymock}",
     guava_testlib: dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
       exclude group: 'com.google.truth'
@@ -123,6 +124,7 @@ ext {
       transitive = false
     },
     coveralls: "org.kt3k.gradle.plugin:coveralls-gradle-plugin:${plugin_versions.coveralls}",
+    extra_conf: "com.netflix.nebula:gradle-extra-configurations-plugin:${plugin_versions.extra_conf}",
     error_prone: "net.ltgt.gradle:gradle-errorprone-plugin:${plugin_versions.error_prone}",
     jmh: "me.champeau.gradle:jmh-gradle-plugin:${plugin_versions.jmh}",
     nexus: "com.bmuschko:gradle-nexus-plugin:${plugin_versions.nexus}",

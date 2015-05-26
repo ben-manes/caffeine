@@ -29,12 +29,12 @@ import com.github.benmanes.caffeine.cache.BasicCache;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Ehcache3<K, V> implements BasicCache<K, V> {
-  private final Cache<K, V> delegate;
+  private final Cache<K, V> cache;
 
   @SuppressWarnings("unchecked")
   public Ehcache3(Prioritizer evictionPolicy, int maximumSize) {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build();
-    delegate = (Cache<K, V>) cacheManager.createCache("benchmark",
+    cache = (Cache<K, V>) cacheManager.createCache("benchmark",
         CacheConfigurationBuilder.newCacheConfigurationBuilder()
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .heap(maximumSize, EntryUnit.ENTRIES)
@@ -45,11 +45,11 @@ public final class Ehcache3<K, V> implements BasicCache<K, V> {
 
   @Override
   public V get(K key) {
-    return delegate.get(key);
+    return cache.get(key);
   }
 
   @Override
   public void put(K key, V value) {
-    delegate.put(key, value);
+    cache.put(key, value);
   }
 }

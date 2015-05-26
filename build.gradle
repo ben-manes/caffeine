@@ -35,6 +35,7 @@ subprojects { proj ->
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'org.dm.bundle'
+  apply plugin: 'provided-base'
   apply plugin: 'java'
 
   apply from: "${rootDir}/gradle/publish.gradle"

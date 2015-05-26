@@ -1,6 +1,6 @@
 /** Cache tracing API */
 dependencies {
-  compile libraries.jsr305
+  provided libraries.jsr305
   
   testCompile libraries.guava
   testCompile test_libraries.testng

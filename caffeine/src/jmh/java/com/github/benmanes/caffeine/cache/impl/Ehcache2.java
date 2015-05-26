@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.impl;
 
-import static net.sf.ehcache.Cache.DEFAULT_CACHE_NAME;
-
 import com.github.benmanes.caffeine.cache.BasicCache;
 
 import net.sf.ehcache.Cache;
