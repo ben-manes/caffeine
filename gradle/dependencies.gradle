@@ -49,6 +49,7 @@ ext {
     truth: '0.24',
   ]
   benchmark_versions = [
+    cache2k: '0.21',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.0.0.26',
     ehcache3: '3.0.0.m1',
@@ -105,6 +106,7 @@ ext {
     truth: "com.google.truth:truth:${test_versions.truth}",
   ]
   benchmark_libraries = [
+    cache2k: "org.cache2k:cache2k-core:${benchmark_versions.cache2k}",
     concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmark_versions.concurrentlinkedhashmap}",
     ehcache2: "net.sf.ehcache:ehcache:${benchmark_versions.ehcache2}",
     ehcache3: "org.ehcache:ehcache:${benchmark_versions.ehcache3}",
