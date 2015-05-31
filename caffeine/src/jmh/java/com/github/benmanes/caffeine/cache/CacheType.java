@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.cache2k.impl.LruCache;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.ehcache.config.Eviction.Prioritizer;
 import org.infinispan.commons.equivalence.AnyEquivalence;
@@ -24,6 +25,7 @@ import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentCo
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.Eviction;
 import org.infinispan.util.concurrent.BoundedConcurrentHashMap;
 
+import com.github.benmanes.caffeine.cache.impl.Cache2k;
 import com.github.benmanes.caffeine.cache.impl.CaffeineCache;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
@@ -36,23 +38,43 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 
 /**
+ * A factory for creating a {@link BasicCache} implementation.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum CacheType {
-  Caffeine {
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new CaffeineCache<>(maximumSize);
-    }
-  },
-  ConcurrentHashMapV7 { // unbounded, see OpenJDK/7u40-b43
+
+  /* ---------------- Unbounded -------------- */
+
+  ConcurrentHashMapV7 { // see OpenJDK/7u40-b43
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new ConcurrentMapCache<>(
           new ConcurrentHashMapV7<>(maximumSize, 0.75f, CONCURRENCY_LEVEL));
     }
   },
-  ConcurrentHashMap { // unbounded
+  ConcurrentHashMap {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new ConcurrentMapCache<>(new ConcurrentHashMap<K, V>(maximumSize));
+    }
+  },
+  NonBlockingHashMap {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      // Note that writes that update an entry to the same reference are short circuited
+      // and do not mutate the hash table. This makes those writes equal to a read only.
+      return new ConcurrentMapCache<>(new NonBlockingHashMap<K, V>(maximumSize));
+    }
+  },
+
+  /* ---------------- Bounded -------------- */
+
+  Cache2k_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new Cache2k<>(LruCache.class, maximumSize);
+    }
+  },
+  Caffeine {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new CaffeineCache<>(maximumSize);
     }
   },
   ConcurrentLinkedHashMap {
@@ -61,6 +83,16 @@ public enum CacheType {
           new ConcurrentLinkedHashMap.Builder<K, V>()
             .maximumWeightedCapacity(maximumSize)
             .build());
+    }
+  },
+  Ehcache2_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new Ehcache2<>(MemoryStoreEvictionPolicy.LRU, maximumSize);
+    }
+  },
+  Ehcache3_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new Ehcache3<>(Prioritizer.LRU, maximumSize);
     }
   },
   Guava {
@@ -83,25 +115,9 @@ public enum CacheType {
               AnyEquivalence.getInstance(), AnyEquivalence.getInstance()));
     }
   },
-  Ehcache2_Lru {
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new Ehcache2<>(MemoryStoreEvictionPolicy.LRU, maximumSize);
-    }
-  },
-  Ehcache3_Lru {
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new Ehcache3<>(Prioritizer.LRU, maximumSize);
-    }
-  },
   LinkedHashMap_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new LinkedHashMapCache<K, V>(true, maximumSize);
-    }
-  },
-  NonBlockingHashMap { // unbounded
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new ConcurrentMapCache<>(
-          new NonBlockingHashMap<K, V>(maximumSize));
     }
   };
 

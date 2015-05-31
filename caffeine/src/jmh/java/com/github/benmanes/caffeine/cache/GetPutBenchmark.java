@@ -31,6 +31,13 @@ import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 
 /**
+ * A benchmark that evaluates the read/write performance of a cache. The cache is pre-populated for
+ * a 100% hit rate and a Zipf distribution of keys is used to mimic application usage patterns.
+ * <p>
+ * <pre>{@code
+ *   ./gradlew jmh -PincludePattern=GetPutBenchmark
+ * }</pre>
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
@@ -44,6 +51,7 @@ public class GetPutBenchmark {
     "Caffeine",
     "ConcurrentLinkedHashMap",
     "Guava",
+    "Cache2k_Lru",
     "Ehcache2_Lru",
     "Ehcache3_Lru",
     "Infinispan_Old_Lru",
