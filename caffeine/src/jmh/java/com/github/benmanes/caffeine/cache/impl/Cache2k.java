@@ -37,7 +37,7 @@ public final class Cache2k<K, V> implements BasicCache<K, V> {
 
   @Override
   public V get(K key) {
-    return cache.get(key);
+    return cache.peek(key);
   }
 
   @Override
@@ -47,7 +47,6 @@ public final class Cache2k<K, V> implements BasicCache<K, V> {
 
   @Override
   public void cleanUp() {
-    cache.purge();
-    cache.flush();
+    cache.clear();
   }
 }

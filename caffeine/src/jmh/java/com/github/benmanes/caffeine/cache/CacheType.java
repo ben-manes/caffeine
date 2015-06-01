@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.cache2k.impl.ClockProPlusCache;
 import org.cache2k.impl.LruCache;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.ehcache.config.Eviction.Prioritizer;
@@ -70,6 +71,11 @@ public enum CacheType {
   Cache2k_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new Cache2k<>(LruCache.class, maximumSize);
+    }
+  },
+  Cache2k_ClockProPlus {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new Cache2k<>(ClockProPlusCache.class, maximumSize);
     }
   },
   Caffeine {
