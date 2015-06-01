@@ -3,9 +3,14 @@
  */
 apply plugin: 'me.champeau.gradle.jmh'
 apply plugin: 'eclipse'
+apply plugin: 'idea'
 
 sourceSets {
   jmh.java.srcDirs += sourceSets.test.java.srcDirs
+}
+
+idea.module {
+  scopes.PROVIDED.plus += [ configurations.jmh ]
 }
 
 plugins.withType(EclipsePlugin) {

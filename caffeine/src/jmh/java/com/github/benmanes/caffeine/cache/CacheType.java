@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.cache2k.impl.ClockProPlusCache;
 import org.cache2k.impl.LruCache;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.ehcache.config.Eviction.Prioritizer;
@@ -60,13 +61,18 @@ public enum CacheType {
   NonBlockingHashMap {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       // Note that writes that update an entry to the same reference are short circuited
-      // and do not mutate the hash table. This makes those writes equal to a read only.
+      // and do not mutate the hash table. This makes those writes equal to a read.
       return new ConcurrentMapCache<>(new NonBlockingHashMap<K, V>(maximumSize));
     }
   },
 
   /* ---------------- Bounded -------------- */
 
+  Cache2k_ClockProPlus {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new Cache2k<>(ClockProPlusCache.class, maximumSize);
+    }
+  },
   Cache2k_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new Cache2k<>(LruCache.class, maximumSize);
