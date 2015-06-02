@@ -45,7 +45,4 @@ public final class Cache2k<K, V> implements BasicCache<K, V> {
     cache.put(key, value);
   }
 
-  @Override
-  public void cleanUp() {
-  }
 }
