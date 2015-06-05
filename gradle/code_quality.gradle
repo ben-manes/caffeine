@@ -5,6 +5,7 @@ apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'checkstyle'
 apply plugin: 'findbugs'
 apply plugin: 'jacoco'
+apply plugin: 'java'
 apply plugin: 'pmd'
 
 configurations {

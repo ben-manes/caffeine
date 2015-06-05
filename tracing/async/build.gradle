@@ -3,8 +3,6 @@ dependencies {
   compile project(':tracing:api')
   compile libraries.disruptor
 
-  provided libraries.jsr305
-
   testCompile libraries.guava
   testCompile test_libraries.jimfs
   testCompile test_libraries.testng

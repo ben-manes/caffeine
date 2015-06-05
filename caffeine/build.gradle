@@ -21,8 +21,6 @@ plugins.withType(EclipsePlugin) {
 dependencies {
   compile project(':tracing:api')
 
-  provided libraries.jsr305
-
   testCompile project(':simulator')
   testCompile project(path: ':tracing:api', configuration: 'testArtifacts')
   testCompile libraries.guava

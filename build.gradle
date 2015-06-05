@@ -54,6 +54,11 @@ subprojects { proj ->
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
 
+  dependencies {
+    provided libraries.jsr305
+    provided libraries.error_prone_annotations
+  }
+
   configurations {
     testArtifacts
   }

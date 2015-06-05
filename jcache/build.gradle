@@ -10,8 +10,6 @@ dependencies {
   compile libraries.jcache
   compile libraries.config
 
-  provided libraries.jsr305
-
   testCompile libraries.guava
   testCompile test_libraries.junit
   testCompile test_libraries.testng
@@ -34,14 +32,15 @@ test {
   useTestNG()
 }
 
-// Executed separately to minimize races due to poor test practices 
+// Executed separately to minimize races due to poor test practices
+// https://github.com/jsr107/jsr107tck/issues/78
 task testJCacheLoader(type: Test) {
-  include "**/CacheLoader*"
+  include '**/CacheLoader*'
 }
 
-task testCompatibilityKit(type: Test, description: "Runs the JCache TCK") {
+task testCompatibilityKit(type: Test, description: 'Runs the JCache TCK') {
   dependsOn(testJCacheLoader)
-  exclude "**/CacheLoader*"
+  exclude '**/CacheLoader*'
 }
 
 task unzipTestKit(type: Copy, group: 'Build', description: 'Unzips the JCache TCK') {
@@ -50,7 +49,7 @@ task unzipTestKit(type: Copy, group: 'Build', description: 'Unzips the JCache TC
 }
 
 [testJCacheLoader, testCompatibilityKit]*.with {
-  group = "Build"
+  group = 'Build'
 
   check.dependsOn(it)
   dependsOn(unzipTestKit)

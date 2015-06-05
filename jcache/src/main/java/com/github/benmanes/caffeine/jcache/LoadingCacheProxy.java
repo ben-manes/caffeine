@@ -122,7 +122,6 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
           for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
             putNoCopyOrAwait(entry.getKey(), entry.getValue(), false, ignored);
           }
-          listener.onCompletion();
         } else {
           getAll(keys, false);
         }
