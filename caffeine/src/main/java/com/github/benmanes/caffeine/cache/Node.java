@@ -50,6 +50,13 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   V getValue();
 
   /**
+   * Returns the reference to the value. This is either the value if strongly held or a
+   * {@link java.lang.ref.Reference} to that value.
+   */
+  @Nonnull
+  Object getValueReference();
+
+  /**
    * Sets the value, which may be held strongly, weakly, or softly. This update may be set lazily
    * and rely on the memory fence when the lock is released.
    */

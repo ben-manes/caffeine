@@ -116,7 +116,7 @@ final class References {
   static class WeakKeyReference<K> extends WeakReference<K> implements InternalReference<K> {
     private final int hashCode;
 
-    public WeakKeyReference(@Nonnull K key, @Nonnull ReferenceQueue<K> queue) {
+    public WeakKeyReference(@Nullable K key, @Nonnull ReferenceQueue<K> queue) {
       super(key, queue);
       hashCode = System.identityHashCode(key);
     }

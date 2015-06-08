@@ -128,29 +128,36 @@ public final class NodeGenerator {
     if (!isBaseClass()) {
       return;
     }
-    Strength keyStrength = strengthOf(Iterables.get(generateFeatures, 0));
     nodeSubtype
         .addField(newFieldOffset(className, "key"))
         .addField(newKeyField())
-        .addMethod(newGetter(keyStrength, kTypeVar, "key", Visibility.LAZY))
-        .addMethod(newGetKeyRef());
+        .addMethod(newGetter(keyStrength(), kTypeVar, "key", Visibility.LAZY))
+        .addMethod(newGetRef("key"));
     addKeyConstructorAssignment(constructorByKey, false);
     addKeyConstructorAssignment(constructorByKeyRef, true);
+  }
+
+  private Strength keyStrength() {
+    return strengthOf(Iterables.get(generateFeatures, 0));
   }
 
   private void addValue() {
     if (!isBaseClass()) {
       return;
     }
-    Strength valueStrength = strengthOf(Iterables.get(generateFeatures, 1));
     nodeSubtype
         .addField(newFieldOffset(className, "value"))
         .addField(newValueField())
-        .addMethod(newGetter(valueStrength, vTypeVar, "value", Visibility.LAZY))
+        .addMethod(newGetter(valueStrength(), vTypeVar, "value", Visibility.LAZY))
+        .addMethod(newGetRef("value"))
         .addMethod(makeSetValue())
         .addMethod(makeContainsValue());
     addValueConstructorAssignment(constructorByKey);
     addValueConstructorAssignment(constructorByKeyRef);
+  }
+
+  private Strength valueStrength() {
+    return strengthOf(Iterables.get(generateFeatures, 1));
   }
 
   /** Creates the setValue method. */
@@ -164,6 +171,7 @@ public final class NodeGenerator {
       setter.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
+      setter.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
       setter.addStatement("$T.UNSAFE.putObject(this, $N, new $T($L, $N, referenceQueue))",
           UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "key", "value");
     }
@@ -349,7 +357,7 @@ public final class NodeGenerator {
 
     String retiredArg;
     String deadArg;
-    if (generateFeatures.contains(Feature.STRONG_KEYS)) {
+    if (keyStrength() == Strength.STRONG) {
       retiredArg = RETIRED_STRONG_KEY;
       deadArg = DEAD_STRONG_KEY;
     } else {
@@ -357,38 +365,33 @@ public final class NodeGenerator {
       deadArg = DEAD_WEAK_KEY;
     }
 
-    String keyOffset = isBaseClass()
-        ? offsetName("key")
-        : baseClassName() + '.' + offsetName("key");
-
     nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
         .addStatement("Object key = getKeyReference()")
         .addStatement("return (key != $L) && (key != $L)", retiredArg, deadArg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
+    addState("isRetired", "retire", retiredArg);
+    addState("isDead", "die", deadArg);
+  }
 
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("isRetired")
-        .addStatement("return (getKeyReference() == $L)", retiredArg)
+  private void addState(String checkName, String actionName, String arg) {
+    nodeSubtype.addMethod(MethodSpec.methodBuilder(checkName)
+        .addStatement("return (getKeyReference() == $L)", arg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("retire")
-        .addStatement("$T.UNSAFE.putObject(this, $N, $N)",
-            UNSAFE_ACCESS, keyOffset, retiredArg)
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-        .build());
 
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("isDead")
-        .addStatement("return (getKeyReference() == $L)", deadArg)
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-        .returns(boolean.class)
-        .build());
-    nodeSubtype.addMethod(MethodSpec.methodBuilder("die")
-        .addStatement("$T.UNSAFE.putObject(this, $N, $N)",
-            UNSAFE_ACCESS, keyOffset, deadArg)
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-        .build());
+    MethodSpec.Builder action = MethodSpec.methodBuilder(actionName)
+        .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+    if (keyStrength() != Strength.STRONG) {
+      action.addStatement("(($T<K>) getKeyReference()).clear()", Reference.class);
+    }
+    if (valueStrength() != Strength.STRONG) {
+      action.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
+    }
+    action.addStatement("$T.UNSAFE.putObject(this, $N, $N)", UNSAFE_ACCESS, offsetName("key"), arg);
+    nodeSubtype.addMethod(action.build());
   }
 
   private String baseClassName() {
@@ -398,21 +401,20 @@ public final class NodeGenerator {
     return Feature.makeClassName(keyAndValue);
   }
 
-  /** Creates an accessor that returns the key reference. */
-  private MethodSpec newGetKeyRef() {
-    MethodSpec.Builder getter = MethodSpec.methodBuilder("getKeyReference")
+  /** Creates an accessor that returns the reference. */
+  private MethodSpec newGetRef(String varName) {
+    MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName) + "Reference")
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(Object.class);
     getter.addStatement("return $T.UNSAFE.getObject(this, $N)",
-        UNSAFE_ACCESS, offsetName("key"));
+        UNSAFE_ACCESS, offsetName(varName));
     return getter.build();
   }
 
   /** Creates an accessor that returns the unwrapped variable. */
   private MethodSpec newGetter(Strength strength, TypeName varType,
       String varName, Visibility visibility) {
-    String methodName = "get" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
-    MethodSpec.Builder getter = MethodSpec.methodBuilder(methodName)
+    MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName))
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(varType);
     String type;
@@ -498,6 +500,10 @@ public final class NodeGenerator {
         ? "WeakValueReference"
         : "SoftValueReference";
     return ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME + ".References", clazz), vTypeVar);
+  }
+
+  private static String capitalize(String str) {
+    return Character.toUpperCase(str.charAt(0)) + str.substring(1);
   }
 
   Strength strengthOf(Feature feature) {

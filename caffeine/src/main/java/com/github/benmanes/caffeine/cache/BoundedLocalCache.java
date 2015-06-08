@@ -384,6 +384,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   void evictEntry(Node<K, V> node, RemovalCause cause) {
     boolean removed = data.remove(node.getKeyReference(), node);
     K key = node.getKey();
+    V value = node.getValue();
 
     makeDead(node);
     if (evicts() || expiresAfterAccess()) {
@@ -398,13 +399,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (hasRemovalListener()) {
         // Notify the listener only if the entry was evicted. This must be performed as the last
         // step during eviction to safe guard against the executor rejecting the notification task.
-        notifyRemoval(key, node.getValue(), cause);
+        if ((key == null) || (value == null)) {
+          cause = RemovalCause.COLLECTED;
+        }
+        notifyRemoval(key, value, cause);
       }
     }
   }
 
   @GuardedBy("evictionLock")
-  void expire() {
+  void expireEntries() {
     long now = ticker().read();
     if (expiresAfterAccess()) {
       long expirationTime = now - expiresAfterAccessNanos();
@@ -549,7 +553,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     drainKeyReferences();
     drainValueReferences();
 
-    expire();
+    expireEntries();
     evictEntries();
   }
 
@@ -579,7 +583,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @SuppressWarnings("unchecked")
       InternalReference<V> ref = (InternalReference<V>) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
-      if (node != null) {
+      if ((node != null) && (valueRef == node.getValueReference())) {
         evictEntry(node, RemovalCause.COLLECTED);
       }
     }
@@ -922,7 +926,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         afterWrite(prior, new UpdateTask(prior, weightedDifference));
       }
       if (hasRemovalListener() && (value != oldValue)) {
-        notifyRemoval(key, value, RemovalCause.REPLACED);
+        notifyRemoval(key, oldValue, RemovalCause.REPLACED);
       }
       return oldValue;
     }
@@ -936,14 +940,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return null;
     }
 
+    V oldValue;
     boolean retired = false;
     synchronized (node) {
+      oldValue = node.getValue();
       if (node.isAlive()) {
         retired = true;
         node.retire();
       }
     }
-    V oldValue = node.getValue();
     if (retired) {
       afterWrite(node, new RemovalTask(node));
       if (hasRemovalListener()) {
@@ -983,7 +988,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     } else if (hasRemovalListener()) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
-      notifyRemoval(castKey, removed[0].getValue(), RemovalCause.EXPLICIT);
+      @SuppressWarnings("unchecked")
+      V castValue = collectValues() ? (V) value : removed[0].getValue();
+      notifyRemoval(castKey, castValue, RemovalCause.EXPLICIT);
     }
     afterWrite(removed[0], new RemovalTask(removed[0]));
     return true;
@@ -1019,7 +1026,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       afterWrite(node, new UpdateTask(node, weightedDifference));
     }
     if (hasRemovalListener() && (value != oldValue)) {
-      notifyRemoval(key, value, RemovalCause.REPLACED);
+      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
     }
     return oldValue;
   }
@@ -1092,7 +1099,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       } else if (data.remove(node.getKeyReference(), node)) {
         afterWrite(node, new RemovalTask(node));
         if (hasRemovalListener()) {
-          notifyRemoval(key, node.getValue(), cause);
+          notifyRemoval(key, value, cause);
         }
         statsCounter().recordEviction();
       }

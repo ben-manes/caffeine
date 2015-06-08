@@ -116,24 +116,19 @@ public final class NodeFactoryGenerator {
 
   private void addNodeStateStatics() {
     Modifier[] modifiers = { Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL };
-    nodeFactory.addType(TypeSpec.enumBuilder("State")
-        .addModifiers(Modifier.PRIVATE)
-        .addEnumConstant("RETIRED")
-        .addEnumConstant("DEAD")
-        .build());
 
     nodeFactory.addField(FieldSpec.builder(Object.class, RETIRED_STRONG_KEY, modifiers)
-        .initializer("State.RETIRED")
+        .initializer("new Object()")
         .build());
     nodeFactory.addField(FieldSpec.builder(Object.class, DEAD_STRONG_KEY, modifiers)
-        .initializer("State.DEAD")
+        .initializer("new Object()")
         .build());
 
     nodeFactory.addField(FieldSpec.builder(rawReferenceKeyType, RETIRED_WEAK_KEY, modifiers)
-        .initializer("new $T($N, null)", rawReferenceKeyType, RETIRED_STRONG_KEY)
+        .initializer("new $T(null, null)", rawReferenceKeyType)
         .build());
     nodeFactory.addField(FieldSpec.builder(rawReferenceKeyType, DEAD_WEAK_KEY, modifiers)
-        .initializer("new $T($N, null)", rawReferenceKeyType, DEAD_STRONG_KEY)
+        .initializer("new $T(null, null)", rawReferenceKeyType)
         .build());
   }
 
