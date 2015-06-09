@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -40,7 +41,10 @@ import com.google.common.cache.CacheBuilder;
 public class ComputeBenchmark {
   static final int SIZE = (2 << 14);
   static final int MASK = SIZE - 1;
+  static final int ITEMS = SIZE / 3;
   static final Integer COMPUTE_KEY = SIZE / 2;
+  static final Callable<Boolean> valueLoader = () -> Boolean.TRUE;
+  static final Function<Integer, Boolean> mappingFunction = any -> Boolean.TRUE;
 
   @Param({"ConcurrentHashMap", "Caffeine", "Guava"})
   String computeType;
@@ -56,7 +60,7 @@ public class ComputeBenchmark {
 
   public ComputeBenchmark() {
     ints = new Integer[SIZE];
-    IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
+    IntegerGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextInt();
     }
@@ -88,12 +92,12 @@ public class ComputeBenchmark {
 
   private void setupConcurrentHashMap() {
     ConcurrentMap<Integer, Boolean> map = new ConcurrentHashMap<>();
-    benchmarkFunction = key -> map.computeIfAbsent(key, any -> Boolean.TRUE);
+    benchmarkFunction = key -> map.computeIfAbsent(key, mappingFunction);
   }
 
   private void setupCaffeine() {
     Cache<Integer, Boolean> cache = Caffeine.newBuilder().build();
-    benchmarkFunction = key -> cache.get(key, any -> Boolean.TRUE);
+    benchmarkFunction = key -> cache.get(key, mappingFunction);
   }
 
   private void setupGuava() {
@@ -101,7 +105,7 @@ public class ComputeBenchmark {
         CacheBuilder.newBuilder().concurrencyLevel(64).build();
     benchmarkFunction = key -> {
       try {
-        return cache.get(key, () -> Boolean.TRUE);
+        return cache.get(key, valueLoader);
       } catch (Exception e) {
         throw Throwables.propagate(e);
       }
