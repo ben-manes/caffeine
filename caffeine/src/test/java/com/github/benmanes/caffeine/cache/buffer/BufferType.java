@@ -27,8 +27,9 @@ import com.github.benmanes.caffeine.cache.ReadBuffer;
 public enum BufferType {
   Ticket(TicketBuffer::new),
   FastFlow(FastFlowBuffer::new),
-  ManyToOne(ManyToOneBuffer::new),
   MpscArray(MpscArrayBuffer::new),
+  ManyToOne(ManyToOneBuffer::new),
+  ManyToOne_spaced(ManyToOneSpacedBuffer::new),
   MpmcArray(MpmcArrayBuffer::new),
   MpscCompound(MpscCompoundBuffer::new);
 
