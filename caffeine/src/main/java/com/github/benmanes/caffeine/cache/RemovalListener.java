@@ -31,7 +31,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * @param <K> the most general type of keys this listener can listen for; for example {@code Object}
  *        if any key is acceptable
  * @param <V> the most general type of values this listener can listen for; for example
- *        {@code Object} if any key is acceptable
+ *        {@code Object} if any value is acceptable
  */
 @ThreadSafe
 @FunctionalInterface

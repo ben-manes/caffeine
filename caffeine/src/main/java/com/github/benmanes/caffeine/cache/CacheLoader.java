@@ -23,6 +23,7 @@ import java.util.concurrent.Executor;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * Computes or retrieves values, based on a key, for use in populating a {@link LoadingCache} or
@@ -39,6 +40,7 @@ import javax.annotation.Nonnull;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@ThreadSafe
 @FunctionalInterface
 public interface CacheLoader<K, V> {
 

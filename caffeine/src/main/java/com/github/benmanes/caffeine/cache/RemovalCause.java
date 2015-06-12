@@ -37,7 +37,7 @@ public enum RemovalCause {
    * {@link Iterator#remove}.
    */
   EXPLICIT {
-    @Override boolean wasEvicted() {
+    @Override public boolean wasEvicted() {
       return false;
     }
   },
@@ -49,7 +49,7 @@ public enum RemovalCause {
    * {@link Map#computeIfPresent}, {@link Map#compute}, or {@link Map#merge}.
    */
   REPLACED {
-    @Override boolean wasEvicted() {
+    @Override public boolean wasEvicted() {
       return false;
     }
   },
@@ -60,7 +60,7 @@ public enum RemovalCause {
    * {@link Caffeine#softValues}.
    */
   COLLECTED {
-    @Override boolean wasEvicted() {
+    @Override public boolean wasEvicted() {
       return true;
     }
   },
@@ -70,7 +70,7 @@ public enum RemovalCause {
    * {@link Caffeine#expireAfterWrite} or {@link Caffeine#expireAfterAccess}.
    */
   EXPIRED {
-    @Override boolean wasEvicted() {
+    @Override public boolean wasEvicted() {
       return true;
     }
   },
@@ -80,7 +80,7 @@ public enum RemovalCause {
    * {@link Caffeine#maximumSize} or {@link Caffeine#maximumWeight}.
    */
   SIZE {
-    @Override boolean wasEvicted() {
+    @Override public boolean wasEvicted() {
       return true;
     }
   };
@@ -89,5 +89,5 @@ public enum RemovalCause {
    * Returns {@code true} if there was an automatic removal due to eviction (the cause is neither
    * {@link #EXPLICIT} nor {@link #REPLACED}).
    */
-  abstract boolean wasEvicted();
+  public abstract boolean wasEvicted();
 }
