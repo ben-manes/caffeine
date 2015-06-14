@@ -140,6 +140,7 @@ public final class Caffeine<K, V> {
 
   RemovalListener<? super K, ? super V> removalListener;
   Supplier<StatsCounter> statsCounterSupplier;
+  CacheWriter<? super K, ? super V> writer;
   Weigher<? super K, ? super V> weigher;
   Supplier<String> nameSupplier;
   Executor executor;
@@ -337,7 +338,7 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> weigher(
       @Nonnull Weigher<? super K1, ? super V1> weigher) {
     requireNonNull(weigher);
-    requireState(this.weigher == null);
+    requireState(this.weigher == null, "weigher was already set to %s", this.weigher);
     requireState(this.maximumSize == UNSET_INT,
         "weigher can not be combined with maximum size", this.maximumSize);
     @SuppressWarnings("unchecked")
@@ -377,13 +378,17 @@ public final class Caffeine<K, V> {
    * Entries with keys that have been garbage collected may be counted in
    * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such
    * entries are cleaned up as part of the routine maintenance described in the class javadoc.
+   * <p>
+   * This feature cannot be used in conjunction with {@link #writer}.
    *
    * @return this builder instance
-   * @throws IllegalStateException if the key strength was already set
+   * @throws IllegalStateException if the key strength was already set or the writer was set
    */
   @Nonnull
   public Caffeine<K, V> weakKeys() {
     requireState(keyStrength == null, "Key strength was already set to %s", keyStrength);
+    requireState(writer == null, "Weak keys may not be used with CacheWriter");
+
     keyStrength = Strength.WEAK;
     return this;
   }
@@ -583,7 +588,7 @@ public final class Caffeine<K, V> {
    */
   @Nonnull
   public Caffeine<K, V> ticker(@Nonnull Ticker ticker) {
-    requireState(this.ticker == null);
+    requireState(this.ticker == null, "Ticker was already set to %s", this.ticker);
     this.ticker = requireNonNull(ticker);
     return this;
   }
@@ -644,6 +649,50 @@ public final class Caffeine<K, V> {
       return asyncListener;
     }
     return castedListener;
+  }
+
+  /**
+   * Specifies a writer instance that caches should notify each time an entry is explicitly created
+   * or modified, or removed for any {@linkplain RemovalCause reason}. The writer is not notified
+   * when an entry is loaded. Each cache created by this builder will invoke this writer as part of
+   * the atomic operation that modifies the cache.
+   * <p>
+   * <b>Warning:</b> after invoking this method, do not continue to use <i>this</i> cache builder
+   * reference; instead use the reference this method <i>returns</i>. At runtime, these point to the
+   * same instance, but only the returned reference has the correct generic type information so as
+   * to ensure type safety. For best results, use the standard method-chaining idiom illustrated in
+   * the class documentation above, configuring a builder and building your cache in a single
+   * statement. Failure to heed this advice can result in a {@link ClassCastException} being thrown
+   * by a cache operation at some <i>undefined</i> point in the future.
+   * <p>
+   * <b>Warning:</b> any exception thrown by {@code writer} will be propagated to the {@code Cache}
+   * user.
+   *
+   * @param writer a writer instance that caches should notify each time an entry is explicitly
+   *        created or modified, or removed for any reason
+   * @param <K1> the key type of the writer
+   * @param <V1> the value type of the writer
+   * @return the cache builder reference that should be used instead of {@code this} for any
+   *         remaining configuration and cache building
+   * @throws IllegalStateException if a writer was already set or if the key strength is weak
+   * @throws NullPointerException if the specified writer is null
+   */
+  @Nonnull
+  public <K1 extends K, V1 extends V> Caffeine<K1, V1> writer(
+      @Nonnull CacheWriter<? super K1, ? super V1> writer) {
+    requireState(this.writer == null, "Writer was already set to %s", this.writer);
+    requireState(keyStrength == null, "Weak keys may not be used with CacheWriter");
+
+    @SuppressWarnings("unchecked")
+    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    self.writer = requireNonNull(writer);
+    return self;
+  }
+
+  <K1 extends K, V1 extends V> CacheWriter<K1, V1> getCacheWriter() {
+    @SuppressWarnings("unchecked")
+    CacheWriter<K1, V1> castedWriter = (CacheWriter<K1, V1>) writer;
+    return (writer == null) ? CacheWriter.disabledWriter() : castedWriter;
   }
 
   /**

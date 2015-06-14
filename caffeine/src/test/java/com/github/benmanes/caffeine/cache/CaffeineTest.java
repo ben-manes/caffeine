@@ -24,6 +24,9 @@ import static org.hamcrest.Matchers.sameInstance;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
@@ -38,7 +41,13 @@ import com.google.common.util.concurrent.MoreExecutors;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineTest {
-  final CacheLoader<Object, Object> single = key -> key;
+  @Mock CacheLoader<Object, Object> single;
+  @Mock CacheWriter<Object, Object> writer;
+
+  @BeforeClass
+  public void beforeClass() {
+    MockitoAnnotations.initMocks(this);
+  }
 
   @Test
   public void unconfigured() {
@@ -320,6 +329,11 @@ public final class CaffeineTest {
     Caffeine.newBuilder().weakKeys().weakKeys();
   }
 
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void weakKeys_writer() {
+    Caffeine.newBuilder().weakKeys().writer(writer);
+  }
+
   @Test
   public void weakKeys() {
     Caffeine.newBuilder().weakKeys().build();
@@ -406,6 +420,30 @@ public final class CaffeineTest {
     RemovalListener<Object, Object> removalListener = notif -> {};
     Caffeine<?, ?> builder = Caffeine.newBuilder().removalListener(removalListener);
     assertThat(builder.getRemovalListener(false), is(removalListener));
+    builder.build();
+  }
+
+  /* ---------------- cacheWriter -------------- */
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void writer_null() {
+    Caffeine.newBuilder().writer(null);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void writer_twice() {
+    Caffeine.newBuilder().writer(writer).writer(writer);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void writer_weakKeys() {
+    Caffeine.newBuilder().writer(writer).weakKeys();
+  }
+
+  @Test
+  public void writer() {
+    Caffeine<?, ?> builder = Caffeine.newBuilder().writer(writer);
+    assertThat(builder.getCacheWriter(), is(writer));
     builder.build();
   }
 

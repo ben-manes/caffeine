@@ -51,6 +51,7 @@ import com.github.benmanes.caffeine.cache.tracing.Tracer;
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Nullable final RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> data;
+  final CacheWriter<K, V> writer;
   final Executor executor;
   final Ticker ticker;
   final long id;
@@ -68,6 +69,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     this.removalListener = builder.getRemovalListener(async);
     this.isRecordingStats = builder.isRecordingStats();
     this.id = tracer().register(builder.name());
+    this.writer = builder.getCacheWriter();
     this.executor = builder.getExecutor();
     this.ticker = builder.getTicker();
   }
@@ -167,13 +169,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
     requireNonNull(function);
-    if (!hasRemovalListener()) {
-      data.replaceAll((key, value) -> {
-        tracer().recordWrite(id, key, 1);
-        return function.apply(key, value);
-      });
-      return;
-    }
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -184,8 +179,15 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         notifyRemoval(notification[0]);
         notification[0] = null;
       }
+
       V newValue = requireNonNull(function.apply(key, value));
-      notification[0] = new RemovalNotification<K, V>(key, value, RemovalCause.REPLACED);
+      if (newValue != null) {
+        writer.write(key, value);
+      }
+      if (hasRemovalListener() && (newValue != value)) {
+        notification[0] = new RemovalNotification<>(key, value, RemovalCause.REPLACED);
+      }
+
       return newValue;
     });
     if (notification[0] != null) {
@@ -208,6 +210,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     boolean[] missed = new boolean[1];
     value = data.computeIfAbsent(key, k -> {
+      // Do not communicate to CacheWriter on a load
       missed[0] = true;
       return statsAware(mappingFunction, isAsync).apply(key);
     });
@@ -227,18 +230,27 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     if (!data.containsKey(key)) {
       return null;
     }
-    if (!hasRemovalListener()) {
-      return data.computeIfPresent(key, statsAware(remappingFunction, false, false));
-    }
+
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     V nv = data.computeIfPresent(key, (K k, V oldValue) -> {
       V newValue = statsAware(remappingFunction, false, false).apply(k, oldValue);
-      notification[0] = (newValue == null)
-          ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
-          : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
-          return newValue;
+
+      RemovalCause cause;
+      if (newValue == null) {
+        cause = RemovalCause.EXPLICIT;
+        writer.delete(key, oldValue, cause);
+      } else {
+        cause = RemovalCause.REPLACED;
+        writer.write(key, newValue);
+      }
+
+      if (hasRemovalListener() && (newValue != oldValue)) {
+        notification[0] = new RemovalNotification<>(key, oldValue, cause);
+      }
+
+      return newValue;
     });
     if (notification[0] != null) {
       notifyRemoval(notification[0]);
@@ -249,45 +261,54 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       boolean recordMiss, boolean isAsync) {
-    tracer().recordWrite(id, key, 1);
-    if (!hasRemovalListener()) {
-      return data.compute(key, statsAware(remappingFunction, recordMiss, isAsync));
-    }
-
-    // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
-    V nv = data.compute(key, (K k, V oldValue) -> {
-      V newValue = statsAware(remappingFunction, recordMiss, isAsync).apply(k, oldValue);
-      if (oldValue != null) {
-        notification[0] = (newValue == null)
-            ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
-            : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
-      }
-      return newValue;
-    });
-    if (notification[0] != null) {
-      notifyRemoval(notification[0]);
-    }
-    return nv;
+    requireNonNull(remappingFunction);
+    return remap(key, statsAware(remappingFunction, recordMiss, isAsync));
   }
 
   @Override
   public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
     requireNonNull(remappingFunction);
+    requireNonNull(value);
+
+    return remap(key, (k, oldValue) ->
+      (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value));
+  }
+
+  /**
+   * A {@link Map#compute(Object, BiFunction)} that does not directly record any cache statistics.
+   *
+   * @param key key with which the specified value is to be associated
+   * @param remappingFunction the function to compute a value
+   * @return the new value associated with the specified key, or null if none
+   */
+  V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     tracer().recordWrite(id, key, 1);
-    if (!hasRemovalListener()) {
-      return data.merge(key, value, statsAware(remappingFunction));
-    }
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
-    V nv = data.merge(key, value, (V oldValue, V val) -> {
-      V newValue = statsAware(remappingFunction).apply(oldValue, val);
-      notification[0] = (newValue == null)
-          ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
-          : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
+    V nv = data.compute(key, (K k, V oldValue) -> {
+      V newValue = remappingFunction.apply(k, oldValue);
+      if ((oldValue == null) && (newValue == null)) {
+        return null;
+      }
+
+      RemovalCause cause;
+      if (newValue == null) {
+        cause = RemovalCause.EXPLICIT;
+        writer.delete(key, oldValue, cause);
+      } else {
+        // Do not communicate to CacheWriter on a load
+        cause = RemovalCause.REPLACED;
+        if (oldValue != null) {
+          writer.write(key, newValue);
+        }
+      }
+
+      if (hasRemovalListener() && (oldValue != null) && (newValue != oldValue)) {
+        notification[0] = new RemovalNotification<>(key, oldValue, cause);
+      }
+
       return newValue;
     });
     if (notification[0] != null) {
@@ -305,7 +326,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public void clear() {
-    if (!hasRemovalListener() && !Tracer.isEnabled()) {
+    if (!hasRemovalListener() && !Tracer.isEnabled() && (writer == CacheWriter.disabledWriter())) {
       data.clear();
       return;
     }
@@ -336,24 +357,42 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V put(K key, V value) {
-    V oldValue = data.put(key, value);
+    requireNonNull(value);
+
+    // ensures that the removal notification is processed after the removal has completed
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    V oldValue[] = (V[]) new Object[1];
+    data.compute(key, (k, v) -> {
+      writer.write(key, value);
+      oldValue[0] = v;
+      return value;
+    });
+
     tracer().recordWrite(id, key, 1);
-    if (hasRemovalListener() && (oldValue != null) && (oldValue != value)) {
-      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+    if (hasRemovalListener() && (oldValue[0] != null) && (oldValue[0] != value)) {
+      notifyRemoval(key, oldValue[0], RemovalCause.REPLACED);
     }
-    return oldValue;
+
+    return oldValue[0];
   }
 
   @Override
   public V putIfAbsent(K key, V value) {
-    V oldValue = data.putIfAbsent(key, value);
+    requireNonNull(value);
+
+    boolean[] wasAbsent = new boolean[1];
+    V val = data.computeIfAbsent(key, k -> {
+      writer.write(key, value);
+      wasAbsent[0] = true;
+      return value;
+    });
     tracer().recordWrite(id, key, 1);
-    return oldValue;
+    return wasAbsent[0] ? null : val;
   }
 
   @Override
   public void putAll(Map<? extends K, ? extends V> map) {
-    if (!hasRemovalListener() && !Tracer.isEnabled()) {
+    if (!hasRemovalListener() && !Tracer.isEnabled() && (writer == CacheWriter.disabledWriter())) {
       data.putAll(map);
       return;
     }
@@ -364,25 +403,49 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V remove(Object key) {
-    V value = data.remove(key);
+    @SuppressWarnings("unchecked")
+    K castKey = (K) key;
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    V oldValue[] = (V[]) new Object[1];
+
+    data.computeIfPresent(castKey, (k, v) -> {
+      writer.delete(castKey, v, RemovalCause.EXPLICIT);
+      oldValue[0] = v;
+      return null;
+    });
     tracer().recordDelete(id, key);
-    if (hasRemovalListener() && (value != null)) {
-      @SuppressWarnings("unchecked")
-      K castKey = (K) key;
-      notifyRemoval(castKey, value, RemovalCause.EXPLICIT);
+
+    if (hasRemovalListener() && (oldValue[0] != null)) {
+      notifyRemoval(castKey, oldValue[0], RemovalCause.EXPLICIT);
     }
-    return value;
+
+    return oldValue[0];
   }
 
   @Override
   public boolean remove(Object key, Object value) {
-    boolean removed = data.remove(key, value);
+    if (value == null) {
+      requireNonNull(key);
+      return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    K castKey = (K) key;
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    V oldValue[] = (V[]) new Object[1];
+
+    data.computeIfPresent(castKey, (k, v) -> {
+      if (v.equals(value)) {
+        writer.delete(castKey, v, RemovalCause.EXPLICIT);
+        oldValue[0] = v;
+        return null;
+      }
+      return v;
+    });
+
+    boolean removed = (oldValue[0] != null);
     if (hasRemovalListener() && removed) {
-      @SuppressWarnings("unchecked")
-      K castKey = (K) key;
-      @SuppressWarnings("unchecked")
-      V castValue = (V) value;
-      notifyRemoval(castKey, castValue, RemovalCause.EXPLICIT);
+      notifyRemoval(castKey, oldValue[0], RemovalCause.EXPLICIT);
     }
     tracer().recordDelete(id, key);
     return removed;
@@ -390,19 +453,42 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V replace(K key, V value) {
-    V prev = data.replace(key, value);
-    if (hasRemovalListener() && (prev != null) && (prev != value)) {
+    requireNonNull(value);
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    V oldValue[] = (V[]) new Object[1];
+    data.computeIfPresent(key, (k, v) -> {
+      writer.write(key, value);
+      oldValue[0] = v;
+      return value;
+    });
+
+    if (hasRemovalListener() && (oldValue[0] != null) && (oldValue[0] != value)) {
       notifyRemoval(key, value, RemovalCause.REPLACED);
     }
     tracer().recordWrite(id, key, 1);
-    return prev;
+    return oldValue[0];
   }
 
   @Override
   public boolean replace(K key, V oldValue, V newValue) {
-    boolean replaced = data.replace(key, oldValue, newValue);
-    if (hasRemovalListener() && replaced  && (oldValue != newValue)) {
-      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+    requireNonNull(oldValue);
+    requireNonNull(newValue);
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    V prev[] = (V[]) new Object[1];
+    data.computeIfPresent(key, (k, v) -> {
+      if (v.equals(oldValue)) {
+        writer.write(key, newValue);
+        prev[0] = v;
+        return newValue;
+      }
+      return v;
+    });
+
+    boolean replaced = (prev[0] != null);
+    if (hasRemovalListener() && replaced && (prev[0] != newValue)) {
+      notifyRemoval(key, prev[0], RemovalCause.REPLACED);
     }
     tracer().recordWrite(id, key, 1);
     return replaced;

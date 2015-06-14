@@ -1193,6 +1193,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       boolean recordMiss, boolean isAsync) {
+    requireNonNull(remappingFunction);
     return remap(key, statsAware(remappingFunction, recordMiss, isAsync));
   }
 
@@ -1203,7 +1204,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param remappingFunction the function to compute a value
    * @return the new value associated with the specified key, or null if none
    */
-  private V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+  V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
