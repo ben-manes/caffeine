@@ -99,8 +99,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * <p>
    * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
    * currently contains a value for {@code key}, and {@link CacheLoader#load} otherwise. Loading is
-   * asynchronous only if {@link CacheLoader#reload} was overridden with an asynchronous
-   * implementation.
+   * asynchronous by delegating to the default executor.
    *
    * @param key key with which a value may be associated
    * @throws NullPointerException if the specified key is null
