@@ -1132,65 +1132,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       boolean isAsync) {
     requireNonNull(key);
     requireNonNull(mappingFunction);
-
     long now = ticker().read();
-    V value = prescreen(key, mappingFunction, now);
-    return (value == null) ? doComputeIfAbsent(key, mappingFunction, isAsync, now) : value;
-  }
 
-  /**
-   * An optimistic fast path due to computeIfAbsent always locking. This is leveraged to evict
-   * if the entry is present but has expired or its key/value has been garbage collected.
-   */
-  V prescreen(K key, Function<? super K, ? extends V> mappingFunction, long now) {
+    // An optimistic fast path due to computeIfAbsent always locking
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
-    if (node == null) {
-      return null;
+    if (node != null) {
+      V value = node.getValue();
+      if ((value == null) && !hasExpired(node, now)) {
+        return value;
+      }
     }
 
-    K nodeKey = node.getKey();
-    @SuppressWarnings("unchecked")
-    V[] value = (V[]) new Object[] { node.getValue() };
-    RemovalCause[] cause = new RemovalCause[1];
-    if ((nodeKey == null) || (value[0] == null)) {
-      cause[0] = RemovalCause.COLLECTED;
-    } else if (hasExpired(node, now)) {
-      cause[0] = RemovalCause.EXPIRED;
-    }
-
-    if (cause[0] == null) {
-      afterRead(node, true);
-      if (Tracer.isEnabled()) {
-        tracer().recordWrite(id, key, weigher.weigh(nodeKey, value[0]));
-      }
-      return value[0];
-    }
-
-    boolean[] removed = new boolean[1];
-    data.computeIfPresent(node.getKeyReference(), (k, n) -> {
-      if (n != node) {
-        return n;
-      }
-      synchronized (n) {
-        value[0] = n.getValue();
-        if (value[0] == null) {
-          cause[0] = RemovalCause.COLLECTED;
-        }
-        writer.delete(nodeKey, value[0], cause[0]);
-        removed[0] = true;
-        n.retire();
-        return null;
-      }
-    });
-
-    if (removed[0]) {
-      if (hasRemovalListener()) {
-        notifyRemoval(key, value[0], cause[0]);
-      }
-      statsCounter().recordEviction();
-      afterWrite(node, new RemovalTask(node));
-    }
-    return null;
+    return doComputeIfAbsent(key, mappingFunction, isAsync, now);
   }
 
   /** Returns the current value from a computeIfAbsent invocation. */
@@ -1198,32 +1151,78 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       boolean isAsync, long now) {
     int[] weight = new int[1];
     @SuppressWarnings("unchecked")
-    V[] value = (V[]) new Object[1];
+    V[] oldValue = (V[]) new Object[1];
+    @SuppressWarnings("unchecked")
+    V[] newValue = (V[]) new Object[1];
+    @SuppressWarnings("unchecked")
+    K[] nodeKey = (K[]) new Object[1];
+    @SuppressWarnings("unchecked")
+    Node<K, V>[] removed = new Node[1];
+    RemovalCause[] cause = new RemovalCause[1];
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    Node<K, V> node = data.computeIfAbsent(keyRef, k -> {
-      value[0] = statsAware(mappingFunction, isAsync).apply(key);
-      if (value[0] == null) {
-        return null;
+
+    Node<K, V> node = data.compute(keyRef, (k, n) -> {
+      if (n == null) {
+        newValue[0] = statsAware(mappingFunction, isAsync).apply(key);
+        if (newValue[0] == null) {
+          return null;
+        }
+        weight[0] = weigher.weigh(key, newValue[0]);
+        return nodeFactory.newNode(key, keyReferenceQueue(),
+            newValue[0], valueReferenceQueue(), weight[0], now);
       }
-      weight[0] = weigher.weigh(key, value[0]);
-      return nodeFactory.newNode(key, keyReferenceQueue(),
-          value[0], valueReferenceQueue(), weight[0], now);
+
+      synchronized (n) {
+        nodeKey[0] = n.getKey();
+        oldValue[0] = n.getValue();
+        if ((nodeKey == null) || (oldValue[0] == null)) {
+          cause[0] = RemovalCause.COLLECTED;
+        } else if (hasExpired(n, now)) {
+          cause[0] = RemovalCause.EXPIRED;
+          n.setAccessTime(now);
+          n.setWriteTime(now);
+        } else {
+          return n;
+        }
+
+        writer.delete(nodeKey[0], oldValue[0], cause[0]);
+        newValue[0] = statsAware(mappingFunction, isAsync).apply(key);
+        if (newValue[0] == null) {
+          removed[0] = n;
+          n.retire();
+          return null;
+        }
+        weight[0] = weigher.weigh(key, newValue[0]);
+        n.setValue(newValue[0], valueReferenceQueue());
+        return n;
+      }
     });
+
     if (node == null) {
+      afterWrite(node, new RemovalTask(removed[0]));
       return null;
     }
-    V val;
-    if (value[0] == null) {
-      val = node.getValue();
+    if (cause[0] != null) {
+      if (hasRemovalListener()) {
+        notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
+      }
+      statsCounter().recordEviction();
+    }
+    if (newValue[0] == null) {
+      tracer().recordRead(id, key);
       afterRead(node, true);
-    } else {
-      val = value[0];
+      return oldValue[0];
+    }
+    if (oldValue[0] == null) {
       afterWrite(node, new AddTask(node, weight[0]));
+    } else {
+      afterRead(node, true);
     }
-    if (Tracer.isEnabled() && (val != null)) {
-      tracer().recordWrite(id, key, weigher.weigh(key, val));
+    if (Tracer.isEnabled()) {
+      tracer().recordWrite(id, key, weigher.weigh(nodeKey[0], newValue[0]));
     }
-    return val;
+
+    return newValue[0];
   }
 
   @Override
@@ -1231,7 +1230,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     requireNonNull(remappingFunction);
 
-    // An optimistic fast path due to computeIfAbsent always locking
+    // An optimistic fast path due to computeIfPresent always locking
     Object ref = nodeFactory.newLookupKey(key);
     if (!data.containsKey(ref)) {
       return null;
