@@ -812,8 +812,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (hasRemovalListener()) {
         notifyRemoval(key, value, cause);
       }
-      makeDead(node);
     }
+
+    makeDead(node);
   }
 
   @Override
