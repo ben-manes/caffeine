@@ -34,11 +34,12 @@ final class SerializationProxy<K, V> implements Serializable {
   boolean weakValues;
   boolean softValues;
   Weigher<?, ?> weigher;
+  CacheLoader<?, ?> loader;
+  CacheWriter<?, ?> writer;
   boolean isRecordingStats;
   long expiresAfterWriteNanos;
   long expiresAfterAccessNanos;
   long refreshAfterWriteNanos;
-  CacheLoader<? super K, V> loader;
   RemovalListener<?, ?> removalListener;
   long maximumSize = Caffeine.UNSET_INT;
   long maximumWeight = Caffeine.UNSET_INT;
@@ -79,6 +80,9 @@ final class SerializationProxy<K, V> implements Serializable {
     }
     if (removalListener != null) {
       builder.removalListener((RemovalListener<Object, Object>) removalListener);
+    }
+    if (writer != CacheWriter.disabledWriter()) {
+      builder.writer(writer);
     }
     return builder;
   }

@@ -791,6 +791,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       proxy.isRecordingStats = cache.isRecordingStats;
       proxy.removalListener = cache.removalListener;
       proxy.ticker = cache.ticker;
+      proxy.writer = cache.writer;
       return proxy;
     }
   }
@@ -882,6 +883,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       proxy.isRecordingStats = cache.isRecordingStats;
       proxy.removalListener = cache.removalListener;
       proxy.ticker = cache.ticker;
+      proxy.writer = cache.writer;
       proxy.loader = loader;
       proxy.async = true;
       return proxy;

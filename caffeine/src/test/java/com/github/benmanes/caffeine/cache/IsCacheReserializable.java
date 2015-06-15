@@ -148,8 +148,10 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
       UnboundedLocalCache<K, V> copy, DescriptionBuilder desc) {
     desc.expectThat("estimated empty", copy.estimatedSize(), is(0L));
     desc.expectThat("same ticker", copy.ticker, is(original.ticker));
+    desc.expectThat("same writer", copy.writer, is(original.writer));
     desc.expectThat("same isRecordingStats",
         copy.isRecordingStats, is(original.isRecordingStats));
+
     if (original.removalListener == null) {
       desc.expectThat("same removalListener", copy.removalListener, is(nullValue()));
     } else if (copy.removalListener == null) {
