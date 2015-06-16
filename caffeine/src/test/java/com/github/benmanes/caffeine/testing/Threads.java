@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.testing;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.testng.Assert.fail;
 
@@ -65,7 +66,7 @@ public final class Threads {
     Runnable thrasher = new Thrasher<A>(collection, failures, operations);
     Threads.executeWithTimeOut(failures, () ->
         ConcurrentTestHarness.timeTasks(Threads.NTHREADS, thrasher));
-    assertThat(failures.isEmpty(), is(true));
+    assertThat(failures, is(empty()));
   }
 
   public static void executeWithTimeOut(Queue<String> failures, Callable<Long> task) {
