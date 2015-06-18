@@ -1135,9 +1135,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     requireNonNull(mappingFunction);
     long now = ticker().read();
 
-    // An optimistic fast path due to computeIfAbsent always locking
-    Object keyRef = nodeFactory.newLookupKey(key);
-    Node<K, V> node = data.get(keyRef);
+    // An optimistic fast path to avoid unnecessary locking
+    Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if (node != null) {
       V value = node.getValue();
       if ((value != null) && !hasExpired(node, now)) {
@@ -1145,6 +1144,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return value;
       }
     }
+    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     return doComputeIfAbsent(key, keyRef, mappingFunction, isAsync, now);
   }
 
@@ -1186,8 +1186,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           return n;
         }
 
-        writer.delete(nodeKey[0], oldValue[0], cause[0]);
         newValue[0] = statsAware(mappingFunction, isAsync).apply(key);
+        writer.delete(nodeKey[0], oldValue[0], cause[0]);
         if (newValue[0] == null) {
           removed[0] = n;
           n.retire();
@@ -1229,16 +1229,67 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @Override
   public V computeIfPresent(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    requireNonNull(key);
     requireNonNull(remappingFunction);
-    long now = ticker().read();
 
-    // An optimistic fast path due to computeIfPresent always locking
+    // A optimistic fast path to avoid unnecessary locking
     Object keyRef = nodeFactory.newLookupKey(key);
     Node<K, V> node = data.get(keyRef);
-    if ((node == null) || (node.getValue() == null) || hasExpired(node, now)) {
+    long now;
+    if ((node == null) || (node.getValue() == null) || hasExpired(node, (now = ticker().read()))) {
       return null;
     }
 
+    boolean computeIfAbsent = false;
+    BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
+        statsAware(remappingFunction, false, false);
+    return remap(key, keyRef, statsAwareRemappingFunction, now, computeIfAbsent);
+  }
+
+  @Override
+  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+      boolean recordMiss, boolean isAsync) {
+    requireNonNull(key);
+    requireNonNull(remappingFunction);
+
+    long now = ticker().read();
+    boolean computeIfAbsent = true;
+    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
+    BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
+        statsAware(remappingFunction, recordMiss, isAsync);
+    return remap(key, keyRef, statsAwareRemappingFunction, now, computeIfAbsent);
+  }
+
+  @Override
+  public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+    requireNonNull(key);
+    requireNonNull(value);
+    requireNonNull(remappingFunction);
+
+    long now = ticker().read();
+    boolean computeIfAbsent = true;
+    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
+    BiFunction<? super K, ? super V, ? extends V> mergeFunction = (k, oldValue) ->
+        (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value);
+    return remap(key, keyRef, mergeFunction, now, computeIfAbsent);
+  }
+
+  /**
+   * Attempts to compute a mapping for the specified key and its current mapped value (or
+   * {@code null} if there is no current mapping).
+   * <p>
+   * An entry that has expired or been reference collected is evicted and the computation continues
+   * as if the entry had not been present. This method does not pre-screen and does not wrap the
+   * remappingFuntion to be statistics aware.
+   *
+   * @param key key with which the specified value is to be associated
+   * @param remappingFunction the function to compute a value
+   * @param now the current time, according to the ticker
+   * @param computeIfAbsent if an absent entry can be computed
+   * @return the new value associated with the specified key, or null if none
+   */
+  V remap(K key, Object keyRef, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+      long now, boolean computeIfAbsent) {
     @SuppressWarnings("unchecked")
     K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings("unchecked")
@@ -1248,12 +1299,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @SuppressWarnings({"unchecked", "rawtypes"})
     Node<K, V>[] removed = new Node[1];
 
-    int[] weight = new int[2];
+    int[] weight = new int[2]; // old, new
     RemovalCause[] cause = new RemovalCause[1];
 
-    node = data.compute(keyRef, (kr, n) -> {
+    Node<K, V> node = data.compute(keyRef, (kr, n) -> {
       if (n == null) {
-        return null;
+        if (!computeIfAbsent) {
+          return null;
+        }
+        newValue[0] = remappingFunction.apply(key, null);
+        if (newValue[0] == null) {
+          return null;
+        }
+        writer.write(key, newValue[0]);
+        weight[1] = weigher.weigh(key, newValue[0]);
+        tracer().recordWrite(id, key, weight[1]);
+        return nodeFactory.newNode(keyRef, newValue[0],
+            valueReferenceQueue(), weight[1], now);
       }
 
       synchronized (n) {
@@ -1263,6 +1325,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           cause[0] = RemovalCause.COLLECTED;
         } else if (hasExpired(n, now)) {
           cause[0] = RemovalCause.EXPIRED;
+          n.setAccessTime(now);
+          n.setWriteTime(now);
         }
         if (cause[0] != null) {
           writer.delete(nodeKey[0], oldValue[0], cause[0]);
@@ -1271,7 +1335,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           return null;
         }
 
-        newValue[0] = statsAware(remappingFunction, false, false).apply(nodeKey[0], oldValue[0]);
+        newValue[0] = remappingFunction.apply(nodeKey[0], oldValue[0]);
         if (newValue[0] == null) {
           writer.delete(nodeKey[0], oldValue[0], cause[0]);
           cause[0] = RemovalCause.EXPLICIT;
@@ -1310,7 +1374,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (oldValue[0] != null) {
         tracer().recordDelete(id, nodeKey[0]);
       }
-    } else if (oldValue[0] != null) {
+    } else if (oldValue[0] == null) {
+      afterWrite(node, new AddTask(node, weight[1]));
+      tracer().recordWrite(id, key, weight[1]);
+    } else {
       int weightedDifference = weight[0] - weight[1];
       if (weightedDifference == 0) {
         afterRead(node, false);
@@ -1321,110 +1388,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     return newValue[0];
-  }
-
-  @Override
-  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean recordMiss, boolean isAsync) {
-    requireNonNull(remappingFunction);
-    return remap(key, statsAware(remappingFunction, recordMiss, isAsync));
-  }
-
-  /**
-   * A {@link Map#compute(Object, BiFunction)} that does not directly record any cache statistics.
-   *
-   * @param key key with which the specified value is to be associated
-   * @param remappingFunction the function to compute a value
-   * @return the new value associated with the specified key, or null if none
-   */
-  V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-    requireNonNull(key);
-    requireNonNull(remappingFunction);
-
-    @SuppressWarnings("unchecked")
-    V[] newValue = (V[]) new Object[1];
-    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    Runnable[] task = new Runnable[2];
-    Node<K, V> node = data.compute(keyRef, (k, prior) -> {
-      if (prior == null) {
-        newValue[0] = remappingFunction.apply(key, null);
-        if (newValue[0] == null) {
-          tracer().recordDelete(id, key);
-          return null;
-        }
-        final long now = ticker().read();
-        final int weight = weigher.weigh(key, newValue[0]);
-        final Node<K, V> newNode = nodeFactory.newNode(
-            keyRef, newValue[0], valueReferenceQueue(), weight, now);
-        task[0] = new AddTask(newNode, weight);
-        tracer().recordWrite(id, key, weight);
-        return newNode;
-      }
-      synchronized (prior) {
-        V oldValue = null;
-        if (prior.isAlive()) {
-          oldValue = prior.getValue();
-        } else {
-          // conditionally removed won, but we got the entry lock first
-          // so help out and pretend like we are inserting a fresh entry
-          task[1] = new RemovalTask(prior);
-          if (hasRemovalListener()) {
-            V value = prior.getValue();
-            if (value == null) {
-              notifyRemoval(key, value, RemovalCause.COLLECTED);
-            } else {
-              notifyRemoval(key, value, RemovalCause.EXPLICIT);
-            }
-          }
-        }
-        newValue[0] = remappingFunction.apply(key, oldValue);
-        if ((newValue[0] == null) && (oldValue != null)) {
-          task[0] = new RemovalTask(prior);
-          if (hasRemovalListener()) {
-            notifyRemoval(key, oldValue, RemovalCause.EXPLICIT);
-          }
-          tracer().recordDelete(id, key);
-          return null;
-        }
-        final int oldWeight = prior.getWeight();
-        final int newWeight = weigher.weigh(key, newValue[0]);
-        if (task[1] == null) {
-          prior.setWeight(newWeight);
-          prior.setValue(newValue[0], valueReferenceQueue());
-          final int weightedDifference = newWeight - oldWeight;
-          if (weightedDifference != 0) {
-            task[0] = new UpdateTask(prior, weightedDifference);
-          }
-          if (hasRemovalListener() && (newValue[0] != oldValue)) {
-            notifyRemoval(key, oldValue, RemovalCause.REPLACED);
-          }
-          tracer().recordWrite(id, key, newWeight);
-          return prior;
-        } else {
-          final long now = ticker().read();
-          Node<K, V> newNode = nodeFactory.newNode(
-              keyRef, newValue[0], valueReferenceQueue(), newWeight, now);
-          task[0] = new AddTask(newNode, newWeight);
-          return newNode;
-        }
-      }
-    });
-    if (task[0] != null) {
-      afterWrite(node, task[0]);
-    }
-    if (task[1] != null) {
-      afterWrite(node, task[1]);
-    }
-    return newValue[0];
-  }
-
-  @Override
-  public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-    requireNonNull(remappingFunction);
-    requireNonNull(value);
-
-    return remap(key, (k, oldValue) ->
-        (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value));
   }
 
   @Override
