@@ -50,7 +50,13 @@ dependencies {
 
 bundle {
   instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
+  instruction 'Export-Package', [
+    'com.github.benmanes.caffeine',
+    'com.github.benmanes.caffeine.base',
+    'com.github.benmanes.caffeine.cache',
+    'com.github.benmanes.caffeine.cache.stats',
+    'com.github.benmanes.caffeine.locks',
+  ].join(';')
 }
 
 task generateLocalCaches(type: JavaExec) {
