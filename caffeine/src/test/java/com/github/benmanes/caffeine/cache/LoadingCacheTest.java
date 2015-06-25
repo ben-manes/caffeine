@@ -42,6 +42,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -59,17 +60,20 @@ public final class LoadingCacheTest {
   /* ---------------- get -------------- */
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_null(LoadingCache<Integer, Integer> cache) {
     cache.get(null);
   }
 
-  @CacheSpec(loader = Loader.NULL)
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.NULL)
   public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey()), is(nullValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_absent_failure(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -82,6 +86,7 @@ public final class LoadingCacheTest {
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -89,9 +94,9 @@ public final class LoadingCacheTest {
     assertThat(value, is(-key));
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
-
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -104,19 +109,22 @@ public final class LoadingCacheTest {
 
   /* ---------------- getAll -------------- */
 
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  // FIXME: @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_null(LoadingCache<Integer, Integer> cache) {
     cache.getAll(null);
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  // FIXME: @CheckNoWriter
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getAll_iterable_nullKey(LoadingCache<Integer, Integer> cache) {
     cache.getAll(Collections.singletonList(null));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -132,20 +140,23 @@ public final class LoadingCacheTest {
     cache.getAll(context.absentKeys()).clear();
   }
 
-  @CacheSpec(loader = Loader.NULL)
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.NULL)
   public void getAll_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.getAll(context.absentKeys()), is(ImmutableMap.of()));
   }
 
+  // FIXME: @CheckNoWriter
   @CacheSpec(loader = Loader.BULK_NULL)
   @Test(dataProvider = "caches", expectedExceptions = Exception.class)
   public void getAll_absent_bulkNull(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(context.absentKeys());
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  // FIXME: @CheckNoWriter
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getAll_absent_failure(LoadingCache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.getAll(context.absentKeys());
@@ -159,6 +170,7 @@ public final class LoadingCacheTest {
     }
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -172,6 +184,7 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -188,6 +201,7 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -201,12 +215,14 @@ public final class LoadingCacheTest {
 
   /* ---------------- refresh -------------- */
 
+  // FIXME: @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void refresh_null(LoadingCache<Integer, Integer> cache) {
     cache.refresh(null);
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       executor = CacheExecutor.DIRECT, loader = Loader.NULL,
@@ -218,6 +234,7 @@ public final class LoadingCacheTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.EXCEPTIONAL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING },
@@ -230,6 +247,7 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(2)));
   }
 
+  // FIXME: @CheckNoWriter
   @CacheSpec(loader = Loader.NULL)
   @Test(dataProvider = "caches")
   public void refresh_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -237,6 +255,7 @@ public final class LoadingCacheTest {
     assertThat(cache.estimatedSize(), is(context.initialSize()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -250,6 +269,7 @@ public final class LoadingCacheTest {
     assertThat(cache.get(context.absentKey()), is(-context.absentKey()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT,
   population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -269,6 +289,7 @@ public final class LoadingCacheTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.IDENTITY,
   population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })

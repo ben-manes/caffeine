@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static org.mockito.Mockito.reset;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
@@ -178,6 +180,7 @@ final class CacheGenerator {
   }
 
   /** Fills the cache up to the population size. */
+  @SuppressWarnings("unchecked")
   private void populate(CacheContext context, Cache<Integer, Integer> cache) {
     if (context.population.size() == 0) {
       return;
@@ -212,5 +215,8 @@ final class CacheGenerator {
       context.ticker().advance(context.advance.timeNanos(), TimeUnit.NANOSECONDS);
     }
     context.enableRejectingCacheWriter();
+    if (context.writer() == Writer.MOCKITO) {
+      reset(context.cacheWriter());
+    }
   }
 }

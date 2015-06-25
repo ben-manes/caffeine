@@ -24,6 +24,11 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccess
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -35,6 +40,7 @@ import org.testng.ITestResult;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.CacheWriter;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -48,10 +54,9 @@ public final class CacheValidationListener implements IInvokedMethodListener {
 
   @Override
   public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
-    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class);
     try {
       if (testResult.isSuccess()) {
+        CacheContext context = null;
         for (Object param : testResult.getParameters()) {
           if (param instanceof Cache<?, ?>) {
             assertThat((Cache<?, ?>) param, is(validCache()));
@@ -59,18 +64,12 @@ public final class CacheValidationListener implements IInvokedMethodListener {
             assertThat((AsyncLoadingCache<?, ?>) param, is(validAsyncCache()));
           } else if (param instanceof Map<?, ?>) {
             assertThat((Map<?, ?>) param, is(validAsMap()));
-          } else if (checkNoStats && (param instanceof CacheContext)) {
-            checkNoStats = false;
-            CacheContext context = (CacheContext) param;
-            assertThat(context, hasHitCount(0));
-            assertThat(context, hasMissCount(0));
-            assertThat(context, hasLoadSuccessCount(0));
-            assertThat(context, hasLoadFailureCount(0));
+          } else if (param instanceof CacheContext) {
+            context = (CacheContext) param;
           }
         }
-        if (checkNoStats) {
-          throw new AssertionError("Test requires CacheContext param for validation");
-        }
+        checkWriter(testResult, context);
+        checkNoStats(testResult, context);
       }
     } catch (AssertionError caught) {
       testResult.setStatus(ITestResult.FAILURE);
@@ -78,6 +77,34 @@ public final class CacheValidationListener implements IInvokedMethodListener {
     } finally {
       cleanUp(testResult);
     }
+  }
+
+  /** Checks the writer if {@link CheckNoWriter} is found. */
+  private static void checkWriter(ITestResult testResult, CacheContext context) {
+    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+    CheckNoWriter checkWriter = testMethod.getAnnotation(CheckNoWriter.class);
+    if (checkWriter == null) {
+      return;
+    }
+    assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
+    CacheWriter<Integer, Integer> writer = context.cacheWriter();
+    verify(writer, never()).write(any(), any());
+    verify(writer, never()).delete(any(), any(), any());
+  }
+
+  /** Checks the statistics if {@link CheckNoStats} is found. */
+  private static void checkNoStats(ITestResult testResult, CacheContext context) {
+    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+    boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class);
+    if (!checkNoStats) {
+      return;
+    }
+
+    assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
+    assertThat(context, hasHitCount(0));
+    assertThat(context, hasMissCount(0));
+    assertThat(context, hasLoadSuccessCount(0));
+    assertThat(context, hasLoadFailureCount(0));
   }
 
   /** Free memory by clearing unused resources after test execution. */

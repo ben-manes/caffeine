@@ -58,6 +58,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -92,12 +93,15 @@ public final class AsyncLoadingCacheTest {
 
   /* ---------------- getIfPresent -------------- */
 
+  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getIfPresent_nullKey(AsyncLoadingCache<Integer, Integer> cache) {
+  public void getIfPresent_nullKey(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
     cache.getIfPresent(null);
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresent_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -106,6 +110,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -121,23 +126,28 @@ public final class AsyncLoadingCacheTest {
   /* ---------------- getFunc -------------- */
 
   @CacheSpec
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getFunc_nullKey(AsyncLoadingCache<Integer, Integer> cache) {
+  public void getFunc_nullKey(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null, key -> null);
   }
 
   @CacheSpec
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getFunc_nullLoader(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.get(context.absentKey(), (Function<Integer, Integer>) null);
   }
 
   @CacheSpec
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getFunc_nullKeyAndLoader(AsyncLoadingCache<Integer, Integer> cache) {
+  public void getFunc_nullKeyAndLoader(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
     cache.get(null, (Function<Integer, Integer>) null);
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DIRECT)
   public void getFunc_absent_null(AsyncLoadingCache<Integer, Integer> cache,
@@ -152,6 +162,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.SINGLE)
   public void getFunc_absent_null_async(AsyncLoadingCache<Integer, Integer> cache,
@@ -177,6 +188,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().asMap(), not(hasKey(key)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT)
   public void getFunc_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
@@ -192,6 +204,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.SINGLE)
   public void getFunc_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
@@ -217,6 +230,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.SINGLE)
   public void getFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
@@ -242,6 +256,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   public void getFunc_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -251,6 +266,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getFunc_present(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -269,26 +285,32 @@ public final class AsyncLoadingCacheTest {
   /* ---------------- getBiFunc -------------- */
 
   @CacheSpec
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getBiFunc_nullKey(AsyncLoadingCache<Integer, Integer> cache) {
+  public void getBiFunc_nullKey(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null, (key, executor) -> CompletableFuture.completedFuture(null));
   }
 
   @CacheSpec
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getBiFunc_nullLoader(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void getBiFunc_nullLoader(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
     BiFunction<Integer, Executor, CompletableFuture<Integer>> mappingFunction = null;
     cache.get(context.absentKey(), mappingFunction);
   }
 
   @CacheSpec
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getBiFunc_nullKeyAndLoader(AsyncLoadingCache<Integer, Integer> cache) {
+  public void getBiFunc_nullKeyAndLoader(AsyncLoadingCache<Integer, Integer> cache
+      , CacheContext context) {
     BiFunction<Integer, Executor, CompletableFuture<Integer>> mappingFunction = null;
     cache.get(null, mappingFunction);
   }
 
   @CacheSpec
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getBiFunc_throwsException(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
@@ -301,6 +323,7 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DIRECT)
   public void getBiFunc_absent_null(AsyncLoadingCache<Integer, Integer> cache,
@@ -312,6 +335,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT, population = Population.SINGLETON,
         maximumSize = MaximumSize.UNREACHABLE, implementation = Implementation.Caffeine)
@@ -330,6 +354,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.SINGLE)
   public void getBiFunc_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
@@ -356,6 +381,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.SINGLE)
   public void getBiFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
@@ -382,6 +408,7 @@ public final class AsyncLoadingCacheTest {
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   public void getBiFunc_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -392,6 +419,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void getBiFunc_present(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -411,17 +439,20 @@ public final class AsyncLoadingCacheTest {
   /* ---------------- get -------------- */
 
   @CacheSpec
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_null(AsyncLoadingCache<Integer, Integer> cache) {
+  public void get_null(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null);
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey()), is(futureOf(context.absentValue())));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   public void get_absent_failure(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -430,6 +461,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(nullValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.SINGLE, loader = Loader.EXCEPTIONAL)
   public void get_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
@@ -450,6 +482,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -462,7 +495,7 @@ public final class AsyncLoadingCacheTest {
 
   /* ---------------- getAll -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAll_iterable_null(AsyncLoadingCache<Integer, Integer> cache,
@@ -470,7 +503,7 @@ public final class AsyncLoadingCacheTest {
     cache.getAll(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -479,7 +512,7 @@ public final class AsyncLoadingCacheTest {
     cache.getAll(Collections.singletonList(null));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -490,14 +523,16 @@ public final class AsyncLoadingCacheTest {
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAll_immutable(AsyncLoadingCache<Integer, Integer> cache, CacheContext context)
       throws Exception {
     cache.getAll(context.absentKeys()).get().clear();
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = ExecutionException.class)
+  // FIXME: @CheckNoWriter
   @CacheSpec(loader = Loader.BULK_NULL)
+  @Test(dataProvider = "caches", expectedExceptions = ExecutionException.class)
   public void getAll_absent_bulkNull(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) throws Exception {
     try {
@@ -512,8 +547,9 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = ExecutionException.class)
+  // FIXME: @CheckNoWriter
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
+  @Test(dataProvider = "caches", expectedExceptions = ExecutionException.class)
   public void getAll_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) throws Exception {
     try {
@@ -528,6 +564,7 @@ public final class AsyncLoadingCacheTest {
     }
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -542,6 +579,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -559,6 +597,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -576,24 +615,28 @@ public final class AsyncLoadingCacheTest {
 
   /* ---------------- put -------------- */
 
+  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(null, context.absentValue());
   }
 
+  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullValue(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), null);
   }
 
+  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKeyAndValue(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.put(null, null);
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_insert_fail(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -605,6 +648,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.SINGLE)
   public void put_insert_failure_async(AsyncLoadingCache<Integer, Integer> cache,
@@ -641,6 +685,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(context.absentValue()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.SINGLE)
   public void put_replace_failure_async(AsyncLoadingCache<Integer, Integer> cache,

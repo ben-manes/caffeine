@@ -48,6 +48,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -63,6 +65,7 @@ public final class CacheTest {
 
   /* ---------------- size -------------- */
 
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void estimatedSize(Cache<Integer, Integer> cache, CacheContext context) {
@@ -71,12 +74,14 @@ public final class CacheTest {
 
   /* ---------------- getIfPresent -------------- */
 
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getIfPresent_nullKey(Cache<Integer, Integer> cache) {
+  public void getIfPresent_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
     cache.getIfPresent(null);
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
@@ -85,6 +90,7 @@ public final class CacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -99,24 +105,28 @@ public final class CacheTest {
   /* ---------------- get -------------- */
 
   @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_nullKey(Cache<Integer, Integer> cache) {
+  public void get_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
     cache.get(null, Function.identity());
   }
 
   @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_nullLoader(Cache<Integer, Integer> cache, CacheContext context) {
     cache.get(context.absentKey(), null);
   }
 
   @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_nullKeyAndLoader(Cache<Integer, Integer> cache) {
+  public void get_nullKeyAndLoader(Cache<Integer, Integer> cache, CacheContext context) {
     cache.get(null, null);
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context) {
     try {
@@ -128,12 +138,14 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey(), k -> null), is(nullValue()));
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -143,6 +155,7 @@ public final class CacheTest {
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(Cache<Integer, Integer> cache, CacheContext context) {
@@ -160,25 +173,29 @@ public final class CacheTest {
 
   /* ---------------- getAllPresent -------------- */
 
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_iterable_null(Cache<Integer, Integer> cache) {
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getAllPresent_iterable_null(Cache<Integer, Integer> cache, CacheContext context) {
     cache.getAllPresent(null);
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_iterable_nullKey(Cache<Integer, Integer> cache) {
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getAllPresent_iterable_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
     cache.getAllPresent(Collections.singletonList(null));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_iterable_empty(Cache<Integer, Integer> cache) {
+  public void getAllPresent_iterable_empty(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAllPresent(ImmutableList.of());
     assertThat(result.size(), is(0));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
@@ -191,11 +208,13 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllPresent_immutable(Cache<Integer, Integer> cache, CacheContext context) {
     cache.getAllPresent(context.absentKeys()).clear();
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -210,6 +229,7 @@ public final class CacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -231,6 +251,7 @@ public final class CacheTest {
   }
 
   @Test(dataProvider = "caches")
+  // FIXME: @CheckNoWriter, but test directly (ignore async view case)
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
@@ -257,18 +278,21 @@ public final class CacheTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(null, context.absentValue());
   }
 
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullValue(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), null);
   }
 
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKeyAndValue(Cache<Integer, Integer> cache, CacheContext context) {
@@ -316,6 +340,7 @@ public final class CacheTest {
     assertThat(cache, hasRemovalNotifications(context, entries.size() / 2, RemovalCause.REPLACED));
   }
 
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_empty(Cache<Integer, Integer> cache, CacheContext context) {
@@ -323,6 +348,7 @@ public final class CacheTest {
     assertThat(cache.estimatedSize(), is(context.initialSize()));
   }
 
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void putAll_null(Cache<Integer, Integer> cache, CacheContext context) {
@@ -331,6 +357,7 @@ public final class CacheTest {
 
   /* ---------------- invalidate -------------- */
 
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void invalidate_absent(Cache<Integer, Integer> cache, CacheContext context) {
@@ -350,6 +377,7 @@ public final class CacheTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
 
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void invalidate_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
@@ -367,6 +395,7 @@ public final class CacheTest {
         context.original().size(), RemovalCause.EXPLICIT));
   }
 
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void invalidateAll_empty(Cache<Integer, Integer> cache, CacheContext context) {
@@ -394,6 +423,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void invalidateAll_null(Cache<Integer, Integer> cache, CacheContext context) {
     cache.invalidateAll(null);
@@ -402,6 +432,7 @@ public final class CacheTest {
   /* ---------------- cleanup -------------- */
 
   @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void cleanup(Cache<Integer, Integer> cache, CacheContext context) {
     cache.cleanUp();
@@ -410,8 +441,9 @@ public final class CacheTest {
   /* ---------------- stats -------------- */
 
   @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  public void stats(Cache<Integer, Integer> cache) {
+  public void stats(Cache<Integer, Integer> cache, CacheContext context) {
     CacheStats stats = cache.stats()
         .plus(new CacheStats(1, 2, 3, 4, 5, 6)
         .minus(new CacheStats(6, 5, 4, 3, 2, 1)));
@@ -420,6 +452,7 @@ public final class CacheTest {
 
   /* ---------------- serialize -------------- */
 
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(writer = Writer.EXCEPTIONAL)
   public void serialize(Cache<Integer, Integer> cache, CacheContext context) {

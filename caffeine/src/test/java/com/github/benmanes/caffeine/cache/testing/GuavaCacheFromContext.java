@@ -171,6 +171,7 @@ public final class GuavaCacheFromContext {
 
     @Override
     public V get(K key, Function<? super K, ? extends V> mappingFunction) {
+      requireNonNull(mappingFunction);
       try {
         return cache.get(key, () -> {
           V value = mappingFunction.apply(key);
@@ -200,13 +201,19 @@ public final class GuavaCacheFromContext {
 
     @Override
     public void put(K key, V value) {
-      writer.write(key, value);
+      requireNonNull(key);
+      requireNonNull(value);
+      if (value != cache.asMap().get(key)) {
+        writer.write(key, value);
+      }
       cache.put(key, value);
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
       for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
+        requireNonNull(entry.getKey());
+        requireNonNull(entry.getValue());
         writer.write(entry.getKey(), entry.getValue());
       }
       cache.putAll(map);

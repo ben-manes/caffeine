@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
-import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
@@ -43,6 +42,7 @@ import java.util.stream.IntStream;
 import org.testng.log4testng.Logger;
 
 import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -142,14 +142,15 @@ public final class Threads {
 
     @Override
     public void run() {
-      Random random = new Random();
       int id = index.getAndIncrement();
       for (Integer e : sets.get(id)) {
-        BiConsumer<A, Integer> operation = operations.get(random.nextInt(operations.size()));
+        BiConsumer<A, Integer> operation = operations.get(
+            ThreadLocalRandom.current().nextInt(operations.size()));
         try {
           operation.accept(collection, e);
         } catch (Throwable t) {
-          failures.add(String.format("Failed: key %s on operation %s", e, operation));
+          failures.add(String.format("Failed: key %s on operation %s%n%s",
+              e, operation, Throwables.getStackTraceAsString(t)));
           throw t;
         }
       }

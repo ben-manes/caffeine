@@ -181,7 +181,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       }
 
       V newValue = requireNonNull(function.apply(key, value));
-      if (newValue != null) {
+      if (newValue != value) {
         writer.write(key, value);
       }
       if (hasRemovalListener() && (newValue != value)) {

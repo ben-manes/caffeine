@@ -56,6 +56,7 @@ import com.google.common.collect.Iterables;
 @Test(dataProviderClass = CacheProvider.class)
 public final class RefreshAfterWriteTest {
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NEGATIVE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -69,6 +70,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -83,6 +85,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -97,6 +100,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -110,6 +114,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })

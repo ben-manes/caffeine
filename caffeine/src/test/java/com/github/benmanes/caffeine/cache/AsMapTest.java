@@ -60,6 +60,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.SerializableTester;
 
@@ -76,7 +77,7 @@ public final class AsMapTest {
 
   /* ---------------- is empty / size / clear -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void isEmpty(Map<Integer, Integer> map, CacheContext context) {
@@ -86,7 +87,7 @@ public final class AsMapTest {
     }
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void size(Map<Integer, Integer> map, CacheContext context) {
@@ -105,14 +106,14 @@ public final class AsMapTest {
 
   /* ---------------- contains -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void containsKey_null(Map<Integer, Integer> map, CacheContext context) {
     map.containsKey(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -122,21 +123,21 @@ public final class AsMapTest {
     }
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void containsKey_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.containsKey(context.absentKey()), is(false));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void containsValue_null(Map<Integer, Integer> map, CacheContext context) {
     map.containsValue(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -146,7 +147,7 @@ public final class AsMapTest {
     }
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void containsValue_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -155,21 +156,21 @@ public final class AsMapTest {
 
   /* ---------------- get -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void get_null(Map<Integer, Integer> map, CacheContext context) {
     map.get(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void get_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.get(context.absentKey()), is(nullValue()));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -181,14 +182,14 @@ public final class AsMapTest {
 
   /* ---------------- get -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getOrDefault_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.getOrDefault(null, 1);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getOrDefault_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -196,7 +197,7 @@ public final class AsMapTest {
     assertThat(map.getOrDefault(context.absentKey(), context.absentKey()), is(context.absentKey()));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -208,14 +209,14 @@ public final class AsMapTest {
 
   /* ---------------- forEach -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void forEach_null(Map<Integer, Integer> map, CacheContext context) {
     map.forEach(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void forEach_scan(Map<Integer, Integer> map, CacheContext context) {
@@ -240,21 +241,21 @@ public final class AsMapTest {
 
   /* ---------------- put -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.put(null, 1);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_nullValue(Map<Integer, Integer> map, CacheContext context) {
     map.put(1, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_nullKeyAndValue(Map<Integer, Integer> map, CacheContext context) {
@@ -303,14 +304,14 @@ public final class AsMapTest {
 
   /* ---------------- putAll -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_null(Map<Integer, Integer> map, CacheContext context) {
     map.putAll(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_empty(Map<Integer, Integer> map, CacheContext context) {
@@ -362,28 +363,28 @@ public final class AsMapTest {
 
   /* ---------------- putIfAbsent -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putIfAbsent_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.putIfAbsent(null, 2);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putIfAbsent_nullValue(Map<Integer, Integer> map, CacheContext context) {
     map.putIfAbsent(1, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putIfAbsent_nullKeyAndValue(Map<Integer, Integer> map, CacheContext context) {
     map.putIfAbsent(null, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
   removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -407,14 +408,14 @@ public final class AsMapTest {
 
   /* ---------------- remove -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void remove_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.remove(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void remove_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -437,35 +438,35 @@ public final class AsMapTest {
 
   /* ---------------- remove conditionally -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.remove(null, 1);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_nullValue(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.remove(1, null), is(false)); // see ConcurrentHashMap
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_nullKeyAndValue(Map<Integer, Integer> map, CacheContext context) {
     map.remove(null, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.remove(context.absentKey(), context.absentValue()), is(false));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -491,28 +492,28 @@ public final class AsMapTest {
 
   /* ---------------- replace -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replace_null(Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, 1);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replace_nullValue(Map<Integer, Integer> map, CacheContext context) {
     map.replace(1, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replace_nullKeyAndValue(Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replace_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -550,56 +551,56 @@ public final class AsMapTest {
 
   /* ---------------- replace conditionally -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replaceConditionally_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, 1, 1);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replaceConditionally_nullOldValue(Map<Integer, Integer> map, CacheContext context) {
     map.replace(1, null, 1);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replaceConditionally_nullNewValue(Map<Integer, Integer> map, CacheContext context) {
     map.replace(1, 1, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replaceConditionally_nullKeyAndOldValue(Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, null, 1);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replaceConditionally_nullKeyAndNewValue(Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, 1, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replaceConditionally_nullOldAndNewValue(Map<Integer, Integer> map, CacheContext context) {
     map.replace(1, null, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replaceConditionally_nullKeyAndValues(Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, null, null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replaceConditionally_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -607,7 +608,7 @@ public final class AsMapTest {
     assertThat(map.replace(key, key, key), is(false));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -654,14 +655,14 @@ public final class AsMapTest {
 
   /* ---------------- replaceAll -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void replaceAll_null(Map<Integer, Integer> map, CacheContext context) {
     map.replaceAll(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -671,6 +672,7 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  //FIXME: @CheckWriter
   @Test(dataProvider = "caches")
   public void replaceAll_sameValue(Map<Integer, Integer> map, CacheContext context) {
     map.replaceAll((key, value) -> value);
@@ -689,14 +691,14 @@ public final class AsMapTest {
 
   /* ---------------- computeIfAbsent -------------- */
 
-  @CheckNoStats
+  @CheckNoStats @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void computeIfAbsent_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.computeIfAbsent(null, key -> -key);
   }
 
-  @CheckNoStats
+  @CheckNoStats @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void computeIfAbsent_nullMappingFunction(Map<Integer, Integer> map, CacheContext context) {
@@ -777,14 +779,14 @@ public final class AsMapTest {
 
   /* ---------------- computeIfPresent -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void computeIfPresent_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.computeIfPresent(null, (key, value) -> -key);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void computeIfPresent_nullMappingFunction(Map<Integer, Integer> map, CacheContext context) {
@@ -888,14 +890,14 @@ public final class AsMapTest {
 
   /* ---------------- compute -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void compute_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.compute(null, (key, value) -> -key);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void compute_nullMappingFunction(Map<Integer, Integer> map, CacheContext context) {
@@ -1005,21 +1007,21 @@ public final class AsMapTest {
 
   /* ---------------- merge -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void merge_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.merge(null, 1, (key, value) -> -key);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void merge_nullValue(Map<Integer, Integer> map, CacheContext context) {
     map.merge(1, null, (key, value) -> -key);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void merge_nullMappingFunction(Map<Integer, Integer> map, CacheContext context) {
@@ -1139,21 +1141,21 @@ public final class AsMapTest {
 
   /* ---------------- equals / hashCode -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void equals_null(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.equals(null), is(false));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void equals_self(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.equals(map), is(true));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void equals(Map<Integer, Integer> map, CacheContext context) {
@@ -1161,21 +1163,21 @@ public final class AsMapTest {
     assertThat(context.original().equals(map), is(true));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void hashCode(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.hashCode(), is(equalTo(context.original().hashCode())));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void hashCode_self(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.hashCode(), is(equalTo(map.hashCode())));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1186,7 +1188,7 @@ public final class AsMapTest {
     assertThat(map.hashCode(), is(not(equalTo(other.hashCode()))));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1204,7 +1206,7 @@ public final class AsMapTest {
 
   /* ---------------- toString -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void toString(Map<Integer, Integer> map, CacheContext context) {
@@ -1218,14 +1220,14 @@ public final class AsMapTest {
 
   /* ---------------- Key Set -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void keySetToArray_null(Map<Integer, Integer> map, CacheContext context) {
     map.keySet().toArray(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void keySetToArray(Map<Integer, Integer> map, CacheContext context) {
@@ -1240,7 +1242,7 @@ public final class AsMapTest {
     assertThat(Arrays.asList(array).containsAll(context.original().keySet()), is(true));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1249,7 +1251,7 @@ public final class AsMapTest {
   }
 
   @CacheSpec
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void keySet_addNotSupported(Map<Integer, Integer> map, CacheContext context) {
     map.keySet().add(1);
@@ -1297,7 +1299,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
@@ -1305,7 +1307,7 @@ public final class AsMapTest {
     map.keySet().iterator().remove();
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NoSuchElementException.class)
@@ -1314,7 +1316,7 @@ public final class AsMapTest {
   }
 
   @CacheSpec
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySpliterator(Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
@@ -1324,14 +1326,14 @@ public final class AsMapTest {
 
   /* ---------------- Values -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void valuesToArray_null(Map<Integer, Integer> map, CacheContext context) {
     map.values().toArray(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void valuesToArray(Map<Integer, Integer> map, CacheContext context) {
@@ -1346,7 +1348,7 @@ public final class AsMapTest {
     assertThat(Arrays.asList(array).containsAll(context.original().values()), is(true));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1354,7 +1356,7 @@ public final class AsMapTest {
     assertThat(map.values(), is(deeplyEmpty()));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
@@ -1406,7 +1408,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
@@ -1414,7 +1416,7 @@ public final class AsMapTest {
     map.values().iterator().remove();
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NoSuchElementException.class)
@@ -1423,7 +1425,7 @@ public final class AsMapTest {
   }
 
   @CacheSpec
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void valueSpliterator(Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
@@ -1433,14 +1435,14 @@ public final class AsMapTest {
 
   /* ---------------- Entry Set -------------- */
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void entrySetToArray_null(Map<Integer, Integer> map, CacheContext context) {
     map.entrySet().toArray(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void entriesToArray(Map<Integer, Integer> map, CacheContext context) {
@@ -1455,7 +1457,7 @@ public final class AsMapTest {
     assertThat(Arrays.asList(array).containsAll(context.original().entrySet()), is(true));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1463,7 +1465,7 @@ public final class AsMapTest {
     assertThat(map.entrySet(), is(deeplyEmpty()));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = Population.EMPTY, removalListener = Listener.DEFAULT)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void entrySet_addIsNotSupported(Map<Integer, Integer> map, CacheContext context) {
@@ -1519,7 +1521,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
@@ -1527,7 +1529,7 @@ public final class AsMapTest {
     map.entrySet().iterator().remove();
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @CacheSpec(population = Population.EMPTY,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NoSuchElementException.class)
@@ -1536,7 +1538,7 @@ public final class AsMapTest {
   }
 
   @CacheSpec
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySetSpliterator(Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
@@ -1559,7 +1561,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(implementation = Implementation.Caffeine,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -1567,7 +1569,7 @@ public final class AsMapTest {
     map.entrySet().iterator().next().setValue(null);
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })

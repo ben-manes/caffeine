@@ -941,8 +941,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (!prior.isAlive()) {
           continue;
         }
-        writer.write(key, value);
         oldValue = prior.getValue();
+        if (value != oldValue) {
+          writer.write(key, value);
+        }
         oldWeight = prior.getWeight();
         prior.setValue(value, valueReferenceQueue());
         prior.setWeight(weight);
