@@ -15,13 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
@@ -35,31 +32,11 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CacheFromContext {
+public final class CaffeineCacheFromContext {
 
-  private CacheFromContext() {}
+  private CaffeineCacheFromContext() {}
 
-  @SuppressWarnings("unchecked")
-  public static <K, V> LoadingCache<K, V> newLoadingCache(CacheContext context) {
-    requireNonNull(context.loader);
-    return (LoadingCache<K, V>) newCache(context);
-  }
-
-  /**
-   * Creates a new cache based on the context's configuration and update's the context's reference.
-   */
-  public static <K, V> Cache<K, V> newCache(CacheContext context) {
-    switch (context.implementation()) {
-      case Caffeine:
-        return newCaffeineCache(context);
-      case Guava:
-        return GuavaLocalCache.newGuavaCache(context);
-      default:
-        throw new IllegalStateException();
-    }
-  }
-
-  private static <K, V> Cache<K, V> newCaffeineCache(CacheContext context) {
+  public static <K, V> Cache<K, V> newCaffeineCache(CacheContext context) {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());
@@ -102,6 +79,9 @@ public final class CacheFromContext {
     }
     if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
+    }
+    if (context.keyStrength != ReferenceType.WEAK) {
+      builder.writer(context.cacheWriter());
     }
     if (context.isAsync()) {
       context.asyncCache = builder.buildAsync(context.loader);

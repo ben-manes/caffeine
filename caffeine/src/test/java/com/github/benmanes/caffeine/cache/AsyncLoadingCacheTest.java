@@ -55,9 +55,10 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.testing.Awaits;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -685,8 +686,8 @@ public final class AsyncLoadingCacheTest {
 
   /* ---------------- serialize -------------- */
 
-  @CacheSpec
   @Test(dataProvider = "caches")
+  @CacheSpec(writer = Writer.EXCEPTIONAL)
   public void serialize(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache, is(reserializable()));
   }

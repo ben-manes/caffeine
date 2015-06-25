@@ -37,6 +37,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -66,7 +67,7 @@ final class CacheGenerator {
         .map(CacheGenerator::newCacheContext)
         .filter(CacheGenerator::isCompatible)
         .map(context -> {
-          Cache<Integer, Integer> cache = CacheFromContext.newCache(context);
+          Cache<Integer, Integer> cache = newCache(context);
           populate(context, cache);
           return Maps.immutableEntry(context, cache);
         });
@@ -114,6 +115,7 @@ final class CacheGenerator {
         ImmutableSet.of(true, isLoadingOnly),
         ImmutableSet.copyOf(computations),
         ImmutableSet.copyOf(cacheSpec.loader()),
+        ImmutableSet.copyOf(cacheSpec.writer()),
         ImmutableSet.copyOf(implementations));
   }
 
@@ -147,6 +149,7 @@ final class CacheGenerator {
         (Boolean) combination.get(index++),
         (Compute) combination.get(index++),
         (Loader) combination.get(index++),
+        (Writer) combination.get(index++),
         (Implementation) combination.get(index++));
   }
 
@@ -160,6 +163,18 @@ final class CacheGenerator {
     boolean skip = (context.isAsync() && asyncIncompatible)
         || refreshIncompatible || weigherIncompatible;
     return !skip;
+  }
+
+  /** Creates a new cache based on the context's configuration. */
+  public static <K, V> Cache<K, V> newCache(CacheContext context) {
+    switch (context.implementation()) {
+      case Caffeine:
+        return CaffeineCacheFromContext.newCaffeineCache(context);
+      case Guava:
+        return GuavaCacheFromContext.newGuavaCache(context);
+      default:
+        throw new IllegalStateException();
+    }
   }
 
   /** Fills the cache up to the population size. */
@@ -177,10 +192,12 @@ final class CacheGenerator {
     int last = base + maximum;
     int middle = Math.max(first, base + ((last - first) / 2));
 
-    // Ensure references are the same for identity comparison (soft, weak)
+    context.disableRejectingCacheWriter();
     for (int i = 1; i <= maximum; i++) {
-      Integer key = (base + i);
-      Integer value = -key;
+      // Reference caching (weak, soft) require unique instances for identity comparison
+      Integer key = new Integer(base + i);
+      Integer value = new Integer(-key);
+
       if (key == first) {
         context.firstKey = key;
       }
@@ -194,5 +211,6 @@ final class CacheGenerator {
       context.original.put(key, value);
       context.ticker().advance(context.advance.timeNanos(), TimeUnit.NANOSECONDS);
     }
+    context.enableRejectingCacheWriter();
   }
 }

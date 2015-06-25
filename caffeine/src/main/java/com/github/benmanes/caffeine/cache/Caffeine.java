@@ -50,6 +50,7 @@ import com.github.benmanes.caffeine.cache.tracing.Tracer;
  *   <li>keys automatically wrapped in {@linkplain WeakReference weak} references
  *   <li>values automatically wrapped in {@linkplain WeakReference weak} or
  *       {@linkplain SoftReference soft} references
+ *   <li>writes propagated to an external resource
  *   <li>notification of evicted (or otherwise removed) entries
  *   <li>accumulation of cache access statistics
  * </ul>

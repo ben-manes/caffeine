@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.Iterators;
 import com.google.common.testing.GcFinalization;
@@ -50,13 +51,15 @@ import com.google.common.testing.GcFinalization;
 public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG, population = Population.FULL)
+  @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
+      population = Population.FULL, writer = Writer.DISABLED)
   public void cleanup_keys(Cache<Integer, Integer> cache, CacheContext context) {
     runCleanupTest(cache, context);
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK, population = Population.FULL)
+  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+      population = Population.FULL, writer = Writer.DISABLED)
   public void cleanup_values(Cache<Integer, Integer> cache, CacheContext context) {
     runCleanupTest(cache, context);
   }
@@ -76,7 +79,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, population = Population.EMPTY)
+  @CacheSpec(keys = ReferenceType.WEAK, population = Population.EMPTY, writer = Writer.DISABLED)
   public void evict_weakKeys(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(Integer.MIN_VALUE + ThreadLocalRandom.current().nextInt(), 0);
     cleanUpUntilEmpty(cache, context);
@@ -84,7 +87,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(values = ReferenceType.WEAK, population = Population.FULL)
+  @CacheSpec(values = ReferenceType.WEAK, population = Population.FULL, writer = Writer.DISABLED)
   public void evict_weakValues(Cache<Integer, Integer> cache, CacheContext context) {
     context.original().clear();
     cleanUpUntilEmpty(cache, context);
@@ -93,7 +96,7 @@ public final class ReferenceTest {
   }
 
   @Test(enabled = false, dataProvider = "caches")
-  @CacheSpec(values = ReferenceType.SOFT, population = Population.FULL)
+  @CacheSpec(values = ReferenceType.SOFT, population = Population.FULL, writer = Writer.DISABLED)
   public void evict_softValues(Cache<Integer, Integer> cache, CacheContext context) {
     context.clear();
     awaitSoftRefGc();
@@ -103,7 +106,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, population = Population.SINGLETON)
+  @CacheSpec(keys = ReferenceType.WEAK, population = Population.SINGLETON, writer = Writer.DISABLED)
   public void iterator_weakKeys(Cache<Integer, Integer> cache, CacheContext context) {
     WeakReference<Integer> weakKey = new WeakReference<>(context.firstKey());
     context.clear();
@@ -118,7 +121,8 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(values = ReferenceType.WEAK, population = Population.SINGLETON)
+  @CacheSpec(values = ReferenceType.WEAK,
+      population = Population.SINGLETON, writer = Writer.DISABLED)
   public void iterator_weakValues(Cache<Integer, Integer> cache, CacheContext context) {
     WeakReference<Integer> weakValue = new WeakReference<>(
         context.original().get(context.firstKey()));
@@ -134,7 +138,8 @@ public final class ReferenceTest {
   }
 
   @Test(enabled = false, dataProvider = "caches")
-  @CacheSpec(values = ReferenceType.SOFT, population = Population.SINGLETON)
+  @CacheSpec(values = ReferenceType.SOFT,
+      population = Population.SINGLETON, writer = Writer.DISABLED)
   public void iterator_softValues(Cache<Integer, Integer> cache, CacheContext context) {
     awaitSoftRefGc();
 

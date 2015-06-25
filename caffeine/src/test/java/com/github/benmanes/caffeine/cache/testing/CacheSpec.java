@@ -33,7 +33,10 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import org.mockito.Mockito;
+
 import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -416,6 +419,37 @@ public @interface CacheSpec {
     public boolean isBulk() {
       return bulk;
     }
+  }
+
+  /* ---------------- CacheWriter -------------- */
+
+  /** Ignored if weak keys are configured. */
+  Writer[] writer() default {
+    Writer.MOCKITO,
+  };
+
+  /** The {@link CacheWriter} for the external resource. */
+  enum Writer implements Supplier<CacheWriter<Integer, Integer>> {
+    /** A writer that does nothing. */
+    DISABLED {
+      @Override public CacheWriter<Integer, Integer> get() {
+        return CacheWriter.disabledWriter();
+      }
+    },
+    /** A writer that records interactions. */
+    MOCKITO {
+      @Override public CacheWriter<Integer, Integer> get() {
+        @SuppressWarnings("unchecked")
+        CacheWriter<Integer, Integer> mock = Mockito.mock(CacheWriter.class);
+        return mock;
+      }
+    },
+    /** A writer that always throws an exception. */
+    EXCEPTIONAL {
+      @Override public CacheWriter<Integer, Integer> get() {
+        return new RejectingCacheWriter<Integer, Integer>();
+      }
+    };
   }
 
   /* ---------------- Executor -------------- */

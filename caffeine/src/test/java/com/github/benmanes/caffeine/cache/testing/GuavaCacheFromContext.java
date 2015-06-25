@@ -22,6 +22,7 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
@@ -32,6 +33,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -58,9 +60,9 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class GuavaLocalCache {
+public final class GuavaCacheFromContext {
 
-  private GuavaLocalCache() {}
+  private GuavaCacheFromContext() {}
 
   /** Returns a Guava-backed cache. */
   @SuppressWarnings("CheckReturnValue")
@@ -68,6 +70,10 @@ public final class GuavaLocalCache {
     checkState(!context.isAsync(), "Guava caches are synchronous only");
 
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
+    CacheWriter<Integer, Integer> writer = (context.keyStrength() == ReferenceType.STRONG)
+        ? context.cacheWriter()
+        : CacheWriter.disabledWriter();
+
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());
     }
@@ -104,21 +110,37 @@ public final class GuavaLocalCache {
     } else if (context.valueStrength == ReferenceType.SOFT) {
       builder.softValues();
     }
-    if (context.removalListenerType != Listener.DEFAULT) {
+    if (context.removalListenerType == Listener.DEFAULT) {
+      final class WriterListener implements RemovalListener<Integer, Integer>, Serializable {
+        private static final long serialVersionUID = 1L;
+
+        @Override public void onRemoval(RemovalNotification<Integer, Integer> notification) {
+          if (notification.wasEvicted()) {
+            @SuppressWarnings("unchecked")
+            Integer castKey = notification.getKey();
+            @SuppressWarnings("unchecked")
+            Integer castValue = notification.getValue();
+            RemovalCause cause = RemovalCause.valueOf(notification.getCause().name());
+            writer.delete(castKey, castValue, cause);
+          }
+        }
+      }
+      builder.removalListener(new WriterListener());
+    } else {
       boolean translateZeroExpire = (context.afterAccess == Expire.IMMEDIATELY) ||
           (context.afterWrite == Expire.IMMEDIATELY);
       builder.removalListener(new GuavaRemovalListener<>(
-          translateZeroExpire, context.removalListener));
+          translateZeroExpire, context.removalListener, writer));
     }
     Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker;
     if (context.loader == null) {
-      context.cache = new GuavaCache<>(builder.<Integer, Integer>build(), ticker);
+      context.cache = new GuavaCache<>(builder.<Integer, Integer>build(), writer, ticker);
     } else if (context.loader().isBulk()) {
       context.cache = new GuavaLoadingCache<>(builder.build(
-          new BulkLoader<Integer, Integer>(context.loader())), ticker);
+          new BulkLoader<Integer, Integer>(context.loader())), writer, ticker);
     } else {
       context.cache = new GuavaLoadingCache<>(builder.build(
-          new SingleLoader<Integer, Integer>(context.loader())), ticker);
+          new SingleLoader<Integer, Integer>(context.loader())), writer, ticker);
     }
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) context.cache;
@@ -129,12 +151,15 @@ public final class GuavaLocalCache {
     private static final long serialVersionUID = 1L;
 
     private final com.google.common.cache.Cache<K, V> cache;
+    private final CacheWriter<K, V> writer;
     private final Ticker ticker;
 
     transient StatsCounter statsCounter;
 
-    GuavaCache(com.google.common.cache.Cache<K, V> cache, Ticker ticker) {
+    GuavaCache(com.google.common.cache.Cache<K, V> cache,
+        CacheWriter<K, V> writer, Ticker ticker) {
       this.statsCounter = new SimpleStatsCounter();
+      this.writer = requireNonNull(writer);
       this.cache = requireNonNull(cache);
       this.ticker = ticker;
     }
@@ -175,11 +200,15 @@ public final class GuavaLocalCache {
 
     @Override
     public void put(K key, V value) {
+      writer.write(key, value);
       cache.put(key, value);
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
+      for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
+        writer.write(entry.getKey(), entry.getValue());
+      }
       cache.putAll(map);
     }
 
@@ -231,17 +260,35 @@ public final class GuavaLocalCache {
         @Override
         public V remove(Object key) {
           requireNonNull(key);
+          if (containsKey(key)) {
+            @SuppressWarnings("unchecked")
+            K castKey = (K) key;
+            writer.delete(castKey, cache.asMap().get(key), RemovalCause.EXPLICIT);
+          }
           return delegate().remove(key);
         }
         @Override
         public boolean remove(Object key, Object value) {
           requireNonNull(key);
+          if (value == null) {
+            return false;
+          }
+          if (value.equals(cache.asMap().get(key))) {
+            @SuppressWarnings("unchecked")
+            K castKey = (K) key;
+            @SuppressWarnings("unchecked")
+            V castValue = (V) value;
+            writer.delete(castKey, castValue, RemovalCause.EXPLICIT);
+          }
           return delegate().remove(key, value);
         }
         @Override
         public V replace(K key, V value) {
           requireNonNull(key);
           requireNonNull(value);
+          if (containsKey(key)) {
+            writer.write(key, value);
+          }
           return delegate().replace(key, value);
         }
         @Override
@@ -249,6 +296,9 @@ public final class GuavaLocalCache {
           requireNonNull(key);
           requireNonNull(oldValue);
           requireNonNull(newValue);
+          if (oldValue.equals(get(key))) {
+            writer.write(key, newValue);
+          }
           return delegate().replace(key, oldValue, newValue);
         }
         @Override
@@ -401,8 +451,9 @@ public final class GuavaLocalCache {
 
     private final com.google.common.cache.LoadingCache<K, V> cache;
 
-    GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache, Ticker ticker) {
-      super(cache, ticker);
+    GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache,
+        CacheWriter<K, V> writer, Ticker ticker) {
+      super(cache, writer, ticker);
       this.cache = requireNonNull(cache);
     }
 
@@ -463,11 +514,14 @@ public final class GuavaLocalCache {
 
     final com.github.benmanes.caffeine.cache.RemovalListener<K, V> delegate;
     final boolean translateZeroExpire;
+    final CacheWriter<K, V> writer;
 
     GuavaRemovalListener(boolean translateZeroExpire,
-        com.github.benmanes.caffeine.cache.RemovalListener<K, V> delegate) {
+        com.github.benmanes.caffeine.cache.RemovalListener<K, V> delegate,
+        CacheWriter<K, V> writer) {
       this.translateZeroExpire = translateZeroExpire;
       this.delegate = delegate;
+      this.writer = writer;
     }
 
     @Override
@@ -476,6 +530,9 @@ public final class GuavaLocalCache {
       if (translateZeroExpire && (cause == RemovalCause.SIZE)) {
         // Guava internally uses sizing logic for null cache case
         cause = RemovalCause.EXPIRED;
+      }
+      if (notification.wasEvicted()) {
+        writer.delete(notification.getKey(), notification.getValue(), cause);
       }
       delegate.onRemoval(new com.github.benmanes.caffeine.cache.RemovalNotification<K, V>(
           notification.getKey(), notification.getValue(), cause));

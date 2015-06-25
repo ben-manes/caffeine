@@ -28,8 +28,8 @@ import javax.annotation.concurrent.ThreadSafe;
  * <p>
  * When combined with a {@link CacheLoader}, the writer simplifies the implementation of a tiered
  * cache. The loader queries the secondary cache and computes the value if not found. The layered
- * cache may be inclusive or modeled as a victim cache by writing entries when the
- * {@link RemovalCause} indicates an eviction.
+ * cache may be modeled as a victim cache by writing entries when the {@link RemovalCause} indicates
+ * an eviction.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the most general type of keys this writer can write; for example {@code Object} if any
