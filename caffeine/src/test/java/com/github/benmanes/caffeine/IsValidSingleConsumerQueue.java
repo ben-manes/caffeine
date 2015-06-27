@@ -26,7 +26,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.SingleConsumerQueue.Node;
@@ -84,7 +83,6 @@ public final class IsValidSingleConsumerQueue<E>
     }
   }
 
-  @Factory
   public static <E> IsValidSingleConsumerQueue<E> validate() {
     return new IsValidSingleConsumerQueue<E>();
   }

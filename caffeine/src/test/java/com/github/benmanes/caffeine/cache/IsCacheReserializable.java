@@ -20,7 +20,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
@@ -264,7 +263,6 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  @Factory
   public static <T> Matcher<T> reserializable() {
     return new IsCacheReserializable<T>();
   }

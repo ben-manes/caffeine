@@ -26,7 +26,6 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
@@ -90,7 +89,6 @@ public final class IsValidLinkedDeque<E> extends TypeSafeDiagnosingMatcher<Linke
     }
   }
 
-  @Factory
   public static <E> IsValidLinkedDeque<E> validLinkedDeque() {
     return new IsValidLinkedDeque<E>();
   }

@@ -29,7 +29,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
@@ -185,7 +184,6 @@ public final class IsValidBoundedLocalCache<K, V>
     }
   }
 
-  @Factory
   public static <K, V> IsValidBoundedLocalCache<K, V> valid() {
     return new IsValidBoundedLocalCache<K, V>();
   }

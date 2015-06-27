@@ -31,7 +31,6 @@ import java.util.Queue;
 import java.util.Set;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 /**
@@ -115,7 +114,6 @@ public final class IsEmptyIterable<E> extends TypeSafeDiagnosingMatcher<Iterable
     } catch (NoSuchElementException e) {}
   }
 
-  @Factory
   public static <E> IsEmptyIterable<E> deeplyEmpty() {
     return new IsEmptyIterable<E>();
   }

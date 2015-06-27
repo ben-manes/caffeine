@@ -36,10 +36,8 @@ import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.lang.ref.Reference;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.lang.model.element.Modifier;
 
@@ -392,13 +390,6 @@ public final class NodeGenerator {
     }
     action.addStatement("$T.UNSAFE.putObject(this, $N, $N)", UNSAFE_ACCESS, offsetName("key"), arg);
     nodeSubtype.addMethod(action.build());
-  }
-
-  private String baseClassName() {
-    List<Feature> keyAndValue = parentFeatures.stream()
-        .filter(feature -> feature.name().endsWith("KEYS") || feature.name().endsWith("VALUES"))
-        .collect(Collectors.toList());
-    return Feature.makeClassName(keyAndValue);
   }
 
   /** Creates an accessor that returns the reference. */

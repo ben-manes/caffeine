@@ -177,7 +177,10 @@ public final class EventDispatcher<K, V> {
                 Runnable action = () -> registration.getCacheEntryListener().dispatch(event);
                 return queue.thenRunAsync(action, exectuor);
               });
-          return ((future != null) && registration.isSynchronous()) ? future : null;
+          if ((future != null) && registration.isSynchronous()) {
+            return future;
+          }
+          return null;
         }).filter(Objects::nonNull).forEach(pending.get()::add);
   }
 }

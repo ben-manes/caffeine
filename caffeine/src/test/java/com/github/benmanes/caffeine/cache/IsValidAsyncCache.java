@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.concurrent.CompletableFuture;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 /**
@@ -59,7 +58,6 @@ public final class IsValidAsyncCache<K, V>
     return true;
   }
 
-  @Factory
   public static <K, V> IsValidAsyncCache<K, V> validAsyncCache() {
     return new IsValidAsyncCache<K, V>();
   }

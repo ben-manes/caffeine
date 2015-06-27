@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.google.common.collect.ImmutableMap;
@@ -56,7 +55,6 @@ public final class IsEmptyMap<K, V>
     return desc.matches();
   }
 
-  @Factory
   public static <K, V> IsEmptyMap<K, V> emptyMap() {
     return new IsEmptyMap<K, V>();
   }

@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.ConcurrentLinkedStack.Node;
@@ -81,7 +80,6 @@ public final class IsValidConcurrentLinkedStack<E>
     }
   }
 
-  @Factory
   public static <E> IsValidConcurrentLinkedStack<E> validate() {
     return new IsValidConcurrentLinkedStack<E>();
   }

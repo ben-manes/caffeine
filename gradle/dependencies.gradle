@@ -40,12 +40,12 @@ ext {
   test_versions = [
     awaitility: '1.6.3',
     easymock: '3.3.1',
-    hamcrest: '1.3',
+    hamcrest: '2.0.0.0',
     jcache_tck: '1.0.1',
     jctools: '1.0',
     jimfs: '1.0',
     junit: '4.12',
-    mockito: '1.10.19',
+    mockito: '2.0.23-beta',
     testng: '6.9.4',
     truth: '0.24',
   ]
@@ -88,20 +88,24 @@ ext {
     univocity_parsers: "com.univocity:univocity-parsers:${versions.univocity_parsers}",
   ]
   test_libraries = [
-    awaitility: "com.jayway.awaitility:awaitility:${test_versions.awaitility}",
+    awaitility: dependencies.create("com.jayway.awaitility:awaitility:${test_versions.awaitility}") {
+      exclude group: 'org.hamcrest'
+    },
     easymock: "org.easymock:easymock:${test_versions.easymock}",
     guava_testlib: dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
       exclude group: 'com.google.truth'
       exclude group: 'junit'
     },
-    hamcrest: "org.hamcrest:hamcrest-library:${test_versions.hamcrest}",
+    hamcrest: "org.hamcrest:java-hamcrest:${test_versions.hamcrest}",
     jcache_guice: "org.jsr107.ri:cache-annotations-ri-guice:${versions.jcache}",
     jcache_tck: "javax.cache:cache-tests:${test_versions.jcache_tck}",
     jcache_tck_tests: "javax.cache:cache-tests:${test_versions.jcache_tck}:tests",
     jctools: "org.jctools:jctools-core:${test_versions.jctools}",
     jimfs: "com.google.jimfs:jimfs:${test_versions.jimfs}",
     junit: "junit:junit:${test_versions.junit}",
-    mockito: "org.mockito:mockito-core:${test_versions.mockito}",
+    mockito: dependencies.create("org.mockito:mockito-core:${test_versions.mockito}") {
+      exclude group: 'org.hamcrest'
+    },
     testng: dependencies.create("org.testng:testng:${test_versions.testng}") {
       exclude group: "junit"
     },

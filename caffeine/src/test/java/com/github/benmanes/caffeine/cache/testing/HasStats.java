@@ -21,7 +21,6 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -79,23 +78,23 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
     }
   }
 
-  @Factory public static HasStats hasHitCount(long count) {
+  public static HasStats hasHitCount(long count) {
     return new HasStats(StatsType.HIT, count);
   }
 
-  @Factory public static HasStats hasMissCount(long count) {
+  public static HasStats hasMissCount(long count) {
     return new HasStats(StatsType.MISS, count);
   }
 
-  @Factory public static HasStats hasEvictionCount(long count) {
+  public static HasStats hasEvictionCount(long count) {
     return new HasStats(StatsType.EVICTION, count);
   }
 
-  @Factory public static HasStats hasLoadSuccessCount(long count) {
+  public static HasStats hasLoadSuccessCount(long count) {
     return new HasStats(StatsType.LOAD_SUCCESS, count);
   }
 
-  @Factory public static HasStats hasLoadFailureCount(long count) {
+  public static HasStats hasLoadFailureCount(long count) {
     return new HasStats(StatsType.LOAD_FAILURE, count);
   }
 }

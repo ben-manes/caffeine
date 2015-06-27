@@ -24,7 +24,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
@@ -71,7 +70,6 @@ public final class IsValidUnboundedLocalCache<K, V>
     }
   }
 
-  @Factory
   public static <K, V> IsValidUnboundedLocalCache<K, V> valid() {
     return new IsValidUnboundedLocalCache<K, V>();
   }

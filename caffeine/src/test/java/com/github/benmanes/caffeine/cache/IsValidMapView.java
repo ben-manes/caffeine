@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 /**
@@ -62,7 +61,6 @@ public final class IsValidMapView<K, V> extends TypeSafeDiagnosingMatcher<Map<K,
     return true;
   }
 
-  @Factory
   public static <K, V> IsValidMapView<K, V> validAsMap() {
     return new IsValidMapView<K, V>();
   }

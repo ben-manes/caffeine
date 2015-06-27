@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.testing;
 import java.util.concurrent.Future;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.hamcrest.core.Is;
@@ -47,12 +46,10 @@ public final class IsFutureValue<V> extends TypeSafeDiagnosingMatcher<Future<V>>
     return matcher.matches(Futures.getUnchecked(future));
   }
 
-  @Factory
   public static <V> IsFutureValue<V> future(Matcher<V> matcher) {
     return new IsFutureValue<V>(matcher);
   }
 
-  @Factory
   public static <V> IsFutureValue<V> futureOf(V value) {
     return new IsFutureValue<V>(Is.is(value));
   }

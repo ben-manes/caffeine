@@ -921,8 +921,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected Map<K, V> copyMap(Map<K, Expirable<V>> map) {
     final ClassLoader classLoader = cacheManager.getClassLoader();
     return map.entrySet().stream().collect(Collectors.toMap(
-        entry -> copyStrategy.copy(entry.getKey(), classLoader),
-        entry -> copyStrategy.copy(entry.getValue().get(), classLoader)));
+        entry -> copyStrategy.copy((K) entry.getKey(), classLoader),
+        entry -> copyStrategy.copy((V) entry.getValue().get(), classLoader)));
   }
 
   /** @return an approximate of the current time in milliseconds */

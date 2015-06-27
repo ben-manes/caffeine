@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.concurrent.CompletableFuture;
 
 import org.hamcrest.Description;
-import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncLoadingCache;
@@ -80,7 +79,6 @@ public final class IsValidCache<K, V>
     return true;
   }
 
-  @Factory
   public static <K, V> IsValidCache<K, V> validCache() {
     return new IsValidCache<K, V>();
   }
