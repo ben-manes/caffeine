@@ -70,6 +70,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
  */
+@Beta
 @ThreadSafe
 public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implements Serializable {
 
@@ -348,10 +349,12 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
           if (first == last) {
             return;
           }
-          first = first.next;
+          Node<E> next;
+          while ((next = first.next) == null) {}
+          first = next;
         }
       }
-      last.next = null;
+      last.lazySetNext(null);
       Node<E> node = transferOrCombine(first, last);
       if (node == null) {
         last.await();
@@ -387,16 +390,17 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
           return slot.compareAndSet(first, null) ? first : null;
         }
       } else if (slot.compareAndSet(found, null)) {
-        last.next = found;
+        last.lazySetNext(found);
         last = findLast(found);
         for (int i = 1; i < ARENA_LENGTH; i++) {
           slot = arena[(i + index) & ARENA_MASK];
           found = slot.get();
           if ((found != null) && slot.compareAndSet(found, null)) {
-            last.next = found;
+            last.lazySetNext(found);
             last = findLast(found);
           }
         }
+        UnsafeAccess.UNSAFE.storeFence();
         return last;
       }
     }
@@ -440,7 +444,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
         first = last;
       } else {
         Node<E> newFirst = new Node<>(e);
-        newFirst.next = first;
+        newFirst.relaxedSetNext(first);
         first = newFirst;
       }
     }
@@ -488,7 +492,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
     if (previous == null) {
       casTop(deleted, deleted.next);
     } else {
-      previous.next = deleted.next;
+      previous.lazySetNext(deleted.next);
     }
     deleted.complete();
   }
@@ -661,17 +665,24 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
     static final long serialVersionUID = 1;
   }
 
-  /**
-   * An item on the stack. The node is mutable prior to being inserted to avoid object churn and
-   * is immutable by the time it has been published to other threads.
-   */
+  /** An item on the stack. */
   static class Node<E> extends AtomicReference<E> {
-    private static final long serialVersionUID = 1L;
+    static final long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
+    static final long serialVersionUID = 1L;
 
-    Node<E> next;
+    volatile Node<E> next;
 
     Node(E value) {
       super(value);
+    }
+
+    void relaxedSetNext(@Nonnull Node<E> newNext) {
+      // Uses relaxed write because the node can only be seen after publication via casNext
+      UnsafeAccess.UNSAFE.putObject(this, NEXT_OFFSET, newNext);
+    }
+
+    void lazySetNext(@Nullable Node<E> newNext) {
+      UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, newNext);
     }
 
     /** A no-op notification that the element was added to the queue. */
