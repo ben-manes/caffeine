@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
@@ -102,6 +103,10 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     assertThat(map, hasRemovalNotifications(context,
         context.original().size(), RemovalCause.EXPLICIT));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.deletedAll(context.original());
+    });
   }
 
   /* ---------------- contains -------------- */
@@ -180,7 +185,7 @@ public final class AsMapTest {
     }
   }
 
-  /* ---------------- get -------------- */
+  /* ---------------- getOrDefault -------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -269,9 +274,14 @@ public final class AsMapTest {
     assertThat(map.put(context.absentKey(), context.absentValue()), is(nullValue()));
     assertThat(map.get(context.absentKey()), is(context.absentValue()));
     assertThat(map.size(), is(context.original().size() + 1));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wrote(context.absentKey(), context.absentValue());
+    });
   }
 
   @CheckNoStats
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
@@ -295,6 +305,10 @@ public final class AsMapTest {
       Integer value = context.original().get(key);
       assertThat(map.put(key, context.absentValue()), is(value));
       assertThat(map.get(key), is(context.absentValue()));
+
+      verifyWriter(context, (verifier, writer) -> {
+        verifier.wrote(key, context.absentValue());
+      });
     }
 
     int count = context.firstMiddleLastKeys().size();
@@ -329,6 +343,10 @@ public final class AsMapTest {
         .collect(Collectors.toMap(Function.identity(), key -> -key));
     map.putAll(entries);
     assertThat(map.size(), is(100 + context.original().size()));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wroteAll(entries);
+    });
   }
 
   @CheckNoStats
@@ -341,6 +359,10 @@ public final class AsMapTest {
     map.putAll(entries);
     assertThat(map, is(equalTo(entries)));
     assertThat(map, hasRemovalNotifications(context, entries.size(), RemovalCause.REPLACED));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wroteAll(entries);
+    });
   }
 
   @CheckNoStats
@@ -359,6 +381,10 @@ public final class AsMapTest {
     map.putAll(entries);
     assertThat(map, is(equalTo(expect)));
     assertThat(map, hasRemovalNotifications(context, entries.size() / 2, RemovalCause.REPLACED));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wroteAll(entries);
+    });
   }
 
   /* ---------------- putIfAbsent -------------- */
@@ -404,6 +430,10 @@ public final class AsMapTest {
     assertThat(map.putIfAbsent(context.absentKey(), context.absentValue()), is(nullValue()));
     assertThat(map.get(context.absentKey()), is(context.absentValue()));
     assertThat(map.size(), is(context.original().size() + 1));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wrote(context.absentKey(), context.absentValue());
+    });
   }
 
   /* ---------------- remove -------------- */
@@ -429,11 +459,15 @@ public final class AsMapTest {
   public void remove_present(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       map.remove(key);
+      verifyWriter(context, (verifier, writer) -> {
+        verifier.deleted(key, context.original().get(key), RemovalCause.EXPLICIT);
+      });
     }
     assertThat(map.size(), is(context.original().size() - context.firstMiddleLastKeys().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
   }
 
   /* ---------------- remove conditionally -------------- */
@@ -483,11 +517,16 @@ public final class AsMapTest {
   public void removeConditionally_presentKeyAndValue(Map<Integer, Integer> map,
       CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      assertThat(map.remove(key, context.original().get(key)), is(true));
+      Integer value = context.original().get(key);
+      assertThat(map.remove(key, value), is(true));
+      verifyWriter(context, (verifier, writer) -> {
+        verifier.deleted(key, value, RemovalCause.EXPLICIT);
+      });
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size() - count));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
   }
 
   /* ---------------- replace -------------- */
@@ -520,7 +559,7 @@ public final class AsMapTest {
     assertThat(map.replace(context.absentKey(), context.absentValue()), is(nullValue()));
   }
 
-  @CheckNoStats
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replace_sameValue(Map<Integer, Integer> map, CacheContext context) {
@@ -543,10 +582,12 @@ public final class AsMapTest {
       Integer oldValue = context.original().get(key);
       assertThat(map.replace(key, context.absentValue()), is(oldValue));
       assertThat(map.get(key), is(context.absentValue()));
+      verifyWriter(context, (verifier, writer) -> verifier.wrote(key, context.absentValue()));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyWriter(context, (verifier, writer) -> verifier.writes(count));
   }
 
   /* ---------------- replace conditionally -------------- */
@@ -624,7 +665,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
-  @CheckNoStats
+  @CheckNoStats @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void replaceConditionally_sameValue(Map<Integer, Integer> map, CacheContext context) {
@@ -646,11 +687,13 @@ public final class AsMapTest {
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.replace(key, context.original().get(key), context.absentValue()), is(true));
       assertThat(map.get(key), is(context.absentValue()));
+      verifyWriter(context, (verifier, writer) -> verifier.wrote(key, context.absentValue()));
     }
     assertThat(map.size(), is(context.original().size()));
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyWriter(context, (verifier, writer) -> verifier.writes(count));
   }
 
   /* ---------------- replaceAll -------------- */
@@ -671,8 +714,7 @@ public final class AsMapTest {
   }
 
   @CacheSpec
-  @CheckNoStats
-  //FIXME: @CheckWriter
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void replaceAll_sameValue(Map<Integer, Integer> map, CacheContext context) {
     map.replaceAll((key, value) -> value);
@@ -685,8 +727,12 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   public void replaceAll_differentValue(Map<Integer, Integer> map, CacheContext context) {
     map.replaceAll((key, value) -> key);
-    map.forEach((key, value) -> assertThat(value, is(equalTo(key))));
+    map.forEach((key, value) -> {
+      assertThat(value, is(equalTo(key)));
+      verifyWriter(context, (verifier, writer) -> verifier.wrote(key, key));
+    });
     assertThat(map, hasRemovalNotifications(context, map.size(), RemovalCause.REPLACED));
+    verifyWriter(context, (verifier, writer) -> verifier.writes(context.original().size()));
   }
 
   /* ---------------- computeIfAbsent -------------- */
@@ -741,6 +787,7 @@ public final class AsMapTest {
     map.computeIfAbsent(context.absentKey(), mappingFunction);
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfAbsent_error(Map<Integer, Integer> map, CacheContext context) {
@@ -752,6 +799,7 @@ public final class AsMapTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -766,6 +814,7 @@ public final class AsMapTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfAbsent_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -793,6 +842,7 @@ public final class AsMapTest {
     map.computeIfPresent(1, null);
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void computeIfPresent_nullValue(Map<Integer, Integer> map, CacheContext context) {
@@ -850,6 +900,7 @@ public final class AsMapTest {
     map.computeIfPresent(context.firstKey(), mappingFunction);
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -862,7 +913,7 @@ public final class AsMapTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
   }
 
-  @CheckNoStats
+  @CheckNoStats // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfPresent_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -871,6 +922,7 @@ public final class AsMapTest {
     assertThat(map.size(), is(context.original().size()));
   }
 
+  //FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void computeIfPresent_present(Map<Integer, Integer> map, CacheContext context) {
@@ -904,6 +956,7 @@ public final class AsMapTest {
     map.computeIfPresent(1, null);
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void compute_remove(Map<Integer, Integer> map, CacheContext context) {
@@ -948,6 +1001,7 @@ public final class AsMapTest {
     map.computeIfPresent(context.firstKey(), mappingFunction);
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void compute_error(Map<Integer, Integer> map, CacheContext context) {
@@ -959,6 +1013,7 @@ public final class AsMapTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void compute_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -970,6 +1025,7 @@ public final class AsMapTest {
     assertThat(map.size(), is(1 + context.original().size()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void compute_sameValue(Map<Integer, Integer> map, CacheContext context) {
@@ -989,6 +1045,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void compute_differentValue(Map<Integer, Integer> map, CacheContext context) {
@@ -1028,6 +1085,7 @@ public final class AsMapTest {
     map.merge(1, 1, null);
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void merge_remove(Map<Integer, Integer> map, CacheContext context) {
@@ -1079,6 +1137,7 @@ public final class AsMapTest {
     map.merge(context.firstKey(), context.original().get(context.firstKey()), mappingFunction);
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Guava,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -1093,7 +1152,7 @@ public final class AsMapTest {
     assertThat(map, is(equalTo(context.original())));
   }
 
-  @CheckNoStats
+  @CheckNoStats // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void merge_absent(Map<Integer, Integer> map, CacheContext context) {
@@ -1104,6 +1163,7 @@ public final class AsMapTest {
     assertThat(map.size(), is(1 + context.original().size()));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void merge_sameValue(Map<Integer, Integer> map, CacheContext context) {
@@ -1122,6 +1182,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void merge_differentValue(Map<Integer, Integer> map, CacheContext context) {
@@ -1265,6 +1326,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CacheSpec
@@ -1282,6 +1344,7 @@ public final class AsMapTest {
       assertThat(keys.contains(key), is(false));
     }
     assertThat(map, is(emptyMap()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CacheSpec
@@ -1297,6 +1360,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1372,6 +1436,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CacheSpec
@@ -1382,15 +1447,16 @@ public final class AsMapTest {
     assertThat(values.contains(new Object()), is(false));
     assertThat(values.remove(new Object()), is(false));
     assertThat(values, hasSize(context.original().size()));
-    for (Integer key : values) {
-      assertThat(values.contains(key), is(true));
-      assertThat(values.remove(key), is(true));
-      assertThat(values.remove(key), is(false));
-      assertThat(values.contains(key), is(false));
+    for (Integer value : values) {
+      assertThat(values.contains(value), is(true));
+      assertThat(values.remove(value), is(true));
+      assertThat(values.remove(value), is(false));
+      assertThat(values.contains(value), is(false));
     }
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CacheSpec
@@ -1406,6 +1472,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1484,6 +1551,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CacheSpec
@@ -1503,6 +1571,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CacheSpec
@@ -1519,6 +1588,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1559,6 +1629,7 @@ public final class AsMapTest {
     assertThat(map.get(entry.getKey()), is(3));
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyWriter(context, (verifier, writer) -> verifier.wrote(entry.getKey(), 3));
   }
 
   @CheckNoWriter @CheckNoStats

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.testing;
 import static com.github.benmanes.caffeine.cache.IsValidAsyncCache.validAsyncCache;
 import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
 import static com.github.benmanes.caffeine.cache.IsValidMapView.validAsMap;
+import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
@@ -26,9 +27,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -40,7 +38,6 @@ import org.testng.ITestResult;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.CacheWriter;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -87,9 +84,10 @@ public final class CacheValidationListener implements IInvokedMethodListener {
       return;
     }
     assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
-    CacheWriter<Integer, Integer> writer = context.cacheWriter();
-    verify(writer, never()).write(any(), any());
-    verify(writer, never()).delete(any(), any(), any());
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.writes(0);
+      verifier.deletions(0);
+    });
   }
 
   /** Checks the statistics if {@link CheckNoStats} is found. */

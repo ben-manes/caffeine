@@ -1064,7 +1064,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return null;
       }
 
-      writer.write(key, oldValue);
+      if (value != oldValue) {
+        writer.write(key, value);
+      }
       node.setValue(value, valueReferenceQueue());
       node.setWeight(weight);
     }
@@ -1111,7 +1113,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return false;
       }
 
-      writer.write(key, newValue);
+      if (newValue != prevValue) {
+        writer.write(key, newValue);
+      }
       node.setValue(newValue, valueReferenceQueue());
       node.setWeight(weight);
     }

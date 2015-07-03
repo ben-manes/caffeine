@@ -21,10 +21,14 @@ import static java.util.Objects.requireNonNull;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -52,8 +56,12 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
+import com.google.common.collect.ForwardingCollection;
 import com.google.common.collect.ForwardingConcurrentMap;
+import com.google.common.collect.ForwardingIterator;
+import com.google.common.collect.ForwardingSet;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
@@ -260,9 +268,35 @@ public final class GuavaCacheFromContext {
           return delegate().containsValue(value);
         }
         @Override
+        public void clear() {
+          keySet().forEach(this::remove);
+        }
+        @Override
         public V get(Object key) {
           requireNonNull(key);
           return delegate().get(key);
+        }
+        @Override
+        public V putIfAbsent(K key, V value) {
+          requireNonNull(key);
+          requireNonNull(value);
+          if (!delegate().containsKey(key)) {
+            writer.write(key, value);
+          }
+          return delegate().putIfAbsent(key, value);
+        }
+        @Override
+        public V put(K key, V value) {
+          requireNonNull(key);
+          requireNonNull(value);
+          if (get(key) != value) {
+            writer.write(key, value);
+          }
+          return delegate().put(key, value);
+        }
+        @Override
+        public void putAll(Map<? extends K, ? extends V> map) {
+          map.entrySet().forEach(entry -> put(entry.getKey(), entry.getValue()));
         }
         @Override
         public V remove(Object key) {
@@ -293,7 +327,8 @@ public final class GuavaCacheFromContext {
         public V replace(K key, V value) {
           requireNonNull(key);
           requireNonNull(value);
-          if (containsKey(key)) {
+          V present = get(key);
+          if ((present != null) && (present != value)) {
             writer.write(key, value);
           }
           return delegate().replace(key, value);
@@ -303,7 +338,8 @@ public final class GuavaCacheFromContext {
           requireNonNull(key);
           requireNonNull(oldValue);
           requireNonNull(newValue);
-          if (oldValue.equals(get(key))) {
+          V present = get(key);
+          if ((newValue != present) && oldValue.equals(present)) {
             writer.write(key, newValue);
           }
           return delegate().replace(key, oldValue, newValue);
@@ -324,7 +360,7 @@ public final class GuavaCacheFromContext {
               return null;
             } else {
               statsCounter.recordLoadSuccess(loadTime);
-              V v = putIfAbsent(key, value);
+              V v = delegate().putIfAbsent(key, value);
               return (v == null) ? value : v;
             }
           } catch (RuntimeException | Error e) {
@@ -416,6 +452,163 @@ public final class GuavaCacheFromContext {
               }
             }
           }
+        }
+        @Override
+        public Set<K> keySet() {
+          return new ForwardingSet<K>() {
+            @Override
+            public void clear() {
+              GuavaCache.this.asMap().clear();
+            }
+            @Override
+            public boolean remove(Object key) {
+              V value = cache.asMap().get(key);
+              if (value != null) {
+                @SuppressWarnings("unchecked")
+                K castKey = (K) key;
+                writer.delete(castKey, value, RemovalCause.EXPLICIT);
+              }
+              return delegate().remove(key);
+            }
+            @Override
+            public Iterator<K> iterator() {
+              return new ForwardingIterator<K>() {
+                final Iterator<K> delegate = cache.asMap().keySet().iterator();
+                K key;
+
+                @Override
+                public K next() {
+                  key = delegate.next();
+                  return key;
+                }
+                @Override
+                public void remove() {
+                  if (key != null) {
+                    V value = cache.asMap().get(key);
+                    if (value != null) {
+                      writer.delete(key, value, RemovalCause.EXPLICIT);
+                    }
+                    key = null;
+                  }
+                  delegate.remove();
+                }
+                @Override
+                protected Iterator<K> delegate() {
+                  return delegate;
+                }
+              };
+            }
+            @Override
+            protected Set<K> delegate() {
+              return cache.asMap().keySet();
+            }
+          };
+        }
+        @Override
+        public Collection<V> values() {
+          return new ForwardingCollection<V>() {
+            @Override
+            public void clear() {
+              GuavaCache.this.asMap().clear();
+            }
+            @Override
+            public boolean remove(Object value) {
+              requireNonNull(value);
+              for (Entry<K, V> entry : cache.asMap().entrySet()) {
+                if (entry.getValue().equals(value)) {
+                  writer.delete(entry.getKey(), entry.getValue(), RemovalCause.EXPLICIT);
+                }
+              }
+              return delegate().remove(value);
+            }
+            @Override
+            public Iterator<V> iterator() {
+              return new ForwardingIterator<V>() {
+                final Iterator<Entry<K, V>> delegate = cache.asMap().entrySet().iterator();
+                Entry<K, V> entry;
+
+                @Override
+                public V next() {
+                  entry = delegate.next();
+                  return entry.getValue();
+                }
+                @Override
+                public void remove() {
+                  if (entry != null) {
+                    writer.delete(entry.getKey(), entry.getValue(), RemovalCause.EXPLICIT);
+                    entry = null;
+                  }
+                  delegate.remove();
+                }
+                @Override
+                protected Iterator<V> delegate() {
+                  return Iterators.transform(delegate, entry -> entry.getValue());
+                }
+              };
+            }
+            @Override
+            protected Collection<V> delegate() {
+              return cache.asMap().values();
+            }
+          };
+        }
+        @Override
+        public Set<Entry<K, V>> entrySet() {
+          return new ForwardingSet<Entry<K, V>>() {
+            @Override
+            public void clear() {
+              GuavaCache.this.asMap().clear();
+            }
+            @Override
+            public boolean remove(Object entry) {
+              requireNonNull(entry);
+              if (delegate().contains(entry)) {
+                @SuppressWarnings("unchecked")
+                Entry<K, V> e = (Entry<K, V>) entry;
+                writer.delete(e.getKey(), e.getValue(), RemovalCause.EXPLICIT);
+              }
+              return delegate().remove(entry);
+            }
+
+            @Override
+            public Iterator<Entry<K, V>> iterator() {
+              return new ForwardingIterator<Entry<K, V>>() {
+                final Iterator<Entry<K, V>> delegate = cache.asMap().entrySet().iterator();
+                Entry<K, V> entry;
+
+                @Override
+                public Entry<K, V> next() {
+                  entry = delegate.next();
+                  return new SimpleEntry<K, V>(entry) {
+                    private static final long serialVersionUID = 1L;
+
+                    @Override
+                    public V setValue(V value) {
+                      requireNonNull(value);
+                      writer.write(entry.getKey(), value);
+                      return super.setValue(value);
+                    }
+                  };
+                }
+                @Override
+                public void remove() {
+                  if (entry != null) {
+                    writer.delete(entry.getKey(), entry.getValue(), RemovalCause.EXPLICIT);
+                    entry = null;
+                  }
+                  delegate.remove();
+                }
+                @Override
+                protected Iterator<Entry<K, V>> delegate() {
+                  return delegate;
+                }
+              };
+            }
+            @Override
+            protected Set<Entry<K, V>> delegate() {
+              return cache.asMap().entrySet();
+            }
+          };
         }
         @Override
         protected ConcurrentMap<K, V> delegate() {

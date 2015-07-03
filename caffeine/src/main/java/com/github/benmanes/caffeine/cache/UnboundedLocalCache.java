@@ -182,7 +182,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
       V newValue = requireNonNull(function.apply(key, value));
       if (newValue != value) {
-        writer.write(key, value);
+        writer.write(key, newValue);
       }
       if (hasRemovalListener() && (newValue != value)) {
         notification[0] = new RemovalNotification<>(key, value, RemovalCause.REPLACED);
@@ -363,7 +363,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     V oldValue[] = (V[]) new Object[1];
     data.compute(key, (k, v) -> {
-      writer.write(key, value);
+      if (value != v) {
+        writer.write(key, value);
+      }
       oldValue[0] = v;
       return value;
     });
@@ -458,7 +460,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     V oldValue[] = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
-      writer.write(key, value);
+      if (value != v) {
+        writer.write(key, value);
+      }
       oldValue[0] = v;
       return value;
     });
@@ -479,7 +483,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     V prev[] = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       if (v.equals(oldValue)) {
-        writer.write(key, newValue);
+        if (newValue != v) {
+          writer.write(key, newValue);
+        }
         prev[0] = v;
         return newValue;
       }

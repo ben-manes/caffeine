@@ -236,6 +236,10 @@ public final class CacheContext {
     return keyStrength;
   }
 
+  public boolean isStrongKeys() {
+    return keyStrength == ReferenceType.STRONG;
+  }
+
   public ReferenceType valueStrength() {
     return valueStrength;
   }
