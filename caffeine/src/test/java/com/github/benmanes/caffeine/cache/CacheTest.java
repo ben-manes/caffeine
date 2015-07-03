@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.IsCacheReserializable.reserializable;
+import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
@@ -50,7 +51,9 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 
 /**
  * The test cases for the {@link Cache} interface that simulate the most generic usages. These
@@ -126,7 +129,7 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_throwsException(Cache<Integer, Integer> cache, CacheContext context) {
     try {
@@ -138,14 +141,14 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey(), k -> null), is(nullValue()));
   }
 
   @CacheSpec
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -155,7 +158,7 @@ public final class CacheTest {
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void get_present(Cache<Integer, Integer> cache, CacheContext context) {
@@ -195,7 +198,7 @@ public final class CacheTest {
     assertThat(result.size(), is(0));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
@@ -208,13 +211,13 @@ public final class CacheTest {
   }
 
   @CacheSpec
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllPresent_immutable(Cache<Integer, Integer> cache, CacheContext context) {
     cache.getAllPresent(context.absentKeys()).clear();
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -229,7 +232,7 @@ public final class CacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -250,8 +253,8 @@ public final class CacheTest {
     assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
   }
 
+  @CheckNoWriter
   @Test(dataProvider = "caches")
-  // FIXME: @CheckNoWriter, but test directly (ignore async view case)
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void put_replace_sameValue(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
@@ -271,6 +274,9 @@ public final class CacheTest {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, context.absentValue());
       assertThat(cache.getIfPresent(key), is(context.absentValue()));
+      verifyWriter(context, (verifier, writer) -> {
+        verifier.wrote(key, context.absentValue());
+      });
     }
     assertThat(cache.estimatedSize(), is(context.initialSize()));
 
@@ -310,6 +316,10 @@ public final class CacheTest {
         .collect(Collectors.toMap(Function.identity(), key -> -key));
     cache.putAll(entries);
     assertThat(cache.estimatedSize(), is(100 + context.initialSize()));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wroteAll(entries);
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -321,6 +331,10 @@ public final class CacheTest {
     cache.putAll(entries);
     assertThat(cache.asMap(), is(equalTo(entries)));
     assertThat(cache, hasRemovalNotifications(context, entries.size(), RemovalCause.REPLACED));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wroteAll(entries);
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -338,6 +352,10 @@ public final class CacheTest {
     cache.putAll(entries);
     assertThat(cache.asMap(), is(equalTo(expect)));
     assertThat(cache, hasRemovalNotifications(context, entries.size() / 2, RemovalCause.REPLACED));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wroteAll(entries);
+    });
   }
 
   @CheckNoWriter @CheckNoStats
@@ -370,10 +388,12 @@ public final class CacheTest {
   public void invalidate_present(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.invalidate(key);
+      verifyWriter(context, (verifier, writer) -> {
+        verifier.deleted(key, context.original().get(key), RemovalCause.EXPLICIT);
+      });
     }
-    assertThat(cache.estimatedSize(), is(context.initialSize() - context.firstMiddleLastKeys().size()));
-
     int count = context.firstMiddleLastKeys().size();
+    assertThat(cache.estimatedSize(), is(context.initialSize() - count));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
 
@@ -393,6 +413,9 @@ public final class CacheTest {
     assertThat(cache.estimatedSize(), is(0L));
     assertThat(cache, hasRemovalNotifications(context,
         context.original().size(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
+    });
   }
 
   @CheckNoWriter @CheckNoStats
@@ -411,6 +434,10 @@ public final class CacheTest {
     cache.invalidateAll(keys);
     assertThat(cache.estimatedSize(), is(context.initialSize() - keys.size()));
     assertThat(cache, hasRemovalNotifications(context, keys.size(), RemovalCause.EXPLICIT));
+
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.deletedAll(Maps.filterKeys(context.original(), Predicates.in(keys)), RemovalCause.EXPLICIT);
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -420,6 +447,9 @@ public final class CacheTest {
     assertThat(cache.estimatedSize(), is(0L));
     assertThat(cache, hasRemovalNotifications(context,
         context.original().size(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
+    });
   }
 
   @CacheSpec

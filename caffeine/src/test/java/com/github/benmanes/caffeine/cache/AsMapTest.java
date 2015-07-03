@@ -105,7 +105,7 @@ public final class AsMapTest {
         context.original().size(), RemovalCause.EXPLICIT));
 
     verifyWriter(context, (verifier, writer) -> {
-      verifier.deletedAll(context.original());
+      verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
     });
   }
 
@@ -1326,7 +1326,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1344,7 +1344,7 @@ public final class AsMapTest {
       assertThat(keys.contains(key), is(false));
     }
     assertThat(map, is(emptyMap()));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1360,7 +1360,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1436,7 +1436,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1456,7 +1456,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1472,7 +1472,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1551,7 +1551,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1571,7 +1571,7 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1588,7 +1588,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original()));
+    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter @CheckNoStats

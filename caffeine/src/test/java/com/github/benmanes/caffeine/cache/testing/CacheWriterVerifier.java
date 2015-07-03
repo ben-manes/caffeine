@@ -74,10 +74,8 @@ public final class CacheWriterVerifier {
   }
 
   /** Checks whether only these entries were deleted. */
-  public void deletedAll(Map<Integer, Integer> map) {
-    map.entrySet().forEach(entry -> {
-      deleted(entry, RemovalCause.EXPLICIT);
-    });
+  public void deletedAll(Map<Integer, Integer> map, RemovalCause cause) {
+    map.entrySet().forEach(entry -> deleted(entry, cause));
     deletions(map.size());
   }
 

@@ -229,17 +229,23 @@ public final class GuavaCacheFromContext {
 
     @Override
     public void invalidate(Object key) {
+      V value = cache.asMap().get(key);
+      if (value != null) {
+        @SuppressWarnings("unchecked")
+        K castKey = (K) key;
+        writer.delete(castKey, value, RemovalCause.EXPLICIT);
+      }
       cache.invalidate(key);
     }
 
     @Override
     public void invalidateAll(Iterable<?> keys) {
-      cache.invalidateAll(keys);
+      keys.forEach(this::invalidate);
     }
 
     @Override
     public void invalidateAll() {
-      cache.invalidateAll();
+      invalidateAll(cache.asMap().keySet());
     }
 
     @Override

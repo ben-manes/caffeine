@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
@@ -55,6 +56,8 @@ import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
 
 /**
  * The test cases for caches with a page replacement algorithm.
@@ -118,6 +121,13 @@ public final class EvictionTest {
     int count = context.absentKeys().size();
     assertThat(context, hasEvictionCount(count));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.SIZE));
+
+    verifyWriter(context, (verifier, writer) -> {
+      Map<Integer, Integer> all = new HashMap<>(context.original());
+      all.putAll(context.absent());
+      MapDifference<Integer, Integer> diff = Maps.difference(all, cache.asMap());
+      verifier.deletedAll(diff.entriesOnlyOnLeft(), RemovalCause.SIZE);
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -230,6 +240,7 @@ public final class EvictionTest {
 
   /* ---------------- Weighted -------------- */
 
+  // FIXME: @CheckNoWriter
   @CacheSpec(maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.NEGATIVE, population = Population.EMPTY)
   @Test(dataProvider = "caches",
@@ -243,6 +254,9 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   public void put_zeroWeight(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.wrote(context.absentKey(), context.absentValue());
+    });
   }
 
   @Test(dataProvider = "caches")
