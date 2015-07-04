@@ -24,6 +24,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -51,6 +52,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
@@ -165,13 +167,21 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.TEN,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void evict_weighted(Cache<Integer, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void evict_weighted(Cache<Integer, List<Integer>> cache,
+      Eviction<?, ?> eviction, CacheContext context) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    CacheWriter<Integer, List<Integer>> writer = (CacheWriter) context.cacheWriter();
+
+    List<Integer> value1 = asList(1, 2);
+    List<Integer> value2 = asList(3, 4, 5, 6, 7);
+    List<Integer> value3 = asList(8, 9, 10);
+
     // Never evicted
     cache.put(0, asList());
 
-    cache.put(1, asList(1, 2));
-    cache.put(2, asList(3, 4, 5, 6, 7));
-    cache.put(3, asList(8, 9, 10));
+    cache.put(1, value1);
+    cache.put(2, value2);
+    cache.put(3, value3);
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(10L));
 
@@ -180,11 +190,20 @@ public final class EvictionTest {
     assertThat(cache.asMap().containsKey(1), is(false));
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(9L));
+    verifyWriter(context, (verifier, ignored) -> {
+      verify(writer).delete(1, value1, RemovalCause.SIZE);
+      verifier.deletions(1, RemovalCause.SIZE);
+    });
 
     // evict (2, 3)
     cache.put(5, asList(12, 13, 14, 15, 16, 17, 18, 19, 20));
     assertThat(cache.estimatedSize(), is(3L));
     assertThat(eviction.weightedSize().getAsLong(), is(10L));
+    verifyWriter(context, (verifier, ignored) -> {
+      verify(writer).delete(2, value2, RemovalCause.SIZE);
+      verify(writer).delete(3, value3, RemovalCause.SIZE);
+      verifier.deletions(3);
+    });
   }
 
   @Test(dataProvider = "caches")
@@ -240,7 +259,7 @@ public final class EvictionTest {
 
   /* ---------------- Weighted -------------- */
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @CacheSpec(maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.NEGATIVE, population = Population.EMPTY)
   @Test(dataProvider = "caches",
@@ -285,12 +304,22 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void put_changeWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void put_changeWeight(Cache<String, List<Integer>> cache,
+      Eviction<?, ?> eviction, CacheContext context) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    CacheWriter<String, List<Integer>> writer = (CacheWriter) context.cacheWriter();
+
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     cache.put("a", asList(-1, -2, -3, -4));
     assertThat(cache.estimatedSize(), is(2L));
     assertThat(eviction.weightedSize().getAsLong(), is(5L));
+
+    verifyWriter(context, (verifier, ignored) -> {
+      verify(writer).write("a", asList(1, 2, 3));
+      verify(writer).write("b", asList(1));
+      verify(writer).write("a", asList(-1, -2, -3, -4));
+    });
   }
 
   @Test(dataProvider = "caches")

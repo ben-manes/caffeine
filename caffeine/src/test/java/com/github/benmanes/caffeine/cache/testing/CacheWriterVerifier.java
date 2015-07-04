@@ -25,8 +25,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 
+import org.mockito.Mockito;
+
 import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 
 /**
  * A utility for verifying that the {@link CacheWriter} mock was operated on correctly.
@@ -40,17 +43,22 @@ public final class CacheWriterVerifier {
     this.context = requireNonNull(context);
   }
 
-  /** Checks whether the expected number of write operations occurred. */
+  /** Checks that neither writes nor deletes occurred. */
+  public void zeroInteractions() {
+    Mockito.verifyZeroInteractions(context.cacheWriter());
+  }
+
+  /** Checks that the expected number of write operations occurred. */
   public void writes(int count) {
     verify(context.cacheWriter(), times(count)).write(any(), any());
   }
 
-  /** Checks whether the key and value were written. */
+  /** Checks that the key and value were written. */
   public void wrote(Integer key, Integer value) {
     verify(context.cacheWriter()).write(eq(key), eq(value));
   }
 
-  /** Checks whether only these entries were written. */
+  /** Checks that only these entries were written. */
   public void wroteAll(Map<Integer, Integer> map) {
     map.entrySet().forEach(entry -> {
       wrote(entry.getKey(), entry.getValue());
@@ -58,22 +66,27 @@ public final class CacheWriterVerifier {
     verify(context.cacheWriter(), times(map.size())).write(any(), any());
   }
 
-  /** Checks whether the expected number of delete operations occurred. */
+  /** Checks that the expected number of delete operations occurred. */
   public void deletions(int count) {
     verify(context.cacheWriter(), times(count)).delete(any(), any(), any());
   }
 
-  /** Checks whether the entry was deleted for the specified reason. */
+  /** Checks that the expected number of delete operations occurred. */
+  public void deletions(long count, RemovalCause cause) {
+    verify(context.cacheWriter(), times((int) count)).delete(any(), any(), eq(cause));
+  }
+
+  /** Checks that the entry was deleted for the specified reason. */
   public void deleted(Entry<Integer, Integer> entry, RemovalCause cause) {
     deleted(entry.getKey(), entry.getValue(), cause);
   }
 
-  /** Checks whether the key and value were deleted for the specified reason. */
+  /** Checks that the key and value were deleted for the specified reason. */
   public void deleted(Integer key, Integer value, RemovalCause cause) {
     verify(context.cacheWriter()).delete(eq(key), eq(value), eq(cause));
   }
 
-  /** Checks whether only these entries were deleted. */
+  /** Checks that only these entries were deleted. */
   public void deletedAll(Map<Integer, Integer> map, RemovalCause cause) {
     map.entrySet().forEach(entry -> deleted(entry, cause));
     deletions(map.size());
@@ -82,8 +95,9 @@ public final class CacheWriterVerifier {
   /** Runs the verification block iff the cache writer is enabled. */
   public static void verifyWriter(CacheContext context,
       BiConsumer<CacheWriterVerifier, CacheWriter<Integer, Integer>> consumer) {
-    // FIXME: Support async mode
-    boolean mayVerify = context.isStrongKeys() && !context.isAsync();
+    boolean mayVerify = (context.implementation() == Implementation.Caffeine)
+        && context.isStrongKeys()
+        && !context.isAsync(); // FIXME: Support async mode
     if (mayVerify) {
       consumer.accept(new CacheWriterVerifier(context), context.cacheWriter());
     }

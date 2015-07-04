@@ -467,7 +467,7 @@ public final class AsMapTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPLICIT));
   }
 
   /* ---------------- remove conditionally -------------- */
@@ -526,7 +526,7 @@ public final class AsMapTest {
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size() - count));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPLICIT));
   }
 
   /* ---------------- replace -------------- */

@@ -84,10 +84,7 @@ public final class CacheValidationListener implements IInvokedMethodListener {
       return;
     }
     assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
-    verifyWriter(context, (verifier, writer) -> {
-      verifier.writes(0);
-      verifier.deletions(0);
-    });
+    verifyWriter(context, (verifier, writer) -> verifier.zeroInteractions());
   }
 
   /** Checks the statistics if {@link CheckNoStats} is found. */

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -64,6 +65,9 @@ public final class ExpireAfterAccessTest {
     cache.put(context.absentKey(), context.absentValue());
     assertThat(cache.estimatedSize(), is(0L));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.deleted(context.absentKey(), context.absentValue(), RemovalCause.EXPIRED);
+    });
   }
 
   /* ---------------- Cache -------------- */
@@ -82,6 +86,7 @@ public final class ExpireAfterAccessTest {
     assertThat(cache.estimatedSize(), is(1L));
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -99,6 +104,8 @@ public final class ExpireAfterAccessTest {
     assertThat(cache.estimatedSize(), is(2L));
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+
   }
 
   @Test(dataProvider = "caches")
@@ -114,6 +121,7 @@ public final class ExpireAfterAccessTest {
     assertThat(cache.estimatedSize(), is(3L));
     long count = context.initialSize() - 3;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -137,6 +145,8 @@ public final class ExpireAfterAccessTest {
     assertThat(cache.estimatedSize(), is(2L));
     long count = Math.max(1, context.initialSize() - 1);
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    // FIXME
+    // verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -161,6 +171,8 @@ public final class ExpireAfterAccessTest {
     assertThat(cache.estimatedSize(), is(2L));
     long count = Math.max(1, context.initialSize() - 1);
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    // FIXME
+    // verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -189,6 +201,10 @@ public final class ExpireAfterAccessTest {
     context.ticker().advance(45, TimeUnit.SECONDS);
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(1L));
+
+    long count = context.initialSize();
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -212,6 +228,10 @@ public final class ExpireAfterAccessTest {
         is(ImmutableMap.of(context.middleKey(), context.middleKey(),
             context.absentKey(), context.absentKey())));
     assertThat(cache.estimatedSize(), is(3L));
+
+    long count = context.initialSize() - 1;
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   /* ---------------- AsyncLoadingCache -------------- */
@@ -235,6 +255,7 @@ public final class ExpireAfterAccessTest {
 
     cache.synchronous().cleanUp();
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.EXPIRED));
   }
 
   /* ---------------- Policy -------------- */
