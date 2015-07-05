@@ -93,7 +93,8 @@ public final class LocalCacheGenerator {
     addRemovalListener();
     addExecutor();
     addStats();
-    addTicker();
+    addExpirationTicker();
+    addStatsTicker();
     addMaximum();
     addAccessOrderDeque();
     addExpireAfterAccess();
@@ -179,15 +180,27 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private void addTicker() {
-    if (Feature.usesTicker(parentFeatures) || !Feature.usesTicker(generateFeatures)) {
+  private void addExpirationTicker() {
+    if (Feature.usesExpirationTicker(parentFeatures)
+        || !Feature.usesExpirationTicker(generateFeatures)) {
       return;
     }
     constructor.addStatement("this.ticker = builder.getTicker()");
     cache.addField(FieldSpec.builder(TICKER, "ticker", privateFinalModifiers).build());
-    cache.addMethod(MethodSpec.methodBuilder("ticker")
+    cache.addMethod(MethodSpec.methodBuilder("expirationTicker")
         .addModifiers(publicFinalModifiers)
         .addStatement("return ticker")
+        .returns(TICKER)
+        .build());
+  }
+
+  private void addStatsTicker() {
+    if (Feature.usesStatsTicker(parentFeatures) || !Feature.usesStatsTicker(generateFeatures)) {
+      return;
+    }
+    cache.addMethod(MethodSpec.methodBuilder("statsTicker")
+        .addModifiers(publicFinalModifiers)
+        .addStatement("return $T.systemTicker()", TICKER)
         .returns(TICKER)
         .build());
   }

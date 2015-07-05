@@ -51,9 +51,13 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Nonnull
   Executor executor();
 
-  /** Returns the {@link Ticker} used by this cache. */
+  /** Returns the {@link Ticker} used by this cache for expiration. */
   @Nonnull
-  Ticker ticker();
+  Ticker expirationTicker();
+
+  /** Returns the {@link Ticker} used by this cache for statistics. */
+  @Nonnull
+  Ticker statsTicker();
 
   /** Returns the {@link Tracer} used by this cache. */
   default Tracer tracer() {
@@ -120,14 +124,14 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
     return key -> {
       V value;
       statsCounter().recordMisses(1);
-      long startTime = ticker().read();
+      long startTime = statsTicker().read();
       try {
         value = mappingFunction.apply(key);
       } catch (RuntimeException | Error e) {
-        statsCounter().recordLoadFailure(ticker().read() - startTime);
+        statsCounter().recordLoadFailure(statsTicker().read() - startTime);
         throw e;
       }
-      long loadTime = ticker().read() - startTime;
+      long loadTime = statsTicker().read() - startTime;
       if (!isAsync) {
         if (value == null) {
           statsCounter().recordLoadFailure(loadTime);
@@ -157,14 +161,14 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
       if ((u == null) && recordMiss) {
         statsCounter().recordMisses(1);
       }
-      long startTime = ticker().read();
+      long startTime = statsTicker().read();
       try {
         result = remappingFunction.apply(t, u);
       } catch (RuntimeException | Error e) {
-        statsCounter().recordLoadFailure(ticker().read() - startTime);
+        statsCounter().recordLoadFailure(statsTicker().read() - startTime);
         throw e;
       }
-      long loadTime = ticker().read() - startTime;
+      long loadTime = statsTicker().read() - startTime;
       if (!isAsync) {
         if (result == null) {
           statsCounter().recordLoadFailure(loadTime);

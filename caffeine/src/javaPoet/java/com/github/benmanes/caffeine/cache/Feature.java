@@ -89,11 +89,14 @@ enum Feature {
         || features.contains(Feature.REFRESH_WRITE);
   }
 
-  public static boolean usesTicker(Set<Feature> features) {
-    return features.contains(Feature.STATS)
-        || features.contains(Feature.EXPIRE_ACCESS)
+  public static boolean usesExpirationTicker(Set<Feature> features) {
+    return features.contains(Feature.EXPIRE_ACCESS)
         || features.contains(Feature.EXPIRE_WRITE)
         || features.contains(Feature.REFRESH_WRITE);
+  }
+
+  public static boolean usesStatsTicker(Set<Feature> features) {
+    return features.contains(Feature.STATS);
   }
 
   public static boolean usesMaximum(Set<Feature> features) {

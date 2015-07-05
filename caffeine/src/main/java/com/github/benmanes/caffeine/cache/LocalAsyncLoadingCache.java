@@ -45,7 +45,6 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
  * This class provides a skeletal implementation of the {@link AsyncLoadingCache} interface to
@@ -102,19 +101,19 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   @Override
   public CompletableFuture<V> get(K key,
       BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction) {
-    long now = cache.ticker().read();
+    long startTime = cache.statsTicker().read();
     @SuppressWarnings({"unchecked", "rawtypes"})
     CompletableFuture<V>[] result = new CompletableFuture[1];
     CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
       result[0] = mappingFunction.apply(key, cache.executor());
       if (result[0] == null) {
-        cache.statsCounter().recordLoadFailure(cache.ticker().read() - now);
+        cache.statsCounter().recordLoadFailure(cache.statsTicker().read() - startTime);
       }
       return result[0];
     }, true);
     if (result[0] != null) {
       result[0].whenComplete((value, error) -> {
-        long loadTime = cache.ticker().read() - now;
+        long loadTime = cache.statsTicker().read() - startTime;
         if (value == null) {
           cache.statsCounter().recordLoadFailure(loadTime);
           cache.remove(key, result[0]);
@@ -204,10 +203,10 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       cache.remove(key);
       return;
     }
-    long now = cache.ticker().read();
+    long startTime = cache.statsTicker().read();
     cache.put(key, valueFuture);
     valueFuture.whenComplete((value, error) -> {
-      long loadTime = cache.ticker().read() - now;
+      long loadTime = cache.statsTicker().read() - startTime;
       if (value == null) {
         cache.remove(key, valueFuture);
         cache.statsCounter().recordLoadFailure(loadTime);
@@ -227,16 +226,16 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   /** A function executed asynchronously after a bulk load completes. */
   private final class AsyncBulkCompleter implements BiConsumer<Map<K, V>, Throwable> {
     private final Map<K, CompletableFuture<V>> proxies;
-    private final long now;
+    private final long startTime;
 
     AsyncBulkCompleter(Map<K, CompletableFuture<V>> proxies) {
-      this.now = cache.ticker().read();
+      this.startTime = cache.statsTicker().read();
       this.proxies = proxies;
     }
 
     @Override
     public void accept(Map<K, V> result, Throwable error) {
-      long loadTime = cache.ticker().read() - now;
+      long loadTime = cache.statsTicker().read() - startTime;
 
       if (result == null) {
         if (error == null) {
@@ -447,7 +446,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     @Override
     public ConcurrentMap<K, V> asMap() {
       if (asMapView == null) {
-        asMapView = new AsMapView<K, V>(cache, cache.statsCounter(), cache.ticker());
+        asMapView = new AsMapView<K, V>(cache);
       }
       return asMapView;
     }
@@ -455,17 +454,12 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
   static final class AsMapView<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
     final LocalCache<K, CompletableFuture<V>> delegate;
-    final StatsCounter statsCounter;
-    final Ticker ticker;
 
     Collection<V> values;
     Set<Entry<K, V>> entries;
 
-    AsMapView(LocalCache<K, CompletableFuture<V>> delegate,
-        StatsCounter statsCounter, Ticker ticker) {
-      this.statsCounter = statsCounter;
+    AsMapView(LocalCache<K, CompletableFuture<V>> delegate) {
       this.delegate = delegate;
-      this.ticker = ticker;
     }
 
     @Override
@@ -586,16 +580,16 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     public V compute(K key,
         BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
       requireNonNull(remappingFunction);
-      long now = ticker.read();
+      long startTime = delegate.statsTicker().read();
       CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
         V oldValue = Async.getWhenSuccessful(oldValueFuture);
         V newValue = remappingFunction.apply(key, oldValue);
-        long loadTime = ticker.read() - now;
+        long loadTime = delegate.statsTicker().read() - startTime;
         if (newValue == null) {
-          statsCounter.recordLoadFailure(loadTime);
+          delegate.statsCounter().recordLoadFailure(loadTime);
           return null;
         }
-        statsCounter.recordLoadSuccess(loadTime);
+        delegate.statsCounter().recordLoadSuccess(loadTime);
         return CompletableFuture.completedFuture(newValue);
       }, false, true);
       return Async.getWhenSuccessful(valueFuture);

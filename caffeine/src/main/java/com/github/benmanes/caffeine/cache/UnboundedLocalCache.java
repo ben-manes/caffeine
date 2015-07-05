@@ -150,13 +150,18 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
-  public Ticker ticker() {
-    return ticker;
+  public Executor executor() {
+    return executor;
   }
 
   @Override
-  public Executor executor() {
-    return executor;
+  public Ticker expirationTicker() {
+    return Ticker.disabledTicker();
+  }
+
+  @Override
+  public Ticker statsTicker() {
+    return ticker;
   }
 
   /* ---------------- JDK8+ Map extensions -------------- */

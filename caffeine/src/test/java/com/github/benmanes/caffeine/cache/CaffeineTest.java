@@ -399,7 +399,7 @@ public final class CaffeineTest {
   public void ticker() {
     Ticker ticker = new FakeTicker();
     Caffeine<?, ?> builder = Caffeine.newBuilder().ticker(ticker);
-    assertThat(builder.getTicker(), is(ticker));
+    assertThat(builder.ticker, is(ticker));
     builder.build();
   }
 

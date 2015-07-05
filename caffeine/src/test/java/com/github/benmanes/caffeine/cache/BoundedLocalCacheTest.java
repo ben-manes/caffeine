@@ -262,7 +262,7 @@ public final class BoundedLocalCacheTest {
     }
     assertThat(buffer.offer(dummy), is(Buffer.FULL));
 
-    localCache.afterRead(dummy, true);
+    localCache.afterRead(dummy, 0, true);
     assertThat(buffer.offer(dummy), is(not(Buffer.FULL)));
   }
 
@@ -274,7 +274,7 @@ public final class BoundedLocalCacheTest {
     Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
     boolean[] ran = new boolean[1];
-    localCache.afterWrite(dummy, () -> ran[0] = true);
+    localCache.afterWrite(dummy, () -> ran[0] = true, 0);
     assertThat(ran[0], is(true));
 
     assertThat(localCache.writeQueue(), hasSize(0));

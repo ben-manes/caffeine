@@ -119,7 +119,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
    */
   default void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
     boolean success = false;
-    long startTime = cache().ticker().read();
+    long startTime = cache().statsTicker().read();
     try {
       @SuppressWarnings("unchecked")
       Map<K, V> loaded = (Map<K, V>) cacheLoader().loadAll(keysToLoad);
@@ -132,7 +132,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
       }
       success = !loaded.isEmpty();
     } finally {
-      long loadTime = cache().ticker().read() - startTime;
+      long loadTime = cache().statsTicker().read() - startTime;
       if (success) {
         cache().statsCounter().recordLoadSuccess(loadTime);
       } else {

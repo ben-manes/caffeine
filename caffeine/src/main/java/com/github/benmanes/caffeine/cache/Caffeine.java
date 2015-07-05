@@ -577,10 +577,10 @@ public final class Caffeine<K, V> {
 
   /**
    * Specifies a nanosecond-precision time source for use in determining when entries should be
-   * expired. By default, {@link System#nanoTime} is used.
+   * expired or refreshed. By default, {@link System#nanoTime} is used.
    * <p>
    * The primary intent of this method is to facilitate testing of caches which have been configured
-   * with {@link #expireAfterWrite} or {@link #expireAfterAccess}.
+   * with {@link #expireAfterWrite}, {@link #expireAfterAccess}, or {@link #refreshAfterWrite}.
    *
    * @param ticker a nanosecond-precision time source
    * @return this builder instance
@@ -596,11 +596,8 @@ public final class Caffeine<K, V> {
 
   @Nonnull
   Ticker getTicker() {
-    if (ticker != null) {
-      return ticker;
-    }
     return expiresAfterAccess() || expiresAfterWrite() || refreshes() || isRecordingStats()
-        ? Ticker.systemTicker()
+        ? (ticker == null) ? Ticker.systemTicker() : ticker
         : Ticker.disabledTicker();
   }
 
