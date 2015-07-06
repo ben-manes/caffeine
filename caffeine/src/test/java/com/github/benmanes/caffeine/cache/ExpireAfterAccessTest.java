@@ -84,6 +84,7 @@ public final class ExpireAfterAccessTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(1L));
+
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
@@ -102,10 +103,10 @@ public final class ExpireAfterAccessTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(2L));
+
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
-
   }
 
   @Test(dataProvider = "caches")
@@ -119,6 +120,7 @@ public final class ExpireAfterAccessTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(3L));
+
     long count = context.initialSize() - 3;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
@@ -143,6 +145,7 @@ public final class ExpireAfterAccessTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(2L));
+
     long count = Math.max(1, context.initialSize() - 1);
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
     // FIXME

@@ -778,14 +778,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       // Discard all entries
       if (evicts() || expiresAfterAccess()) {
         Node<K, V> node;
-        while ((node = accessOrderDeque().poll()) != null) {
+        while ((node = accessOrderDeque().peek()) != null) {
           removeNode(node);
+          accessOrderDeque().poll();
         }
       }
       if (expiresAfterWrite()) {
         Node<K, V> node;
-        while ((node = writeOrderDeque().poll()) != null) {
+        while ((node = writeOrderDeque().peek()) != null) {
           removeNode(node);
+          writeOrderDeque().poll();
         }
       }
       data.values().forEach(this::removeNode);
@@ -988,10 +990,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
         oldValue[0] = n.getValue();
+
+        cause[0] = (oldValue[0] == null) ? RemovalCause.COLLECTED : RemovalCause.EXPLICIT;
+        writer.delete(castKey, oldValue[0], cause[0]);
         n.retire();
       }
-      cause[0] = (oldValue[0] == null) ? RemovalCause.COLLECTED : RemovalCause.EXPLICIT;
-      writer.delete(castKey, oldValue[0], cause[0]);
       node[0] = n;
       return null;
     });

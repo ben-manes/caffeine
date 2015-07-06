@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -77,7 +78,10 @@ public final class ExpireAfterWriteTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(0L));
-    assertThat(cache, hasRemovalNotifications(context, context.initialSize(), RemovalCause.EXPIRED));
+
+    long count = context.initialSize();
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -92,8 +96,10 @@ public final class ExpireAfterWriteTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(1L));
+
     long count = context.initialSize();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -107,8 +113,10 @@ public final class ExpireAfterWriteTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(0L));
+
     long count = context.initialSize();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -130,8 +138,11 @@ public final class ExpireAfterWriteTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(2L));
+
     long count = Math.max(1, context.initialSize() - 1);
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    // FIXME
+    // verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -154,8 +165,11 @@ public final class ExpireAfterWriteTest {
 
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(2L));
+
     long count = Math.max(1, context.initialSize() - 1);
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    // FIXME
+    // verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -181,6 +195,10 @@ public final class ExpireAfterWriteTest {
     cache.cleanUp();
     assertThat(cache.estimatedSize(), is(1L));
     assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
+
+    long count = context.initialSize();
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -198,6 +216,10 @@ public final class ExpireAfterWriteTest {
         is(ImmutableMap.of(context.firstKey(), context.firstKey(),
             context.absentKey(), context.absentKey())));
     assertThat(cache.estimatedSize(), is(2L));
+
+    long count = context.initialSize();
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   /* ---------------- AsyncLoadingCache -------------- */
@@ -221,6 +243,7 @@ public final class ExpireAfterWriteTest {
 
     cache.synchronous().cleanUp();
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.EXPIRED));
   }
 
   /* ---------------- Policy -------------- */

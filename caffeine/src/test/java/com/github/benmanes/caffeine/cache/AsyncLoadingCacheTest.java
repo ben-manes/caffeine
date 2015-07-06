@@ -56,10 +56,12 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
+import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.WriteException;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -619,8 +621,9 @@ public final class AsyncLoadingCacheTest {
   @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void put_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.put(null, context.absentValue());
+  public void put_nullKey(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
+    cache.put(null, value);
   }
 
   @CheckNoWriter
@@ -635,6 +638,34 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void put_nullKeyAndValue(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.put(null, null);
+  }
+
+  @CheckNoStats // FIXME
+  @Test(enabled = false, dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void put_insert_writeFails(AsyncLoadingCache<Integer, Integer> map, CacheContext context) {
+    CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
+    try {
+      map.put(context.absentKey(), value);
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @CheckNoStats // FIXME
+  @Test(enabled = false, dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void put_replace_writeFails(AsyncLoadingCache<Integer, Integer> map,
+      CacheContext context) {
+    CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
+    try {
+      map.put(context.middleKey(), value);
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
   }
 
   @CheckNoWriter

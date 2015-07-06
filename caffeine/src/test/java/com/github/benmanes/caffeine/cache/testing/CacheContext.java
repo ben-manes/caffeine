@@ -154,10 +154,11 @@ public final class CacheContext {
   }
 
   public Set<Integer> firstMiddleLastKeys() {
-    return ImmutableSet.of(firstKey, middleKey, lastKey);
+    return ImmutableSet.of(firstKey(), middleKey(), lastKey());
   }
 
   public void clear() {
+    initialSize();
     original.clear();
     absent = null;
     absentKey = null;

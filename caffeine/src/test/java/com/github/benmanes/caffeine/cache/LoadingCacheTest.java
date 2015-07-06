@@ -60,20 +60,20 @@ public final class LoadingCacheTest {
   /* ---------------- get -------------- */
 
   @CacheSpec
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void get_null(LoadingCache<Integer, Integer> cache) {
+  public void get_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.get(null);
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL)
   public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey()), is(nullValue()));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @CacheSpec(loader = Loader.EXCEPTIONAL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void get_absent_failure(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -86,7 +86,7 @@ public final class LoadingCacheTest {
   }
 
   @CacheSpec
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   public void get_absent(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.absentKey();
@@ -109,18 +109,18 @@ public final class LoadingCacheTest {
 
   /* ---------------- getAll -------------- */
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getAll_iterable_null(LoadingCache<Integer, Integer> cache) {
+  public void getAll_iterable_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(null);
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void getAll_iterable_nullKey(LoadingCache<Integer, Integer> cache) {
+  public void getAll_iterable_nullKey(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(Collections.singletonList(null));
   }
 
@@ -140,21 +140,21 @@ public final class LoadingCacheTest {
     cache.getAll(context.absentKeys()).clear();
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL)
   public void getAll_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.getAll(context.absentKeys()), is(ImmutableMap.of()));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @CacheSpec(loader = Loader.BULK_NULL)
   @Test(dataProvider = "caches", expectedExceptions = Exception.class)
   public void getAll_absent_bulkNull(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(context.absentKeys());
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
   @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
   public void getAll_absent_failure(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -201,7 +201,7 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -215,10 +215,10 @@ public final class LoadingCacheTest {
 
   /* ---------------- refresh -------------- */
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void refresh_null(LoadingCache<Integer, Integer> cache) {
+  public void refresh_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     cache.refresh(null);
   }
 

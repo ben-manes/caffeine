@@ -39,14 +39,14 @@ public final class RejectingCacheWriter<K, V> implements CacheWriter<K, V>, Seri
   @Override
   public void write(K key, V value) {
     if (reject) {
-      throw new IllegalStateException();
+      throw new WriteException();
     }
   }
 
   @Override
   public void delete(K key, V value, RemovalCause cause) {
     if (reject) {
-      throw new IllegalStateException();
+      throw new DeleteException();
     }
   }
 
@@ -58,5 +58,13 @@ public final class RejectingCacheWriter<K, V> implements CacheWriter<K, V>, Seri
   @Override
   public int hashCode() {
     return RejectingCacheWriter.class.hashCode();
+  }
+
+  public static final class WriteException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+  }
+
+  public static final class DeleteException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
   }
 }

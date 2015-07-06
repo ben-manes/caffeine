@@ -31,7 +31,7 @@ ext {
     error_prone_annotations: '2.0.4',
     flip_tables: '1.0.2',
     guava: '18.0',
-    javapoet: '1.1.0',
+    javapoet: '1.2.0',
     jcache: '1.0.0',
     joor: '0.9.5',
     jsr305: '3.0.0',
@@ -45,7 +45,7 @@ ext {
     jctools: '1.0',
     jimfs: '1.0',
     junit: '4.12',
-    mockito: '2.0.23-beta',
+    mockito: '2.0.26-beta',
     testng: '6.9.4',
     truth: '0.24',
   ]
@@ -71,7 +71,7 @@ ext {
     nexus: '2.3.1',
     versions: '0.11.3',
     semantic_versioning: '1.1.0',
-    stats: '0.1.4',
+    stats: '0.1.5',
   ]
 
   libraries = [

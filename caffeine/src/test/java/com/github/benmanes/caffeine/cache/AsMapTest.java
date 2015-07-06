@@ -59,9 +59,13 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
+import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
+import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.WriteException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.SerializableTester;
 
@@ -107,6 +111,19 @@ public final class AsMapTest {
     verifyWriter(context, (verifier, writer) -> {
       verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
     });
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void clear_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.clear();
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
   }
 
   /* ---------------- contains -------------- */
@@ -268,6 +285,31 @@ public final class AsMapTest {
   }
 
   @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void put_insert_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.put(context.absentKey(), context.absentValue());
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void put_replace_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.put(context.middleKey(), context.absentValue());
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void put_insert(Map<Integer, Integer> map, CacheContext context) {
@@ -280,8 +322,7 @@ public final class AsMapTest {
     });
   }
 
-  @CheckNoStats
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
@@ -323,6 +364,31 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_null(Map<Integer, Integer> map, CacheContext context) {
     map.putAll(null);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void putAll_insert_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.putAll(context.absent());
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void putAll_replace_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.putAll(ImmutableMap.of(context.middleKey(), context.absentValue()));
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
   }
 
   @CheckNoWriter @CheckNoStats
@@ -410,6 +476,18 @@ public final class AsMapTest {
     map.putIfAbsent(null, null);
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void putIfAbsent_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.putIfAbsent(context.absentKey(), context.absentValue());
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -443,6 +521,19 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void remove_nullKey(Map<Integer, Integer> map, CacheContext context) {
     map.remove(null);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void remove_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.remove(context.middleKey());
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
   }
 
   @CheckNoWriter @CheckNoStats
@@ -491,6 +582,19 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void removeConditionally_nullKeyAndValue(Map<Integer, Integer> map, CacheContext context) {
     map.remove(null, null);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void removeConditionally_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.remove(context.middleKey(), context.original().get(context.middleKey()));
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
   }
 
   @CheckNoWriter @CheckNoStats
@@ -557,6 +661,19 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void replace_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.replace(context.absentKey(), context.absentValue()), is(nullValue()));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void replace_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.replace(context.middleKey(), context.absentValue());
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
   }
 
   @CheckNoWriter @CheckNoStats
@@ -649,6 +766,20 @@ public final class AsMapTest {
     assertThat(map.replace(key, key, key), is(false));
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void replaceConditionally_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Integer key = context.middleKey();
+      map.replace(key, context.original().get(key), context.absentValue());
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -711,6 +842,19 @@ public final class AsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void replaceAll_nullValue(Map<Integer, Integer> map, CacheContext context) {
     map.replaceAll((key, value) -> null);
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void replaceAll_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.replaceAll((key, value) -> context.absentValue());
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
   }
 
   @CacheSpec
@@ -1318,6 +1462,19 @@ public final class AsMapTest {
     map.keySet().add(1);
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void keySet_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.keySet().clear();
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
@@ -1326,7 +1483,9 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
+    });
   }
 
   @CacheSpec
@@ -1379,6 +1538,21 @@ public final class AsMapTest {
     map.keySet().iterator().next();
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void keyIterator_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Iterator<Integer> i = map.keySet().iterator();
+      i.next();
+      i.remove();
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
   @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
@@ -1428,6 +1602,19 @@ public final class AsMapTest {
     map.values().add(1);
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void values_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.values().clear();
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
@@ -1436,7 +1623,9 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
+    });
   }
 
   @CacheSpec
@@ -1491,6 +1680,21 @@ public final class AsMapTest {
     map.values().iterator().next();
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void valueIterator_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Iterator<Integer> i = map.values().iterator();
+      i.next();
+      i.remove();
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
   @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
@@ -1543,6 +1747,19 @@ public final class AsMapTest {
     }
   }
 
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void entrySet_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      map.entrySet().clear();
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
@@ -1551,7 +1768,9 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> {
+      verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
+    });
   }
 
   @CacheSpec
@@ -1606,6 +1825,22 @@ public final class AsMapTest {
   public void entryIterator_noMoreElements(Map<Integer, Integer> map, CacheContext context) {
     map.entrySet().iterator().next();
   }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void entryIterator_writeFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Iterator<Entry<Integer, Integer>> i = map.entrySet().iterator();
+      i.next();
+      i.remove();
+    } finally {
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
