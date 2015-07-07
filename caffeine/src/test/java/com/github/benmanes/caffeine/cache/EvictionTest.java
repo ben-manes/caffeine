@@ -51,8 +51,11 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
+import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
@@ -161,6 +164,7 @@ public final class EvictionTest {
     assertThat(cache.asMap(), is(equalTo(lru)));
     assertThat(context, hasEvictionCount(evicted[0]));
     assertThat(cache, hasRemovalNotifications(context, evicted[0], RemovalCause.SIZE));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(evicted[0], RemovalCause.SIZE));
   }
 
   @Test(dataProvider = "caches")
@@ -231,6 +235,7 @@ public final class EvictionTest {
     assertThat(eviction.weightedSize().getAsLong(), is(10L));
     assertThat(cache.synchronous().estimatedSize(), is(2L));
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
   }
 
   @Test(dataProvider = "caches")
@@ -255,6 +260,23 @@ public final class EvictionTest {
     Awaits.await().untilTrue(done);
     assertThat(eviction.weightedSize().getAsLong(), is(0L));
     assertThat(cache.synchronous().estimatedSize(), is(0L));
+
+    assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
+  }
+
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, maximumSize = MaximumSize.FULL,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void evict_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
+    try {
+      cache.policy().eviction().ifPresent(policy -> policy.setMaximum(0));
+    } finally {
+      context.disableRejectingCacheWriter();
+      assertThat(cache.asMap(), equalTo(context.original()));
+    }
   }
 
   /* ---------------- Weighted -------------- */

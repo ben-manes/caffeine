@@ -431,10 +431,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if ((node == null) || (node.getAccessTime() > expirationTime)) {
           break;
         }
-        accessOrderDeque().pollFirst();
-        if (expiresAfterWrite()) {
-          writeOrderDeque().remove(node);
-        }
         evictEntry(node, RemovalCause.EXPIRED);
       }
     }
@@ -444,10 +440,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         final Node<K, V> node = writeOrderDeque().peekFirst();
         if ((node == null) || (node.getWriteTime() > expirationTime)) {
           break;
-        }
-        writeOrderDeque().pollFirst();
-        if (evicts() || expiresAfterAccess()) {
-          accessOrderDeque().remove(node);
         }
         evictEntry(node, RemovalCause.EXPIRED);
       }
@@ -951,12 +943,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
       V oldValue;
       int oldWeight;
+      boolean expired = false;
       synchronized (prior) {
         if (!prior.isAlive()) {
           continue;
         }
         oldValue = prior.getValue();
-        if (value != oldValue) {
+        if (oldValue == null) {
+          writer.delete(key, oldValue, RemovalCause.COLLECTED);
+        } else if (hasExpired(prior, now)) {
+          writer.delete(key, oldValue, RemovalCause.EXPIRED);
+          expired = true;
+        }
+        if (expired || (value != oldValue)) {
           writer.write(key, value);
         }
         oldWeight = prior.getWeight();
@@ -965,13 +964,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
 
       final int weightedDifference = weight - oldWeight;
-      if (!expiresAfterWrite() && (weightedDifference == 0)) {
+      if (!expired && !expiresAfterWrite() && (weightedDifference == 0)) {
         afterRead(prior, now, false);
       } else {
         afterWrite(prior, new UpdateTask(prior, weightedDifference), now);
       }
-      if (hasRemovalListener() && (value != oldValue)) {
-        notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+      if (hasRemovalListener()) {
+        if (expired) {
+          notifyRemoval(key, oldValue, RemovalCause.EXPIRED);
+        } else if (oldValue == null) {
+          notifyRemoval(key, oldValue, RemovalCause.COLLECTED);
+        } else if (value != oldValue) {
+          notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+        }
       }
       return oldValue;
     }

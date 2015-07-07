@@ -118,7 +118,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void clear_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void clear_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.clear();
     } finally {
@@ -288,7 +288,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void put_insert_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void put_insert_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.put(context.absentKey(), context.absentValue());
     } finally {
@@ -301,7 +301,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void put_replace_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void put_replace_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.put(context.middleKey(), context.absentValue());
     } finally {
@@ -370,7 +370,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void putAll_insert_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void putAll_insert_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.putAll(context.absent());
     } finally {
@@ -383,7 +383,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void putAll_replace_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void putAll_replace_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.putAll(ImmutableMap.of(context.middleKey(), context.absentValue()));
     } finally {
@@ -480,7 +480,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void putIfAbsent_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void putIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.putIfAbsent(context.absentKey(), context.absentValue());
     } finally {
@@ -528,7 +528,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void remove_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void remove_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.remove(context.middleKey());
     } finally {
@@ -589,7 +589,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void removeConditionally_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void removeConditionally_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.remove(context.middleKey(), context.original().get(context.middleKey()));
     } finally {
@@ -668,7 +668,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void replace_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void replace_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.replace(context.middleKey(), context.absentValue());
     } finally {
@@ -771,7 +771,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void replaceConditionally_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void replaceConditionally_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Integer key = context.middleKey();
       map.replace(key, context.original().get(key), context.absentValue());
@@ -849,7 +849,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void replaceAll_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void replaceAll_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.replaceAll((key, value) -> context.absentValue());
     } finally {
@@ -1467,7 +1467,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void keySet_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void keySet_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.keySet().clear();
     } finally {
@@ -1543,7 +1543,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void keyIterator_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void keyIterator_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Iterator<Integer> i = map.keySet().iterator();
       i.next();
@@ -1607,7 +1607,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void values_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void values_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.values().clear();
     } finally {
@@ -1685,7 +1685,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void valueIterator_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void valueIterator_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Iterator<Integer> i = map.values().iterator();
       i.next();
@@ -1752,7 +1752,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void entrySet_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void entrySet_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.entrySet().clear();
     } finally {
@@ -1831,7 +1831,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void entryIterator_writeFails(Map<Integer, Integer> map, CacheContext context) {
+  public void entryIterator_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Iterator<Entry<Integer, Integer>> i = map.entrySet().iterator();
       i.next();

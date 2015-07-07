@@ -644,7 +644,7 @@ public final class AsyncLoadingCacheTest {
   @Test(enabled = false, dataProvider = "caches", expectedExceptions = WriteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void put_insert_writeFails(AsyncLoadingCache<Integer, Integer> map, CacheContext context) {
+  public void put_insert_writerFails(AsyncLoadingCache<Integer, Integer> map, CacheContext context) {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
     try {
       map.put(context.absentKey(), value);
@@ -658,7 +658,7 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void put_replace_writeFails(AsyncLoadingCache<Integer, Integer> map,
+  public void put_replace_writerFails(AsyncLoadingCache<Integer, Integer> map,
       CacheContext context) {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
     try {

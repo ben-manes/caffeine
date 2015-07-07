@@ -314,7 +314,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void put_insert_writeFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void put_insert_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.put(context.absentKey(), context.absentValue());
     } finally {
@@ -327,7 +327,7 @@ public final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void put_replace_writeFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void put_replace_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.put(context.middleKey(), context.absentValue());
     } finally {
@@ -407,7 +407,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches", expectedExceptions = WriteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void putAll_insert_writeFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void putAll_insert_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.putAll(context.absent());
     } finally {
@@ -420,7 +420,7 @@ public final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void putAll_replace_writeFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void putAll_replace_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.putAll(ImmutableMap.of(context.middleKey(), context.absentValue()));
     } finally {
@@ -464,7 +464,7 @@ public final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void invalidate_writeFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void invalidate_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.invalidate(context.middleKey());
     } finally {
@@ -532,7 +532,7 @@ public final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void invalidateAll_partial_writeFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void invalidateAll_partial_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.invalidateAll(context.firstMiddleLastKeys());
     } finally {
@@ -545,7 +545,7 @@ public final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void invalidateAll_full_writeFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void invalidateAll_full_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.invalidateAll();
     } finally {
