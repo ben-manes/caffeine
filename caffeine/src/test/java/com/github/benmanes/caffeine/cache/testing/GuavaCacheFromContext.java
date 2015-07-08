@@ -229,6 +229,11 @@ public final class GuavaCacheFromContext {
           return delegate().containsValue(value);
         }
         @Override
+        public void clear() {
+          // https://github.com/google/guava/issues/2101
+          invalidateAll();
+        }
+        @Override
         public V get(Object key) {
           requireNonNull(key);
           return delegate().get(key);

@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -73,18 +71,17 @@ interface LocalManualCache<C extends LocalCache<K, V>, K, V> extends Cache<K, V>
 
   @Override
   default void invalidate(Object key) {
-    requireNonNull(key);
     cache().remove(key);
-  }
-
-  @Override
-  default void invalidateAll() {
-    cache().clear();
   }
 
   @Override
   default void invalidateAll(Iterable<?> keys) {
     cache().invalidateAll(keys);
+  }
+
+  @Override
+  default void invalidateAll() {
+    cache().clear();
   }
 
   @Override

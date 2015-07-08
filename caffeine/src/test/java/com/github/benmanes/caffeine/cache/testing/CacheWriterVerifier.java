@@ -67,8 +67,8 @@ public final class CacheWriterVerifier {
   }
 
   /** Checks that the expected number of delete operations occurred. */
-  public void deletions(int count) {
-    verify(context.cacheWriter(), times(count)).delete(any(), any(), any());
+  public void deletions(long count) {
+    verify(context.cacheWriter(), times((int) count)).delete(any(), any(), any());
   }
 
   /** Checks that the expected number of delete operations occurred. */

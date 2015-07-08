@@ -157,6 +157,10 @@ public final class CacheContext {
     return ImmutableSet.of(firstKey(), middleKey(), lastKey());
   }
 
+  public void cleanUp() {
+    cache.cleanUp();
+  }
+
   public void clear() {
     initialSize();
     original.clear();
