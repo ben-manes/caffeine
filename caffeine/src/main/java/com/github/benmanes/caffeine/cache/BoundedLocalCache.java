@@ -1201,7 +1201,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** Returns the current value from a computeIfAbsent invocation. */
   V doComputeIfAbsent(K key, Object keyRef, Function<? super K, ? extends V> mappingFunction,
       boolean isAsync, long now) {
-    int[] weight = new int[1];
     @SuppressWarnings("unchecked")
     V[] oldValue = (V[]) new Object[1];
     @SuppressWarnings("unchecked")
@@ -1210,21 +1209,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings({"unchecked", "rawtypes"})
     Node<K, V>[] removed = new Node[1];
-    RemovalCause[] cause = new RemovalCause[1];
 
+    int[] weight = new int[2]; // old, new
+    RemovalCause[] cause = new RemovalCause[1];
     Node<K, V> node = data.compute(keyRef, (k, n) -> {
       if (n == null) {
         newValue[0] = statsAware(mappingFunction, isAsync).apply(key);
         if (newValue[0] == null) {
           return null;
         }
-        weight[0] = weigher.weigh(key, newValue[0]);
+        weight[1] = weigher.weigh(key, newValue[0]);
         return nodeFactory.newNode(key, keyReferenceQueue(),
-            newValue[0], valueReferenceQueue(), weight[0], now);
+            newValue[0], valueReferenceQueue(), weight[1], now);
       }
 
       synchronized (n) {
         nodeKey[0] = n.getKey();
+        weight[0] = n.getWeight();
         oldValue[0] = n.getValue();
         if ((nodeKey == null) || (oldValue[0] == null)) {
           cause[0] = RemovalCause.COLLECTED;
@@ -1243,8 +1244,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           n.retire();
           return null;
         }
-        weight[0] = weigher.weigh(key, newValue[0]);
+        weight[1] = weigher.weigh(key, newValue[0]);
         n.setValue(newValue[0], valueReferenceQueue());
+        n.setWeight(weight[1]);
         return n;
       }
     });
@@ -1265,9 +1267,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return oldValue[0];
     }
     if (oldValue[0] == null) {
-      afterWrite(node, new AddTask(node, weight[0]), now);
+      afterWrite(node, new AddTask(node, weight[1]), now);
     } else {
-      afterRead(node, now, true);
+      int weightedDifference = (weight[1] - weight[0]);
+      afterWrite(node, new UpdateTask(node, weightedDifference), now);
     }
     if (Tracer.isEnabled()) {
       tracer().recordWrite(id, key, weigher.weigh(nodeKey[0], newValue[0]));
@@ -1288,6 +1291,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     long now;
     if ((node == null) || (node.getValue() == null)
         || hasExpired(node, (now = expirationTicker().read()))) {
+      scheduleDrainBuffers();
       return null;
     }
 
@@ -1379,11 +1383,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
         if (cause[0] != null) {
           writer.delete(nodeKey[0], oldValue[0], cause[0]);
+          if (!computeIfAbsent) {
+            removed[0] = n;
+            n.retire();
+            return null;
+          }
         }
 
-        n.setWriteTime(now);
-        n.setAccessTime(now);
-        newValue[0] = remappingFunction.apply(nodeKey[0], oldValue[0]);
+        newValue[0] = remappingFunction.apply(nodeKey[0],
+            (cause[0] == null) ? oldValue[0] : null);
         if (newValue[0] == null) {
           if (cause[0] == null) {
             cause[0] = RemovalCause.EXPLICIT;
@@ -1399,10 +1407,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         weight[1] = weigher.weigh(key, newValue[0]);
         n.setValue(newValue[0], valueReferenceQueue());
         n.setWeight(weight[1]);
+        n.setWriteTime(now);
+        n.setAccessTime(now);
         if ((cause[0] == null) && newValue[0] != oldValue) {
           cause[0] = RemovalCause.REPLACED;
         }
-
         return n;
       }
     });
@@ -1428,11 +1437,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       afterWrite(node, new AddTask(node, weight[1]), now);
       tracer().recordWrite(id, key, weight[1]);
     } else {
-      int weightedDifference = weight[0] - weight[1];
-      if (weightedDifference == 0) {
-        afterRead(node, now, false);
-      } else {
+      int weightedDifference = weight[1] - weight[0];
+      if (expiresAfterWrite() || (weightedDifference != 0)) {
         afterWrite(node, new UpdateTask(node, weightedDifference), now);
+      } else {
+        afterRead(node, now, false);
       }
       tracer().recordWrite(id, nodeKey[0], weight[1]);
     }

@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -40,11 +41,13 @@ import com.github.benmanes.caffeine.cache.Policy.Expiration;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
@@ -54,6 +57,7 @@ import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteExc
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 
 /**
  * The test cases for caches that support the expire after read (time-to-idle) policy.
@@ -466,9 +470,9 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
-      expireAfterAccess = Expire.ONE_MINUTE, writer = Writer.EXCEPTIONAL,
-      removalListener = Listener.REJECTING)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void refresh_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.HOURS);
     cache.refresh(context.firstKey());
@@ -637,7 +641,20 @@ public final class ExpireAfterAccessTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
-  // FIXME: putIfAbsent_writerFail
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void putIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      context.ticker().advance(1, TimeUnit.HOURS);
+      map.putIfAbsent(context.firstKey(), context.absentValue());
+    } finally {
+      context.disableRejectingCacheWriter();
+      context.ticker().advance(-1, TimeUnit.HOURS);
+      assertThat(map, equalTo(context.original()));
+    }
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
@@ -671,7 +688,20 @@ public final class ExpireAfterAccessTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
-  // FIXME: put_writerFail
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void put_writerFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      context.ticker().advance(1, TimeUnit.HOURS);
+      map.put(context.firstKey(), context.absentValue());
+    } finally {
+      context.disableRejectingCacheWriter();
+      context.ticker().advance(-1, TimeUnit.HOURS);
+      assertThat(map, equalTo(context.original()));
+    }
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
@@ -701,7 +731,7 @@ public final class ExpireAfterAccessTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
   }
 
-  // FIXME: replace_writerFail
+  // replace_writerFail: Not needed due to exiting without side-effects
 
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
@@ -733,7 +763,7 @@ public final class ExpireAfterAccessTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
   }
 
-  // FIXME: replaceConditionally_writerFail
+  // replaceConditionally_writerFail: Not needed due to exiting without side-effects
 
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
@@ -773,7 +803,217 @@ public final class ExpireAfterAccessTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
-  // FIXME: removeConditionally_writerFail
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void removeConditionally_writerFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Integer key = context.firstKey();
+      context.ticker().advance(1, TimeUnit.HOURS);
+      map.remove(key, context.original().get(key));
+    } finally {
+      context.disableRejectingCacheWriter();
+      context.ticker().advance(-1, TimeUnit.HOURS);
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
+  public void computeIfAbsent(Map<Integer, Integer> map, CacheContext context) {
+    Integer key = context.firstKey();
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    assertThat(map.computeIfAbsent(key, k -> context.absentValue()), is(context.absentValue()));
+
+    assertThat(map.size(), is(1));
+    long count = context.initialSize();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void computeIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Integer key = context.firstKey();
+      context.ticker().advance(1, TimeUnit.HOURS);
+      map.computeIfAbsent(key, k -> context.absentValue());
+    } finally {
+      context.disableRejectingCacheWriter();
+      context.ticker().advance(-1, TimeUnit.HOURS);
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
+  public void computeIfPresent(Map<Integer, Integer> map, CacheContext context) {
+    Integer key = context.firstKey();
+    Integer value = context.absentValue();
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    assertThat(map.computeIfPresent(key, (k, v) -> value), is(nullValue()));
+
+    assertThat(map.size(), is(0));
+    long count = context.initialSize();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void computeIfPresent_writerFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Integer key = context.firstKey();
+      context.ticker().advance(1, TimeUnit.HOURS);
+      map.computeIfPresent(key, (k, v) -> context.absentValue());
+    } finally {
+      context.disableRejectingCacheWriter();
+      context.ticker().advance(-1, TimeUnit.HOURS);
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
+  public void compute(Map<Integer, Integer> map, CacheContext context) {
+    Integer key = context.firstKey();
+    Integer value = context.absentValue();
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    assertThat(map.compute(key, (k, v) -> {
+      assertThat(v, is(nullValue()));
+      return value;
+    }), is(value));
+
+    long count = context.initialSize() - map.size() + 1;
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void compute_writerFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Integer key = context.firstKey();
+      context.ticker().advance(1, TimeUnit.HOURS);
+      map.compute(key, (k, v) -> context.absentValue());
+    } finally {
+      context.disableRejectingCacheWriter();
+      context.ticker().advance(-1, TimeUnit.HOURS);
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
+  public void merge(Map<Integer, Integer> map, CacheContext context) {
+    Integer key = context.firstKey();
+    Integer value = context.absentValue();
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    assertThat(map.merge(key, value, (oldValue, v) -> {
+      throw new AssertionError("Should never be called");
+    }), is(value));
+
+    long count = context.initialSize() - map.size() + 1;
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
+      population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE,
+      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+  public void merge_writerFails(Map<Integer, Integer> map, CacheContext context) {
+    try {
+      Integer key = context.firstKey();
+      Integer value = context.absentValue();
+      context.ticker().advance(1, TimeUnit.HOURS);
+      map.merge(key, value, (oldValue, v) -> context.absentValue());
+    } finally {
+      context.disableRejectingCacheWriter();
+      context.ticker().advance(-1, TimeUnit.HOURS);
+      assertThat(map, equalTo(context.original()));
+    }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
+  public void iterators(Map<Integer, Integer> map, CacheContext context) {
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    assertThat(Iterators.size(map.keySet().iterator()), is(0));
+    assertThat(Iterators.size(map.values().iterator()), is(0));
+    assertThat(Iterators.size(map.entrySet().iterator()), is(0));
+  }
+
+  /* ---------------- Weights -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = Population.EMPTY, maximumSize = MaximumSize.FULL,
+      weigher = CacheWeigher.COLLECTION)
+  public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
+    cache.put(1, ImmutableList.of(1));
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    cache.put(1, ImmutableList.of(1, 2, 3));
+
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = Population.EMPTY, maximumSize = MaximumSize.FULL,
+      weigher = CacheWeigher.COLLECTION)
+  public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
+    cache.put(1, ImmutableList.of(1));
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    cache.asMap().putIfAbsent(1, ImmutableList.of(1, 2, 3));
+
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = Population.EMPTY, maximumSize = MaximumSize.FULL,
+      weigher = CacheWeigher.COLLECTION)
+  public void computeIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
+    cache.put(1, ImmutableList.of(1));
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    cache.asMap().computeIfAbsent(1, k -> ImmutableList.of(1, 2, 3));
+
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = Population.EMPTY, maximumSize = MaximumSize.FULL,
+      weigher = CacheWeigher.COLLECTION)
+  public void compute_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
+    cache.put(1, ImmutableList.of(1));
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    cache.asMap().compute(1, (k, v) -> ImmutableList.of(1, 2, 3));
+
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = Population.EMPTY, maximumSize = MaximumSize.FULL,
+      weigher = CacheWeigher.COLLECTION)
+  public void merge_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
+    cache.put(1, ImmutableList.of(1));
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    cache.asMap().merge(1, ImmutableList.of(1, 2, 3), (oldValue, v) -> {
+      throw new AssertionError("Should never be called");
+    });
+
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+  }
 
   /* ---------------- Policy -------------- */
 
