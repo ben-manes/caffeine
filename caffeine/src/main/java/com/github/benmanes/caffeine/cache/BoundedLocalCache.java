@@ -984,7 +984,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
 
       int weightedDifference = mayUpdate ? (weight - oldWeight) : 0;
-      if ((oldValue == null) || expired || expiresAfterWrite() || (weightedDifference != 0)) {
+      if ((oldValue == null) || (weightedDifference != 0) || expired
+          || (!onlyIfAbsent && (oldValue != null) && expiresAfterWrite())) {
         afterWrite(prior, new UpdateTask(prior, weightedDifference), now);
       } else {
         afterRead(prior, now, false);

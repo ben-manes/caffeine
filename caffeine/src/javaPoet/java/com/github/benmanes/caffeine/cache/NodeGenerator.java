@@ -191,7 +191,7 @@ public final class NodeGenerator {
   }
 
   private FieldSpec newKeyField() {
-    Modifier[] modifiers = { Modifier.PROTECTED, Modifier.VOLATILE };
+    Modifier[] modifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
     FieldSpec.Builder fieldSpec = isStrongKeys()
         ? FieldSpec.builder(kTypeVar, "key", modifiers)
         : FieldSpec.builder(keyReferenceType(), "key", modifiers);
@@ -199,7 +199,7 @@ public final class NodeGenerator {
   }
 
   private FieldSpec newValueField() {
-    Modifier[] modifiers = { Modifier.PROTECTED, Modifier.VOLATILE };
+    Modifier[] modifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
     FieldSpec.Builder fieldSpec = isStrongValues()
         ? FieldSpec.builder(vTypeVar, "value", modifiers)
         : FieldSpec.builder(valueReferenceType(), "value", modifiers);
@@ -263,7 +263,7 @@ public final class NodeGenerator {
   /** Adds weight support, if enabled, to the node type. */
   private void addWeight() {
     if (generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
-      nodeSubtype.addField(int.class, "weight", Modifier.PROTECTED)
+      nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
           .addMethod(newGetter(Strength.STRONG, TypeName.INT, "weight", Visibility.IMMEDIATE))
           .addMethod(newSetter(TypeName.INT, "weight", Visibility.IMMEDIATE));
       addIntConstructorAssignment(constructorByKey, "weight", "weight", Visibility.IMMEDIATE);
@@ -275,7 +275,7 @@ public final class NodeGenerator {
   private void addExpiration() {
     if (generateFeatures.contains(Feature.EXPIRE_ACCESS)) {
       nodeSubtype.addField(newFieldOffset(className, "accessTime"))
-          .addField(long.class, "accessTime", Modifier.PROTECTED, Modifier.VOLATILE)
+          .addField(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG,
               "accessTime", Visibility.LAZY))
           .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.LAZY));
@@ -285,7 +285,7 @@ public final class NodeGenerator {
 
     if (!Feature.useWriteTime(parentFeatures) && Feature.useWriteTime(generateFeatures)) {
       nodeSubtype.addField(newFieldOffset(className, "writeTime"))
-          .addField(long.class, "writeTime", Modifier.PROTECTED, Modifier.VOLATILE)
+          .addField(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
       addLongConstructorAssignment(constructorByKey, "now", "writeTime", Visibility.LAZY);
@@ -343,7 +343,7 @@ public final class NodeGenerator {
 
   /** Adds a simple field, accessor, and mutator for the variable. */
   private void addFieldAndGetter(TypeSpec.Builder typeSpec, TypeName varType, String varName) {
-    typeSpec.addField(varType, varName, Modifier.PROTECTED)
+    typeSpec.addField(varType, varName, Modifier.PRIVATE)
         .addMethod(newGetter(Strength.STRONG, varType, varName, Visibility.IMMEDIATE))
         .addMethod(newSetter(varType, varName, Visibility.IMMEDIATE));
   }
