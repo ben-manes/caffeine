@@ -33,7 +33,6 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 
@@ -90,10 +89,10 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
         break;
       case COLLECTED:
         assertThat(notification.wasEvicted(), is(true));
-        if (context.keyStrength() == ReferenceType.STRONG) {
+        if (context.isStrongKeys()) {
           assertThat(notification.getKey(), is(not(nullValue())));
         }
-        if (context.valueStrength() == ReferenceType.STRONG) {
+        if (context.isStrongValues()) {
           assertThat(notification.getValue(), is(not(nullValue())));
         }
     }

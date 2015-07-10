@@ -129,6 +129,39 @@ public @interface CacheSpec {
 
   /* ---------------- Maximum size -------------- */
 
+  /** The maximum size, each resulting in a new combination. */
+  MaximumSize[] maximumSize() default {
+    MaximumSize.DISABLED,
+    MaximumSize.UNREACHABLE
+  };
+
+  enum MaximumSize {
+    /** A flag indicating that entries are not evicted due to a maximum size threshold. */
+    DISABLED(Long.MAX_VALUE),
+    /** A configuration where entries are evicted immediately. */
+    ZERO(0L),
+    /** A configuration that holds a single entry. */
+    ONE(1L),
+    /** A configuration that holds ten entries. */
+    TEN(10L),
+    /** A configuration that holds the {@link Population#FULL} count. */
+    FULL(InitialCapacity.FULL.size()),
+    /** A configuration where the threshold is too high for eviction to occur. */
+    UNREACHABLE(Long.MAX_VALUE);
+
+    private final long max;
+
+    private MaximumSize(long max) {
+      this.max = max;
+    }
+
+    public long max() {
+      return max;
+    }
+  }
+
+  /* ---------------- Weigher -------------- */
+
   /** The weigher, each resulting in a new combination. */
   CacheWeigher[] weigher() default {
     CacheWeigher.DEFAULT,
@@ -175,43 +208,10 @@ public @interface CacheSpec {
     }
   }
 
-  /* ---------------- Maximum size -------------- */
-
-  /** The maximum size, each resulting in a new combination. */
-  MaximumSize[] maximumSize() default {
-    MaximumSize.DISABLED,
-    MaximumSize.UNREACHABLE
-  };
-
-  enum MaximumSize {
-    /** A flag indicating that entries are not evicted due to a maximum size threshold. */
-    DISABLED(Long.MAX_VALUE),
-    /** A configuration where entries are evicted immediately. */
-    ZERO(0L),
-    /** A configuration that holds a single entry. */
-    ONE(1L),
-    /** A configuration that holds ten entries. */
-    TEN(10L),
-    /** A configuration that holds the {@link Population#FULL} count. */
-    FULL(InitialCapacity.FULL.size()),
-    /** A configuration where the threshold is too high for eviction to occur. */
-    UNREACHABLE(Long.MAX_VALUE);
-
-    private final long max;
-
-    private MaximumSize(long max) {
-      this.max = max;
-    }
-
-    public long max() {
-      return max;
-    }
-  }
-
   /* ---------------- Expiration -------------- */
 
   /** Indicates that the combination must have an expiration setting. */
-  boolean expirationRequired() default false;
+  boolean requiresExpiration() default false;
 
   /** The expiration time-to-idle setting, each resulting in a new combination. */
   Expire[] expireAfterAccess() default {
@@ -275,8 +275,8 @@ public @interface CacheSpec {
 
   /* ---------------- Reference-based -------------- */
 
-  /** Indicates that the combination must have a reference collection setting. */
-  boolean referenceRequired() default false;
+  /** Indicates that the combination must have a weak reference collection setting. */
+  boolean requiresWeakRef() default false;
 
   /** The reference type of that the cache holds a key with (strong or weak only). */
   ReferenceType[] keys() default {

@@ -245,12 +245,20 @@ public final class CacheContext {
     return keyStrength == ReferenceType.STRONG;
   }
 
+  public boolean isWeakKeys() {
+    return keyStrength == ReferenceType.STRONG;
+  }
+
   public ReferenceType valueStrength() {
     return valueStrength;
   }
 
   public boolean isStrongValues() {
     return valueStrength == ReferenceType.STRONG;
+  }
+
+  public boolean isWeakValues() {
+    return valueStrength == ReferenceType.WEAK;
   }
 
   public boolean isLoading() {

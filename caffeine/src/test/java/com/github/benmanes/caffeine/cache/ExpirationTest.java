@@ -61,7 +61,7 @@ import com.google.common.collect.Iterators;
 public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
-  @CacheSpec(expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.IMMEDIATELY},
+  @CacheSpec(requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.IMMEDIATELY},
       expireAfterWrite = {Expire.DISABLED, Expire.IMMEDIATELY}, population = Population.EMPTY)
   public void expire_zero(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
@@ -76,7 +76,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, writer = Writer.EXCEPTIONAL, expirationRequired = true,
+      population = Population.FULL, writer = Writer.EXCEPTIONAL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       removalListener = Listener.REJECTING)
@@ -93,7 +93,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -109,7 +109,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_insert(Cache<Integer, Integer> cache, CacheContext context) {
@@ -123,7 +123,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_replace(Cache<Integer, Integer> cache, CacheContext context) {
@@ -146,7 +146,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -162,7 +162,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void putAll_insert(Cache<Integer, Integer> cache, CacheContext context) {
@@ -177,7 +177,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void putAll_replace(Cache<Integer, Integer> cache, CacheContext context) {
@@ -201,7 +201,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -217,7 +217,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void invalidate(Cache<Integer, Integer> cache, CacheContext context) {
@@ -231,7 +231,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -247,7 +247,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
@@ -261,7 +261,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -277,7 +277,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void invalidateAll_full(Cache<Integer, Integer> cache, CacheContext context) {
@@ -291,7 +291,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -308,7 +308,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void estimatedSize(Cache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
@@ -317,7 +317,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void cleanUp(Cache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
@@ -331,7 +331,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -350,7 +350,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -367,7 +367,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -383,7 +383,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void refresh(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -400,7 +400,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -416,7 +416,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
-      removalListener = Listener.CONSUMING, expirationRequired = true,
+      removalListener = Listener.CONSUMING, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void get(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -433,7 +433,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, removalListener = Listener.CONSUMING,
-      expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void get_async(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> future = new CompletableFuture<Integer>();
@@ -456,7 +456,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
-      removalListener = Listener.CONSUMING, expirationRequired = true,
+      removalListener = Listener.CONSUMING, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void getAll(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -468,7 +468,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_insert(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -481,7 +481,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_replace(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -506,7 +506,7 @@ public final class ExpirationTest {
   /* ---------------- Map -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void isEmpty(Map<Integer, Integer> map, CacheContext context) {
@@ -515,7 +515,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void containsKey(Map<Integer, Integer> map, CacheContext context) {
@@ -525,7 +525,7 @@ public final class ExpirationTest {
 
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void containsValue(Map<Integer, Integer> map, CacheContext context) {
@@ -534,7 +534,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void clear(Map<Integer, Integer> map, CacheContext context) {
@@ -548,7 +548,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -565,7 +565,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -581,7 +581,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_insert(Map<Integer, Integer> map, CacheContext context) {
@@ -595,7 +595,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_replace(Map<Integer, Integer> map, CacheContext context) {
@@ -618,7 +618,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -634,7 +634,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void replace(Map<Integer, Integer> map, CacheContext context) {
@@ -651,7 +651,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void replace_updated(Map<Integer, Integer> map, CacheContext context) {
@@ -668,7 +668,7 @@ public final class ExpirationTest {
   // replace_writerFail: Not needed due to exiting without side-effects
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void replaceConditionally(Map<Integer, Integer> map, CacheContext context) {
@@ -686,7 +686,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void replaceConditionally_updated(Map<Integer, Integer> map, CacheContext context) {
@@ -704,7 +704,7 @@ public final class ExpirationTest {
   // replaceConditionally_writerFail: Not needed due to exiting without side-effects
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void remove(Map<Integer, Integer> map, CacheContext context) {
@@ -718,7 +718,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -734,7 +734,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void removeConditionally(Map<Integer, Integer> map, CacheContext context) {
@@ -749,7 +749,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -766,7 +766,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void computeIfAbsent(Map<Integer, Integer> map, CacheContext context) {
@@ -782,7 +782,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -799,7 +799,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void computeIfPresent(Map<Integer, Integer> map, CacheContext context) {
@@ -816,7 +816,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -833,7 +833,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void compute(Map<Integer, Integer> map, CacheContext context) {
@@ -852,7 +852,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -869,7 +869,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void merge(Map<Integer, Integer> map, CacheContext context) {
@@ -887,7 +887,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, expirationRequired = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -905,7 +905,7 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, expirationRequired = true,
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void iterators(Map<Integer, Integer> map, CacheContext context) {
@@ -920,7 +920,7 @@ public final class ExpirationTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
-      expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     cache.put(1, ImmutableList.of(1));
@@ -933,7 +933,7 @@ public final class ExpirationTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
-      expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     cache.put(1, ImmutableList.of(1));
@@ -946,7 +946,7 @@ public final class ExpirationTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
-      expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void computeIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     cache.put(1, ImmutableList.of(1));
@@ -959,7 +959,7 @@ public final class ExpirationTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
-      expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void compute_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     cache.put(1, ImmutableList.of(1));
@@ -972,7 +972,7 @@ public final class ExpirationTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
-      expirationRequired = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void merge_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     cache.put(1, ImmutableList.of(1));
