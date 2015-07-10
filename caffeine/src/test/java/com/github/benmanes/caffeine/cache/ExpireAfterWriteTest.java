@@ -131,7 +131,7 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
+  @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE, loader = {Loader.IDENTITY, Loader.BULK_IDENTITY},
       population = { Population.PARTIAL, Population.FULL })
   public void getAll(LoadingCache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);

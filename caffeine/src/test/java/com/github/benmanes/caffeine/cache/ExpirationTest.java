@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -47,9 +48,11 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
+import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Maps;
 
 /**
  * The test cases for caches that support the expire after read or expire after write policy.
@@ -455,13 +458,16 @@ public final class ExpirationTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
+  @CacheSpec(population = Population.FULL,
       removalListener = Listener.CONSUMING, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
+      loader = {Loader.IDENTITY, Loader.BULK_IDENTITY})
   public void getAll(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    context.ticker().advance(1, TimeUnit.SECONDS);
+    Set<Integer> keys = context.firstMiddleLastKeys();
+    context.ticker().advance(1, TimeUnit.MINUTES);
     cache.getAll(context.firstMiddleLastKeys());
+    assertThat(cache.getAll(keys).join(), is(Maps.uniqueIndex(keys, Functions.identity())));
 
     long count = context.initialSize();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));

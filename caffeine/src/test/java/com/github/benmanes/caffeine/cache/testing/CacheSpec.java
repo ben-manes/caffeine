@@ -383,6 +383,16 @@ public @interface CacheSpec {
         return null;
       }
     },
+    BULK_IDENTITY(true) {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        Map<Integer, Integer> result = new HashMap<>();
+        keys.forEach(key -> result.put(key, key));
+        return result;
+      }
+    },
     BULK_NEGATIVE(true) {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();

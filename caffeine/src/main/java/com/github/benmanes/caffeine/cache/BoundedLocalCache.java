@@ -1379,7 +1379,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       synchronized (n) {
         nodeKey[0] = n.getKey();
         oldValue[0] = n.getValue();
-        if ((nodeKey == null) || (oldValue == null)) {
+        if ((nodeKey == null) || (oldValue[0] == null)) {
           cause[0] = RemovalCause.COLLECTED;
         } else if (hasExpired(n, now)) {
           cause[0] = RemovalCause.EXPIRED;
