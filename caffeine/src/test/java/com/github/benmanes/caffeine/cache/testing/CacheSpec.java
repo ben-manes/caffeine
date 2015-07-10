@@ -210,6 +210,9 @@ public @interface CacheSpec {
 
   /* ---------------- Expiration -------------- */
 
+  /** Indicates that the combination must have an expiration setting. */
+  boolean expirationRequired() default false;
+
   /** The expiration time-to-idle setting, each resulting in a new combination. */
   Expire[] expireAfterAccess() default {
     Expire.DISABLED,
@@ -271,6 +274,9 @@ public @interface CacheSpec {
   }
 
   /* ---------------- Reference-based -------------- */
+
+  /** Indicates that the combination must have a reference collection setting. */
+  boolean referenceRequired() default false;
 
   /** The reference type of that the cache holds a key with (strong or weak only). */
   ReferenceType[] keys() default {

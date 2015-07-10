@@ -66,8 +66,8 @@ final class CacheGenerator {
   /** Returns a lazy stream so that the test case is GC-able after use. */
   public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate() {
     return combinations().stream()
-        .map(CacheGenerator::newCacheContext)
-        .filter(CacheGenerator::isCompatible)
+        .map(this::newCacheContext)
+        .filter(this::isCompatible)
         .map(context -> {
           Cache<Integer, Integer> cache = newCache(context);
           populate(context, cache);
@@ -132,7 +132,7 @@ final class CacheGenerator {
   }
 
   /** Returns a new cache context based on the combination. */
-  private static CacheContext newCacheContext(List<Object> combination) {
+  private CacheContext newCacheContext(List<Object> combination) {
     int index = 0;
     return new CacheContext(
         (InitialCapacity) combination.get(index++),
@@ -156,14 +156,19 @@ final class CacheGenerator {
   }
 
   /** Returns if the context is a viable configuration. */
-  private static boolean isCompatible(CacheContext context) {
+  private boolean isCompatible(CacheContext context) {
     boolean asyncIncompatible = (context.implementation() != Implementation.Caffeine)
         || (context.valueStrength() != ReferenceType.STRONG)
         || !context.isLoading();
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
     boolean weigherIncompatible = context.isUnbounded() && context.isWeighted();
+    boolean expirationIncompatible = cacheSpec.expirationRequired() && !context.expires();
+    boolean referenceIncompatible = cacheSpec.referenceRequired()
+        && (!context.isStrongKeys() || !context.isStrongValues());
+
     boolean skip = (context.isAsync() && asyncIncompatible)
-        || refreshIncompatible || weigherIncompatible;
+        || refreshIncompatible || weigherIncompatible
+        || expirationIncompatible || referenceIncompatible;
     return !skip;
   }
 

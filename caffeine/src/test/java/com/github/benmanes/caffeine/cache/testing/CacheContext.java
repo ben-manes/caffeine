@@ -249,6 +249,10 @@ public final class CacheContext {
     return valueStrength;
   }
 
+  public boolean isStrongValues() {
+    return valueStrength == ReferenceType.STRONG;
+  }
+
   public boolean isLoading() {
     return (loader != null);
   }
