@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.jcache.integration;
+package com.github.benmanes.caffeine.jcache.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -26,6 +26,7 @@ import java.util.Iterator;
 
 import javax.cache.Cache;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
+import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryRemovedListener;
 
 import org.mockito.Mock;
@@ -37,19 +38,18 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.jcache.Expirable;
-import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class JCacheRemovalListenerTest {
-  JCacheRemovalListener<Integer, Integer> listener;
+public final class JCacheEvictionListenerTest {
+  JCacheEvictionListener<Integer, Integer> listener;
   JCacheStatisticsMXBean statistics;
 
   @Mock Cache<Integer, Integer> cache;
-  @Mock CacheEntryRemovedListener<Integer, Integer> entryListener;
+  @Mock EvictionListener entryListener;
 
   @BeforeMethod
   public void before() {
@@ -57,7 +57,7 @@ public final class JCacheRemovalListenerTest {
     statistics = new JCacheStatisticsMXBean();
     EventDispatcher<Integer, Integer> dispatcher =
         new EventDispatcher<>(MoreExecutors.directExecutor());
-    listener = new JCacheRemovalListener<>(dispatcher, statistics);
+    listener = new JCacheEvictionListener<>(dispatcher, statistics);
     listener.setCache(cache);
     statistics.enable(true);
 
@@ -75,14 +75,21 @@ public final class JCacheRemovalListenerTest {
 
   @Test(dataProvider = "notifications")
   public void publishIfEvicted(RemovalNotification<Integer, Expirable<Integer>> notification) {
-    listener.onRemoval(notification);
+    listener.delete(notification.getKey(), notification.getValue(), notification.getCause());
 
     if (notification.wasEvicted()) {
-      verify(entryListener).onRemoved(any());
+      if (notification.getCause() == RemovalCause.EXPIRED) {
+        verify(entryListener).onExpired(any());
+      } else {
+        verify(entryListener).onRemoved(any());
+      }
       assertThat(statistics.getCacheEvictions(), is(1L));
     } else {
       verify(entryListener, never()).onRemoved(any());
       assertThat(statistics.getCacheEvictions(), is(0L));
     }
   }
+
+  interface EvictionListener extends CacheEntryRemovedListener<Integer, Integer>,
+      CacheEntryExpiredListener<Integer, Integer> {}
 }

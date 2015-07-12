@@ -33,8 +33,8 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
+import com.github.benmanes.caffeine.jcache.event.JCacheEvictionListener;
 import com.github.benmanes.caffeine.jcache.integration.JCacheLoaderAdapter;
-import com.github.benmanes.caffeine.jcache.integration.JCacheRemovalListener;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 import com.typesafe.config.Config;
 
@@ -107,7 +107,7 @@ final class CacheFactory {
     final CaffeineConfiguration<K, V> config;
 
     CacheLoader<K, V> cacheLoader;
-    JCacheRemovalListener<K, V> removalListener;
+    JCacheEvictionListener<K, V> evictionListener;
 
     Builder(String cacheName, CaffeineConfiguration<K, V> config) {
       this.config = config;
@@ -127,18 +127,15 @@ final class CacheFactory {
 
     /** Creates a configured cache. */
     public CacheProxy<K, V> build() {
-      boolean requiresRemovalListener =
-          configureMaximumSize() ||
-          configureMaximumWeight() ||
-          configureExpireAfterWrite() ||
-          configureExpireAfterAccess();
-      if (requiresRemovalListener) {
-        configureRemovalListener();
+      boolean evicts = configureMaximumSize() || configureMaximumWeight()
+          || configureExpireAfterWrite() || configureExpireAfterAccess();
+      if (evicts) {
+        configureEvictionListener();
       }
 
       CacheProxy<K, V> cache = isReadThrough() ? newLoadingCacheProxy() : newCacheProxy();
-      if (requiresRemovalListener) {
-        removalListener.setCache(cache);
+      if (evicts) {
+        evictionListener.setCache(cache);
       }
       return cache;
     }
@@ -198,9 +195,9 @@ final class CacheFactory {
     }
 
     /** Configures the removal listener. */
-    private void configureRemovalListener() {
-      removalListener = new JCacheRemovalListener<>(dispatcher, statistics);
-      caffeine.removalListener(removalListener);
+    private void configureEvictionListener() {
+      evictionListener = new JCacheEvictionListener<>(dispatcher, statistics);
+      caffeine.writer(evictionListener);
     }
   }
 }

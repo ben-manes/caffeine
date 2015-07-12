@@ -13,30 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.jcache.integration;
+package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
 import javax.cache.Cache;
 
-import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
+import com.github.benmanes.caffeine.cache.CacheWriter;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.jcache.Expirable;
-import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 
 /**
- * A Caffeine listener that publishes eviction events to the JCache listeners.
+ * A Caffeine {@link CacheWriter} that provides an adapter to publish events in the order of the
+ * actions being performed on a key.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class JCacheRemovalListener<K, V> implements RemovalListener<K, Expirable<V>> {
+public final class JCacheEvictionListener<K, V> implements CacheWriter<K, Expirable<V>> {
   private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
 
   private Cache<K, V> cache;
 
-  public JCacheRemovalListener(EventDispatcher<K, V> dispatcher,
+  public JCacheEvictionListener(EventDispatcher<K, V> dispatcher,
       JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);
     this.statistics = requireNonNull(statistics);
@@ -52,9 +52,16 @@ public final class JCacheRemovalListener<K, V> implements RemovalListener<K, Exp
   }
 
   @Override
-  public void onRemoval(RemovalNotification<K, Expirable<V>> notification) {
-    if (notification.wasEvicted()) {
-      dispatcher.publishRemoved(cache, notification.getKey(), notification.getValue().get());
+  public void write(K key, Expirable<V> value) {}
+
+  @Override
+  public void delete(K key, Expirable<V> value, RemovalCause cause) {
+    if (cause.wasEvicted()) {
+      if (cause == RemovalCause.EXPIRED) {
+        dispatcher.publishExpired(cache, key, value.get());
+      } else {
+        dispatcher.publishRemoved(cache, key, value.get());
+      }
       dispatcher.ignoreSynchronous();
       statistics.recordEvictions(1L);
     }

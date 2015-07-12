@@ -40,13 +40,13 @@ import javax.cache.CacheException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class SerializationAwareCopyStrategy extends AbstractCopyStrategy<byte[]> {
+public class JavaSerializationCopyStrategy extends AbstractCopyStrategy<byte[]> {
 
-  public SerializationAwareCopyStrategy() {
+  public JavaSerializationCopyStrategy() {
     super();
   }
 
-  public SerializationAwareCopyStrategy(Set<Class<?>> immutableClasses,
+  public JavaSerializationCopyStrategy(Set<Class<?>> immutableClasses,
       Map<Class<?>, Function<Object, Object>> deepCopyStrategies) {
     super(immutableClasses, deepCopyStrategies);
   }

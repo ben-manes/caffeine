@@ -33,7 +33,7 @@ import javax.cache.expiry.ExpiryPolicy;
 
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.jcache.copy.SerializationAwareCopyStrategy;
+import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopyStrategy;
 import com.google.common.collect.Iterables;
 import com.typesafe.config.ConfigFactory;
 
@@ -78,7 +78,7 @@ public final class TypesafeConfigurationTest {
   static void checkStoreByValue(CaffeineConfiguration<?, ?> config) {
     assertThat(config.isStoreByValue(), is(true));
     assertThat(config.getCopyStrategyFactory().create(),
-        instanceOf(SerializationAwareCopyStrategy.class));
+        instanceOf(JavaSerializationCopyStrategy.class));
   }
 
   static void checkListener(CaffeineConfiguration<?, ?> config) {

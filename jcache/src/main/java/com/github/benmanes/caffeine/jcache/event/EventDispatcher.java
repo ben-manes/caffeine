@@ -38,7 +38,7 @@ import javax.cache.event.EventType;
  * A dispatcher that publishes cache events to listeners for asynchronous execution.
  * <p>
  * A {@link CacheEntryListener} is required to receive events in the order of the actions being
- * performed on the associated entry. This implementation supports this through an actor-like model
+ * performed on the associated key. This implementation supports this through an actor-like model
  * by using a dispatch queue per listener. A listener is never executed in parallel on different
  * events, but may be executed sequentially on different threads. Batch processing of the dispatch
  * queue is not presently supported.
