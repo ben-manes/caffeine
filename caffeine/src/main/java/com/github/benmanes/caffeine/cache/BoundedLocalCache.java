@@ -903,12 +903,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public V put(K key, V value) {
-    return put(key, value, false);
+    return put(key, value, true, false);
+  }
+
+  @Override
+  public V put(K key, V value, boolean notifyWriter) {
+    return put(key, value, notifyWriter, false);
   }
 
   @Override
   public V putIfAbsent(K key, V value) {
-    return put(key, value, true);
+    return put(key, value, true, true);
   }
 
   /**
@@ -917,10 +922,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    *
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
+   * @param notifyWriter if the writer should be notified for an inserted or updated entry
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
    * @return the prior value in the data store or null if no mapping was found
    */
-  V put(K key, V value, boolean onlyIfAbsent) {
+  V put(K key, V value, boolean notifyWriter, boolean onlyIfAbsent) {
     requireNonNull(key);
     requireNonNull(value);
 
@@ -938,7 +944,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
         Node<K, V> computed = node;
         prior = data.computeIfAbsent(node.getKeyReference(), k -> {
-          writer.write(key, value);
+          if (notifyWriter) {
+            writer.write(key, value);
+          }
           return computed;
         });
         if (prior == node) {
@@ -966,7 +974,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           mayUpdate = false;
         }
 
-        if (expired || (mayUpdate && (value != oldValue))) {
+        if (notifyWriter && (expired || (mayUpdate && (value != oldValue)))) {
           writer.write(key, value);
         }
         if (mayUpdate) {
@@ -1369,7 +1377,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (newValue[0] == null) {
           return null;
         }
-        writer.write(key, newValue[0]);
         weight[1] = weigher.weigh(key, newValue[0]);
         tracer().recordWrite(id, key, weight[1]);
         return nodeFactory.newNode(keyRef, newValue[0],
@@ -1398,14 +1405,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (newValue[0] == null) {
           if (cause[0] == null) {
             cause[0] = RemovalCause.EXPLICIT;
-            writer.delete(nodeKey[0], oldValue[0], cause[0]);
           }
           removed[0] = n;
           n.retire();
           return null;
         }
 
-        writer.write(nodeKey[0], newValue[0]);
         weight[0] = n.getWeight();
         weight[1] = weigher.weigh(key, newValue[0]);
         n.setValue(newValue[0], valueReferenceQueue());

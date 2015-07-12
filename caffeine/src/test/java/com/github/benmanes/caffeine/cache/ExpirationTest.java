@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
@@ -82,7 +83,7 @@ public final class ExpirationTest {
       population = Population.FULL, writer = Writer.EXCEPTIONAL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, removalListener = Listener.REJECTING)
   public void getIfPresent_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -99,7 +100,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void get_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -152,7 +153,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void put_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -207,7 +208,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void putAll_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -237,7 +238,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void invalidate_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -267,7 +268,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void invalidateAll_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -297,7 +298,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void invalidateAll_full_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -337,7 +338,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void cleanUp_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -356,7 +357,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void get_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -373,7 +374,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void getAll_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -406,7 +407,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void refresh_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.HOURS);
     cache.refresh(context.firstKey());
@@ -565,7 +566,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void clear_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -582,7 +583,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void putIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -635,7 +636,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void put_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -732,7 +733,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, requiresExpiration = true,
+      population = Population.FULL, compute = Compute.SYNC, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
@@ -766,7 +767,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void removeConditionally_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Integer key = context.firstKey();
@@ -799,7 +800,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void computeIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Integer key = context.firstKey();
@@ -833,7 +834,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void computeIfPresent_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Integer key = context.firstKey();
@@ -869,7 +870,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void compute_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Integer key = context.firstKey();
@@ -904,7 +905,7 @@ public final class ExpirationTest {
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void merge_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Integer key = context.firstKey();

@@ -42,7 +42,7 @@ import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
 /**
  * A builder of {@link AsyncLoadingCache}, {@link LoadingCache}, and {@link Cache} instances
- * having any combination of the following features:
+ * having a combination of the following features:
  * <ul>
  *   <li>automatic loading of entries into the cache, optionally asynchronously
  *   <li>least-recently-used eviction when a maximum size is exceeded
@@ -216,9 +216,9 @@ public final class Caffeine<K, V> {
 
   /**
    * Specifies the executor to use when running asynchronous tasks. The executor is delegated to
-   * when sending removal notifications and asynchronous computations requested through the
-   * {@link AsyncLoadingCache} and {@link LoadingCache#refresh}. By default,
-   * {@link ForkJoinPool#commonPool()} is used.
+   * when sending removal notifications, when asynchronous computations are performed by
+   * {@link AsyncLoadingCache} and {@link LoadingCache#refresh}, or when performing periodic
+   * maintenance. By default, {@link ForkJoinPool#commonPool()} is used.
    * <p>
    * The primary intent of this method is to facilitate testing of caches which have been
    * configured with {@link #removalListener} or utilize asynchronous computations. A test may
@@ -652,8 +652,8 @@ public final class Caffeine<K, V> {
   /**
    * Specifies a writer instance that caches should notify each time an entry is explicitly created
    * or modified, or removed for any {@linkplain RemovalCause reason}. The writer is not notified
-   * when an entry is loaded. Each cache created by this builder will invoke this writer as part of
-   * the atomic operation that modifies the cache.
+   * when an entry is loaded or computed. Each cache created by this builder will invoke this writer
+   * as part of the atomic operation that modifies the cache.
    * <p>
    * <b>Warning:</b> after invoking this method, do not continue to use <i>this</i> cache builder
    * reference; instead use the reference this method <i>returns</i>. At runtime, these point to the
@@ -665,6 +665,8 @@ public final class Caffeine<K, V> {
    * <p>
    * <b>Warning:</b> any exception thrown by {@code writer} will be propagated to the {@code Cache}
    * user.
+   * <p>
+   * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
    * @param writer a writer instance that caches should notify each time an entry is explicitly
    *        created or modified, or removed for any reason
@@ -860,6 +862,7 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       @Nonnull CacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null);
+    requireState(writer == null);
     requireWeightWithWeigher();
     requireNonNull(loader);
 

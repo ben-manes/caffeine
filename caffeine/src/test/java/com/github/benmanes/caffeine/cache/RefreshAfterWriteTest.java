@@ -42,6 +42,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -56,7 +57,7 @@ import com.google.common.collect.Iterables;
 @Test(dataProviderClass = CacheProvider.class)
 public final class RefreshAfterWriteTest {
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NEGATIVE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -70,7 +71,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -85,7 +86,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -100,7 +101,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
@@ -114,7 +115,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.IDENTITY,
       population = { Population.PARTIAL, Population.FULL })

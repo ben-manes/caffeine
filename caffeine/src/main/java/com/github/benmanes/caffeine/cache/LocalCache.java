@@ -79,6 +79,12 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Nonnull
   Map<K, V> getAllPresent(@Nonnull Iterable<?> keys);
 
+  /**
+   * See {@link Cache#put(Object, Object)}. This method differs by allowing the operation to not
+   * notify the writer when an entry was inserted or updated.
+   */
+  V put(K key, V value, boolean notifyWriter);
+
   @Override
   default V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     return compute(key, remappingFunction, false, false);

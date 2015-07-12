@@ -20,16 +20,9 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * Communicates the write or deletion of a value, based on a key, to an external resource.
- * <p>
- * The operations may be performed in either a <tt>write-through</tt> or <tt>write-behind</tt>
- * style, where the difference is whether the operation completes synchronously or asynchronously
- * with the cache.
- * <p>
- * When combined with a {@link CacheLoader}, the writer simplifies the implementation of a tiered
- * cache. The loader queries the secondary cache and computes the value if not found. The layered
- * cache may be modeled as a victim cache by writing entries when the {@link RemovalCause} indicates
- * an eviction.
+ * Communicates the write or deletion of a value, based on a key, to an external resource. A writer
+ * is notified by the cache each time an entry is explicitly created or modified, or removed for any
+ * {@linkplain RemovalCause reason}. The writer is not notified when an entry is loaded or computed.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the most general type of keys this writer can write; for example {@code Object} if any

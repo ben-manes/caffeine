@@ -261,6 +261,10 @@ public final class CacheContext {
     return valueStrength == ReferenceType.WEAK;
   }
 
+  public boolean isSoftValues() {
+    return valueStrength == ReferenceType.SOFT;
+  }
+
   public boolean isLoading() {
     return (loader != null);
   }

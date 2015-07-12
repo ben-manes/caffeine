@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -123,7 +124,9 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
     try {
       @SuppressWarnings("unchecked")
       Map<K, V> loaded = (Map<K, V>) cacheLoader().loadAll(keysToLoad);
-      cache().putAll(loaded);
+      for (Entry<K, V> entry : loaded.entrySet()) {
+        cache().put(entry.getKey(), entry.getValue(), false);
+      }
       for (K key : keysToLoad) {
         V value = loaded.get(key);
         if (value != null) {

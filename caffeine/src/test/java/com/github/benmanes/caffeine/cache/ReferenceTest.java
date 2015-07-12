@@ -36,6 +36,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
@@ -117,7 +118,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void get_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -163,7 +164,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void put_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -199,7 +200,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void putAll_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -234,7 +235,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void invalidate_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -269,7 +270,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void invalidateAll_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
     try {
@@ -303,7 +304,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void invalidateAll_full_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
     try {
@@ -348,7 +349,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void cleanUp_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.original().keySet();
     try {
@@ -385,7 +386,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void get_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -422,7 +423,7 @@ public final class ReferenceTest {
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL,
-      loader = {Loader.IDENTITY, Loader.BULK_IDENTITY})
+      compute = Compute.SYNC, loader = {Loader.IDENTITY, Loader.BULK_IDENTITY})
   public void getAll_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
     try {
@@ -460,7 +461,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void refresh_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
@@ -506,7 +507,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void get_writerFails(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -542,7 +543,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void getAll_writerFails(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
     try {
@@ -640,7 +641,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void clear_writerFails(Map<Integer, Integer> map, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
     try {
@@ -676,7 +677,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void putIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -712,7 +713,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void put_writerFails(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -775,7 +776,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void remove_writerFails(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -828,7 +829,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void computeIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -884,7 +885,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void compute_writerFails(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     try {
@@ -921,7 +922,7 @@ public final class ReferenceTest {
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
+      compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void merge_writerFails(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     try {

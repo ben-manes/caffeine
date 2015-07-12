@@ -69,9 +69,9 @@ public final class CaffeineCacheFromContext {
     } else if (context.keyStrength == ReferenceType.SOFT) {
       throw new IllegalStateException();
     }
-    if (context.valueStrength == ReferenceType.WEAK) {
+    if (context.isWeakValues()) {
       builder.weakValues();
-    } else if (context.valueStrength == ReferenceType.SOFT) {
+    } else if (context.isSoftValues()) {
       builder.softValues();
     }
     if (context.cacheExecutor != CacheExecutor.DEFAULT) {
@@ -80,7 +80,7 @@ public final class CaffeineCacheFromContext {
     if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
     }
-    if (context.keyStrength != ReferenceType.WEAK) {
+    if (context.isStrongKeys() && !context.isAsync()) {
       builder.writer(context.cacheWriter());
     }
     if (context.isAsync()) {

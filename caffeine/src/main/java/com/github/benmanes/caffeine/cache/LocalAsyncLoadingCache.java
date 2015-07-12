@@ -198,7 +198,8 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
   @Override
   public void put(K key, CompletableFuture<V> valueFuture) {
-    if (valueFuture.isCompletedExceptionally()) {
+    if (valueFuture.isCompletedExceptionally()
+        || (valueFuture.isDone() && (valueFuture.join() == null))) {
       cache.statsCounter().recordLoadFailure(0L);
       cache.remove(key);
       return;

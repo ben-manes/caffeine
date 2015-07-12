@@ -187,7 +187,7 @@ public final class LoadingCacheTest {
     }
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -201,7 +201,7 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
@@ -239,7 +239,7 @@ public final class LoadingCacheTest {
     cache.refresh(null);
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       executor = CacheExecutor.DIRECT, loader = Loader.NULL,
@@ -251,7 +251,7 @@ public final class LoadingCacheTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.EXCEPTIONAL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING },
@@ -264,7 +264,7 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(2)));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @CacheSpec(loader = Loader.NULL)
   @Test(dataProvider = "caches")
   public void refresh_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -272,7 +272,7 @@ public final class LoadingCacheTest {
     assertThat(cache.estimatedSize(), is(context.initialSize()));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -286,7 +286,7 @@ public final class LoadingCacheTest {
     assertThat(cache.get(context.absentKey()), is(-context.absentKey()));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT,
   population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
@@ -306,7 +306,7 @@ public final class LoadingCacheTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
-  // FIXME: @CheckNoWriter
+  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(executor = CacheExecutor.DIRECT, loader = Loader.IDENTITY,
   population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })

@@ -24,8 +24,7 @@ LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
 
 #### Features at a Glance
 
-Caffeine provide flexible construction to create a cache with any combination of the following
-features:
+Caffeine provide flexible construction to create a cache with a combination of the following features:
 
  * [automatic loading of entries][population] into the cache, optionally asynchronously
  * [least-recently-used eviction][size] when a maximum size is exceeded
@@ -44,7 +43,7 @@ In addition, Caffeine offers the following extensions:
 
 ### Download
 
-Download [the latest .jar][jar] from [Maven Central][maven] or depend via Gradle:
+Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
 compile 'com.github.ben-manes.caffeine:caffeine:1.2.0'
@@ -55,7 +54,7 @@ compile 'com.github.ben-manes.caffeine:jcache:1.2.0'
 compile 'com.github.ben-manes.caffeine:tracing-async:1.2.0'
 ```
 
-Snapshots of the development version are available in 
+Snapshots of the development version are available in
 [Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots).
 
 [benchmarks]: https://github.com/ben-manes/caffeine/wiki/Benchmarks
@@ -74,5 +73,4 @@ Snapshots of the development version are available in
 [simulator]: https://github.com/ben-manes/caffeine/wiki/Simulator
 [guava-adapter]: https://github.com/ben-manes/caffeine/wiki/Guava
 [jsr107]: https://github.com/ben-manes/caffeine/wiki/JCache
-[jar]: https://search.maven.org/remote_content?g=com.github.ben-manes.caffeine&a=caffeine&v=LATEST
 [maven]: https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine

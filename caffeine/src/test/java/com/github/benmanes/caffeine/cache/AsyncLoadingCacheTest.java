@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.IsCacheReserializable.reserializable;
-import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
@@ -56,12 +55,10 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
-import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.WriteException;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -640,34 +637,6 @@ public final class AsyncLoadingCacheTest {
     cache.put(null, null);
   }
 
-  @CheckNoStats // FIXME
-  @Test(enabled = false, dataProvider = "caches", expectedExceptions = WriteException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void put_insert_writerFails(AsyncLoadingCache<Integer, Integer> map, CacheContext context) {
-    CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
-    try {
-      map.put(context.absentKey(), value);
-    } finally {
-      assertThat(map, equalTo(context.original()));
-    }
-  }
-
-  @CheckNoStats // FIXME
-  @Test(enabled = false, dataProvider = "caches", expectedExceptions = WriteException.class)
-  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void put_replace_writerFails(AsyncLoadingCache<Integer, Integer> map,
-      CacheContext context) {
-    CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
-    try {
-      map.put(context.middleKey(), value);
-    } finally {
-      assertThat(map, equalTo(context.original()));
-    }
-  }
-
   @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -711,10 +680,6 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
     assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(context.absentValue()));
-
-    verifyWriter(context, (verifier, writer) -> {
-      verifier.wrote(context.absentKey(), context.absentValue());
-    });
   }
 
   @CheckNoWriter
@@ -747,10 +712,10 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().getIfPresent(key), is(context.absentValue()));
   }
 
-  // FIXME: do not publish replace event
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
-  public void put_replace_nullValue(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void put_replace_nullValue(
+      AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(null);
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, value);
@@ -759,9 +724,6 @@ public final class AsyncLoadingCacheTest {
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize() - count));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> {
-      verifier.deleted(context.absentKey(), context.absentValue(), RemovalCause.EXPLICIT);
-    });
   }
 
   @Test(dataProvider = "caches")
@@ -776,9 +738,6 @@ public final class AsyncLoadingCacheTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
-    verifyWriter(context, (verifier, writer) -> {
-      verifier.wrote(context.absentKey(), context.absentValue());
-    });
   }
 
   /* ---------------- serialize -------------- */

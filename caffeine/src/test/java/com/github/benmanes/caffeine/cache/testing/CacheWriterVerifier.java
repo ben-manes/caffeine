@@ -97,7 +97,7 @@ public final class CacheWriterVerifier {
       BiConsumer<CacheWriterVerifier, CacheWriter<Integer, Integer>> consumer) {
     boolean mayVerify = (context.implementation() == Implementation.Caffeine)
         && context.isStrongKeys()
-        && !context.isAsync(); // FIXME: Support async mode
+        && !context.isAsync();
     if (mayVerify) {
       consumer.accept(new CacheWriterVerifier(context), context.cacheWriter());
     }

@@ -242,15 +242,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     V nv = data.computeIfPresent(key, (K k, V oldValue) -> {
       V newValue = statsAware(remappingFunction, false, false).apply(k, oldValue);
 
-      RemovalCause cause;
-      if (newValue == null) {
-        cause = RemovalCause.EXPLICIT;
-        writer.delete(key, oldValue, cause);
-      } else {
-        cause = RemovalCause.REPLACED;
-        writer.write(key, newValue);
-      }
-
+      RemovalCause cause = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
       if (hasRemovalListener() && (newValue != oldValue)) {
         notification[0] = new RemovalNotification<>(key, oldValue, cause);
       }
@@ -298,18 +290,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         return null;
       }
 
-      RemovalCause cause;
-      if (newValue == null) {
-        cause = RemovalCause.EXPLICIT;
-        writer.delete(key, oldValue, cause);
-      } else {
-        // Do not communicate to CacheWriter on a load
-        cause = RemovalCause.REPLACED;
-        if (oldValue != null) {
-          writer.write(key, newValue);
-        }
-      }
-
+      RemovalCause cause = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
       if (hasRemovalListener() && (oldValue != null) && (newValue != oldValue)) {
         notification[0] = new RemovalNotification<>(key, oldValue, cause);
       }
@@ -362,13 +343,18 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V put(K key, V value) {
+    return put(key, value, true);
+  }
+
+  @Override
+  public V put(K key, V value, boolean notifyWriter) {
     requireNonNull(value);
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
     V oldValue[] = (V[]) new Object[1];
     data.compute(key, (k, v) -> {
-      if (value != v) {
+      if (notifyWriter && (value != v)) {
         writer.write(key, value);
       }
       oldValue[0] = v;
