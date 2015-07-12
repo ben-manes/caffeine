@@ -524,11 +524,19 @@ public final class ExpirationTest {
   @CacheSpec(population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void size(Map<Integer, Integer> map, CacheContext context) {
+    context.ticker().advance(1, TimeUnit.MINUTES);
+    assertThat(map.size(), is((int) context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL, requiresExpiration = true,
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void containsKey(Map<Integer, Integer> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
     assertThat(map.containsKey(context.firstKey()), is(false));
   }
-
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, requiresExpiration = true,
@@ -928,10 +936,10 @@ public final class ExpirationTest {
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
       requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
-  public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
+  public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     cache.put(1, ImmutableList.of(1));
     context.ticker().advance(1, TimeUnit.MINUTES);
-    cache.put(1, ImmutableList.of(1, 2, 3));
+    cache.asMap().putIfAbsent(1, ImmutableList.of(1, 2, 3));
 
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
   }
@@ -941,10 +949,10 @@ public final class ExpirationTest {
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
       requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
-  public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
+  public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     cache.put(1, ImmutableList.of(1));
     context.ticker().advance(1, TimeUnit.MINUTES);
-    cache.asMap().putIfAbsent(1, ImmutableList.of(1, 2, 3));
+    cache.put(1, ImmutableList.of(1, 2, 3));
 
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
   }

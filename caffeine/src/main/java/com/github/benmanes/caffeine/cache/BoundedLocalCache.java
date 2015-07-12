@@ -840,7 +840,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     long now = expirationTicker().read();
     for (Node<K, V> node : data.values()) {
-      if (node.containsValue(value) && !hasExpired(node, now)) {
+      if (node.containsValue(value) && !hasExpired(node, now) && (node.getKey() != null)) {
         return true;
       }
     }

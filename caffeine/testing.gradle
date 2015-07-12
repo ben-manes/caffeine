@@ -54,7 +54,7 @@ testNames.each { testName ->
 tasks.withType(Test) {
   useTestNG()
   if (name.startsWith('slow')) {
-    maxHeapSize = '128m'
+    maxParallelForks = 4
     options.includeGroups = ['slow']
   } else {
     options {

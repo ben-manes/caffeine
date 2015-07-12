@@ -62,7 +62,11 @@ public final class IsValidBoundedLocalCache<K, V>
     checkReadBuffer(cache);
     checkCache(cache, desc);
     checkEvictionDeque(cache, desc);
-    return desc.matches();
+
+    if (!desc.matches()) {
+      throw new AssertionError(desc.getDescription().toString());
+    }
+    return true;
   }
 
   private void drain(BoundedLocalCache<K, V> cache) {
@@ -173,7 +177,10 @@ public final class IsValidBoundedLocalCache<K, V>
 
     if (!cache.collectValues()) {
       desc.expectThat("not null value", value, is(not(nullValue())));
-      desc.expectThat(() -> "Could not find value: " + value, cache.containsValue(value), is(true));
+      if ((key != null) && !cache.hasExpired(node, cache.expirationTicker().read())) {
+        desc.expectThat(() -> "Could not find key: " + key + ", value: " + value,
+            cache.containsValue(value), is(true));
+      }
     }
 
     if (value instanceof CompletableFuture<?>) {

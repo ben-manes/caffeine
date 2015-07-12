@@ -170,6 +170,23 @@ public final class LoadingCacheTest {
     }
   }
 
+  @CheckNoWriter
+  @CacheSpec(loader = { Loader.EXCEPTIONAL, Loader.BULK_EXCEPTIONAL })
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void getAll_absent_failure_iterable(
+      LoadingCache<Integer, Integer> cache, CacheContext context) {
+    try {
+      cache.getAll(() -> context.absentKeys().iterator());
+    } finally {
+      int misses = context.absentKeys().size();
+      int loadFailures = context.loader().isBulk()
+          ? 1
+          : (context.isAsync() ? misses : 1);
+      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
+      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(loadFailures)));
+    }
+  }
+
   // FIXME: @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },

@@ -157,16 +157,16 @@ final class CacheGenerator {
 
   /** Returns if the context is a viable configuration. */
   private boolean isCompatible(CacheContext context) {
-    boolean asyncIncompatible = (context.implementation() != Implementation.Caffeine)
-        || !context.isStrongValues()
-        || !context.isLoading();
+    boolean asyncIncompatible = context.isAsync()
+        && ((context.implementation() != Implementation.Caffeine)
+            || !context.isStrongValues() || !context.isLoading());
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
     boolean weigherIncompatible = context.isUnbounded() && context.isWeighted();
     boolean expirationIncompatible = cacheSpec.requiresExpiration() && !context.expires();
     boolean referenceIncompatible = cacheSpec.requiresWeakRef()
         && (context.isWeakKeys() || context.isWeakValues());
 
-    boolean skip = (context.isAsync() && asyncIncompatible)
+    boolean skip = asyncIncompatible
         || refreshIncompatible || weigherIncompatible
         || expirationIncompatible || referenceIncompatible;
     return !skip;

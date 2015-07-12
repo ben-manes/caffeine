@@ -699,10 +699,6 @@ public final class AsyncLoadingCacheTest {
     Awaits.await().untilTrue(done);
     MoreExecutors.shutdownAndAwaitTermination(
         (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
-
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-
     assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
@@ -767,7 +763,6 @@ public final class AsyncLoadingCacheTest {
       verifier.deleted(context.absentKey(), context.absentValue(), RemovalCause.EXPLICIT);
     });
   }
-
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
