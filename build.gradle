@@ -48,8 +48,8 @@ subprojects { proj ->
   group = 'com.github.ben-manes.caffeine'
   version.with {
     major = 1 // incompatible API changes
-    minor = 2 // backwards-compatible additions
-    patch = 1 // backwards-compatible bug fixes
+    minor = 3 // backwards-compatible additions
+    patch = 0 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
