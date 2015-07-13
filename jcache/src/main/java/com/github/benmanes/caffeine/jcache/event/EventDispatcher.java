@@ -104,7 +104,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishCreated(Cache<K, V> cache, K key, V value) {
-    publish(new JCacheEntryEvent<>(cache, EventType.CREATED, key, null, value));
+    publish(new JCacheEntryEvent<>(cache, EventType.CREATED, key, null, value), false);
   }
 
   /**
@@ -116,7 +116,7 @@ public final class EventDispatcher<K, V> {
    * @param newValue the entry's new value
    */
   public void publishUpdated(Cache<K, V> cache, K key, V oldValue, V newValue) {
-    publish(new JCacheEntryEvent<>(cache, EventType.UPDATED, key, oldValue, newValue));
+    publish(new JCacheEntryEvent<>(cache, EventType.UPDATED, key, oldValue, newValue), false);
   }
 
   /**
@@ -127,7 +127,19 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemoved(Cache<K, V> cache, K key, V value) {
-    publish(new JCacheEntryEvent<>(cache, EventType.REMOVED, key, null, value));
+    publish(new JCacheEntryEvent<>(cache, EventType.REMOVED, key, null, value), false);
+  }
+
+  /**
+   * Publishes a remove event for the entry to all of the interested listeners. This method does
+   * not register the synchronous listener's future with {@link #awaitSynchronous()}.
+   *
+   * @param cache the cache where the entry was removed
+   * @param key the entry's key
+   * @param value the entry's value
+   */
+  public void publishRemovedQuietly(Cache<K, V> cache, K key, V value) {
+    publish(new JCacheEntryEvent<>(cache, EventType.REMOVED, key, null, value), true);
   }
 
   /**
@@ -138,7 +150,19 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpired(Cache<K, V> cache, K key, V value) {
-    publish(new JCacheEntryEvent<>(cache, EventType.EXPIRED, key, value, null));
+    publish(new JCacheEntryEvent<>(cache, EventType.EXPIRED, key, value, null), false);
+  }
+
+  /**
+   * Publishes a expire event for the entry to all of the interested listeners. This method does
+   * not register the synchronous listener's future with {@link #awaitSynchronous()}.
+   *
+   * @param cache the cache where the entry expired
+   * @param key the entry's key
+   * @param value the entry's value
+   */
+  public void publishExpiredQuietly(Cache<K, V> cache, K key, V value) {
+    publish(new JCacheEntryEvent<>(cache, EventType.EXPIRED, key, value, null), true);
   }
 
   /**
@@ -167,7 +191,7 @@ public final class EventDispatcher<K, V> {
   }
 
   /** Broadcasts the event to all of the interested listener's dispatch queues. */
-  private void publish(JCacheEntryEvent<K, V> event) {
+  private void publish(JCacheEntryEvent<K, V> event, boolean quiet) {
     dispatchQueues.keySet().stream()
         .filter(registration -> registration.getCacheEntryFilter().evaluate(event))
         .filter(registration -> registration.getCacheEntryListener().isCompatible(event))
@@ -177,7 +201,7 @@ public final class EventDispatcher<K, V> {
                 Runnable action = () -> registration.getCacheEntryListener().dispatch(event);
                 return queue.thenRunAsync(action, exectuor);
               });
-          if ((future != null) && registration.isSynchronous()) {
+          if ((future != null) && registration.isSynchronous() && !quiet) {
             return future;
           }
           return null;

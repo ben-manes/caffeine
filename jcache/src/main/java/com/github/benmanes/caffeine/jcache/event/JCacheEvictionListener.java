@@ -58,11 +58,10 @@ public final class JCacheEvictionListener<K, V> implements CacheWriter<K, Expira
   public void delete(K key, Expirable<V> value, RemovalCause cause) {
     if (cause.wasEvicted()) {
       if (cause == RemovalCause.EXPIRED) {
-        dispatcher.publishExpired(cache, key, value.get());
+        dispatcher.publishExpiredQuietly(cache, key, value.get());
       } else {
-        dispatcher.publishRemoved(cache, key, value.get());
+        dispatcher.publishRemovedQuietly(cache, key, value.get());
       }
-      dispatcher.ignoreSynchronous();
       statistics.recordEvictions(1L);
     }
   }

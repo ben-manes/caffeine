@@ -52,6 +52,9 @@ compile 'com.github.ben-manes.caffeine:caffeine:1.3.0'
 compile 'com.github.ben-manes.caffeine:guava:1.3.0'
 compile 'com.github.ben-manes.caffeine:jcache:1.3.0'
 compile 'com.github.ben-manes.caffeine:tracing-async:1.3.0'
+
+// Transitive requirement (if jars manually managed)
+compile 'com.github.ben-manes.caffeine:tracing-api:1.3.0'
 ```
 
 Snapshots of the development version are available in
