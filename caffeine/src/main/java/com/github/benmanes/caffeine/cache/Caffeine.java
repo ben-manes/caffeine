@@ -666,7 +666,7 @@ public final class Caffeine<K, V> {
    * <b>Warning:</b> any exception thrown by {@code writer} will be propagated to the {@code Cache}
    * user.
    * <p>
-   * This feature cannot be used in conjunction with {@link #buildAsync}.
+   * This feature cannot be used in conjunction with {@link #weakKeys()} or {@link #buildAsync}.
    *
    * @param writer a writer instance that caches should notify each time an entry is explicitly
    *        created or modified, or removed for any reason

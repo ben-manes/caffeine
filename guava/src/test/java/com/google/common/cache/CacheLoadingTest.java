@@ -30,17 +30,14 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.logging.Logger;
 
-import junit.framework.TestCase;
-
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
@@ -57,6 +54,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.common.util.concurrent.Uninterruptibles;
+
+import junit.framework.TestCase;
 
 /**
  * Tests relating to cache loading: concurrent loading, exceptions during loading, etc.
@@ -2089,11 +2088,11 @@ public class CacheLoadingTest extends TestCase {
     assertFalse(map.containsKey(getKey));
     assertSame(refreshKey, map.get(refreshKey));
 
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       cache.getUnchecked(getKey);
       getFinishedSignal.countDown();
     });
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       cache.refresh(refreshKey);
       getFinishedSignal.countDown();
     });
@@ -2140,11 +2139,11 @@ public class CacheLoadingTest extends TestCase {
     ConcurrentMap<String,String> map = cache.asMap();
     map.put(refreshKey, refreshKey);
 
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       cache.getUnchecked(getKey);
       getFinishedSignal.countDown();
     });
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       cache.refresh(refreshKey);
       getFinishedSignal.countDown();
     });
@@ -2192,11 +2191,11 @@ public class CacheLoadingTest extends TestCase {
     ConcurrentMap<String,String> map = cache.asMap();
     map.put(refreshKey, refreshKey);
 
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       cache.getUnchecked(getKey);
       getFinishedSignal.countDown();
     });
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       cache.refresh(refreshKey);
       getFinishedSignal.countDown();
     });
@@ -2208,11 +2207,11 @@ public class CacheLoadingTest extends TestCase {
     assertFalse(map.containsKey(refreshKey));
 
     // start new computations
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       cache.getUnchecked(getKey);
       getFinishedSignal.countDown();
     });
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       cache.refresh(refreshKey);
       getFinishedSignal.countDown();
     });

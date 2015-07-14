@@ -17,16 +17,15 @@ package com.github.benmanes.caffeine.guava;
 
 import java.lang.reflect.Constructor;
 
-import junit.framework.TestCase;
-
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaCache.CacheLoaderException;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.TestingCacheLoaders;
 import com.google.common.testing.SerializableTester;
 import com.google.common.util.concurrent.MoreExecutors;
+
+import junit.framework.TestCase;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -35,7 +34,8 @@ public final class CaffeinatedGuavaTest extends TestCase {
 
   public void testSerializable() {
     SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder()));
-    SerializableTester.reserialize(CaffeinatedGuava.build(Caffeine.newBuilder(), Loader.IDENTITY));
+    SerializableTester.reserialize(CaffeinatedGuava.build(
+        Caffeine.newBuilder(), IdentityLoader.INSTANCE));
     SerializableTester.reserialize(CaffeinatedGuava.build(
         Caffeine.newBuilder(), TestingCacheLoaders.identityLoader()));
   }
@@ -79,6 +79,15 @@ public final class CaffeinatedGuavaTest extends TestCase {
       cache.refresh(1);
     } catch (CacheLoaderException e) {
       assertTrue(Thread.currentThread().isInterrupted());
+    }
+  }
+
+  enum IdentityLoader implements com.github.benmanes.caffeine.cache.CacheLoader<Object, Object> {
+    INSTANCE;
+
+    @Override
+    public Object load(Object key) {
+      return key;
     }
   }
 }

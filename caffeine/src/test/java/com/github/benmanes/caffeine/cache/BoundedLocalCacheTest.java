@@ -37,7 +37,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
@@ -52,6 +51,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import com.github.benmanes.caffeine.testing.Awaits;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;

@@ -28,8 +28,8 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.testing.Awaits;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.testing.SerializableTester;
 
 /**

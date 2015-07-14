@@ -24,8 +24,8 @@ import java.util.Iterator;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.ReadBuffer;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
  * The tests cases for a read buffer strategy. This validates an implementation approach which can

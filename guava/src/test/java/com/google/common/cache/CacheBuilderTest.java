@@ -32,11 +32,11 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
@@ -357,7 +357,7 @@ public class CacheBuilderTest extends TestCase {
 
     final CountDownLatch computationStarted = new CountDownLatch(1);
     final CountDownLatch computationComplete = new CountDownLatch(1);
-    ConcurrentTestHarness.execute(() -> {
+    ForkJoinPool.commonPool().execute(() -> {
       computationStarted.countDown();
       cache.getUnchecked("b");
       computationComplete.countDown();

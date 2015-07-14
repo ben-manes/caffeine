@@ -25,18 +25,17 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.TestCase;
-
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
-import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.Callables;
 import com.google.common.util.concurrent.MoreExecutors;
+
+import junit.framework.TestCase;
 
 /**
  * Tests relating to cache expiration: make sure entries expire at the right times, make sure

@@ -20,7 +20,7 @@ import static org.hamcrest.Matchers.is;
 
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

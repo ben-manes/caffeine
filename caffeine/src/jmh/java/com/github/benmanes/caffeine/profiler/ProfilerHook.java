@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.base.Stopwatch;
 
 /**

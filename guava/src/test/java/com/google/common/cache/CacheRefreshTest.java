@@ -19,7 +19,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import junit.framework.TestCase;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.TestingCacheLoaders.IncrementingLoader;
 import com.google.common.util.concurrent.MoreExecutors;

@@ -5,6 +5,7 @@ mainClassName = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
 
 dependencies {
   compile project(':tracing:api')
+  compile project(':tracing:async')
 
   compile libraries.akka
   compile libraries.joor
@@ -12,7 +13,6 @@ dependencies {
   compile libraries.flip_tables
   compile libraries.univocity_parsers
 
-  compile project(':tracing:async')
   testCompile test_libraries.jimfs
   testCompile test_libraries.testng
   testCompile test_libraries.awaitility

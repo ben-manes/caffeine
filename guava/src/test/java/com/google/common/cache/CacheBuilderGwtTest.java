@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
-import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.collect.ImmutableList;

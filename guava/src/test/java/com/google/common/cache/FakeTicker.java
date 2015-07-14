@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Ben Manes. All Rights Reserved.
+ * Copyright 2014 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine;
+package com.google.common.cache;
 
-import com.google.common.testing.AbstractPackageSanityTests;
+import java.io.Serializable;
+
+import com.github.benmanes.caffeine.cache.Ticker;
 
 /**
- * Basic sanity tests for the entire package.
- *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class PackageSanityTests extends AbstractPackageSanityTests {
-
-  public PackageSanityTests() {
-    publicApiOnly();
-    ignoreClasses(clazz ->
-        clazz == SingleConsumerQueue.class ||
-        clazz == ConcurrentLinkedStack.class);
-  }
+final class FakeTicker extends com.google.common.testing.FakeTicker
+    implements Ticker, Serializable {
+  private static final long serialVersionUID = 1L;
 }

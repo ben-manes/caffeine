@@ -7,7 +7,6 @@ dependencies {
   testCompile test_libraries.jimfs
   testCompile test_libraries.testng
   testCompile test_libraries.awaitility
-  testCompile project(path: ':tracing:api', configuration: 'testArtifacts')
 }
 
 test {

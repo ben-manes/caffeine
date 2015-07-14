@@ -22,7 +22,6 @@ dependencies {
   compile project(':tracing:api')
 
   testCompile project(':simulator')
-  testCompile project(path: ':tracing:api', configuration: 'testArtifacts')
   testCompile libraries.guava
   testCompile test_libraries.awaitility
   testCompile test_libraries.guava_testlib

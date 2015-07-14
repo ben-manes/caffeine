@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
  * The tests cases for the {@link BoundedBuffer}.

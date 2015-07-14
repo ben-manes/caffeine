@@ -41,7 +41,6 @@ import java.util.stream.IntStream;
 
 import org.testng.log4testng.Logger;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;

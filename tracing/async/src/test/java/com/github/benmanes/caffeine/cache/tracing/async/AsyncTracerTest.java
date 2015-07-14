@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.tracing.async;
 
+import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -26,12 +27,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Phaser;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import com.github.benmanes.caffeine.cache.tracing.Tracer;
 import com.google.common.jimfs.Jimfs;
 import com.lmax.disruptor.util.DaemonThreadFactory;
@@ -60,14 +63,25 @@ public final class AsyncTracerTest {
 
   @Test(dataProvider = "tracer")
   public void publishEvents(AsyncTracer tracer, boolean plainText) throws Exception {
-    ConcurrentTestHarness.timeTasks(10, () -> {
+    int nThreads = 10;
+    Phaser phaser = new Phaser(nThreads);
+    AtomicInteger done = new AtomicInteger();
+
+    Runnable task = () -> {
+      phaser.arriveAndAwaitAdvance();
       for (int i = 0; i < 100; i++) {
         tracer.register(Integer.toString(i));
         tracer.recordRead(i, i);
         tracer.recordWrite(i, i, i);
         tracer.recordDelete(i, i);
       }
-    });
+      done.incrementAndGet();
+    };
+    for (int i = 0; i < nThreads; i++) {
+      ForkJoinPool.commonPool().execute(task);
+    }
+    await().untilAtomic(done, is(nThreads));
+
     tracer.shutdown();
     if (plainText) {
       assertThat(Files.lines(filePath).count(), is(4000L));

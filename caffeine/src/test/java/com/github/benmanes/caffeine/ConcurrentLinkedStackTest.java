@@ -51,6 +51,7 @@ import com.github.benmanes.caffeine.ConcurrentLinkedStack.Node;
 import com.github.benmanes.caffeine.ConcurrentLinkedStackTest.ValidatingStackListener;
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.github.benmanes.caffeine.testing.Awaits;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.testing.SerializableTester;
