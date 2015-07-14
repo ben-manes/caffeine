@@ -49,7 +49,7 @@ subprojects { proj ->
   version.with {
     major = 1 // incompatible API changes
     minor = 3 // backwards-compatible additions
-    patch = 1 // backwards-compatible bug fixes
+    patch = 2 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
@@ -66,19 +66,19 @@ subprojects { proj ->
   configurations {
     testArtifacts
   }
-  
+
   tasks.withType(Test) {
     if (!it.name.startsWith('slow')) {
       rootProject.testReport.reportOn it
     }
   }
-  
+
   task testJar(type: Jar, group: "Build") {
     description = "Assembles a jar archive containing the test classes."
     baseName = "${archivesBaseName}-test"
     from sourceSets.test.output
   }
-  
+
   artifacts {
     testArtifacts testJar
   }
