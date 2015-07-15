@@ -205,7 +205,8 @@ public final class GuavaCacheFromContext {
 
     @Override
     public long estimatedSize() {
-      return cache.size();
+      // https://github.com/google/guava/issues/2108
+      return Math.max(0L, cache.size());
     }
 
     @Override
@@ -227,6 +228,11 @@ public final class GuavaCacheFromContext {
         public boolean containsValue(Object value) {
           requireNonNull(value);
           return delegate().containsValue(value);
+        }
+        @Override
+        public int size() {
+          // https://github.com/google/guava/issues/2108
+          return Math.max(0, delegate().size());
         }
         @Override
         public void clear() {

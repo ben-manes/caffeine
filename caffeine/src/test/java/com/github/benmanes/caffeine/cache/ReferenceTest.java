@@ -64,10 +64,8 @@ import com.google.common.testing.GcFinalization;
 @Listeners(CacheValidationListener.class)
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
-  // These tests focus on weak reference collection, since that can be reliably triggered through
-  // a garbage collection. Soft references cannot be deterministically evicted, so we must infer
-  // correct usage from the weak tests. A possible workaround is to mimic collection by null'ing
-  // out the entry's reference and using a custom ReferenceQueue that we can append to.
+  // These tests require that the JVM uses -XX:SoftRefLRUPolicyMSPerMB=0 so that soft references
+  // can be reliably garbage collected (by making them behave as weak references).
 
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL)
@@ -86,7 +84,7 @@ public final class ReferenceTest {
   /* ---------------- Cache -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -98,7 +96,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -114,7 +112,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -132,7 +130,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -144,7 +142,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -160,7 +158,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -179,7 +177,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -196,7 +194,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -215,7 +213,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -231,7 +229,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -250,7 +248,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -266,7 +264,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -285,7 +283,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -300,7 +298,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -319,7 +317,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -330,7 +328,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -345,7 +343,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -366,7 +364,7 @@ public final class ReferenceTest {
   /* ---------------- LoadingCache -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.SINGLETON, stats = Stats.ENABLED, loader = Loader.IDENTITY,
@@ -382,7 +380,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -401,7 +399,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED,
@@ -418,7 +416,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -438,7 +436,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, loader = Loader.IDENTITY,
@@ -457,7 +455,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -475,7 +473,7 @@ public final class ReferenceTest {
   /* ---------------- AsyncLoadingCache -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -487,7 +485,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.SINGLETON, stats = Stats.ENABLED, loader = Loader.IDENTITY,
@@ -503,7 +501,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -522,7 +520,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED,
@@ -539,7 +537,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -558,7 +556,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED,  removalListener = Listener.CONSUMING)
@@ -576,7 +574,7 @@ public final class ReferenceTest {
   /* ---------------- Map -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -587,7 +585,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -598,7 +596,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -622,7 +620,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -637,7 +635,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -656,7 +654,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -673,7 +671,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -692,7 +690,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -709,7 +707,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -728,7 +726,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -742,7 +740,7 @@ public final class ReferenceTest {
   // replace_writerFail: Not needed due to replacement being impossible
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -756,7 +754,7 @@ public final class ReferenceTest {
   // replace_writerFail: Not needed due to replacement being impossible
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -772,7 +770,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -791,7 +789,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -809,7 +807,7 @@ public final class ReferenceTest {
   // removeConditionally_writerFail: Not needed due to removal being impossible
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -825,7 +823,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -844,7 +842,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -862,7 +860,7 @@ public final class ReferenceTest {
   // computeIfPresent_writerFail: Not needed due to exiting without side-effects
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -881,7 +879,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -900,7 +898,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
@@ -918,7 +916,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
-  @CacheSpec(keys = ReferenceType.STRONG, values = ReferenceType.WEAK,
+  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
@@ -937,8 +935,8 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(requiresWeakRef = true)
-  public void iterators_weakKeys(Map<Integer, Integer> map, CacheContext context) {
+  @CacheSpec(requiresWeakOrSoft = true)
+  public void iterators(Map<Integer, Integer> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(Iterators.size(map.keySet().iterator()), is(0));
@@ -950,7 +948,7 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = ReferenceType.WEAK, expireAfterAccess = Expire.DISABLED,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING, writer = Writer.DISABLED)
@@ -965,7 +963,7 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = ReferenceType.WEAK, expireAfterAccess = Expire.DISABLED,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
@@ -980,7 +978,7 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = ReferenceType.WEAK, expireAfterAccess = Expire.DISABLED,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
@@ -995,7 +993,7 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = ReferenceType.WEAK, expireAfterAccess = Expire.DISABLED,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
@@ -1010,7 +1008,7 @@ public final class ReferenceTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = ReferenceType.WEAK, expireAfterAccess = Expire.DISABLED,
+      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.DEFAULT, writer = Writer.DISABLED)

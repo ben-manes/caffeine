@@ -275,8 +275,8 @@ public @interface CacheSpec {
 
   /* ---------------- Reference-based -------------- */
 
-  /** Indicates that the combination must have a weak reference collection setting. */
-  boolean requiresWeakRef() default false;
+  /** Indicates that the combination must have a weak or soft reference collection setting. */
+  boolean requiresWeakOrSoft() default false;
 
   /** The reference type of that the cache holds a key with (strong or weak only). */
   ReferenceType[] keys() default {

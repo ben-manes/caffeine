@@ -58,7 +58,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     long millis = currentTimeMillis();
     V value = doSafely(() -> {
       Expirable<V> expirable = cache.getIfPresent(key);
-      if ((expirable == null) || expirable.hasExpired(millis)) {
+      if ((expirable != null) && expirable.hasExpired(millis)) {
         if (cache.asMap().remove(key, expirable)) {
           dispatcher.publishExpired(this, key, expirable.get());
           statistics.recordEvictions(1);
