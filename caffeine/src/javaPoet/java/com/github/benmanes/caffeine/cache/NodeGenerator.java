@@ -450,7 +450,7 @@ public final class NodeGenerator {
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .addParameter(varType, varName);
     if (visibility.isRelaxed) {
-      setter.addStatement("$T.UNSAFE.putOrdered$L(this, $N, $N)",
+      setter.addStatement("$T.UNSAFE.put$L(this, $N, $N)",
           UNSAFE_ACCESS, type, offsetName(varName), varName);
     } else {
       setter.addStatement("this.$N = $N", varName, varName);

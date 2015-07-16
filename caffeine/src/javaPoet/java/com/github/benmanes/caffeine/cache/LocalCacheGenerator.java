@@ -221,12 +221,12 @@ public final class LocalCacheGenerator {
     cache.addField(newFieldOffset(className, "maximum"));
     cache.addMethod(MethodSpec.methodBuilder("maximum")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("return maximum")
+        .addStatement("return $T.UNSAFE.getLong(this, $N)", UNSAFE_ACCESS, offsetName("maximum"))
         .returns(long.class)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("lazySetMaximum")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
+        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
             UNSAFE_ACCESS, offsetName("maximum"), "maximum")
         .addParameter(long.class, "maximum")
         .build());
@@ -235,12 +235,13 @@ public final class LocalCacheGenerator {
     cache.addField(newFieldOffset(className, "weightedSize"));
     cache.addMethod(MethodSpec.methodBuilder("weightedSize")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("return weightedSize")
+        .addStatement("return $T.UNSAFE.getLong(this, $N)",
+            UNSAFE_ACCESS, offsetName("weightedSize"))
         .returns(long.class)
         .build());
     cache.addMethod(MethodSpec.methodBuilder("lazySetWeightedSize")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("$T.UNSAFE.putOrderedLong(this, $N, $N)",
+        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
             UNSAFE_ACCESS, offsetName("weightedSize"), "weightedSize")
         .addParameter(long.class, "weightedSize")
         .build());
