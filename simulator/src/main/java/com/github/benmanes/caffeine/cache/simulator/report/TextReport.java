@@ -44,13 +44,14 @@ public final class TextReport {
   public void writeTo(PrintStream ps) {
     results.sort((first, second) -> first.name().compareTo(second.name()));
 
-    String[] headers = { "Policy", "Hit rate", "Evictions", "Execution time"};
+    String[] headers = { "Policy", "Hit rate", "Requests", "Evictions", "Time"};
     String[][] data = new String[results.size()][headers.length];
     for (int i = 0; i < results.size(); i++) {
       PolicyStats policyStats = results.get(i);
       data[i] = new String[] {
           policyStats.name(),
           String.format("%.2f %%", 100 * policyStats.hitRate()),
+          String.format("%,d", policyStats.requestCount()),
           String.format("%,d", policyStats.evictionCount()),
           String.format("%,d ms", policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS))
       };

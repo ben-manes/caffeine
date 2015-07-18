@@ -16,14 +16,15 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.FileFormat;
 import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyBuilder;
@@ -67,7 +68,9 @@ public final class Simulator extends UntypedActor {
   @Override
   public void onReceive(Object msg) throws IOException {
     if (msg == Message.START) {
-      events().forEach(event -> router.route(event, getSelf()));
+      try (Stream<?> events = eventStream()) {
+        events.forEach(event -> router.route(event, getSelf()));
+      }
       router.route(Message.FINISH, getSelf());
     } else if (msg instanceof PolicyStats) {
       report.add((PolicyStats) msg);
@@ -78,14 +81,22 @@ public final class Simulator extends UntypedActor {
     }
   }
 
-  private Stream<?> events() throws IOException {
+  private Stream<?> eventStream() throws IOException {
     BasicSettings settings = new BasicSettings(config);
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings);
     }
-    return (settings.fileSource().format() == FileFormat.TEXT)
-        ? LogReader.textLogStream(settings.fileSource().path())
-        : LogReader.binaryLogStream(settings.fileSource().path());
+    Path filePath = settings.fileSource().path();
+    switch (settings.fileSource().format()) {
+      case CAFFEINE_TEXT:
+        return LogReader.textLogStream(filePath);
+      case CAFFEINE_BINARY:
+        return LogReader.binaryLogStream(filePath);
+      case LIRS:
+        return LirsTraceReader.traceStream(filePath);
+      default:
+        throw new IllegalStateException("Unknown format: " + settings.fileSource().format());
+    }
   }
 
   private List<Routee> makeRoutes() {

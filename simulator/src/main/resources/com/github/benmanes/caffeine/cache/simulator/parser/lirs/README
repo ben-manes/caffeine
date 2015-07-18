@@ -1,0 +1,36 @@
+Descriptions:
+   The LIRS algorithm is described in the wiki page:
+   http://en.wikipedia.org/wiki/LIRS_caching_algorithm.
+   In the wiki page, there is a graph illustrating the operations
+   of LIRS on two stacks (Stack S and Stack Q)
+
+   ./trace/{2_pools, cs, cpp, gli, ps, sprite, multi1,
+   multi2, multi3}.trc are the trace files. As these traces have long
+   reference sequences, if you just want to run partial of them(from the
+   very beginning to a certain point rather than the very end), you can
+   simply insert a breakpoint "*" after a certain line, indicating that the stack
+   information needs to be printed into files right after the
+   reference before the "*" is processed. By default, there is a
+   breakpoint at the end of trace file.
+
+   For example, there are two "*" in ./traces/cs.trc, indicating that
+   the HIR/LIR stack information as well as eviction sequence should be
+   printed for the following three access sequences:
+   {0..14}, {0..22} and {0..file-end}. The output file name format is:
+   TRACENAME-output-{LIR, HIR, EVICTED}-CHECKPOINTNUM.log. In the names,
+   "LIR" means the contents of the LIRS stack (Stack S in the wiki
+   page), "HIR" means the contents of the LIRS queue (Stack Q in the
+   wiki page), and "EVICTED" means the sequence of pages that are
+   evicted. Please see the sample files under ./traces for details.
+
+   In the output file of LIR stack,
+   "R" refers as "resident"; "NR" refers as "non-resident";
+   "H" refers as "HIR block"; "L" refers as "LIR block";
+
+   For other details, please read the source codes.
+
+How to run the program:
+  ./lirs ./traces/TRACE_NAME
+  For example, "./lirs ./traces/cs" will run the LIRS simulation
+  on the trace "cs.trc" and the information of HIR/LIR, as well as
+  the eviction sequence will be printed out into the files respectively.
