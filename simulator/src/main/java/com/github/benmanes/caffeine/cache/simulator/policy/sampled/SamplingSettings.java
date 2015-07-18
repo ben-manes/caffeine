@@ -15,18 +15,17 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
-import akka.actor.UntypedActor;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.sampled.AbstractSamplingPolicy.Sample;
+import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy.Sample;
+import com.typesafe.config.Config;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class SamplingSettings extends BasicSettings {
 
-  public SamplingSettings(UntypedActor actor) {
-    super(actor);
+  public SamplingSettings(Config config) {
+    super(config);
   }
 
   public int sampleSize() {

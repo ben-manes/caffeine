@@ -19,42 +19,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.google.common.base.MoreObjects;
-
-import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
-import akka.dispatch.BoundedMessageQueueSemantics;
-import akka.dispatch.RequiresMessageQueue;
+import com.typesafe.config.Config;
 
 /**
- * A skeletal implementation of a caching policy implemented a linked list maintained in either
- * insertion or access order.
+ * A cache that uses a linked list, in either insertion or access order, to implement simple
+ * page replacement algorithms.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-abstract class AbstractLinkedPolicy extends UntypedActor
-    implements RequiresMessageQueue<BoundedMessageQueueSemantics> {
-
-  private final Map<Integer, Node> data;
+public final class LinkedPolicy implements Policy {
   private final PolicyStats policyStats;
+  private final Map<Object, Node> data;
   private final EvictionPolicy policy;
   private final Admittor admittor;
   private final int maximumSize;
   private final Node sentinel;
 
-  /**
-   * Creates an actor that delegates to an LRU, FIFO, or CLOCK based cache.
-   *
-   * @param name the name of this policy
-   * @param admittor the admission strategy
-   * @param policy the eviction policy to apply
-   */
-  protected AbstractLinkedPolicy(String name, Admittor admittor, EvictionPolicy policy) {
-    BasicSettings settings = new BasicSettings(this);
+  public LinkedPolicy(String name, Admittor admittor, Config config, EvictionPolicy policy) {
+    BasicSettings settings = new BasicSettings(config);
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.data = new HashMap<>();
@@ -64,37 +50,15 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   }
 
   @Override
-  public void onReceive(Object msg) throws Exception {
-    if (msg instanceof TraceEvent) {
-      policyStats.stopwatch().start();
-      handleEvent((TraceEvent) msg);
-      policyStats.stopwatch().stop();
-    } else if (msg == Message.END) {
-      getSender().tell(policyStats, ActorRef.noSender());
-      getContext().stop(getSelf());
-    }
+  public PolicyStats stats() {
+    return policyStats;
   }
 
-  private void handleEvent(TraceEvent event) {
-    switch (event.action()) {
-      case WRITE:
-        onCreateOrUpdate(event);
-        break;
-      case READ:
-        onRead(event);
-        break;
-      case DELETE:
-        data.remove(event.keyHash());
-        break;
-      default:
-        throw new UnsupportedOperationException();
-    }
-  }
-
-  private void onCreateOrUpdate(TraceEvent event) {
-    Node node = new Node(event.keyHash(), sentinel);
+  @Override
+  public void record(Object key) {
+    Node node = new Node(key, sentinel);
     Node old = data.putIfAbsent(node.key, node);
-    admittor.record(event.keyHash());
+    admittor.record(key);
     if (old == null) {
       policyStats.recordMiss();
       node.appendToTail();
@@ -102,17 +66,6 @@ abstract class AbstractLinkedPolicy extends UntypedActor
     } else {
       policyStats.recordHit();
       policy.onAccess(old);
-    }
-  }
-
-  private void onRead(TraceEvent event) {
-    Node node = data.get(event.keyHash());
-    admittor.record(event.keyHash());
-    if (node == null) {
-      policyStats.recordMiss();
-    } else {
-      policyStats.recordHit();
-      policy.onAccess(node);
     }
   }
 
@@ -141,7 +94,7 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   }
 
   /** The replacement policy. */
-  protected enum EvictionPolicy {
+  public enum EvictionPolicy {
 
     /** Evicts entries based on insertion order. */
     FIFO() {
@@ -203,7 +156,7 @@ abstract class AbstractLinkedPolicy extends UntypedActor
     private static final Node UNLINKED = new Node();
 
     private final Node sentinel;
-    private final Integer key;
+    private final Object key;
 
     private boolean marked;
     private Node prev;
@@ -218,7 +171,7 @@ abstract class AbstractLinkedPolicy extends UntypedActor
     }
 
     /** Creates a new, unlinked node. */
-    public Node(Integer key, Node sentinel) {
+    public Node(Object key, Node sentinel) {
       this.next = UNLINKED;
       this.prev = UNLINKED;
       this.sentinel = sentinel;
@@ -294,6 +247,7 @@ abstract class AbstractLinkedPolicy extends UntypedActor
     @Override
     public String toString() {
       return MoreObjects.toStringHelper(this)
+          .add("key'", key)
           .add("marked", marked)
           .toString();
     }

@@ -28,8 +28,6 @@ import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGe
 import com.github.benmanes.caffeine.cache.simulator.generator.SkewedLatestGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.UniformIntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ZipfianGenerator;
-import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
-import com.github.benmanes.caffeine.cache.tracing.TraceEvent.Action;
 
 /**
  * A generator of synthetic cache events to simulate different caching patterns.
@@ -41,7 +39,7 @@ public final class Synthetic {
   private Synthetic() {}
 
   /** Returns a sequence of events based on the setting's distribution. */
-  public static Stream<TraceEvent> generate(BasicSettings settings) {
+  public static Stream<String> generate(BasicSettings settings) {
     int items = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase()) {
       case "counter":
@@ -73,7 +71,7 @@ public final class Synthetic {
    * @param start the number that the counter starts from
    * @param items the number of items in the distribution
    */
-  public static Stream<TraceEvent> counter(int start, int items) {
+  public static Stream<String> counter(int start, int items) {
     return generate(new CounterGenerator(start), items);
   }
 
@@ -84,7 +82,7 @@ public final class Synthetic {
    * @param mean mean arrival rate of gamma (a half life of 1/gamma)
    * @param items the number of items in the distribution
    */
-  public static Stream<TraceEvent> exponential(double mean, int items) {
+  public static Stream<String> exponential(double mean, int items) {
     return generate(new ExponentialGenerator(mean), items);
   }
 
@@ -101,7 +99,7 @@ public final class Synthetic {
    * @param hotOpnFraction percentage of operations accessing the hot set
    * @param items the number of items in the distribution
    */
-  public static Stream<TraceEvent> hotspot(int lowerBound, int upperBound,
+  public static Stream<String> hotspot(int lowerBound, int upperBound,
       double hotsetFraction, double hotOpnFraction, int items) {
     return generate(new HotspotIntegerGenerator(lowerBound,
         upperBound, hotsetFraction, hotOpnFraction), items);
@@ -115,7 +113,7 @@ public final class Synthetic {
    *
    * @param items the number of items in the distribution
    */
-  public static Stream<TraceEvent> scrambledZipfian(int items) {
+  public static Stream<String> scrambledZipfian(int items) {
     return generate(new ScrambledZipfianGenerator(items), items);
   }
 
@@ -125,7 +123,7 @@ public final class Synthetic {
    *
    * @param items the number of items in the distribution
    */
-  public static Stream<TraceEvent> skewedZipfianLatest(int items) {
+  public static Stream<String> skewedZipfianLatest(int items) {
     return generate(new SkewedLatestGenerator(new CounterGenerator(items)), items);
   }
 
@@ -135,7 +133,7 @@ public final class Synthetic {
    *
    * @param items the number of items in the distribution
    */
-  public static Stream<TraceEvent> zipfian(int items) {
+  public static Stream<String> zipfian(int items) {
     return generate(new ZipfianGenerator(items), items);
   }
 
@@ -148,13 +146,12 @@ public final class Synthetic {
    * @param items the number of items in the distribution
    * @return a stream of cache events
    */
-  public static Stream<TraceEvent> uniform(int lowerBound, int upperBound, int items) {
+  public static Stream<String> uniform(int lowerBound, int upperBound, int items) {
     return generate(new UniformIntegerGenerator(lowerBound, upperBound), items);
   }
 
   /** Returns a sequence of items constructed by the generator. */
-  private static Stream<TraceEvent> generate(Generator generator, int items) {
-    return IntStream.range(0, items).mapToObj(ignored ->
-      new TraceEvent(null, 0, Action.WRITE, generator.nextString().hashCode(), 1, 0L));
+  private static Stream<String> generate(Generator generator, int items) {
+    return IntStream.range(0, items).mapToObj(ignored -> generator.nextString());
   }
 }

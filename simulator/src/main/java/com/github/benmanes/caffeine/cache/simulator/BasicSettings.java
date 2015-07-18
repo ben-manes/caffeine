@@ -23,8 +23,6 @@ import java.util.List;
 
 import com.typesafe.config.Config;
 
-import akka.actor.UntypedActor;
-
 /**
  * The simulator's configuration. A policy can extend this class as a convenient way to extract
  * its own settings.
@@ -36,8 +34,8 @@ public class BasicSettings {
 
   private final Config config;
 
-  public BasicSettings(UntypedActor actor) {
-    config = actor.getContext().system().settings().config().getConfig("caffeine.simulator");
+  public BasicSettings(Config config) {
+    this.config = config;
   }
 
   public List<String> policies() {
@@ -75,7 +73,7 @@ public class BasicSettings {
     return config;
   }
 
-  final class AdmissionSource {
+  public final class AdmissionSource {
     public List<String> admittors() {
       return config().getStringList("admission.admittors");
     }
@@ -87,7 +85,7 @@ public class BasicSettings {
     }
   }
 
-  final class FileSource {
+  public final class FileSource {
     public Path path() {
       return Paths.get(config().getString("file.path"));
     }
@@ -96,7 +94,7 @@ public class BasicSettings {
     }
   }
 
-  final class SyntheticSource {
+  public final class SyntheticSource {
     public String distribution() {
       return config().getString("synthetic.distribution");
     }
@@ -116,17 +114,17 @@ public class BasicSettings {
       return new Uniform();
     }
 
-    final class Counter {
+    public final class Counter {
       public int start() {
         return config().getInt("synthetic.counter.start");
       }
     }
-    final class Exponential {
+    public final class Exponential {
       public double mean() {
         return config().getDouble("synthetic.exponential.mean");
       }
     }
-    final class Hotspot {
+    public final class Hotspot {
       public int lowerBound() {
         return config().getInt("synthetic.hotspot.lower-bound");
       }
@@ -140,7 +138,7 @@ public class BasicSettings {
         return config().getDouble("synthetic.hotspot.hot-opn-fraction");
       }
     }
-    final class Uniform {
+    public final class Uniform {
       public int lowerBound() {
         return config().getInt("synthetic.uniform.lower-bound");
       }

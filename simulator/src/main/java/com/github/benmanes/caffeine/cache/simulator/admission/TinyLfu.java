@@ -45,13 +45,15 @@ public final class TinyLfu implements Admittor {
   }
 
   @Override
-  public void record(int key) {
-    sketch.add(key, 1);
+  public void record(Object key) {
+    sketch.add(key.hashCode(), 1);
   }
 
   @Override
-  public boolean admit(int candidateKey, int victimKey) {
-    return sketch.estimateCount(candidateKey) >= sketch.estimateCount(victimKey);
+  public boolean admit(Object candidateKey, Object victimKey) {
+    long candidateCount = sketch.estimateCount(candidateKey.hashCode());
+    long victimCount = sketch.estimateCount(victimKey.hashCode());
+    return candidateCount >= victimCount;
   }
 
   @SuppressWarnings("unused")

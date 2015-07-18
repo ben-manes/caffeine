@@ -16,11 +16,25 @@
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
 /**
+ * An admission policy to the cache. A page replacement policy always admits new entries and chooses
+ * a victim to remove if the cache exceeds a maximum size. An admission policy augments the eviction
+ * policy by letting the cache not accept the new entry, based on the assumption that the victim is
+ * more likely to be used again.
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Admittor {
 
-  void record(int key);
+  /** Records the access to the entry. */
+  void record(Object key);
 
-  boolean admit(int candidateKey, int victimKey);
+  /**
+   * Returns if the candidate should be added to the cache and the page replacement policy's chosen
+   * victim should be removed.
+   *
+   * @param candidateKey the key to the newly added entry
+   * @param victimKey the key to the entry the policy recommends removing
+   * @return if the candidate should be added and the victim removed due to eviction
+   */
+  boolean admit(Object candidateKey, Object victimKey);
 }

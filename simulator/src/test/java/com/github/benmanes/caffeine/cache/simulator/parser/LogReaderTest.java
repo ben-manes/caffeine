@@ -28,6 +28,7 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.Synthetic;
 import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent.Action;
 import com.github.benmanes.caffeine.cache.tracing.async.BinaryLogEventHandler;
 import com.github.benmanes.caffeine.cache.tracing.async.LogEventHandler;
 import com.github.benmanes.caffeine.cache.tracing.async.TextLogEventHandler;
@@ -56,7 +57,9 @@ public final class LogReaderTest {
   }
 
   private List<TraceEvent> makeEvents() {
-    return Synthetic.counter(0, FILE_SIZE).collect(Collectors.toList());
+    return Synthetic.counter(0, FILE_SIZE).map(count -> {
+        return new TraceEvent(null, 0, Action.WRITE, count.hashCode(), 1, 0L);
+    }).collect(Collectors.toList());
   }
 
   private Path eventsAsLogFile(List<TraceEvent> events, Function<Path, LogEventHandler> handlerFun)

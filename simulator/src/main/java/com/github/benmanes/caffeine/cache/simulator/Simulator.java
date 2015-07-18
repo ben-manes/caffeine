@@ -17,19 +17,19 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.joor.Reflect;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.FileFormat;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
-import com.github.benmanes.caffeine.cache.simulator.admission.AlwaysAdmit;
-import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyBuilder;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
-import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+import com.typesafe.config.Config;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
@@ -46,20 +46,20 @@ import akka.routing.Router;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Simulator extends UntypedActor {
-  public enum Message { START, END }
+  public enum Message { START, FINISH }
 
-  private final BasicSettings settings;
   private final TextReport report;
+  private final Config config;
   private final Router router;
   private int remaining;
 
   public Simulator() {
-    settings = new BasicSettings(this);
-    report = new TextReport();
+    config = getContext().system().settings().config().getConfig("caffeine.simulator");
 
     List<Routee> routes = makeRoutes();
     router = new Router(new BroadcastRoutingLogic(), routes);
     remaining = routes.size();
+    report = new TextReport();
 
     getSelf().tell(Message.START, ActorRef.noSender());
   }
@@ -68,7 +68,7 @@ public final class Simulator extends UntypedActor {
   public void onReceive(Object msg) throws IOException {
     if (msg == Message.START) {
       events().forEach(event -> router.route(event, getSelf()));
-      router.route(Message.END, getSelf());
+      router.route(Message.FINISH, getSelf());
     } else if (msg instanceof PolicyStats) {
       report.add((PolicyStats) msg);
       if (--remaining == 0) {
@@ -78,7 +78,8 @@ public final class Simulator extends UntypedActor {
     }
   }
 
-  private Stream<TraceEvent> events() throws IOException {
+  private Stream<?> events() throws IOException {
+    BasicSettings settings = new BasicSettings(config);
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings);
     }
@@ -88,28 +89,22 @@ public final class Simulator extends UntypedActor {
   }
 
   private List<Routee> makeRoutes() {
-    return settings.policies().stream().flatMap(policy -> {
-      BasicSettings settings = new BasicSettings(this);
-      return settings.admission().admittors().stream().map(admittorType ->
-          makeRoutee(policy, admittorType));
-    }).collect(Collectors.toList());
-  }
-
-  private ActorRefRoutee makeRoutee(String policy, String admittorType) {
-    String name;
-    Admittor admittor;
-    if (admittorType.equals("None")) {
-      name = policy;
-      admittor = AlwaysAdmit.INSTANCE;
-    } else {
-      name = policy + "_" + admittorType;
-      admittor = new TinyLfu(settings.admission().eps(), settings.admission().confidence());
+    BasicSettings settings = new BasicSettings(config);
+    Map<String, Policy> policies = new TreeMap<>();
+    for (String policyType : settings.policies()) {
+      for (String admittorType : settings.admission().admittors()) {
+        Policy policy = new PolicyBuilder(config)
+            .admittor(admittorType)
+            .type(policyType)
+            .build();
+        policies.put(policy.stats().name(), policy);
+      }
     }
-    String packageName = Simulator.class.getPackage().getName();
-    Class<?> actorClass = Reflect.on(packageName + ".policy." + policy).type();
-    ActorRef actorRef = getContext().actorOf(Props.create(actorClass, name, admittor), name);
-    getContext().watch(actorRef);
-    return new ActorRefRoutee(actorRef);
+    return policies.values().stream().map(policy -> {
+      ActorRef actorRef = getContext().actorOf(Props.create(PolicyActor.class, policy));
+      getContext().watch(actorRef);
+      return new ActorRefRoutee(actorRef);
+    }).collect(Collectors.toList());
   }
 
   public static void main(String[] args) {

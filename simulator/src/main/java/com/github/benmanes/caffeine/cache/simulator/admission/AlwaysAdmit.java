@@ -22,10 +22,10 @@ public enum AlwaysAdmit implements Admittor {
   INSTANCE;
 
   @Override
-  public void record(int key) {}
+  public void record(Object key) {}
 
   @Override
-  public boolean admit(int key, int candidateKey) {
+  public boolean admit(Object key, Object candidateKey) {
     return true;
   }
 }

@@ -21,32 +21,25 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.google.common.base.MoreObjects;
+import com.typesafe.config.Config;
 
-import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
-import akka.dispatch.BoundedMessageQueueSemantics;
-import akka.dispatch.RequiresMessageQueue;
 import scala.concurrent.forkjoin.ThreadLocalRandom;
 
 /**
- * A skeletal implementation of a caching policy implemented a sampled array of entries.
+ * A cache that uses a  a sampled array of entries to implement simple page replacement algorithms.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-abstract class AbstractSamplingPolicy extends UntypedActor
-    implements RequiresMessageQueue<BoundedMessageQueueSemantics> {
-  private final Map<Integer, Node> data;
+public final class SamplingPolicy implements Policy {
   private final PolicyStats policyStats;
+  private final Map<Object, Node> data;
   private final EvictionPolicy policy;
   private final Sample sampleStrategy;
   private final Deque<Integer> free;
@@ -54,14 +47,8 @@ abstract class AbstractSamplingPolicy extends UntypedActor
   private final int sampleSize;
   private final Node[] table;
 
-  /**
-   * Creates an actor that delegates to an LRU, FIFO, or RANDOM based cache.
-   *
-   * @param name the name of this policy
-   * @param policy the eviction policy to apply
-   */
-  protected AbstractSamplingPolicy(String name, Admittor admittor, EvictionPolicy policy) {
-    SamplingSettings settings = new SamplingSettings(this);
+  public SamplingPolicy(String name, Admittor admittor, Config config, EvictionPolicy policy) {
+    SamplingSettings settings = new SamplingSettings(config);
     this.sampleStrategy = settings.sampleStrategy();
     this.policyStats = new PolicyStats(name);
     this.sampleSize = settings.sampleSize();
@@ -69,62 +56,29 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     this.admittor = admittor;
     this.policy = policy;
 
-    this.free = new ArrayDeque<Integer>(settings.maximumSize());
-    this.table = new Node[settings.maximumSize() + 1];
-    for (int i = 0; i < settings.maximumSize() + 1; i++) {
+    int overflowSize = settings.maximumSize() + 1;
+    this.free = new ArrayDeque<Integer>(overflowSize);
+    this.table = new Node[overflowSize];
+    for (int i = 0; i < overflowSize; i++) {
       free.add(i);
     }
   }
 
   @Override
-  public void onReceive(Object msg) throws Exception {
-    if (msg instanceof TraceEvent) {
-      policyStats.stopwatch().start();
-      handleEvent((TraceEvent) msg);
-      policyStats.stopwatch().stop();
-    } else if (msg == Message.END) {
-      getSender().tell(policyStats, ActorRef.noSender());
-      getContext().stop(getSelf());
-    }
+  public PolicyStats stats() {
+    return policyStats;
   }
 
-  private void handleEvent(TraceEvent event) {
-    switch (event.action()) {
-      case WRITE:
-        onCreateOrUpdate(event);
-        break;
-      case READ:
-        onRead(event);
-        break;
-      case DELETE:
-        onDelete(event);
-        break;
-      default:
-        throw new UnsupportedOperationException();
-    }
-  }
-
-  private void onCreateOrUpdate(TraceEvent event) {
-    Node node = data.get(event.keyHash());
-    admittor.record(event.keyHash());
+  @Override
+  public void record(Object key) {
+    Node node = data.get(key);
+    admittor.record(key);
     if (node == null) {
+      node = new Node(key, free.pop());
       policyStats.recordMiss();
-
-      node = new Node(event.keyHash(), free.pop());
-      data.put(event.keyHash(), node);
       table[node.index] = node;
+      data.put(key, node);
       evict(node);
-    } else {
-      policyStats.recordHit();
-      node.accessTime = System.nanoTime();
-    }
-  }
-
-  private void onRead(TraceEvent event) {
-    Node node = data.get(event.keyHash());
-    admittor.record(event.keyHash());
-    if (node == null) {
-      policyStats.recordMiss();
     } else {
       node.accessTime = System.nanoTime();
       policyStats.recordHit();
@@ -132,14 +86,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     }
   }
 
-  private void onDelete(TraceEvent event) {
-    Node node = data.remove(event.keyHash());
-    if (node != null) {
-      removeFromTable(node);
-    }
-  }
-
-  /** Evicts while the map exceeds the maximum capacity. */
+  /** Evicts if the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
     if (free.isEmpty()) {
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
@@ -172,13 +119,10 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     GUESS {
       @Override public <E> List<E> sample(E[] elements, int sampleSize) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        Set<Integer> sampled = new HashSet<>(sampleSize);
         List<E> sample = new ArrayList<E>(sampleSize);
-        while (sampled.size() != sampleSize) {
+        for (int i = 0; i < sampleSize; i++) {
           int index = random.nextInt(elements.length);
-          if (sampled.add(index)) {
-            sample.add(elements[index]);
-          }
+          sample.add(elements[index]);
         }
         return sample;
       }
@@ -214,7 +158,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
   }
 
   /** The replacement policy. */
-  protected enum EvictionPolicy {
+  public enum EvictionPolicy {
 
     /** Evicts entries based on insertion order. */
     FIFO() {
@@ -274,7 +218,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
 
   /** A node on the double-linked list. */
   static final class Node {
-    private final Integer key;
+    private final Object key;
 
     private long insertionTime;
     private long accessTime;
@@ -282,7 +226,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     private int index;
 
     /** Creates a new node. */
-    public Node(Integer key, int index) {
+    public Node(Object key, int index) {
       this.insertionTime = System.nanoTime();
       this.accessTime = insertionTime;
       this.index = index;
@@ -292,6 +236,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
     @Override
     public String toString() {
       return MoreObjects.toStringHelper(this)
+          .add("key", key)
           .add("index", index)
           .toString();
     }
