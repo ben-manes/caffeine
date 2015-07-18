@@ -31,6 +31,7 @@ import com.typesafe.config.Config;
  */
 public class BasicSettings {
   public enum FileFormat {
+    ADDRESS,
     CAFFEINE_TEXT,
     CAFFEINE_BINARY,
     LIRS,

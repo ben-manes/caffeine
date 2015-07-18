@@ -46,7 +46,11 @@ public final class TinyLfu implements Admittor {
 
   @Override
   public void record(Object key) {
-    sketch.add(key.hashCode(), 1);
+    if (key instanceof Number) {
+      sketch.add(((Number) key).longValue(), 1);
+    } else {
+      sketch.add(key.hashCode(), 1);
+    }
   }
 
   @Override

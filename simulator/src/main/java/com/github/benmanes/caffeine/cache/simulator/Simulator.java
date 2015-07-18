@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
@@ -88,12 +89,14 @@ public final class Simulator extends UntypedActor {
     }
     Path filePath = settings.fileSource().path();
     switch (settings.fileSource().format()) {
+      case ADDRESS:
+        return new AddressTraceReader(filePath).events();
       case CAFFEINE_TEXT:
         return LogReader.textLogStream(filePath);
       case CAFFEINE_BINARY:
         return LogReader.binaryLogStream(filePath);
       case LIRS:
-        return LirsTraceReader.traceStream(filePath);
+        return new LirsTraceReader(filePath).events();
       default:
         throw new IllegalStateException("Unknown format: " + settings.fileSource().format());
     }

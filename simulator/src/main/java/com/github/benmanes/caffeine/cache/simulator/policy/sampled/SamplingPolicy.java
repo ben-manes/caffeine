@@ -23,6 +23,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -30,10 +31,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
 
-import scala.concurrent.forkjoin.ThreadLocalRandom;
-
 /**
- * A cache that uses a  a sampled array of entries to implement simple page replacement algorithms.
+ * A cache that uses a sampled array of entries to implement simple page replacement algorithms.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -161,7 +160,7 @@ public final class SamplingPolicy implements Policy {
   public enum EvictionPolicy {
 
     /** Evicts entries based on insertion order. */
-    FIFO() {
+    FIFO {
       @Override Node select(List<Node> sample) {
         return sample.stream().min((first, second) ->
             Long.compare(first.insertionTime, second.insertionTime)).get();
@@ -169,7 +168,7 @@ public final class SamplingPolicy implements Policy {
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
-    LRU() {
+    LRU {
       @Override Node select(List<Node> sample) {
         return sample.stream().min((first, second) ->
             Long.compare(first.accessTime, second.accessTime)).get();
@@ -177,7 +176,7 @@ public final class SamplingPolicy implements Policy {
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
-    MRU() {
+    MRU {
       @Override Node select(List<Node> sample) {
         return sample.stream().max((first, second) ->
             Long.compare(first.accessTime, second.accessTime)).get();
@@ -187,7 +186,7 @@ public final class SamplingPolicy implements Policy {
     /**
      * Evicts entries based on how frequently they are used, with the least frequent evicted first.
      */
-    LFU() {
+    LFU {
       @Override Node select(List<Node> sample) {
         return sample.stream().min((first, second) ->
             Long.compare(first.frequency, second.frequency)).get();
@@ -197,7 +196,7 @@ public final class SamplingPolicy implements Policy {
     /**
      * Evicts entries based on how frequently they are used, with the most frequent evicted first.
      */
-    MFU() {
+    MFU {
       @Override Node select(List<Node> sample) {
         return sample.stream().max((first, second) ->
             Long.compare(first.frequency, second.frequency)).get();
@@ -205,7 +204,7 @@ public final class SamplingPolicy implements Policy {
     },
 
     /** Evicts a random entry. */
-    RANDOM() {
+    RANDOM {
       @Override Node select(List<Node> sample) {
         int victim = ThreadLocalRandom.current().nextInt(sample.size());
         return sample.get(victim);

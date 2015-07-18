@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
+package com.github.benmanes.caffeine.cache.simulator.parser.address;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -22,13 +22,14 @@ import java.util.stream.Stream;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader;
 
 /**
- * A reader for the trace files provided by the authors of the LIRS algorithm.
+ * A reader for the trace files of application address instructions, provided by
+ * <a href="http://cseweb.ucsd.edu/classes/fa07/cse240a/project1.html">UC SD</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LirsTraceReader extends TraceReader<Long> {
+public final class AddressTraceReader extends TraceReader<Long> {
 
-  public LirsTraceReader(Path filePath) {
+  public AddressTraceReader(Path filePath) {
     super(filePath);
   }
 
@@ -36,7 +37,8 @@ public final class LirsTraceReader extends TraceReader<Long> {
   public Stream<Long> events() throws IOException {
     return lines()
         .map(line -> line.trim())
-        .filter(line -> !line.equals("*"))
-        .map(Long::parseLong);
+        .map(line -> line.split(" ")[1])
+        .map(address -> address.substring(2))
+        .map(address -> Long.parseLong(address, 16));
   }
 }

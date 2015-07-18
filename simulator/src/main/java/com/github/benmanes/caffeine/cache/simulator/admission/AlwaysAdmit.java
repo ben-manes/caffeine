@@ -25,7 +25,7 @@ public enum AlwaysAdmit implements Admittor {
   public void record(Object key) {}
 
   @Override
-  public boolean admit(Object key, Object candidateKey) {
+  public boolean admit(Object candidateKey, Object victimKey) {
     return true;
   }
 }

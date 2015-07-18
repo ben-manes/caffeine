@@ -72,15 +72,15 @@ public final class LinkedPolicy implements Policy {
   /** Evicts while the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
     while (data.size() > maximumSize) {
-      Node node = sentinel.next;
-      if (node == sentinel) {
-        continue;
-      } else if (policy.onEvict(node)) {
+      Node victim = sentinel.next;
+      if (victim == sentinel) {
+        throw new IllegalStateException();
+      } else if (policy.onEvict(victim)) {
         policyStats.recordEviction();
 
-        boolean admit = admittor.admit(candidate.key, node.key);
+        boolean admit = admittor.admit(candidate.key, victim.key);
         if (admit) {
-          evictEntry(node);
+          evictEntry(victim);
         } else {
           evictEntry(candidate);
         }
@@ -97,7 +97,7 @@ public final class LinkedPolicy implements Policy {
   public enum EvictionPolicy {
 
     /** Evicts entries based on insertion order. */
-    FIFO() {
+    FIFO {
       @Override void onAccess(Node node) {
         // do nothing
       }
@@ -110,7 +110,7 @@ public final class LinkedPolicy implements Policy {
      * Evicts entries based on insertion order, but gives an entry a "second chance" if it has been
      * requested recently.
      */
-    CLOCK() {
+    CLOCK {
       @Override void onAccess(Node node) {
         node.marked = true;
       }
@@ -125,7 +125,7 @@ public final class LinkedPolicy implements Policy {
     },
 
     /** Evicts entries based on how recently they are used, with the most recent evicted first. */
-    MRU() {
+    MRU {
       @Override void onAccess(Node node) {
         node.moveToHead();
       }
@@ -135,7 +135,7 @@ public final class LinkedPolicy implements Policy {
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
-    LRU() {
+    LRU {
       @Override void onAccess(Node node) {
         node.moveToTail();
       }
