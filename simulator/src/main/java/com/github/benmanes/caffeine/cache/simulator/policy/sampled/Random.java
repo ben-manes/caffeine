@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+
 /**
  * Implements a random cache based on sampling the entries.
  *
@@ -22,7 +24,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
  */
 public final class Random extends AbstractSamplingPolicy {
 
-  public Random(String name) {
-    super(name, EvictionPolicy.RANDOM);
+  public Random(String name, Admittor admittor) {
+    super(name, admittor, EvictionPolicy.RANDOM);
   }
 }

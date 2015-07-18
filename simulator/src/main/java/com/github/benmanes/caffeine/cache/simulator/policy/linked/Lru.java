@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+
 /**
  * Implements a least-recently-used cache based on linked nodes.
  *
@@ -22,7 +24,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
  */
 public final class Lru extends AbstractLinkedPolicy {
 
-  public Lru(String name) {
-    super(name, EvictionPolicy.LRU);
+  public Lru(String name, Admittor admittor) {
+    super(name, admittor, EvictionPolicy.LRU);
   }
 }

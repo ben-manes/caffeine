@@ -13,18 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
-
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+package com.github.benmanes.caffeine.cache.simulator.admission;
 
 /**
- * Implements a first-in/first-out cache based on sampling the entries.
- *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Fifo extends AbstractSamplingPolicy {
+public interface Admittor {
 
-  public Fifo(String name, Admittor admittor) {
-    super(name, admittor, EvictionPolicy.FIFO);
-  }
+  void record(int key);
+
+  boolean admit(int candidateKey, int victimKey);
 }

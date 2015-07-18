@@ -26,16 +26,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import scala.concurrent.forkjoin.ThreadLocalRandom;
+import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+import com.google.common.base.MoreObjects;
+
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import akka.dispatch.BoundedMessageQueueSemantics;
 import akka.dispatch.RequiresMessageQueue;
-
-import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
-import com.google.common.base.MoreObjects;
+import scala.concurrent.forkjoin.ThreadLocalRandom;
 
 /**
  * A skeletal implementation of a caching policy implemented a sampled array of entries.
@@ -49,6 +50,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
   private final EvictionPolicy policy;
   private final Sample sampleStrategy;
   private final Deque<Integer> free;
+  private final Admittor admittor;
   private final int sampleSize;
   private final Node[] table;
 
@@ -58,17 +60,18 @@ abstract class AbstractSamplingPolicy extends UntypedActor
    * @param name the name of this policy
    * @param policy the eviction policy to apply
    */
-  protected AbstractSamplingPolicy(String name, EvictionPolicy policy) {
+  protected AbstractSamplingPolicy(String name, Admittor admittor, EvictionPolicy policy) {
     SamplingSettings settings = new SamplingSettings(this);
     this.sampleStrategy = settings.sampleStrategy();
     this.policyStats = new PolicyStats(name);
     this.sampleSize = settings.sampleSize();
     this.data = new HashMap<>();
+    this.admittor = admittor;
     this.policy = policy;
 
     this.free = new ArrayDeque<Integer>(settings.maximumSize());
-    this.table = new Node[settings.maximumSize()];
-    for (int i = 0; i < settings.maximumSize(); i++) {
+    this.table = new Node[settings.maximumSize() + 1];
+    for (int i = 0; i < settings.maximumSize() + 1; i++) {
       free.add(i);
     }
   }
@@ -88,11 +91,7 @@ abstract class AbstractSamplingPolicy extends UntypedActor
   private void handleEvent(TraceEvent event) {
     switch (event.action()) {
       case WRITE:
-        if (data.containsKey(event.keyHash())) {
-          onRead(event);
-        } else {
-          onCreateOrUpdate(event);
-        }
+        onCreateOrUpdate(event);
         break;
       case READ:
         onRead(event);
@@ -107,18 +106,23 @@ abstract class AbstractSamplingPolicy extends UntypedActor
 
   private void onCreateOrUpdate(TraceEvent event) {
     Node node = data.get(event.keyHash());
+    admittor.record(event.keyHash());
     if (node == null) {
-      evict();
+      policyStats.recordMiss();
+
       node = new Node(event.keyHash(), free.pop());
       data.put(event.keyHash(), node);
       table[node.index] = node;
+      evict(node);
     } else {
+      policyStats.recordHit();
       node.accessTime = System.nanoTime();
     }
   }
 
   private void onRead(TraceEvent event) {
     Node node = data.get(event.keyHash());
+    admittor.record(event.keyHash());
     if (node == null) {
       policyStats.recordMiss();
     } else {
@@ -136,15 +140,21 @@ abstract class AbstractSamplingPolicy extends UntypedActor
   }
 
   /** Evicts while the map exceeds the maximum capacity. */
-  private void evict() {
+  private void evict(Node candidate) {
     if (free.isEmpty()) {
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
           : sampleStrategy.sample(table, sampleSize);
       Node victim = policy.select(sample);
       policyStats.recordEviction();
-      removeFromTable(victim);
-      data.remove(victim.key);
+
+      if (admittor.admit(candidate.key, victim.key)) {
+        removeFromTable(victim);
+        data.remove(victim.key);
+      } else {
+        removeFromTable(candidate);
+        data.remove(candidate.key);
+      }
     }
   }
 

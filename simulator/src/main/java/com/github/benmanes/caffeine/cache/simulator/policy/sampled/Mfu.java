@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+
 /**
  * Implements a most-frequently-used cache based on sampling the entries.
  *
@@ -22,7 +24,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
  */
 public final class Mfu extends AbstractSamplingPolicy {
 
-  public Mfu(String name) {
-    super(name, EvictionPolicy.MFU);
+  public Mfu(String name, Admittor admittor) {
+    super(name, admittor, EvictionPolicy.MFU);
   }
 }

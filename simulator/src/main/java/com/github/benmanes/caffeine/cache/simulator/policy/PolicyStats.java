@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
 
 /**
@@ -72,5 +73,10 @@ public final class PolicyStats {
 
   public long evictionCount() {
     return evictionCount;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).addValue(name).toString();
   }
 }

@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+
 /**
  * Implements a clock (fifo with second chance) cache based on linked nodes.
  *
@@ -22,7 +24,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
  */
 public final class Clock extends AbstractLinkedPolicy {
 
-  public Clock(String name) {
-    super(name, EvictionPolicy.CLOCK);
+  public Clock(String name, Admittor admittor) {
+    super(name, admittor, EvictionPolicy.CLOCK);
   }
 }

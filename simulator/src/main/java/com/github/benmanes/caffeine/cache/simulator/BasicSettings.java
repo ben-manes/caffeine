@@ -21,9 +21,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import akka.actor.UntypedActor;
-
 import com.typesafe.config.Config;
+
+import akka.actor.UntypedActor;
 
 /**
  * The simulator's configuration. A policy can extend this class as a convenient way to extract
@@ -42,6 +42,10 @@ public class BasicSettings {
 
   public List<String> policies() {
     return config().getStringList("policies");
+  }
+
+  public AdmissionSource admission() {
+    return new AdmissionSource();
   }
 
   public int maximumSize() {
@@ -69,6 +73,18 @@ public class BasicSettings {
   /** Returns the config resolved at the simulator's path. */
   protected Config config() {
     return config;
+  }
+
+  final class AdmissionSource {
+    public List<String> admittors() {
+      return config().getStringList("admission.admittors");
+    }
+    public double eps() {
+      return config().getDouble("admission.eps");
+    }
+    public double confidence() {
+      return config().getDouble("admission.confidence");
+    }
   }
 
   final class FileSource {

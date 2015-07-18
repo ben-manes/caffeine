@@ -35,6 +35,7 @@ ext {
     jcache: '1.0.0',
     joor: '0.9.5',
     jsr305: '3.0.0',
+    stream: '2.7.0',
     univocity_parsers: '1.5.6',
   ]
   test_versions = [
@@ -85,6 +86,7 @@ ext {
     jcache: "javax.cache:cache-api:${versions.jcache}",
     joor: "org.jooq:joor:${versions.joor}",
     jsr305: "com.google.code.findbugs:jsr305:${versions.jsr305}",
+    stream: "com.clearspring.analytics:stream:${versions.stream}",
     univocity_parsers: "com.univocity:univocity-parsers:${versions.univocity_parsers}",
   ]
   test_libraries = [

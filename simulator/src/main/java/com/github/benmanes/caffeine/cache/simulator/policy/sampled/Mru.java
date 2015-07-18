@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+
 /**
  * Implements a most-recently-used cache based on sampling the entries.
  *
@@ -22,7 +24,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
  */
 public final class Mru extends AbstractSamplingPolicy {
 
-  public Mru(String name) {
-    super(name, EvictionPolicy.MRU);
+  public Mru(String name, Admittor admittor) {
+    super(name, admittor, EvictionPolicy.MRU);
   }
 }

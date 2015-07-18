@@ -18,16 +18,17 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+import com.google.common.base.MoreObjects;
+
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import akka.dispatch.BoundedMessageQueueSemantics;
 import akka.dispatch.RequiresMessageQueue;
-
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
-import com.google.common.base.MoreObjects;
 
 /**
  * A skeletal implementation of a caching policy implemented a linked list maintained in either
@@ -41,6 +42,7 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   private final Map<Integer, Node> data;
   private final PolicyStats policyStats;
   private final EvictionPolicy policy;
+  private final Admittor admittor;
   private final int maximumSize;
   private final Node sentinel;
 
@@ -48,14 +50,16 @@ abstract class AbstractLinkedPolicy extends UntypedActor
    * Creates an actor that delegates to an LRU, FIFO, or CLOCK based cache.
    *
    * @param name the name of this policy
+   * @param admittor the admission strategy
    * @param policy the eviction policy to apply
    */
-  protected AbstractLinkedPolicy(String name, EvictionPolicy policy) {
+  protected AbstractLinkedPolicy(String name, Admittor admittor, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(this);
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.data = new HashMap<>();
     this.sentinel = new Node();
+    this.admittor = admittor;
     this.policy = policy;
   }
 
@@ -74,11 +78,7 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   private void handleEvent(TraceEvent event) {
     switch (event.action()) {
       case WRITE:
-        if (data.containsKey(event.keyHash())) {
-          onRead(event);
-        } else {
-          onCreateOrUpdate(event);
-        }
+        onCreateOrUpdate(event);
         break;
       case READ:
         onRead(event);
@@ -94,16 +94,20 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   private void onCreateOrUpdate(TraceEvent event) {
     Node node = new Node(event.keyHash(), sentinel);
     Node old = data.putIfAbsent(node.key, node);
+    admittor.record(event.keyHash());
     if (old == null) {
+      policyStats.recordMiss();
       node.appendToTail();
-      evict();
+      evict(node);
     } else {
+      policyStats.recordHit();
       policy.onAccess(old);
     }
   }
 
   private void onRead(TraceEvent event) {
     Node node = data.get(event.keyHash());
+    admittor.record(event.keyHash());
     if (node == null) {
       policyStats.recordMiss();
     } else {
@@ -113,17 +117,27 @@ abstract class AbstractLinkedPolicy extends UntypedActor
   }
 
   /** Evicts while the map exceeds the maximum capacity. */
-  private void evict() {
+  private void evict(Node candidate) {
     while (data.size() > maximumSize) {
       Node node = sentinel.next;
       if (node == sentinel) {
-        return;
+        continue;
       } else if (policy.onEvict(node)) {
         policyStats.recordEviction();
-        data.remove(node.key);
-        node.remove();
+
+        boolean admit = admittor.admit(candidate.key, node.key);
+        if (admit) {
+          evictEntry(node);
+        } else {
+          evictEntry(candidate);
+        }
       }
     }
+  }
+
+  private void evictEntry(Node node) {
+    data.remove(node.key);
+    node.remove();
   }
 
   /** The replacement policy. */

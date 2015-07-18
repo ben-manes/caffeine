@@ -22,6 +22,15 @@ import java.util.stream.Stream;
 
 import org.joor.Reflect;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.FileFormat;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.AlwaysAdmit;
+import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
+import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
+import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
+
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
@@ -29,12 +38,6 @@ import akka.routing.ActorRefRoutee;
 import akka.routing.BroadcastRoutingLogic;
 import akka.routing.Routee;
 import akka.routing.Router;
-
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.FileFormat;
-import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
-import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 
 /**
  * The simulator broadcasts the recorded cache events to each policy actor and generates an
@@ -52,9 +55,11 @@ public final class Simulator extends UntypedActor {
 
   public Simulator() {
     settings = new BasicSettings(this);
-    remaining = settings.policies().size();
-    router = makeBroadcastingRouter();
     report = new TextReport();
+
+    List<Routee> routes = makeRoutes();
+    router = new Router(new BroadcastRoutingLogic(), routes);
+    remaining = routes.size();
 
     getSelf().tell(Message.START, ActorRef.noSender());
   }
@@ -82,15 +87,29 @@ public final class Simulator extends UntypedActor {
         : LogReader.binaryLogStream(settings.fileSource().path());
   }
 
-  private Router makeBroadcastingRouter() {
-    String packageName = getClass().getPackage().getName();
-    List<Routee> routes = settings.policies().stream().map(policy -> {
-      Class<?> actorClass = Reflect.on(packageName + ".policy." + policy).type();
-      ActorRef actorRef = getContext().actorOf(Props.create(actorClass, policy), policy);
-      getContext().watch(actorRef);
-      return new ActorRefRoutee(actorRef);
+  private List<Routee> makeRoutes() {
+    return settings.policies().stream().flatMap(policy -> {
+      BasicSettings settings = new BasicSettings(this);
+      return settings.admission().admittors().stream().map(admittorType ->
+          makeRoutee(policy, admittorType));
     }).collect(Collectors.toList());
-    return new Router(new BroadcastRoutingLogic(), routes);
+  }
+
+  private ActorRefRoutee makeRoutee(String policy, String admittorType) {
+    String name;
+    Admittor admittor;
+    if (admittorType.equals("None")) {
+      name = policy;
+      admittor = AlwaysAdmit.INSTANCE;
+    } else {
+      name = policy + "_" + admittorType;
+      admittor = new TinyLfu(settings.admission().eps(), settings.admission().confidence());
+    }
+    String packageName = Simulator.class.getPackage().getName();
+    Class<?> actorClass = Reflect.on(packageName + ".policy." + policy).type();
+    ActorRef actorRef = getContext().actorOf(Props.create(actorClass, name, admittor), name);
+    getContext().watch(actorRef);
+    return new ActorRefRoutee(actorRef);
   }
 
   public static void main(String[] args) {
