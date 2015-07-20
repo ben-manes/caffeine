@@ -35,6 +35,7 @@ public class BasicSettings {
     CAFFEINE_TEXT,
     CAFFEINE_BINARY,
     LIRS,
+    WIKIPEDIA,
   }
 
   private final Config config;
