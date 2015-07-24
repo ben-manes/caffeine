@@ -36,6 +36,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -112,7 +113,12 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       return result[0];
     }, true);
     if (result[0] != null) {
+      AtomicBoolean completed = new AtomicBoolean();
       result[0].whenComplete((value, error) -> {
+        if (!completed.compareAndSet(false, true)) {
+          // Ignore multiple invocations due to ForkJoinPool retrying on delays
+          return;
+        }
         long loadTime = cache.statsTicker().read() - startTime;
         if (value == null) {
           cache.statsCounter().recordLoadFailure(loadTime);
@@ -204,9 +210,14 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       cache.remove(key);
       return;
     }
+    AtomicBoolean completed = new AtomicBoolean();
     long startTime = cache.statsTicker().read();
     cache.put(key, valueFuture);
     valueFuture.whenComplete((value, error) -> {
+      if (!completed.compareAndSet(false, true)) {
+        // Ignore multiple invocations due to ForkJoinPool retrying on delays
+        return;
+      }
       long loadTime = cache.statsTicker().read() - startTime;
       if (value == null) {
         cache.remove(key, valueFuture);
