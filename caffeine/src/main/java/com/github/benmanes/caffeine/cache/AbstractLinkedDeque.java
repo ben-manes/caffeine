@@ -260,7 +260,6 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     return offerLast(e);
   }
 
-
   @Override
   public void addFirst(E e) {
     if (!offerFirst(e)) {

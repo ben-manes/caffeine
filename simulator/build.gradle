@@ -13,6 +13,8 @@ dependencies {
   compile libraries.stream
   compile libraries.flip_tables
   compile libraries.univocity_parsers
+  compile benchmark_libraries.slf4j_nop
+  compile benchmark_libraries.jackrabbit
 
   testCompile test_libraries.jimfs
   testCompile test_libraries.testng

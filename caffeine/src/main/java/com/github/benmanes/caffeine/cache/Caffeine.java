@@ -921,6 +921,9 @@ public final class Caffeine<K, V> {
     if (removalListener != null) {
       s.append("removalListener").append(',');
     }
+    if (writer != null) {
+      s.append("writer").append(',');
+    }
     if (s.length() > baseLength) {
       s.deleteCharAt(s.length() - 1);
     }

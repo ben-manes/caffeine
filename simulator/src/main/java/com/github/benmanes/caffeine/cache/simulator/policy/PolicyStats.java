@@ -26,9 +26,9 @@ import com.google.common.base.Stopwatch;
 public final class PolicyStats {
   private final String name;
 
-  private int hitCount;
-  private int missCount;
-  private int evictionCount;
+  private long hitCount;
+  private long missCount;
+  private long evictionCount;
 
   private Stopwatch stopwatch;
 
@@ -49,12 +49,28 @@ public final class PolicyStats {
     hitCount++;
   }
 
+  public void setHitCount(long hitCount) {
+    this.hitCount = hitCount;
+  }
+
   public void recordMiss() {
     missCount++;
   }
 
+  public void setMissCount(long missCount) {
+    this.missCount = missCount;
+  }
+
   public void recordEviction() {
     evictionCount++;
+  }
+
+  public void setEvictionCount(long evictionCount) {
+    this.evictionCount = evictionCount;
+  }
+
+  public long evictionCount() {
+    return evictionCount;
   }
 
   public long requestCount() {
@@ -69,10 +85,6 @@ public final class PolicyStats {
   public double missRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
-  }
-
-  public long evictionCount() {
-    return evictionCount;
   }
 
   @Override

@@ -44,8 +44,13 @@ public final class PolicyActor extends UntypedActor
       getContext().stop(getSelf());
     } else {
       policy.stats().stopwatch().start();
-      policy.record(msg);
-      policy.stats().stopwatch().stop();
+      try {
+        policy.record(msg);
+      } catch (Exception e) {
+        context().system().log().error(e, "");
+      } finally {
+        policy.stats().stopwatch().stop();
+      }
     }
   }
 }

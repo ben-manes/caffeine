@@ -180,13 +180,10 @@ public final class LinkedPolicy implements Policy {
 
     /** Appends the node to the tail of the list. */
     public void appendToTail() {
-      // Allow moveToTail() to no-op
-      next = sentinel;
-
-      // Read the tail on the stack to avoid unnecessary volatile reads
-      final Node tail = sentinel.prev;
+      Node tail = sentinel.prev;
       sentinel.prev = this;
       tail.next = this;
+      next = sentinel;
       prev = tail;
     }
 
@@ -197,7 +194,7 @@ public final class LinkedPolicy implements Policy {
       next = UNLINKED; // mark as unlinked
     }
 
-    /** Moves the node to the tail. */
+    /** Moves the node to the head. */
     public void moveToHead() {
       if (isHead() || isUnlinked()) {
         return;

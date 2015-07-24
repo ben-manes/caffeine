@@ -30,7 +30,7 @@ ext {
     disruptor: '3.3.2',
     error_prone_annotations: '2.0.4',
     flip_tables: '1.0.2',
-    guava: '18.0',
+    guava: '19.0-rc1',
     javapoet: '1.2.0',
     jcache: '1.0.0',
     joor: '0.9.5',
@@ -46,7 +46,7 @@ ext {
     jctools: '1.0',
     jimfs: '1.0',
     junit: '4.12',
-    mockito: '2.0.29-beta',
+    mockito: '2.0.31-beta',
     testng: '6.9.6',
     truth: '0.24',
   ]
@@ -57,6 +57,7 @@ ext {
     ehcache3: '3.0.0.m1',
     high_scale_lib: '1.0.6',
     infinispan: '8.0.0.Beta1',
+    jackrabbit: '1.3.3',
     jamm: '0.3.1',
     java_object_layout: '0.3.2',
     koloboke: '0.6.7',
@@ -110,8 +111,8 @@ ext {
     },
     testng: [
       dependencies.create("org.testng:testng:${test_versions.testng}") {
-        exclude group: "junit"
-        exclude group: "guice"
+        exclude group: 'junit'
+        exclude group: 'guice'
       },
       'com.google.inject:guice:4.0'
     ],
@@ -124,6 +125,9 @@ ext {
     ehcache3: "org.ehcache:ehcache:${benchmark_versions.ehcache3}",
     high_scale_lib: "com.boundary:high-scale-lib:${benchmark_versions.high_scale_lib}",
     infinispan: "org.infinispan:infinispan-core:${benchmark_versions.infinispan}",
+    jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${benchmark_versions.jackrabbit}") {
+      exclude group: 'junit'
+    },
     jamm: "com.github.jbellis:jamm:${benchmark_versions.jamm}",
     java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
     koloboke: [

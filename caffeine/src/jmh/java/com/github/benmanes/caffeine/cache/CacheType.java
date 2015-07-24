@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.jackrabbit.oak.cache.CacheLIRS;
 import org.cache2k.impl.ClockProPlusCache;
 import org.cache2k.impl.LruCache;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
@@ -119,6 +120,11 @@ public enum CacheType {
           new BoundedEquivalentConcurrentHashMapV8<>(maximumSize, Eviction.LRU,
               BoundedEquivalentConcurrentHashMapV8.getNullEvictionListener(),
               AnyEquivalence.getInstance(), AnyEquivalence.getInstance()));
+    }
+  },
+  Jackrabbit {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new GuavaCache<>(new CacheLIRS<>(maximumSize));
     }
   },
   LinkedHashMap_Lru {

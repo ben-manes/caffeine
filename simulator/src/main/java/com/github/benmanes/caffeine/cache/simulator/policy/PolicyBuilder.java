@@ -21,6 +21,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.AlwaysAdmit;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
+import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
@@ -31,7 +32,6 @@ import com.typesafe.config.Config;
  */
 public final class PolicyBuilder {
   private Admittor admittor;
-  private int maximumSize;
   private Config config;
   private String type;
 
@@ -58,14 +58,16 @@ public final class PolicyBuilder {
 
   public Policy build() {
     String strategy = type.substring(type.lastIndexOf('.') + 1);
-    if (type.startsWith("linked")) {
+    if (type.startsWith("opt")) {
+      return new UnboundedPolicy(type);
+    } else if (type.startsWith("linked")) {
       return new LinkedPolicy(name(), admittor, config,
           LinkedPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
     } else if (type.startsWith("sampled")) {
       return new SamplingPolicy(name(), admittor, config,
           SamplingPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
-    } else if (type.startsWith("opt")) {
-      return new UnboundedPolicy(type);
+    } else if (type.startsWith("irr")) {
+      return new JackrabbitLirsPolicy(type, config);
     }
     throw new IllegalStateException("Unknown policy: " + type);
   }
