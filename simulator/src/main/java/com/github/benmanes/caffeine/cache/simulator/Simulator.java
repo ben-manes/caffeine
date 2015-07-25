@@ -23,8 +23,8 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.LogReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.caffeine.CaffeineLogReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -72,8 +72,9 @@ public final class Simulator extends UntypedActor {
     if (msg == Message.START) {
       try (Stream<?> events = eventStream()) {
         events.forEach(event -> router.route(event, getSelf()));
+      } finally {
+        router.route(Message.FINISH, getSelf());
       }
-      router.route(Message.FINISH, getSelf());
     } else if (msg instanceof PolicyStats) {
       report.add((PolicyStats) msg);
       if (--remaining == 0) {
@@ -93,9 +94,9 @@ public final class Simulator extends UntypedActor {
       case ADDRESS:
         return new AddressTraceReader(filePath).events();
       case CAFFEINE_TEXT:
-        return LogReader.textLogStream(filePath);
+        return CaffeineLogReader.textLogStream(filePath);
       case CAFFEINE_BINARY:
-        return LogReader.binaryLogStream(filePath);
+        return CaffeineLogReader.binaryLogStream(filePath);
       case LIRS:
         return new LirsTraceReader(filePath).events();
       case WIKIPEDIA:

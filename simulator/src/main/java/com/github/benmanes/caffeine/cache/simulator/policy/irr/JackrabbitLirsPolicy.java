@@ -17,11 +17,9 @@ package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import org.apache.jackrabbit.oak.cache.CacheLIRS;
 
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.cache.CacheLoader;
-import com.google.common.cache.CacheStats;
 import com.google.common.cache.LoadingCache;
 import com.typesafe.config.Config;
 
@@ -31,9 +29,6 @@ import com.typesafe.config.Config;
  * changes: An additional queue for non-resident entries is used, to prevent unbound memory usage.
  * The maximum size of this queue is at most the size of the rest of the stack. About 6.25% of the
  * mapped entries are cold.
- * <p>
- * Internally, the cache is split into a number of segments, and each segment is an individual LIRS
- * cache.
  * <p>
  * Accessed entries are only moved to the top of the stack if at least a number of other entries
  * have been moved to the front (1% by default). Write access and moving entries to the top of the
@@ -47,14 +42,15 @@ public final class JackrabbitLirsPolicy implements Policy {
   private final PolicyStats policyStats;
 
   public JackrabbitLirsPolicy(String name, Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    LirsSettings settings = new LirsSettings(config);
     this.policyStats = new PolicyStats(name);
     this.cache = new CacheLIRS.Builder<>()
-        .maximumSize(settings.maximumSize())
-        .segmentCount(1)
         .recordStats()
+        .segmentCount(1)
+        .maximumSize(settings.maximumSize())
+        .stackMoveDistance(settings.stackMoveDistance())
         .build(new CacheLoader<Object, Object>() {
-          @Override public Object load(Object key) throws Exception {
+          @Override public Object load(Object key) {
             computed.set(key);
             return key;
           }
@@ -63,8 +59,7 @@ public final class JackrabbitLirsPolicy implements Policy {
 
   @Override
   public PolicyStats stats() {
-    CacheStats stats = cache.stats();
-    policyStats.setEvictionCount(stats.evictionCount());
+    policyStats.setEvictionCount(cache.stats().evictionCount());
     return policyStats;
   }
 

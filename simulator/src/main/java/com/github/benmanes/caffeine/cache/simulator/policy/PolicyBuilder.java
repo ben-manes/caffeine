@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPol
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.typesafe.config.Config;
 
 /**
@@ -57,19 +58,24 @@ public final class PolicyBuilder {
   }
 
   public Policy build() {
+    String pkg = type.substring(0, type.indexOf('.'));
     String strategy = type.substring(type.lastIndexOf('.') + 1);
-    if (type.startsWith("opt")) {
-      return new UnboundedPolicy(type);
-    } else if (type.startsWith("linked")) {
-      return new LinkedPolicy(name(), admittor, config,
-          LinkedPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
-    } else if (type.startsWith("sampled")) {
-      return new SamplingPolicy(name(), admittor, config,
-          SamplingPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
-    } else if (type.startsWith("irr")) {
-      return new JackrabbitLirsPolicy(type, config);
+    switch (pkg) {
+      case "opt":
+        return new UnboundedPolicy(type);
+      case "linked":
+        return new LinkedPolicy(name(), admittor, config,
+            LinkedPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
+      case "sampled":
+        return new SamplingPolicy(name(), admittor, config,
+            SamplingPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
+      case "two-queue":
+        return new TwoQueuePolicy(type, config);
+      case "irr":
+        return new JackrabbitLirsPolicy(type, config);
+      default:
+        throw new IllegalStateException("Unknown policy: " + type);
     }
-    throw new IllegalStateException("Unknown policy: " + type);
   }
 
   private String name() {

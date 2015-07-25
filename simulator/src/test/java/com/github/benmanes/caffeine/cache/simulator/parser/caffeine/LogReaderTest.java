@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.parser;
+package com.github.benmanes.caffeine.cache.simulator.parser.caffeine;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.Synthetic;
+import com.github.benmanes.caffeine.cache.simulator.parser.caffeine.CaffeineLogReader;
 import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.github.benmanes.caffeine.cache.tracing.TraceEvent.Action;
 import com.github.benmanes.caffeine.cache.tracing.async.BinaryLogEventHandler;
@@ -44,7 +45,7 @@ public final class LogReaderTest {
   public void readTextLog() throws Exception {
     List<TraceEvent> events = makeEvents();
     Path filePath = eventsAsLogFile(events, TextLogEventHandler::new);
-    List<TraceEvent> read = LogReader.textLogStream(filePath).collect(Collectors.toList());
+    List<TraceEvent> read = CaffeineLogReader.textLogStream(filePath).collect(Collectors.toList());
     assertThat(read, is(equalTo(events)));
   }
 
@@ -52,7 +53,7 @@ public final class LogReaderTest {
   public void readBinaryLog() throws Exception {
     List<TraceEvent> events = makeEvents();
     Path filePath = eventsAsLogFile(events, BinaryLogEventHandler::new);
-    List<TraceEvent> read = LogReader.binaryLogStream(filePath).collect(Collectors.toList());
+    List<TraceEvent> read = CaffeineLogReader.binaryLogStream(filePath).collect(Collectors.toList());
     assertThat(read, is(equalTo(events)));
   }
 

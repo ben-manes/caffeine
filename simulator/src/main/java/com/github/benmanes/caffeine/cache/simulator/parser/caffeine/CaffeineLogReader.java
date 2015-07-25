@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.parser;
+package com.github.benmanes.caffeine.cache.simulator.parser.caffeine;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -42,9 +42,9 @@ import com.univocity.parsers.csv.CsvParserSettings;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LogReader {
+public final class CaffeineLogReader {
 
-  private LogReader() {}
+  private CaffeineLogReader() {}
 
   /**
    * Creates a {@link Stream} that lazily reads the log file in the binary format.
