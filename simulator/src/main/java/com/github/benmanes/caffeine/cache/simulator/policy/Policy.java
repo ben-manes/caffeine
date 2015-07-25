@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * A cache that implements a page replacement policy.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@NotThreadSafe
 public interface Policy {
 
   /** Records that the entry was accessed. */

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -32,6 +33,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyBuilder;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.typesafe.config.Config;
 
 import akka.actor.ActorRef;
@@ -51,19 +54,23 @@ import akka.routing.Router;
 public final class Simulator extends UntypedActor {
   public enum Message { START, FINISH }
 
+  private final Stopwatch stopwatch;
   private final TextReport report;
   private final Config config;
   private final Router router;
+  private final int batchSize;
   private int remaining;
 
   public Simulator() {
     config = getContext().system().settings().config().getConfig("caffeine.simulator");
+    batchSize = config.getInt("batch-size");
 
     List<Routee> routes = makeRoutes();
     router = new Router(new BroadcastRoutingLogic(), routes);
     remaining = routes.size();
     report = new TextReport();
 
+    stopwatch = Stopwatch.createStarted();
     getSelf().tell(Message.START, ActorRef.noSender());
   }
 
@@ -71,7 +78,15 @@ public final class Simulator extends UntypedActor {
   public void onReceive(Object msg) throws IOException {
     if (msg == Message.START) {
       try (Stream<?> events = eventStream()) {
-        events.forEach(event -> router.route(event, getSelf()));
+        List<Object> batch = new ArrayList<>(batchSize);
+        events.forEach(event -> {
+          batch.add(event);
+          if (batch.size() == batchSize) {
+            router.route(ImmutableList.copyOf(batch), getSelf());
+            batch.clear();
+          }
+        });
+        router.route(batch, getSelf());
       } finally {
         router.route(Message.FINISH, getSelf());
       }
@@ -80,6 +95,7 @@ public final class Simulator extends UntypedActor {
       if (--remaining == 0) {
         report.writeTo(System.out);
         getContext().stop(getSelf());
+        System.out.println("Executed in " + stopwatch);
       }
     }
   }

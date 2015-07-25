@@ -56,11 +56,12 @@ public final class LinkedPolicy implements Policy {
 
   @Override
   public void record(Object key) {
-    Node node = new Node(key, sentinel);
-    Node old = data.putIfAbsent(node.key, node);
+    Node old = data.get(key);
     admittor.record(key);
     if (old == null) {
+      Node node = new Node(key, sentinel);
       policyStats.recordMiss();
+      data.put(key, node);
       node.appendToTail();
       evict(node);
     } else {

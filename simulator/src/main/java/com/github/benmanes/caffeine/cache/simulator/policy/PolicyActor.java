@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+
 import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
 
 import akka.actor.ActorRef;
@@ -39,18 +41,26 @@ public final class PolicyActor extends UntypedActor
 
   @Override
   public void onReceive(Object msg) throws Exception {
-    if (msg == Message.FINISH) {
+    if (msg instanceof List) {
+      @SuppressWarnings("unchecked")
+      List<Object> events = (List<Object>) msg;
+      events.forEach(this::process);
+    } else if (msg == Message.FINISH) {
       getSender().tell(policy.stats(), ActorRef.noSender());
       getContext().stop(getSelf());
     } else {
-      policy.stats().stopwatch().start();
-      try {
-        policy.record(msg);
-      } catch (Exception e) {
-        context().system().log().error(e, "");
-      } finally {
-        policy.stats().stopwatch().stop();
-      }
+      context().system().log().error("Invalid message: " + msg);
+    }
+  }
+
+  private void process(Object o) {
+    policy.stats().stopwatch().start();
+    try {
+      policy.record(o);
+    } catch (Exception e) {
+      context().system().log().error(e, "");
+    } finally {
+      policy.stats().stopwatch().stop();
     }
   }
 }
