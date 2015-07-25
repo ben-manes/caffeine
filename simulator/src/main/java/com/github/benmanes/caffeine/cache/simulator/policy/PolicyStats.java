@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
 
@@ -33,8 +35,8 @@ public final class PolicyStats {
   private Stopwatch stopwatch;
 
   public PolicyStats(String name) {
+    this.name = requireNonNull(name);
     this.stopwatch = Stopwatch.createUnstarted();
-    this.name = name;
   }
 
   public Stopwatch stopwatch() {

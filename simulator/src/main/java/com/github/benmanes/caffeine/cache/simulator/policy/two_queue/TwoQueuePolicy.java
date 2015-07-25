@@ -38,7 +38,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class TwoQueuePolicy implements Policy {
+public final class TwoQueuePolicy implements Policy {
   private static final Node UNLINKED = new Node();
 
   private final PolicyStats policyStats;

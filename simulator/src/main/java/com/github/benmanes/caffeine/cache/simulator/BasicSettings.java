@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -34,7 +35,7 @@ public class BasicSettings {
   private final Config config;
 
   public BasicSettings(Config config) {
-    this.config = config;
+    this.config = requireNonNull(config);
   }
 
   public List<String> policies() {
