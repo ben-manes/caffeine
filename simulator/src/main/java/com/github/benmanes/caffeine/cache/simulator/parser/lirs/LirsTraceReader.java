@@ -19,14 +19,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
 /**
  * A reader for the trace files provided by the authors of the LIRS algorithm.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LirsTraceReader extends TraceReader<Long> {
+public final class LirsTraceReader extends TextTraceReader<Long> {
 
   public LirsTraceReader(Path filePath) {
     super(filePath);

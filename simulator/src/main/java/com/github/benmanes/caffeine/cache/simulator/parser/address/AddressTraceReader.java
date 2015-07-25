@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
 /**
  * A reader for the trace files of application address instructions, provided by
@@ -27,7 +27,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddressTraceReader extends TraceReader<Long> {
+public final class AddressTraceReader extends TextTraceReader<Long> {
 
   public AddressTraceReader(Path filePath) {
     super(filePath);

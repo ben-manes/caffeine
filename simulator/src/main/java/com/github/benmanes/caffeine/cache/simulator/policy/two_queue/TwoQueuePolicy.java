@@ -58,22 +58,21 @@ public class TwoQueuePolicy implements Policy {
 
   public TwoQueuePolicy(String name, Config config) {
     TwoQueueSettings settings = new TwoQueueSettings(config);
-    this.maximumSize = settings.maximumSize();
-    this.policyStats = new PolicyStats(name);
-    this.data = new HashMap<>();
 
     this.headIn = new Node();
     this.headOut = new Node();
     this.headMain = new Node();
-
-    maxIn = (int) (maximumSize * settings.percentIn());
-    maxOut = (int) (maximumSize * settings.percentOut());
+    this.data = new HashMap<>();
+    this.policyStats = new PolicyStats(name);
+    this.maximumSize = settings.maximumSize();
+    this.maxIn = (int) (maximumSize * settings.percentIn());
+    this.maxOut = (int) (maximumSize * settings.percentOut());
   }
 
   @Override
   public void record(Object key) {
     // On accessing a page X :
-    //   if X is in MAIN then
+    //   if X is in Am then
     //     move X to the head of Am
     //   else if (X is in Alout) then
     //     reclaimfor(X)

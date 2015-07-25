@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,10 +25,7 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.caffeine.CaffeineLogReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyBuilder;
@@ -46,7 +44,7 @@ import akka.routing.Routee;
 import akka.routing.Router;
 
 /**
- * The simulator broadcasts the recorded cache events to each policy actor and generates an
+ * A simulator that broadcasts the recorded cache events to each policy actor and generates an
  * aggregated report.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -77,19 +75,7 @@ public final class Simulator extends UntypedActor {
   @Override
   public void onReceive(Object msg) throws IOException {
     if (msg == Message.START) {
-      try (Stream<?> events = eventStream()) {
-        List<Object> batch = new ArrayList<>(batchSize);
-        events.forEach(event -> {
-          batch.add(event);
-          if (batch.size() == batchSize) {
-            router.route(ImmutableList.copyOf(batch), getSelf());
-            batch.clear();
-          }
-        });
-        router.route(batch, getSelf());
-      } finally {
-        router.route(Message.FINISH, getSelf());
-      }
+      broadcast();
     } else if (msg instanceof PolicyStats) {
       report.add((PolicyStats) msg);
       if (--remaining == 0) {
@@ -100,28 +86,37 @@ public final class Simulator extends UntypedActor {
     }
   }
 
-  private Stream<?> eventStream() throws IOException {
-    BasicSettings settings = new BasicSettings(config);
-    if (settings.isSynthetic()) {
-      return Synthetic.generate(settings);
-    }
-    Path filePath = settings.fileSource().path();
-    switch (settings.fileSource().format()) {
-      case ADDRESS:
-        return new AddressTraceReader(filePath).events();
-      case CAFFEINE_TEXT:
-        return CaffeineLogReader.textLogStream(filePath);
-      case CAFFEINE_BINARY:
-        return CaffeineLogReader.binaryLogStream(filePath);
-      case LIRS:
-        return new LirsTraceReader(filePath).events();
-      case WIKIPEDIA:
-        return new WikipediaTraceReader(filePath).events();
-      default:
-        throw new IllegalStateException("Unknown format: " + settings.fileSource().format());
+  /** Broadcast the trace events to all of the policy actors. */
+  private void broadcast() {
+    try (Stream<?> events = eventStream()) {
+      List<Object> batch = new ArrayList<>(batchSize);
+      events.forEach(event -> {
+        batch.add(event);
+        if (batch.size() == batchSize) {
+          router.route(ImmutableList.copyOf(batch), getSelf());
+          batch.clear();
+        }
+      });
+      router.route(batch, getSelf());
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    } finally {
+      router.route(Message.FINISH, getSelf());
     }
   }
 
+  /** Returns a stream of trace events. */
+  private Stream<?> eventStream() throws IOException {
+    BasicSettings settings = new BasicSettings(config);
+    if (settings.isSynthetic()) {
+      return Synthetic.generate(settings).boxed();
+    }
+    Path filePath = settings.fileSource().path();
+    TraceFormat format = settings.fileSource().format();
+    return format.readFile(filePath).events();
+  }
+
+  /** Returns the actors to broadcast trace events to. */
   private List<Routee> makeRoutes() {
     BasicSettings settings = new BasicSettings(config);
     Map<String, Policy> policies = new TreeMap<>();

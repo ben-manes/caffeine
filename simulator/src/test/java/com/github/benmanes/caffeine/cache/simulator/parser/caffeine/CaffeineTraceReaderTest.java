@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.Synthetic;
-import com.github.benmanes.caffeine.cache.simulator.parser.caffeine.CaffeineLogReader;
 import com.github.benmanes.caffeine.cache.tracing.TraceEvent;
 import com.github.benmanes.caffeine.cache.tracing.TraceEvent.Action;
 import com.github.benmanes.caffeine.cache.tracing.async.BinaryLogEventHandler;
@@ -38,14 +37,15 @@ import com.google.common.jimfs.Jimfs;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LogReaderTest {
+public final class CaffeineTraceReaderTest {
   static final int FILE_SIZE = 1_000;
 
   @Test
   public void readTextLog() throws Exception {
     List<TraceEvent> events = makeEvents();
     Path filePath = eventsAsLogFile(events, TextLogEventHandler::new);
-    List<TraceEvent> read = CaffeineLogReader.textLogStream(filePath).collect(Collectors.toList());
+    List<TraceEvent> read = new CaffeineTextTraceReader(filePath)
+        .events().collect(Collectors.toList());
     assertThat(read, is(equalTo(events)));
   }
 
@@ -53,12 +53,13 @@ public final class LogReaderTest {
   public void readBinaryLog() throws Exception {
     List<TraceEvent> events = makeEvents();
     Path filePath = eventsAsLogFile(events, BinaryLogEventHandler::new);
-    List<TraceEvent> read = CaffeineLogReader.binaryLogStream(filePath).collect(Collectors.toList());
+    List<TraceEvent> read = new CaffeineBinaryTraceReader(filePath)
+        .events().collect(Collectors.toList());
     assertThat(read, is(equalTo(events)));
   }
 
   private List<TraceEvent> makeEvents() {
-    return Synthetic.counter(0, FILE_SIZE).map(count -> {
+    return Synthetic.counter(0, FILE_SIZE).boxed().map(count -> {
         return new TraceEvent(null, 0, Action.WRITE, count.hashCode(), 1, 0L);
     }).collect(Collectors.toList());
   }

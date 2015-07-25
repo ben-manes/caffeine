@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSource.Hotspot;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSource.Uniform;
@@ -39,7 +38,7 @@ public final class Synthetic {
   private Synthetic() {}
 
   /** Returns a sequence of events based on the setting's distribution. */
-  public static Stream<Integer> generate(BasicSettings settings) {
+  public static IntStream generate(BasicSettings settings) {
     int items = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase()) {
       case "counter":
@@ -71,7 +70,7 @@ public final class Synthetic {
    * @param start the number that the counter starts from
    * @param items the number of items in the distribution
    */
-  public static Stream<Integer> counter(int start, int items) {
+  public static IntStream counter(int start, int items) {
     return generate(new CounterGenerator(start), items);
   }
 
@@ -82,7 +81,7 @@ public final class Synthetic {
    * @param mean mean arrival rate of gamma (a half life of 1/gamma)
    * @param items the number of items in the distribution
    */
-  public static Stream<Integer> exponential(double mean, int items) {
+  public static IntStream exponential(double mean, int items) {
     return generate(new ExponentialGenerator(mean), items);
   }
 
@@ -99,7 +98,7 @@ public final class Synthetic {
    * @param hotOpnFraction percentage of operations accessing the hot set
    * @param items the number of items in the distribution
    */
-  public static Stream<Integer> hotspot(int lowerBound, int upperBound,
+  public static IntStream hotspot(int lowerBound, int upperBound,
       double hotsetFraction, double hotOpnFraction, int items) {
     return generate(new HotspotIntegerGenerator(lowerBound,
         upperBound, hotsetFraction, hotOpnFraction), items);
@@ -113,7 +112,7 @@ public final class Synthetic {
    *
    * @param items the number of items in the distribution
    */
-  public static Stream<Integer> scrambledZipfian(int items) {
+  public static IntStream scrambledZipfian(int items) {
     return generate(new ScrambledZipfianGenerator(items), items);
   }
 
@@ -123,7 +122,7 @@ public final class Synthetic {
    *
    * @param items the number of items in the distribution
    */
-  public static Stream<Integer> skewedZipfianLatest(int items) {
+  public static IntStream skewedZipfianLatest(int items) {
     return generate(new SkewedLatestGenerator(new CounterGenerator(items)), items);
   }
 
@@ -133,7 +132,7 @@ public final class Synthetic {
    *
    * @param items the number of items in the distribution
    */
-  public static Stream<Integer> zipfian(int items) {
+  public static IntStream zipfian(int items) {
     return generate(new ZipfianGenerator(items), items);
   }
 
@@ -146,12 +145,12 @@ public final class Synthetic {
    * @param items the number of items in the distribution
    * @return a stream of cache events
    */
-  public static Stream<Integer> uniform(int lowerBound, int upperBound, int items) {
+  public static IntStream uniform(int lowerBound, int upperBound, int items) {
     return generate(new UniformIntegerGenerator(lowerBound, upperBound), items);
   }
 
   /** Returns a sequence of items constructed by the generator. */
-  private static Stream<Integer> generate(IntegerGenerator generator, int count) {
-    return IntStream.range(0, count).mapToObj(ignored -> generator.nextInt());
+  private static IntStream generate(IntegerGenerator generator, int count) {
+    return IntStream.range(0, count).map(ignored -> generator.nextInt());
   }
 }

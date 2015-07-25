@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.typesafe.config.Config;
 
 /**
@@ -30,14 +31,6 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class BasicSettings {
-  public enum FileFormat {
-    ADDRESS,
-    CAFFEINE_TEXT,
-    CAFFEINE_BINARY,
-    LIRS,
-    WIKIPEDIA,
-  }
-
   private final Config config;
 
   public BasicSettings(Config config) {
@@ -95,8 +88,8 @@ public class BasicSettings {
     public Path path() {
       return Paths.get(config().getString("file.path"));
     }
-    public FileFormat format() {
-      return FileFormat.valueOf(config().getString("file.format").toUpperCase());
+    public TraceFormat format() {
+      return TraceFormat.valueOf(config().getString("file.format").toUpperCase());
     }
   }
 
