@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator.report;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.jakewharton.fliptables.FlipTable;
@@ -53,7 +52,7 @@ public final class TextReport {
           String.format("%.2f %%", 100 * policyStats.hitRate()),
           String.format("%,d", policyStats.requestCount()),
           String.format("%,d", policyStats.evictionCount()),
-          String.format("%,d ms", policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS))
+          policyStats.stopwatch().toString()
       };
     }
     ps.append(FlipTable.of(headers, data));

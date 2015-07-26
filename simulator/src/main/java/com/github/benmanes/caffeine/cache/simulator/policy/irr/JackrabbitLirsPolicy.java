@@ -64,7 +64,7 @@ public final class JackrabbitLirsPolicy implements Policy {
   }
 
   @Override
-  public void record(Object key) {
+  public void record(Comparable<Object> key) {
     cache.getUnchecked(key);
     if (computed.get() == null) {
       policyStats.recordHit();

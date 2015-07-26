@@ -72,7 +72,7 @@ public final class SegmentedLruPolicy implements Policy {
   }
 
   @Override
-  public void record(Object key) {
+  public void record(Comparable<Object> key) {
     Node node = data.get(key);
     admittor.record(key);
     if (node == null) {

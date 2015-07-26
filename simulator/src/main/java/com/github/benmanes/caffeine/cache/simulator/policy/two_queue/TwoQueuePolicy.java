@@ -70,7 +70,7 @@ public final class TwoQueuePolicy implements Policy {
   }
 
   @Override
-  public void record(Object key) {
+  public void record(Comparable<Object> key) {
     // On accessing a page X :
     //   if X is in Am then
     //     move X to the head of Am

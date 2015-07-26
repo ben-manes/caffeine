@@ -36,7 +36,7 @@ import com.google.common.base.Charsets;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public abstract class TextTraceReader<E> implements TraceReader<E> {
+public abstract class TextTraceReader<E extends Comparable<E>> implements TraceReader<E> {
   protected final Path filePath;
 
   protected TextTraceReader(Path filePath) {

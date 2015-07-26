@@ -43,9 +43,10 @@ public final class PolicyActor extends UntypedActor
   public void onReceive(Object msg) throws Exception {
     if (msg instanceof List) {
       @SuppressWarnings("unchecked")
-      List<Object> events = (List<Object>) msg;
+      List<Comparable<Object>> events = (List<Comparable<Object>>) msg;
       events.forEach(this::process);
     } else if (msg == Message.FINISH) {
+      policy.finished();
       getSender().tell(policy.stats(), ActorRef.noSender());
       getContext().stop(getSelf());
     } else {
@@ -53,7 +54,7 @@ public final class PolicyActor extends UntypedActor
     }
   }
 
-  private void process(Object o) {
+  private void process(Comparable<Object> o) {
     policy.stats().stopwatch().start();
     try {
       policy.record(o);

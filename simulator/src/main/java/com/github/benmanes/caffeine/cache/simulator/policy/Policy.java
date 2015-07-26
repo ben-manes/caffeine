@@ -26,7 +26,10 @@ import javax.annotation.concurrent.NotThreadSafe;
 public interface Policy {
 
   /** Records that the entry was accessed. */
-  void record(Object key);
+  void record(Comparable<Object> key);
+
+  /** Indicates that the recording has completed. */
+  default void finished() {}
 
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();

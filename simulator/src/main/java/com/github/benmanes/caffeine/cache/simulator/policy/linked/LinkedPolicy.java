@@ -55,7 +55,7 @@ public final class LinkedPolicy implements Policy {
   }
 
   @Override
-  public void record(Object key) {
+  public void record(Comparable<Object> key) {
     Node old = data.get(key);
     admittor.record(key);
     if (old == null) {

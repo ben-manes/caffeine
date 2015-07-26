@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TraceEvent {
+public final class TraceEvent implements Comparable<TraceEvent> {
   public enum Action { REGISTER, READ, WRITE, DELETE }
 
   private long timestamp;
@@ -226,6 +226,23 @@ public final class TraceEvent {
   @Override
   public int hashCode() {
     return (int) (timestamp ^ id);
+  }
+
+  @Override
+  public int compareTo(TraceEvent event) {
+    int result = Long.compare(timestamp, event.timestamp);
+    if (result != 0) {
+      return result;
+    }
+    result = Long.compare(id, event.id);
+    if (result != 0) {
+      return result;
+    }
+    result = Integer.compare(keyHash, event.keyHash);
+    if (result != 0) {
+      return result;
+    }
+    return action.compareTo(event.action);
   }
 
   @Override
