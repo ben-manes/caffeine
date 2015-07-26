@@ -665,7 +665,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
 
       // ignore out-of-order write operations
-      if (node.isAlive()) {
+      boolean isAlive;
+      synchronized (node) {
+        isAlive = node.isAlive();
+      }
+      if (isAlive) {
         if (expiresAfterWrite()) {
           writeOrderDeque().add(node);
         }

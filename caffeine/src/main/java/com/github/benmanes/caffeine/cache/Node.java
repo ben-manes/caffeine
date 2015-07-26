@@ -70,15 +70,18 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   boolean containsValue(@Nonnull Object value);
 
   /** If the entry is available in the hash-table and page replacement policy. */
+  @GuardedBy("this")
   boolean isAlive();
 
   /**
    * If the entry was removed from the hash-table and is awaiting removal from the page
    * replacement policy.
    */
+  @GuardedBy("this")
   boolean isRetired();
 
   /** If the entry was removed from the hash-table and the page replacement policy. */
+  @GuardedBy("this")
   boolean isDead();
 
   /** Sets the node to the <tt>retired</tt> state. */
