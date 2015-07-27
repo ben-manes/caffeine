@@ -19,15 +19,14 @@ package com.github.benmanes.caffeine.cache.simulator.generator;
 import java.util.Random;
 
 /**
- * Generate integers resembling a hotspot distribution where x% of operations
- * access y% of data items. The parameters specify the bounds for the numbers,
- * the percentage of the of the interval which comprises the hot set and
- * the percentage of operations that access the hot set. Numbers of the hot set are
- * always smaller than any number in the cold set. Elements from the hot set and
- * the cold set are chose using a uniform distribution.
+ * Generate integers resembling a hotspot distribution where x% of operations access y% of data
+ * items. The parameters specify the bounds for the numbers, the percentage of the of the interval
+ * which comprises the hot set and the percentage of operations that access the hot set. Numbers of
+ * the hot set are always smaller than any number in the cold set. Elements from the hot set and the
+ * cold set are chose using a uniform distribution.
  *
  * @author sudipto
- * https://github.com/brianfrankcooper/YCSB
+ * @author https://github.com/brianfrankcooper/YCSB
  */
 public class HotspotIntegerGenerator extends IntegerGenerator {
 
@@ -46,8 +45,8 @@ public class HotspotIntegerGenerator extends IntegerGenerator {
    * @param hotsetFraction percentage of data item
    * @param hotOpnFraction percentage of operations accessing the hot set.
    */
-  public HotspotIntegerGenerator(int lowerBound, int upperBound,
-      double hotsetFraction, double hotOpnFraction) {
+  public HotspotIntegerGenerator(int lowerBound, int upperBound, double hotsetFraction,
+      double hotOpnFraction) {
     if (hotsetFraction < 0.0 || hotsetFraction > 1.0) {
       System.err.println("Hotset fraction out of range. Setting to 0.0");
       hotsetFraction = 0.0;
@@ -57,8 +56,8 @@ public class HotspotIntegerGenerator extends IntegerGenerator {
       hotOpnFraction = 0.0;
     }
     if (lowerBound > upperBound) {
-      System.err.println("Upper bound of Hotspot generator smaller than the lower bound. " +
-      		"Swapping the values.");
+      System.err.println("Upper bound of Hotspot generator smaller than the lower bound. "
+          + "Swapping the values.");
       int temp = lowerBound;
       lowerBound = upperBound;
       upperBound = temp;
@@ -67,7 +66,7 @@ public class HotspotIntegerGenerator extends IntegerGenerator {
     this.upperBound = upperBound;
     this.hotsetFraction = hotsetFraction;
     int interval = upperBound - lowerBound + 1;
-    this.hotInterval = (int)(interval * hotsetFraction);
+    this.hotInterval = (int) (interval * hotsetFraction);
     this.coldInterval = interval - hotInterval;
     this.hotOpnFraction = hotOpnFraction;
   }
@@ -114,9 +113,10 @@ public class HotspotIntegerGenerator extends IntegerGenerator {
   public double getHotOpnFraction() {
     return hotOpnFraction;
   }
+
   @Override
   public double mean() {
-    return hotOpnFraction * (lowerBound + hotInterval/2.0)
-      + (1 - hotOpnFraction) * (lowerBound + hotInterval + coldInterval/2.0);
+    return hotOpnFraction * (lowerBound + hotInterval / 2.0)
+        + (1 - hotOpnFraction) * (lowerBound + hotInterval + coldInterval / 2.0);
   }
 }

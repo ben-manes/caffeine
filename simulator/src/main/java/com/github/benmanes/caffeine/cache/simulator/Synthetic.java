@@ -17,8 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import java.util.stream.IntStream;
 
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSource.Hotspot;
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSource.Uniform;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.UniformSettings;
 import com.github.benmanes.caffeine.cache.simulator.generator.CounterGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ExponentialGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.HotspotIntegerGenerator;
@@ -46,7 +46,7 @@ public final class Synthetic {
       case "exponential":
         return exponential(settings.synthetic().exponential().mean(), items);
       case "hotpot":
-        Hotspot hotspot = settings.synthetic().hotspot();
+        HotspotSettings hotspot = settings.synthetic().hotspot();
         return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
             hotspot.hotOpnFraction(), hotspot.hotsetFraction(), items);
       case "zipfian":
@@ -56,7 +56,7 @@ public final class Synthetic {
       case "skewed-zipfian-latest":
         return skewedZipfianLatest(items);
       case "uniform":
-        Uniform uniform = settings.synthetic().uniform();
+        UniformSettings uniform = settings.synthetic().uniform();
         return uniform(uniform.lowerBound(), uniform.upperBound(), items);
       default:
         throw new IllegalStateException("Unknown distribution: "

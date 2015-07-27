@@ -49,7 +49,7 @@ public abstract class TextTraceReader<E extends Comparable<E>> implements TraceR
     try {
       GZIPInputStream stream = new GZIPInputStream(Files.newInputStream(path));
       Reader reader = new InputStreamReader(stream, Charsets.UTF_8);
-      return new BufferedReader(reader).lines();
+      return new BufferedReader(reader, 1 << 16).lines();
     } catch (ZipException e) {
       return Files.lines(path);
     }

@@ -16,9 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -32,7 +30,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyBuilder;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.typesafe.config.Config;
 
 import akka.actor.ActorRef;
@@ -44,14 +42,28 @@ import akka.routing.Routee;
 import akka.routing.Router;
 
 /**
- * A simulator that broadcasts the recorded cache events to each policy actor and generates an
- * aggregated report.
+ * A simulator that broadcasts the recorded cache events to each policy and generates an aggregated
+ * report. See <tt>reference.conf</tt> for details on the configuration.
+ * <p>
+ * The simulator reports the hit rate of each of the policy being evaluated. A miss may occur
+ * due to,
+ * <ul>
+ *   <li>Conflict: multiple entries are mapped to the same location
+ *   <li>Compulsory: the first reference misses and the entry must be loaded
+ *   <li>Capacity: the cache is not large enough to contain the needed entries
+ *   <li>Coherence: an invalidation is issued by another process in the system
+ * </ul>
+ * <p>
+ * It is recommended that multiple access traces are used during evaluation to see how the policies
+ * handle different workload patterns. When choosing a policy some metrics that are not reported
+ * may be relevant, such as the cost of maintaining the policy's internal structures.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Simulator extends UntypedActor {
   public enum Message { START, FINISH }
 
+  private final BasicSettings settings;
   private final Stopwatch stopwatch;
   private final TextReport report;
   private final Config config;
@@ -61,12 +73,13 @@ public final class Simulator extends UntypedActor {
 
   public Simulator() {
     config = getContext().system().settings().config().getConfig("caffeine.simulator");
-    batchSize = config.getInt("batch-size");
+    settings = new BasicSettings(config);
+    report = new TextReport(settings);
+    batchSize = settings.batchSize();
 
     List<Routee> routes = makeRoutes();
     router = new Router(new BroadcastRoutingLogic(), routes);
     remaining = routes.size();
-    report = new TextReport();
 
     stopwatch = Stopwatch.createStarted();
     getSelf().tell(Message.START, ActorRef.noSender());
@@ -79,7 +92,7 @@ public final class Simulator extends UntypedActor {
     } else if (msg instanceof PolicyStats) {
       report.add((PolicyStats) msg);
       if (--remaining == 0) {
-        report.writeTo(System.out);
+        report.print();
         getContext().stop(getSelf());
         System.out.println("Executed in " + stopwatch);
       }
@@ -87,19 +100,11 @@ public final class Simulator extends UntypedActor {
   }
 
   /** Broadcast the trace events to all of the policy actors. */
-  private void broadcast() {
+  private void broadcast() throws IOException {
     try (Stream<?> events = eventStream()) {
-      List<Object> batch = new ArrayList<>(batchSize);
-      events.forEach(event -> {
-        batch.add(event);
-        if (batch.size() == batchSize) {
-          router.route(ImmutableList.copyOf(batch), getSelf());
-          batch.clear();
-        }
+      Iterators.partition(events.iterator(), batchSize).forEachRemaining(batch -> {
+        router.route(batch, getSelf());
       });
-      router.route(batch, getSelf());
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
     } finally {
       router.route(Message.FINISH, getSelf());
     }
@@ -107,18 +112,16 @@ public final class Simulator extends UntypedActor {
 
   /** Returns a stream of trace events. */
   private Stream<?> eventStream() throws IOException {
-    BasicSettings settings = new BasicSettings(config);
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings).boxed();
     }
-    Path filePath = settings.fileSource().path();
-    TraceFormat format = settings.fileSource().format();
+    Path filePath = settings.traceFile().path();
+    TraceFormat format = settings.traceFile().format();
     return format.readFile(filePath).events();
   }
 
   /** Returns the actors to broadcast trace events to. */
   private List<Routee> makeRoutes() {
-    BasicSettings settings = new BasicSettings(config);
     Map<String, Policy> policies = new TreeMap<>();
     for (String policyType : settings.policies()) {
       for (String admittorType : settings.admission().admittors()) {

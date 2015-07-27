@@ -22,7 +22,9 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 
 /**
- * A cache that has no maximum size by never evicting.
+ * A cache that has no maximum size. This demonstrates the upper bound of the hit rate due to
+ * compulsory misses (first reference misses), which can only be avoided if the application can
+ * intelligently prefetch the data prior to the request.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

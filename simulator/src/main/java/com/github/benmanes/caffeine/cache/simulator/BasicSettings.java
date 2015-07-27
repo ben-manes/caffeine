@@ -38,12 +38,20 @@ public class BasicSettings {
     this.config = requireNonNull(config);
   }
 
+  public ReportSettings report() {
+    return new ReportSettings();
+  }
+
+  public int batchSize() {
+    return config().getInt("batch-size");
+  }
+
   public List<String> policies() {
     return config().getStringList("policies");
   }
 
-  public AdmissionSource admission() {
-    return new AdmissionSource();
+  public AdmissionSettings admission() {
+    return new AdmissionSettings();
   }
 
   public int maximumSize() {
@@ -58,14 +66,14 @@ public class BasicSettings {
     return config().getString("source").equals("synthetic");
   }
 
-  public FileSource fileSource() {
+  public TraceFileSettings traceFile() {
     checkState(isFile());
-    return new FileSource();
+    return new TraceFileSettings();
   }
 
-  public SyntheticSource synthetic() {
+  public SyntheticSettings synthetic() {
     checkState(isSynthetic());
-    return new SyntheticSource();
+    return new SyntheticSettings();
   }
 
   /** Returns the config resolved at the simulator's path. */
@@ -73,7 +81,19 @@ public class BasicSettings {
     return config;
   }
 
-  public final class AdmissionSource {
+  public final class ReportSettings {
+    public String sortBy() {
+      return config().getString("report.sort-by").trim();
+    }
+    public boolean ascending() {
+      return config().getBoolean("report.ascending");
+    }
+    public String output() {
+      return config().getString("report.output").trim();
+    }
+  }
+
+  public final class AdmissionSettings {
     public List<String> admittors() {
       return config().getStringList("admission.admittors");
     }
@@ -85,46 +105,46 @@ public class BasicSettings {
     }
   }
 
-  public final class FileSource {
+  public final class TraceFileSettings {
     public Path path() {
       return Paths.get(config().getString("file.path"));
     }
     public TraceFormat format() {
-      return TraceFormat.valueOf(config().getString("file.format").toUpperCase());
+      return TraceFormat.valueOf(config().getString("file.format").replace('-', '_').toUpperCase());
     }
   }
 
-  public final class SyntheticSource {
+  public final class SyntheticSettings {
     public String distribution() {
       return config().getString("synthetic.distribution");
     }
     public int events() {
       return config().getInt("synthetic.events");
     }
-    public Counter counter() {
-      return new Counter();
+    public CounterSettings counter() {
+      return new CounterSettings();
     }
-    public Exponential exponential() {
-      return new Exponential();
+    public ExponentialSettings exponential() {
+      return new ExponentialSettings();
     }
-    public Hotspot hotspot() {
-      return new Hotspot();
+    public HotspotSettings hotspot() {
+      return new HotspotSettings();
     }
-    public Uniform uniform() {
-      return new Uniform();
+    public UniformSettings uniform() {
+      return new UniformSettings();
     }
 
-    public final class Counter {
+    public final class CounterSettings {
       public int start() {
         return config().getInt("synthetic.counter.start");
       }
     }
-    public final class Exponential {
+    public final class ExponentialSettings {
       public double mean() {
         return config().getDouble("synthetic.exponential.mean");
       }
     }
-    public final class Hotspot {
+    public final class HotspotSettings {
       public int lowerBound() {
         return config().getInt("synthetic.hotspot.lower-bound");
       }
@@ -138,7 +158,7 @@ public class BasicSettings {
         return config().getDouble("synthetic.hotspot.hot-opn-fraction");
       }
     }
-    public final class Uniform {
+    public final class UniformSettings {
       public int lowerBound() {
         return config().getInt("synthetic.uniform.lower-bound");
       }

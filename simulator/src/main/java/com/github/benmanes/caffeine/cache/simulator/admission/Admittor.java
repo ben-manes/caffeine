@@ -37,4 +37,21 @@ public interface Admittor {
    * @return if the candidate should be added and the victim removed due to eviction
    */
   boolean admit(Object candidateKey, Object victimKey);
+
+  /** Returns an admittor that admits every candidate. */
+  static Admittor always() {
+    return AlwaysAdmit.INSTANCE;
+  }
+}
+
+enum AlwaysAdmit implements Admittor {
+  INSTANCE;
+
+  @Override
+  public void record(Object key) {}
+
+  @Override
+  public boolean admit(Object candidateKey, Object victimKey) {
+    return true;
+  }
 }

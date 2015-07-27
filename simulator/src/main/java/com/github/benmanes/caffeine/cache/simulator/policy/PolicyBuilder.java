@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
-import com.github.benmanes.caffeine.cache.simulator.admission.AlwaysAdmit;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
@@ -49,7 +48,7 @@ public final class PolicyBuilder {
 
   public PolicyBuilder admittor(String admittorType) {
     if (admittorType.equals("None")) {
-      admittor = AlwaysAdmit.INSTANCE;
+      admittor = Admittor.always();
     } else if (admittorType.equals("TinyLfu")) {
       BasicSettings settings = new BasicSettings(config);
       admittor = new TinyLfu(settings.admission().eps(), settings.admission().confidence());
@@ -89,7 +88,7 @@ public final class PolicyBuilder {
   }
 
   private String name() {
-    if (admittor == AlwaysAdmit.INSTANCE) {
+    if (admittor == Admittor.always()) {
       return type;
     }
     return type + "_" + admittor.getClass().getSimpleName();

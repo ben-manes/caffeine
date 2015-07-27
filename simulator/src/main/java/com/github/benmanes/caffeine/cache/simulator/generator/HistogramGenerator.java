@@ -22,10 +22,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * Generate integers according to a histogram distribution.  The histogram
- * buckets are of width one, but the values are multiplied by a block size.
- * Therefore, instead of drawing sizes uniformly at random within each
- * bucket, we always draw the largest value in the current bucket, so the value
+ * Generate integers according to a histogram distribution. The histogram buckets are of width one,
+ * but the values are multiplied by a block size. Therefore, instead of drawing sizes uniformly at
+ * random within each bucket, we always draw the largest value in the current bucket, so the value
  * drawn is always a multiple of block_size.
  *
  * The minimum value this distribution returns is block_size (not zero).
@@ -33,80 +32,81 @@ import java.util.ArrayList;
  * Modified Nov 19 2010 by sears
  *
  * @author snjones
- * https://github.com/brianfrankcooper/YCSB
+ * @author https://github.com/brianfrankcooper/YCSB
  */
 public class HistogramGenerator extends IntegerGenerator {
 
-	long block_size;
-	long[] buckets;
-	long area;
-	long weighted_area = 0;
-	double mean_size = 0;
+  long block_size;
+  long[] buckets;
+  long area;
+  long weighted_area = 0;
+  double mean_size = 0;
 
-	@SuppressWarnings("resource")
+  @SuppressWarnings("resource")
   public HistogramGenerator(String histogramfile) throws IOException {
-	BufferedReader in = new BufferedReader(new FileReader(histogramfile));
-	String str;
-	String[] line;
+    BufferedReader in = new BufferedReader(new FileReader(histogramfile));
+    String str;
+    String[] line;
 
-	ArrayList<Integer> a = new ArrayList<Integer>();
+    ArrayList<Integer> a = new ArrayList<Integer>();
 
-	str = in.readLine();
-	if(str == null) {
-		throw new IOException("Empty input file!\n");
-	}
-	line = str.split("\t");
-	if(line[0].compareTo("BlockSize") != 0) {
-		throw new IOException("First line of histogram is not the BlockSize!\n");
-	}
-	block_size = Integer.parseInt(line[1]);
+    str = in.readLine();
+    if (str == null) {
+      throw new IOException("Empty input file!\n");
+    }
+    line = str.split("\t");
+    if (line[0].compareTo("BlockSize") != 0) {
+      throw new IOException("First line of histogram is not the BlockSize!\n");
+    }
+    block_size = Integer.parseInt(line[1]);
 
-	while((str = in.readLine()) != null){
-		// [0] is the bucket, [1] is the value
-		line = str.split("\t");
+    while ((str = in.readLine()) != null) {
+      // [0] is the bucket, [1] is the value
+      line = str.split("\t");
 
-		a.add(Integer.parseInt(line[0]), Integer.parseInt(line[1]));
-	}
-	buckets = new long[a.size()];
-	for(int i = 0; i < a.size(); i++) {
-		buckets[i] = a.get(i);
-	}
+      a.add(Integer.parseInt(line[0]), Integer.parseInt(line[1]));
+    }
+    buckets = new long[a.size()];
+    for (int i = 0; i < a.size(); i++) {
+      buckets[i] = a.get(i);
+    }
 
-	in.close();
-	init();
-	}
+    in.close();
+    init();
+  }
 
-	public HistogramGenerator(long[] buckets, int block_size) {
-		this.block_size = block_size;
-		this.buckets = buckets;
-		init();
-	}
-	private void init() {
-		for(int i = 0; i < buckets.length; i++) {
-			area += buckets[i];
-			weighted_area = i * buckets[i];
-		}
-		// calculate average file size
-		mean_size = ((double)block_size) * ((double)weighted_area) / (area);
-	}
+  public HistogramGenerator(long[] buckets, int block_size) {
+    this.block_size = block_size;
+    this.buckets = buckets;
+    init();
+  }
 
-	@Override
-	public int nextInt() {
-		int number = Utils.random().nextInt((int)area);
-		int i;
+  private void init() {
+    for (int i = 0; i < buckets.length; i++) {
+      area += buckets[i];
+      weighted_area = i * buckets[i];
+    }
+    // calculate average file size
+    mean_size = ((double) block_size) * ((double) weighted_area) / (area);
+  }
 
-		for(i = 0; i < (buckets.length - 1); i++){
-			number -= buckets[i];
-			if(number <= 0){
-				return (int)((i+1)*block_size);
-			}
-		}
+  @Override
+  public int nextInt() {
+    int number = Utils.random().nextInt((int) area);
+    int i;
 
-		return (int)(i * block_size);
-	}
+    for (i = 0; i < (buckets.length - 1); i++) {
+      number -= buckets[i];
+      if (number <= 0) {
+        return (int) ((i + 1) * block_size);
+      }
+    }
 
-	@Override
-	public double mean() {
-		return mean_size;
-	}
+    return (int) (i * block_size);
+  }
+
+  @Override
+  public double mean() {
+    return mean_size;
+  }
 }

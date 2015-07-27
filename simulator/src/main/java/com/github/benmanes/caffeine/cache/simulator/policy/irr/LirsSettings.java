@@ -28,6 +28,6 @@ final class LirsSettings extends BasicSettings {
   }
 
   public int stackMoveDistance() {
-    return config().getInt("lirs.stack_move_distance");
+    return config().getInt("lirs.stack-move-distance");
   }
 }

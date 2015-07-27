@@ -364,7 +364,7 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
-    });
+    }, context.executor());
     failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
@@ -390,7 +390,7 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
       Awaits.await().untilTrue(done);
       return null;
-    });
+    }, context.executor());
     failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
@@ -659,7 +659,7 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
-    });
+    }, context.executor());
     failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();
@@ -692,7 +692,7 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
-    });
+    }, context.executor());
     failedFuture.whenComplete((r, e) -> done.set(true));
 
     Integer key = context.absentKey();

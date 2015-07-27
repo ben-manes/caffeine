@@ -26,6 +26,8 @@ import com.google.common.collect.Multiset;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TinyLfu implements Admittor {
+  private static final int RANDOM_SEED = 1033096058;
+
   /*
    * TinyLFU is an admission policy that uses a probabilistic frequency of the items to determine
    * if the newly added entry should be retained instead of the eviction policy's victim. This
@@ -41,7 +43,7 @@ public final class TinyLfu implements Admittor {
   public TinyLfu(double epsOfTotalCount, double confidence) {
     // These parameters are best described in...
     // https://github.com/twitter/algebird/blob/develop/algebird-core/src/main/scala/com/twitter/algebird/CountMinSketch.scala
-    this.sketch = new ConservativeAddSketch(epsOfTotalCount, confidence, (int) System.nanoTime());
+    this.sketch = new ConservativeAddSketch(epsOfTotalCount, confidence, RANDOM_SEED);
   }
 
   @Override

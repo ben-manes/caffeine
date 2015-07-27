@@ -15,20 +15,19 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Ticker;
 import com.typesafe.config.Config;
 
 /**
@@ -37,30 +36,31 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SamplingPolicy implements Policy {
+  private static final long RANDOM_SEED = -4962768465676381896L;
+  
   private final PolicyStats policyStats;
   private final Map<Object, Node> data;
   private final EvictionPolicy policy;
   private final Sample sampleStrategy;
-  private final Deque<Integer> free;
   private final Admittor admittor;
+  private final int maximumSize;
   private final int sampleSize;
+  private final Ticker ticker;
+  private final Random random;
   private final Node[] table;
 
   public SamplingPolicy(String name, Admittor admittor, Config config, EvictionPolicy policy) {
     SamplingSettings settings = new SamplingSettings(config);
     this.sampleStrategy = settings.sampleStrategy();
+    this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.sampleSize = settings.sampleSize();
+    this.table = new Node[maximumSize + 1];
+    this.random = new Random(RANDOM_SEED);
+    this.ticker = new CountTicker();
     this.data = new HashMap<>();
     this.admittor = admittor;
     this.policy = policy;
-
-    int overflowSize = settings.maximumSize() + 1;
-    this.free = new ArrayDeque<Integer>(overflowSize);
-    this.table = new Node[overflowSize];
-    for (int i = 0; i < overflowSize; i++) {
-      free.add(i);
-    }
   }
 
   @Override
@@ -71,27 +71,28 @@ public final class SamplingPolicy implements Policy {
   @Override
   public void record(Comparable<Object> key) {
     Node node = data.get(key);
+    long now = ticker.read();
     admittor.record(key);
     if (node == null) {
-      node = new Node(key, free.pop());
+      node = new Node(key, data.size(), now);
       policyStats.recordMiss();
       table[node.index] = node;
       data.put(key, node);
       evict(node);
     } else {
-      node.accessTime = System.nanoTime();
       policyStats.recordHit();
+      node.accessTime = now;
       node.frequency++;
     }
   }
 
   /** Evicts if the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
-    if (free.isEmpty()) {
+    if (data.size() > maximumSize) {
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
-          : sampleStrategy.sample(table, sampleSize);
-      Node victim = policy.select(sample);
+          : sampleStrategy.sample(table, sampleSize, random);
+      Node victim = policy.select(sample, random);
       policyStats.recordEviction();
 
       if (admittor.admit(candidate.key, victim.key)) {
@@ -106,18 +107,16 @@ public final class SamplingPolicy implements Policy {
 
   /** Removes the node from the table and adds the index to the free list. */
   private void removeFromTable(Node node) {
-    int last = (table.length - free.size()) - 1;
+    int last = data.size() - 1;
     table[node.index] = table[last];
     table[node.index].index = node.index;
     table[last] = null;
-    free.push(last);
   }
 
   /** The algorithms to choose a random sample with. */
   public enum Sample {
     GUESS {
-      @Override public <E> List<E> sample(E[] elements, int sampleSize) {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
+      @Override public <E> List<E> sample(E[] elements, int sampleSize, Random random) {
         List<E> sample = new ArrayList<E>(sampleSize);
         for (int i = 0; i < sampleSize; i++) {
           int index = random.nextInt(elements.length);
@@ -127,8 +126,7 @@ public final class SamplingPolicy implements Policy {
       }
     },
     RESERVOIR {
-      @Override public <E> List<E> sample(E[] elements, int sampleSize) {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
+      @Override public <E> List<E> sample(E[] elements, int sampleSize, Random random) {
         List<E> sample = new ArrayList<>(sampleSize);
         int count = 0;
         for (E e : elements) {
@@ -146,14 +144,14 @@ public final class SamplingPolicy implements Policy {
       }
     },
     SHUFFLE {
-      @Override public <E> List<E> sample(E[] elements, int sampleSize) {
+      @Override public <E> List<E> sample(E[] elements, int sampleSize, Random random) {
         List<E> sample = new ArrayList<>(Arrays.asList(elements));
-        Collections.shuffle(sample, ThreadLocalRandom.current());
+        Collections.shuffle(sample, random);
         return sample.subList(0, sampleSize);
       }
     };
 
-    abstract <E> List<E> sample(E[] elements, int sampleSize);
+    abstract <E> List<E> sample(E[] elements, int sampleSize, Random random);
   }
 
   /** The replacement policy. */
@@ -161,7 +159,7 @@ public final class SamplingPolicy implements Policy {
 
     /** Evicts entries based on insertion order. */
     FIFO {
-      @Override Node select(List<Node> sample) {
+      @Override Node select(List<Node> sample, Random random) {
         return sample.stream().min((first, second) ->
             Long.compare(first.insertionTime, second.insertionTime)).get();
       }
@@ -169,7 +167,7 @@ public final class SamplingPolicy implements Policy {
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     LRU {
-      @Override Node select(List<Node> sample) {
+      @Override Node select(List<Node> sample, Random random) {
         return sample.stream().min((first, second) ->
             Long.compare(first.accessTime, second.accessTime)).get();
       }
@@ -177,7 +175,7 @@ public final class SamplingPolicy implements Policy {
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     MRU {
-      @Override Node select(List<Node> sample) {
+      @Override Node select(List<Node> sample, Random random) {
         return sample.stream().max((first, second) ->
             Long.compare(first.accessTime, second.accessTime)).get();
       }
@@ -187,7 +185,7 @@ public final class SamplingPolicy implements Policy {
      * Evicts entries based on how frequently they are used, with the least frequent evicted first.
      */
     LFU {
-      @Override Node select(List<Node> sample) {
+      @Override Node select(List<Node> sample, Random random) {
         return sample.stream().min((first, second) ->
             Long.compare(first.frequency, second.frequency)).get();
       }
@@ -197,7 +195,7 @@ public final class SamplingPolicy implements Policy {
      * Evicts entries based on how frequently they are used, with the most frequent evicted first.
      */
     MFU {
-      @Override Node select(List<Node> sample) {
+      @Override Node select(List<Node> sample, Random random) {
         return sample.stream().max((first, second) ->
             Long.compare(first.frequency, second.frequency)).get();
       }
@@ -205,14 +203,14 @@ public final class SamplingPolicy implements Policy {
 
     /** Evicts a random entry. */
     RANDOM {
-      @Override Node select(List<Node> sample) {
-        int victim = ThreadLocalRandom.current().nextInt(sample.size());
+      @Override Node select(List<Node> sample, Random random) {
+        int victim = random.nextInt(sample.size());
         return sample.get(victim);
       }
     };
 
     /** Determines which node to evict. */
-    abstract Node select(List<Node> sample);
+    abstract Node select(List<Node> sample, Random random);
   }
 
   /** A node on the double-linked list. */
@@ -225,9 +223,9 @@ public final class SamplingPolicy implements Policy {
     private int index;
 
     /** Creates a new node. */
-    public Node(Object key, int index) {
-      this.insertionTime = System.nanoTime();
-      this.accessTime = insertionTime;
+    public Node(Object key, int index, long tick) {
+      this.insertionTime = tick;
+      this.accessTime = tick;
       this.index = index;
       this.key = key;
     }
@@ -238,6 +236,20 @@ public final class SamplingPolicy implements Policy {
           .add("key", key)
           .add("index", index)
           .toString();
+    }
+  }
+
+  /**
+   * An incrementing time source. This is used because calling {@link System#nanoTime()} and
+   * {@link System#currentTimeMillis()} are expensive operations. For sampling purposes the
+   * access time relative to other entries is needed, which a counter serves equally well as
+   * a true time source.
+   */
+  static final class CountTicker extends Ticker {
+    private long tick;
+
+    @Override public long read() {
+      return ++tick;
     }
   }
 }
