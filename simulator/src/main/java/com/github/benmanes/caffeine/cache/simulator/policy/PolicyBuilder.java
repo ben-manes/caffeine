@@ -21,6 +21,8 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy.Frequency;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
@@ -70,7 +72,10 @@ public final class PolicyBuilder {
         }
         throw new IllegalStateException("Unknown policy: " + type);
       case "linked":
-        if (strategy.equalsIgnoreCase("SegmentedLru")) {
+        if (strategy.equalsIgnoreCase("Lfu") || strategy.equalsIgnoreCase("Mfu")) {
+          return new FrequentlyUsedPolicy(name(), admittor,
+              Frequency.valueOf(strategy.toUpperCase()), config);
+        } else if (strategy.equalsIgnoreCase("SegmentedLru")) {
           return new SegmentedLruPolicy(name(), admittor, config);
         }
         return new LinkedPolicy(name(), admittor, config,
