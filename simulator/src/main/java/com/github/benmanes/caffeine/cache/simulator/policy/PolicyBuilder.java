@@ -20,9 +20,9 @@ import static java.util.Objects.requireNonNull;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
+import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy.Frequency;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
@@ -61,20 +61,20 @@ public final class PolicyBuilder {
   }
 
   public Policy build() {
-    String pkg = type.substring(0, type.indexOf('.'));
+    String base = type.substring(0, type.indexOf('.'));
     String strategy = type.substring(type.lastIndexOf('.') + 1);
-    switch (pkg) {
+    switch (base) {
       case "opt":
         if (strategy.equalsIgnoreCase("Clairvoyant")) {
           return new ClairvoyantPolicy(type, config);
         } else if (strategy.equalsIgnoreCase("Unbounded")) {
           return new UnboundedPolicy(type);
         }
-        throw new IllegalStateException("Unknown policy: " + type);
+        break;
       case "linked":
         if (strategy.equalsIgnoreCase("Lfu") || strategy.equalsIgnoreCase("Mfu")) {
-          return new FrequentlyUsedPolicy(name(), admittor,
-              Frequency.valueOf(strategy.toUpperCase()), config);
+          return new FrequentlyUsedPolicy(name(), admittor, config,
+              FrequentlyUsedPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
         } else if (strategy.equalsIgnoreCase("SegmentedLru")) {
           return new SegmentedLruPolicy(name(), admittor, config);
         }
@@ -87,9 +87,10 @@ public final class PolicyBuilder {
         return new TwoQueuePolicy(type, config);
       case "irr":
         return new JackrabbitLirsPolicy(type, config);
-      default:
-        throw new IllegalStateException("Unknown policy: " + type);
+      case "adaptive":
+        return new ArcPolicy(type, config);
     }
+    throw new IllegalStateException("Unknown policy: " + type);
   }
 
   private String name() {

@@ -37,7 +37,7 @@ import com.typesafe.config.Config;
  */
 public final class SamplingPolicy implements Policy {
   private static final long RANDOM_SEED = -4962768465676381896L;
-  
+
   private final PolicyStats policyStats;
   private final Map<Object, Node> data;
   private final EvictionPolicy policy;

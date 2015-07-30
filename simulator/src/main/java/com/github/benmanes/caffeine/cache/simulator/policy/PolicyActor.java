@@ -40,7 +40,7 @@ public final class PolicyActor extends UntypedActor
   }
 
   @Override
-  public void onReceive(Object msg) throws Exception {
+  public void onReceive(Object msg) {
     if (msg instanceof List) {
       @SuppressWarnings("unchecked")
       List<Comparable<Object>> events = (List<Comparable<Object>>) msg;

@@ -34,19 +34,19 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class FrequentlyUsedPolicy implements Policy {
-  public enum Frequency { LFU, MFU }
+  public enum EvictionPolicy { LFU, MFU }
 
   private final PolicyStats policyStats;
   private final Map<Object, Node> data;
+  private final EvictionPolicy policy;
+  private final FrequencyNode freq0;
   private final Admittor admittor;
   private final int maximumSize;
 
-  private final FrequencyNode freq0;
-  private final Frequency frequency;
-
-  public FrequentlyUsedPolicy(String name, Admittor admittor, Frequency frequency, Config config) {
+  public FrequentlyUsedPolicy(String name, Admittor admittor,
+      Config config, EvictionPolicy frequency) {
     BasicSettings settings = new BasicSettings(config);
-    this.frequency = requireNonNull(frequency);
+    this.policy = requireNonNull(frequency);
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.admittor = requireNonNull(admittor);
@@ -118,7 +118,7 @@ public final class FrequentlyUsedPolicy implements Policy {
    * entries having a high frequency from the distant past.
    */
   Node nextVictim(Node candidate) {
-    if (frequency == Frequency.MFU) {
+    if (policy == EvictionPolicy.MFU) {
       // highest, never the candidate
       return freq0.prev.nextNode.next;
     }
@@ -185,7 +185,7 @@ public final class FrequentlyUsedPolicy implements Policy {
     }
   }
 
-  /** A cache entries for a frequency count. */
+  /** A cache entry on the frequency node's chain. */
   static final class Node {
     private final Object key;
 
