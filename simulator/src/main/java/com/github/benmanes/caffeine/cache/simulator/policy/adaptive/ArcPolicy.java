@@ -30,7 +30,7 @@ import com.typesafe.config.Config;
 /**
  * Adaptive Replacement Cache. This algorithm uses a queue for items that are seen once (T1), a
  * queue for items seen multiple times (T2), and non-resident queues for evicted items that are
- * being monitored (B1, B2). The maximum size of the IN and OUT queues is adjusted dynamically based
+ * being monitored (B1, B2). The maximum size of the T1 and T2 queues is adjusted dynamically based
  * on the workload patterns and effectiveness of the cache.
  * <p>
  * This implementation is based on the psuedo code provided by the authors in their paper

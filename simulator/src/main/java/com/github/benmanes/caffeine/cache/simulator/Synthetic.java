@@ -45,7 +45,7 @@ public final class Synthetic {
         return counter(settings.synthetic().counter().start(), items);
       case "exponential":
         return exponential(settings.synthetic().exponential().mean(), items);
-      case "hotpot":
+      case "hotspot":
         HotspotSettings hotspot = settings.synthetic().hotspot();
         return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
             hotspot.hotOpnFraction(), hotspot.hotsetFraction(), items);

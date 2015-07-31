@@ -19,7 +19,6 @@ import org.apache.jackrabbit.oak.cache.CacheLIRS;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.typesafe.config.Config;
 
@@ -37,24 +36,17 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JackrabbitLirsPolicy implements Policy {
-  private final ThreadLocal<Object> computed = new ThreadLocal<>();
   private final LoadingCache<Object, Object> cache;
   private final PolicyStats policyStats;
 
   public JackrabbitLirsPolicy(String name, Config config) {
     LirsSettings settings = new LirsSettings(config);
     this.policyStats = new PolicyStats(name);
-    this.cache = new CacheLIRS.Builder<>()
+    this.cache = CacheLIRS.newBuilder()
         .recordStats()
-        .segmentCount(1)
         .maximumSize(settings.maximumSize())
         .stackMoveDistance(settings.stackMoveDistance())
-        .build(new CacheLoader<Object, Object>() {
-          @Override public Object load(Object key) {
-            computed.set(key);
-            return key;
-          }
-        });
+        .build();
   }
 
   @Override
@@ -65,12 +57,12 @@ public final class JackrabbitLirsPolicy implements Policy {
 
   @Override
   public void record(Comparable<Object> key) {
-    cache.getUnchecked(key);
-    if (computed.get() == null) {
-      policyStats.recordHit();
-    } else {
-      computed.set(null);
+    Object value = cache.getUnchecked(key);
+    if (value == null) {
+      cache.put(key, key);
       policyStats.recordMiss();
+    } else {
+      policyStats.recordHit();
     }
   }
 }

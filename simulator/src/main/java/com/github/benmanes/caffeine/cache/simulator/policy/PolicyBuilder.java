@@ -21,6 +21,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.irr.InfinispanLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
@@ -29,6 +30,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.victim.VictimPolicy;
 import com.typesafe.config.Config;
 
 /**
@@ -83,10 +85,16 @@ public final class PolicyBuilder {
       case "sampled":
         return new SamplingPolicy(name(), admittor, config,
             SamplingPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
+      case "victim":
+        return new VictimPolicy(type, config);
       case "two-queue":
         return new TwoQueuePolicy(type, config);
       case "irr":
-        return new JackrabbitLirsPolicy(type, config);
+        if (strategy.equalsIgnoreCase("JackrabbitLirs")) {
+          return new JackrabbitLirsPolicy(type, config);
+        } else {
+          return new InfinispanLirsPolicy(type, config);
+        }
       case "adaptive":
         return new ArcPolicy(type, config);
     }

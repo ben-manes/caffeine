@@ -16,6 +16,7 @@ dependencies {
   compile libraries.univocity_parsers
   compile benchmark_libraries.slf4j_nop
   compile benchmark_libraries.jackrabbit
+  compile benchmark_libraries.infinispan
 
   testCompile test_libraries.jimfs
   testCompile test_libraries.testng
