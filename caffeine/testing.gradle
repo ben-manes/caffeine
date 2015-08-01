@@ -34,10 +34,10 @@ testNames.each { testName ->
       def strength = labels.collect{ it.split('Keys|Values') }.flatten()
       systemProperties['keys'] = strength[0]
       systemProperties['values'] = strength[1]
+      systemProperties['compute'] = isAsync ? 'async' : 'sync'
+      systemProperties['stats'] = hasStats ? 'enabled' : 'disabled'
     }
     systemProperties['implementation'] = implementation
-    systemProperties['compute'] = isAsync ? 'async' : 'sync'
-    systemProperties['stats'] = hasStats ? 'enabled' : 'disabled'
 
     // ensure we don't overwrite default report directories used by 'test' task
     reports.html.destination = "${buildDir}/reports/${name}"

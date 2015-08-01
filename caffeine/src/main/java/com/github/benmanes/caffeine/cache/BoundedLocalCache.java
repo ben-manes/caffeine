@@ -835,7 +835,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @Override
   public boolean containsKey(Object key) {
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
-    return (node != null) && !hasExpired(node, expirationTicker().read());
+    return (node != null) && (node.getValue() != null)
+        && !hasExpired(node, expirationTicker().read());
   }
 
   @Override
