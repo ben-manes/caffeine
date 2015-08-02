@@ -36,7 +36,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class VictimPolicy implements Policy {
+public final class VictimLruPolicy implements Policy {
   private final Map<Object, Node> victimData;
   private final PolicyStats policyStats;
   private final PrimaryMap primaryData;
@@ -45,7 +45,7 @@ public final class VictimPolicy implements Policy {
   private final int maxVictim;
   private final int maxMain;
 
-  public VictimPolicy(String name, Config config) {
+  public VictimLruPolicy(String name, Config config) {
     VictimSettings settings = new VictimSettings(config);
     this.admittor = new TinyLfu(settings.admission().eps(), settings.admission().confidence());
     this.maxVictim = (int) (settings.maximumSize() * settings.percentVictim());
@@ -175,7 +175,7 @@ public final class VictimPolicy implements Policy {
       super(config);
     }
     public double percentVictim() {
-      return config().getDouble("victim.percent-victim");
+      return config().getDouble("victim-lru.percent-victim");
     }
   }
 }

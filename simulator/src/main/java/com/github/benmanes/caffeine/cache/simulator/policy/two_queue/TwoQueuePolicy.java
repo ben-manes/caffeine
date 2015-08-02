@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -235,6 +236,21 @@ public final class TwoQueuePolicy implements Policy {
           .add("key", key)
           .add("type", type)
           .toString();
+    }
+  }
+
+  static final class TwoQueueSettings extends BasicSettings {
+
+    public TwoQueueSettings(Config config) {
+      super(config);
+    }
+
+    public double percentIn() {
+      return config().getDouble("two-queue.percent-in");
+    }
+
+    public double percentOut() {
+      return config().getDouble("two-queue.percent-out");
     }
   }
 }

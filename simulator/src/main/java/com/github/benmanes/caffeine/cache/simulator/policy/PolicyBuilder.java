@@ -29,8 +29,10 @@ import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPo
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.victim.VictimPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.victim.VictimLruPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.victim.VictimTuQueuePolicy;
 import com.typesafe.config.Config;
 
 /**
@@ -86,9 +88,19 @@ public final class PolicyBuilder {
         return new SamplingPolicy(name(), admittor, config,
             SamplingPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
       case "victim":
-        return new VictimPolicy(type, config);
+        if (strategy.equalsIgnoreCase("Lru")) {
+          return new VictimLruPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("TuQueue")) {
+          return new VictimTuQueuePolicy(type, config);
+        }
+        break;
       case "two-queue":
-        return new TwoQueuePolicy(type, config);
+        if (strategy.equalsIgnoreCase("TuQueue")) {
+          return new TuQueuePolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("TwoQueue")) {
+          return new TwoQueuePolicy(type, config);
+        }
+        break;
       case "irr":
         if (strategy.equalsIgnoreCase("JackrabbitLirs")) {
           return new JackrabbitLirsPolicy(type, config);

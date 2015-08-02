@@ -27,12 +27,11 @@ import com.google.common.base.Stopwatch;
  */
 public final class PolicyStats {
   private final String name;
+  private final Stopwatch stopwatch;
 
   private long hitCount;
   private long missCount;
   private long evictionCount;
-
-  private Stopwatch stopwatch;
 
   public PolicyStats(String name) {
     this.name = requireNonNull(name);

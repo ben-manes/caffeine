@@ -20,9 +20,9 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.jooq.lambda.Seq;
@@ -41,12 +41,12 @@ import com.jakewharton.fliptables.FlipTable;
 public final class TextReport {
   private static final String[] HEADERS = { "Policy", "Hit rate", "Requests", "Evictions", "Time"};
 
-  private final Set<PolicyStats> results;
+  private final List<PolicyStats> results;
   private final BasicSettings settings;
 
   public TextReport(BasicSettings settings) {
     this.settings = requireNonNull(settings);
-    results = new TreeSet<>(settings.report().ascending() ? comparator() : comparator().reversed());
+    results = new ArrayList<>();
   }
 
   /** Adds the result of a policy simulation. */
@@ -68,6 +68,7 @@ public final class TextReport {
 
   /** Assembles an aggregated report. */
   private String assemble() {
+    results.sort(comparator());
     String[][] data = new String[results.size()][HEADERS.length];
     Seq.seq(results).zipWithIndex().forEach(statsAndIndex -> {
       PolicyStats policyStats = statsAndIndex.v1;
@@ -85,20 +86,28 @@ public final class TextReport {
 
   /** Returns a comparator that sorts by the specified column. */
   private Comparator<PolicyStats> comparator() {
+    Comparator<PolicyStats> comparator;
     switch (settings.report().sortBy().toLowerCase()) {
       case "policy":
-        return (first, second) -> first.name().compareTo(second.name());
+        comparator = (first, second) -> first.name().compareTo(second.name());
+        break;
       case "hit rate":
-        return (first, second) -> Double.compare(first.hitRate(), second.hitRate());
+        comparator = (first, second) -> Double.compare(first.hitRate(), second.hitRate());
+        break;
       case "requests":
-        return (first, second) -> Long.compare(first.requestCount(), second.requestCount());
+        comparator = (first, second) -> Long.compare(first.requestCount(), second.requestCount());
+        break;
       case "evictions":
-        return (first, second) -> Long.compare(first.evictionCount(), second.evictionCount());
+        comparator = (first, second) -> Long.compare(first.evictionCount(), second.evictionCount());
+        break;
       case "time":
-        return (first, second) -> Long.compare(first.stopwatch().elapsed(TimeUnit.NANOSECONDS),
+        comparator = (first, second) -> Long.compare(
+            first.stopwatch().elapsed(TimeUnit.NANOSECONDS),
             second.stopwatch().elapsed(TimeUnit.NANOSECONDS));
+        break;
       default:
         throw new IllegalArgumentException("Unknown sort order: " + settings.report().sortBy());
     }
+    return settings.report().ascending() ? comparator : comparator.reversed();
   }
 }
