@@ -252,7 +252,6 @@ public final class CarPolicy implements Policy {
     Node next;
     QueueType type;
     boolean marked;
-    boolean sentinel;
 
     Node() {
       this.key = null;

@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.InfinispanLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
@@ -113,6 +114,8 @@ public final class PolicyBuilder {
           return new ArcPolicy(type, config);
         } else if (strategy.equalsIgnoreCase("CAR")) {
           return new CarPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("CART")) {
+          return new CartPolicy(type, config);
         }
         break;
     }
