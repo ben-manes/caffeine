@@ -33,7 +33,7 @@ import com.typesafe.config.Config;
  * being monitored (B1, B2). The maximum size of the T1 and T2 queues is adjusted dynamically based
  * on the workload patterns and effectiveness of the cache.
  * <p>
- * This implementation is based on the psuedo code provided by the authors in their paper
+ * This implementation is based on the pseudo code provided by the authors in their paper
  * <a href="http://www.cs.cmu.edu/~15-440/READINGS/megiddo-computer2004.pdf">Outperforming LRU with
  * an Adaptive Replacement Cache Algorithm</a> and is further described in their paper,
  * <a href="https://www.usenix.org/event/fast03/tech/full_papers/megiddo/megiddo.pdf">ARC: A
