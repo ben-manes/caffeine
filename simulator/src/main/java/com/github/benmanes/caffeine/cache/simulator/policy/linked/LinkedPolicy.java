@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -72,19 +74,15 @@ public final class LinkedPolicy implements Policy {
 
   /** Evicts while the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
-    while (data.size() > maximumSize) {
-      Node victim = sentinel.next;
-      if (victim == sentinel) {
-        throw new IllegalStateException();
-      } else if (policy.onEvict(victim)) {
-        policyStats.recordEviction();
+    if (data.size() > maximumSize) {
+      Node victim = policy.findVictim(sentinel);
+      policyStats.recordEviction();
 
-        boolean admit = admittor.admit(candidate.key, victim.key);
-        if (admit) {
-          evictEntry(victim);
-        } else {
-          evictEntry(candidate);
-        }
+      boolean admit = admittor.admit(candidate.key, victim.key);
+      if (admit) {
+        evictEntry(victim);
+      } else {
+        evictEntry(candidate);
       }
     }
   }
@@ -102,8 +100,8 @@ public final class LinkedPolicy implements Policy {
       @Override void onAccess(Node node) {
         // do nothing
       }
-      @Override boolean onEvict(Node node) {
-        return true;
+      @Override Node findVictim(Node setinel) {
+        return setinel.next;
       }
     },
 
@@ -115,23 +113,27 @@ public final class LinkedPolicy implements Policy {
       @Override void onAccess(Node node) {
         node.marked = true;
       }
-      @Override boolean onEvict(Node node) {
-        if (node.marked) {
-          node.moveToTail();
-          node.marked = false;
-          return false;
+      @Override Node findVictim(Node setinel) {
+        for (;;) {
+          Node node = setinel.next;
+          if (node.marked) {
+            node.moveToTail();
+            node.marked = false;
+          } else {
+            return node;
+          }
         }
-        return true;
       }
     },
 
     /** Evicts entries based on how recently they are used, with the most recent evicted first. */
     MRU {
       @Override void onAccess(Node node) {
-        node.moveToHead();
+        node.moveToTail();
       }
-      @Override boolean onEvict(Node node) {
-        return true;
+      @Override Node findVictim(Node setinel) {
+        // Skip over the added entry
+        return setinel.prev.prev;
       }
     },
 
@@ -140,26 +142,24 @@ public final class LinkedPolicy implements Policy {
       @Override void onAccess(Node node) {
         node.moveToTail();
       }
-      @Override boolean onEvict(Node node) {
-        return true;
+      @Override Node findVictim(Node setinel) {
+        return setinel.next;
       }
     };
 
     /** Performs any operations required by the policy after a node was successfully retrieved. */
     abstract void onAccess(Node node);
 
-    /** Determines whether to evict the node at the head of the list. */
-    abstract boolean onEvict(Node node);
+    /** Returns the victim entry to evict. */
+    abstract Node findVictim(Node sentinel);
   }
 
   /** A node on the double-linked list. */
   static final class Node {
-    private static final Node UNLINKED = new Node();
-
     private final Node sentinel;
-    private final Object key;
 
     private boolean marked;
+    private Object key;
     private Node prev;
     private Node next;
 
@@ -173,8 +173,6 @@ public final class LinkedPolicy implements Policy {
 
     /** Creates a new, unlinked node. */
     public Node(Object key, Node sentinel) {
-      this.next = UNLINKED;
-      this.prev = UNLINKED;
       this.sentinel = sentinel;
       this.key = key;
     }
@@ -192,20 +190,20 @@ public final class LinkedPolicy implements Policy {
     public void remove() {
       prev.next = next;
       next.prev = prev;
-      next = UNLINKED; // mark as unlinked
+      prev = next = null;
+      key = null;
     }
 
     /** Moves the node to the head. */
     public void moveToHead() {
-      if (isHead() || isUnlinked()) {
-        return;
-      }
+      requireNonNull(key);
+
       // unlink
       prev.next = next;
       next.prev = prev;
 
       // link
-      next = sentinel.next; // ordered for isHead()
+      next = sentinel.next;
       prev = sentinel;
       sentinel.next = this;
       next.prev = this;
@@ -213,39 +211,23 @@ public final class LinkedPolicy implements Policy {
 
     /** Moves the node to the tail. */
     public void moveToTail() {
-      if (isTail() || isUnlinked()) {
-        return;
-      }
+      requireNonNull(key);
+
       // unlink
       prev.next = next;
       next.prev = prev;
 
       // link
-      next = sentinel; // ordered for isTail()
+      next = sentinel;
       prev = sentinel.prev;
       sentinel.prev = this;
       prev.next = this;
     }
 
-    /** Checks whether the node is linked on the list chain. */
-    public boolean isUnlinked() {
-      return (next == UNLINKED);
-    }
-
-    /** Checks whether the node is the first linked on the list chain. */
-    public boolean isHead() {
-      return (prev == sentinel);
-    }
-
-    /** Checks whether the node is the last linked on the list chain. */
-    public boolean isTail() {
-      return (next == sentinel);
-    }
-
     @Override
     public String toString() {
       return MoreObjects.toStringHelper(this)
-          .add("key'", key)
+          .add("key", key)
           .add("marked", marked)
           .toString();
     }

@@ -91,7 +91,7 @@ public final class SamplingPolicy implements Policy {
     if (data.size() > maximumSize) {
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
-          : sampleStrategy.sample(table, sampleSize, random);
+          : sampleStrategy.sample(table, candidate, sampleSize, random);
       Node victim = policy.select(sample, random);
       policyStats.recordEviction();
 
@@ -116,20 +116,26 @@ public final class SamplingPolicy implements Policy {
   /** The algorithms to choose a random sample with. */
   public enum Sample {
     GUESS {
-      @Override public <E> List<E> sample(E[] elements, int sampleSize, Random random) {
+      @Override public <E> List<E> sample(E[] elements, E candidate, int sampleSize, Random random) {
         List<E> sample = new ArrayList<E>(sampleSize);
         for (int i = 0; i < sampleSize; i++) {
           int index = random.nextInt(elements.length);
+          if (elements[index] == candidate) {
+            i--; // try again
+          }
           sample.add(elements[index]);
         }
         return sample;
       }
     },
     RESERVOIR {
-      @Override public <E> List<E> sample(E[] elements, int sampleSize, Random random) {
+      @Override public <E> List<E> sample(E[] elements, E candidate, int sampleSize, Random random) {
         List<E> sample = new ArrayList<>(sampleSize);
         int count = 0;
         for (E e : elements) {
+          if (e == candidate) {
+            continue;
+          }
           count++;
           if (sample.size() <= sampleSize) {
             sample.add(e);
@@ -144,14 +150,15 @@ public final class SamplingPolicy implements Policy {
       }
     },
     SHUFFLE {
-      @Override public <E> List<E> sample(E[] elements, int sampleSize, Random random) {
+      @Override public <E> List<E> sample(E[] elements, E candidate, int sampleSize, Random random) {
         List<E> sample = new ArrayList<>(Arrays.asList(elements));
         Collections.shuffle(sample, random);
+        sample.remove(candidate);
         return sample.subList(0, sampleSize);
       }
     };
 
-    abstract <E> List<E> sample(E[] elements, int sampleSize, Random random);
+    abstract <E> List<E> sample(E[] elements, E candidate, int sampleSize, Random random);
   }
 
   /** The replacement policy. */

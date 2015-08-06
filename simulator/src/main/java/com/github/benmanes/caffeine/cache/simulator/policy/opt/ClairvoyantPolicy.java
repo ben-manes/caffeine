@@ -18,9 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Queue;
-import java.util.TreeSet;
 import java.util.function.Function;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -30,6 +28,8 @@ import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
 import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
+import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 
 /**
  * Bélády's optimal page replacement policy. The upper bound of the hit rate is estimated by
@@ -42,8 +42,8 @@ public final class ClairvoyantPolicy implements Policy {
 
   private final Map<Object, IntPriorityQueue> accessTimes;
   private final Queue<Comparable<Object>> future;
-  private final NavigableSet<Access> data;
   private final PolicyStats policyStats;
+  private final IntSortedSet data;
   private final int maximumSize;
 
   private int tick;
@@ -54,7 +54,7 @@ public final class ClairvoyantPolicy implements Policy {
     policyStats = new PolicyStats(name);
     accessTimes = new HashMap<>();
     future = new ArrayDeque<>();
-    data = new TreeSet<>();
+    data = new IntRBTreeSet();
   }
 
   @Override
@@ -83,9 +83,13 @@ public final class ClairvoyantPolicy implements Policy {
     IntPriorityQueue times = accessTimes.get(key);
 
     int lastAccess = times.dequeueInt();
-    int nextAccess = times.isEmpty() ? Integer.MAX_VALUE : times.firstInt();
-    boolean found = data.remove(new Access(key, lastAccess));
-    data.add(new Access(key, nextAccess));
+    boolean found = data.remove(lastAccess);
+
+    if (times.isEmpty()) {
+      accessTimes.remove(key);
+    } else {
+      data.add(times.firstInt());
+    }
     if (found) {
       policyStats.recordHit();
     } else {
@@ -98,23 +102,7 @@ public final class ClairvoyantPolicy implements Policy {
 
   /** Removes the entry whose next access is farthest away into the future. */
   private void evict() {
-    data.pollLast();
+    data.rem(data.lastInt());
     policyStats.recordEviction();
-  }
-
-  private static final class Access implements Comparable<Access> {
-    final Comparable<Object> key;
-    final int accessTime;
-
-    Access(Comparable<Object> key, int accessTime) {
-      this.accessTime = accessTime;
-      this.key = key;
-    }
-
-    @Override
-    public int compareTo(Access accessKey) {
-      int result = Integer.compare(accessTime, accessKey.accessTime);
-      return (result == 0) ? key.compareTo(accessKey.key) : result;
-    }
   }
 }
