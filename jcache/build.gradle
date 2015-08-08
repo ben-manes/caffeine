@@ -28,19 +28,12 @@ bundle {
   instruction 'Export-Package', 'com.github.benmanes.caffeine.jcache.*'
 }
 
+tasks.withType(Javadoc) {
+  options.addStringOption('Xdoclint:none', '-quiet')
+}
+
 test {
   useTestNG()
-}
-
-// Executed separately to minimize races due to poor test practices
-// https://github.com/jsr107/jsr107tck/issues/78
-task testJCacheLoader(type: Test) {
-  include '**/CacheLoader*'
-}
-
-task testCompatibilityKit(type: Test, description: 'Runs the JCache TCK') {
-  dependsOn(testJCacheLoader)
-  exclude '**/CacheLoader*'
 }
 
 task unzipTestKit(type: Copy, group: 'Build', description: 'Unzips the JCache TCK') {
@@ -48,14 +41,15 @@ task unzipTestKit(type: Copy, group: 'Build', description: 'Unzips the JCache TC
   into { "${buildDir}/tck" }
 }
 
-[testJCacheLoader, testCompatibilityKit]*.with {
-  group = 'Build'
-
-  check.dependsOn(it)
+task testCompatibilityKit(type: Test, group: 'Build', description: 'Runs the JCache TCK') {
   dependsOn(unzipTestKit)
+  onlyIf { compileTestJava.didWork || unzipTestKit.didWork }
 
   useJUnit()
   testClassesDir = file("${buildDir}/tck")
+  reports.html.destination = "${buildDir}/reports/${name}"
+  reports.junitXml.destination = "${buildDir}/${name}-results"
+  binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
 
   def pkg = 'com.github.benmanes.caffeine.jcache'
   systemProperty 'java.net.preferIPv4Stack', 'true'
@@ -66,3 +60,4 @@ task unzipTestKit(type: Copy, group: 'Build', description: 'Unzips the JCache TC
   systemProperty 'org.jsr107.tck.management.agentId', 'CaffeineMBeanServer'
   systemProperty 'javax.management.builder.initial', "${pkg}.management.JCacheMBeanServerBuilder"
 }
+check.dependsOn(testCompatibilityKit)

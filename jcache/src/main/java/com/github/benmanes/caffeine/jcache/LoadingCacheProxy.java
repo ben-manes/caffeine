@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import javax.cache.Cache;
@@ -43,11 +43,11 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, Expirable<V>> cache;
 
-  public LoadingCacheProxy(String name, CacheManager cacheManager,
+  public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,
       ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
-    super(name, cacheManager, configuration, cache, dispatcher,
+    super(name, executor, cacheManager, configuration, cache, dispatcher,
         Optional.of(cacheLoader), expiry, ticker, statistics);
     this.cache = cache;
   }
@@ -114,7 +114,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         ? NullCompletionListener.INSTANCE
         : completionListener;
 
-    ForkJoinPool.commonPool().execute(() -> {
+    executor.execute(() -> {
       try {
         if (replaceExistingValues) {
           int[] ignored = { 0 };

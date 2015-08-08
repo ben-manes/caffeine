@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
@@ -44,6 +45,11 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class CacheFactory {
+  // Avoid asynchronous executions due to the TCK's poor test practices
+  // https://github.com/jsr107/jsr107tck/issues/78
+  private static final boolean USE_DIRECT_EXECUTOR =
+      System.getProperties().containsKey("org.jsr107.tck.management.agentId");
+
   private final Config rootConfig;
   private final CacheManager cacheManager;
 
@@ -100,6 +106,7 @@ final class CacheFactory {
   private final class Builder<K, V> {
     final Ticker ticker;
     final String cacheName;
+    final Executor executor;
     final ExpiryPolicy expiry;
     final EventDispatcher<K, V> dispatcher;
     final JCacheStatisticsMXBean statistics;
@@ -116,9 +123,10 @@ final class CacheFactory {
       this.caffeine = Caffeine.newBuilder();
       this.statistics = new JCacheStatisticsMXBean();
       this.expiry = config.getExpiryPolicyFactory().create();
-      this.dispatcher = new EventDispatcher<>(ForkJoinPool.commonPool());
+      this.executor = USE_DIRECT_EXECUTOR ? Runnable::run : ForkJoinPool.commonPool();
+      this.dispatcher = new EventDispatcher<>(executor);
 
-      caffeine.name(cacheName::toString);
+      caffeine.name(cacheName::toString).executor(executor);
       if (config.getCacheLoaderFactory() != null) {
         cacheLoader = config.getCacheLoaderFactory().create();
       }
@@ -147,7 +155,7 @@ final class CacheFactory {
 
     /** Creates a cache that does not read through on a cache miss. */
     private CacheProxy<K, V> newCacheProxy() {
-      return new CacheProxy<K, V>(cacheName, cacheManager, config, caffeine.build(),
+      return new CacheProxy<K, V>(cacheName, executor, cacheManager, config, caffeine.build(),
           dispatcher, Optional.ofNullable(cacheLoader), expiry, ticker, statistics);
     }
 
@@ -155,8 +163,8 @@ final class CacheFactory {
     private CacheProxy<K, V> newLoadingCacheProxy() {
       JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
           cacheLoader, dispatcher, expiry, ticker, statistics);
-      CacheProxy<K, V> cache = new LoadingCacheProxy<K, V>(cacheName, cacheManager, config,
-          caffeine.build(adapter), dispatcher, cacheLoader, expiry, ticker, statistics);
+      CacheProxy<K, V> cache = new LoadingCacheProxy<K, V>(cacheName, executor, cacheManager,
+          config, caffeine.build(adapter), dispatcher, cacheLoader, expiry, ticker, statistics);
       adapter.setCache(cache);
       return cache;
     }

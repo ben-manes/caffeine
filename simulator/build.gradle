@@ -37,6 +37,6 @@ tasks.withType(Javadoc) {
 
 run {
   systemProperties System.properties.findAll { 
-    it.getKey().startsWith("akka") || it.getKey().startsWith("simulator")
+    it.getKey().startsWith('akka') || it.getKey().startsWith('simulator')
   }
 }

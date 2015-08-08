@@ -27,7 +27,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -79,11 +79,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final JCacheStatisticsMXBean statistics;
   protected final EventDispatcher<K, V> dispatcher;
   protected final ExpiryPolicy expiry;
+  protected final Executor executor;
   protected final Ticker ticker;
 
   private volatile boolean closed;
 
-  public CacheProxy(String name, CacheManager cacheManager,
+  public CacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, Optional<CacheLoader<K, V>> cacheLoader,
@@ -93,6 +94,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     this.cacheLoader = requireNonNull(cacheLoader);
     this.dispatcher = requireNonNull(dispatcher);
     this.statistics = requireNonNull(statistics);
+    this.executor = requireNonNull(executor);
     this.expiry = requireNonNull(expiry);
     this.ticker = requireNonNull(ticker);
     this.cache = requireNonNull(cache);
@@ -207,7 +209,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       listener.onCompletion();
       return;
     }
-    ForkJoinPool.commonPool().execute(() -> {
+    executor.execute(() -> {
       try {
         if (replaceExistingValues) {
           loadAllAndReplaceExisting(keys);
