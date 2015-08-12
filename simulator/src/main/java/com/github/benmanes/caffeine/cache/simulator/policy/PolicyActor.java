@@ -49,6 +49,8 @@ public final class PolicyActor extends UntypedActor
       policy.finished();
       getSender().tell(policy.stats(), ActorRef.noSender());
       getContext().stop(getSelf());
+    } else if (msg == Message.ERROR) {
+      getContext().stop(getSelf());
     } else {
       context().system().log().error("Invalid message: " + msg);
     }
@@ -60,6 +62,7 @@ public final class PolicyActor extends UntypedActor
       policy.record(o);
     } catch (Exception e) {
       context().system().log().error(e, "");
+      getSender().tell(Message.ERROR, ActorRef.noSender());
     } finally {
       policy.stats().stopwatch().stop();
     }

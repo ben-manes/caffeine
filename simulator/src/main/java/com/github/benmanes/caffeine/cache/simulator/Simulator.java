@@ -61,7 +61,7 @@ import akka.routing.Router;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Simulator extends UntypedActor {
-  public enum Message { START, FINISH }
+  public enum Message { START, FINISH, ERROR }
 
   private final BasicSettings settings;
   private final Stopwatch stopwatch;
@@ -89,6 +89,8 @@ public final class Simulator extends UntypedActor {
   public void onReceive(Object msg) throws IOException {
     if (msg == Message.START) {
       broadcast();
+    } else if (msg == Message.ERROR) {
+      getContext().stop(getSelf());
     } else if (msg instanceof PolicyStats) {
       report.add((PolicyStats) msg);
       if (--remaining == 0) {
@@ -105,8 +107,11 @@ public final class Simulator extends UntypedActor {
       Iterators.partition(events.iterator(), batchSize).forEachRemaining(batch -> {
         router.route(batch, getSelf());
       });
-    } finally {
       router.route(Message.FINISH, getSelf());
+    } catch (Exception e) {
+      router.route(Message.ERROR, getSelf());
+      context().system().log().error(e, "");
+      getContext().stop(getSelf());
     }
   }
 

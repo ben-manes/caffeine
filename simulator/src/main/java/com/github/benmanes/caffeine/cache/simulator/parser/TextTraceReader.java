@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedReader;
@@ -61,7 +62,7 @@ public abstract class TextTraceReader<E extends Comparable<E>> implements TraceR
       return filePath;
     }
     URL url = getClass().getResource(filePath.getFileName().toFile().getName());
-    requireNonNull(url, "Could not find file: " + filePath);
+    checkArgument(url != null, "Could not find file: " + filePath);
     return Paths.get(url.getFile());
   }
 }
