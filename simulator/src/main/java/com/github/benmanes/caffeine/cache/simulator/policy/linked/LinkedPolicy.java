@@ -100,8 +100,8 @@ public final class LinkedPolicy implements Policy {
       @Override void onAccess(Node node) {
         // do nothing
       }
-      @Override Node findVictim(Node setinel) {
-        return setinel.next;
+      @Override Node findVictim(Node sentinel) {
+        return sentinel.next;
       }
     },
 
@@ -113,9 +113,9 @@ public final class LinkedPolicy implements Policy {
       @Override void onAccess(Node node) {
         node.marked = true;
       }
-      @Override Node findVictim(Node setinel) {
+      @Override Node findVictim(Node sentinel) {
         for (;;) {
-          Node node = setinel.next;
+          Node node = sentinel.next;
           if (node.marked) {
             node.moveToTail();
             node.marked = false;
@@ -131,9 +131,9 @@ public final class LinkedPolicy implements Policy {
       @Override void onAccess(Node node) {
         node.moveToTail();
       }
-      @Override Node findVictim(Node setinel) {
+      @Override Node findVictim(Node sentinel) {
         // Skip over the added entry
-        return setinel.prev.prev;
+        return sentinel.prev.prev;
       }
     },
 
@@ -142,8 +142,8 @@ public final class LinkedPolicy implements Policy {
       @Override void onAccess(Node node) {
         node.moveToTail();
       }
-      @Override Node findVictim(Node setinel) {
-        return setinel.next;
+      @Override Node findVictim(Node sentinel) {
+        return sentinel.next;
       }
     };
 

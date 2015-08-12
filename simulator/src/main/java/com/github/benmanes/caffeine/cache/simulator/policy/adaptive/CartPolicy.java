@@ -108,14 +108,14 @@ public final class CartPolicy implements Policy {
     // if (x is not in B1 ∪ B2) then
     //   Insert x at the tail of T1.
     //   Reset the page reference bit of x
-    //   Set filter bit of x to “S”
+    //   Set filter bit of x to "S"
     //   nS = nS + 1 /* history hit */
     // else if (x is in B1) then
     //   Adapt: Increase the target size for the list T1 as: p = min{p + max{1, nS / |B1|}, c}
     //   Move x to the tail of T1
     //   Reset the page reference bit of x
     //   Set nL = nL + 1.
-    //   Set type of x to “L”.
+    //   Set type of x to "L".
     // /* history hit */
     // else /* x must be in B2 */
     //   Adapt: Decrease the target size for the list T1 as: p = max{p − max{1, nL / |B2|}, 0}
@@ -152,7 +152,7 @@ public final class CartPolicy implements Policy {
       data.put(key, node);
       sizeT1++;
 
-      // Set filter bit of x to “S”
+      // Set filter bit of x to "S"
       // nS = nS + 1 /* history hit */
       node.filter = FilterType.ShortTerm;
       sizeS++;
@@ -169,7 +169,7 @@ public final class CartPolicy implements Policy {
 
       // Reset the page reference bit of x
       // Set nL = nL + 1.
-      // Set type of x to “L”.
+      // Set type of x to "L".
       node.filter = FilterType.LongTerm;
       node.marked = false;
       sizeL++;
@@ -212,13 +212,13 @@ public final class CartPolicy implements Policy {
     //     Set target q = min(q + 1, 2c − |T1|)
     //
     // /* The following while loop should stop, if T1 is empty */
-    // while ((the filter bit of the head page in T1 is “L”)
+    // while ((the filter bit of the head page in T1 is "L")
     //     or (the page reference bit of the head page in T1 is set))
     //   if ((the page reference bit of the head page in T1 is set)
     //     Move the head page in T1 to tail position in T1
     //     Reset the page reference bit
-    //     if ((|T1| ≥ min(p + 1, |B1|)) and (the filter bit of the moved page is “S”)) then
-    //       set type of x to “L”
+    //     if ((|T1| ≥ min(p + 1, |B1|)) and (the filter bit of the moved page is "S")) then
+    //       set type of x to "L"
     //       nS = nS − 1
     //       nL = nL + 1
     //   else

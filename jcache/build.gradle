@@ -60,4 +60,4 @@ task testCompatibilityKit(type: Test, group: 'Build', description: 'Runs the JCa
   systemProperty 'org.jsr107.tck.management.agentId', 'CaffeineMBeanServer'
   systemProperty 'javax.management.builder.initial', "${pkg}.management.JCacheMBeanServerBuilder"
 }
-check.dependsOn(testCompatibilityKit)
+test.dependsOn(testCompatibilityKit)

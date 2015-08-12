@@ -43,7 +43,7 @@ import com.lmax.disruptor.util.DaemonThreadFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class AsyncTracerTest {
-  Path badPath = Jimfs.newFileSystem().getPath("\\a/b");
+  Path badPath = Jimfs.newFileSystem().getPath("a/b");
   ExecutorService executor;
   Path filePath;
 
