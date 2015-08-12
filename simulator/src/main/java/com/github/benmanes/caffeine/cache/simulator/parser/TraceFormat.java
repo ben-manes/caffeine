@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
-import java.nio.file.Path;
 import java.util.function.Function;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
@@ -36,9 +35,9 @@ public enum TraceFormat {
   LIRS(LirsTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new);
 
-  private final Function<Path, TraceReader<?>> factory;
+  private final Function<String, TraceReader<?>> factory;
 
-  private TraceFormat(Function<Path, TraceReader<?>> factory) {
+  private TraceFormat(Function<String, TraceReader<?>> factory) {
     this.factory = factory;
   }
 
@@ -48,7 +47,7 @@ public enum TraceFormat {
    * @param filePath the path to the file in the trace's format
    * @return a reader for streaming the events from the file
    */
-  public TraceReader<?> readFile(Path filePath) {
+  public TraceReader<?> readFile(String filePath) {
     return factory.apply(filePath);
   }
 }

@@ -19,16 +19,24 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipException;
+
+import javax.annotation.Nullable;
+
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.LineIterator;
 
 import com.google.common.base.Charsets;
 
@@ -38,31 +46,47 @@ import com.google.common.base.Charsets;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public abstract class TextTraceReader<E extends Comparable<E>> implements TraceReader<E> {
-  protected final Path filePath;
+  protected final String filePath;
 
-  protected TextTraceReader(Path filePath) {
-    this.filePath = requireNonNull(filePath);
+  protected TextTraceReader(String filePath) {
+    this.filePath = requireNonNull(FilenameUtils.normalize(filePath));
   }
 
   /** Returns a stream of each line in the trace file. */
   protected Stream<String> lines() throws IOException {
-    Path path = resolve(filePath);
+    Stream<String> gzipStream = gzipStream();
+    return (gzipStream == null) ? fileStream() : gzipStream;
+  }
+
+  /** Returns the trace file stream if gzip'ed, otherwise null. */
+  private @Nullable Stream<String> gzipStream() throws IOException {
+    InputStream input = openFile();
     try {
-      GZIPInputStream stream = new GZIPInputStream(Files.newInputStream(path));
+      GZIPInputStream stream = new GZIPInputStream(input);
       Reader reader = new InputStreamReader(stream, Charsets.UTF_8);
       return new BufferedReader(reader, 1 << 16).lines();
     } catch (ZipException e) {
-      return Files.lines(path);
+      input.close();
+      return null;
     }
   }
 
-  /** Returns the relative file if the full path is not provided. */
-  protected Path resolve(Path filePath) {
-    if (filePath.toFile().exists()) {
-      return filePath;
+  /** Returns the trace file stream. */
+  private Stream<String> fileStream() throws IOException {
+    LineIterator lines = IOUtils.lineIterator(new InputStreamReader(openFile(), Charsets.UTF_8));
+    Spliterator<String> spliterator =
+        Spliterators.spliteratorUnknownSize(lines, Spliterator.NONNULL);
+    return StreamSupport.stream(spliterator, false).onClose(lines::close);
+  }
+
+  /** Returns an open input stream for the trace file. */
+  private InputStream openFile() throws IOException {
+    File file = new File(filePath);
+    if (file.exists()) {
+      return new FileInputStream(file);
     }
-    URL url = getClass().getResource(filePath.getFileName().toFile().getName());
-    checkArgument(url != null, "Could not find file: " + filePath);
-    return Paths.get(url.getFile());
+    InputStream input = getClass().getResourceAsStream(filePath);
+    checkArgument(input != null, "Could not find file: " + filePath);
+    return input;
   }
 }

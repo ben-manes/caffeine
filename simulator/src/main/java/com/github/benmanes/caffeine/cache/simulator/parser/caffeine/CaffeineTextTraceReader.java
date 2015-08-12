@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
@@ -43,6 +44,10 @@ import com.univocity.parsers.csv.CsvParserSettings;
  */
 public final class CaffeineTextTraceReader implements TraceReader<TraceEvent> {
   private final Path filePath;
+
+  public CaffeineTextTraceReader(String filePath) {
+    this(Paths.get(filePath));
+  }
 
   public CaffeineTextTraceReader(Path filePath) {
     this.filePath = requireNonNull(filePath);

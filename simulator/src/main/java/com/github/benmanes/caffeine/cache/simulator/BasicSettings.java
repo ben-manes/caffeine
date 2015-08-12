@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
@@ -106,8 +104,8 @@ public class BasicSettings {
   }
 
   public final class TraceFileSettings {
-    public Path path() {
-      return Paths.get(config().getString("file.path"));
+    public String path() {
+      return config().getString("file.path");
     }
     public TraceFormat format() {
       return TraceFormat.valueOf(config().getString("file.format").replace('-', '_').toUpperCase());

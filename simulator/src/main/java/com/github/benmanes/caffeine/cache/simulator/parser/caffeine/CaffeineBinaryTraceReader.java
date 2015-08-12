@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
@@ -42,6 +43,10 @@ import com.github.benmanes.caffeine.cache.tracing.TraceEventFormats;
  */
 public final class CaffeineBinaryTraceReader implements TraceReader<TraceEvent> {
   private final Path filePath;
+
+  public CaffeineBinaryTraceReader(String filePath) {
+    this(Paths.get(filePath));
+  }
 
   public CaffeineBinaryTraceReader(Path filePath) {
     this.filePath = requireNonNull(filePath);

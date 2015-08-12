@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -120,7 +119,7 @@ public final class Simulator extends UntypedActor {
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings).boxed();
     }
-    Path filePath = settings.traceFile().path();
+    String filePath = settings.traceFile().path();
     TraceFormat format = settings.traceFile().format();
     return format.readFile(filePath).events();
   }

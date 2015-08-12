@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -28,7 +27,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
  */
 public final class LirsTraceReader extends TextTraceReader<Long> {
 
-  public LirsTraceReader(Path filePath) {
+  public LirsTraceReader(String filePath) {
     super(filePath);
   }
 
