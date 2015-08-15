@@ -13,29 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
+package com.github.benmanes.caffeine.cache.simulator.parser.arc;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
 /**
- * A reader for the trace files provided by the authors of the LIRS algorithm.
+ * A reader for the trace files provided by the authors of the ARC algorithm. See
+ * <a href="http://researcher.watson.ibm.com/researcher/view_person_subpage.php?id=4700">traces</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LirsTraceReader extends TextTraceReader<Long> {
+public final class ArcTraceReader extends TextTraceReader<Long> {
 
-  public LirsTraceReader(String filePath) {
+  public ArcTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
   public Stream<Long> events() throws IOException {
-    return lines()
-        .filter(line -> !line.isEmpty())
-        .filter(line -> !line.equals("*"))
-        .map(Long::parseLong);
+    return lines().flatMapToLong(line -> {
+      String[] array = line.split(" ", 3);
+      long startBlock = Long.parseLong(array[0]);
+      int sequence = Integer.parseInt(array[1]);
+      long[] block = new long[sequence];
+      for (int i = 0; i < sequence; i++) {
+        block[i] = startBlock + i;
+      }
+      return Arrays.stream(block);
+    }).boxed();
   }
 }

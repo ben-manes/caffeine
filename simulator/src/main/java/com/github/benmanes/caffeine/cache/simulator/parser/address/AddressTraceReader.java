@@ -35,7 +35,6 @@ public final class AddressTraceReader extends TextTraceReader<Long> {
   @Override
   public Stream<Long> events() throws IOException {
     return lines()
-        .map(line -> line.trim())
         .map(line -> line.split(" ")[1])
         .map(address -> address.substring(2))
         .map(address -> Long.parseLong(address, 16));

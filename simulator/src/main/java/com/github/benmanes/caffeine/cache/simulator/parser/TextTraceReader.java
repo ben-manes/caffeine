@@ -25,20 +25,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipException;
-
-import javax.annotation.Nullable;
-
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.LineIterator;
 
 import com.google.common.base.Charsets;
+import com.google.common.io.Closeables;
 
 /**
  * A skeletal implementation that reads the trace file line by line as textual data.
@@ -46,40 +37,31 @@ import com.google.common.base.Charsets;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public abstract class TextTraceReader<E extends Comparable<E>> implements TraceReader<E> {
-  protected final String filePath;
+  private final String filePath;
 
-  protected TextTraceReader(String filePath) {
-    this.filePath = requireNonNull(FilenameUtils.normalize(filePath));
+  public TextTraceReader(String filePath) {
+    this.filePath = requireNonNull(filePath);
   }
 
   /** Returns a stream of each line in the trace file. */
   protected Stream<String> lines() throws IOException {
-    Stream<String> gzipStream = gzipStream();
-    return (gzipStream == null) ? fileStream() : gzipStream;
-  }
-
-  /** Returns the trace file stream if gzip'ed, otherwise null. */
-  private @Nullable Stream<String> gzipStream() throws IOException {
-    InputStream input = openFile();
-    try {
-      GZIPInputStream stream = new GZIPInputStream(input);
-      Reader reader = new InputStreamReader(stream, Charsets.UTF_8);
-      return new BufferedReader(reader, 1 << 16).lines();
-    } catch (ZipException e) {
-      input.close();
-      return null;
+    IOException e = null;
+    for (boolean compressed : new boolean[] { true, false }) {
+      InputStream input = openFile();
+      try {
+        InputStream stream = compressed ? new GZIPInputStream(input) : input;
+        Reader reader = new InputStreamReader(stream, Charsets.UTF_8);
+        return new BufferedReader(reader, 1 << 16).lines().map(String::trim)
+            .onClose(() -> Closeables.closeQuietly(input));
+      } catch (IOException ex) {
+        input.close();
+        e = ex;
+      }
     }
+    throw e;
   }
 
-  /** Returns the trace file stream. */
-  private Stream<String> fileStream() throws IOException {
-    LineIterator lines = IOUtils.lineIterator(new InputStreamReader(openFile(), Charsets.UTF_8));
-    Spliterator<String> spliterator =
-        Spliterators.spliteratorUnknownSize(lines, Spliterator.NONNULL);
-    return StreamSupport.stream(spliterator, false).onClose(lines::close);
-  }
-
-  /** Returns an open input stream for the trace file. */
+  /** Returns the input stream for the raw file. */
   private InputStream openFile() throws IOException {
     File file = new File(filePath);
     if (file.exists()) {
