@@ -34,6 +34,6 @@ public final class VictimTuQueuePolicy extends TuQueuePolicy {
 
   private static Admittor admittor(Config config) {
     VictimSettings settings = new VictimSettings(config);
-    return new TinyLfu(settings.admission().eps(), settings.admission().confidence());
+    return new TinyLfu(settings.admission().eps(), settings.admission().confidence(),settings.admission().sampleSize());
   }
 }

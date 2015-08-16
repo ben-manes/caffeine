@@ -101,6 +101,9 @@ public class BasicSettings {
     public double confidence() {
       return config().getDouble("admission.confidence");
     }
+    public int sampleSize() {
+        return config().getInt("admission.sample_size");
+      }
   }
 
   public final class TraceFileSettings {

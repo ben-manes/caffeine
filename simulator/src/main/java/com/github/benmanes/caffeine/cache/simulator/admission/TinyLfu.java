@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
-import com.clearspring.analytics.stream.frequency.ConservativeAddSketch;
+import com.clearspring.analytics.stream.frequency.CountMinTinyLfu;
 import com.clearspring.analytics.stream.frequency.IFrequency;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -40,10 +40,10 @@ public final class TinyLfu implements Admittor {
 
   private final IFrequency sketch;
 
-  public TinyLfu(double epsOfTotalCount, double confidence) {
+  public TinyLfu(double epsOfTotalCount, double confidence, int sampleSize) {
     // These parameters are best described in...
     // https://github.com/twitter/algebird/blob/develop/algebird-core/src/main/scala/com/twitter/algebird/CountMinSketch.scala
-    this.sketch = new ConservativeAddSketch(epsOfTotalCount, confidence, RANDOM_SEED);
+    this.sketch = new CountMinTinyLfu(epsOfTotalCount,confidence,RANDOM_SEED,sampleSize); 
   }
 
   @Override

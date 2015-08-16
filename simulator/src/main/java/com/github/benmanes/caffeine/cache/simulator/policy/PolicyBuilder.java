@@ -60,7 +60,7 @@ public final class PolicyBuilder {
       admittor = Admittor.always();
     } else if (admittorType.equals("TinyLfu")) {
       BasicSettings settings = new BasicSettings(config);
-      admittor = new TinyLfu(settings.admission().eps(), settings.admission().confidence());
+      admittor = new TinyLfu(settings.admission().eps(), settings.admission().confidence(), settings.admission().sampleSize());
     } else {
       throw new IllegalStateException("Unknown admittor: " + admittorType);
     }
