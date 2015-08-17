@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.InfinispanLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.irr.LirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
@@ -104,7 +105,9 @@ public final class PolicyBuilder {
         }
         break;
       case "irr":
-        if (strategy.equalsIgnoreCase("JackrabbitLirs")) {
+        if (strategy.equalsIgnoreCase("Lirs")) {
+          return new LirsPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("JackrabbitLirs")) {
           return new JackrabbitLirsPolicy(type, config);
         } else {
           return new InfinispanLirsPolicy(type, config);
