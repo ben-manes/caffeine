@@ -16,9 +16,8 @@
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
 import com.clearspring.analytics.stream.frequency.CountMinTinyLfu;
-import com.clearspring.analytics.stream.frequency.IFrequency;
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.typesafe.config.Config;
 
 /**
  * Admits new entries based on the estimated frequency of its historic use.
@@ -28,31 +27,17 @@ import com.google.common.collect.Multiset;
 public final class TinyLfu implements Admittor {
   private static final int RANDOM_SEED = 1033096058;
 
-  /*
-   * TinyLFU is an admission policy that uses a probabilistic frequency of the items to determine
-   * if the newly added entry should be retained instead of the eviction policy's victim. This
-   * augments classic policies like LRU to increase the hit rate and be scan resistant, and does
-   * not require retaining non-resident entries like LIRS or ARC style eviction policies.
-   *
-   * [1] TinyLFU: A Highly Efficient Cache Admission Policy
-   * http://www.cs.technion.ac.il/~gilga/TinyLFU_PDP2014.pdf
-   */
+  private final CountMinTinyLfu sketch;
 
-  private final IFrequency sketch;
-
-  public TinyLfu(double epsOfTotalCount, double confidence, int sampleSize) {
-    // These parameters are best described in...
-    // https://github.com/twitter/algebird/blob/develop/algebird-core/src/main/scala/com/twitter/algebird/CountMinSketch.scala
-    this.sketch = new CountMinTinyLfu(epsOfTotalCount,confidence,RANDOM_SEED,sampleSize); 
+  public TinyLfu(Config config) {
+    BasicSettings settings = new BasicSettings(config);
+    sketch = new CountMinTinyLfu(settings.admission().eps(),
+        settings.admission().confidence(), RANDOM_SEED, settings.admission().sampleSize());
   }
 
   @Override
   public void record(Object key) {
-    if (key instanceof Number) {
-      sketch.add(((Number) key).longValue(), 1);
-    } else {
-      sketch.add(key.hashCode(), 1);
-    }
+    sketch.add(key.hashCode(), 1);
   }
 
   @Override
@@ -60,35 +45,5 @@ public final class TinyLfu implements Admittor {
     long candidateCount = sketch.estimateCount(candidateKey.hashCode());
     long victimCount = sketch.estimateCount(victimKey.hashCode());
     return candidateCount >= victimCount;
-  }
-
-  @SuppressWarnings("unused")
-  private static final class PerfectFrequency implements IFrequency {
-    final Multiset<Object> keys = HashMultiset.create();
-
-    @Override
-    public void add(long item, long count) {
-      keys.add(item, (int) count);
-    }
-
-    @Override
-    public void add(String item, long count) {
-      keys.add(item, (int) count);
-    }
-
-    @Override
-    public long estimateCount(long item) {
-      return keys.count(item);
-    }
-
-    @Override
-    public long estimateCount(String item) {
-      return keys.count(item);
-    }
-
-    @Override
-    public long size() {
-      return keys.elementSet().size();
-    }
   }
 }

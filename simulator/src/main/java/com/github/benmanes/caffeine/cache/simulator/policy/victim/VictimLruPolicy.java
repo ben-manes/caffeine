@@ -47,10 +47,10 @@ public final class VictimLruPolicy implements Policy {
 
   public VictimLruPolicy(String name, Config config) {
     VictimSettings settings = new VictimSettings(config);
-    this.admittor = new TinyLfu(settings.admission().eps(), settings.admission().confidence(), settings.admission().sampleSize());
     this.maxVictim = (int) (settings.maximumSize() * settings.percentVictim());
     this.maxMain = settings.maximumSize() - maxVictim;
     this.policyStats = new PolicyStats(name);
+    this.admittor = new TinyLfu(config);
     this.primaryData = new PrimaryMap();
     this.victimData = new HashMap<>();
     this.sentinel = new Node();

@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
@@ -59,8 +58,7 @@ public final class PolicyBuilder {
     if (admittorType.equals("None")) {
       admittor = Admittor.always();
     } else if (admittorType.equals("TinyLfu")) {
-      BasicSettings settings = new BasicSettings(config);
-      admittor = new TinyLfu(settings.admission().eps(), settings.admission().confidence(), settings.admission().sampleSize());
+      admittor = new TinyLfu(config);
     } else {
       throw new IllegalStateException("Unknown admittor: " + admittorType);
     }
