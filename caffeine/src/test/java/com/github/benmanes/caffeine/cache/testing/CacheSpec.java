@@ -399,7 +399,7 @@ public @interface CacheSpec {
       }
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
         Map<Integer, Integer> result = new HashMap<>();
-        keys.forEach(key -> result.put(key, -key));
+        keys.forEach(key -> result.put(key, interner.get().intern(-key)));
         return result;
       }
     },
