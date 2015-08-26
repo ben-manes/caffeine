@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import org.apache.jackrabbit.oak.cache.CacheLIRS;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.cache.LoadingCache;
@@ -40,12 +41,11 @@ public final class JackrabbitLirsPolicy implements Policy {
   private final PolicyStats policyStats;
 
   public JackrabbitLirsPolicy(String name, Config config) {
-    LirsSettings settings = new LirsSettings(config);
+    BasicSettings settings = new BasicSettings(config);
     this.policyStats = new PolicyStats(name);
     this.cache = CacheLIRS.newBuilder()
         .recordStats()
         .maximumSize(settings.maximumSize())
-        .stackMoveDistance(settings.stackMoveDistance())
         .build();
   }
 
