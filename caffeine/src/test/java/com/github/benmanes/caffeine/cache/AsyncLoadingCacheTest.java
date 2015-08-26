@@ -50,10 +50,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -159,7 +157,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isDone(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(key), is(nullValue()));
   }
 
   @CheckNoWriter
@@ -193,15 +191,14 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(executor = CacheExecutor.DIRECT)
   public void getFunc_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    Integer key = context.absentKey();
-    CompletableFuture<Integer> valueFuture = cache.get(key,
+    CompletableFuture<Integer> valueFuture = cache.get(context.absentKey(),
         k -> { throw new IllegalStateException(); });
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
   @CheckNoWriter
@@ -209,10 +206,9 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(executor = CacheExecutor.SINGLE)
   public void getFunc_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    Integer key = context.absentKey();
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
-    CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
+    CompletableFuture<Integer> valueFuture = cache.get(context.absentKey(), k -> {
       Awaits.await().untilTrue(ready);
       throw new IllegalStateException();
     });
@@ -227,7 +223,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
   @CheckNoWriter
@@ -235,9 +231,8 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.SINGLE)
   public void getFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    Integer key = context.absentKey();
     AtomicBoolean done = new AtomicBoolean();
-    CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
+    CompletableFuture<Integer> valueFuture = cache.get(context.absentKey(), k -> {
       Awaits.await().until(done::get);
       return null;
     });
@@ -252,7 +247,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isDone(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
   @CacheSpec
@@ -319,30 +314,29 @@ public final class AsyncLoadingCacheTest {
     } finally {
       assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
       assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-      assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(nullValue()));
+      assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
     }
   }
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DIRECT)
+  @CacheSpec(loader = Loader.NULL)
   public void getBiFunc_absent_null(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     Integer key = context.absentKey();
     assertThat(cache.get(key, (k, executor) -> null), is(nullValue()));
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(key), is(nullValue()));
   }
 
+  @CacheSpec
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DIRECT, population = Population.SINGLETON,
-        maximumSize = MaximumSize.UNREACHABLE, implementation = Implementation.Caffeine)
-  public void getBiFunc_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
+  public void getBiFunc_absent_failure_before(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    CompletableFuture<Integer> failedFuture = CompletableFuture.completedFuture(null);
-    failedFuture.obtrudeException(new IllegalStateException());
+    CompletableFuture<Integer> failedFuture = new CompletableFuture<>();
+    failedFuture.completeExceptionally(new IllegalStateException());
 
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
@@ -351,60 +345,39 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(key), is(nullValue()));
   }
 
+  @CacheSpec
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.SINGLE)
-  public void getBiFunc_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
+  public void getBiFunc_absent_failure_after(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    AtomicBoolean ready = new AtomicBoolean();
-    AtomicBoolean done = new AtomicBoolean();
-    CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
-      Awaits.await().untilTrue(ready);
-      throw new IllegalStateException();
-    }, context.executor());
-    failedFuture.whenComplete((r, e) -> done.set(true));
+    CompletableFuture<Integer> failedFuture = new CompletableFuture<>();
 
     Integer key = context.absentKey();
     CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
-    ready.set(true);
-    Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
+    failedFuture.completeExceptionally(new IllegalStateException());
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(key), is(nullValue()));
   }
 
+  @CacheSpec
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.SINGLE)
   public void getBiFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    AtomicBoolean done = new AtomicBoolean();
-    CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
-      Awaits.await().untilTrue(done);
-      return null;
-    }, context.executor());
-    failedFuture.whenComplete((r, e) -> done.set(true));
-
-    Integer key = context.absentKey();
-    CompletableFuture<Integer> valueFuture = cache.get(key, (k, executor) -> failedFuture);
-    valueFuture.cancel(true);
-    Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
+    CompletableFuture<Integer> cancelledFuture = new CompletableFuture<>();
+    cache.get(context.absentKey(), (k, executor) -> cancelledFuture);
+    cancelledFuture.cancel(true);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-
-    assertThat(valueFuture.isCancelled(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
   @CacheSpec
@@ -458,7 +431,7 @@ public final class AsyncLoadingCacheTest {
   public void get_absent_failure(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> future = cache.get(context.absentKey());
     assertThat(future.isCompletedExceptionally(), is(true));
-    assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
   }
 
   @CheckNoWriter
@@ -479,7 +452,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    assertThat(cache.getIfPresent(key), is(nullValue()));
   }
 
   @CheckNoWriter
@@ -640,35 +613,27 @@ public final class AsyncLoadingCacheTest {
   @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void put_insert_fail(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void put_insert_failure_before(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
     CompletableFuture<Integer> failedFuture = CompletableFuture.completedFuture(null);
-    failedFuture.obtrudeException(new IllegalStateException());
+    failedFuture.completeExceptionally(new IllegalStateException());
 
     cache.put(context.absentKey(), failedFuture);
-    assertThat(cache.synchronous().getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.SINGLE)
-  public void put_insert_failure_async(AsyncLoadingCache<Integer, Integer> cache,
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void put_insert_failure_after(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    AtomicBoolean ready = new AtomicBoolean();
-    AtomicBoolean done = new AtomicBoolean();
-    CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
-      Awaits.await().untilTrue(ready);
-      throw new IllegalStateException();
-    }, context.executor());
-    failedFuture.whenComplete((r, e) -> done.set(true));
+    CompletableFuture<Integer> failedFuture = new CompletableFuture<>();
 
-    Integer key = context.absentKey();
-    cache.put(key, failedFuture);
-    ready.set(true);
-    Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
-    assertThat(cache.synchronous().getIfPresent(key), is(nullValue()));
+    cache.put(context.absentKey(), failedFuture);
+    failedFuture.completeExceptionally(new IllegalStateException());
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
   @Test(dataProvider = "caches")
@@ -684,32 +649,30 @@ public final class AsyncLoadingCacheTest {
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.SINGLE)
-  public void put_replace_failure_async(AsyncLoadingCache<Integer, Integer> cache,
+  @CacheSpec(population = { Population.SINGLETON, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void put_replace_failure_before(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    AtomicBoolean ready = new AtomicBoolean();
-    AtomicBoolean done = new AtomicBoolean();
-    CompletableFuture<Integer> failedFuture = CompletableFuture.supplyAsync(() -> {
-      Awaits.await().untilTrue(ready);
-      throw new IllegalStateException();
-    }, context.executor());
-    failedFuture.whenComplete((r, e) -> done.set(true));
+    CompletableFuture<Integer> failedFuture = CompletableFuture.completedFuture(null);
+    failedFuture.completeExceptionally(new IllegalStateException());
 
-    Integer key = context.absentKey();
-    cache.put(key, failedFuture);
+    cache.put(context.middleKey(), failedFuture);
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(cache.synchronous().estimatedSize(), is(context.initialSize() - 1));
+  }
 
-    CompletableFuture<Integer> successFuture =
-        CompletableFuture.completedFuture(context.absentValue());
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void put_replace_failure_after(AsyncLoadingCache<Integer, Integer> cache,
+      CacheContext context) {
+    CompletableFuture<Integer> failedFuture = CompletableFuture.completedFuture(null);
 
-    cache.put(key, successFuture);
-    ready.set(true);
-    Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
-
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(1)));
-    assertThat(cache.synchronous().getIfPresent(key), is(context.absentValue()));
+    cache.put(context.middleKey(), failedFuture);
+    failedFuture.completeExceptionally(new IllegalStateException());
+    assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
+    assertThat(cache.synchronous().estimatedSize(), is(context.initialSize() - 1));
   }
 
   @Test(dataProvider = "caches")

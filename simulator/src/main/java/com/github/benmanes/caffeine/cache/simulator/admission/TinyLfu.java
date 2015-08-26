@@ -42,8 +42,8 @@ public final class TinyLfu implements Admittor {
 
   @Override
   public boolean admit(Object candidateKey, Object victimKey) {
-    long candidateCount = sketch.estimateCount(candidateKey.hashCode());
-    long victimCount = sketch.estimateCount(victimKey.hashCode());
-    return candidateCount >= victimCount;
+    long candidateFreq = sketch.frequency(candidateKey.hashCode());
+    long victimFreq = sketch.frequency(victimKey.hashCode());
+    return candidateFreq >= victimFreq;
   }
 }

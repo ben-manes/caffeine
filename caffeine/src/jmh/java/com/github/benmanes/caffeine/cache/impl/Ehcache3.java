@@ -33,7 +33,7 @@ public final class Ehcache3<K, V> implements BasicCache<K, V> {
 
   @SuppressWarnings("unchecked")
   public Ehcache3(Prioritizer evictionPolicy, int maximumSize) {
-    CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build();
+    CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = (Cache<K, V>) cacheManager.createCache("benchmark",
         CacheConfigurationBuilder.newCacheConfigurationBuilder()
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()

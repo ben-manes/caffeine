@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Ben Manes. All Rights Reserved.
+ * Copyright 2015 Gilga Einziger. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,47 +29,41 @@ package com.clearspring.analytics.stream.frequency;
  *
  * @author gilga1983@gmail.com (Gilga Einziger)
  */
-public class CountMinTinyLfu extends ConservativeAddSketch {
+public final class CountMinTinyLfu {
+  final ConservativeAddSketch sketch;
   final int sampleSize;
-  int nrItems;
+  int size;
 
   public CountMinTinyLfu(int depth, int width, int seed, int samplesize) {
-    super(depth, width, seed);
+    sketch = new ConservativeAddSketch(depth, width, seed);
     sampleSize = samplesize;
-    nrItems = 0;
   }
 
   public CountMinTinyLfu(double epsOfTotalCount, double confidence, int seed, int samplesize) {
-    super(epsOfTotalCount, confidence, seed);
+    sketch = new ConservativeAddSketch(epsOfTotalCount, confidence, seed);
     sampleSize = samplesize;
-    nrItems = 0;
   }
 
-  @Override
+  /** Returns the estimated usage frequency of the item. */
+  public long frequency(long item) {
+    return sketch.estimateCount(item);
+  }
+
   public void add(long item, long count) {
-    if (estimateCount(item) < 10) {
-      super.add(item, count);
+    if (sketch.estimateCount(item) < 10) {
+      sketch.add(item, count);
     }
-    nrItems += count;
-    resetIfNeeded();
-  }
-
-  @Override
-  public void add(String item, long count) {
-    if (estimateCount(item) < 10) {
-      super.add(item, count);
-    }
-    nrItems += count;
+    size += count;
     resetIfNeeded();
   }
 
   private void resetIfNeeded() {
-    if (nrItems > sampleSize) {
-      nrItems /= 2;
-      for (int i = 0; i < depth; i++) {
-        for (int j = 0; j < width; j++) {
-          nrItems -= table[i][j] & 1;
-          table[i][j] >>>= 1;
+    if (size > sampleSize) {
+      size /= 2;
+      for (int i = 0; i < sketch.depth; i++) {
+        for (int j = 0; j < sketch.width; j++) {
+          size -= sketch.table[i][j] & 1;
+          sketch.table[i][j] >>>= 1;
         }
       }
     }

@@ -28,8 +28,14 @@ test {
 }
 
 bundle {
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.simulator'
-}
+  instruction 'Export-Package', [
+    'com.github.benmanes.caffeine.simulator',
+    'com.github.benmanes.caffeine.simulator.admission',
+    'com.github.benmanes.caffeine.simulator.generator',
+    'com.github.benmanes.caffeine.simulator.parser',
+    'com.github.benmanes.caffeine.simulator.policy',
+    'com.github.benmanes.caffeine.simulator.report',
+  ].join(';')}
 
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
