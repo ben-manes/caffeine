@@ -296,7 +296,7 @@ public final class ClockProPolicy implements Policy {
     HOT, COLD, TEST;
   }
 
-  private final class Node {
+  private static final class Node {
     final Object key;
     boolean marked;
     Status status;

@@ -266,8 +266,8 @@ public final class LirsPolicy implements Policy {
   final class Node {
     final Object key;
 
-    int irr;
     Status type;
+
     Node prevS;
     Node nextS;
     Node prevQ;

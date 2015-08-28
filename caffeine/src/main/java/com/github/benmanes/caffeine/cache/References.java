@@ -116,7 +116,7 @@ final class References {
   static class WeakKeyReference<K> extends WeakReference<K> implements InternalReference<K> {
     private final int hashCode;
 
-    public WeakKeyReference(@Nullable K key, @Nonnull ReferenceQueue<K> queue) {
+    public WeakKeyReference(@Nullable K key, @Nullable ReferenceQueue<K> queue) {
       super(key, queue);
       hashCode = System.identityHashCode(key);
     }
@@ -147,7 +147,7 @@ final class References {
     private final Object keyReference;
 
     public WeakValueReference(@Nonnull Object keyReference,
-        @Nonnull V value, @Nonnull ReferenceQueue<V> queue) {
+        @Nullable V value, @Nullable ReferenceQueue<V> queue) {
       super(value, queue);
       this.keyReference = keyReference;
     }
@@ -178,7 +178,7 @@ final class References {
     private final Object keyReference;
 
     public SoftValueReference(@Nonnull Object keyReference,
-        @Nonnull V value, @Nonnull ReferenceQueue<V> queue) {
+        @Nullable V value, @Nullable ReferenceQueue<V> queue) {
       super(value, queue);
       this.keyReference = keyReference;
     }

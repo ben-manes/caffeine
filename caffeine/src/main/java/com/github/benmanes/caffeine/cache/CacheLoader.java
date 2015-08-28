@@ -82,9 +82,9 @@ public interface CacheLoader<K, V> {
    *
    * @param key the non-null key whose value should be loaded
    * @param executor the executor that asynchronously loads the entry
-   * @return the future value associated with {@code key} or {@code null} if not computable
+   * @return the future value associated with {@code key}
    */
-  @CheckForNull
+  @Nonnull
   default CompletableFuture<V> asyncLoad(@Nonnull K key, @Nonnull Executor executor) {
     requireNonNull(key);
     requireNonNull(executor);

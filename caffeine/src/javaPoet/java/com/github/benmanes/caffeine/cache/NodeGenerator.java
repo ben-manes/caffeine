@@ -150,8 +150,8 @@ public final class NodeGenerator {
         .addMethod(newGetRef("value"))
         .addMethod(makeSetValue())
         .addMethod(makeContainsValue());
-    addValueConstructorAssignment(constructorByKey);
-    addValueConstructorAssignment(constructorByKeyRef);
+    addValueConstructorAssignment(constructorByKey, "key");
+    addValueConstructorAssignment(constructorByKeyRef, "keyReference");
   }
 
   private Strength valueStrength() {
@@ -249,14 +249,14 @@ public final class NodeGenerator {
   }
 
   /** Adds a constructor assignment. */
-  private void addValueConstructorAssignment(MethodSpec.Builder constructor) {
+  private void addValueConstructorAssignment(MethodSpec.Builder constructor, String keyName) {
     if (isStrongValues()) {
       constructor.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
-      constructor.addStatement("$T.UNSAFE.putObject(this, $N, new $T(this.$N, $N, $N))",
+      constructor.addStatement("$T.UNSAFE.putObject(this, $N, new $T($N, $N, $N))",
           UNSAFE_ACCESS, offsetName("value"), valueReferenceType(),
-          "key", "value", "valueReferenceQueue");
+          keyName, "value", "valueReferenceQueue");
     }
   }
 

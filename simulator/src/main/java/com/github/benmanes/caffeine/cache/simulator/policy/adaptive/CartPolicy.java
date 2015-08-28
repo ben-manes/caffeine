@@ -267,7 +267,7 @@ public final class CartPolicy implements Policy {
         sizeT1--;
         sizeT2++;
 
-        q = Math.max(q - q, maximumSize - sizeT1);
+        q = Math.max(q - 1, maximumSize - sizeT1);
       }
     }
 

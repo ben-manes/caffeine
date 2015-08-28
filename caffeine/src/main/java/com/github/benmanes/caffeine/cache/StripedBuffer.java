@@ -214,25 +214,23 @@ abstract class StripedBuffer<E> implements Buffer<E> {
       int n;
       if ((buffers = table) != null && (n = buffers.length) > 0) {
         if ((buffer = buffers[(n - 1) & h]) == null) {
-          if (tableBusy == 0) { // Try to attach new Buffer
-            if (tableBusy == 0 && casTableBusy()) {
-              boolean created = false;
-              try { // Recheck under lock
-                Buffer<E>[] rs;
-                int mask, j;
-                if (((rs = table) != null) && ((mask = rs.length) > 0)
-                    && (rs[j = (mask - 1) & h] == null)) {
-                  rs[j] = create(e);
-                  created = true;
-                }
-              } finally {
-                tableBusy = 0;
+          if ((tableBusy == 0) && casTableBusy()) { // Try to attach new Buffer
+            boolean created = false;
+            try { // Recheck under lock
+              Buffer<E>[] rs;
+              int mask, j;
+              if (((rs = table) != null) && ((mask = rs.length) > 0)
+                  && (rs[j = (mask - 1) & h] == null)) {
+                rs[j] = create(e);
+                created = true;
               }
-              if (created) {
-                break;
-              }
-              continue; // Slot is now non-empty
+            } finally {
+              tableBusy = 0;
             }
+            if (created) {
+              break;
+            }
+            continue; // Slot is now non-empty
           }
           collide = false;
         } else if (!wasUncontended) { // CAS already known to fail

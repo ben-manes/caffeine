@@ -35,7 +35,8 @@ bundle {
     'com.github.benmanes.caffeine.simulator.parser',
     'com.github.benmanes.caffeine.simulator.policy',
     'com.github.benmanes.caffeine.simulator.report',
-  ].join(';')}
+  ].join(';')
+}
 
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
