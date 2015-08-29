@@ -87,7 +87,7 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
   }
 
   @Override
-  public final V setValue(V value) {
+  public V setValue(V value) {
     throw new UnsupportedOperationException();
   }
 

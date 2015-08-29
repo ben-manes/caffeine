@@ -1,0 +1,119 @@
+<?xml version="1.0"?>
+<ruleset name="caffeine"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+
+  <rule ref="rulesets/java/basic.xml">
+    <exclude name="AvoidBranchingStatementAsLastInLoop"/>
+    <exclude name="UselessParentheses"/>
+  </rule>
+
+  <rule ref="rulesets/java/braces.xml"/>
+
+  <rule ref="rulesets/java/clone.xml"/>
+
+  <rule ref="rulesets/java/codesize.xml">
+    <exclude name="TooManyMethods"/>
+    <exclude name="ExcessivePublicCount"/>
+    <exclude name="ExcessiveClassLength"/>
+    <exclude name="ExcessiveMethodLength"/>
+    
+    <exclude name="NPathComplexity"/>
+    <exclude name="CyclomaticComplexity"/>
+    <exclude name="StdCyclomaticComplexity"/>
+    <exclude name="ModifiedCyclomaticComplexity"/>
+  </rule>
+
+  <rule ref="rulesets/java/comments.xml">
+    <exclude name="CommentSize"/>
+    <exclude name="CommentRequired"/>
+  </rule>
+
+  <rule ref="rulesets/java/coupling.xml">
+    <exclude name="LawOfDemeter"/>
+    <exclude name="ExcessiveImports"/>
+    <exclude name="LoosePackageCoupling"/>
+    <exclude name="CouplingBetweenObjects"/>
+  </rule>
+
+  <rule ref="rulesets/java/design.xml">
+    <exclude name="GodClass"/>
+    <exclude name="UseVarargs"/>
+    <exclude name="ConfusingTernary"/>
+    <exclude name="CompareObjectsWithEquals"/>
+    <exclude name="UncommentedEmptyMethodBody"/>
+    <exclude name="AvoidReassigningParameters"/>
+    <exclude name="UncommentedEmptyConstructor"/>
+    <exclude name="UnnecessaryLocalBeforeReturn"/>
+    <exclude name="AvoidSynchronizedAtMethodLevel"/>
+    <exclude name="ConstructorCallsOverridableMethod"/>
+    <exclude name="PositionLiteralsFirstInComparisons"/>
+    <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
+    <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
+    <exclude name="PositionLiteralsFirstInCaseInsensitiveComparisons"/>
+  </rule>
+  <rule ref="rulesets/java/design.xml/ConfusingTernary">
+    <properties>
+      <property name="ignoreElseIf" value="true"/>
+    </properties>
+  </rule>
+
+  <rule ref="rulesets/java/empty.xml">
+    <exclude name="EmptyWhileStmt"/>
+  </rule>
+
+  <rule ref="rulesets/java/finalizers.xml"/>
+
+  <rule ref="rulesets/java/imports.xml">
+    <exclude name="DontImportJavaLang"/>
+  </rule>
+
+  <rule ref="rulesets/java/naming.xml">
+    <exclude name="LongVariable"/>
+    <exclude name="ShortVariable"/>
+    <exclude name="ShortClassName"/>
+    <exclude name="AbstractNaming"/>
+    <exclude name="VariableNamingConventions"/>
+    <exclude name="AvoidFieldNameMatchingMethodName"/>
+  </rule>
+
+  <rule ref="rulesets/java/optimizations.xml">
+    <exclude name="PrematureDeclaration"/>
+    <exclude name="LocalVariableCouldBeFinal"/>
+    <exclude name="MethodArgumentCouldBeFinal"/>
+    <exclude name="AvoidInstantiatingObjectsInLoops"/>
+  </rule>
+
+  <rule ref="rulesets/java/strictexception.xml">
+    <exclude name="AvoidCatchingThrowable"/>
+    <exclude name="AvoidRethrowingException"/>
+    <exclude name="AvoidCatchingGenericException"/>
+    <exclude name="AvoidThrowingRawExceptionTypes"/>
+  </rule>
+
+  <rule ref="rulesets/java/strings.xml">
+    <exclude name="AvoidDuplicateLiterals"/>
+  </rule>
+  <rule ref="rulesets/java/strings.xml/AvoidDuplicateLiterals">
+    <properties>
+      <property name="skipAnnotations" value="true"/>
+    </properties>
+  </rule>
+
+  <rule ref="rulesets/java/sunsecure.xml"/>
+
+  <rule ref="rulesets/java/typeresolution.xml"/>
+
+  <rule ref="rulesets/java/unnecessary.xml">
+    <exclude name="UselessParentheses"/>  
+  </rule>
+
+  <rule ref="rulesets/java/unusedcode.xml">
+    <exclude name="UnusedPrivateMethod"/>
+  </rule>
+
+  <!--
+  <rule ref="rulesets/java/controversial.xml"/>
+  -->
+</ruleset>

@@ -43,7 +43,7 @@ public final class JCacheMBeanServerBuilder extends MBeanServerBuilder {
     return JmxMBeanServer.newMBeanServer(defaultDomain, outer, jcacheDelegate, false);
   }
 
-  private final class JCacheMBeanServerDelegate extends MBeanServerDelegate {
+  private static final class JCacheMBeanServerDelegate extends MBeanServerDelegate {
     private final MBeanServerDelegate delegate;
 
     JCacheMBeanServerDelegate(MBeanServerDelegate delegate) {

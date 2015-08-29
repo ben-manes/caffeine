@@ -38,9 +38,10 @@ import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
 public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<K, V> {
   private static final long serialVersionUID = 1L;
 
+  private final MutableConfiguration<K, V> delegate;
+
   private Factory<CopyStrategy> copyStrategyFactory;
   private Factory<Weigher<K, V>> weigherFactory;
-  private MutableConfiguration<K, V> delegate;
   private Long expireAfterAccessNanos;
   private Long expireAfterWriteNanos;
   private Long maximumWeight;

@@ -32,9 +32,9 @@ import javax.annotation.Nonnull;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 interface Buffer<E> {
-  static final int FULL = 1;
-  static final int SUCCESS = 0;
-  static final int FAILED = -1;
+  int FULL = 1;
+  int SUCCESS = 0;
+  int FAILED = -1;
 
   /** Returns a no-op implementation. */
   @SuppressWarnings("unchecked")
@@ -74,14 +74,14 @@ interface Buffer<E> {
    *
    * @return the number of elements read from this buffer
    */
-  public int reads();
+  int reads();
 
   /**
    * Returns the number of elements that have been written to the buffer.
    *
    * @return the number of elements written to this buffer
    */
-  public int writes();
+  int writes();
 }
 
 enum DisabledBuffer implements Buffer<Object> {

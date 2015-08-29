@@ -334,6 +334,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     }
 
     @Override
+    @SuppressWarnings("PMD.PreserveStackTrace")
     public V get(K key, Function<? super K, ? extends V> mappingFunction) {
       requireNonNull(mappingFunction);
       CompletableFuture<V> future = LocalAsyncLoadingCache.this.get(key, (k, executor) ->
@@ -353,6 +354,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     }
 
     @Override
+    @SuppressWarnings("PMD.PreserveStackTrace")
     public V get(K key) {
       try {
         return LocalAsyncLoadingCache.this.get(key).get();
@@ -369,6 +371,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     }
 
     @Override
+    @SuppressWarnings("PMD.PreserveStackTrace")
     public Map<K, V> getAll(Iterable<? extends K> keys) {
       try {
         return LocalAsyncLoadingCache.this.getAll(keys).get();
@@ -433,12 +436,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
       BiFunction<K, CompletableFuture<V>, CompletableFuture<V>> refreshFunction =
           (k, oldValueFuture) -> {
-            V oldValue = null;
-            try {
-              oldValue = (oldValueFuture == null) ? null : oldValueFuture.get();
-            } catch (InterruptedException e) {
-              throw new CompletionException(e);
-            } catch (ExecutionException e) {}
+            V oldValue = (oldValueFuture == null) ? null : oldValueFuture.join();
             V newValue = (oldValue == null) ? loader.load(key) : loader.reload(key, oldValue);
             return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
           };

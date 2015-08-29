@@ -84,7 +84,7 @@ public class ZipfianGenerator extends IntegerGenerator {
    * recomputation. If true, then the code will recompute zeta if the itemcount goes down. If false,
    * the code will assume itemcount only goes up, and never recompute.
    */
-  boolean allowitemcountdecrease = false;
+  boolean allowitemcountdecrease;
 
   /******************************* Constructors **************************************/
 

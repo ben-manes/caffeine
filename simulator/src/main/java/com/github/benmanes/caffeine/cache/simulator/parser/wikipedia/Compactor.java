@@ -190,7 +190,7 @@ public final class Compactor implements Runnable {
     }
   }
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     checkArgument(args.length == 2, "Compactor [input file] [output file]");
     Compactor compactor = new Compactor(Paths.get(args[0]), Paths.get(args[1]));
     Stopwatch stopwatch = Stopwatch.createStarted();

@@ -131,6 +131,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
   }
 
   @Override
+  @SuppressWarnings("PMD.TooFewBranchesForASwitchStatement")
   public boolean isSupported(OptionalFeature optionalFeature) {
     switch (optionalFeature) {
       case STORE_BY_REFERENCE:

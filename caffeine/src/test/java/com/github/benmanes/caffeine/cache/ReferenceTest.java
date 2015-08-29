@@ -627,7 +627,6 @@ public final class ReferenceTest {
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void clear_writerFails(Map<Integer, Integer> map, CacheContext context) {
-    Set<Integer> keys = context.firstMiddleLastKeys();
     try {
       context.clear();
       GcFinalization.awaitFullGc();

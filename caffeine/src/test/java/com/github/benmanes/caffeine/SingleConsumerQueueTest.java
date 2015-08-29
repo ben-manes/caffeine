@@ -203,7 +203,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.addAll(list), is(true));
     assertThat(queue.peek(), is(0));
     assertThat(Iterables.getLast(queue), is(POPULATED_SIZE - 1));
-    assertThat(String.format("\nExpected: %s%n     but: %s", queue, list),
+    assertThat(String.format("%nExpected: %s%n     but: %s", queue, list),
       elementsEqual(queue.iterator(), list.iterator()));
   }
 
@@ -215,7 +215,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.addAll(list), is(true));
     assertThat(queue.peek(), is(0));
     assertThat(Iterables.getLast(queue), is(POPULATED_SIZE + 2));
-    assertThat(String.format("\nExpected: %s%n     but: %s", queue, expect),
+    assertThat(String.format("%nExpected: %s%n     but: %s", queue, expect),
         elementsEqual(queue.iterator(), expect.iterator()));
   }
 
@@ -411,7 +411,7 @@ public class SingleConsumerQueueTest {
   @Test(dataProvider = "empty,singleton,populated")
   public void serializable(Queue<Integer> queue) {
     Queue<Integer> copy = SerializableTester.reserialize(queue);
-    assertThat(String.format("\nExpected: %s%n     but: %s", queue, copy),
+    assertThat(String.format("%nExpected: %s%n     but: %s", queue, copy),
         elementsEqual(queue.iterator(), copy.iterator()));
   }
 

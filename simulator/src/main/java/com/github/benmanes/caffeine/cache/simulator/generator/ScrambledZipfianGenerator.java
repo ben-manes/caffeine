@@ -108,7 +108,7 @@ public class ScrambledZipfianGenerator extends IntegerGenerator {
    */
   public long nextLong() {
     long ret = gen.nextLong();
-    ret = _min + Utils.FNVhash64(ret) % _itemcount;
+    ret = _min + Utils.fnvHash64(ret) % _itemcount;
     setLastInt((int) ret);
     return ret;
   }
@@ -121,7 +121,7 @@ public class ScrambledZipfianGenerator extends IntegerGenerator {
     ScrambledZipfianGenerator gen = new ScrambledZipfianGenerator(10000);
 
     for (int i = 0; i < 1000000; i++) {
-      System.out.println("" + gen.nextInt());
+      System.out.println(gen.nextInt());
     }
   }
 

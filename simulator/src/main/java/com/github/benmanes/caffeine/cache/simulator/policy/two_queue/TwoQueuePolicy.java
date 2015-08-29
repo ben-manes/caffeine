@@ -46,12 +46,12 @@ public final class TwoQueuePolicy implements Policy {
   private final Map<Object, Node> data;
   private final int maximumSize;
 
-  private int maxIn;
   private int sizeIn;
+  private final int maxIn;
   private final Node headIn;
 
-  private int maxOut;
   private int sizeOut;
+  private final int maxOut;
   private final Node headOut;
 
   private int sizeMain;
@@ -71,6 +71,7 @@ public final class TwoQueuePolicy implements Policy {
   }
 
   @Override
+  @SuppressWarnings("PMD.ConfusingTernary")
   public void record(Comparable<Object> key) {
     // On accessing a page X :
     //   if X is in Am then

@@ -27,7 +27,6 @@ import org.testng.annotations.Test;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class UnsafeAccessTest {
-  UnsafeAccess field = new UnsafeAccess(); // test coverage of constructor
 
   @Test
   public void load_fallback() throws Exception {
@@ -37,7 +36,7 @@ public final class UnsafeAccessTest {
 
   @Test
   public void objectFieldOffset() {
-    assertThat(UnsafeAccess.objectFieldOffset(getClass(), "field"), is(greaterThan(0L)));
+    assertThat(UnsafeAccess.objectFieldOffset(RelaxedFields.class, "ivalue"), is(greaterThan(0L)));
   }
 
   @Test(expectedExceptions = Error.class)

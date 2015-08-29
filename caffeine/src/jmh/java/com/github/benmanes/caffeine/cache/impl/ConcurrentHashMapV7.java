@@ -113,7 +113,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */
-@SuppressWarnings("all")
+@SuppressWarnings({"all", "unchecked", "rawtypes", "serial"})
 public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
         implements ConcurrentMap<K, V>, Serializable {
     private static final long serialVersionUID = 7249069246763182397L;
@@ -243,10 +243,6 @@ public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
     private transient final int hashSeed = randomHashSeed(this);
 
     private static int randomHashSeed(ConcurrentHashMapV7 instance) {
-        if (sun.misc.VM.isBooted() && Holder.ALTERNATIVE_HASHING) {
-            return randomHashSeed(instance);
-        }
-
         return 0;
     }
 
@@ -258,24 +254,7 @@ public class ConcurrentHashMapV7<K, V> extends AbstractMap<K, V>
      * @return a non-zero 32-bit pseudo random value.
      */
     public static int randomHashSeed(Object instance) {
-        int seed;
-        if (sun.misc.VM.isBooted()) {
-            seed = ThreadLocalRandom.current().nextInt();
-        } else {
-            // lower quality "random" seed value--still better than zero and not
-            // not practically reversible.
-            int hashing_seed[] = {
-//                System.identityHashCode(Hashing.class),
-                System.identityHashCode(instance),
-                System.identityHashCode(Thread.currentThread()),
-                (int) Thread.currentThread().getId(),
-                (int) (System.currentTimeMillis() >>> 2), // resolution is poor
-                (int) (System.nanoTime() >>> 5), // resolution is poor
-                (int) (Runtime.getRuntime().freeMemory() >>> 4) // alloc min
-            };
-
-            seed = murmur3_32(hashing_seed);
-        }
+        int seed = ThreadLocalRandom.current().nextInt();
 
         // force to non-zero.
         return (0 != seed) ? seed : 1;

@@ -39,8 +39,8 @@ public class HistogramGenerator extends IntegerGenerator {
   long block_size;
   long[] buckets;
   long area;
-  long weighted_area = 0;
-  double mean_size = 0;
+  long weighted_area;
+  double mean_size;
 
   @SuppressWarnings("resource")
   public HistogramGenerator(String histogramfile) throws IOException {
@@ -75,6 +75,7 @@ public class HistogramGenerator extends IntegerGenerator {
     init();
   }
 
+  @SuppressWarnings("PMD.ArrayIsStoredDirectly")
   public HistogramGenerator(long[] buckets, int block_size) {
     this.block_size = block_size;
     this.buckets = buckets;

@@ -21,23 +21,22 @@ tasks.withType(JavaCompile) {
   options.compilerArgs << '-Xlint:all'
 }
 
-javadoc.options.links('http://docs.oracle.com/javase/8/docs/api/');
+javadoc.options.links('http://docs.oracle.com/javase/8/docs/api/')
 
 checkstyle {
   showViolations = true
-  sourceSets = [sourceSets.main]
   toolVersion = "${plugin_versions.checkstyle}"
   config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
 }
 
 findbugs {
   effort = 'max'
-  sourceSets = [sourceSets.main]
 }
 
 pmd {
-  sourceSets = [sourceSets.main]
-  ruleSets = [/* 'java-basic', */ 'java-braces']
+  ruleSets = []
+  toolVersion = '5.3.3'
+  ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
 }
 
 jacocoTestReport {
@@ -94,7 +93,7 @@ tasks.withType(FindBugs) {
 }
 
 tasks.withType(Pmd) {
-  enabled = System.properties.containsKey('pmd')
+  enabled = name.endsWith('Main') && System.properties.containsKey('pmd')
   group = 'PMD'
   reports {
     xml.enabled = false

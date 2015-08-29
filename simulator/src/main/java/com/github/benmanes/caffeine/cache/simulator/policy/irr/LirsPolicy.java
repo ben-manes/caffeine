@@ -153,12 +153,11 @@ public final class LirsPolicy implements Policy {
       node.type = Status.LIR;
       node.removeFrom(StackType.Q);
 
+      pruneStack();
       Node bottom = headS.prevS;
       bottom.type = Status.HIR_RESIDENT;
       bottom.removeFrom(StackType.S);
       bottom.moveToTop(StackType.Q);
-
-      pruneStack();
     } else {
       node.moveToTop(StackType.Q);
     }
@@ -166,8 +165,8 @@ public final class LirsPolicy implements Policy {
   }
 
   private void onNonResidentHir(Node node) {
-    // Upon accessing an HIR nonresident block X. This is a miss. We remove the HIR resident block
-    // at the bottom of stack Q (it then becomes a nonresident block) and evict it from the cache.
+    // Upon accessing an HIR non-resident block X. This is a miss. We remove the HIR resident block
+    // at the bottom of stack Q (it then becomes a non-resident block) and evict it from the cache.
     // Then, we load the requested block X into the freed buffer and place it at the top of stack
     // S. There are two cases for the original location of block X: a) If X is in the stack S, we
     // change its status to LIR and move the LIR block at the bottom of stack S to the top of
@@ -182,6 +181,8 @@ public final class LirsPolicy implements Policy {
 
     if (residentSize > maximumSize) {
       Node bottom = headQ.prevQ;
+
+      checkState(bottom.type == Status.HIR_RESIDENT);
       bottom.type = Status.HIR_NON_RESIDENT;
       bottom.removeFrom(StackType.Q);
       policyStats.recordEviction();
@@ -191,11 +192,13 @@ public final class LirsPolicy implements Policy {
     if (node.isInStack(StackType.S)) {
       node.type = Status.LIR;
 
+      pruneStack();
       Node bottom = headS.prevS;
+
+      checkState(bottom.type == Status.LIR);
       bottom.type = Status.HIR_RESIDENT;
       bottom.removeFrom(StackType.S);
       bottom.moveToTop(StackType.Q);
-      pruneStack();
     } else {
       node.moveToTop(StackType.Q);
     }
@@ -204,7 +207,7 @@ public final class LirsPolicy implements Policy {
 
   private void pruneStack() {
     // In the LIRS replacement, there is an operation called “stack pruning” on LIRS stack S, which
-    // removes the HIR blocks at the stack bottom until an LIR block sits there. This operation
+    // removes the HIR blocks at the stack bottom until a LIR block sits there. This operation
     // serves two purposes: 1) We ensure the block at the stack bottom always belongs to the LIR
     // block set. 2) After the LIR block in the bottom is removed, those HIR blocks contiguously
     // located above it will not have a chance to change their status from HIR to LIR since their
@@ -241,6 +244,8 @@ public final class LirsPolicy implements Policy {
   @Override
   public void finished() {
     checkState(residentSize <= maximumSize);
+    checkState(sizeS == data.values().stream().filter(node -> node.isInS).count());
+    checkState(sizeQ == data.values().stream().filter(node -> node.isInQ).count());
   }
 
   enum Status {
@@ -249,7 +254,7 @@ public final class LirsPolicy implements Policy {
     HIR_NON_RESIDENT;
   }
 
-  // S holds three types of blocks, LIR blocks, resident HIR blocks, nonresident HIR blocks
+  // S holds three types of blocks, LIR blocks, resident HIR blocks, non-resident HIR blocks
   // Q holds all of the resident HIR blocks
   enum StackType {
     // We store LIR blocks and HIR blocks with their recencies less than the maximum recency of the
@@ -326,7 +331,6 @@ public final class LirsPolicy implements Policy {
 
     public void removeFrom(StackType stackType) {
       checkState(isInStack(stackType));
-      requireNonNull(key);
 
       if (stackType == StackType.S) {
         prevS.nextS = nextS;

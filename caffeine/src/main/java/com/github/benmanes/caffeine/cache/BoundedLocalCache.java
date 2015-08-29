@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
-import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InvalidObjectException;
@@ -1498,11 +1497,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     try {
       maintenance();
 
-      final int initialCapacity = (weigher == Weigher.singleton())
+      int initialCapacity = (weigher == Weigher.singleton())
           ? Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size())
           : 16;
-      final Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
-      final Iterator<Node<K, V>> iterator = ascending
+      Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
+      Iterator<Node<K, V>> iterator = ascending
           ? deque.iterator()
           : deque.descendingIterator();
       while (iterator.hasNext() && (limit > map.size())) {
@@ -1513,7 +1512,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           map.put(key, value);
         }
       }
-      return unmodifiableMap(map);
+      return Collections.unmodifiableMap(map);
     } finally {
       evictionLock.unlock();
     }
@@ -1743,14 +1742,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     proxy.softValues = cache.nodeFactory.softValues();
     proxy.isRecordingStats = cache.isRecordingStats();
     proxy.removalListener = cache.removalListener();
+    proxy.ticker = cache.expirationTicker();
     proxy.writer = cache.writer;
-    if (cache.expirationTicker() != Ticker.disabledTicker()) {
-      proxy.ticker = cache.expirationTicker();
-    } else if (cache.statsTicker() != Ticker.disabledTicker()) {
-      proxy.ticker = cache.statsTicker();
-    } else {
-      proxy.ticker = Ticker.disabledTicker();
-    }
     if (cache.expiresAfterAccess()) {
       proxy.expiresAfterAccessNanos = cache.expiresAfterAccessNanos();
     }
@@ -1968,14 +1961,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       private Map<K, V> sortedByWriteTime(boolean ascending, int limit) {
         Caffeine.requireArgument(limit >= 0);
-        final int initialCapacity = (cache.weigher == Weigher.singleton())
-            ? Math.min(limit, cache.evicts() ? (int) cache.adjustedWeightedSize() : cache.size())
-            : 16;
-        final Map<K, V> map = new LinkedHashMap<>(initialCapacity);
         Iterator<Node<K, V>> iterator = cache.data.values().stream().sorted((a, b) -> {
           int comparison = Long.compare(a.getWriteTime(), b.getWriteTime());
           return ascending ? comparison : -comparison;
         }).iterator();
+        int initialCapacity = (cache.weigher == Weigher.singleton())
+            ? Math.min(limit, cache.evicts() ? (int) cache.adjustedWeightedSize() : cache.size())
+            : 16;
+        Map<K, V> map = new LinkedHashMap<>(initialCapacity);
         while (iterator.hasNext() && (limit > map.size())) {
           Node<K, V> node = iterator.next();
           K key = node.getKey();
@@ -1984,7 +1977,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             map.put(key, value);
           }
         }
-        return unmodifiableMap(map);
+        return Collections.unmodifiableMap(map);
       }
     }
   }

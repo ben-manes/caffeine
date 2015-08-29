@@ -370,7 +370,7 @@ public final class ConcurrentLinkedStackTest {
     List<Integer> list = new ArrayList<>();
     populate(list, POPULATED_SIZE);
     Collections.reverse(list);
-    assertThat(String.format("\nExpected: %s%n     but: %s", stack, list),
+    assertThat(String.format("%nExpected: %s%n     but: %s", stack, list),
         elementsEqual(stack.iterator(), list.iterator()));
   }
 

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.base;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 
 import sun.misc.Unsafe;
 
@@ -56,7 +57,9 @@ public final class UnsafeAccess {
     }
   }
 
-  static Unsafe load(String openJdk, String android) throws Exception {
+  static Unsafe load(String openJdk, String android) throws NoSuchMethodException,
+      SecurityException, InstantiationException, IllegalAccessException,
+      IllegalArgumentException, InvocationTargetException {
     Field field = null;
     try {
       // try OpenJDK field name
@@ -76,5 +79,5 @@ public final class UnsafeAccess {
     return (Unsafe) field.get(null);
   }
 
-  UnsafeAccess() {}
+  private UnsafeAccess() {}
 }

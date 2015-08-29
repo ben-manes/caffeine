@@ -223,8 +223,8 @@ public final class SamplingPolicy implements Policy {
   /** A node on the double-linked list. */
   static final class Node {
     private final Object key;
+    private final long insertionTime;
 
-    private long insertionTime;
     private long accessTime;
     private int frequency;
     private int index;

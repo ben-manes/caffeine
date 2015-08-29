@@ -170,6 +170,7 @@ public final class CarPolicy implements Policy {
     return (node != null) && ((node.type == QueueType.B1) || (node.type == QueueType.B2));
   }
 
+  @SuppressWarnings("PMD.ConfusingTernary")
   private void demote() {
     // found = 0
     // repeat

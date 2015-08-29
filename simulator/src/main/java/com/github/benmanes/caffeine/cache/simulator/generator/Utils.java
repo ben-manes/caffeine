@@ -23,9 +23,11 @@ import java.util.Random;
  *
  * @author https://github.com/brianfrankcooper/YCSB
  */
-class Utils {
+final class Utils {
   private static final Random rand = new Random();
   private static final ThreadLocal<Random> rng = new ThreadLocal<Random>();
+
+  private Utils() {}
 
   public static Random random() {
     Random ret = rng.get();
@@ -39,7 +41,7 @@ class Utils {
   /**
    * Generate a random ASCII string of a given length.
    */
-  public static String ASCIIString(int length) {
+  public static String asciiString(int length) {
     int interval = '~' - ' ' + 1;
 
     byte[] buf = new byte[length];
@@ -58,7 +60,7 @@ class Utils {
    * Hash an integer value.
    */
   public static long hash(long val) {
-    return FNVhash64(val);
+    return fnvHash64(val);
   }
 
   public static final int FNV_offset_basis_32 = 0x811c9dc5;
@@ -70,7 +72,7 @@ class Utils {
    * @param val The value to hash.
    * @return The hash value
    */
-  public static int FNVhash32(int val) {
+  public static int fnvHash32(int val) {
     // from http://en.wikipedia.org/wiki/Fowler_Noll_Vo_hash
     int hashval = FNV_offset_basis_32;
 
@@ -94,7 +96,7 @@ class Utils {
    * @param val The value to hash.
    * @return The hash value
    */
-  public static long FNVhash64(long val) {
+  public static long fnvHash64(long val) {
     // from http://en.wikipedia.org/wiki/Fowler_Noll_Vo_hash
     long hashval = FNV_offset_basis_64;
 

@@ -59,6 +59,7 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
   }
 
   @Override
+  @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.ExceptionAsFlowControl"})
   public V get(K key, Callable<? extends V> valueLoader) throws ExecutionException {
     requireNonNull(valueLoader);
     try {

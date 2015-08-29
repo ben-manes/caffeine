@@ -145,10 +145,10 @@ public final class FrequentlyUsedPolicy implements Policy {
   /** A frequency count and associated chain of cache entries. */
   static final class FrequencyNode {
     private final int count;
+    private final Node nextNode;
 
     private FrequencyNode prev;
     private FrequencyNode next;
-    private Node nextNode;
 
     public FrequencyNode(int count) {
       nextNode = new Node(this);

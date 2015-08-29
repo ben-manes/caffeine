@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.MissingStaticMethodInNonInstantiatableClass")
 final class References {
 
   private References() {}
@@ -163,6 +164,7 @@ final class References {
     }
 
     @Override
+    @SuppressWarnings("PMD.UselessOverridingMethod")
     public int hashCode() {
       return super.hashCode();
     }
@@ -194,6 +196,7 @@ final class References {
     }
 
     @Override
+    @SuppressWarnings("PMD.UselessOverridingMethod")
     public int hashCode() {
       return super.hashCode();
     }

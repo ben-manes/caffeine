@@ -31,6 +31,8 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -67,6 +69,8 @@ import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class CacheProxy<K, V> implements Cache<K, V> {
+  private static final Logger logger = Logger.getLogger(CacheProxy.class.getName());
+
   private final com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache;
   private final CaffeineConfiguration<K, V> configuration;
   private final CopyStrategy copyStrategy;
@@ -84,6 +88,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   private volatile boolean closed;
 
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public CacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration,
       com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache,
@@ -482,11 +487,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
-    if (value != null) {
+    if (value == null) {
+      statistics.recordMisses(1L);
+    } else {
       statistics.recordHits(1L);
       statistics.recordRemovals(1L);
-    } else {
-      statistics.recordMisses(1L);
     }
     V copy = copyOf(value);
     long duration = ticker.read() - start;
@@ -691,7 +696,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Returns the updated expirable value after performing the post processing actions. */
-  @SuppressWarnings("fallthrough")
+  @SuppressWarnings({"fallthrough", "PMD.MissingBreakInSwitch"})
   private Expirable<V> postProcess(Expirable<V> expirable, EntryProcessorEntry<K, V> entry) {
     switch (entry.getAction()) {
       case NONE:
@@ -854,12 +859,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     try {
       writer.writeAll(entries);
       return null;
-    } catch (RuntimeException e) {
+    } catch (CacheWriterException e) {
       for (Cache.Entry<? extends K, ? extends V> entry : entries) {
         map.remove(entry.getKey());
       }
-      if (e instanceof CacheWriterException) {
-        return (CacheWriterException) e;
+      throw e;
+    } catch (RuntimeException e) {
+      for (Cache.Entry<? extends K, ? extends V> entry : entries) {
+        map.remove(entry.getKey());
       }
       return new CacheWriterException("Exception in CacheWriter", e);
     }
@@ -874,11 +881,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     try {
       writer.deleteAll(keysToDelete);
       return null;
+    } catch (CacheWriterException e) {
+      keys.removeAll(keysToDelete);
+      throw e;
     } catch (RuntimeException e) {
       keys.removeAll(keysToDelete);
-      if (e instanceof CacheWriterException) {
-        return (CacheWriterException) e;
-      }
       return new CacheWriterException("Exception in CacheWriter", e);
     }
   }
@@ -923,8 +930,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected Map<K, V> copyMap(Map<K, Expirable<V>> map) {
     final ClassLoader classLoader = cacheManager.getClassLoader();
     return map.entrySet().stream().collect(Collectors.toMap(
-        entry -> copyStrategy.copy((K) entry.getKey(), classLoader),
-        entry -> copyStrategy.copy((V) entry.getValue().get(), classLoader)));
+        entry -> (K) copyStrategy.copy(entry.getKey(), classLoader),
+        entry -> (V) copyStrategy.copy(entry.getValue().get(), classLoader)));
   }
 
   /** @return an approximate of the current time in milliseconds */
@@ -945,7 +952,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       Duration duration = expires.get();
       long expireTimeMS = duration.getAdjustedTime(currentTimeMS);
       expirable.setExpireTimeMS(expireTimeMS);
-    } catch (Exception ignored) {}
+    } catch (Exception e) {
+      logger.log(Level.WARNING, "Failed to set the entry's expiration time", e);
+    }
   }
 
   /**
@@ -959,6 +968,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       Duration duration = expires.get();
       return duration.isZero() ? 0 : duration.getAdjustedTime(currentTimeMillis());
     } catch (Exception e) {
+      logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
       return Long.MAX_VALUE;
     }
   }
@@ -969,6 +979,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param task the operation to perform
    * @return the result if successful
    */
+  @SuppressWarnings("PMD.AvoidCatchingNPE")
   protected <T> T doSafely(Supplier<T> task) {
     requireNotClosed();
     try {

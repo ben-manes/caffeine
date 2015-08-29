@@ -55,6 +55,7 @@ public final class TraceEvent implements Comparable<TraceEvent> {
   public TraceEvent(String name, long id, Action action, int keyHash, int weight, long timestamp) {
     this.timestamp = timestamp;
     this.keyHash = keyHash;
+    this.weight = weight;
     this.action = action;
     this.name = name;
     this.id = id;
@@ -75,6 +76,7 @@ public final class TraceEvent implements Comparable<TraceEvent> {
   }
 
   /** @return the unqiue id of the cache */
+  @SuppressWarnings("PMD.ShortMethodName")
   public long id() {
     return id;
   }

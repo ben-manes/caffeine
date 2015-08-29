@@ -43,6 +43,7 @@ import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   private final LoadingCache<K, Expirable<V>> cache;
 
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public LoadingCacheProxy(String name, Executor executor, CacheManager cacheManager,
       CaffeineConfiguration<K, V> configuration, LoadingCache<K, Expirable<V>> cache,
       EventDispatcher<K, V> dispatcher, CacheLoader<K, V> cacheLoader,

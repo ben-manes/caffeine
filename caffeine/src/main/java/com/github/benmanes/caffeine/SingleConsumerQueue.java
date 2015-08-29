@@ -342,7 +342,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   }
 
   /** Returns the arena index for the current thread. */
-  static final int index() {
+  static int index() {
     int probe = UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), PROBE);
     if (probe == 0) {
       ThreadLocalRandom.current(); // force initialization
@@ -363,8 +363,8 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   @Override
   public Iterator<E> iterator() {
     return new Iterator<E>() {
+      Node<E> prev;
       Node<E> t = tail;
-      Node<E> prev = null;
       Node<E> cursor = head;
       boolean failOnRemoval = true;
 
@@ -499,7 +499,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     /** A busy wait until the operation has completed. */
     @Override
     void await() {
-      while (!done) {};
+      while (!done) {}
     }
 
     /** Returns whether the operation completed. */

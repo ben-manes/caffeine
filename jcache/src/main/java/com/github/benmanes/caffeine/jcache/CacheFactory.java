@@ -78,13 +78,13 @@ final class CacheFactory {
    * @return a newly constructed cache instance
    */
   public <K, V> CacheProxy<K, V> createCache(String cacheName, Configuration<K, V> configuration) {
-    CaffeineConfiguration<K, V> config = resolveConfigurationFor(cacheName, configuration);
+    CaffeineConfiguration<K, V> config = resolveConfigurationFor(configuration);
     return new Builder<>(cacheName, config).build();
   }
 
   /** Copies the configuration and overlays it on top of the default settings. */
   private <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
-      String cacheName, Configuration<K, V> configuration) {
+      Configuration<K, V> configuration) {
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       return new CaffeineConfiguration<K, V>((CaffeineConfiguration<K, V>) configuration);
     }
@@ -116,6 +116,7 @@ final class CacheFactory {
     CacheLoader<K, V> cacheLoader;
     JCacheEvictionListener<K, V> evictionListener;
 
+    @SuppressWarnings("PMD.StringToString")
     Builder(String cacheName, CaffeineConfiguration<K, V> config) {
       this.config = config;
       this.cacheName = cacheName;

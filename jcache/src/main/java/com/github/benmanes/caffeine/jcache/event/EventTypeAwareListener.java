@@ -75,6 +75,8 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
         case EXPIRED:
           onExpired(event);
           break;
+        default:
+          throw new IllegalStateException("Unknown event type: " + event.getEventType());
       }
     } catch (Exception e) {
       logger.log(Level.WARNING, null, e);

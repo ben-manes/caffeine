@@ -748,6 +748,7 @@ public final class Caffeine<K, V> {
   }
 
   /** Returns a best effort guess of the calling class's simple name. */
+  @SuppressWarnings({"PMD.AvoidDeeplyNestedIfStmts", "PMD.UselessOverridingMethod"})
   static String callerClassName() {
     Class<?>[] classContext = new SecurityManager() {
       @Override public Class<?>[] getClassContext() {
@@ -759,8 +760,8 @@ public final class Caffeine<K, V> {
         String pkg = clazz.getPackage().getName();
         if (!pkg.startsWith("com.github.benmanes.caffeine") && !pkg.startsWith("java")) {
           String name = clazz.getSimpleName();
-          int end = name.indexOf('$');
           if (!name.isEmpty()) {
+            int end = name.indexOf('$');
             return (end == -1) ? name : name.substring(0, end);
           }
         }
@@ -919,10 +920,10 @@ public final class Caffeine<K, V> {
       s.append("valueStrength=").append(valueStrength.toString().toLowerCase()).append(',');
     }
     if (removalListener != null) {
-      s.append("removalListener").append(',');
+      s.append("removalListener,");
     }
     if (writer != null) {
-      s.append("writer").append(',');
+      s.append("writer,");
     }
     if (s.length() > baseLength) {
       s.deleteCharAt(s.length() - 1);

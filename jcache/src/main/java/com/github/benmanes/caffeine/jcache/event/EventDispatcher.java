@@ -60,7 +60,7 @@ public final class EventDispatcher<K, V> {
 
   public EventDispatcher(Executor exectuor) {
     this.dispatchQueues = new ConcurrentHashMap<>();
-    this.exectuor = exectuor;
+    this.exectuor = requireNonNull(exectuor);
   }
 
   /**

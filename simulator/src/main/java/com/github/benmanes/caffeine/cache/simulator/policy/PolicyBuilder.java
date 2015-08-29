@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Locale;
+
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
@@ -42,8 +44,9 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class PolicyBuilder {
+  private final Config config;
+
   private Admittor admittor;
-  private Config config;
   private String type;
 
   public PolicyBuilder(Config config) {
@@ -68,7 +71,7 @@ public final class PolicyBuilder {
 
   public Policy build() {
     String base = type.substring(0, type.indexOf('.'));
-    String strategy = type.substring(type.lastIndexOf('.') + 1);
+    String strategy = type.substring(type.lastIndexOf('.') + 1).toUpperCase(Locale.US);
     switch (base) {
       case "opt":
         if (strategy.equalsIgnoreCase("Clairvoyant")) {
@@ -80,15 +83,15 @@ public final class PolicyBuilder {
       case "linked":
         if (strategy.equalsIgnoreCase("Lfu") || strategy.equalsIgnoreCase("Mfu")) {
           return new FrequentlyUsedPolicy(name(), admittor, config,
-              FrequentlyUsedPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
+              FrequentlyUsedPolicy.EvictionPolicy.valueOf(strategy));
         } else if (strategy.equalsIgnoreCase("SegmentedLru")) {
           return new SegmentedLruPolicy(name(), admittor, config);
         }
         return new LinkedPolicy(name(), admittor, config,
-            LinkedPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
+            LinkedPolicy.EvictionPolicy.valueOf(strategy));
       case "sampled":
         return new SamplingPolicy(name(), admittor, config,
-            SamplingPolicy.EvictionPolicy.valueOf(strategy.toUpperCase()));
+            SamplingPolicy.EvictionPolicy.valueOf(strategy));
       case "victim":
         if (strategy.equalsIgnoreCase("Lru")) {
           return new VictimLruPolicy(type, config);
@@ -122,6 +125,8 @@ public final class PolicyBuilder {
         } else if (strategy.equalsIgnoreCase("CART")) {
           return new CartPolicy(type, config);
         }
+        break;
+      default:
         break;
     }
     throw new IllegalStateException("Unknown policy: " + type);

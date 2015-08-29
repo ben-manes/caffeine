@@ -15,11 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-
 /**
  * The reason why a cached entry was removed.
  *
@@ -28,13 +23,27 @@ import java.util.concurrent.ConcurrentMap;
 public enum RemovalCause {
 
   /**
-   * The entry was manually removed by the user. This can result from the user invoking
-   * {@link Cache#invalidate}, {@link Cache#invalidateAll(Iterable)}, {@link Cache#invalidateAll()},
-   * {@link Map#remove}, {@link Map#computeIfPresent}, {@link Map#compute}, {@link Map#merge}, or
-   * {@link ConcurrentMap#remove} on the cache or map view. A manual removal may also be performed
-   * through the key/value/entry collections views by the user invoking {@link Collection#remove},
-   * {@link Collection#removeAll}, {@link Collection#removeIf}, {@link Collection#retainAll}, or
-   * {@link Iterator#remove}.
+   * The entry was manually removed by the user. This can result from the user invoking any of the
+   * following methods on the cache or map view.
+   * <ul>
+   *   <li>{@link Cache#invalidate}</li>
+   *   <li>{@link Cache#invalidateAll(Iterable)}</li>
+   *   <li>{@link Cache#invalidateAll()}</li>
+   *   <li>{@link java.util.Map#remove}</li>
+   *   <li>{@link java.util.Map#computeIfPresent}</li>
+   *   <li>{@link java.util.Map#compute}</li>
+   *   <li>{@link java.util.Map#merge}</li>
+   *   <li>{@link java.util.concurrent.ConcurrentMap#remove}</li>
+   * </ul>
+   * A manual removal may also be performed through the key, value, or entry collections views by
+   * the user invoking any of the following methods.
+   * <ul>
+   *   <li>{@link java.util.Collection#remove}</li>
+   *   <li>{@link java.util.Collection#removeAll}</li>
+   *   <li>{@link java.util.Collection#removeIf}</li>
+   *   <li>{@link java.util.Collection#retainAll}</li>
+   *   <li>{@link java.util.Iterator#remove}</li>
+   * </ul>
    */
   EXPLICIT {
     @Override public boolean wasEvicted() {
@@ -44,9 +53,18 @@ public enum RemovalCause {
 
   /**
    * The entry itself was not actually removed, but its value was replaced by the user. This can
-   * result from the user invoking {@link Cache#put}, {@link Cache#putAll},
-   * {@link LoadingCache#refresh}, {@link Map#put}, {@link Map#putAll}, {@link Map#replace},
-   * {@link Map#computeIfPresent}, {@link Map#compute}, or {@link Map#merge}.
+   * result from the user invoking any of the following methods on the cache or map view.
+   * <ul>
+   *   <li>{@link Cache#put}</li>
+   *   <li>{@link Cache#putAll}</li>
+   *   <li>{@link LoadingCache#refresh}</li>
+   *   <li>{@link java.util.Map#put}</li>
+   *   <li>{@link java.util.Map#putAll}</li>
+   *   <li>{@link java.util.Map#replace}</li>
+   *   <li>{@link java.util.Map#computeIfPresent}</li>
+   *   <li>{@link java.util.Map#compute}</li>
+   *   <li>{@link java.util.Map#merge}</li>
+   * </ul>
    */
   REPLACED {
     @Override public boolean wasEvicted() {
@@ -88,6 +106,8 @@ public enum RemovalCause {
   /**
    * Returns {@code true} if there was an automatic removal due to eviction (the cause is neither
    * {@link #EXPLICIT} nor {@link #REPLACED}).
+   *
+   * @return if the entry was automatically removed due to eviction
    */
   public abstract boolean wasEvicted();
 }

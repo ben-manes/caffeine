@@ -5,7 +5,7 @@
 [![License](http://img.shields.io/:license-apache-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 Caffeine is a [high performance][benchmarks] caching library based on Java 8. For more
-details, see our [users' guide][users-guide] and browse the [API docs][javadoc] for
+details, see our [user's guide][users-guide] and browse the [API docs][javadoc] for
 the latest release.
 
 ### Cache
@@ -60,7 +60,7 @@ Snapshots of the development version are available in
 [benchmarks]: https://github.com/ben-manes/caffeine/wiki/Benchmarks
 [users-guide]: https://github.com/ben-manes/caffeine/wiki
 [javadoc]: http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine
-[guava-cache]: https://code.google.com/p/guava-libraries/wiki/CachesExplained
+[guava-cache]: https://github.com/google/guava/wiki/CachesExplained
 [clhm]: https://code.google.com/p/concurrentlinkedhashmap
 [population]: https://github.com/ben-manes/caffeine/wiki/Population
 [size]: https://github.com/ben-manes/caffeine/wiki/Eviction#size-based

@@ -364,11 +364,11 @@ public class NonReentrantLock implements Lock, Serializable {
       return isLocked() && (getExclusiveOwnerThread() == Thread.currentThread());
     }
 
-    public final boolean isLocked() {
+    public boolean isLocked() {
       return getState() == LOCKED;
     }
 
-    public final Thread getOwner() {
+    public Thread getOwner() {
       return getExclusiveOwnerThread();
     }
 

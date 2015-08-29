@@ -68,6 +68,7 @@ public final class TraceEventTest {
     TraceEvent second = new TraceEvent();
     second.setKeyHash(first.keyHash());
     second.setAction(first.action());
+    second.setWeight(first.weight());
     second.setId(first.id());
     second.setTimestamp(first.timestamp());
     assertEqualEvents(first, second);

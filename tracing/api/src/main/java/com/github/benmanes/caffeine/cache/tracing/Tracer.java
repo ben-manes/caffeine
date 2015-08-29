@@ -27,7 +27,7 @@ import javax.annotation.Nonnull;
  */
 public interface Tracer {
   /** The system property string to disable tracing if a provider is available. */
-  static final String TRACING_ENABLED = "caffeine.tracing.enabled";
+  String TRACING_ENABLED = "caffeine.tracing.enabled";
 
   /**
    * Registers a cache by name for identifying the cache during simulation. The name is not required
@@ -79,12 +79,12 @@ public interface Tracer {
   void recordDelete(long id, @Nonnull Object key);
 
   /** @return if tracing is enabled and an implementation has been loaded. */
-  public static boolean isEnabled() {
+  static boolean isEnabled() {
     return getDefault() != disabled();
   }
 
   /** @return a tracer implementation that does not record any events. */
-  public static Tracer disabled() {
+  static Tracer disabled() {
     return DisabledTracer.INSTANCE;
   }
 
@@ -95,7 +95,7 @@ public interface Tracer {
    *
    * @return the tracer implementation that was loaded or a disabled instance otherwise
    */
-  public static Tracer getDefault() {
+  static Tracer getDefault() {
     return TracerHolder.INSTANCE;
   }
 }
@@ -117,7 +117,7 @@ final class TracerHolder {
     if ((property == null) || Boolean.parseBoolean(property)) {
       for (Tracer tracer : ServiceLoader.load(Tracer.class)) {
         return tracer;
-      };
+      }
     }
     return DisabledTracer.INSTANCE;
   }

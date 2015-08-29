@@ -113,7 +113,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
   static final int ARENA_LENGTH = ceilingNextPowerOfTwo((NCPU + 1) / 2);
 
   /** The mask value for indexing into the arena. */
-  static int ARENA_MASK = ARENA_LENGTH - 1;
+  static final int ARENA_MASK = ARENA_LENGTH - 1;
 
   /**
    * The number of times to spin (doing nothing except polling a memory location) before giving up
@@ -407,7 +407,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
   }
 
   /** Returns the arena index for the current thread. */
-  static final int index() {
+  static int index() {
     int probe = UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), PROBE);
     if (probe == 0) {
       ThreadLocalRandom.current(); // force initialization
@@ -720,7 +720,7 @@ public final class ConcurrentLinkedStack<E> extends CLSHeader.TopRef<E> implemen
     /** A busy wait until the operation has completed. */
     @Override
     void await() {
-      while (!done) {};
+      while (!done) {}
     }
 
     /** Returns whether the operation completed. */

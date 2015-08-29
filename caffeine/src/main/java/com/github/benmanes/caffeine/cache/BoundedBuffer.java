@@ -124,13 +124,13 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
 /** The namespace for field padding through inheritance. */
 final class BBHeader {
 
-  static abstract class PadReadCounter {
+  static class PadReadCounter {
     long p00, p01, p02, p03, p04, p05, p06, p07;
     long p10, p11, p12, p13, p14, p15, p16, p17;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the read count. */
-  static abstract class ReadCounterRef extends PadReadCounter {
+  static class ReadCounterRef extends PadReadCounter {
     static final long READ_OFFSET =
         UnsafeAccess.objectFieldOffset(ReadCounterRef.class, "readCounter");
 
@@ -141,13 +141,13 @@ final class BBHeader {
     }
   }
 
-  static abstract class PadWriteCounter extends ReadCounterRef {
+  static class PadWriteCounter extends ReadCounterRef {
     long p20, p21, p22, p23, p24, p25, p26, p27;
     long p30, p31, p32, p33, p34, p35, p36, p37;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the write count. */
-  static abstract class ReadAndWriteCounterRef extends PadWriteCounter {
+  static class ReadAndWriteCounterRef extends PadWriteCounter {
     static final long WRITE_OFFSET =
         UnsafeAccess.objectFieldOffset(ReadAndWriteCounterRef.class, "writeCounter");
 
