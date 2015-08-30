@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -53,7 +52,6 @@ import com.typesafe.config.Config;
 public class TuQueuePolicy implements Policy {
   private final PolicyStats policyStats;
   private final Map<Object, Node> data;
-  private final Admittor admittor;
   private final int maximumSize;
 
   private int maxHot;
@@ -68,17 +66,12 @@ public class TuQueuePolicy implements Policy {
   private final Node headCold;
 
   public TuQueuePolicy(String name, Config config) {
-    this(name, config, Admittor.always());
-  }
-
-  protected TuQueuePolicy(String name, Config config, Admittor victimAdmittor) {
     TuQueueSettings settings = new TuQueueSettings(config);
 
     this.headHot = new Node();
     this.headWarm = new Node();
     this.headCold = new Node();
     this.data = new HashMap<>();
-    this.admittor = victimAdmittor;
     this.policyStats = new PolicyStats(name);
     this.maximumSize = settings.maximumSize();
     this.maxHot = (int) (maximumSize * settings.percentHot());
@@ -88,7 +81,6 @@ public class TuQueuePolicy implements Policy {
   @Override
   public void record(Comparable<Object> key) {
     Node node = data.get(key);
-    admittor.record(key);
 
     if (node == null) {
       policyStats.recordMiss();
@@ -116,7 +108,7 @@ public class TuQueuePolicy implements Policy {
       sizeWarm++;
 
       if (sizeWarm > maxWarm) {
-        Node demoted = admittor.admit(node.key, headWarm.next.key) ? headWarm.next : node;
+        Node demoted = headWarm.next;
         demoted.remove();
         sizeWarm--;
         demoted.type = QueueType.COLD;
@@ -137,7 +129,7 @@ public class TuQueuePolicy implements Policy {
     sizeHot++;
 
     if (sizeHot > maxHot) {
-      Node demoted = admittor.admit(node.key, headHot.next.key) ? headHot.next : node;
+      Node demoted = headHot.next;
       demoted.remove();
       sizeHot--;
       demoted.appendToTail(headCold);
