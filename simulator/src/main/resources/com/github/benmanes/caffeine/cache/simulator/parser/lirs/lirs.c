@@ -39,12 +39,12 @@ int main(int argc, char* argv[])
   int opt;
 
   if (argc != 2){
-    printf("%s file_name_prefix[.trc] \n", argv[0]);
+    printf("%s file_name_prefix[.trace] \n", argv[0]);
     exit(1);
   }
   
   strcpy(trc_file_name, argv[1]);
-  strcat(trc_file_name, ".trc");
+  strcat(trc_file_name, ".trace");
   trace_fp = openReadFile(trc_file_name);
 
   if (!get_range(trace_fp, &vm_size, &total_pg_refs)){

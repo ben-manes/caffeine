@@ -81,21 +81,26 @@ public final class LirsPolicy implements Policy {
 
   private final PolicyStats policyStats;
   private final Map<Object, Node> data;
+  private final int maximumHotSize;
   private final int maximumSize;
+
   private final Node headS;
   private final Node headQ;
 
   private int sizeS;
   private int sizeQ;
+  private int sizeHot;
   private int residentSize;
 
   public LirsPolicy(String name, Config config) {
-    BasicSettings settings = new BasicSettings(config);
+    LirsSettings settings = new LirsSettings(config);
+    this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.data = new HashMap<>();
     this.headS = new Node();
     this.headQ = new Node();
+
   }
 
   @Override
@@ -105,20 +110,11 @@ public final class LirsPolicy implements Policy {
       node = new Node(key);
       data.put(key,node);
       onNonResidentHir(node);
-
-      // When an LIR block set is not full, all the accessed blocks are given LIR status until its
-      // size reaches Llirs. After that, HIR status is given to any blocks that are accessed for the
-      // first time and to blocks that have not been accessed for a long time so that currently they
-      // are not in stack S.
-      // FIXME(ben): Should this be the 99% hot size hinted to in the paper?
-      if (residentSize < maximumSize) {
-        node.type = Status.LIR;
-      }
-    } else if (node.type == Status.LIR) {
+    } else if (node.status == Status.LIR) {
       onLir(node);
-    } else if (node.type == Status.HIR_RESIDENT) {
+    } else if (node.status == Status.HIR_RESIDENT) {
       onResidentHir(node);
-    } else if (node.type == Status.HIR_NON_RESIDENT) {
+    } else if (node.status == Status.HIR_NON_RESIDENT) {
       onNonResidentHir(node);
     } else {
       throw new IllegalStateException();
@@ -149,22 +145,51 @@ public final class LirsPolicy implements Policy {
     // it to the top of stack Q.
     policyStats.recordHit();
 
-    if (node.isInStack(StackType.S)) {
-      node.type = Status.LIR;
+    boolean isInStack = node.isInStack(StackType.S);
+    node.moveToTop(StackType.S);
+
+    if (isInStack) {
+      sizeHot++;
+      node.status = Status.LIR;
       node.removeFrom(StackType.Q);
 
-      pruneStack();
       Node bottom = headS.prevS;
-      bottom.type = Status.HIR_RESIDENT;
+      sizeHot--;
+
+      bottom.status = Status.HIR_RESIDENT;
       bottom.removeFrom(StackType.S);
       bottom.moveToTop(StackType.Q);
+
+      pruneStack();
     } else {
       node.moveToTop(StackType.Q);
     }
-    node.moveToTop(StackType.S);
   }
 
   private void onNonResidentHir(Node node) {
+    // When LIR block set is not full, all the referenced blocks are given an LIR status until its
+    // size reaches Llirs. After that, HIR status is given to any blocks that are referenced for the
+    // first time, and to the blocks that have not been referenced for a long time so that they are
+    // not in stack S any longer.
+    policyStats.recordMiss();
+
+    if (sizeHot < maximumHotSize) {
+      onWarmupMiss(node);
+    } else {
+      onFullMiss(node);
+    }
+    residentSize++;
+  }
+
+  /** Records a miss when the hot set is not full. */
+  private void onWarmupMiss(Node node) {
+    node.moveToTop(StackType.S);
+    node.status = Status.LIR;
+    sizeHot++;
+  }
+
+  /** Records a miss when the hot set is full. */
+  private void onFullMiss(Node node) {
     // Upon accessing an HIR non-resident block X. This is a miss. We remove the HIR resident block
     // at the bottom of stack Q (it then becomes a non-resident block) and evict it from the cache.
     // Then, we load the requested block X into the freed buffer and place it at the top of stack
@@ -174,35 +199,31 @@ public final class LirsPolicy implements Policy {
     // illustrated in the transition from state(a) to state(d) in Fig.2. b) If X is not in stack S,
     // we leave its status unchanged and place it at the top of stack Q. This case is illustrated in
     // the transition from state (a) to state (e) in Fig. 2.
-    policyStats.recordMiss();
 
-    node.type = Status.HIR_RESIDENT;
-    residentSize++;
-
-    if (residentSize > maximumSize) {
-      Node bottom = headQ.prevQ;
-
-      checkState(bottom.type == Status.HIR_RESIDENT);
-      bottom.type = Status.HIR_NON_RESIDENT;
-      bottom.removeFrom(StackType.Q);
-      policyStats.recordEviction();
-      residentSize--;
+    node.status = Status.HIR_RESIDENT;
+    if (residentSize >= maximumSize) {
+      evict();
     }
 
-    if (node.isInStack(StackType.S)) {
-      node.type = Status.LIR;
+    boolean isInStack = node.isInStack(StackType.S);
+    node.moveToTop(StackType.S);
 
-      pruneStack();
+    if (isInStack) {
+      node.status = Status.LIR;
+      sizeHot++;
+
       Node bottom = headS.prevS;
+      checkState(bottom.status == Status.LIR);
 
-      checkState(bottom.type == Status.LIR);
-      bottom.type = Status.HIR_RESIDENT;
+      bottom.status = Status.HIR_RESIDENT;
       bottom.removeFrom(StackType.S);
       bottom.moveToTop(StackType.Q);
+      sizeHot--;
+
+      pruneStack();
     } else {
       node.moveToTop(StackType.Q);
     }
-    node.moveToTop(StackType.S);
   }
 
   private void pruneStack() {
@@ -212,28 +233,35 @@ public final class LirsPolicy implements Policy {
     // block set. 2) After the LIR block in the bottom is removed, those HIR blocks contiguously
     // located above it will not have a chance to change their status from HIR to LIR since their
     // recencies are larger than the new maximum recency of the LIR blocks.
-
     for (;;) {
       Node bottom = headS.prevS;
-      if ((bottom == headS) || (bottom.type == Status.LIR)) {
+      if ((bottom == headS) || (bottom.status == Status.LIR)) {
         break;
+      } else if (bottom.status == Status.HIR_NON_RESIDENT) {
+        // the map only needs to hold non-resident entries that are on the stack
+        data.remove(bottom.key);
       }
       bottom.removeFrom(StackType.S);
     }
   }
 
   private void evict() {
-    // When a miss occurs and a block is needed for replacement, we choose an HIR block that is
-    // resident in the cache. The blocks in the LIR block set always reside in the cache, i.e.,
-    // there are no misses for the references to the LIR blocks. However, a reference to an HIR
-    // block is likely to encounter a miss because Lhirs is very small (its practical size can be as
-    // small as 1 percent of the cache size).
-
     // Once a free block is needed, the LIRS algorithm removes a resident HIR block from the bottom
-    // of stack Q for replacement. However, the replaced HIR block remains in 2. For simplicity, in
-    // the rest of the paper we use “a block in the stack” instead of “the entry of a block in the
-    // stack” without ambiguity. stack S with its residence status changed to “nonresident” if it is
-    // originally in the stack.
+    // of stack Q for replacement. However, the replaced HIR block remains in stack S with its
+    // residence status changed to “non resident” if it is originally in the stack. We ensure the
+    // block in the bottom of the stack S is an LIR block by removing HIR blocks after it.
+
+    policyStats.recordEviction();
+
+    residentSize--;
+    Node bottom = headQ.prevQ;
+    bottom.removeFrom(StackType.Q);
+    bottom.status = Status.HIR_NON_RESIDENT;
+    if (!bottom.isInStack(StackType.S)) {
+      // the map only needs to hold non-resident entries that are on the stack
+      data.remove(bottom.key);
+    }
+    pruneStack();
   }
 
   @Override
@@ -243,6 +271,12 @@ public final class LirsPolicy implements Policy {
 
   @Override
   public void finished() {
+    long resident = data.values().stream()
+        .filter(node -> node.status != Status.HIR_NON_RESIDENT)
+        .count();
+
+    checkState(resident == residentSize);
+    checkState(sizeHot <= maximumHotSize);
     checkState(residentSize <= maximumSize);
     checkState(sizeS == data.values().stream().filter(node -> node.isInS).count());
     checkState(sizeQ == data.values().stream().filter(node -> node.isInQ).count());
@@ -271,7 +305,7 @@ public final class LirsPolicy implements Policy {
   final class Node {
     final Object key;
 
-    Status type;
+    Status status;
 
     Node prevS;
     Node nextS;
@@ -353,8 +387,19 @@ public final class LirsPolicy implements Policy {
     public String toString() {
       return MoreObjects.toStringHelper(this)
           .add("key", key)
-          .add("type", type)
+          .add("type", status)
           .toString();
+    }
+  }
+
+  static final class LirsSettings extends BasicSettings {
+
+    public LirsSettings(Config config) {
+      super(config);
+    }
+
+    public double percentHot() {
+      return config().getDouble("lirs.percent-hot");
     }
   }
 }
