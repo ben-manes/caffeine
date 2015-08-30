@@ -18,7 +18,9 @@ package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -28,62 +30,30 @@ import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
 
 /**
- * Low Inter-reference Recency Set replacement policy.
+ * Low Inter-reference Recency Set (LIRS) algorithm. This algorithm organizes blocks by their
+ * inter-reference recency (IRR) and groups entries as either having a low (LIR) or high (HIR)
+ * recency. A LIR entry is preferable to retain in the cache and evicted HIR entries may be retained
+ * as non-resident HIR entries. This allows a non-resident HIR entry to be promoted to a LIR entry
+ * upon immediately upon a cache miss. The authors recommend sizing the maximum number of LIR blocks
+ * to 99% of the cache's total size (1% remaining for HIR blocks). The authors do not provide a
+ * recommendation for setting the maximum number of non-resident HIR blocks.
+ * <p>
+ * The algorithm is explained by the authors in
+ * <a href="http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-02-6.pdf">LIRS: An
+ * Efficient Low Inter-reference Recency Set Replacement Policy to Improve Buffer Cache
+ * Performance</a> and
+ * <a href="http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-05-11.pdf">Making LRU
+ * Friendly to Weak Locality Workloads: A Novel Replacement Algorithm to Improve Buffer Cache
+ * Performance</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LirsPolicy implements Policy {
-  /*
-   * IRR of a block refers to the number of other blocks accessed between two consecutive references
-   * to the block. Specifically, the recency refers to the number of other blocks accessed from last
-   * reference to the current time. We assume that if the IRR of a block is large, the next IRR of
-   * the block is likely to be large again. Following this assumption, we select the blocks with
-   * large IRRs for replacement, because these blocks are highly possible to be evicted later by LRU
-   * before being referenced again.
-   *
-   * It dynamically and responsively distinguishes low IRR (denoted as LIR) blocks from high IRR
-   * (denoted as HIR) blocks, and keeps the LIR blocks in the cache, where the recencies of blocks
-   * are only used to help determine LIR or HIR statuses of blocks. We maintain an LIR block set and
-   * an HIR block set, and manage to limit the size of the LIR set so that all the LIR blocks in the
-   * set can fit in the cache. The blocks in the LIR set are not chosen for replacement, and there
-   * are no misses with references to these blocks. Only a very small portion of the cache is
-   * assigned to store HIR blocks. Resident HIR blocks may be evicted at any recency. However, when
-   * the recency of an LIR block increases to a certain point, and an HIR block gets accessed at a
-   * smaller recency than that of the LIR block, the statuses of the two blocks are switched.
-   *
-   * We also divide the cache, whose size in blocks is L, into a major part and a minor part in
-   * terms of the size. The major part with the size of Llirs is used to store LIR blocks, and the
-   * minor part with the size of Lhirs is used to store blocks from HIR block set, where Llirs +
-   * Lhirs = L. When a miss occurs and a free block is needed for replacement, we choose an HIR
-   * block that is resident in the cache. LIR block set always resides in the cache and there are no
-   * misses for the references to LIR blocks. However, a reference to an HIR block would likely to
-   * encounter a miss, because Lhirs is very small (its practical size can be as small as 1% of the
-   * cache size).
-   *
-   * 1. Upon accessing an LIR block X: This access is guaranteed to be a hit in the cache. We move
-   * it to the top of stack S. If the LIR block is originally located in the bottom of the stack, we
-   * conduct a stack pruning.
-   *
-   * 2. Upon accessing an HIR resident block X: This is a hit in the cache. We move it to the top of
-   * stack S. There are two cases for block X: (1) If X is in the stack S, we change its status to
-   * LIR. This block is also removed from list Q. The LIR block in the bottom of S is moved to the
-   * end of list Q with its status changed to HIR. A stack pruning is then conducted. (2) If X is
-   * not in stack S, we leave its status in HIR and move it to the end of list Q.
-   *
-   * 3. Upon accessing an HIR non-resident block X: This is a miss. We remove the HIR resident block
-   * at the front of list Q (it then becomes a non-resident block), and replace it out of the cache.
-   * Then we load the requested block X into the freed buffer and place it on the top of stack S.
-   * There are two cases for block X: (1) If X is in stack S, we change its status to LIR and move
-   * the LIR block in the bottom of stack S to the end of list Q with its status changed to HIR. A
-   * stack pruning is then conducted. (2) If X is not in stack S, we leave its status in HIR and
-   * place it in the end of list Q.
-   */
-
   private final PolicyStats policyStats;
   private final Map<Object, Node> data;
+  private final List<Object> evicted;
   private final int maximumHotSize;
   private final int maximumSize;
-
   private final Node headS;
   private final Node headQ;
 
@@ -92,15 +62,18 @@ public final class LirsPolicy implements Policy {
   private int sizeHot;
   private int residentSize;
 
+  // Enable to print out the internal state
+  private final boolean debug = false;
+
   public LirsPolicy(String name, Config config) {
     LirsSettings settings = new LirsSettings(config);
     this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
+    this.evicted = new ArrayList<>();
     this.data = new HashMap<>();
     this.headS = new Node();
     this.headQ = new Node();
-
   }
 
   @Override
@@ -262,6 +235,10 @@ public final class LirsPolicy implements Policy {
       data.remove(bottom.key);
     }
     pruneStack();
+
+    if (debug) {
+      evicted.add(bottom.key);
+    }
   }
 
   @Override
@@ -280,6 +257,35 @@ public final class LirsPolicy implements Policy {
     checkState(residentSize <= maximumSize);
     checkState(sizeS == data.values().stream().filter(node -> node.isInS).count());
     checkState(sizeQ == data.values().stream().filter(node -> node.isInQ).count());
+
+    if (debug) {
+      printLirs();
+    }
+  }
+
+  /** Prints out the internal state of the policy. */
+  private void printLirs() {
+    List<Object> stack = new ArrayList<>(sizeS);
+    List<Object> queue = new ArrayList<>(sizeQ);
+
+    for (Node n = headS.nextS; n != headS; n = n.nextS) {
+      checkState(n.isInS);
+      if (n.status == Status.HIR_NON_RESIDENT) {
+        stack.add("NR_" + n.key);
+      } else if (n.status == Status.HIR_RESIDENT) {
+        stack.add("RH_" + n.key);
+      } else {
+        stack.add("RL_" + n.key);
+      }
+    }
+    for (Node n = headQ.nextQ; n != headQ; n = n.nextQ) {
+      checkState(n.isInQ);
+      queue.add(n.key);
+    }
+
+    System.out.println("Stack: " + stack);
+    System.out.println("Queue: " + queue);
+    System.out.println("Evicted: " + evicted);
   }
 
   enum Status {
@@ -343,19 +349,19 @@ public final class LirsPolicy implements Policy {
       }
 
       if (stackType == StackType.S) {
-        Node tail = headS.prevS;
-        headS.prevS = this;
-        tail.nextS = this;
-        nextS = headS;
-        prevS = tail;
+        Node next = headS.nextS;
+        headS.nextS = this;
+        next.prevS = this;
+        this.nextS = next;
+        this.prevS = headS;
         isInS = true;
         sizeS++;
       } else if (stackType == StackType.Q) {
-        Node tail = headQ.prevQ;
-        headQ.prevQ = this;
-        tail.nextQ = this;
-        nextQ = headQ;
-        prevQ = tail;
+        Node next = headQ.nextQ;
+        headQ.nextQ = this;
+        next.prevQ = this;
+        this.nextQ = next;
+        this.prevQ = headQ;
         isInQ = true;
         sizeQ++;
       } else {
