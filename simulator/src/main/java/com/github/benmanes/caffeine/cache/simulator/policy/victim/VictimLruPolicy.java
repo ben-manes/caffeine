@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.victim;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,8 +41,8 @@ import com.typesafe.config.Config;
 public final class VictimLruPolicy implements Policy {
   private final Map<Object, Node> victimData;
   private final PolicyStats policyStats;
-  private final PrimaryMap primaryData;
   private final Admittor admittor;
+  private final LruMap mainData;
   private final Node sentinel;
   private final int maxVictim;
   private final int maxMain;
@@ -51,8 +53,8 @@ public final class VictimLruPolicy implements Policy {
     this.maxMain = settings.maximumSize() - maxVictim;
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(config);
-    this.primaryData = new PrimaryMap();
     this.victimData = new HashMap<>();
+    this.mainData = new LruMap();
     this.sentinel = new Node();
   }
 
@@ -63,22 +65,28 @@ public final class VictimLruPolicy implements Policy {
 
   @Override
   public void record(Comparable<Object> key) {
-    Node node = primaryData.get(key);
+    Node node = mainData.get(key);
+    admittor.record(key);
     if (node == null) {
       node = victimData.remove(key);
       if (node == null) {
         node = new Node(key, sentinel);
-        primaryData.put(key, node);
+        mainData.put(key, node);
         policyStats.recordMiss();
       } else {
         node.remove();
-        primaryData.put(key, node);
+        mainData.put(key, node);
         policyStats.recordHit();
       }
     } else {
-      admittor.record(key);
       policyStats.recordHit();
     }
+  }
+
+  @Override
+  public void finished() {
+    checkState(mainData.size() <= maxMain);
+    checkState(victimData.size() <= maxVictim);
   }
 
   /** A node on the double-linked list. */
@@ -128,10 +136,10 @@ public final class VictimLruPolicy implements Policy {
   }
 
   /** An LRU cache that evicts to the victim cache. */
-  final class PrimaryMap extends LinkedHashMap<Object, Node> {
+  final class LruMap extends LinkedHashMap<Object, Node> {
     private static final long serialVersionUID = 1L;
 
-    PrimaryMap() {
+    LruMap() {
       super(maxMain, 0.75f, true);
     }
 

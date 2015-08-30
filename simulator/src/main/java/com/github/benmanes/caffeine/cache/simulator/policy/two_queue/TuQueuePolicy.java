@@ -116,7 +116,7 @@ public class TuQueuePolicy implements Policy {
       sizeWarm++;
 
       if (sizeWarm > maxWarm) {
-        Node demoted = admittor.admit(node.key, headWarm.next) ? headWarm.next : node;
+        Node demoted = admittor.admit(node.key, headWarm.next.key) ? headWarm.next : node;
         demoted.remove();
         sizeWarm--;
         demoted.type = QueueType.COLD;
@@ -137,7 +137,7 @@ public class TuQueuePolicy implements Policy {
     sizeHot++;
 
     if (sizeHot > maxHot) {
-      Node demoted = admittor.admit(node.key, headHot.next) ? headHot.next : node;
+      Node demoted = admittor.admit(node.key, headHot.next.key) ? headHot.next : node;
       demoted.remove();
       sizeHot--;
       demoted.appendToTail(headCold);
