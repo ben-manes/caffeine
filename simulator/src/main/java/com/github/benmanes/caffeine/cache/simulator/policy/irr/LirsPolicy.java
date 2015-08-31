@@ -140,14 +140,16 @@ public final class LirsPolicy implements Policy {
   }
 
   private void onNonResidentHir(Node node) {
-    // When LIR block set is not full, all the referenced blocks are given an LIR status until its
-    // size reaches Llirs. After that, HIR status is given to any blocks that are referenced for the
-    // first time, and to the blocks that have not been referenced for a long time so that they are
-    // not in stack S any longer.
+    // When an LIR block set is not full, all the accessed blocks are given LIR status until its
+    // size reaches Llirs. After that, HIR status is given to any blocks that are accessed for the
+    // first time and to blocks that have not been accessed for a long time so that currently they
+    // are not in stack S.
     policyStats.recordMiss();
 
     if (sizeHot < maximumHotSize) {
-      onWarmupMiss(node);
+      onLirWarmupMiss(node);
+    } else if (residentSize < maximumSize) {
+      onHirWarmupMiss(node);
     } else {
       onFullMiss(node);
     }
@@ -155,10 +157,16 @@ public final class LirsPolicy implements Policy {
   }
 
   /** Records a miss when the hot set is not full. */
-  private void onWarmupMiss(Node node) {
+  private void onLirWarmupMiss(Node node) {
     node.moveToTop(StackType.S);
     node.status = Status.LIR;
     sizeHot++;
+  }
+
+  /** Records a miss when the cold set is not full. */
+  private void onHirWarmupMiss(Node node) {
+    node.status = Status.HIR_RESIDENT;
+    node.moveToTop(StackType.Q);
   }
 
   /** Records a miss when the hot set is full. */
@@ -265,27 +273,30 @@ public final class LirsPolicy implements Policy {
 
   /** Prints out the internal state of the policy. */
   private void printLirs() {
-    List<Object> stack = new ArrayList<>(sizeS);
-    List<Object> queue = new ArrayList<>(sizeQ);
-
+    System.out.println("** LIRS stack TOP **");
     for (Node n = headS.nextS; n != headS; n = n.nextS) {
       checkState(n.isInS);
       if (n.status == Status.HIR_NON_RESIDENT) {
-        stack.add("NR_" + n.key);
+        System.out.println("<NR> " + n.key);
       } else if (n.status == Status.HIR_RESIDENT) {
-        stack.add("RH_" + n.key);
+        System.out.println("<RH> " + n.key);
       } else {
-        stack.add("RL_" + n.key);
+        System.out.println("<RL> " + n.key);
       }
     }
+    System.out.println("** LIRS stack BOTTOM **");
+
+    System.out.println("\n** LIRS queue END **");
     for (Node n = headQ.nextQ; n != headQ; n = n.nextQ) {
       checkState(n.isInQ);
-      queue.add(n.key);
+      System.out.println(n.key);
     }
+    System.out.println("** LIRS queue front **");
 
-    System.out.println("Stack: " + stack);
-    System.out.println("Queue: " + queue);
-    System.out.println("Evicted: " + evicted);
+    System.out.println("\nLIRS EVICTED PAGE sequence:");
+    for (int i = 0; i < evicted.size(); i++) {
+      System.out.println("<" + i + "> " + evicted.get(i));
+    }
   }
 
   enum Status {
