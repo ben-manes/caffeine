@@ -35,7 +35,9 @@ import com.typesafe.config.Config;
  * A new entry starts in the eden queue and remain there as long as it has high temporal locality.
  * Eventually an entry will slip from the end of the eden queue onto the front of the main queue. If
  * the main queue is already full, then TinyLfu determines whether to evict the newly admitted entry
- * or the victim entry chosen by main queue's policy. Both the eden and main spaces use LRU queues.
+ * or the victim entry chosen by main queue's policy. The eden queue allows an entry that has a high
+ * temporal locality and a low frequency of use to reside the cache until it has poor recency, at
+ * which point it is discarded by TinyLfu. Both the eden and main spaces use LRU queues.
  * <p>
  * Scan resistance is achieved by means of the eden queue. Transient data will pass through from the
  * eden queue and not be accepted into the main queue. Responsiveness is maintained by the main
@@ -94,7 +96,7 @@ public final class EdenQueuePolicy implements Policy {
     }
   }
 
-  /** Evicts while the map exceeds the maximum capacity. */
+  /** Evicts if the map exceeds the maximum capacity. */
   private void evict() {
     if (sizeEden <= maxEden) {
       return;
@@ -109,13 +111,13 @@ public final class EdenQueuePolicy implements Policy {
     sizeMain++;
 
     if (sizeMain > maxMain) {
-      policyStats.recordEviction();
-
       Node victim = headMain.next;
       Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
       sizeMain--;
+
+      policyStats.recordEviction();
     }
   }
 

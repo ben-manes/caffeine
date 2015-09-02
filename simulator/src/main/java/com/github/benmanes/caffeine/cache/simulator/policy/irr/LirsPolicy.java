@@ -119,9 +119,10 @@ public final class LirsPolicy implements Policy {
     policyStats.recordHit();
 
     boolean isInStack = node.isInStack(StackType.S);
+    boolean isTop = node.isStackTop(StackType.S);
     node.moveToTop(StackType.S);
 
-    if (isInStack) {
+    if (isInStack && !isTop) {
       sizeHot++;
       node.status = Status.LIR;
       node.removeFrom(StackType.Q);
@@ -349,6 +350,16 @@ public final class LirsPolicy implements Policy {
         return isInS;
       } else if (stackType == StackType.Q) {
         return isInQ;
+      } else {
+        throw new IllegalArgumentException();
+      }
+    }
+
+    public boolean isStackTop(StackType stackType) {
+      if (stackType == StackType.S) {
+        return (headS.nextS == this);
+      } else if (stackType == StackType.Q) {
+        return (headQ.nextQ == this);
       } else {
         throw new IllegalArgumentException();
       }
