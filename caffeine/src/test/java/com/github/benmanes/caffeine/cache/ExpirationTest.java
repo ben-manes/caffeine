@@ -601,7 +601,7 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_insert(Map<Integer, Integer> map, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
-    map.put(context.firstKey(), context.absentValue());
+    assertThat(map.put(context.firstKey(), context.absentValue()), is(nullValue()));
 
     long count = context.initialSize();
     assertThat(map.size(), is(1));
@@ -616,8 +616,8 @@ public final class ExpirationTest {
   public void put_replace(Map<Integer, Integer> map, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
 
-    map.put(context.firstKey(), context.absentValue());
-    map.put(context.absentKey(), context.absentValue());
+    assertThat(map.put(context.firstKey(), context.absentValue()), is(not(nullValue())));
+    assertThat(map.put(context.absentKey(), context.absentValue()), is(nullValue()));
     context.consumedNotifications().clear(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);

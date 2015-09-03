@@ -1005,7 +1005,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         afterRead(prior, now, false);
       }
 
-      return oldValue;
+      return expired ? null : oldValue;
     }
   }
 

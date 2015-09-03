@@ -192,7 +192,7 @@ public final class ExpireAfterAccessTest {
     assertThat(map.putIfAbsent(context.firstKey(), context.absentValue()), is(not(nullValue())));
 
     context.ticker().advance(30, TimeUnit.SECONDS);
-    map.putIfAbsent(context.lastKey(), context.absentValue());
+    assertThat(map.putIfAbsent(context.lastKey(), context.absentValue()), is(nullValue()));
 
     long count = context.initialSize() - 1;
     assertThat(map.size(), is(2));
