@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -75,11 +76,13 @@ public final class SamplingPolicy implements Policy {
     admittor.record(key);
     if (node == null) {
       node = new Node(key, data.size(), now);
+      policyStats.recordOperation();
       policyStats.recordMiss();
       table[node.index] = node;
       data.put(key, node);
       evict(node);
     } else {
+      policyStats.recordOperation();
       policyStats.recordHit();
       node.accessTime = now;
       node.frequency++;
@@ -91,9 +94,10 @@ public final class SamplingPolicy implements Policy {
     if (data.size() > maximumSize) {
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
-          : sampleStrategy.sample(table, candidate, sampleSize, random);
+          : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
       Node victim = policy.select(sample, random);
       policyStats.recordEviction();
+
 
       if (admittor.admit(candidate.key, victim.key)) {
         removeFromTable(victim);
@@ -116,8 +120,10 @@ public final class SamplingPolicy implements Policy {
   /** The algorithms to choose a random sample with. */
   public enum Sample {
     GUESS {
-      @Override public <E> List<E> sample(E[] elements, E candidate, int sampleSize, Random random) {
+      @Override public <E> List<E> sample(E[] elements, E candidate,
+          int sampleSize, Random random, PolicyStats policyStats) {
         List<E> sample = new ArrayList<E>(sampleSize);
+        policyStats.addOperations(sampleSize);
         for (int i = 0; i < sampleSize; i++) {
           int index = random.nextInt(elements.length);
           if (elements[index] == candidate) {
@@ -129,8 +135,10 @@ public final class SamplingPolicy implements Policy {
       }
     },
     RESERVOIR {
-      @Override public <E> List<E> sample(E[] elements, E candidate, int sampleSize, Random random) {
+      @Override public <E> List<E> sample(E[] elements, E candidate,
+          int sampleSize, Random random, PolicyStats policyStats) {
         List<E> sample = new ArrayList<>(sampleSize);
+        policyStats.addOperations(elements.length);
         int count = 0;
         for (E e : elements) {
           if (e == candidate) {
@@ -150,15 +158,18 @@ public final class SamplingPolicy implements Policy {
       }
     },
     SHUFFLE {
-      @Override public <E> List<E> sample(E[] elements, E candidate, int sampleSize, Random random) {
+      @Override public <E> List<E> sample(E[] elements, E candidate,
+          int sampleSize, Random random, PolicyStats policyStats) {
         List<E> sample = new ArrayList<>(Arrays.asList(elements));
+        policyStats.addOperations(elements.length);
         Collections.shuffle(sample, random);
         sample.remove(candidate);
         return sample.subList(0, sampleSize);
       }
     };
 
-    abstract <E> List<E> sample(E[] elements, E candidate, int sampleSize, Random random);
+    abstract <E> List<E> sample(E[] elements, E candidate,
+        int sampleSize, Random random, PolicyStats policyStats);
   }
 
   /** The replacement policy. */
@@ -257,6 +268,18 @@ public final class SamplingPolicy implements Policy {
 
     @Override public long read() {
       return ++tick;
+    }
+  }
+
+  static final class SamplingSettings extends BasicSettings {
+    public SamplingSettings(Config config) {
+      super(config);
+    }
+    public int sampleSize() {
+      return config().getInt("sampling.size");
+    }
+    public Sample sampleStrategy() {
+      return Sample.valueOf(config().getString("sampling.strategy").toUpperCase());
     }
   }
 }

@@ -68,14 +68,14 @@ public final class LinkedPolicy implements Policy {
       evict(node);
     } else {
       policyStats.recordHit();
-      policy.onAccess(old);
+      policy.onAccess(old, policyStats);
     }
   }
 
   /** Evicts while the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
-      Node victim = policy.findVictim(sentinel);
+      Node victim = policy.findVictim(sentinel, policyStats);
       policyStats.recordEviction();
 
       boolean admit = admittor.admit(candidate.key, victim.key);
@@ -84,6 +84,8 @@ public final class LinkedPolicy implements Policy {
       } else {
         evictEntry(candidate);
       }
+    } else {
+      policyStats.recordOperation();
     }
   }
 
@@ -97,10 +99,12 @@ public final class LinkedPolicy implements Policy {
 
     /** Evicts entries based on insertion order. */
     FIFO {
-      @Override void onAccess(Node node) {
+      @Override void onAccess(Node node, PolicyStats policyStats) {
+        policyStats.recordOperation();
         // do nothing
       }
-      @Override Node findVictim(Node sentinel) {
+      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+        policyStats.recordOperation();
         return sentinel.next;
       }
     },
@@ -110,11 +114,13 @@ public final class LinkedPolicy implements Policy {
      * requested recently.
      */
     CLOCK {
-      @Override void onAccess(Node node) {
+      @Override void onAccess(Node node, PolicyStats policyStats) {
+        policyStats.recordOperation();
         node.marked = true;
       }
-      @Override Node findVictim(Node sentinel) {
+      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
         for (;;) {
+          policyStats.recordOperation();
           Node node = sentinel.next;
           if (node.marked) {
             node.moveToTail();
@@ -128,10 +134,12 @@ public final class LinkedPolicy implements Policy {
 
     /** Evicts entries based on how recently they are used, with the most recent evicted first. */
     MRU {
-      @Override void onAccess(Node node) {
+      @Override void onAccess(Node node, PolicyStats policyStats) {
+        policyStats.recordOperation();
         node.moveToTail();
       }
-      @Override Node findVictim(Node sentinel) {
+      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+        policyStats.recordOperation();
         // Skip over the added entry
         return sentinel.prev.prev;
       }
@@ -139,19 +147,21 @@ public final class LinkedPolicy implements Policy {
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     LRU {
-      @Override void onAccess(Node node) {
+      @Override void onAccess(Node node, PolicyStats policyStats) {
+        policyStats.recordOperation();
         node.moveToTail();
       }
-      @Override Node findVictim(Node sentinel) {
+      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+        policyStats.recordOperation();
         return sentinel.next;
       }
     };
 
     /** Performs any operations required by the policy after a node was successfully retrieved. */
-    abstract void onAccess(Node node);
+    abstract void onAccess(Node node, PolicyStats policyStats);
 
     /** Returns the victim entry to evict. */
-    abstract Node findVictim(Node sentinel);
+    abstract Node findVictim(Node sentinel, PolicyStats policyStats);
   }
 
   /** A node on the double-linked list. */

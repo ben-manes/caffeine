@@ -83,6 +83,7 @@ public final class ArcPolicy implements Policy {
 
   @Override
   public void record(Comparable<Object> key) {
+    policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
       onMiss(key);

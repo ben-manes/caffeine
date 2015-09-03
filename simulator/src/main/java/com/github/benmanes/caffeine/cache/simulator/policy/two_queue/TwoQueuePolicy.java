@@ -86,6 +86,7 @@ public final class TwoQueuePolicy implements Policy {
     //     add X to the head of Alin
     //   end if
 
+    policyStats.recordOperation();
     Node node = data.get(key);
     if (node != null) {
       switch (node.type) {

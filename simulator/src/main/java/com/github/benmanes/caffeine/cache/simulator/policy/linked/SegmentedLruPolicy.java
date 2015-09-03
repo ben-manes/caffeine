@@ -73,6 +73,7 @@ public final class SegmentedLruPolicy implements Policy {
 
   @Override
   public void record(Comparable<Object> key) {
+    policyStats.recordOperation();
     Node node = data.get(key);
     admittor.record(key);
     if (node == null) {
@@ -111,7 +112,7 @@ public final class SegmentedLruPolicy implements Policy {
   }
 
   private void evict(Node candidate) {
-    while (data.size() > maximumSize) {
+    if (data.size() > maximumSize) {
       Node victim = (maxProtected == 0)
           ? headProtected.next // degrade to LRU
           : headProbation.next;

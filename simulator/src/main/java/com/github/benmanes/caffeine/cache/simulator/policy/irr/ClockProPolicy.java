@@ -105,6 +105,7 @@ public final class ClockProPolicy implements Policy {
   }
 
   private void onMiss(Object key) {
+    policyStats.recordOperation();
     policyStats.recordMiss();
 
     Node node = new Node(key);
@@ -116,6 +117,7 @@ public final class ClockProPolicy implements Policy {
   }
 
   private void onNonResidentHit(Node node) {
+    policyStats.recordOperation();
     policyStats.recordMiss();
 
     if (maximumColdSize < maximumSize) {
@@ -133,6 +135,7 @@ public final class ClockProPolicy implements Policy {
   }
 
   private void onHit(Node node) {
+    policyStats.recordOperation();
     policyStats.recordHit();
     node.marked = true;
   }
@@ -185,6 +188,7 @@ public final class ClockProPolicy implements Policy {
     // head of the list. We run handHot to turn a hot page with a large recency into a cold page.
 
     while (maximumSize <= (sizeHot + sizeCold)) {
+      policyStats.recordOperation();
       scanCold();
     }
   }
@@ -246,6 +250,7 @@ public final class ClockProPolicy implements Policy {
         sizeCold--;
         sizeTest++;
         while (maximumSize < sizeTest) {
+          policyStats.recordOperation();
           scanTest();
         }
       }
@@ -254,6 +259,7 @@ public final class ClockProPolicy implements Policy {
     // Move the hand forward
     handCold = handCold.next;
     while ((maximumSize - maximumColdSize) < sizeHot) {
+      policyStats.recordOperation();
       scanHot();
     }
   }

@@ -61,6 +61,7 @@ public final class FrequentlyUsedPolicy implements Policy {
 
   @Override
   public void record(Comparable<Object> key) {
+    policyStats.recordOperation();
     Node node = data.get(key);
     admittor.record(key);
     if (node == null) {

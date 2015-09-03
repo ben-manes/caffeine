@@ -39,7 +39,8 @@ import com.jakewharton.fliptables.FlipTable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TextReport {
-  private static final String[] HEADERS = { "Policy", "Hit rate", "Requests", "Evictions", "Time"};
+  private static final String[] HEADERS = {
+      "Policy", "Hit rate", "Hits", "Misses", "Requests", "Evictions", "Steps", "Time"};
 
   private final List<PolicyStats> results;
   private final BasicSettings settings;
@@ -76,38 +77,49 @@ public final class TextReport {
       data[index] = new String[] {
           policyStats.name(),
           String.format("%.2f %%", 100 * policyStats.hitRate()),
+          String.format("%,d", policyStats.hitCount()),
+          String.format("%,d", policyStats.missCount()),
           String.format("%,d", policyStats.requestCount()),
           String.format("%,d", policyStats.evictionCount()),
+          steps(policyStats),
           policyStats.stopwatch().toString()
       };
     });
     return FlipTable.of(HEADERS, data);
   }
 
+  private static String steps(PolicyStats policyStats) {
+    long operations = policyStats.operationCount();
+    long complexity = (long) (100 * policyStats.complexity());
+    return (operations == 0) ? "?" : String.format("%,d (%,d %%)", operations, complexity);
+  }
+
   /** Returns a comparator that sorts by the specified column. */
   private Comparator<PolicyStats> comparator() {
-    Comparator<PolicyStats> comparator;
+    Comparator<PolicyStats> comparator = makeComparator();
+    return settings.report().ascending() ? comparator : comparator.reversed();
+  }
+
+  private Comparator<PolicyStats> makeComparator() {
     switch (settings.report().sortBy().toLowerCase()) {
       case "policy":
-        comparator = (first, second) -> first.name().compareTo(second.name());
-        break;
+        return (first, second) -> first.name().compareTo(second.name());
       case "hit rate":
-        comparator = (first, second) -> Double.compare(first.hitRate(), second.hitRate());
-        break;
-      case "requests":
-        comparator = (first, second) -> Long.compare(first.requestCount(), second.requestCount());
-        break;
+        return (first, second) -> Double.compare(first.hitRate(), second.hitRate());
+      case "hits":
+        return (first, second) -> Long.compare(first.hitCount(), second.hitCount());
+      case "misses":
+        return (first, second) -> Long.compare(first.hitCount(), second.hitCount());
       case "evictions":
-        comparator = (first, second) -> Long.compare(first.evictionCount(), second.evictionCount());
-        break;
+        return (first, second) -> Long.compare(first.evictionCount(), second.evictionCount());
+      case "steps":
+        return (first, second) -> Long.compare(first.operationCount(), second.operationCount());
       case "time":
-        comparator = (first, second) -> Long.compare(
+        return (first, second) -> Long.compare(
             first.stopwatch().elapsed(TimeUnit.NANOSECONDS),
             second.stopwatch().elapsed(TimeUnit.NANOSECONDS));
-        break;
       default:
         throw new IllegalArgumentException("Unknown sort order: " + settings.report().sortBy());
     }
-    return settings.report().ascending() ? comparator : comparator.reversed();
   }
 }

@@ -78,6 +78,7 @@ public final class LirsPolicy implements Policy {
 
   @Override
   public void record(Comparable<Object> key) {
+    policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
       node = new Node(key);
@@ -216,6 +217,8 @@ public final class LirsPolicy implements Policy {
     // located above it will not have a chance to change their status from HIR to LIR since their
     // recencies are larger than the new maximum recency of the LIR blocks.
     for (;;) {
+      policyStats.recordOperation();
+
       Node bottom = headS.prevS;
       if ((bottom == headS) || (bottom.status == Status.LIR)) {
         break;

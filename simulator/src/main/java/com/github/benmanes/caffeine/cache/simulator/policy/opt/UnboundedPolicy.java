@@ -44,6 +44,7 @@ public final class UnboundedPolicy implements Policy {
 
   @Override
   public void record(Comparable<Object> key) {
+    policyStats.recordOperation();
     if (data.add(key)) {
       policyStats.recordMiss();
     } else {

@@ -91,6 +91,7 @@ public final class CartPolicy implements Policy {
   private void onHit(Node node) {
     // Set the page reference bit for x
     node.marked = true;
+    policyStats.recordOperation();
   }
 
   private void onMiss(Object key, Node node) {
@@ -124,6 +125,7 @@ public final class CartPolicy implements Policy {
     //   Set nL = nL + 1
     //   if (|T2|+|B2|+|T1|−nS ≥ c) then
     //     Set target q = min(q + 1, 2c − |T1|)
+    policyStats.recordOperation();
 
     if ((sizeT1 + sizeT2) == maximumSize) {
       demote();
@@ -236,6 +238,7 @@ public final class CartPolicy implements Policy {
     policyStats.recordEviction();
 
     while (headT2.next.marked) {
+      policyStats.recordOperation();
       Node demoted = headT2.next;
       demoted.marked = false;
       demoted.remove();
@@ -250,6 +253,7 @@ public final class CartPolicy implements Policy {
     }
 
     while ((headT1.next.filter == FilterType.LongTerm) || headT1.next.marked) {
+      policyStats.recordOperation();
       Node node = headT1.next;
       if (node.marked) {
         node.moveToTail(headT1);

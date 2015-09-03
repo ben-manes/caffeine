@@ -87,6 +87,7 @@ public final class CarPolicy implements Policy {
   private void onHit(Node node) {
     // Set the page reference bit for x
     node.marked = true;
+    policyStats.recordOperation();
   }
 
   private void onMiss(Object key, Node node) {
@@ -111,6 +112,7 @@ public final class CarPolicy implements Policy {
     //   Adapt: Decrease the target size for the list T1 as: p = max{p − max{1, |B1|/|B2|}, 0}
     //   Move x at the tail of T2.
     //   Set the page reference bit of x.
+    policyStats.recordOperation();
 
     if ((sizeT1 + sizeT2) == maximumSize) {
       demote();
@@ -190,6 +192,7 @@ public final class CarPolicy implements Policy {
 
     policyStats.recordEviction();
     for (;;) {
+      policyStats.recordOperation();
       if (sizeT1 >= Math.max(1,  p)) {
         Node candidate = headT1.next;
         if (!candidate.marked) {

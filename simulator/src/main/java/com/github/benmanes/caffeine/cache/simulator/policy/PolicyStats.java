@@ -32,6 +32,7 @@ public final class PolicyStats {
   private long hitCount;
   private long missCount;
   private long evictionCount;
+  private long operationCount;
 
   public PolicyStats(String name) {
     this.name = requireNonNull(name);
@@ -46,32 +47,52 @@ public final class PolicyStats {
     return name;
   }
 
+  public void recordOperation() {
+    operationCount++;
+  }
+
+  public long operationCount() {
+    return operationCount;
+  }
+
+  public void addOperations(long operations) {
+    operationCount += operations;
+  }
+
   public void recordHit() {
     hitCount++;
   }
 
-  public void setHitCount(long hitCount) {
-    this.hitCount = hitCount;
+  public long hitCount() {
+    return hitCount;
+  }
+
+  public void addHits(long hits) {
+    hitCount += hits;
   }
 
   public void recordMiss() {
     missCount++;
   }
 
-  public void setMissCount(long missCount) {
-    this.missCount = missCount;
+  public long missCount() {
+    return missCount;
+  }
+
+  public void addMisses(long misses) {
+    missCount += misses;
+  }
+
+  public long evictionCount() {
+    return evictionCount;
   }
 
   public void recordEviction() {
     evictionCount++;
   }
 
-  public void setEvictionCount(long evictionCount) {
-    this.evictionCount = evictionCount;
-  }
-
-  public long evictionCount() {
-    return evictionCount;
+  public void addEvictions(long evictions) {
+    evictionCount += evictions;
   }
 
   public long requestCount() {
@@ -86,6 +107,11 @@ public final class PolicyStats {
   public double missRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
+  }
+
+  public double complexity() {
+    long requestCount = requestCount();
+    return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
   }
 
   @Override

@@ -51,8 +51,12 @@ public final class JackrabbitLirsPolicy implements Policy {
 
   @Override
   public PolicyStats stats() {
-    policyStats.setEvictionCount(cache.stats().evictionCount());
     return policyStats;
+  }
+
+  @Override
+  public void finished() {
+    policyStats.addEvictions(cache.stats().evictionCount());
   }
 
   @Override
