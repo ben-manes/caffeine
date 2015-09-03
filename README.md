@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/ben-manes/caffeine.svg)](https://travis-ci.org/ben-manes/caffeine)
 [![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine)
-[![JavaDoc](https://img.shields.io/badge/javadoc-1.3.1-brightgreen.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
+[![JavaDoc](https://img.shields.io/badge/javadoc-1.3.2-brightgreen.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
 [![License](http://img.shields.io/:license-apache-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 Caffeine is a [high performance][benchmarks] caching library based on Java 8. For more
@@ -46,12 +46,12 @@ In addition, Caffeine offers the following extensions:
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:1.3.1'
+compile 'com.github.ben-manes.caffeine:caffeine:1.3.2'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:1.3.1'
-compile 'com.github.ben-manes.caffeine:jcache:1.3.1'
-compile 'com.github.ben-manes.caffeine:tracing-async:1.3.1'
+compile 'com.github.ben-manes.caffeine:guava:1.3.2'
+compile 'com.github.ben-manes.caffeine:jcache:1.3.2'
+compile 'com.github.ben-manes.caffeine:tracing-async:1.3.2'
 ```
 
 Snapshots of the development version are available in
