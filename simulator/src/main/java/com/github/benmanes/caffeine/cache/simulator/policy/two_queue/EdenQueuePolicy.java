@@ -30,9 +30,9 @@ import com.typesafe.config.Config;
 
 /**
  * An adaption of the 2Q algorithm based on the TinyLfu policy. Unlike the original 2Q algorithm,
- * non-resident entries are not retained by instead relying on the TinyLfu's history.
+ * non-resident entries are not retained by instead relying on TinyLfu's history.
  * <p>
- * A new entry starts in the eden queue and remain there as long as it has high temporal locality.
+ * A new entry starts in the eden queue and remains there as long as it has high temporal locality.
  * Eventually an entry will slip from the end of the eden queue onto the front of the main queue. If
  * the main queue is already full, then a historic frequency filter determines whether to evict the
  * newly admitted entry or the victim entry chosen by main queue's policy. This process ensures that
