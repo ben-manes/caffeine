@@ -52,10 +52,12 @@ public final class LirsPolicy implements Policy {
   private final PolicyStats policyStats;
   private final Map<Object, Node> data;
   private final List<Object> evicted;
-  private final int maximumHotSize;
-  private final int maximumSize;
   private final Node headS;
   private final Node headQ;
+
+  private final int maximumNonResidentSize;
+  private final int maximumHotSize;
+  private final int maximumSize;
 
   private int sizeS;
   private int sizeQ;
@@ -67,6 +69,7 @@ public final class LirsPolicy implements Policy {
 
   public LirsPolicy(String name, Config config) {
     LirsSettings settings = new LirsSettings(config);
+    this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
     this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
@@ -228,6 +231,23 @@ public final class LirsPolicy implements Policy {
       }
       bottom.removeFrom(StackType.S);
     }
+
+    // Bound the number of non-resident entries. This should be ordered on its own queue to avoid
+    // traversing over resident entries. While not described in the paper, the author's reference
+    // implementation provides a similar parameter to avoid uncontrolled growth.
+    Node node = headS.prevS.prevS;
+    while (data.size() >= (maximumSize + maximumNonResidentSize)) {
+      if (node.status == Status.HIR_NON_RESIDENT) {
+        policyStats.recordOperation();
+        Node removed = node;
+        node = node.prevS;
+
+        removed.removeFrom(StackType.S);
+        data.remove(removed.key);
+      } else {
+        node = node.prevS;
+      }
+    }
   }
 
   private void evict() {
@@ -267,6 +287,7 @@ public final class LirsPolicy implements Policy {
     checkState(resident == residentSize);
     checkState(sizeHot <= maximumHotSize);
     checkState(residentSize <= maximumSize);
+    checkState(data.size() <= (maximumSize + maximumNonResidentSize));
     checkState(sizeS == data.values().stream().filter(node -> node.isInS).count());
     checkState(sizeQ == data.values().stream().filter(node -> node.isInQ).count());
 
@@ -424,13 +445,14 @@ public final class LirsPolicy implements Policy {
   }
 
   static final class LirsSettings extends BasicSettings {
-
     public LirsSettings(Config config) {
       super(config);
     }
-
     public double percentHot() {
       return config().getDouble("lirs.percent-hot");
+    }
+    public double nonResidentMultiplier() {
+      return config().getDouble("lirs.non-resident-multiplier");
     }
   }
 }
