@@ -15,9 +15,13 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.Serializable;
 import java.util.Objects;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 
@@ -33,10 +37,11 @@ public final class JCacheExpiryPolicy implements ExpiryPolicy, Serializable {
   private final Duration update;
   private final Duration access;
 
-  public JCacheExpiryPolicy(Duration creation, Duration update, Duration access) {
-    this.creation = (creation == null) ? Duration.ETERNAL : creation;
-    this.update = (update == null) ? Duration.ETERNAL : update;
-    this.access = (access == null) ? Duration.ETERNAL : access;
+  public JCacheExpiryPolicy(@Nonnull Duration creation, 
+      @Nullable Duration update, @Nullable Duration access) {
+    this.creation = requireNonNull(creation);
+    this.update = update;
+    this.access = access;
   }
 
   @Override

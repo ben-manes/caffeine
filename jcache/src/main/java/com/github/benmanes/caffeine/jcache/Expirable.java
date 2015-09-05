@@ -37,6 +37,11 @@ public final class Expirable<V> {
     return value;
   }
 
+  /** Returns the time, in milliseconds, when the value will expire. */
+  public long getExpireTimeMS() {
+    return expireTimeMS;
+  }
+
   /** Specifies the time, in milliseconds, when the value will expire. */
   public void setExpireTimeMS(long expireTimeMS) {
     this.expireTimeMS = expireTimeMS;

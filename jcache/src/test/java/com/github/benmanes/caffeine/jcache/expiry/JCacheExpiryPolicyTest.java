@@ -28,8 +28,9 @@ import org.testng.annotations.Test;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JCacheExpiryPolicyTest {
-  ExpiryPolicy eternal = new JCacheExpiryPolicy(null, null, null);
-  ExpiryPolicy temporal = new JCacheExpiryPolicy(
+  final ExpiryPolicy eternal = new JCacheExpiryPolicy(
+      Duration.ETERNAL, Duration.ETERNAL, Duration.ETERNAL);
+  final ExpiryPolicy temporal = new JCacheExpiryPolicy(
       Duration.ONE_DAY, Duration.ONE_HOUR, Duration.ONE_MINUTE);
 
   @Test

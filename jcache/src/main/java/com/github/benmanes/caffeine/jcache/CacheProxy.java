@@ -315,6 +315,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       long expireTimeMS = expireTimeMS(created
           ? expiry::getExpiryForCreation
           : expiry::getExpiryForUpdate);
+      if (expireTimeMS < 0) {
+        expireTimeMS = expirable.getExpireTimeMS();
+      }
       if (expireTimeMS == 0) {
         replaced[0] = created ? null : expirable.get();
         return null;
@@ -523,6 +526,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         publishToCacheWriter(writer::write, () -> new EntryProxy<K, V>(key, expirable.get()));
         dispatcher.publishUpdated(this, key, expirable.get(), copyOf(newValue));
         long expireTimeMS = expireTimeMS(expiry::getExpiryForUpdate);
+        if (expireTimeMS < 0) {
+          expireTimeMS = expirable.getExpireTimeMS();
+        }
         result = new Expirable<>(newValue, expireTimeMS);
         replaced[0] = true;
       } else {
@@ -602,6 +608,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
       publishToCacheWriter(writer::write, () -> new EntryProxy<K, V>(key, value));
       long expireTimeMS = expireTimeMS(expiry::getExpiryForUpdate);
+      if (expireTimeMS < 0) {
+        expireTimeMS = expirable.getExpireTimeMS();
+      }
       dispatcher.publishUpdated(this, key, expirable.get(), copy);
       replaced[0] = expirable.get();
       return new Expirable<>(copy, expireTimeMS);
@@ -701,9 +710,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     switch (entry.getAction()) {
       case NONE:
         return expirable;
-      case READ:
-        expirable.setExpireTimeMS(expireTimeMS(expiry::getExpiryForAccess));
+      case READ: {
+        long expireTimeMS = expireTimeMS(expiry::getExpiryForAccess);
+        if (expireTimeMS >= 0) {
+          expirable.setExpireTimeMS(expireTimeMS);
+        }
         return expirable;
+      }
       case CREATED:
         this.publishToCacheWriter(writer::write, () -> entry);
         // fall through
@@ -711,11 +724,16 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         statistics.recordPuts(1L);
         dispatcher.publishCreated(this, entry.getKey(), entry.getValue());
         return new Expirable<>(entry.getValue(), expireTimeMS(expiry::getExpiryForCreation));
-      case UPDATED:
+      case UPDATED: {
         statistics.recordPuts(1L);
         publishToCacheWriter(writer::write, () -> entry);
         dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), entry.getValue());
-        return new Expirable<>(entry.getValue(), expireTimeMS(expiry::getExpiryForUpdate));
+        long expireTimeMS = expireTimeMS(expiry::getExpiryForUpdate);
+        if (expireTimeMS < 0) {
+          expireTimeMS = expirable.getExpireTimeMS();
+        }
+        return new Expirable<>(entry.getValue(), expireTimeMS);
+      }
       case DELETED:
         statistics.recordRemovals(1L);
         publishToCacheWriter(writer::delete, entry::getKey);
@@ -950,8 +968,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       long currentTimeMS, Supplier<Duration> expires) {
     try {
       Duration duration = expires.get();
-      long expireTimeMS = duration.getAdjustedTime(currentTimeMS);
-      expirable.setExpireTimeMS(expireTimeMS);
+      if (duration != null) {
+        long expireTimeMS = duration.getAdjustedTime(currentTimeMS);
+        expirable.setExpireTimeMS(expireTimeMS);
+      }
     } catch (Exception e) {
       logger.log(Level.WARNING, "Failed to set the entry's expiration time", e);
     }
@@ -961,15 +981,18 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * Returns the time when the entry will expire based on the supplied expiration function.
    *
    * @param expires the expiration function
-   * @return the time when the entry will expire
+   * @return the time when the entry will expire, or negative if the time should not be changed
    */
   protected long expireTimeMS(Supplier<Duration> expires) {
     try {
       Duration duration = expires.get();
+      if (duration == null) {
+        return -1;
+      }
       return duration.isZero() ? 0 : duration.getAdjustedTime(currentTimeMillis());
     } catch (Exception e) {
       logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
-      return Long.MAX_VALUE;
+      return -1;
     }
   }
 
