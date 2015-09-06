@@ -47,6 +47,7 @@ import com.typesafe.config.Config;
  */
 public final class EdenQueuePolicy implements Policy {
   private final PolicyStats policyStats;
+  private final int recencyMoveDistance;
   private final Map<Object, Node> data;
   private final Admittor admittor;
   private final Node headEden;
@@ -56,11 +57,13 @@ public final class EdenQueuePolicy implements Policy {
 
   private int sizeEden;
   private int sizeMain;
+  private int mainRecencyCounter;
 
   public EdenQueuePolicy(String name, Config config) {
     EdenQueueSettings settings = new EdenQueueSettings(config);
     this.maxEden = (int) (settings.maximumSize() * settings.percentEden());
     this.maxMain = settings.maximumSize() - maxEden;
+    this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(config);
     this.data = new HashMap<>();
@@ -77,8 +80,9 @@ public final class EdenQueuePolicy implements Policy {
   public void record(Comparable<Object> key) {
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
     if (node == null) {
+      admittor.record(key);
+
       node = new Node(key, Status.EDEN);
       node.appendToTail(headEden);
       data.put(key, node);
@@ -87,10 +91,15 @@ public final class EdenQueuePolicy implements Policy {
 
       policyStats.recordMiss();
     } else if (node.status == Status.EDEN) {
+      admittor.record(key);
       node.moveToTail(headEden);
       policyStats.recordHit();
     } else if (node.status == Status.MAIN) {
-      node.moveToTail(headMain);
+      // Fast path skips the hottest entries, useful for concurrent caches
+      if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {
+        node.moveToTail(headMain);
+        admittor.record(key);
+      }
       policyStats.recordHit();
     } else {
       throw new IllegalStateException();
@@ -120,6 +129,10 @@ public final class EdenQueuePolicy implements Policy {
 
       policyStats.recordEviction();
     }
+
+    if (candidate.isInQueue()) {
+      candidate.recencyMove = ++mainRecencyCounter;
+    }
   }
 
   @Override
@@ -135,11 +148,12 @@ public final class EdenQueuePolicy implements Policy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    private final Object key;
+    final Object key;
 
-    private Status status;
-    private Node prev;
-    private Node next;
+    int recencyMove;
+    Status status;
+    Node prev;
+    Node next;
 
     /** Creates a new sentinel node. */
     public Node() {
@@ -152,6 +166,10 @@ public final class EdenQueuePolicy implements Policy {
     public Node(Object key, Status status) {
       this.status = status;
       this.key = key;
+    }
+
+    public boolean isInQueue() {
+      return next != null;
     }
 
     public void moveToTail(Node head) {
@@ -189,6 +207,9 @@ public final class EdenQueuePolicy implements Policy {
     }
     public double percentEden() {
       return config().getDouble("eden-queue.percent-eden");
+    }
+    public double percentFastPath() {
+      return config().getDouble("eden-queue.percent-fast-path");
     }
   }
 }
