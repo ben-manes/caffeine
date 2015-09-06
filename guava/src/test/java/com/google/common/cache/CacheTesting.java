@@ -137,6 +137,8 @@ class CacheTesting {
       for (Segment<?, ?> segment : map.segments) {
         drainRecencyQueue(segment);
       }
+    } else {
+      cache.cleanUp();
     }
   }
 

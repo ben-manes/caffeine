@@ -25,9 +25,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.irr.GoogleLirsPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.irr.InfinispanLirsPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.irr.JackrabbitLirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.LirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
@@ -104,12 +101,6 @@ public final class PolicyBuilder {
       case "irr":
         if (strategy.equalsIgnoreCase("Lirs")) {
           return new LirsPolicy(type, config);
-        } else if (strategy.equalsIgnoreCase("JackrabbitLirs")) {
-          return new JackrabbitLirsPolicy(type, config);
-        } else if (strategy.equalsIgnoreCase("InfinispanLirs")) {
-          return new InfinispanLirsPolicy(type, config);
-        } else if (strategy.equalsIgnoreCase("GoogleLirs")) {
-          return new GoogleLirsPolicy(type, config);
         } else if (strategy.equalsIgnoreCase("ClockPro")) {
           return new ClockProPolicy(type, config);
         }

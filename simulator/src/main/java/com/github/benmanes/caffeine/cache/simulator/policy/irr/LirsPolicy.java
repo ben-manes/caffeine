@@ -244,7 +244,7 @@ public final class LirsPolicy implements Policy {
     // traversing over resident entries. While not described in the paper, the author's reference
     // implementation provides a similar parameter to avoid uncontrolled growth.
     Node node = headS.prevS.prevS;
-    while (data.size() >= (maximumSize + maximumNonResidentSize)) {
+    while (data.size() > (maximumSize + maximumNonResidentSize)) {
       if (node.status == Status.HIR_NON_RESIDENT) {
         policyStats.recordOperation();
         Node removed = node;
