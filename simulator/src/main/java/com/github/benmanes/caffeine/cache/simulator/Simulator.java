@@ -128,7 +128,7 @@ public final class Simulator extends UntypedActor {
   private List<Routee> makeRoutes() {
     Map<String, Policy> policies = new TreeMap<>();
     for (String policyType : settings.policies()) {
-      for (String admittorType : settings.admission().admittors()) {
+      for (String admittorType : settings.admission()) {
         Policy policy = new PolicyBuilder(config)
             .admittor(admittorType)
             .type(policyType)

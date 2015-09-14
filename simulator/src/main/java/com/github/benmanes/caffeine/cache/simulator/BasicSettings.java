@@ -48,8 +48,12 @@ public class BasicSettings {
     return config().getStringList("policies");
   }
 
-  public AdmissionSettings admission() {
-    return new AdmissionSettings();
+  public List<String> admission() {
+    return config().getStringList("admission");
+  }
+
+  public TinyLfuSettings tinyLfu() {
+    return new TinyLfuSettings();
   }
 
   public int maximumSize() {
@@ -91,20 +95,27 @@ public class BasicSettings {
     }
   }
 
-  public final class AdmissionSettings {
-    public List<String> admittors() {
-      return config().getStringList("admission.admittors");
+  public final class TinyLfuSettings {
+    public String sketch() {
+      return config().getString("tiny-lfu.sketch");
     }
-    public double eps() {
-      return config().getDouble("admission.eps");
+    public CountMin64Settings countMin64() {
+      return new CountMin64Settings();
     }
-    public double confidence() {
-      return config().getDouble("admission.confidence");
-    }
-    public int sampleSize() {
-      return config().getInt("admission.sample_size");
+
+    public final class CountMin64Settings {
+      public double eps() {
+        return config().getDouble("tiny-lfu.count-min-64.eps");
+      }
+      public double confidence() {
+        return config().getDouble("tiny-lfu.count-min-64.confidence");
+      }
+      public int sampleSize() {
+        return config().getInt("tiny-lfu.count-min-64.sample_size");
+      }
     }
   }
+
 
   public final class TraceFileSettings {
     public String path() {

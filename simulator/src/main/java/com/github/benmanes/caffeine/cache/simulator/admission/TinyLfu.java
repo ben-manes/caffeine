@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.admission;
 
 import com.clearspring.analytics.stream.frequency.CountMinTinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.sketch.Frequency;
+import com.github.benmanes.caffeine.cache.simulator.admission.sketch.FrequencySketch;
 import com.typesafe.config.Config;
 
 /**
@@ -25,25 +27,28 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TinyLfu implements Admittor {
-  private static final int RANDOM_SEED = 1033096058;
-
-  private final CountMinTinyLfu sketch;
+  private final Frequency<Object> sketch;
 
   public TinyLfu(Config config) {
-    BasicSettings settings = new BasicSettings(config);
-    sketch = new CountMinTinyLfu(settings.admission().eps(),
-        settings.admission().confidence(), RANDOM_SEED, settings.admission().sampleSize());
+    String type = new BasicSettings(config).tinyLfu().sketch();
+    if (type.equalsIgnoreCase("count-min-4")) {
+      sketch = new FrequencySketch<>();
+    } else if (type.equalsIgnoreCase("count-min-64")) {
+      sketch = new CountMinTinyLfu<>(config);
+    } else {
+      throw new IllegalStateException("Unknown sketch type: " + type);
+    }
   }
 
   @Override
   public void record(Object key) {
-    sketch.add(key.hashCode(), 1);
+    sketch.increment(key);
   }
 
   @Override
   public boolean admit(Object candidateKey, Object victimKey) {
-    long candidateFreq = sketch.frequency(candidateKey.hashCode());
-    long victimFreq = sketch.frequency(victimKey.hashCode());
+    long candidateFreq = sketch.frequency(candidateKey);
+    long victimFreq = sketch.frequency(victimKey);
     return candidateFreq > victimFreq;
   }
 }

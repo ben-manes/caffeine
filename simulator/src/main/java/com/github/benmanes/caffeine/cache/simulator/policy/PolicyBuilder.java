@@ -56,9 +56,9 @@ public final class PolicyBuilder {
   }
 
   public PolicyBuilder admittor(String admittorType) {
-    if (admittorType.equals("None")) {
+    if (admittorType.equalsIgnoreCase("All")) {
       admittor = Admittor.always();
-    } else if (admittorType.equals("TinyLfu")) {
+    } else if (admittorType.equalsIgnoreCase("TinyLfu")) {
       admittor = new TinyLfu(config);
     } else {
       throw new IllegalStateException("Unknown admittor: " + admittorType);
