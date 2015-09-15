@@ -16,7 +16,6 @@
 package com.clearspring.analytics.stream.frequency;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.TinyLfuSettings.CountMin64Settings;
 import com.github.benmanes.caffeine.cache.simulator.admission.sketch.Frequency;
 import com.typesafe.config.Config;
 
@@ -43,9 +42,10 @@ public final class CountMinTinyLfu<E> implements Frequency<E> {
   int size;
 
   public CountMinTinyLfu(Config config) {
-    CountMin64Settings settings = new BasicSettings(config).tinyLfu().countMin64();
-    sketch = new ConservativeAddSketch(settings.eps(), settings.confidence(), RANDOM_SEED);
-    sampleSize = settings.sampleSize();
+    BasicSettings settings = new BasicSettings(config);
+    sketch = new ConservativeAddSketch(settings.tinyLfu().countMin64().eps(),
+        settings.tinyLfu().countMin64().confidence(), RANDOM_SEED);
+    sampleSize = 10 * settings.maximumSize();
   }
 
   /** Returns the estimated usage frequency of the item. */

@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.admission.sketch;
 
 import javax.annotation.Nonnull;
 
+import org.jctools.util.UnsafeAccess;
+
 /**
  * A 4-bit variant of CountMinSketch, allowing an element to have a maximum popularity of 15.
  * <p>
@@ -32,16 +34,38 @@ public final class FrequencySketch<E> implements Frequency<E> {
   private static final long RESET_MASK = 0x1111111111111111L;
   private static final long MASK_A = 0xf0f0f0f0f0f0f0f0L;
   private static final long MASK_B = 0x0f0f0f0f0f0f0f0fL;
-  private static final int SAMPLE_SIZE = 5_000;
-  private static final int LENGTH = 512; // must be power-of-two
-  private static final int LENGTH_MASK = LENGTH - 1;
 
+  private static final int TABLE_BASE;
+  private static final int TABLE_SHIFT;
+
+  static {
+    TABLE_BASE = UnsafeAccess.UNSAFE.arrayBaseOffset(long[].class);
+    int scale = UnsafeAccess.UNSAFE.arrayIndexScale(long[].class);
+    if ((scale & (scale - 1)) != 0) {
+      throw new Error("data type scale not a power of two");
+    }
+    TABLE_SHIFT = 31 - Integer.numberOfLeadingZeros(scale);
+  }
+
+  final int sampleSize;
+  final int tableMask;
   final long[] table;
 
   int size;
 
-  public FrequencySketch() {
-    table = new long[LENGTH];
+  public FrequencySketch(int expectedSize) {
+    table = new long[ceilingNextPowerOfTwo(expectedSize)];
+    sampleSize = 10 * expectedSize;
+    tableMask = table.length - 1;
+  }
+
+  static int ceilingNextPowerOfTwo(int x) {
+    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
+    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
+  }
+
+  static long byteOffset(int i) {
+    return ((long) i << TABLE_SHIFT) + TABLE_BASE;
   }
 
   @Override
@@ -49,9 +73,10 @@ public final class FrequencySketch<E> implements Frequency<E> {
     int item = e.hashCode();
     int start = (item & 3) << 2;
     int frequency = Integer.MAX_VALUE;
-    for (int i = start; i < (start + 4); i++) {
+    for (int i = 0; i < 4; i++) {
       int index = indexOf(item, i);
-      int count = (int) ((table[index] >>> (i << 2)) & 0xfL);
+      long slot = UnsafeAccess.UNSAFE.getLong(table, byteOffset(index));
+      int count = (int) ((slot >>> ((start + i) << 2)) & 0xfL);
       frequency = Math.min(frequency, count);
     }
     return frequency;
@@ -61,12 +86,19 @@ public final class FrequencySketch<E> implements Frequency<E> {
   public void increment(@Nonnull E e) {
     int item = e.hashCode();
     int start = (item & 3) << 2;
-    for (int i = start; i < (start + 4); i++) {
-      int index = indexOf(item, i);
-      increment(index, i);
-    }
 
-    if (++size == SAMPLE_SIZE) {
+    // Loop unrolling improves throughput by 5m ops/s
+    int index0 = indexOf(item, 0);
+    int index1 = indexOf(item, 1);
+    int index2 = indexOf(item, 2);
+    int index3 = indexOf(item, 3);
+
+    boolean added = increment(index0, start);
+    added |= increment(index1, start + 1);
+    added |= increment(index2, start + 2);
+    added |= increment(index3, start + 3);
+
+    if (added && (++size == sampleSize)) {
       reset();
     }
   }
@@ -76,21 +108,26 @@ public final class FrequencySketch<E> implements Frequency<E> {
    *
    * @param i the table index (16 counters)
    * @param j the counter to increment
+   * @return if incremented
    */
-  void increment(int i, int j) {
+  boolean increment(int i, int j) {
     int offset = j << 2;
     long mask = (0xfL << offset);
-    if ((table[i] & mask) != mask) {
-      table[i] += (1L << offset);
+    long byteOffset = byteOffset(i);
+    long slot = UnsafeAccess.UNSAFE.getLong(table, byteOffset);
+    if ((slot & mask) != mask) {
+      table[i] = slot + (1L << offset);
+      return true;
     }
+    return false;
   }
 
   /**
    * Reduces every counter by half of its original value. As each table entry represents 16 counters
    * this is performed as two 8 counter reductions OR'd together.
-   * */
+   */
   void reset() {
-    size = (SAMPLE_SIZE >>> 1);
+    size = (sampleSize >>> 1);
     for (int i = 0; i < table.length; i++) {
       size -= Long.bitCount(table[i] & RESET_MASK);
       long a = ((table[i] & MASK_A) >>> 1) & MASK_A;
@@ -103,12 +140,12 @@ public final class FrequencySketch<E> implements Frequency<E> {
    * Returns the table index for the counter at the specified depth.
    *
    * @param item the element's hash
-   * @param i the counter (depth)
+   * @param i the counter depth
    * @return the table index
    */
   int indexOf(int item, int i) {
-    long hash = SEED[i & 3] * item;
+    long hash = SEED[i] * item;
     hash += hash >> 32;
-    return (int) (hash & LENGTH_MASK);
+    return ((int) hash) & tableMask;
   }
 }

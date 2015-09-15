@@ -30,9 +30,10 @@ public final class TinyLfu implements Admittor {
   private final Frequency<Object> sketch;
 
   public TinyLfu(Config config) {
-    String type = new BasicSettings(config).tinyLfu().sketch();
+    BasicSettings settings = new BasicSettings(config);
+    String type = settings.tinyLfu().sketch();
     if (type.equalsIgnoreCase("count-min-4")) {
-      sketch = new FrequencySketch<>();
+      sketch = new FrequencySketch<>(settings.maximumSize());
     } else if (type.equalsIgnoreCase("count-min-64")) {
       sketch = new CountMinTinyLfu<>(config);
     } else {

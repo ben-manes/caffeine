@@ -32,7 +32,7 @@ public class FrequencySketchTest {
 
   @BeforeMethod
   public void before() {
-    sketch = new FrequencySketch<>();
+    sketch = new FrequencySketch<>(512);
   }
 
   @Test
