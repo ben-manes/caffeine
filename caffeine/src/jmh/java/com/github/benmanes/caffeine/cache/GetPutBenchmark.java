@@ -27,8 +27,8 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
-import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
-import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
+import com.yahoo.ycsb.generator.IntegerGenerator;
+import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * A benchmark that evaluates the read/write performance of a cache. The cache is pre-populated for

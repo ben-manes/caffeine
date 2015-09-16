@@ -13,41 +13,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.admission.sketch;
+package com.github.benmanes.caffeine.cache;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class FrequencySketchTest {
+public final class FrequencySketchTest {
   final Integer item = ThreadLocalRandom.current().nextInt();
-  FrequencySketch<Integer> sketch;
 
-  @BeforeMethod
-  public void before() {
-    sketch = new FrequencySketch<>(512);
-  }
-
-  @Test
-  public void increment_once() {
+  @Test(dataProvider = "sketch")
+  public void increment_once(FrequencySketch<Integer> sketch) {
     sketch.increment(item);
-    int count = sketch.frequency(item);
-    assertThat(count, is(1));
+    assertThat(sketch.frequency(item), is(1));
   }
 
-  @Test
-  public void increment_max() {
+  @Test(dataProvider = "sketch")
+  public void increment_max(FrequencySketch<Integer> sketch) {
     for (int i = 0; i < 20; i++) {
       sketch.increment(item);
     }
-    int count = sketch.frequency(item);
-    assertThat(count, is(15));
+    assertThat(sketch.frequency(item), is(15));
+  }
+
+  @Test(dataProvider = "sketch")
+  public void increment_distinct(FrequencySketch<Integer> sketch) {
+    sketch.increment(item);
+    sketch.increment(item + 1);
+    assertThat(sketch.frequency(item), is(1));
+    assertThat(sketch.frequency(item + 1), is(1));
+    assertThat(sketch.frequency(item + 2), is(0));
+  }
+
+  @DataProvider(name = "sketch")
+  public Object[][] providesSketch() {
+    return new Object[][] {{ new FrequencySketch<Integer>(512) }};
   }
 }

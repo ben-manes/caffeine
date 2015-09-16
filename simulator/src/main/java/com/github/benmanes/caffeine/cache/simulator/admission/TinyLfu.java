@@ -15,10 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
-import com.clearspring.analytics.stream.frequency.CountMinTinyLfu;
+import com.clearspring.analytics.stream.frequency.CountMin64TinyLfu;
+import com.github.benmanes.caffeine.cache.CountMin4TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.sketch.Frequency;
-import com.github.benmanes.caffeine.cache.simulator.admission.sketch.FrequencySketch;
 import com.typesafe.config.Config;
 
 /**
@@ -33,9 +32,9 @@ public final class TinyLfu implements Admittor {
     BasicSettings settings = new BasicSettings(config);
     String type = settings.tinyLfu().sketch();
     if (type.equalsIgnoreCase("count-min-4")) {
-      sketch = new FrequencySketch<>(settings.maximumSize());
+      sketch = new CountMin4TinyLfu<>(config);
     } else if (type.equalsIgnoreCase("count-min-64")) {
-      sketch = new CountMinTinyLfu<>(config);
+      sketch = new CountMin64TinyLfu<>(config);
     } else {
       throw new IllegalStateException("Unknown sketch type: " + type);
     }

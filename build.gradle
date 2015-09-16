@@ -23,6 +23,7 @@ task testReport(type: TestReport, group: 'Build') {
 
 allprojects {
   repositories {
+    maven { url 'https://jitpack.io' }
     mavenCentral()
     jcenter()
   }

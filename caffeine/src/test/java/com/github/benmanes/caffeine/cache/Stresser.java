@@ -25,11 +25,11 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.LongAdder;
 
-import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
-import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.yahoo.ycsb.generator.IntegerGenerator;
+import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * A stress test to observe if the cache has a memory leak by not being able to drain the buffers

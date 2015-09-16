@@ -4,6 +4,7 @@ apply plugin:'application'
 mainClassName = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
 
 dependencies {
+  compile project(':caffeine')
   compile project(':tracing:api')
   compile project(':tracing:async')
 

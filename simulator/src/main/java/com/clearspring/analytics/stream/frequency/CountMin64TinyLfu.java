@@ -16,7 +16,7 @@
 package com.clearspring.analytics.stream.frequency;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.sketch.Frequency;
+import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
 import com.typesafe.config.Config;
 
 /**
@@ -33,7 +33,7 @@ import com.typesafe.config.Config;
  *
  * @author gilga1983@gmail.com (Gilga Einziger)
  */
-public final class CountMinTinyLfu<E> implements Frequency<E> {
+public final class CountMin64TinyLfu<E> implements Frequency<E> {
   private static final int RANDOM_SEED = 1033096058;
   private static final int MAX_COUNT = 15;
 
@@ -41,7 +41,7 @@ public final class CountMinTinyLfu<E> implements Frequency<E> {
   final int sampleSize;
   int size;
 
-  public CountMinTinyLfu(Config config) {
+  public CountMin64TinyLfu(Config config) {
     BasicSettings settings = new BasicSettings(config);
     sketch = new ConservativeAddSketch(settings.tinyLfu().countMin64().eps(),
         settings.tinyLfu().countMin64().confidence(), RANDOM_SEED);

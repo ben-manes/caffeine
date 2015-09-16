@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
 
 import org.testng.annotations.DataProvider;
@@ -26,8 +27,6 @@ import com.github.benmanes.caffeine.ConcurrentLinkedStackTest.ValidatingStackLis
 import com.github.benmanes.caffeine.testing.Threads;
 import com.google.common.collect.ImmutableList;
 import com.google.common.testing.SerializableTester;
-
-import scala.concurrent.forkjoin.ThreadLocalRandom;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

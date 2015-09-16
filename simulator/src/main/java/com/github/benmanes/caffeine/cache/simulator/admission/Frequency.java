@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.admission.sketch;
+package com.github.benmanes.caffeine.cache.simulator.admission;
 
 import javax.annotation.Nonnull;
 
@@ -24,9 +24,9 @@ import javax.annotation.Nonnull;
  */
 public interface Frequency<E> {
 
+  /** Returns the estimated number of times the element was seen. */
+  int frequency(@Nonnull E e);
+
   /** Increments the popularity of the element. */
   void increment(@Nonnull E e);
-
-  /** Returns the estimated number of times the element was seen, up to an internal maximum. */
-  int frequency(@Nonnull E e);
 }

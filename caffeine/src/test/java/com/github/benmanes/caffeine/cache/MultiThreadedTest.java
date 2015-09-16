@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -41,8 +42,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.SerializableTester;
-
-import scala.concurrent.forkjoin.ThreadLocalRandom;
 
 /**
  * A test to assert basic concurrency characteristics by validating the internal state after load.

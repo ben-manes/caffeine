@@ -40,8 +40,6 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
-import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
-import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -64,6 +62,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+import com.yahoo.ycsb.generator.IntegerGenerator;
+import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * The test cases for caches with a page replacement algorithm.

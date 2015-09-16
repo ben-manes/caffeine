@@ -21,13 +21,13 @@ plugins.withType(EclipsePlugin) {
 dependencies {
   compile project(':tracing:api')
 
-  testCompile project(':simulator')
   testCompile libraries.guava
-  testCompile test_libraries.awaitility
-  testCompile test_libraries.guava_testlib
+  testCompile libraries.ycsb
+  testCompile test_libraries.testng
   testCompile test_libraries.jctools
   testCompile test_libraries.mockito
-  testCompile test_libraries.testng
+  testCompile test_libraries.awaitility
+  testCompile test_libraries.guava_testlib
 
   javaAgent benchmark_libraries.jamm
 
