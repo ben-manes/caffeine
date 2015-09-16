@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -32,7 +33,7 @@ final class FrequencySketch<E> {
 
   /*
    * This class maintains a 4-bit CountMinSketch [1] with periodic aging to provide the popularity
-   * history for the TinyLfu [2] admission policy. The time and space efficiency of the sketch
+   * history for the TinyLfu admission policy [2]. The time and space efficiency of the sketch
    * allows it to estimate the frequency of an entry in a stream of cache access events.
    *
    * The counter matrix is represented as a single dimensional array holding 16 counters per slot. A
@@ -41,10 +42,10 @@ final class FrequencySketch<E> {
    * number of entries in the cache, increased to the closest power-of-two to exploit more efficient
    * bit masking.
    *
-   * The frequency of all entries is aged periodically using a sample period based on the maximum
+   * The frequency of all entries is aged periodically using a sampling window based on the maximum
    * number of entries in the cache. This is referred to as the reset operation by TinyLfu and keeps
-   * the sketch fresh dividing all counters by two. The O(n) cost of aging is amortized, ideal for
-   * a hardware prefetcher, and uses inexpensive bit manipulations per array location.
+   * the sketch fresh by dividing all counters by two. The O(n) cost of aging is amortized, ideal
+   * for hardware prefetching, and uses inexpensive bit manipulations per array location.
    *
    * [1] An Improved Data Stream Summary: The Count-Min Sketch and its Applications
    * http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
@@ -72,7 +73,7 @@ final class FrequencySketch<E> {
    *
    * @param maximumSize the maximum size of the cache
    */
-  public FrequencySketch(int maximumSize) {
+  public FrequencySketch(@Nonnegative int maximumSize) {
     table = new long[ceilingNextPowerOfTwo(maximumSize)];
     sampleSize = 10 * maximumSize;
     tableMask = table.length - 1;
@@ -84,12 +85,13 @@ final class FrequencySketch<E> {
    * @param element the element to count occurrences of
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
+  @Nonnegative
   public int frequency(@Nonnull E e) {
-    int item = e.hashCode();
-    int start = (item & 3) << 2;
+    int hash = spread(e.hashCode());
+    int start = (hash & 3) << 2;
     int frequency = Integer.MAX_VALUE;
     for (int i = 0; i < 4; i++) {
-      int index = indexOf(item, i);
+      int index = indexOf(hash, i);
       long slot = UnsafeAccess.UNSAFE.getLong(table, byteOffset(index));
       int count = (int) ((slot >>> ((start + i) << 2)) & 0xfL);
       frequency = Math.min(frequency, count);
@@ -105,14 +107,14 @@ final class FrequencySketch<E> {
    * @param e the element to add
    */
   public void increment(@Nonnull E e) {
-    int item = e.hashCode();
-    int start = (item & 3) << 2;
+    int hash = spread(e.hashCode());
+    int start = (hash & 3) << 2;
 
     // Loop unrolling improves throughput by 5m ops/s
-    int index0 = indexOf(item, 0);
-    int index1 = indexOf(item, 1);
-    int index2 = indexOf(item, 2);
-    int index3 = indexOf(item, 3);
+    int index0 = indexOf(hash, 0);
+    int index1 = indexOf(hash, 1);
+    int index2 = indexOf(hash, 2);
+    int index3 = indexOf(hash, 3);
 
     boolean added = incrementAt(index0, start);
     added |= incrementAt(index1, start + 1);
@@ -134,8 +136,7 @@ final class FrequencySketch<E> {
   boolean incrementAt(int i, int j) {
     int offset = j << 2;
     long mask = (0xfL << offset);
-    long byteOffset = byteOffset(i);
-    long slot = UnsafeAccess.UNSAFE.getLong(table, byteOffset);
+    long slot = UnsafeAccess.UNSAFE.getLong(table, byteOffset(i));
     if ((slot & mask) != mask) {
       table[i] = slot + (1L << offset);
       return true;
@@ -168,6 +169,15 @@ final class FrequencySketch<E> {
     long hash = SEED[i] * item;
     hash += hash >> 32;
     return ((int) hash) & tableMask;
+  }
+
+  /**
+   * Applies a supplemental hash function to a given hashCode, which defends against poor quality
+   * hash functions.
+   */
+  static int spread(int x) {
+    x = ((x >>> 16) ^ x) * 0x45d9f3b;
+    return (x >>> 16) ^ x;
   }
 
   static int ceilingNextPowerOfTwo(int x) {
