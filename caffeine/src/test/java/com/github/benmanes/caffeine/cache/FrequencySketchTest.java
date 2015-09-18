@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -28,6 +29,29 @@ import org.testng.annotations.Test;
  */
 public final class FrequencySketchTest {
   final Integer item = ThreadLocalRandom.current().nextInt();
+
+  @Test(dataProvider = "sketch", expectedExceptions = IllegalArgumentException.class)
+  public void ensureCapacity_negative(FrequencySketch<Integer> sketch) {
+    sketch.ensureCapacity(-1);
+  }
+
+  @Test(dataProvider = "sketch")
+  public void ensureCapacity_smaller(FrequencySketch<Integer> sketch) {
+    int size = sketch.table.length;
+    sketch.ensureCapacity(size / 2);
+    assertThat(sketch.table.length, is(size));
+    assertThat(sketch.tableMask, is(size - 1));
+    assertThat(sketch.sampleSize, is(10 * size));
+  }
+
+  @Test(dataProvider = "sketch")
+  public void ensureCapacity_larger(FrequencySketch<Integer> sketch) {
+    int size = sketch.table.length;
+    sketch.ensureCapacity(size * 2);
+    assertThat(sketch.table.length, is(size * 2));
+    assertThat(sketch.tableMask, is(2 * size - 1));
+    assertThat(sketch.sampleSize, is(10 * 2 * size));
+  }
 
   @Test(dataProvider = "sketch")
   public void increment_once(FrequencySketch<Integer> sketch) {
@@ -50,6 +74,21 @@ public final class FrequencySketchTest {
     assertThat(sketch.frequency(item), is(1));
     assertThat(sketch.frequency(item + 1), is(1));
     assertThat(sketch.frequency(item + 2), is(0));
+  }
+
+  @Test
+  public void reset() {
+    boolean reset = false;
+    FrequencySketch<Integer> sketch = new FrequencySketch<>(64);
+    for (int i = 1; i < 20 * sketch.table.length; i++) {
+      sketch.increment(i);
+      if (sketch.size != i) {
+        reset = true;
+        break;
+      }
+    }
+    assertThat(reset, is(true));
+    assertThat(sketch.size, lessThanOrEqualTo(sketch.sampleSize / 2));
   }
 
   @DataProvider(name = "sketch")

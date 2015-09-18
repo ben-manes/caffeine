@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -44,13 +46,20 @@ final class FrequencySketch<E> {
    *
    * The frequency of all entries is aged periodically using a sampling window based on the maximum
    * number of entries in the cache. This is referred to as the reset operation by TinyLfu and keeps
-   * the sketch fresh by dividing all counters by two. The O(n) cost of aging is amortized, ideal
-   * for hardware prefetching, and uses inexpensive bit manipulations per array location.
+   * the sketch fresh by dividing all counters by two and subtracting based on the number of odd
+   * counters found. The O(n) cost of aging is amortized, ideal for hardware prefetching, and uses
+   * inexpensive bit manipulations per array location.
+   *
+   * A per instance smear is used to help protect against hash flooding [3], which would result
+   * in the admission policy always rejecting new candidates. The use of a pseudo random hashing
+   * function resolves the concern of a denial of service attack by exploiting the hash codes.
    *
    * [1] An Improved Data Stream Summary: The Count-Min Sketch and its Applications
    * http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
    * [2] TinyLFU: A Highly Efficient Cache Admission Policy
    * http://www.cs.technion.ac.il/~gilga/TinyLFU_PDP2014.pdf
+   * [3] Denial of Service via Algorithmic Complexity Attack
+   * http://www.cs.virginia.edu/~cs216/Fall2005/notes/CrosbyWallach_UsenixSec2003.pdf
    */
 
   static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
@@ -60,6 +69,8 @@ final class FrequencySketch<E> {
   static final long MASK_B = 0x0f0f0f0f0f0f0f0fL;
   static final int TABLE_SHIFT;
   static final int TABLE_BASE;
+
+  final int randomSeed;
 
   int sampleSize;
   int tableMask;
@@ -73,6 +84,11 @@ final class FrequencySketch<E> {
    * @param maximumSize the maximum size of the cache
    */
   public FrequencySketch(@Nonnegative long maximumSize) {
+    this(maximumSize, ThreadLocalRandom.current().nextInt());
+  }
+
+  FrequencySketch(@Nonnegative long maximumSize, int randomSeed) {
+    this.randomSeed = randomSeed;
     ensureCapacity(maximumSize);
   }
 
@@ -95,6 +111,7 @@ final class FrequencySketch<E> {
     if (sampleSize <= 0) {
       sampleSize = Integer.MAX_VALUE;
     }
+    size = 0;
   }
 
   /**
@@ -167,13 +184,15 @@ final class FrequencySketch<E> {
    * this is performed as two 8 counter reductions OR'd together.
    */
   void reset() {
+    int count = 0;
     size = (sampleSize >>> 1);
     for (int i = 0; i < table.length; i++) {
-      size -= Long.bitCount(table[i] & RESET_MASK);
+      count += Long.bitCount(table[i] & RESET_MASK);
       long a = ((table[i] & MASK_A) >>> 1) & MASK_A;
       long b = ((table[i] & MASK_B) >>> 1) & MASK_B;
       table[i] = a | b;
     }
+    size -= (count >>> 2);
   }
 
   /**
@@ -193,8 +212,9 @@ final class FrequencySketch<E> {
    * Applies a supplemental hash function to a given hashCode, which defends against poor quality
    * hash functions.
    */
-  static int spread(int x) {
+  int spread(int x) {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
+    x = ((x >>> 16) ^ x) * randomSeed;
     return (x >>> 16) ^ x;
   }
 
