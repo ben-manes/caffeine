@@ -34,9 +34,9 @@ subprojects { proj ->
     return
   }
   apply plugin: 'com.github.ethankhall.semantic-versioning'
+  apply plugin: 'nebula.provided-base'
   apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'org.dm.bundle'
-  apply plugin: 'provided-base'
   apply plugin: 'java'
 
   apply from: "${rootDir}/gradle/publish.gradle"

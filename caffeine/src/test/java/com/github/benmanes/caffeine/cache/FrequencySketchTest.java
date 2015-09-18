@@ -54,6 +54,6 @@ public final class FrequencySketchTest {
 
   @DataProvider(name = "sketch")
   public Object[][] providesSketch() {
-    return new Object[][] {{ new FrequencySketch<Integer>(512) }};
+    return new Object[][] {{ new FrequencySketch<>(512) }};
   }
 }

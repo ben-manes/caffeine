@@ -53,30 +53,48 @@ final class FrequencySketch<E> {
    * http://www.cs.technion.ac.il/~gilga/TinyLFU_PDP2014.pdf
    */
 
-  static final long[] SEED = new long[] {
-      -7701517898679364118L, -8602375887669043078L, 5691832600956327737L, -1886344194585363204L};
+  static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
+      0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final long RESET_MASK = 0x1111111111111111L;
   static final long MASK_A = 0xf0f0f0f0f0f0f0f0L;
   static final long MASK_B = 0x0f0f0f0f0f0f0f0fL;
   static final int TABLE_SHIFT;
   static final int TABLE_BASE;
 
-  final int sampleSize;
-  final int tableMask;
-  final long[] table;
-
+  int sampleSize;
+  int tableMask;
+  long[] table;
   int size;
 
   /**
-   * Creates a frequency sketch that can accurately determine the popularity of elements given
-   * the size of the cache.
+   * Creates a frequency sketch that can accurately estimate the popularity of elements given
+   * the maximum size of the cache.
    *
    * @param maximumSize the maximum size of the cache
    */
-  public FrequencySketch(@Nonnegative int maximumSize) {
-    table = new long[ceilingNextPowerOfTwo(maximumSize)];
-    sampleSize = 10 * maximumSize;
+  public FrequencySketch(@Nonnegative long maximumSize) {
+    ensureCapacity(maximumSize);
+  }
+
+  /**
+   * Increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary, to ensure that
+   * it can accurately estimate the popularity of elements given the maximum size of the cache.
+   *
+   * @param maximumSize the maximum size of the cache
+   */
+  public void ensureCapacity(@Nonnegative long maximumSize) {
+    Caffeine.requireArgument(maximumSize >= 0);
+    int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE);
+    if ((table != null) && (table.length >= maximum)) {
+      return;
+    }
+
+    table = new long[ceilingNextPowerOfTwo(maximum)];
     tableMask = table.length - 1;
+    sampleSize = (10 * maximum);
+    if (sampleSize <= 0) {
+      sampleSize = Integer.MAX_VALUE;
+    }
   }
 
   /**
