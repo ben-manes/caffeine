@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -29,7 +28,6 @@ import javax.annotation.concurrent.ThreadSafe;
 public interface Ticker {
 
   /** @return the number of nanoseconds elapsed since this ticker's fixed point of reference */
-  @Nonnegative
   long read();
 
   /** @return a ticker that reads the current time using {@link System#nanoTime} */
