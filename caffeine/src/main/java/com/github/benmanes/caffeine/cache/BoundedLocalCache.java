@@ -149,7 +149,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess())
-        ? node -> reorder(accessOrderDeque(), node)
+        ? node -> reorder(accessOrderMainDeque(), node)
         : e -> {};
     drainBuffersTask = this::cleanUp;
   }
@@ -160,7 +160,25 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @GuardedBy("evictionLock")
-  protected AccessOrderDeque<Node<K, V>> accessOrderDeque() {
+  protected AccessOrderDeque<Node<K, V>> accessOrderEdenDeque() {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected AccessOrderDeque<Node<K, V>> accessOrderMainDeque() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected int moveDistance() {
+    return 0;
+  }
+
+  protected int moveCount() {
+    return 0;
+  }
+
+  @GuardedBy("evictionLock")
+  protected int setMoveCount(int count) {
     throw new UnsupportedOperationException();
   }
 
@@ -176,6 +194,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** If the page replacement policy buffers writes. */
   protected boolean buffersWrites() {
     return false;
+  }
+
+  protected FrequencySketch<K> frequencySketch() {
+    throw new UnsupportedOperationException();
   }
 
   protected CacheLoader<? super K, V> cacheLoader() {
@@ -370,7 +392,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     // fails due to a concurrent removal of the victim, that removal may cancel out the addition
     // that triggered this eviction. The victim is eagerly unlinked before the removal task so
     // that if an eviction is still required then a new victim will be chosen for removal.
-    Node<K, V> node = accessOrderDeque().peek();
+    Node<K, V> node = accessOrderMainDeque().peek();
     while (hasOverflowed()) {
       // If weighted values are used, then the pending operations will adjust the size to reflect
       // the correct weight
@@ -392,7 +414,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (expiresAfterAccess()) {
       long expirationTime = now - expiresAfterAccessNanos();
       for (;;) {
-        final Node<K, V> node = accessOrderDeque().peekFirst();
+        final Node<K, V> node = accessOrderMainDeque().peekFirst();
         if ((node == null) || (node.getAccessTime() > expirationTime)) {
           break;
         }
@@ -467,7 +489,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     makeDead(node);
     if (evicts() || expiresAfterAccess()) {
-      accessOrderDeque().remove(node);
+      accessOrderMainDeque().remove(node);
     }
     if (expiresAfterWrite()) {
       writeOrderDeque().remove(node);
@@ -634,8 +656,32 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     readBuffer.drainTo(accessPolicy);
   }
 
+  @GuardedBy("evictionLock")
+  void onAccess(Node<K, V> node) {
+    if (evicts()) {
+      K key = node.getKey();
+      if (key != null) {
+        frequencySketch().increment(node.getKey());
+      }
+      // Handle both access deques
+      if (true /* is eden */) {
+        if (accessOrderEdenDeque().contains(node)) {
+          accessOrderEdenDeque().moveToBack(node);
+        }
+      } else {
+        if (accessOrderMainDeque().contains(node)) {
+          accessOrderMainDeque().moveToBack(node);
+        }
+      }
+    } else if (expiresAfterAccess()) {
+      if (accessOrderMainDeque().contains(node)) {
+        accessOrderMainDeque().moveToBack(node);
+      }
+    }
+  }
+
   /** Updates the node's location in the page replacement policy. */
-  static <K, V> void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node) {
+  void reorder(LinkedDeque<Node<K, V>> deque, Node<K, V> node) {
     // An entry may be scheduled for reordering despite having been removed. This can occur when the
     // entry was concurrently read while a writer was removing it. If the entry is no longer linked
     // then it does not need to be processed.
@@ -690,6 +736,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     public void run() {
       if (evicts()) {
         lazySetWeightedSize(weightedSize() + weight);
+
+        long size = (weigher == Weigher.singleton()) ? adjustedWeightedSize() : data.mappingCount();
+        frequencySketch().ensureCapacity(size);
       }
 
       // ignore out-of-order write operations
@@ -702,7 +751,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           writeOrderDeque().add(node);
         }
         if (evicts() || expiresAfterAccess()) {
-          accessOrderDeque().add(node);
+          accessOrderMainDeque().add(node);
         }
       }
 
@@ -732,7 +781,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     public void run() {
       // add may not have been processed yet
       if (evicts() || expiresAfterAccess()) {
-        accessOrderDeque().remove(node);
+        accessOrderMainDeque().remove(node);
       }
       if (expiresAfterWrite()) {
         writeOrderDeque().remove(node);
@@ -758,7 +807,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         lazySetWeightedSize(weightedSize() + weightDifference);
       }
       if (evicts() || expiresAfterAccess()) {
-        reorder(accessOrderDeque(), node);
+        reorder(accessOrderMainDeque(), node);
       }
       if (expiresAfterWrite()) {
         reorder(writeOrderDeque(), node);
@@ -804,9 +853,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       // Discard all entries
       if (evicts() || expiresAfterAccess()) {
         Node<K, V> node;
-        while ((node = accessOrderDeque().peek()) != null) {
+        while ((node = accessOrderMainDeque().peek()) != null) {
           removeNode(node, now);
-          accessOrderDeque().poll();
+          accessOrderMainDeque().poll();
         }
       }
       if (expiresAfterWrite()) {
@@ -1894,10 +1943,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         cache.setMaximum(maximumSize);
       }
       @Override public Map<K, V> coldest(int limit) {
-        return cache.orderedMap(cache.accessOrderDeque(), transformer, true, limit);
+        return cache.orderedMap(cache.accessOrderMainDeque(), transformer, true, limit);
       }
       @Override public Map<K, V> hottest(int limit) {
-        return cache.orderedMap(cache.accessOrderDeque(), transformer, false, limit);
+        return cache.orderedMap(cache.accessOrderMainDeque(), transformer, false, limit);
       }
     }
 
@@ -1922,10 +1971,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         cache.executor().execute(cache.drainBuffersTask);
       }
       @Override public Map<K, V> oldest(int limit) {
-        return cache.orderedMap(cache.accessOrderDeque(), transformer, true, limit);
+        return cache.orderedMap(cache.accessOrderMainDeque(), transformer, true, limit);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return cache.orderedMap(cache.accessOrderDeque(), transformer, false, limit);
+        return cache.orderedMap(cache.accessOrderMainDeque(), transformer, false, limit);
       }
     }
 

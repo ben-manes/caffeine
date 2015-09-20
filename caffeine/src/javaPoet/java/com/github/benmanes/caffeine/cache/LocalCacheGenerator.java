@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.ACCESS_ORDER_DEQ
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.FREQUENCY_SKETCH;
 import static com.github.benmanes.caffeine.cache.Specifications.REMOVAL_LISTENER;
 import static com.github.benmanes.caffeine.cache.Specifications.STATS_COUNTER;
 import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
@@ -96,7 +97,8 @@ public final class LocalCacheGenerator {
     addExpirationTicker();
     addStatsTicker();
     addMaximum();
-    addAccessOrderDeque();
+    addAccessOrderEdenDeque();
+    addAccessOrderMainDeque();
     addExpireAfterAccess();
     addExpireAfterWrite();
     addRefreshAfterWrite();
@@ -245,6 +247,26 @@ public final class LocalCacheGenerator {
             UNSAFE_ACCESS, offsetName("weightedSize"), "weightedSize")
         .addParameter(long.class, "weightedSize")
         .build());
+
+    cache.addField(FieldSpec.builder(FREQUENCY_SKETCH, "sketch", privateFinalModifiers).build());
+    constructor.addStatement("this.sketch = new $T(0)", FREQUENCY_SKETCH);
+    cache.addMethod(MethodSpec.methodBuilder("frequencySketch")
+        .addModifiers(protectedFinalModifiers)
+        .addStatement("return sketch")
+        .returns(FREQUENCY_SKETCH)
+        .build());
+
+    cache.addField(FieldSpec.builder(int.class, "moveCounter", privateVolatileModifiers).build());
+    cache.addMethod(MethodSpec.methodBuilder("moveCounter")
+        .addModifiers(protectedFinalModifiers)
+        .addStatement("return moveCounter")
+        .returns(int.class)
+        .build());
+    cache.addMethod(MethodSpec.methodBuilder("setMoveCounter")
+        .addModifiers(protectedFinalModifiers)
+        .addParameter(int.class, "moveCounter")
+        .addStatement("this.moveCounter = moveCounter")
+        .build());
   }
 
   private void addExpireAfterAccess() {
@@ -319,19 +341,20 @@ public final class LocalCacheGenerator {
         .build());
   }
 
-  private void addAccessOrderDeque() {
-    if (Feature.usesAccessOrderDeque(parentFeatures)
-        || !Feature.usesAccessOrderDeque(generateFeatures)) {
+  private void addAccessOrderEdenDeque() {
+    if (Feature.usesAccessOrderEdenDeque(parentFeatures)
+        || !Feature.usesAccessOrderEdenDeque(generateFeatures)) {
       return;
     }
-    constructor.addStatement("this.accessOrderDeque = new $T()", ACCESS_ORDER_DEQUE);
-    cache.addField(
-        FieldSpec.builder(ACCESS_ORDER_DEQUE, "accessOrderDeque", privateFinalModifiers).build());
-    cache.addMethod(MethodSpec.methodBuilder("accessOrderDeque")
-        .addModifiers(protectedFinalModifiers)
-        .addStatement("return accessOrderDeque")
-        .returns(ACCESS_ORDER_DEQUE)
-        .build());
+    addDeque(ACCESS_ORDER_DEQUE, "accessOrderEdenDeque");
+  }
+
+  private void addAccessOrderMainDeque() {
+    if (Feature.usesAccessOrderMainDeque(parentFeatures)
+        || !Feature.usesAccessOrderMainDeque(generateFeatures)) {
+      return;
+    }
+    addDeque(ACCESS_ORDER_DEQUE, "accessOrderMainDeque");
   }
 
   private void addWriteOrderDeque() {
@@ -339,13 +362,17 @@ public final class LocalCacheGenerator {
         || !Feature.usesWriteOrderDeque(generateFeatures)) {
       return;
     }
-    constructor.addStatement("this.writeOrderDeque = new $T()", WRITE_ORDER_DEQUE);
+    addDeque(WRITE_ORDER_DEQUE, "writeOrderDeque");
+  }
+
+  private void addDeque(TypeName type, String name) {
+    constructor.addStatement("this.$L = new $T()", name, type);
     cache.addField(
-        FieldSpec.builder(WRITE_ORDER_DEQUE, "writeOrderDeque", privateFinalModifiers).build());
-    cache.addMethod(MethodSpec.methodBuilder("writeOrderDeque")
+        FieldSpec.builder(type, name, privateFinalModifiers).build());
+    cache.addMethod(MethodSpec.methodBuilder(name)
         .addModifiers(protectedFinalModifiers)
-        .addStatement("return writeOrderDeque")
-        .returns(WRITE_ORDER_DEQUE)
+        .addStatement("return " + name)
+        .returns(type)
         .build());
   }
 

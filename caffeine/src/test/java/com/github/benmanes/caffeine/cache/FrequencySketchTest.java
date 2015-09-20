@@ -30,6 +30,25 @@ import org.testng.annotations.Test;
 public final class FrequencySketchTest {
   final Integer item = ThreadLocalRandom.current().nextInt();
 
+  @Test(expectedExceptions = IllegalArgumentException.class)
+  public void construct_negative() {
+    new FrequencySketch<Integer>(-1);
+  }
+
+  @Test
+  public void construct_zero() {
+    FrequencySketch<Integer> sketch = new FrequencySketch<>(0);
+    assertThat(sketch.table.length, is(0));
+    assertThat(sketch.tableMask, is(0));
+  }
+
+  @Test
+  public void construct_positive() {
+    FrequencySketch<Integer> sketch = new FrequencySketch<>(10);
+    assertThat(sketch.table.length, is(16));
+    assertThat(sketch.tableMask, is(15));
+  }
+
   @Test(dataProvider = "sketch", expectedExceptions = IllegalArgumentException.class)
   public void ensureCapacity_negative(FrequencySketch<Integer> sketch) {
     sketch.ensureCapacity(-1);
@@ -89,6 +108,36 @@ public final class FrequencySketchTest {
     }
     assertThat(reset, is(true));
     assertThat(sketch.size, lessThanOrEqualTo(sketch.sampleSize / 2));
+  }
+
+  @Test
+  public void heavyHitters() {
+    FrequencySketch<Double> sketch = new FrequencySketch<>(512, 1033096058);
+    for (int i = 100; i < 100_000; i++) {
+      sketch.increment((double) i);
+    }
+    for (int i = 0; i < 10; i += 2) {
+      for (int j = 0; j < i; j++) {
+        sketch.increment((double) i);
+      }
+    }
+
+    // A perfect popularity count yields an array [0, 0, 2, 0, 4, 0, 6, 0, 8, 0]
+    int[] popularity = new int[10];
+    for (int i = 0; i < 10; i++) {
+      popularity[i] = sketch.frequency((double) i);
+    }
+    for (int i = 0; i < popularity.length; i++) {
+      if ((i == 0) || (i == 1) || (i == 3) || (i == 5) || (i == 7) || (i == 9)) {
+        assertThat(popularity[i], lessThanOrEqualTo(popularity[2]));
+      } else if (i == 2) {
+        assertThat(popularity[2], lessThanOrEqualTo(popularity[4]));
+      } else if (i == 4) {
+        assertThat(popularity[4], lessThanOrEqualTo(popularity[6]));
+      } else if (i == 6) {
+        assertThat(popularity[6], lessThanOrEqualTo(popularity[8]));
+      }
+    }
   }
 
   @DataProvider(name = "sketch")

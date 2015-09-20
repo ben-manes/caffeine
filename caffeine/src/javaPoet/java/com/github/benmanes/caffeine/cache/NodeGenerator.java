@@ -83,6 +83,7 @@ public final class NodeGenerator {
     addKey();
     addValue();
     addWeight();
+    addMaximum();
     addExpiration();
     addDeques();
     addStateMethods();
@@ -260,6 +261,13 @@ public final class NodeGenerator {
     }
   }
 
+  /** Adds maximum size/weight support, if enabled, to the node type. */
+  private void addMaximum() {
+    if (!Feature.usesMaximum(generateFeatures)) {
+      return;
+    }
+  }
+
   /** Adds weight support, if enabled, to the node type. */
   private void addWeight() {
     if (generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
@@ -329,8 +337,8 @@ public final class NodeGenerator {
 
   /** Adds the access and write deques, if needed, to the type. */
   private void addDeques() {
-    if (!Feature.usesAccessOrderDeque(parentFeatures)
-        && Feature.usesAccessOrderDeque(generateFeatures)) {
+    if (!Feature.usesAccessOrderMainDeque(parentFeatures)
+        && Feature.usesAccessOrderMainDeque(generateFeatures)) {
       addFieldAndGetter(nodeSubtype, NODE, "previousInAccessOrder");
       addFieldAndGetter(nodeSubtype, NODE, "nextInAccessOrder");
     }

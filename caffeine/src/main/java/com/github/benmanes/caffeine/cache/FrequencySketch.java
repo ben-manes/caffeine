@@ -42,7 +42,7 @@ final class FrequencySketch<E> {
    * fixed depth of four balances the accuracy and cost, resulting in a width of four times the
    * length of the array. To retain an accurate estimation the array's length equals the maximum
    * number of entries in the cache, increased to the closest power-of-two to exploit more efficient
-   * bit masking.
+   * bit masking. This configuration results in a confidence of 93.75% and error bound of ℇ / width.
    *
    * The frequency of all entries is aged periodically using a sampling window based on the maximum
    * number of entries in the cache. This is referred to as the reset operation by TinyLfu and keeps
@@ -67,6 +67,7 @@ final class FrequencySketch<E> {
   static final long RESET_MASK = 0x1111111111111111L;
   static final long MASK_A = 0xf0f0f0f0f0f0f0f0L;
   static final long MASK_B = 0x0f0f0f0f0f0f0f0fL;
+  static final long[] EMPTY_TABLE = {};
   static final int TABLE_SHIFT;
   static final int TABLE_BASE;
 
@@ -100,13 +101,13 @@ final class FrequencySketch<E> {
    */
   public void ensureCapacity(@Nonnegative long maximumSize) {
     Caffeine.requireArgument(maximumSize >= 0);
-    int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE);
+    int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {
       return;
     }
 
-    table = new long[ceilingNextPowerOfTwo(maximum)];
-    tableMask = table.length - 1;
+    table = (maximum == 0) ? EMPTY_TABLE : new long[ceilingNextPowerOfTwo(maximum)];
+    tableMask = Math.max(0, table.length - 1);
     sampleSize = (10 * maximum);
     if (sampleSize <= 0) {
       sampleSize = Integer.MAX_VALUE;

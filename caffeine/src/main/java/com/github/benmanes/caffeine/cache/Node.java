@@ -69,6 +69,20 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    */
   boolean containsValue(@Nonnull Object value);
 
+  /** Returns the weight of this entry. */
+  @Nonnegative
+  @GuardedBy("this")
+  default int getWeight() {
+    return 1;
+  }
+
+  /** Sets the weight. */
+  @Nonnegative
+  @GuardedBy("this")
+  default void setWeight(int weight) {}
+
+  /* ---------------- Health -------------- */
+
   /** If the entry is available in the hash-table and page replacement policy. */
   @GuardedBy("this")
   boolean isAlive();
@@ -94,19 +108,39 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /* ---------------- Access order -------------- */
 
-  /** Returns the weight of this entry. */
-  @Nonnegative
-  @GuardedBy("this")
-  default int getWeight() {
-    return 1;
+  /** Returns if the entry is in the Eden or Main access queue. */
+  default boolean isEden() {
+    return false;
   }
 
-  /** Sets the weight. */
-  @Nonnegative
-  @GuardedBy("this")
-  default void setWeight(int weight) {}
+  /** Returns the entry's move count in the Main access queue. */
+  default int getMoveCount() {
+    return 0;
+  }
 
-  /* ---------------- Access order -------------- */
+  /** Set entry's move count in the Main access queue. */
+  default void setMoveCountMain(int move) {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns the encoded access metadata.
+   * <ul>
+   *   <li>sign bit: negative if Eden; positive if Main</li>
+   *   <li>magnitude: the move count in the Main access queue</li>
+   * </ul>
+   */
+  default int getAccessMetadata() {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Stores the encoded access metadata. This update may be set lazily and rely on the memory fence
+   * when the lock is released.
+   */
+  default int setAccessMetadata(int metadata) {
+    throw new UnsupportedOperationException();
+  }
 
   /** Returns the time that this entry was last accessed, in ns. */
   default long getAccessTime() {

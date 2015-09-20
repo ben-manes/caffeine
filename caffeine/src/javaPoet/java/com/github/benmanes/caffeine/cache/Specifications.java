@@ -103,6 +103,9 @@ public final class Specifications {
   static final TypeName WRITE_QUEUE = ParameterizedTypeName.get(
       WRITE_QUEUE_TYPE, ClassName.get(Runnable.class));
 
+  static final TypeName FREQUENCY_SKETCH = ParameterizedTypeName.get(
+      ClassName.get("com.github.benmanes.caffeine.cache", "FrequencySketch"), kTypeVar);
+
   private Specifications() {}
 
   /** Returns the offset constant to this variable. */

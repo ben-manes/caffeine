@@ -65,6 +65,7 @@ tasks.withType(Test) {
     exceptionFormat 'full'
     showCauses = true
     showExceptions = true
+    showStackTraces = true
   }
   jacoco {
     append = true

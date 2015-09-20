@@ -183,7 +183,7 @@ public final class BoundedLocalCacheTest {
       Integer... expect) {
     localCache.maintenance();
     List<Integer> evictionList = Lists.newArrayList();
-    localCache.accessOrderDeque().forEach(
+    localCache.accessOrderMainDeque().forEach(
         node -> evictionList.add(node.getKey()));
     assertThat(localCache.size(), is(equalTo(expect.length)));
     assertThat(localCache.keySet(), containsInAnyOrder(expect));
@@ -195,7 +195,7 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onGet(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque().peek();
+    Node<Integer, Integer> first = localCache.accessOrderMainDeque().peek();
     updateRecency(localCache, () -> localCache.get(first.getKey()));
   }
 
@@ -204,7 +204,7 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque().peek();
+    Node<Integer, Integer> first = localCache.accessOrderMainDeque().peek();
     updateRecency(localCache, () -> localCache.putIfAbsent(first.getKey(), first.getKey()));
   }
 
@@ -213,7 +213,7 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onPut(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque().peek();
+    Node<Integer, Integer> first = localCache.accessOrderMainDeque().peek();
     updateRecency(localCache, () -> localCache.put(first.getKey(), first.getKey()));
   }
 
@@ -222,7 +222,7 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = MaximumSize.FULL)
   public void updateRecency_onReplace(Cache<Integer, Integer> cache) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque().peek();
+    Node<Integer, Integer> first = localCache.accessOrderMainDeque().peek();
     updateRecency(localCache, () -> localCache.replace(first.getKey(), first.getKey()));
   }
 
@@ -232,7 +232,7 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onReplaceConditionally(
       Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderDeque().peek();
+    Node<Integer, Integer> first = localCache.accessOrderMainDeque().peek();
     Integer key = first.getKey();
     Integer value = context.original().get(key);
 
@@ -240,13 +240,13 @@ public final class BoundedLocalCacheTest {
   }
 
   private void updateRecency(BoundedLocalCache<Integer, Integer> cache, Runnable operation) {
-    Node<Integer, Integer> first = cache.accessOrderDeque().peek();
+    Node<Integer, Integer> first = cache.accessOrderMainDeque().peek();
 
     operation.run();
     cache.maintenance();
 
-    assertThat(cache.accessOrderDeque().peekFirst(), is(not(first)));
-    assertThat(cache.accessOrderDeque().peekLast(), is(first));
+    assertThat(cache.accessOrderMainDeque().peekFirst(), is(not(first)));
+    assertThat(cache.accessOrderMainDeque().peekLast(), is(first));
   }
 
   @Test(dataProvider = "caches")
@@ -306,7 +306,7 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     cache.put(1, 1);
     assertThat(localCache.writeQueue(), hasSize(0));
-    assertThat(localCache.accessOrderDeque(), hasSize(1));
+    assertThat(localCache.accessOrderMainDeque(), hasSize(1));
   }
 
   @Test(dataProvider = "caches")
