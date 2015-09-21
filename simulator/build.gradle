@@ -28,6 +28,10 @@ test {
 }
 
 bundle {
+  instruction 'Import-Package', [
+    'com.github.benmanes.caffeine.cache.tracing',
+    'com.github.benmanes.caffeine.cache.tracing.async',
+  ].join(';')
   instruction 'Export-Package', [
     'com.github.benmanes.caffeine.simulator',
     'com.github.benmanes.caffeine.simulator.admission',
