@@ -50,7 +50,7 @@ import com.github.benmanes.caffeine.cache.node.AddDeques;
 import com.github.benmanes.caffeine.cache.node.AddExpiration;
 import com.github.benmanes.caffeine.cache.node.AddHealth;
 import com.github.benmanes.caffeine.cache.node.AddKey;
-import com.github.benmanes.caffeine.cache.node.AddSubType;
+import com.github.benmanes.caffeine.cache.node.AddSubtype;
 import com.github.benmanes.caffeine.cache.node.AddToString;
 import com.github.benmanes.caffeine.cache.node.AddValue;
 import com.github.benmanes.caffeine.cache.node.AddWeight;
@@ -91,7 +91,7 @@ import com.squareup.javapoet.TypeSpec;
 public final class NodeFactoryGenerator {
   final Path directory;
   final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
-  final List<NodeRule> rules = ImmutableList.of(new AddSubType(), new AddConstructors(),
+  final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddWeight(), new AddExpiration(), new AddDeques(),
       new AddHealth(), new AddToString(), new Finalize());
 

@@ -35,7 +35,26 @@ import java.util.TreeMap;
 
 import javax.lang.model.element.Modifier;
 
+import com.github.benmanes.caffeine.cache.local.AddCacheLoader;
+import com.github.benmanes.caffeine.cache.local.AddConstructor;
+import com.github.benmanes.caffeine.cache.local.AddDeques;
+import com.github.benmanes.caffeine.cache.local.AddExecutor;
+import com.github.benmanes.caffeine.cache.local.AddExpirationTicker;
+import com.github.benmanes.caffeine.cache.local.AddExpireAfterAccess;
+import com.github.benmanes.caffeine.cache.local.AddExpireAfterWrite;
+import com.github.benmanes.caffeine.cache.local.AddKeyValueStrength;
+import com.github.benmanes.caffeine.cache.local.AddMaximum;
+import com.github.benmanes.caffeine.cache.local.AddRefreshAfterWrite;
+import com.github.benmanes.caffeine.cache.local.AddRemovalListener;
+import com.github.benmanes.caffeine.cache.local.AddStats;
+import com.github.benmanes.caffeine.cache.local.AddStatsTicker;
+import com.github.benmanes.caffeine.cache.local.AddSubtype;
+import com.github.benmanes.caffeine.cache.local.AddWriteQueue;
+import com.github.benmanes.caffeine.cache.local.Finalize;
+import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
+import com.github.benmanes.caffeine.cache.local.LocalCacheRule;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -57,6 +76,11 @@ public final class LocalCacheFactoryGenerator {
       Feature.LOADING, Feature.LISTENING, Feature.EXECUTOR, Feature.STATS, Feature.MAXIMUM_SIZE,
       Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
   };
+  final List<LocalCacheRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructor(),
+      new AddKeyValueStrength(), new AddCacheLoader(), new AddRemovalListener(),
+      new AddExecutor(), new AddStats(), new AddExpirationTicker(), new AddStatsTicker(),
+      new AddMaximum(), new AddDeques(), new AddExpireAfterAccess(), new AddExpireAfterWrite(),
+      new AddRefreshAfterWrite(), new AddWriteQueue(), new Finalize());
   final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
   final Path directory;
 
@@ -160,9 +184,13 @@ public final class LocalCacheFactoryGenerator {
       superClass = ParameterizedTypeName.get(ClassName.bestGuess(
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
-    LocalCacheGenerator generator = new LocalCacheGenerator(
+
+    LocalCacheContext context = new LocalCacheContext(
         superClass, className, isFinal, parentFeatures, generateFeatures);
-    factory.addType(generator.generate());
+    for (LocalCacheRule rule : rules) {
+      rule.accept(context);
+    }
+    factory.addType(context.cache.build());
   }
 
   private void addClassJavaDoc() {

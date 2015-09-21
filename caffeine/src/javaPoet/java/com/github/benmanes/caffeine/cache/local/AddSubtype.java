@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.node;
+package com.github.benmanes.caffeine.cache.local;
 
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.nodeType;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 
 import javax.lang.model.element.Modifier;
 
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeSpec;
-
 /**
- * Adds the node inheritance hierarchy.
+ * Adds the cache inheritance hierarchy.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddSubType extends NodeRule {
+public final class AddSubtype extends LocalCacheRule {
 
   @Override
   protected boolean applies() {
@@ -38,18 +34,12 @@ public final class AddSubType extends NodeRule {
 
   @Override
   protected void execute() {
-    context.nodeSubtype = TypeSpec.classBuilder(context.className)
+    context.cache.superclass(context.superClass)
         .addModifiers(Modifier.STATIC)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {
-      context.nodeSubtype.addModifiers(Modifier.FINAL);
-    }
-    if (isBaseClass()) {
-      context.nodeSubtype.addSuperinterface(
-          ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar));
-    } else {
-      context.nodeSubtype.superclass(context.superClass);
+      context.cache.addModifiers(Modifier.FINAL);
     }
   }
 }
