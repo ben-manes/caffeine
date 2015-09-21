@@ -45,6 +45,18 @@ import java.util.TreeMap;
 
 import javax.lang.model.element.Modifier;
 
+import com.github.benmanes.caffeine.cache.node.AddConstructors;
+import com.github.benmanes.caffeine.cache.node.AddDeques;
+import com.github.benmanes.caffeine.cache.node.AddExpiration;
+import com.github.benmanes.caffeine.cache.node.AddHealth;
+import com.github.benmanes.caffeine.cache.node.AddKey;
+import com.github.benmanes.caffeine.cache.node.AddSubType;
+import com.github.benmanes.caffeine.cache.node.AddToString;
+import com.github.benmanes.caffeine.cache.node.AddValue;
+import com.github.benmanes.caffeine.cache.node.AddWeight;
+import com.github.benmanes.caffeine.cache.node.Finalize;
+import com.github.benmanes.caffeine.cache.node.NodeContext;
+import com.github.benmanes.caffeine.cache.node.NodeRule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -79,6 +91,9 @@ import com.squareup.javapoet.TypeSpec;
 public final class NodeFactoryGenerator {
   final Path directory;
   final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
+  final List<NodeRule> rules = ImmutableList.of(new AddSubType(), new AddConstructors(),
+      new AddKey(), new AddValue(), new AddWeight(), new AddExpiration(), new AddDeques(),
+      new AddHealth(), new AddToString(), new Finalize());
 
   TypeSpec.Builder nodeFactory;
 
@@ -254,10 +269,12 @@ public final class NodeFactoryGenerator {
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
 
-    NodeGenerator nodeGenerator = new NodeGenerator(
-        superClass, className, isFinal, parentFeatures, generateFeatures);
-    TypeSpec.Builder nodeSubType = nodeGenerator.createNodeType();
-    nodeFactory.addType(nodeSubType.build());
+    NodeContext context = new NodeContext(superClass, className,
+        isFinal, parentFeatures, generateFeatures);
+    for (NodeRule rule : rules) {
+      rule.accept(context);
+    }
+    nodeFactory.addType(context.nodeSubtype.build());
     addEnumConstant(className, features);
   }
 
