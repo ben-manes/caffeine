@@ -1,5 +1,5 @@
 language: java
-sudo: true
+sudo: false
 
 jdk:
   - oraclejdk8
