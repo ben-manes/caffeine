@@ -49,7 +49,11 @@ dependencies {
 }
 
 bundle {
-  instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
+  instruction 'Import-Package', [
+    'sun.misc.*',
+    'com.github.benmanes.caffeine.cache.tracing',
+    'resolution:=optional'
+  ].join(';')
   instruction 'Export-Package', [
     'com.github.benmanes.caffeine',
     'com.github.benmanes.caffeine.base',
