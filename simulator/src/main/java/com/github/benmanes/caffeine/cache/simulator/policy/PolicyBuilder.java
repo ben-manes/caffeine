@@ -32,7 +32,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPo
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.EdenQueuePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.typesafe.config.Config;
@@ -94,8 +94,11 @@ public final class PolicyBuilder {
           return new TuQueuePolicy(type, config);
         } else if (strategy.equalsIgnoreCase("TwoQueue")) {
           return new TwoQueuePolicy(type, config);
-        } else if (strategy.equalsIgnoreCase("EdenQueue")) {
-          return new EdenQueuePolicy(type, config);
+        }
+        break;
+      case "sketch":
+        if (strategy.equalsIgnoreCase("WindowTinyLfu")) {
+          return new WindowTinyLfuPolicy(type, config);
         }
         break;
       case "irr":

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
+package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -29,8 +29,8 @@ import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
 
 /**
- * An adaption of the 2Q algorithm based on the TinyLfu policy. Unlike the original 2Q algorithm,
- * non-resident entries are not retained by instead relying on TinyLfu's history.
+ * An adaption of the TinyLfu policy that adds a temporal admission window. This window allows the
+ * policy to have a high hit rate in when entries exhibit a high temporal, low frequency pattern.
  * <p>
  * A new entry starts in the eden queue and remains there as long as it has high temporal locality.
  * Eventually an entry will slip from the end of the eden queue onto the front of the main queue. If
@@ -45,7 +45,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class EdenQueuePolicy implements Policy {
+public final class WindowTinyLfuPolicy implements Policy {
   private final PolicyStats policyStats;
   private final int recencyMoveDistance;
   private final Map<Object, Node> data;
@@ -59,10 +59,10 @@ public final class EdenQueuePolicy implements Policy {
   private int sizeMain;
   private int mainRecencyCounter;
 
-  public EdenQueuePolicy(String name, Config config) {
-    EdenQueueSettings settings = new EdenQueueSettings(config);
-    this.maxEden = (int) (settings.maximumSize() * settings.percentEden());
-    this.maxMain = settings.maximumSize() - maxEden;
+  public WindowTinyLfuPolicy(String name, Config config) {
+    WindowTinyLfuSettings settings = new WindowTinyLfuSettings(config);
+    this.maxMain = (int) (settings.maximumSize() * settings.percentMain());
+    this.maxEden = settings.maximumSize() - maxMain;
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(config);
@@ -201,15 +201,15 @@ public final class EdenQueuePolicy implements Policy {
     }
   }
 
-  static final class EdenQueueSettings extends BasicSettings {
-    public EdenQueueSettings(Config config) {
+  static final class WindowTinyLfuSettings extends BasicSettings {
+    public WindowTinyLfuSettings(Config config) {
       super(config);
     }
-    public double percentEden() {
-      return config().getDouble("eden-queue.percent-eden");
+    public double percentMain() {
+      return config().getDouble("window-tiny-lfu.percent-main");
     }
     public double percentFastPath() {
-      return config().getDouble("eden-queue.percent-fast-path");
+      return config().getDouble("window-tiny-lfu.percent-fast-path");
     }
   }
 }

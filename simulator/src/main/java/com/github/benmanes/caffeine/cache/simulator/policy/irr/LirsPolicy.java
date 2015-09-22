@@ -34,8 +34,8 @@ import com.typesafe.config.Config;
  * inter-reference recency (IRR) and groups entries as either having a low (LIR) or high (HIR)
  * recency. A LIR entry is preferable to retain in the cache and evicted HIR entries may be retained
  * as non-resident HIR entries. This allows a non-resident HIR entry to be promoted to a LIR entry
- * upon immediately upon a cache miss. The authors recommend sizing the maximum number of LIR blocks
- * to 99% of the cache's total size (1% remaining for HIR blocks). The authors do not provide a
+ * shortly after a cache miss. The authors recommend sizing the maximum number of LIR blocks to 99%
+ * of the cache's total size (1% remaining for HIR blocks). The authors do not provide a
  * recommendation for setting the maximum number of non-resident HIR blocks.
  * <p>
  * The algorithm is explained by the authors in
