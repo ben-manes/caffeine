@@ -14,6 +14,10 @@ dependencies {
 }
 
 bundle {
+  instruction 'Import-Package', [
+    'com.github.benmanes.caffeine.cache',
+    'com.github.benmanes.caffeine.cache.stats',
+  ].join(';')
   instruction 'Export-Package', 'com.github.benmanes.caffeine.guava.*'
 }
 
