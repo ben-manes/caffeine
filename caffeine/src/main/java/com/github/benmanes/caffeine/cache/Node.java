@@ -110,35 +110,23 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /** Returns if the entry is in the Eden or Main access queue. */
   default boolean isEden() {
-    return false;
+    return getMoveCount() == 0;
   }
 
-  /** Returns the entry's move count in the Main access queue. */
+  /**
+   * Returns the entry's move count in the Main access queue. A move count of zero indicates that
+   * the entry is in the Eden queue.
+   */
+  @Nonnegative
   default int getMoveCount() {
     return 0;
   }
 
-  /** Set entry's move count in the Main access queue. */
-  default void setMoveCountMain(int move) {
-    throw new UnsupportedOperationException();
-  }
-
   /**
-   * Returns the encoded access metadata.
-   * <ul>
-   *   <li>sign bit: negative if Eden; positive if Main</li>
-   *   <li>magnitude: the move count in the Main access queue</li>
-   * </ul>
+   * Set entry's move count in the Main access queue. The value zero indicates that the entry
+   * resides in the Eden queue.
    */
-  default int getAccessMetadata() {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Stores the encoded access metadata. This update may be set lazily and rely on the memory fence
-   * when the lock is released.
-   */
-  default int setAccessMetadata(int metadata) {
+  default void setMoveCountMain(@Nonnegative int move) {
     throw new UnsupportedOperationException();
   }
 
@@ -151,7 +139,7 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * Sets the access time in nanoseconds. This update may be set lazily and rely on the memory fence
    * when the lock is released.
    */
-  default void setAccessTime(@Nonnegative long time) {}
+  default void setAccessTime(long time) {}
 
   @Override
   @GuardedBy("evictionLock")
@@ -180,7 +168,6 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   /* ---------------- Write order -------------- */
 
   /** Returns the time that this entry was last written, in ns. */
-  @Nonnegative
   default long getWriteTime() {
     return 0L;
   }
@@ -189,13 +176,13 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * Sets the write time in nanoseconds. This update may be set lazily and rely on the memory fence
    * when the lock is released.
    */
-  default void setWriteTime(@Nonnegative long time) {}
+  default void setWriteTime(long time) {}
 
   /**
    * Atomically sets the write time to the given updated value if the current value equals the
    * expected value and returns if the update was successful.
    */
-  default boolean casWriteTime(@Nonnegative long expect, @Nonnegative long update) {
+  default boolean casWriteTime(long expect, long update) {
     throw new UnsupportedOperationException();
   }
 

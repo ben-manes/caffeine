@@ -20,6 +20,8 @@ import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
 import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -44,6 +46,7 @@ public final class AddMaximum extends LocalCacheRule {
     addMaximum();
     addWeightedSize();
     addFrequencySketch();
+    addMoveDistance();
     addMoveCounter();
   }
 
@@ -102,9 +105,24 @@ public final class AddMaximum extends LocalCacheRule {
         .build());
   }
 
+  private void addMoveDistance() {
+    context.cache.addField(FieldSpec.builder(
+        int.class, "moveDistance", Modifier.PRIVATE).build());
+    context.cache.addMethod(MethodSpec.methodBuilder("moveDistance")
+        .addModifiers(protectedFinalModifiers)
+        .addStatement("return moveDistance")
+        .returns(int.class)
+        .build());
+    context.cache.addMethod(MethodSpec.methodBuilder("setMoveDistance")
+        .addModifiers(protectedFinalModifiers)
+        .addParameter(int.class, "moveDistance")
+        .addStatement("this.moveDistance = moveDistance")
+        .build());
+  }
+
   private void addMoveCounter() {
     context.cache.addField(FieldSpec.builder(
-        int.class, "moveCounter", privateVolatileModifiers).build());
+        int.class, "moveCounter", Modifier.PRIVATE).build());
     context.cache.addMethod(MethodSpec.methodBuilder("moveCounter")
         .addModifiers(protectedFinalModifiers)
         .addStatement("return moveCounter")

@@ -52,6 +52,7 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nonnegative;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
@@ -154,6 +155,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     drainBuffersTask = this::cleanUp;
   }
 
+  /* ---------------- Shared -------------- */
+
   /** Returns if the node's value is currently being computed, asynchronously. */
   final boolean isComputingAsync(Node<?, ?> node) {
     return isAsync && !Async.isReady((CompletableFuture<?>) node.getValue());
@@ -169,25 +172,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  protected int moveDistance() {
-    return 0;
-  }
-
-  protected int moveCount() {
-    return 0;
-  }
-
-  @GuardedBy("evictionLock")
-  protected int setMoveCount(int count) {
-    throw new UnsupportedOperationException();
-  }
-
   @GuardedBy("evictionLock")
   protected WriteOrderDeque<Node<K, V>> writeOrderDeque() {
-    throw new UnsupportedOperationException();
-  }
-
-  protected Queue<Runnable> writeQueue() {
     throw new UnsupportedOperationException();
   }
 
@@ -196,7 +182,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return false;
   }
 
-  protected FrequencySketch<K> frequencySketch() {
+  protected Queue<Runnable> writeQueue() {
     throw new UnsupportedOperationException();
   }
 
@@ -209,17 +195,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return ForkJoinPool.commonPool();
   }
 
-  @Override
-  public Ticker expirationTicker() {
-    return Ticker.disabledTicker();
-  }
-
-  @Override
-  public Ticker statsTicker() {
-    return Ticker.disabledTicker();
-  }
-
   /* ---------------- Stats Support -------------- */
+
+  @Override
+  public boolean isRecordingStats() {
+    return false;
+  }
 
   @Override
   public StatsCounter statsCounter() {
@@ -227,8 +208,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @Override
-  public boolean isRecordingStats() {
-    return false;
+  public Ticker statsTicker() {
+    return Ticker.disabledTicker();
   }
 
   /* ---------------- Removal Listener Support -------------- */
@@ -325,11 +306,49 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public Ticker expirationTicker() {
+    return Ticker.disabledTicker();
+  }
+
   /* ---------------- Eviction Support -------------- */
 
   /** Returns if the cache evicts entries due to a maximum size or weight threshold. */
   protected boolean evicts() {
     return false;
+  }
+
+  protected FrequencySketch<K> frequencySketch() {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns the maximum distance that an entry can move from the least-recently-used position in
+   * the Main queue before recording its access is required. An entry falling within the interval is
+   * eligible for a fast-path read by not updating its access history.
+   */
+  @Nonnegative
+  protected int moveDistance() {
+    return 0;
+  }
+
+  @GuardedBy("evictionLock")
+  protected void setMoveDistance(@Nonnegative int distance) {
+    throw new UnsupportedOperationException();
+  }
+
+  /***
+   * Returns the movement count in the Main queue. The returned value equals the count held by the
+   * least-recently-used entry in the queue.
+   */
+  @Nonnegative
+  protected int moveCount() {
+    return 0;
+  }
+
+  @GuardedBy("evictionLock")
+  protected void setMoveCount(@Nonnegative int count) {
+    throw new UnsupportedOperationException();
   }
 
   /** Returns the maximum weighted size of the cache. */
