@@ -46,10 +46,12 @@ public final class ClairvoyantPolicy implements Policy {
   private final IntSortedSet data;
   private final int maximumSize;
 
+  private int infiniteTimestamp;
   private int tick;
 
   public ClairvoyantPolicy(String name, Config config) {
     BasicSettings settings = new BasicSettings(config);
+    infiniteTimestamp = Integer.MAX_VALUE;
     maximumSize = settings.maximumSize();
     policyStats = new PolicyStats(name);
     accessTimes = new HashMap<>();
@@ -86,6 +88,7 @@ public final class ClairvoyantPolicy implements Policy {
     boolean found = data.remove(lastAccess);
 
     if (times.isEmpty()) {
+      data.add(infiniteTimestamp--);
       accessTimes.remove(key);
     } else {
       data.add(times.firstInt());

@@ -24,20 +24,23 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
-import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.SortedSet;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableSortedSet;
 import com.univocity.parsers.common.ParsingContext;
 import com.univocity.parsers.common.processor.AbstractRowProcessor;
+import com.univocity.parsers.common.processor.RowProcessor;
 import com.univocity.parsers.csv.CsvFormat;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
@@ -52,7 +55,7 @@ import com.univocity.parsers.csv.CsvWriterSettings;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Compactor implements Runnable {
+public final class Compactor {
 
   /*
    * The trace comprises one request per line. Each line contains:
@@ -62,37 +65,41 @@ public final class Compactor implements Runnable {
    *  - A flag to indicate if the request resulted in a database update or not
    */
 
-  private final Path inPath;
+  private final SortedSet<Path> inPaths;
   private final Path outPath;
 
-  public Compactor(Path inPath, Path outPath) {
-    this.inPath = requireNonNull(inPath);
+  public Compactor(SortedSet<Path> inPaths, Path outPath) {
+    this.inPaths = requireNonNull(inPaths);
     this.outPath = requireNonNull(outPath);
   }
 
-  @Override
-  public void run() {
-    try (Reader reader = newReader()) {
-      CsvParser parser = newParser();
-      parser.parse(reader);
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+  public void run() throws IOException {
+    WikipediaRowProcessor rowProcessor = new WikipediaRowProcessor(outPath);
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    CsvParser parser = newParser(rowProcessor);
+    for (Path inPath : inPaths) {
+      try (Reader reader = newReader(inPath)) {
+        parser.parse(reader);
+      }
+      System.out.println(inPath.toFile().getName() + " completed after " + stopwatch);
     }
+    rowProcessor.writer.close();
+    System.out.println("Executed in " + stopwatch);
   }
 
-  private Reader newReader() throws IOException {
+  private Reader newReader(Path inPath) throws IOException {
     GZIPInputStream stream = new GZIPInputStream(Files.newInputStream(inPath));
     Reader reader = new InputStreamReader(stream, Charsets.UTF_8);
     return new BufferedReader(reader);
   }
 
-  private CsvParser newParser() throws IOException {
+  private CsvParser newParser(RowProcessor rowProcessor) throws IOException {
     CsvFormat format = new CsvFormat();
     format.setDelimiter(' ');
     CsvParserSettings settings = new CsvParserSettings();
     settings.setFormat(format);
     settings.selectIndexes(2, 3);
-    settings.setRowProcessor(new WikipediaRowProcessor(outPath));
+    settings.setRowProcessor(rowProcessor);
     settings.setInputBufferSize(10 * settings.getInputBufferSize());
     return new CsvParser(settings);
   }
@@ -183,19 +190,16 @@ public final class Compactor implements Runnable {
       }
       return true;
     }
-
-    @Override
-    public void processEnded(ParsingContext context) {
-      writer.close();
-    }
   }
 
-  public static void main(String[] args) {
-    checkArgument(args.length == 2, "Compactor [input file] [output file]");
-    Compactor compactor = new Compactor(Paths.get(args[0]), Paths.get(args[1]));
-    Stopwatch stopwatch = Stopwatch.createStarted();
-
-    compactor.run();
-    System.out.println("Executed in " + stopwatch);
+  public static void main(String[] args) throws IOException {
+    checkArgument(args.length == 2, "Compactor [input directory] [output file]");
+    String input = args[0];
+    String output = args[1];
+    try (DirectoryStream<Path> dir = Files.newDirectoryStream(Paths.get(input))) {
+      SortedSet<Path> paths = ImmutableSortedSet.copyOf(dir);
+      Compactor compactor = new Compactor(paths, Paths.get(output));
+      compactor.run();
+    }
   }
 }

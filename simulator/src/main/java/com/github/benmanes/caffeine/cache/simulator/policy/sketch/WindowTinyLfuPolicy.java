@@ -30,7 +30,7 @@ import com.typesafe.config.Config;
 
 /**
  * An adaption of the TinyLfu policy that adds a temporal admission window. This window allows the
- * policy to have a high hit rate in when entries exhibit a high temporal, low frequency pattern.
+ * policy to have a high hit rate when entries exhibit a high temporal / low frequency pattern.
  * <p>
  * A new entry starts in the eden queue and remains there as long as it has high temporal locality.
  * Eventually an entry will slip from the end of the eden queue onto the front of the main queue. If
