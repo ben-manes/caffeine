@@ -380,27 +380,90 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       Node<K, V> next = node.getNextInAccessOrder();
       if (node.getWeight() != 0) {
-        evictEntry(node, RemovalCause.SIZE);
+        evictEntry(node, RemovalCause.SIZE, 0L);
       }
       node = next;
     }
   }
 
   @GuardedBy("evictionLock")
-  void evictEntry(Node<K, V> node, RemovalCause cause) {
+  void expireEntries() {
+    long now = expirationTicker().read();
+    if (expiresAfterAccess()) {
+      long expirationTime = now - expiresAfterAccessNanos();
+      for (;;) {
+        final Node<K, V> node = accessOrderDeque().peekFirst();
+        if ((node == null) || (node.getAccessTime() > expirationTime)) {
+          break;
+        }
+        evictEntry(node, RemovalCause.EXPIRED, now);
+      }
+    }
+    if (expiresAfterWrite()) {
+      long expirationTime = now - expiresAfterWriteNanos();
+      for (;;) {
+        final Node<K, V> node = writeOrderDeque().peekFirst();
+        if ((node == null) || (node.getWriteTime() > expirationTime)) {
+          break;
+        }
+        evictEntry(node, RemovalCause.EXPIRED, now);
+      }
+    }
+  }
+
+  /** Returns if the entry has expired. */
+  boolean hasExpired(Node<K, V> node, long now) {
+    if (isComputingAsync(node)) {
+      return false;
+    }
+    return (expiresAfterAccess() && (now - node.getAccessTime() >= expiresAfterAccessNanos()))
+        || (expiresAfterWrite() && (now - node.getWriteTime() >= expiresAfterWriteNanos()));
+  }
+
+  /**
+   * Attempts to evict the entry based on the given removal cause. A removal due to expiration may
+   * be ignored if the entry was since updated and is no longer eligible for eviction.
+   *
+   * @param node the entry to evict
+   * @param cause the reason to evict
+   * @param now the current time, used only if expiring
+   */
+  @GuardedBy("evictionLock")
+  void evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
     V value = node.getValue();
     boolean[] removed = new boolean[1];
+    boolean[] resurrect = new boolean[1];
     RemovalCause actualCause = (key == null) || (value == null) ? RemovalCause.COLLECTED : cause;
 
     data.computeIfPresent(node.getKeyReference(), (k, n) -> {
-      if (n == node) {
-        writer.delete(key, value, actualCause);
-        removed[0] = true;
-        return null;
+      if (n != node) {
+        return n;
       }
-      return n;
+      if (actualCause == RemovalCause.EXPIRED) {
+        boolean expired = false;
+        if (expiresAfterAccess()) {
+          long expirationTime = now - expiresAfterAccessNanos();
+          expired |= n.getAccessTime() <= expirationTime;
+        }
+        if (expiresAfterWrite()) {
+          long expirationTime = now - expiresAfterWriteNanos();
+          expired |= n.getWriteTime() <= expirationTime;
+        }
+        if (!expired) {
+          resurrect[0] = true;
+          return n;
+        }
+      }
+      writer.delete(key, value, actualCause);
+      removed[0] = true;
+      return null;
     });
+
+    if (resurrect[0]) {
+      // The entry is no longer expired and will be reordered in the next maintenance cycle
+      return;
+    }
 
     makeDead(node);
     if (evicts() || expiresAfterAccess()) {
@@ -418,40 +481,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         notifyRemoval(key, value, actualCause);
       }
     }
-  }
-
-  @GuardedBy("evictionLock")
-  void expireEntries() {
-    long now = expirationTicker().read();
-    if (expiresAfterAccess()) {
-      long expirationTime = now - expiresAfterAccessNanos();
-      for (;;) {
-        final Node<K, V> node = accessOrderDeque().peekFirst();
-        if ((node == null) || (node.getAccessTime() > expirationTime)) {
-          break;
-        }
-        evictEntry(node, RemovalCause.EXPIRED);
-      }
-    }
-    if (expiresAfterWrite()) {
-      long expirationTime = now - expiresAfterWriteNanos();
-      for (;;) {
-        final Node<K, V> node = writeOrderDeque().peekFirst();
-        if ((node == null) || (node.getWriteTime() > expirationTime)) {
-          break;
-        }
-        evictEntry(node, RemovalCause.EXPIRED);
-      }
-    }
-  }
-
-  /** Returns if the entry has expired. */
-  boolean hasExpired(Node<K, V> node, long now) {
-    if (isComputingAsync(node)) {
-      return false;
-    }
-    return (expiresAfterAccess() && (now - node.getAccessTime() >= expiresAfterAccessNanos()))
-        || (expiresAfterWrite() && (now - node.getWriteTime() >= expiresAfterWriteNanos()));
   }
 
   /**
@@ -577,7 +606,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     while ((keyRef = keyReferenceQueue().poll()) != null) {
       Node<K, V> node = data.get(keyRef);
       if (node != null) {
-        evictEntry(node, RemovalCause.COLLECTED);
+        evictEntry(node, RemovalCause.COLLECTED, 0L);
       }
     }
   }
@@ -594,7 +623,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       InternalReference<V> ref = (InternalReference<V>) valueRef;
       Node<K, V> node = data.get(ref.getKeyReference());
       if ((node != null) && (valueRef == node.getValueReference())) {
-        evictEntry(node, RemovalCause.COLLECTED);
+        evictEntry(node, RemovalCause.COLLECTED, 0L);
       }
     }
   }
