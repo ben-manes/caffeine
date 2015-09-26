@@ -23,7 +23,6 @@ testNames.each { testName ->
   def labels = testType.split('And').collect { it[0].toLowerCase() + it.substring(1) }
 
   task "${testName}"(type: Test) {
-    useTestNG()
     group = 'Cache tests'
     description = 'Runs ' + labels.join(' with ') + 
       implementation + ' and ' + (hasStats ? 'stats ' : 'no stats ') +
@@ -39,15 +38,18 @@ testNames.each { testName ->
     }
     systemProperties['implementation'] = implementation
 
-    // ensure we don't overwrite default report directories used by 'test' task
-    reports.html.destination = "${buildDir}/reports/${name}"
-    reports.junitXml.destination = "${buildDir}/${name}-results"
-    binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
-
     // Configure task dependencies
     if (System.env.'CI' || !name.startsWith('slow')) {
       tasks.test.dependsOn(it)
     }
+  }
+}
+
+task isolatedTests(type: Test, group: 'Cache tests') {
+  description = 'Tests that must be run in isolation'
+
+  if (!System.env.'CI') {
+    tasks.test.dependsOn(it)
   }
 }
 
@@ -56,14 +58,21 @@ tasks.withType(Test) {
   if (name.startsWith('slow')) {
     maxParallelForks = 2
     options.includeGroups = ['slow']
+  } else if (name.startsWith('isolated')) {
+    options.includeGroups = ['isolated']
   } else {
     options {
-      excludeGroups = ['slow']
+      excludeGroups = ['slow', 'isolated']
       parallel = 'methods'
       threadCount = 6
     }
   }
   systemProperty 'caffeine.tracing.enabled', 'false'
+
+  // ensure tasks don't overwrite the default report directories used by the 'test' task
+  reports.html.destination = "${buildDir}/reports/${name}"
+  reports.junitXml.destination = "${buildDir}/${name}-results"
+  binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
 }
 
 task stress(type: JavaExec, group: 'Cache tests', description: 'Executes a stress test') {

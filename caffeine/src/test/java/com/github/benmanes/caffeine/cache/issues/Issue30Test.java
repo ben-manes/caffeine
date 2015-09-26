@@ -26,14 +26,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Issue #30: Unexpected cache misses with <tt>expireAfterWrite</tt> using multiple keys.
@@ -45,6 +51,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * @author yurgis2
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Test(groups = "isolated")
+@Listeners(CacheValidationListener.class)
 public final class Issue30Test {
   private static final boolean DEBUG = false;
 
@@ -60,21 +68,27 @@ public final class Issue30Test {
 
   private static final int TTL = 100;
   private static final int EPSILON = 10;
+  private static final int N_THREADS = 10;
 
-  @DataProvider(name = "cache")
+  private final ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
+
+  @AfterClass
+  public void afterClass() {
+    MoreExecutors.shutdownAndAwaitTermination(executor, 1, TimeUnit.MINUTES);
+  }
+
+  @DataProvider(name = "params")
   public Object[][] providesCache() {
     ConcurrentMap<String, String> source = new ConcurrentHashMap<>();
     ConcurrentMap<String, Date> lastLoad = new ConcurrentHashMap<>();
     AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
         .expireAfterWrite(TTL, TimeUnit.MILLISECONDS)
+        .executor(executor)
         .buildAsync(new Loader(source, lastLoad));
     return new Object[][] {{ cache, source, lastLoad }};
   }
 
-  // FIXME: For now, this test has to be run manually due to CI & build having enough shared work
-  // to cause the delays to be exceeded. This tests needs to be isolated so that no other machine
-  // work causes the timing periods to exceed the thresholds.
-  @Test(enabled = false, dataProvider = "cache", invocationCount = 100, threadPoolSize = 10)
+  @Test(dataProvider = "params", invocationCount = 100, threadPoolSize = N_THREADS)
   public void expiration(AsyncLoadingCache<String, String> cache,
       ConcurrentMap<String, String> source, ConcurrentMap<String, Date> lastLoad) throws Exception {
     initialValues(cache, source, lastLoad);
