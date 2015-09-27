@@ -46,6 +46,7 @@ dependencies {
   javaPoetCompile libraries.guava
   javaPoetCompile libraries.jsr305
   javaPoetCompile libraries.javapoet
+  javaPoetCompile libraries.commons_lang3
 }
 
 bundle {

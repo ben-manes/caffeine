@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
+import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import java.lang.ref.Reference;
 import java.util.function.Consumer;
@@ -127,10 +128,6 @@ public abstract class NodeRule implements Consumer<NodeContext> {
     }
 
     return setter.build();
-  }
-
-  private static String capitalize(String str) {
-    return Character.toUpperCase(str.charAt(0)) + str.substring(1);
   }
 
   private Strength strengthOf(Feature feature) {

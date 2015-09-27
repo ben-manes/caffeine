@@ -72,13 +72,13 @@ public enum Feature {
 
   public static boolean usesAccessOrderEdenDeque(Set<Feature> features) {
     return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT);
+        || features.contains(Feature.MAXIMUM_WEIGHT)
+        || features.contains(Feature.EXPIRE_ACCESS);
   }
 
   public static boolean usesAccessOrderMainDeque(Set<Feature> features) {
     return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT)
-        || features.contains(Feature.EXPIRE_ACCESS);
+        || features.contains(Feature.MAXIMUM_WEIGHT);
   }
 
   public static boolean usesWriteQueue(Set<Feature> features) {

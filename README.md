@@ -41,6 +41,13 @@ In addition, Caffeine offers the following extensions:
  * [Guava adapters][guava-adapter]
  * [JSR-107 JCache][jsr107]
 
+#### Coming Soon in 2.0
+
+A new eviction policy, [Window TinyLfu][efficiency], substantially improves upon the classic _Least 
+Recently Used_ policy. It provides a near optimal hit rate in O(1) time with a small footprint. The 
+adoption of this policy will also enable the use of a fast path that can significantly increase the
+throughput.
+
 ### Download
 
 Download from [Maven Central][maven] or depend via Gradle:
@@ -74,3 +81,4 @@ Snapshots of the development version are available in
 [guava-adapter]: https://github.com/ben-manes/caffeine/wiki/Guava
 [jsr107]: https://github.com/ben-manes/caffeine/wiki/JCache
 [maven]: https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine
+[efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency

@@ -126,7 +126,7 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * Set entry's move count in the Main access queue. The value zero indicates that the entry
    * resides in the Eden queue.
    */
-  default void setMoveCountMain(@Nonnegative int move) {
+  default void setMoveCount(@Nonnegative int move) {
     throw new UnsupportedOperationException();
   }
 

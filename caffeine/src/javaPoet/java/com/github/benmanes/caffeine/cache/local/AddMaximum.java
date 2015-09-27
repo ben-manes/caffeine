@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.FREQUENCY_SKETCH
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
 import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
+import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import javax.lang.model.element.Modifier;
 
@@ -43,11 +44,13 @@ public final class AddMaximum extends LocalCacheRule {
   @Override
   protected void execute() {
     addEvicts();
-    addMaximum();
-    addWeightedSize();
+    addMaximum("eden");
+    addMaximum("main");
+    addWeightedSize("eden");
+    addWeightedSize("main");
     addFrequencySketch();
     addMoveDistance();
-    addMoveCounter();
+    addMoveCount();
   }
 
   private void addEvicts() {
@@ -58,46 +61,47 @@ public final class AddMaximum extends LocalCacheRule {
         .build());
   }
 
-  private void addMaximum() {
-    context.constructor.addStatement(
-        "this.maximum = $T.min(builder.getMaximumWeight(), MAXIMUM_CAPACITY)", Math.class);
-    context.cache.addField(FieldSpec.builder(long.class, "maximum", privateVolatileModifiers).build());
-    context.cache.addField(newFieldOffset(context.className, "maximum"));
-    context.cache.addMethod(MethodSpec.methodBuilder("maximum")
+  private void addMaximum(String prefix) {
+    String varName = prefix + "Maximum";
+    context.cache.addField(FieldSpec.builder(
+        long.class, varName, privateVolatileModifiers).build());
+    context.cache.addField(newFieldOffset(context.className, varName));
+    context.cache.addMethod(MethodSpec.methodBuilder(varName)
         .addModifiers(protectedFinalModifiers)
-        .addStatement("return $T.UNSAFE.getLong(this, $N)", UNSAFE_ACCESS, offsetName("maximum"))
+        .addStatement("return $T.UNSAFE.getLong(this, $N)", UNSAFE_ACCESS, offsetName(varName))
         .returns(long.class)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("lazySetMaximum")
+    context.cache.addMethod(MethodSpec.methodBuilder("lazySet" + capitalize(varName))
         .addModifiers(protectedFinalModifiers)
         .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName("maximum"), "maximum")
-        .addParameter(long.class, "maximum")
+            UNSAFE_ACCESS, offsetName(varName), varName)
+        .addParameter(long.class, varName)
         .build());
   }
 
-  private void addWeightedSize() {
+  private void addWeightedSize(String prefix) {
+    String varName = prefix + "WeightedSize";
     context.cache.addField(FieldSpec.builder(
-        long.class, "weightedSize", privateVolatileModifiers).build());
-    context.cache.addField(newFieldOffset(context.className, "weightedSize"));
-    context.cache.addMethod(MethodSpec.methodBuilder("weightedSize")
+        long.class, varName, privateVolatileModifiers).build());
+    context.cache.addField(newFieldOffset(context.className, varName));
+    context.cache.addMethod(MethodSpec.methodBuilder(varName)
         .addModifiers(protectedFinalModifiers)
-        .addStatement("return $T.UNSAFE.getLong(this, $N)",
-            UNSAFE_ACCESS, offsetName("weightedSize"))
+        .addStatement("return $T.UNSAFE.getLong(this, $N)", UNSAFE_ACCESS, offsetName(varName))
         .returns(long.class)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("lazySetWeightedSize")
+    context.cache.addMethod(MethodSpec.methodBuilder("lazySet" + capitalize(varName))
         .addModifiers(protectedFinalModifiers)
         .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName("weightedSize"), "weightedSize")
-        .addParameter(long.class, "weightedSize")
+            UNSAFE_ACCESS, offsetName(varName), varName)
+        .addParameter(long.class, varName)
         .build());
   }
 
   private void addFrequencySketch() {
     context.cache.addField(FieldSpec.builder(
         FREQUENCY_SKETCH, "sketch", privateFinalModifiers).build());
-    context.constructor.addStatement("this.sketch = new $T(0)", FREQUENCY_SKETCH);
+    context.constructor.addStatement(
+        "this.sketch = new $T(builder.getInitialCapacity())", FREQUENCY_SKETCH);
     context.cache.addMethod(MethodSpec.methodBuilder("frequencySketch")
         .addModifiers(protectedFinalModifiers)
         .addStatement("return sketch")
@@ -120,18 +124,18 @@ public final class AddMaximum extends LocalCacheRule {
         .build());
   }
 
-  private void addMoveCounter() {
+  private void addMoveCount() {
     context.cache.addField(FieldSpec.builder(
-        int.class, "moveCounter", Modifier.PRIVATE).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("moveCounter")
+        int.class, "moveCount", Modifier.PRIVATE).build());
+    context.cache.addMethod(MethodSpec.methodBuilder("moveCount")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("return moveCounter")
+        .addStatement("return moveCount")
         .returns(int.class)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("setMoveCounter")
+    context.cache.addMethod(MethodSpec.methodBuilder("setMoveCount")
         .addModifiers(protectedFinalModifiers)
-        .addParameter(int.class, "moveCounter")
-        .addStatement("this.moveCounter = moveCounter")
+        .addParameter(int.class, "moveCount")
+        .addStatement("this.moveCount = moveCount")
         .build());
   }
 }

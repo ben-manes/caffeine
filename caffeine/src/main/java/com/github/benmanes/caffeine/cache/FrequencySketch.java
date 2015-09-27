@@ -64,9 +64,8 @@ final class FrequencySketch<E> {
 
   static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
-  static final long RESET_MASK = 0x1111111111111111L;
-  static final long MASK_A = 0xf0f0f0f0f0f0f0f0L;
-  static final long MASK_B = 0x0f0f0f0f0f0f0f0fL;
+  static final long RESET_MASK = 0x7777777777777777L;
+  static final long ONE_MASK = 0x1111111111111111L;
   static final long[] EMPTY_TABLE = {};
   static final int TABLE_SHIFT;
   static final int TABLE_BASE;
@@ -180,18 +179,13 @@ final class FrequencySketch<E> {
     return false;
   }
 
-  /**
-   * Reduces every counter by half of its original value. As each table entry represents 16 counters
-   * this is performed as two 8 counter reductions OR'd together.
-   */
+  /** Reduces every counter by half of its original value. */
   void reset() {
     int count = 0;
     size = (sampleSize >>> 1);
     for (int i = 0; i < table.length; i++) {
-      count += Long.bitCount(table[i] & RESET_MASK);
-      long a = ((table[i] & MASK_A) >>> 1) & MASK_A;
-      long b = ((table[i] & MASK_B) >>> 1) & MASK_B;
-      table[i] = a | b;
+      count += Long.bitCount(table[i] & ONE_MASK);
+      table[i] = (table[i] >>> 1) & RESET_MASK;
     }
     size -= (count >>> 2);
   }

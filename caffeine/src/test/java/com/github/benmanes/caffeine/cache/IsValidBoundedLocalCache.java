@@ -87,7 +87,7 @@ public final class IsValidBoundedLocalCache<K, V>
   private void checkCache(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
     desc.expectThat("Inconsistent size", cache.data.size(), is(cache.size()));
     if (cache.evicts()) {
-      desc.expectThat("overflow", cache.maximum(),
+      desc.expectThat("overflow", cache.mainMaximum(),
           is(greaterThanOrEqualTo(cache.adjustedWeightedSize())));
     }
 
@@ -107,17 +107,28 @@ public final class IsValidBoundedLocalCache<K, V>
 
   private void checkEvictionDeque(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
     if (cache.evicts() || cache.expiresAfterAccess()) {
+      checkLinks(cache, cache.accessOrderEdenDeque(), desc);
+      checkDeque(cache.accessOrderEdenDeque(), desc);
+    }
+    if (!cache.evicts() && cache.expiresAfterAccess()) {
+      desc.expectThat(() -> "deque size " + cache.accessOrderEdenDeque(),
+          cache.accessOrderEdenDeque(), hasSize(cache.size()));
+    }
+    if (cache.evicts()) {
+      int size = cache.accessOrderEdenDeque().size() + cache.accessOrderMainDeque().size();
+      desc.expectThat("deque sizes", size, is(cache.size()));
       checkLinks(cache, cache.accessOrderMainDeque(), desc);
-      checkDeque(cache.accessOrderMainDeque(), cache.size(), desc);
+      checkDeque(cache.accessOrderMainDeque(), desc);
     }
     if (cache.expiresAfterWrite()) {
-      checkLinks(cache, cache.writeOrderDeque(), desc);
-      checkDeque(cache.writeOrderDeque(), cache.size(), desc);
+      WriteOrderDeque<Node<K, V>> deque = cache.writeOrderDeque();
+      desc.expectThat(() -> "deque size " + deque, deque, hasSize(cache.size()));
+      checkLinks(cache, deque, desc);
+      checkDeque(deque, desc);
     }
   }
 
-  private void checkDeque(LinkedDeque<Node<K, V>> deque, int size, DescriptionBuilder desc) {
-    desc.expectThat(() -> "deque size " + deque, deque, hasSize(size));
+  private void checkDeque(LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
     IsValidLinkedDeque.<Node<K, V>>validLinkedDeque().matchesSafely(deque, desc.getDescription());
   }
 

@@ -219,6 +219,10 @@ public final class CacheContext {
     return isWeighted() ? maximumWeight() : maximumSize();
   }
 
+  public CacheWeigher weigher() {
+    return weigher;
+  }
+
   public boolean isWeighted() {
     return (weigher != CacheWeigher.DEFAULT);
   }
