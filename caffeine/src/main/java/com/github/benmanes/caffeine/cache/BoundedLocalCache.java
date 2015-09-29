@@ -29,6 +29,7 @@ import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,6 +59,7 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
+import com.github.benmanes.caffeine.cache.LinkedDeque.PeekingIterator;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -355,23 +357,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
+  /** Returns the maximum weighted size of the main space. */
+  protected long maximum() {
+    throw new UnsupportedOperationException();
+  }
+
   /** Returns the maximum weighted size of the eden space. */
   protected long edenMaximum() {
     throw new UnsupportedOperationException();
   }
 
-  /** Returns the maximum weighted size of the main space. */
-  protected long mainMaximum() {
+  @GuardedBy("evictionLock") // must write under lock
+  protected void lazySetMaximum(long maximum) {
     throw new UnsupportedOperationException();
   }
 
   @GuardedBy("evictionLock") // must write under lock
   protected void lazySetEdenMaximum(long maximum) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock") // must write under lock
-  protected void lazySetMainMaximum(long maximum) {
     throw new UnsupportedOperationException();
   }
 
@@ -384,16 +386,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Caffeine.requireArgument(maximum >= 0);
 
     long max = Math.min(maximum, MAXIMUM_CAPACITY);
-    long main = (long) (max * PERCENT_MAIN);
-    long eden = max - main;
+    long eden = max - (long) (max * PERCENT_MAIN);
 
+    lazySetMaximum(max);
     lazySetEdenMaximum(eden);
-    lazySetMainMaximum(main);
   }
 
   /** Returns the combined weight of the values in the cache. */
   long adjustedWeightedSize() {
-    return Math.max(0, edenWeightedSize() + mainWeightedSize());
+    return Math.max(0, weightedSize());
+  }
+
+  /** Returns the uncorrected combined weight of the values in the cache. */
+  protected long weightedSize() {
+    throw new UnsupportedOperationException();
   }
 
   /** Returns the uncorrected combined weight of the values in the eden space. */
@@ -401,18 +407,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  /** Returns the uncorrected combined weight of the values in the main space. */
-  protected long mainWeightedSize() {
+  @GuardedBy("evictionLock") // must write under lock
+  protected void lazySetWeightedSize(long weightedSize) {
     throw new UnsupportedOperationException();
   }
 
   @GuardedBy("evictionLock") // must write under lock
   protected void lazySetEdenWeightedSize(long weightedSize) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock") // must write under lock
-  protected void lazySetMainWeightedSize(long weightedSize) {
     throw new UnsupportedOperationException();
   }
 
@@ -441,8 +442,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @GuardedBy("evictionLock")
   void evictFromEden() {
-    Node<K, V> node = accessOrderEdenDeque().peek();
     while (edenWeightedSize() > edenMaximum()) {
+      Node<K, V> node = accessOrderEdenDeque().peek();
+
       // If weighted values are used, then the pending operations will adjust the size to reflect
       // the correct weight
       if (node == null) {
@@ -460,13 +462,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       int weight = node.getWeight();
       lazySetEdenWeightedSize(edenWeightedSize() - weight);
-      lazySetMainWeightedSize(mainWeightedSize() + weight);
     }
   }
 
   @GuardedBy("evictionLock")
   void evictFromMain() {
-    while ((mainWeightedSize() + edenWeightedSize()) > (edenMaximum() + mainMaximum())) {
+    while (weightedSize() > maximum()) {
       Node<K, V> victim = accessOrderMainDeque().peekFirst();
       Node<K, V> candidate = accessOrderMainDeque().peekLast();
 
@@ -768,7 +769,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (key == null) {
         return;
       }
-      frequencySketch().increment(node.getKey());
+      frequencySketch().increment(key);
       if (node.isEden()) {
         reorder(accessOrderEdenDeque(), node);
       } else {
@@ -817,9 +818,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (evicts()) {
         if (node.isEden()) {
           lazySetEdenWeightedSize(edenWeightedSize() - node.getWeight());
-        } else {
-          lazySetMainWeightedSize(mainWeightedSize() - node.getWeight());
         }
+        lazySetWeightedSize(weightedSize() - node.getWeight());
       }
       node.die();
     }
@@ -839,6 +839,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       if (evicts()) {
+        lazySetWeightedSize(weightedSize() + weight);
         lazySetEdenWeightedSize(edenWeightedSize() + weight);
         long size = (weigher == Weigher.singleton()) ? adjustedWeightedSize() : data.mappingCount();
         frequencySketch().ensureCapacity(size);
@@ -911,9 +912,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (evicts()) {
         if (node.isEden()) {
           lazySetEdenWeightedSize(edenWeightedSize() + weightDifference);
-        } else {
-          lazySetMainWeightedSize(mainWeightedSize() + weightDifference);
         }
+        lazySetWeightedSize(weightedSize() + weightDifference);
       }
       if (evicts() || expiresAfterAccess()) {
         onAccess(node);
@@ -1671,19 +1671,81 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
-   * Returns an unmodifiable snapshot map whose order of iteration matches the deque's, in either
-   * ascending or descending mode. Beware that obtaining the mappings is <em>NOT</em> a
-   * constant-time operation.
+   * Returns an unmodifiable snapshot map ordered in eviction order, either ascending or descending.
+   * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation.
    *
-   * @param deque the access or write order deques
+   * @param limit the maximum number of entries
    * @param transformer a function that unwraps the value
    * @param ascending the iteration order
-   * @param limit the maximum number of entries
    * @return an unmodifiable snapshot in a specified order
    */
-  @SafeVarargs
-  final Map<K, V> orderedMap(Function<V, V> transformer, boolean ascending, int limit,
-      LinkedDeque<Node<K, V>>... deques) {
+  @SuppressWarnings("GuardedByChecker")
+  Map<K, V> evictionOrder(int limit, Function<V, V> transformer, boolean ascending) {
+    Comparator<Node<K, V>> comparator = (n1, n2) -> Integer.compare(
+        frequencySketch().frequency(n1.getKey()), frequencySketch().frequency(n2.getKey()));
+    comparator = ascending ? comparator : comparator.reversed();
+    PeekingIterator<Node<K, V>> first =
+        ascending ? accessOrderEdenDeque().iterator() : accessOrderEdenDeque().descendingIterator();
+    PeekingIterator<Node<K, V>> second =
+        ascending ? accessOrderMainDeque().iterator() : accessOrderMainDeque().descendingIterator();
+    return orderBy(limit, transformer, comparator, first, second);
+  }
+
+  /**
+   * Returns an unmodifiable snapshot map ordered in access expiration order, either ascending or
+   * descending. Beware that obtaining the mappings is <em>NOT</em> a constant-time operation.
+   *
+   * @param limit the maximum number of entries
+   * @param transformer a function that unwraps the value
+   * @param ascending the iteration order
+   * @return an unmodifiable snapshot in a specified order
+   */
+  @SuppressWarnings("GuardedByChecker")
+  Map<K, V> expireAfterAcessOrder(int limit, Function<V, V> transformer, boolean ascending) {
+    Comparator<Node<K, V>> comparator = (n1, n2) ->
+        Long.compare(n1.getAccessTime(), n2.getAccessTime());
+    comparator = ascending ? comparator : comparator.reversed();
+    Function<LinkedDeque<Node<K, V>>, PeekingIterator<Node<K, V>>> ordering =
+        deque -> ascending ? deque.iterator() : deque.descendingIterator();
+    PeekingIterator<Node<K, V>> first = ordering.apply(accessOrderEdenDeque());
+    PeekingIterator<Node<K, V>> second =
+        evicts() ? ordering.apply(accessOrderMainDeque()) : PeekingIterator.empty();
+    return orderBy(limit, transformer, comparator, first, second);
+  }
+
+  /**
+   * Returns an unmodifiable snapshot map ordered in write expiration order, either ascending or
+   * descending. Beware that obtaining the mappings is <em>NOT</em> a constant-time operation.
+   *
+   * @param limit the maximum number of entries
+   * @param transformer a function that unwraps the value
+   * @param ascending the iteration order
+   * @return an unmodifiable snapshot in a specified order
+   */
+  @SuppressWarnings("GuardedByChecker")
+  Map<K, V> expireAfterWriteOrder(int limit, Function<V, V> transformer, boolean ascending) {
+    Comparator<Node<K, V>> comparator = (n1, n2) ->
+        Long.compare(n1.getAccessTime(), n2.getAccessTime());
+    comparator = ascending ? comparator : comparator.reversed();
+    PeekingIterator<Node<K, V>> deque =
+        ascending ? writeOrderDeque().iterator() : writeOrderDeque().descendingIterator();
+    return orderBy(limit, transformer, comparator, deque, PeekingIterator.empty());
+  }
+
+  /**
+   * Returns an unmodifiable snapshot map ordered by merging the two iterators and selecting which
+   * element to consume first by the comparator. Beware that obtaining the mappings is <em>NOT</em>
+   * a constant-time operation.
+   *
+   * @param limit the maximum number of entries
+   * @param transformer a function that unwraps the value
+   * @param comparator a function that chooses an element
+   * @param first the first ordered iterator
+   * @param second the second ordered iterator
+   * @return an unmodifiable snapshot in a specified order
+   */
+  Map<K, V> orderBy(int limit, Function<V, V> transformer, Comparator<Node<K, V>> comparator,
+      PeekingIterator<Node<K, V>> first, PeekingIterator<Node<K, V>> second) {
     Caffeine.requireArgument(limit >= 0);
     evictionLock.lock();
     try {
@@ -1693,19 +1755,26 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           ? Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size())
           : 16;
       Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
-      for (LinkedDeque<Node<K, V>> deque : deques) {
-        Iterator<Node<K, V>> iterator = ascending
-            ? deque.iterator()
-            : deque.descendingIterator();
-        while (iterator.hasNext() && (limit > map.size())) {
-          Node<K, V> node = iterator.next();
-          K key = node.getKey();
-          V value = transformer.apply(node.getValue());
-          if ((key != null) && (value != null) && node.isAlive()) {
-            map.put(key, value);
-          }
+      Consumer<Node<K, V>> consumer = node -> {
+        K key = node.getKey();
+        V value = node.getValue();
+        if ((key != null) && (value != null) && node.isAlive()) {
+          map.put(key, transformer.apply(value));
+        }
+      };
+      Node<K, V> node1, node2;
+      while ((map.size() < limit) && ((node1 = first.peek()) != null)
+          && ((node2 = second.peek()) != null)) {
+        if (comparator.compare(node1, node2) <= 0) {
+          first.next();
+          consumer.accept(node1);
+        } else {
+          second.next();
+          consumer.accept(node2);
         }
       }
+      first.asStream().limit(Math.max(0, limit - map.size())).forEach(consumer);
+      second.asStream().limit(Math.max(0, limit - map.size())).forEach(consumer);
       return Collections.unmodifiableMap(map);
     } finally {
       evictionLock.unlock();
@@ -1945,19 +2014,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       proxy.expiresAfterWriteNanos = cache.expiresAfterWriteNanos();
     }
     if (cache.evicts()) {
-      long maximum;
-      cache.evictionLock.lock();
-      try {
-        maximum = cache.edenMaximum() + cache.mainMaximum();
-      } finally {
-        cache.evictionLock.unlock();
-      }
-
       if (isWeighted) {
         proxy.weigher = cache.weigher;
-        proxy.maximumWeight = maximum;
+        proxy.maximumWeight = cache.maximum();
       } else {
-        proxy.maximumSize = maximum;
+        proxy.maximumSize = cache.maximum();
       }
     }
     return proxy;
@@ -2066,12 +2127,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return OptionalLong.empty();
       }
       @Override public long getMaximum() {
-        cache.evictionLock.lock();
-        try {
-          return cache.edenMaximum() + cache.mainMaximum();
-        } finally {
-          cache.evictionLock.unlock();
-        }
+        return cache.maximum();
       }
       @Override public void setMaximum(long maximum) {
         cache.evictionLock.lock();
@@ -2083,12 +2139,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
       }
       @Override public Map<K, V> coldest(int limit) {
-        return cache.orderedMap(transformer, true, limit,
-            cache.accessOrderMainDeque(), cache.accessOrderEdenDeque());
+        return cache.evictionOrder(limit, transformer, true);
       }
       @Override public Map<K, V> hottest(int limit) {
-        return cache.orderedMap(transformer, false, limit,
-            cache.accessOrderMainDeque(), cache.accessOrderEdenDeque());
+        return cache.evictionOrder(limit, transformer, false);
       }
     }
 
@@ -2113,12 +2167,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         cache.executor().execute(cache.drainBuffersTask);
       }
       @Override public Map<K, V> oldest(int limit) {
-        return cache.orderedMap(transformer, true, limit,
-            cache.accessOrderMainDeque(), cache.accessOrderEdenDeque());
+        return cache.expireAfterAcessOrder(limit, transformer, true);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return cache.orderedMap(transformer, false, limit,
-            cache.accessOrderMainDeque(), cache.accessOrderEdenDeque());
+        return cache.expireAfterAcessOrder(limit, transformer, false);
       }
     }
 
@@ -2143,10 +2195,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         cache.executor().execute(cache.drainBuffersTask);
       }
       @Override public Map<K, V> oldest(int limit) {
-        return cache.orderedMap(transformer, true, limit, cache.writeOrderDeque());
+        return cache.expireAfterWriteOrder(limit, transformer, true);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return cache.orderedMap(transformer, false, limit, cache.writeOrderDeque());
+        return cache.expireAfterWriteOrder(limit, transformer, false);
       }
     }
 
@@ -2173,15 +2225,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public Map<K, V> oldest(int limit) {
         return cache.expiresAfterWrite()
             ? expireAfterWrite().get().oldest(limit)
-            : sortedByWriteTime(true, limit);
+            : sortedByWriteTime(limit, true);
       }
       @Override public Map<K, V> youngest(int limit) {
         return cache.expiresAfterWrite()
             ? expireAfterWrite().get().youngest(limit)
-            : sortedByWriteTime(false, limit);
+            : sortedByWriteTime(limit, false);
       }
 
-      private Map<K, V> sortedByWriteTime(boolean ascending, int limit) {
+      private Map<K, V> sortedByWriteTime(int limit, boolean ascending) {
         Caffeine.requireArgument(limit >= 0);
         Iterator<Node<K, V>> iterator = cache.data.values().stream().sorted((a, b) -> {
           int comparison = Long.compare(a.getWriteTime(), b.getWriteTime());

@@ -52,7 +52,7 @@ import com.google.common.testing.SerializableTester;
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class MultiThreadedTest {
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = MaximumSize.DISABLED, stats = Stats.DISABLED,
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, refreshAfterWrite = Expire.DISABLED,
@@ -62,7 +62,7 @@ public final class MultiThreadedTest {
     Threads.runTest(cache, operations);
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.DISABLED,
@@ -72,7 +72,7 @@ public final class MultiThreadedTest {
     Threads.runTest(cache, operations);
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = MaximumSize.DISABLED, stats = Stats.DISABLED,
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, refreshAfterWrite = Expire.DISABLED,
@@ -83,7 +83,7 @@ public final class MultiThreadedTest {
     Threads.runTest(cache, asyncOperations);
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.DISABLED,

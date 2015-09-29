@@ -16,6 +16,12 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Deque;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -89,4 +95,31 @@ interface LinkedDeque<E> extends Deque<E> {
 
   /** Sets the next element or <tt>null</tt> if there is no link. */
   void setNext(E e, E next);
+
+  @Override
+  PeekingIterator<E> iterator();
+
+  @Override
+  PeekingIterator<E> descendingIterator();
+
+  interface PeekingIterator<E> extends Iterator<E> {
+
+    /** Returns the next element in the iteration, without advancing the iteration. */
+    E peek();
+
+    /** Returns a stream that consumes this iterator's contents. */
+    default Stream<E> asStream() {
+      return StreamSupport.stream(
+          Spliterators.spliteratorUnknownSize(this, Spliterator.ORDERED), false);
+    }
+
+    /** Returns an iterator that has no elements. */
+    static <E> PeekingIterator<E> empty() {
+      return new PeekingIterator<E>() {
+        @Override public E peek() { return null; }
+        @Override public boolean hasNext() { return false; }
+        @Override public E next() { throw new NoSuchElementException(); }
+      };
+    }
+  }
 }

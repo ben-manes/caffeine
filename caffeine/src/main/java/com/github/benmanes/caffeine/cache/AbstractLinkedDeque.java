@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.AbstractCollection;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -353,12 +352,6 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     };
   }
 
-  interface PeekingIterator<E> extends Iterator<E> {
-
-    /** Returns the next element in the iteration, without advancing the iteration. */
-    E peek();
-  }
-
   abstract class AbstractLinkedIterator implements PeekingIterator<E> {
     E cursor;
 
@@ -378,15 +371,15 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
 
     @Override
     public E peek() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
       return cursor;
     }
 
     @Override
     public E next() {
-      E e = peek();
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      E e = cursor;
       cursor = computeNext();
       return e;
     }

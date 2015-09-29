@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -589,11 +590,22 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(population = Population.FULL,
+      implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void coldest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
-    Map<Integer, Integer> coldest = eviction.coldest(Integer.MAX_VALUE);
-    assertThat(Iterables.elementsEqual(coldest.keySet(), context.original().keySet()), is(true));
+    int size = context.original().size();
+    int main = (int) (BoundedLocalCache.PERCENT_MAIN * context.maximumSize());
+    int eden = size - main;
+    if (eden < context.weigher().weigh(null, null)) {
+      main += eden;
+    }
+
+    Iterable<Integer> keys = Iterables.concat(
+        Iterables.skip(context.original().keySet(), main),
+        Iterables.limit(ImmutableList.copyOf(context.original().keySet()), main));
+    Set<Integer> coldest = eviction.coldest(Integer.MAX_VALUE).keySet();
+    assertThat(Iterables.elementsEqual(keys, coldest), is(true));
   }
 
   @Test(dataProvider = "caches")
@@ -634,22 +646,12 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, maximumSize = MaximumSize.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void hottest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
-    int size = context.original().size();
-    int main = (int) (BoundedLocalCache.PERCENT_MAIN * context.maximumSize());
-    int eden = size - main;
-    if (eden < context.weigher().weigh(null, null)) {
-      main += eden;
-    }
-
-    Iterable<Integer> keys = Iterables.concat(
-        Iterables.skip(ImmutableList.copyOf(context.original().keySet()).reverse(), size - main),
-        Iterables.skip(context.original().keySet(), main));
-    Set<Integer> hottest = eviction.hottest(Integer.MAX_VALUE).keySet();
-    assertThat(Iterables.elementsEqual(keys, hottest), is(true));
+    Map<Integer, Integer> hottest = eviction.hottest(Integer.MAX_VALUE);
+    Set<Integer> keys = new LinkedHashSet<>(ImmutableList.copyOf(hottest.keySet()).reverse());
+    assertThat(Iterables.elementsEqual(keys, context.original().keySet()), is(true));
   }
 
   @Test(dataProvider = "caches")

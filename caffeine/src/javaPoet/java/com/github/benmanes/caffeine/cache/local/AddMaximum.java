@@ -44,10 +44,10 @@ public final class AddMaximum extends LocalCacheRule {
   @Override
   protected void execute() {
     addEvicts();
+    addMaximum("");
     addMaximum("eden");
-    addMaximum("main");
+    addWeightedSize("");
     addWeightedSize("eden");
-    addWeightedSize("main");
     addFrequencySketch();
     addMoveDistance();
     addMoveCount();
@@ -62,7 +62,7 @@ public final class AddMaximum extends LocalCacheRule {
   }
 
   private void addMaximum(String prefix) {
-    String varName = prefix + "Maximum";
+    String varName = prefix.isEmpty() ? "maximum" : prefix + "Maximum";
     context.cache.addField(FieldSpec.builder(
         long.class, varName, privateVolatileModifiers).build());
     context.cache.addField(newFieldOffset(context.className, varName));
@@ -80,7 +80,7 @@ public final class AddMaximum extends LocalCacheRule {
   }
 
   private void addWeightedSize(String prefix) {
-    String varName = prefix + "WeightedSize";
+    String varName = prefix.isEmpty() ? "weightedSize" : prefix + "WeightedSize";
     context.cache.addField(FieldSpec.builder(
         long.class, varName, privateVolatileModifiers).build());
     context.cache.addField(newFieldOffset(context.className, varName));
