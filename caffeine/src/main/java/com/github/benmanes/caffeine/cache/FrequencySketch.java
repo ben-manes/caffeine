@@ -42,7 +42,8 @@ final class FrequencySketch<E> {
    * fixed depth of four balances the accuracy and cost, resulting in a width of four times the
    * length of the array. To retain an accurate estimation the array's length equals the maximum
    * number of entries in the cache, increased to the closest power-of-two to exploit more efficient
-   * bit masking. This configuration results in a confidence of 93.75% and error bound of ℇ / width.
+   * bit masking. This configuration results in a confidence of 93.75% and error bound of
+   * epsilon / width.
    *
    * The frequency of all entries is aged periodically using a sampling window based on the maximum
    * number of entries in the cache. This is referred to as the reset operation by TinyLfu and keeps
