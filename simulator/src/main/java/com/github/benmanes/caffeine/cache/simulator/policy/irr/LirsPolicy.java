@@ -228,7 +228,7 @@ public final class LirsPolicy implements Policy {
   }
 
   private void pruneStack() {
-    // In the LIRS replacement, there is an operation called "stack pruning" on LIRS stack S, which
+    // In the LIRS replacement, there is an operation called “stack pruning” on LIRS stack S, which
     // removes the HIR blocks at the stack bottom until a LIR block sits there. This operation
     // serves two purposes: 1) We ensure the block at the stack bottom always belongs to the LIR
     // block set. 2) After the LIR block in the bottom is removed, those HIR blocks contiguously
@@ -266,7 +266,7 @@ public final class LirsPolicy implements Policy {
   private void evict() {
     // Once a free block is needed, the LIRS algorithm removes a resident HIR block from the bottom
     // of stack Q for replacement. However, the replaced HIR block remains in stack S with its
-    // residence status changed to "non resident" if it is originally in the stack. We ensure the
+    // residence status changed to “non resident” if it is originally in the stack. We ensure the
     // block in the bottom of the stack S is an LIR block by removing HIR blocks after it.
 
     policyStats.recordEviction();
