@@ -40,6 +40,10 @@ public class BasicSettings {
     return new ReportSettings();
   }
 
+  public int randomSeed() {
+    return 1033096058;
+  }
+
   public int batchSize() {
     return config().getInt("batch-size");
   }

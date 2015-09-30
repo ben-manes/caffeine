@@ -37,8 +37,6 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SamplingPolicy implements Policy {
-  private static final long RANDOM_SEED = -4962768465676381896L;
-
   private final PolicyStats policyStats;
   private final Map<Object, Node> data;
   private final EvictionPolicy policy;
@@ -53,11 +51,11 @@ public final class SamplingPolicy implements Policy {
   public SamplingPolicy(String name, Admittor admittor, Config config, EvictionPolicy policy) {
     SamplingSettings settings = new SamplingSettings(config);
     this.sampleStrategy = settings.sampleStrategy();
+    this.random = new Random(settings.randomSeed());
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];
-    this.random = new Random(RANDOM_SEED);
     this.ticker = new CountTicker();
     this.data = new HashMap<>();
     this.admittor = admittor;

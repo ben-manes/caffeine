@@ -34,7 +34,6 @@ import com.typesafe.config.Config;
  * @author gilga1983@gmail.com (Gilga Einziger)
  */
 public final class CountMin64TinyLfu<E> implements Frequency<E> {
-  private static final int RANDOM_SEED = 1033096058;
   private static final int MAX_COUNT = 15;
 
   final CountMinSketch sketch;
@@ -44,7 +43,7 @@ public final class CountMin64TinyLfu<E> implements Frequency<E> {
   public CountMin64TinyLfu(Config config) {
     BasicSettings settings = new BasicSettings(config);
     sketch = new ConservativeAddSketch(settings.tinyLfu().countMin64().eps(),
-        settings.tinyLfu().countMin64().confidence(), RANDOM_SEED);
+        settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
     sampleSize = 10 * settings.maximumSize();
   }
 

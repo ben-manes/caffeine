@@ -37,8 +37,6 @@ import com.typesafe.config.Config;
  * @author gilg1983@gmail.com (Gil Einziger)
  */
 public final class RandomRemovalFrequencyTable<E> implements Frequency<E> {
-  private static final int RANDOM_SEED = 1033096058;
-
   /** sum of total items */
   private final int maxSum;
   /** total sum of stored items **/
@@ -53,7 +51,7 @@ public final class RandomRemovalFrequencyTable<E> implements Frequency<E> {
   public RandomRemovalFrequencyTable(Config config) {
     BasicSettings settings = new BasicSettings(config);
     maxSum = sampleFactor * settings.maximumSize();
-    random = new Random(RANDOM_SEED);
+    random = new Random(settings.randomSeed());
     table = new HashMap<>(maxSum);
   }
 
