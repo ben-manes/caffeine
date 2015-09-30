@@ -53,8 +53,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -143,52 +143,47 @@ public final class BoundedLocalCacheTest {
     }
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.TEN, weigher = CacheWeigher.DEFAULT)
-  public void evict_lru(Cache<Integer, Integer> cache, CacheContext context) {
-    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+  public void evict_wtinylfu(Cache<Integer, Integer> cache, CacheContext context) {
     for (int i = 0; i < 10; i++) {
       cache.put(i, -i);
     }
 
-    checkContainsInOrder(localCache, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+    checkContainsInOrder(cache, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8);
 
     // re-order
-    checkReorder(localCache, asList(0, 1, 2), 3, 4, 5, 6, 7, 8, 9, 0, 1, 2);
+    checkReorder(cache, asList(0, 1, 2), 9, 3, 4, 5, 6, 7, 8, 0, 1, 2);
 
-    // evict 3, 4, 5
-    checkEvict(localCache, asList(10, 11, 12), 6, 7, 8, 9, 0, 1, 2, 10, 11, 12);
+    // evict 9, 10, 11
+    checkEvict(cache, asList(10, 11, 12), 12, 3, 4, 5, 6, 7, 8, 0, 1, 2);
 
     // re-order
-    checkReorder(localCache, asList(6, 7, 8), 9, 0, 1, 2, 10, 11, 12, 6, 7, 8);
+    checkReorder(cache, asList(6, 7, 8), 12, 3, 4, 5, 0, 1, 2, 6, 7, 8);
 
-    // evict 9, 0, 1
-    checkEvict(localCache, asList(13, 14, 15), 2, 10, 11, 12, 6, 7, 8, 13, 14, 15);
+    // evict 12, 13, 14
+    checkEvict(cache, asList(13, 14, 15), 15, 3, 4, 5, 0, 1, 2, 6, 7, 8);
 
     assertThat(context, hasEvictionCount(6));
   }
 
-  private void checkReorder(BoundedLocalCache<Integer, Integer> localCache,
-      List<Integer> keys, Integer... expect) {
-    keys.forEach(localCache::get);
-    checkContainsInOrder(localCache, expect);
+  private void checkReorder(Cache<Integer, Integer> cache, List<Integer> keys, Integer... expect) {
+    keys.forEach(cache::getIfPresent);
+    checkContainsInOrder(cache, expect);
   }
 
-  private void checkEvict(BoundedLocalCache<Integer, Integer> localCache,
-      List<Integer> keys, Integer... expect) {
-    keys.forEach(i -> localCache.put(i, i));
-    checkContainsInOrder(localCache, expect);
+  private void checkEvict(Cache<Integer, Integer> cache, List<Integer> keys, Integer... expect) {
+    keys.forEach(i -> cache.put(i, i));
+    checkContainsInOrder(cache, expect);
   }
 
-  private void checkContainsInOrder(BoundedLocalCache<Integer, Integer> localCache,
-      Integer... expect) {
-    localCache.maintenance();
-    List<Integer> evictionList = Lists.newArrayList();
-    localCache.accessOrderMainDeque().forEach(
-        node -> evictionList.add(node.getKey()));
-    assertThat(localCache.size(), is(equalTo(expect.length)));
-    assertThat(localCache.keySet(), containsInAnyOrder(expect));
+  private void checkContainsInOrder(Cache<Integer, Integer> cache, Integer... expect) {
+    cache.cleanUp();
+    List<Integer> evictionList = ImmutableList.copyOf(
+        cache.policy().eviction().get().coldest(Integer.MAX_VALUE).keySet());
+    assertThat(cache.asMap().size(), is(equalTo(expect.length)));
+    assertThat(cache.asMap().keySet(), containsInAnyOrder(expect));
     assertThat(evictionList, is(equalTo(asList(expect))));
   }
 

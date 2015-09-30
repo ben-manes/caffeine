@@ -14,8 +14,9 @@ dependencies {
   compile libraries.guava
   compile libraries.stream
   compile libraries.flip_tables
-  compile test_libraries.jctools
   compile libraries.univocity_parsers
+  compile benchmark_libraries.ehcache2
+  compile benchmark_libraries.ehcache3
   compile benchmark_libraries.slf4j_nop
 
   testCompile test_libraries.jimfs

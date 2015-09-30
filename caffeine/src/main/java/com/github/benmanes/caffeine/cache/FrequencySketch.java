@@ -31,8 +31,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NotThreadSafe
-public
-final class FrequencySketch<E> {
+public final class FrequencySketch<E> {
 
   /*
    * This class maintains a 4-bit CountMinSketch [1] with periodic aging to provide the popularity
@@ -118,7 +117,7 @@ final class FrequencySketch<E> {
   /**
    * Returns the estimated number of occurrences of an element, up to the maximum (15).
    *
-   * @param element the element to count occurrences of
+   * @param e the element to count occurrences of
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
   @Nonnegative

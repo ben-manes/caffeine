@@ -31,6 +31,10 @@ import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.CaffeinePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache2Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache3Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
@@ -115,6 +119,17 @@ public final class PolicyBuilder {
           return new CarPolicy(type, config);
         } else if (strategy.equalsIgnoreCase("Cart")) {
           return new CartPolicy(type, config);
+        }
+        break;
+      case "product":
+        if (strategy.equalsIgnoreCase("Guava")) {
+          return new GuavaPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("Ehcache2")) {
+          return new Ehcache2Policy(type, config);
+        } else if (strategy.equalsIgnoreCase("Ehcache3")) {
+          return new Ehcache3Policy(type, config);
+        } else if (strategy.equalsIgnoreCase("Caffeine")) {
+          return new CaffeinePolicy(type, config);
         }
         break;
       default:
