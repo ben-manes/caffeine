@@ -41,7 +41,7 @@ public class BasicSettings {
   }
 
   public int randomSeed() {
-    return 1033096058;
+    return config().getInt("random-seed");
   }
 
   public int batchSize() {

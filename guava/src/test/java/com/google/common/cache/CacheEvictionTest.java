@@ -289,7 +289,7 @@ public class CacheEvictionTest extends TestCase {
     // add an at-the-maximum-weight entry
     getAll(cache, asList(45));
     CacheTesting.drainRecencyQueues(cache);
-    assertThat(keySet).containsExactly(0, 45);
+    assertThat(keySet).containsExactly(0, 8, 9);
 
     // add an over-the-maximum-weight entry
     getAll(cache, asList(46));

@@ -44,7 +44,7 @@ public final class Ehcache3Policy implements Policy {
     policyStats = new PolicyStats(name);
     Ehcache3Settings settings = new Ehcache3Settings(config);
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
-    cache = cacheManager.createCache("benchmark",
+    cache = cacheManager.createCache(name,
         CacheConfigurationBuilder.newCacheConfigurationBuilder()
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .heap(settings.maximumSize(), EntryUnit.ENTRIES)
@@ -79,7 +79,7 @@ public final class Ehcache3Policy implements Policy {
       super(config);
     }
     public EvictionPrioritizer<Object, Object> prioritizer() {
-      return Prioritizer.valueOf(config().getString("ehcache3.prioritizer").toUpperCase());
+      return Prioritizer.valueOf(config().getString("ehcache3.policy").toUpperCase());
     }
   }
 }

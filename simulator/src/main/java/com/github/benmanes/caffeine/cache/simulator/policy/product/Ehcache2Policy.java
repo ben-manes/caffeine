@@ -48,7 +48,7 @@ public final class Ehcache2Policy implements Policy {
     policyStats = new PolicyStats(name);
 
     CacheConfiguration configuration = new CacheConfiguration(
-        "cache-" + counter.incrementAndGet(), maximumSize);
+        name + "-" + counter.incrementAndGet(), maximumSize);
     configuration.setMemoryStoreEvictionPolicyFromObject(settings.policy());
     cache = new Cache(configuration);
     cacheManager.addCache(cache);
