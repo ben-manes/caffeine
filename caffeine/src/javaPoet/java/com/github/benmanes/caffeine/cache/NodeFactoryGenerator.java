@@ -54,7 +54,6 @@ import com.github.benmanes.caffeine.cache.node.AddMaximum;
 import com.github.benmanes.caffeine.cache.node.AddSubtype;
 import com.github.benmanes.caffeine.cache.node.AddToString;
 import com.github.benmanes.caffeine.cache.node.AddValue;
-import com.github.benmanes.caffeine.cache.node.AddWeight;
 import com.github.benmanes.caffeine.cache.node.Finalize;
 import com.github.benmanes.caffeine.cache.node.NodeContext;
 import com.github.benmanes.caffeine.cache.node.NodeRule;
@@ -93,8 +92,8 @@ public final class NodeFactoryGenerator {
   final Path directory;
   final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
   final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
-      new AddKey(), new AddValue(), new AddMaximum(), new AddWeight(), new AddExpiration(),
-      new AddDeques(), new AddHealth(), new AddToString(), new Finalize());
+      new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
+      new AddHealth(), new AddToString(), new Finalize());
 
   TypeSpec.Builder nodeFactory;
 

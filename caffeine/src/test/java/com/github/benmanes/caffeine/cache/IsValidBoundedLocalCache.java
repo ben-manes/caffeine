@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -34,6 +33,7 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
@@ -106,25 +106,20 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkEvictionDeque(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
-    if (cache.evicts() || cache.expiresAfterAccess()) {
-      checkLinks(cache, cache.accessOrderEdenDeque(), desc);
+    if (cache.evicts()) {
+      ImmutableList<LinkedDeque<Node<K, V>>> deques = ImmutableList.of(
+          cache.accessOrderEdenDeque(), cache.accessOrderMainDeque());
+      checkLinks(cache, deques, desc);
+      checkDeque(cache.accessOrderEdenDeque(), desc);
+      checkDeque(cache.accessOrderMainDeque(), desc);
+    } else if (cache.expiresAfterAccess()) {
+      checkLinks(cache, ImmutableList.of(cache.accessOrderEdenDeque()), desc);
       checkDeque(cache.accessOrderEdenDeque(), desc);
     }
-    if (!cache.evicts() && cache.expiresAfterAccess()) {
-      desc.expectThat(() -> "deque size " + cache.accessOrderEdenDeque(),
-          cache.accessOrderEdenDeque(), hasSize(cache.size()));
-    }
-    if (cache.evicts()) {
-      int size = cache.accessOrderEdenDeque().size() + cache.accessOrderMainDeque().size();
-      desc.expectThat("deque sizes", size, is(cache.size()));
-      checkLinks(cache, cache.accessOrderMainDeque(), desc);
-      checkDeque(cache.accessOrderMainDeque(), desc);
-    }
+
     if (cache.expiresAfterWrite()) {
-      WriteOrderDeque<Node<K, V>> deque = cache.writeOrderDeque();
-      desc.expectThat(() -> "deque size " + deque, deque, hasSize(cache.size()));
-      checkLinks(cache, deque, desc);
-      checkDeque(deque, desc);
+      checkLinks(cache, ImmutableList.of(cache.writeOrderDeque()), desc);
+      checkDeque(cache.writeOrderDeque(), desc);
     }
   }
 
@@ -133,9 +128,15 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkLinks(BoundedLocalCache<K, V> cache,
-      LinkedDeque<Node<K, V>> deque, DescriptionBuilder desc) {
+      ImmutableList<LinkedDeque<Node<K, V>>> deques, DescriptionBuilder desc) {
+    int size = 0;
+    long weightedSize = 0;
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
-    long weightedSize = scanLinks(cache, seen, deque, desc);
+    for (LinkedDeque<Node<K, V>> deque : deques) {
+      size += deque.size();
+      weightedSize += scanLinks(cache, seen, deque, desc);
+    }
+    desc.expectThat(() -> "deque size " + deques, size, is(cache.size()));
 
     Supplier<String> errorMsg = () -> String.format(
         "Size != list length; pending=%s, additional: %s", cache.writeQueue().size(),

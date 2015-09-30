@@ -38,7 +38,7 @@ public final class FrequencySketchTest {
   @Test
   public void construct_zero() {
     FrequencySketch<Integer> sketch = new FrequencySketch<>(0);
-    assertThat(sketch.table.length, is(0));
+    assertThat(sketch.table.length, is(1));
     assertThat(sketch.tableMask, is(0));
   }
 

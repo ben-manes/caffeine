@@ -19,6 +19,7 @@ import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeName;
 
 /**
  * Adds the maximum metadata to the node.
@@ -34,6 +35,11 @@ public final class AddMaximum extends NodeRule {
 
   @Override
   protected void execute() {
+    addMoveCount();
+    addWeight();
+  }
+
+  private void addMoveCount() {
     context.nodeSubtype.addField(int.class, "moveCount", Modifier.PRIVATE);
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getMoveCount")
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
@@ -45,5 +51,20 @@ public final class AddMaximum extends NodeRule {
         .addParameter(int.class, "moveCount")
         .addStatement("this.moveCount = moveCount")
         .build());
+  }
+
+  private void addWeight() {
+    if (!context.generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
+      return;
+    }
+    context.nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
+        .addMethod(newGetter(Strength.STRONG, TypeName.INT, "weight", Visibility.IMMEDIATE))
+        .addMethod(newSetter(TypeName.INT, "weight", Visibility.IMMEDIATE));
+    context.constructorByKey.addStatement("this.$N = $N", "weight", "weight");
+    context.constructorByKeyRef.addStatement("this.$N = $N", "weight", "weight");
+
+    context.nodeSubtype.addField(int.class, "policyWeight", Modifier.PRIVATE)
+        .addMethod(newGetter(Strength.STRONG, TypeName.INT, "policyWeight", Visibility.IMMEDIATE))
+        .addMethod(newSetter(TypeName.INT, "policyWeight", Visibility.IMMEDIATE));
   }
 }

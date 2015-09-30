@@ -69,17 +69,29 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    */
   boolean containsValue(@Nonnull Object value);
 
-  /** Returns the weight of this entry. */
+  /** Returns the weight of this entry from the entry's perspective. */
   @Nonnegative
   @GuardedBy("this")
   default int getWeight() {
     return 1;
   }
 
-  /** Sets the weight. */
+  /** Sets the weight from the entry's perspective. */
   @Nonnegative
   @GuardedBy("this")
   default void setWeight(int weight) {}
+
+  /** Returns the weight of this entry from the policy's perspective. */
+  @Nonnegative
+  @GuardedBy("evictionLock")
+  default int getPolicyWeight() {
+    return 1;
+  }
+
+  /** Sets the weight from the policy's perspective. */
+  @Nonnegative
+  @GuardedBy("evictionLock")
+  default void setPolicyWeight(int weight) {}
 
   /* ---------------- Health -------------- */
 

@@ -442,8 +442,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @GuardedBy("evictionLock")
   void evictFromEden() {
+    Node<K, V> node = accessOrderEdenDeque().peek();
     while (edenWeightedSize() > edenMaximum()) {
-      Node<K, V> node = accessOrderEdenDeque().peek();
 
       // If weighted values are used, then the pending operations will adjust the size to reflect
       // the correct weight
@@ -451,17 +451,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return;
       }
 
-      if (node.getWeight() == 0) {
-        node = node.getNextInAccessOrder();
-        continue;
+      if (node.getWeight() != 0) {
+        node.setMoveCount(incrementAndGetMoveCount());
+        accessOrderEdenDeque().remove(node);
+        accessOrderMainDeque().add(node);
+
+        int weight = node.getWeight();
+        lazySetEdenWeightedSize(edenWeightedSize() - weight);
       }
 
-      node.setMoveCount(incrementAndGetMoveCount());
-      accessOrderEdenDeque().remove(node);
-      accessOrderMainDeque().add(node);
-
-      int weight = node.getWeight();
-      lazySetEdenWeightedSize(edenWeightedSize() - weight);
+      node = node.getNextInAccessOrder();
     }
   }
 

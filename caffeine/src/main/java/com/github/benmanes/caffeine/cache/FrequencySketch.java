@@ -67,7 +67,6 @@ final class FrequencySketch<E> {
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final long RESET_MASK = 0x7777777777777777L;
   static final long ONE_MASK = 0x1111111111111111L;
-  static final long[] EMPTY_TABLE = {};
   static final int TABLE_SHIFT;
   static final int TABLE_BASE;
 
@@ -106,7 +105,7 @@ final class FrequencySketch<E> {
       return;
     }
 
-    table = (maximum == 0) ? EMPTY_TABLE : new long[ceilingNextPowerOfTwo(maximum)];
+    table = new long[(maximum == 0) ? 1 : ceilingNextPowerOfTwo(maximum)];
     tableMask = Math.max(0, table.length - 1);
     sampleSize = (10 * maximum);
     if (sampleSize <= 0) {
