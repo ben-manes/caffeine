@@ -168,7 +168,7 @@ public final class EvictionTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(evicted[0], RemovalCause.SIZE));
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.TEN,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
@@ -177,9 +177,10 @@ public final class EvictionTest {
     @SuppressWarnings({"unchecked", "rawtypes"})
     CacheWriter<Integer, List<Integer>> writer = (CacheWriter) context.cacheWriter();
 
-    List<Integer> value1 = asList(1, 2);
+    List<Integer> value1 = asList(8, 9, 10);
     List<Integer> value2 = asList(3, 4, 5, 6, 7);
-    List<Integer> value3 = asList(8, 9, 10);
+    List<Integer> value3 = asList(1, 2);
+    List<Integer> value4 = asList(11);
 
     // Never evicted
     cache.put(0, asList());
@@ -190,28 +191,29 @@ public final class EvictionTest {
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(10L));
 
-    // evict (1)
-    cache.put(4, asList(11));
-    assertThat(cache.asMap().containsKey(1), is(false));
+    // evict (3)
+    cache.put(4, value4);
+    assertThat(cache.asMap().containsKey(3), is(false));
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(9L));
     verifyWriter(context, (verifier, ignored) -> {
-      verify(writer).delete(1, value1, RemovalCause.SIZE);
+      verify(writer).delete(3, value3, RemovalCause.SIZE);
       verifier.deletions(1, RemovalCause.SIZE);
     });
 
-    // evict (2, 3)
+    // evict (2, 3, 4)
     cache.put(5, asList(12, 13, 14, 15, 16, 17, 18, 19, 20));
-    assertThat(cache.estimatedSize(), is(3L));
-    assertThat(eviction.weightedSize().getAsLong(), is(10L));
+    assertThat(cache.estimatedSize(), is(2L));
+    assertThat(eviction.weightedSize().getAsLong(), is(9L));
     verifyWriter(context, (verifier, ignored) -> {
       verify(writer).delete(2, value2, RemovalCause.SIZE);
       verify(writer).delete(3, value3, RemovalCause.SIZE);
-      verifier.deletions(3);
+      verify(writer).delete(4, value4, RemovalCause.SIZE);
+      verifier.deletions(4);
     });
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.TEN,
       weigher = CacheWeigher.VALUE, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)

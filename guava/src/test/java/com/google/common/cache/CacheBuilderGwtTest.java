@@ -96,17 +96,17 @@ public class CacheBuilderGwtTest extends TestCase {
 
     assertEquals(null, cache.getIfPresent(10));
     // Order required to remove dependence on acces order / write order constraint.
+    assertEquals(Integer.valueOf(10), cache.getIfPresent(1));
     assertEquals(Integer.valueOf(20), cache.getIfPresent(2));
     assertEquals(Integer.valueOf(30), cache.getIfPresent(3));
-    assertEquals(Integer.valueOf(40), cache.getIfPresent(4));
     assertEquals(Integer.valueOf(50), cache.getIfPresent(5));
 
     cache.put(1, 10);
     assertEquals(Integer.valueOf(10), cache.getIfPresent(1));
+    assertEquals(Integer.valueOf(20), cache.getIfPresent(2));
     assertEquals(Integer.valueOf(30), cache.getIfPresent(3));
-    assertEquals(Integer.valueOf(40), cache.getIfPresent(4));
     assertEquals(Integer.valueOf(50), cache.getIfPresent(5));
-    assertEquals(null, cache.getIfPresent(2));
+    assertEquals(null, cache.getIfPresent(4));
   }
 
   @SuppressWarnings("deprecation")
@@ -312,8 +312,8 @@ public class CacheBuilderGwtTest extends TestCase {
 
     assertEquals(2, stats[0]);
     assertEquals(2, stats[1]);
-    assertEquals(4, stats[2]);
-    assertEquals(3, stats[3]);
+    assertEquals(3, stats[2]);
+    assertEquals(4, stats[3]);
   }
 
   public void testPutAll() {

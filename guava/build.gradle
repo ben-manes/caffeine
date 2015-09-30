@@ -22,7 +22,6 @@ bundle {
 }
 
 test {
-  enabled = false // FIXME(ben): Broken by W-TinyLfu development
   systemProperty 'caffeine.tracing.enabled', 'false'
 }
 

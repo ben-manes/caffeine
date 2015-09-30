@@ -2080,8 +2080,9 @@ public class CacheLoadingTest extends TestCase {
       }
     };
 
-    final LoadingCache<String, String> cache = CaffeinatedGuava.build(
-        Caffeine.newBuilder().executor(MoreExecutors.directExecutor()), computeFunction);
+    final LoadingCache<String, String> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .initialCapacity(1000)
+        .executor(MoreExecutors.directExecutor()), computeFunction);
     ConcurrentMap<String,String> map = cache.asMap();
     map.put(refreshKey, refreshKey);
     assertEquals(1, map.size());

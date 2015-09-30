@@ -199,7 +199,8 @@ public class CacheEvictionTest extends TestCase {
         });
   }
 
-  public void testEviction_lru() {
+  // FIXME(ben): Caffeine uses W-TinyLfu, not Lru
+  public void disabled_testEviction_lru() {
     // test lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
     LoadingCache<Integer, Integer> cache =
@@ -231,7 +232,8 @@ public class CacheEvictionTest extends TestCase {
     assertThat(keySet).containsExactly(2, 10, 11, 12, 6, 7, 8, 13, 14, 15);
   }
 
-  public void testEviction_weightedLru() {
+  // FIXME(ben): Caffeine uses W-TinyLfu, not Lru
+  public void disabled_testEviction_weightedLru() {
     // test weighted lru within a single segment
     IdentityLoader<Integer> loader = identityLoader();
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
