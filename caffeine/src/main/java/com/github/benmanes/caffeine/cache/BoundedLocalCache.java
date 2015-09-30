@@ -842,6 +842,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         lazySetEdenWeightedSize(edenWeightedSize() + weight);
         long size = (weigher == Weigher.singleton()) ? adjustedWeightedSize() : data.mappingCount();
         frequencySketch().ensureCapacity(size);
+
+        K key = node.getKey();
+        if (key != null) {
+          frequencySketch().increment(key);
+        }
       }
 
       // ignore out-of-order write operations
