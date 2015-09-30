@@ -96,7 +96,6 @@ public final class SamplingPolicy implements Policy {
       Node victim = policy.select(sample, random);
       policyStats.recordEviction();
 
-
       if (admittor.admit(candidate.key, victim.key)) {
         removeFromTable(victim);
         data.remove(victim.key);

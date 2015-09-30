@@ -259,7 +259,6 @@ public final class LirsPolicy implements Policy {
       removed.removeFrom(StackType.NR);
       removed.removeFrom(StackType.S);
       data.remove(removed.key);
-
     }
   }
 

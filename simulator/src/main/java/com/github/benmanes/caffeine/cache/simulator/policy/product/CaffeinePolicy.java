@@ -54,7 +54,6 @@ public final class CaffeinePolicy implements Policy {
     } else {
       policyStats.recordMiss();
     }
-    cache.cleanUp();
   }
 
   @Override

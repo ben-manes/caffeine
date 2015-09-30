@@ -18,6 +18,7 @@ dependencies {
   compile benchmark_libraries.ehcache2
   compile benchmark_libraries.ehcache3
   compile benchmark_libraries.slf4j_nop
+  compile benchmark_libraries.infinispan
 
   testCompile test_libraries.jimfs
   testCompile test_libraries.testng
