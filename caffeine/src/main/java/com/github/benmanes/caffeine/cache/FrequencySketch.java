@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NotThreadSafe
+public
 final class FrequencySketch<E> {
 
   /*
