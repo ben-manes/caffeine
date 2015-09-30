@@ -451,6 +451,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return;
       }
 
+      Node<K, V> next = node.getNextInAccessOrder();
       if (node.getWeight() != 0) {
         node.setMoveCount(incrementAndGetMoveCount());
         accessOrderEdenDeque().remove(node);
@@ -459,8 +460,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         int weight = node.getWeight();
         lazySetEdenWeightedSize(edenWeightedSize() - weight);
       }
-
-      node = node.getNextInAccessOrder();
+      node = next;
     }
   }
 
