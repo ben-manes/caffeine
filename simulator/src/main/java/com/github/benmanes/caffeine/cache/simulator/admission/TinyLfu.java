@@ -38,7 +38,7 @@ public final class TinyLfu implements Admittor {
       sketch = new CountMin64TinyLfu<>(config);
     } else if (type.equalsIgnoreCase("random-table")) {
       sketch = new RandomRemovalFrequencyTable<>(config);
-    }  else {
+    } else {
       throw new IllegalStateException("Unknown sketch type: " + type);
     }
   }
