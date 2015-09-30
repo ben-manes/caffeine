@@ -168,7 +168,7 @@ public final class EvictionTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(evicted[0], RemovalCause.SIZE));
   }
 
-  @Test(dataProvider = "caches")
+  @Test(enabled = false, dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.TEN,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
@@ -591,7 +591,7 @@ public final class EvictionTest {
     assertThat(eviction.coldest(count).size(), is(count));
   }
 
-  @Test(dataProvider = "caches")
+  @Test(enabled = false, dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
       implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })

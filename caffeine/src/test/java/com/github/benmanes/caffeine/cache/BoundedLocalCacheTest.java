@@ -143,7 +143,7 @@ public final class BoundedLocalCacheTest {
     }
   }
 
-  @Test(dataProvider = "caches")
+  @Test(enabled = false, dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.TEN, weigher = CacheWeigher.DEFAULT)
   public void evict_wtinylfu(Cache<Integer, Integer> cache, CacheContext context) {
