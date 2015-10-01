@@ -30,7 +30,9 @@ import java.util.function.Supplier;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
+import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.collect.ImmutableList;
@@ -174,7 +176,14 @@ public final class IsValidBoundedLocalCache<K, V>
     K key = node.getKey();
 
     desc.expectThat("weight", node.getWeight(), is(greaterThanOrEqualTo(0)));
-    desc.expectThat("weight", node.getWeight(), is(weigher.weigh(key, value)));
+
+    boolean canCheckWeight = weigher == CacheWeigher.RANDOM;
+    if (weigher instanceof AsyncWeigher) {
+      canCheckWeight = ((AsyncWeigher<?, ?>) weigher).delegate == CacheWeigher.RANDOM;
+    }
+    if (canCheckWeight) {
+      desc.expectThat("weight", node.getWeight(), is(weigher.weigh(key, value)));
+    }
 
     if (cache.collectKeys()) {
       if ((key != null) && (value != null)) {

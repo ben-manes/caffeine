@@ -190,6 +190,12 @@ public @interface CacheSpec {
       @Override public int weigh(Object key, Object value) {
         return ((Collection<?>) value).size();
       }
+    },
+    /** A flag indicating that the entry's weight is randomly changing. */
+    RANDOM(1) {
+      @Override public int weigh(Object key, Object value) {
+        return ThreadLocalRandom.current().nextInt(1, 10);
+      }
     };
 
     private int units;

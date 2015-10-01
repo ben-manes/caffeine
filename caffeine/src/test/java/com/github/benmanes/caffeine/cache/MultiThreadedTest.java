@@ -63,7 +63,7 @@ public final class MultiThreadedTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
+  @CacheSpec(maximumSize = MaximumSize.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.DISABLED,
       removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,
@@ -84,7 +84,7 @@ public final class MultiThreadedTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
+  @CacheSpec(maximumSize = MaximumSize.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.DISABLED,
       removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,

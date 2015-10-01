@@ -458,8 +458,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         accessOrderEdenDeque().remove(node);
         accessOrderMainDeque().add(node);
 
-        int weight = node.getWeight();
-        lazySetEdenWeightedSize(edenWeightedSize() - weight);
+        lazySetEdenWeightedSize(edenWeightedSize() - node.getPolicyWeight());
       }
       node = next;
     }
@@ -816,6 +815,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return;
       }
       if (evicts()) {
+        // The node's policy weight may be out of sync due to a pending update waiting to be
+        // processed. At this point the node's weight is finalized, so the weight can be safely
+        // taken from the node's perspective and the sizes will be adjusted correctly.
         if (node.isEden()) {
           lazySetEdenWeightedSize(edenWeightedSize() - node.getWeight());
         }
@@ -839,6 +841,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       if (evicts()) {
+        node.setPolicyWeight(weight);
         lazySetWeightedSize(weightedSize() + weight);
         lazySetEdenWeightedSize(edenWeightedSize() + weight);
         long size = (weigher == Weigher.singleton()) ? adjustedWeightedSize() : data.mappingCount();
@@ -919,6 +922,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           lazySetEdenWeightedSize(edenWeightedSize() + weightDifference);
         }
         lazySetWeightedSize(weightedSize() + weightDifference);
+        node.setPolicyWeight(node.getPolicyWeight() + weightDifference);
       }
       if (evicts() || expiresAfterAccess()) {
         onAccess(node);
