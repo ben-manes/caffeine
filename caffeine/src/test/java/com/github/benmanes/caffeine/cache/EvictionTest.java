@@ -27,7 +27,6 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -63,8 +62,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
-import com.yahoo.ycsb.generator.IntegerGenerator;
-import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * The test cases for caches with a page replacement algorithm.
@@ -137,42 +134,10 @@ public final class EvictionTest {
     });
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = { MaximumSize.ZERO, MaximumSize.ONE, MaximumSize.FULL })
-  public void evict_lru(Cache<Integer, Integer> cache, CacheContext context) {
-    int[] evicted = new int[1];
-    Map<Integer, Integer> lru = new LinkedHashMap<Integer, Integer>(1, 0.75f, true) {
-      private static final long serialVersionUID = 1L;
-      @Override protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
-        if (size() > context.maximumSize()) {
-          evicted[0]++;
-          return true;
-        }
-        return false;
-      }
-    };
-    Map<Integer, Integer> all = new HashMap<>();
-    IntegerGenerator generator = new ScrambledZipfianGenerator(10 * context.maximumSize());
-    for (int i = 0; i < (10 * context.maximumSize()); i++) {
-      Integer next = generator.nextInt();
-      all.putIfAbsent(next, next);
-      Integer key = all.getOrDefault(next, next);
-
-      Integer lruValue = lru.putIfAbsent(key, key);
-      Integer cacheValue = cache.asMap().putIfAbsent(key, key);
-      assertThat(cacheValue, is(lruValue));
-    }
-    assertThat(cache.asMap(), is(equalTo(lru)));
-    assertThat(context, hasEvictionCount(evicted[0]));
-    assertThat(cache, hasRemovalNotifications(context, evicted[0], RemovalCause.SIZE));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(evicted[0], RemovalCause.SIZE));
-  }
-
-  @Test(enabled = false, dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.TEN,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = MaximumSize.TEN,
+      weigher = CacheWeigher.COLLECTION, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void evict_weighted(Cache<Integer, List<Integer>> cache,
       Eviction<?, ?> eviction, CacheContext context) {
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -182,6 +147,7 @@ public final class EvictionTest {
     List<Integer> value2 = asList(3, 4, 5, 6, 7);
     List<Integer> value3 = asList(1, 2);
     List<Integer> value4 = asList(11);
+    List<Integer> value5 = asList(12, 13, 14, 15, 16, 17, 18, 19, 20);
 
     // Never evicted
     cache.put(0, asList());
@@ -202,15 +168,13 @@ public final class EvictionTest {
       verifier.deletions(1, RemovalCause.SIZE);
     });
 
-    // evict (2, 3, 4)
-    cache.put(5, asList(12, 13, 14, 15, 16, 17, 18, 19, 20));
-    assertThat(cache.estimatedSize(), is(2L));
+    // evict 5
+    cache.put(5, value5);
+    assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(9L));
     verifyWriter(context, (verifier, ignored) -> {
-      verify(writer).delete(2, value2, RemovalCause.SIZE);
-      verify(writer).delete(3, value3, RemovalCause.SIZE);
-      verify(writer).delete(4, value4, RemovalCause.SIZE);
-      verifier.deletions(4);
+      verify(writer).delete(5, value5, RemovalCause.SIZE);
+      verifier.deletions(2);
     });
   }
 
