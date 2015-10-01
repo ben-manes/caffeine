@@ -442,8 +442,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @GuardedBy("evictionLock")
   void evictFromEden() {
+    long mainMaximum = maximum() - edenMaximum();
     Node<K, V> node = accessOrderEdenDeque().peek();
-    while (edenWeightedSize() > edenMaximum()) {
+    while (edenWeightedSize() > edenMaximum() || (weightedSize() < mainMaximum)) {
 
       // If weighted values are used, then the pending operations will adjust the size to reflect
       // the correct weight

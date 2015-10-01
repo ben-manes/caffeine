@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.local;
 
 import static com.github.benmanes.caffeine.cache.Specifications.STATS_COUNTER;
+import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
 
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
@@ -33,6 +34,20 @@ public final class AddStats extends LocalCacheRule {
 
   @Override
   protected void execute() {
+    addIsRecording();
+    addStatsTicker();
+    addStatsCounter();
+  }
+
+  private void addIsRecording() {
+    context.cache.addMethod(MethodSpec.methodBuilder("isRecordingStats")
+        .addModifiers(publicFinalModifiers)
+        .addStatement("return true")
+        .returns(boolean.class)
+        .build());
+  }
+
+  private void addStatsCounter() {
     context.constructor.addStatement("this.statsCounter = builder.getStatsCounterSupplier().get()");
     context.cache.addField(FieldSpec.builder(
         STATS_COUNTER, "statsCounter", privateFinalModifiers).build());
@@ -41,10 +56,13 @@ public final class AddStats extends LocalCacheRule {
         .addStatement("return statsCounter")
         .returns(STATS_COUNTER)
         .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("isRecordingStats")
+  }
+
+  private void addStatsTicker() {
+    context.cache.addMethod(MethodSpec.methodBuilder("statsTicker")
         .addModifiers(publicFinalModifiers)
-        .addStatement("return true")
-        .returns(boolean.class)
+        .addStatement("return $T.systemTicker()", TICKER)
+        .returns(TICKER)
         .build());
   }
 }

@@ -47,7 +47,6 @@ import com.github.benmanes.caffeine.cache.local.AddMaximum;
 import com.github.benmanes.caffeine.cache.local.AddRefreshAfterWrite;
 import com.github.benmanes.caffeine.cache.local.AddRemovalListener;
 import com.github.benmanes.caffeine.cache.local.AddStats;
-import com.github.benmanes.caffeine.cache.local.AddStatsTicker;
 import com.github.benmanes.caffeine.cache.local.AddSubtype;
 import com.github.benmanes.caffeine.cache.local.AddWriteQueue;
 import com.github.benmanes.caffeine.cache.local.Finalize;
@@ -77,10 +76,10 @@ public final class LocalCacheFactoryGenerator {
       Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
   };
   final List<LocalCacheRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructor(),
-      new AddKeyValueStrength(), new AddCacheLoader(), new AddRemovalListener(),
-      new AddExecutor(), new AddStats(), new AddExpirationTicker(), new AddStatsTicker(),
-      new AddMaximum(), new AddDeques(), new AddExpireAfterAccess(), new AddExpireAfterWrite(),
-      new AddRefreshAfterWrite(), new AddWriteQueue(), new Finalize());
+      new AddKeyValueStrength(), new AddCacheLoader(), new AddRemovalListener(), new AddExecutor(),
+      new AddStats(), new AddExpirationTicker(), new AddMaximum(), new AddDeques(),
+      new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
+      new AddWriteQueue(), new Finalize());
   final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
   final Path directory;
 

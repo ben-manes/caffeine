@@ -46,6 +46,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
@@ -143,9 +144,10 @@ public final class BoundedLocalCacheTest {
     }
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.EMPTY, maximumSize = MaximumSize.TEN, weigher = CacheWeigher.DEFAULT)
+      population = Population.EMPTY, initialCapacity = InitialCapacity.EXCESSIVE,
+      maximumSize = MaximumSize.TEN, weigher = CacheWeigher.DEFAULT)
   public void evict_wtinylfu(Cache<Integer, Integer> cache, CacheContext context) {
     for (int i = 0; i < 10; i++) {
       cache.put(i, -i);

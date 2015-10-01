@@ -46,6 +46,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
@@ -591,9 +592,9 @@ public final class EvictionTest {
     assertThat(eviction.coldest(count).size(), is(count));
   }
 
-  @Test(enabled = false, dataProvider = "caches")
-  @CacheSpec(population = Population.FULL,
-      implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void coldest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
     int size = context.original().size();
