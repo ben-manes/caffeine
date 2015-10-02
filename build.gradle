@@ -22,6 +22,8 @@ task testReport(type: TestReport, group: 'Build') {
 }
 
 allprojects {
+  apply from: "${rootDir}/gradle/eclipse.gradle"
+
   repositories {
     maven { url 'https://jitpack.io' }
     mavenCentral()
