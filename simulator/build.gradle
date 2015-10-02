@@ -15,6 +15,7 @@ dependencies {
   compile libraries.stream
   compile libraries.flip_tables
   compile libraries.univocity_parsers
+  compile benchmark_libraries.cache2k
   compile benchmark_libraries.ehcache2
   compile benchmark_libraries.ehcache3
   compile benchmark_libraries.slf4j_nop

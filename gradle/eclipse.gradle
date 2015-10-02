@@ -3,7 +3,7 @@
  *
  * @see http://gradle.org/docs/current/userguide/eclipse_plugin.html
  */
-apply plugin: "eclipse"
+apply plugin: 'eclipse'
 
 // For the Gradle Eclipse plugin
 eclipse.project.file.withXml { provider ->
@@ -11,39 +11,39 @@ eclipse.project.file.withXml { provider ->
 }
 
 // For the Eclipse STS plugin
-task afterEclipseImport(description: "Post processing after project generation", group: "IDE") {
-  ext.srcFile = file(".project")
+task afterEclipseImport(description: 'Post processing after project generation', group: 'IDE') {
+  ext.srcFile = file('.project')
   inputs.file srcFile
   outputs.dir srcFile
-    onlyIf { srcFile.exists() }
-    doLast {
+  onlyIf { srcFile.exists() }
+  doLast {
     def projectDescription = new XmlParser().parse(srcFile)
     ignoreDerivedResources(projectDescription)
-      def writer = new FileWriter(srcFile)
+    def writer = new FileWriter(srcFile)
     def printer = new XmlNodePrinter(new PrintWriter(writer))
     printer.setPreserveWhitespace(true)
     printer.print(projectDescription)
   }
 }
 
-def ignoreDerivedResources(projectDescription, directories = ["test-output", 
-    "build/classes", "build/reports", "build/jacoco", "build/tmp"]) {
+def ignoreDerivedResources(projectDescription, directories = [
+    'test-output', 'build/classes', 'build/reports', 'build/jacoco', 'build/tmp']) {
   def count = directories.count { file(it).exists() }
   if (count > 0) {
     def filter = projectDescription
-      .appendNode("filteredResources")
-      .appendNode("filter")
-    filter.appendNode("id", System.currentTimeMillis().toString().trim())
-    filter.appendNode("type", "26")
-    filter.appendNode("name")
-    def matcher = filter.appendNode("matcher")
-    matcher.appendNode("id", "org.eclipse.ui.ide.orFilterMatcher")
-    def arguments = matcher.appendNode("arguments")
+      .appendNode('filteredResources')
+      .appendNode('filter')
+    filter.appendNode('id', System.currentTimeMillis().toString().trim())
+    filter.appendNode('type', '26')
+    filter.appendNode('name')
+    def matcher = filter.appendNode('matcher')
+    matcher.appendNode('id', 'org.eclipse.ui.ide.orFilterMatcher')
+    def arguments = matcher.appendNode('arguments')
     directories.each {
       if (file(it).exists()) {
-        def dirMatcher = arguments.appendNode("matcher")
-        dirMatcher.appendNode("id", "org.eclipse.ui.ide.multiFilter")
-        dirMatcher.appendNode("arguments", "1.0-projectRelativePath-matches-false-false-${it}")
+        def dirMatcher = arguments.appendNode('matcher')
+        dirMatcher.appendNode('id', 'org.eclipse.ui.ide.multiFilter')
+        dirMatcher.appendNode('arguments', "1.0-projectRelativePath-matches-false-false-${it}")
       }
     }
   }

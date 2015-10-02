@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.Cache2kPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.CaffeinePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache2Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache3Policy;
@@ -123,7 +124,9 @@ public final class PolicyBuilder {
         }
         break;
       case "product":
-        if (strategy.equalsIgnoreCase("Guava")) {
+        if (strategy.equalsIgnoreCase("Cache2k")) {
+          return new Cache2kPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("Guava")) {
           return new GuavaPolicy(type, config);
         } else if (strategy.equalsIgnoreCase("Ehcache2")) {
           return new Ehcache2Policy(type, config);
