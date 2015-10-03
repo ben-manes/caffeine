@@ -31,7 +31,7 @@ public final class TinyCache<E> implements Frequency<E> {
   // number of (independent sets)
   int nrSets;
   // size between cache and sample.
-  final int sampleFactor = 8;
+  final int sampleFactor = 10;
   // max frequency estimation of an item.
   final int maxcount = 10;
 

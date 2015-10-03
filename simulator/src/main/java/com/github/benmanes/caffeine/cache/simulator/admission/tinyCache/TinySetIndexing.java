@@ -85,6 +85,7 @@ public final class TinySetIndexing {
       tempisLastIndex >>>= 1;
 
     }
+    TinySetIndexing.ChainEnd = currentOffset;
     TinySetIndexing.ChainStart = currentOffset;
     while ((tempisLastIndex & 1L) == 0) {
       currentOffset++;
