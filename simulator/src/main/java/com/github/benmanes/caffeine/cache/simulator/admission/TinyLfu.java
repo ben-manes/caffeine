@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission;
 import com.clearspring.analytics.stream.frequency.CountMin64TinyLfu;
 import com.github.benmanes.caffeine.cache.CountMin4TinyLfu;
 import com.github.benmanes.caffeine.cache.RandomRemovalFrequencyTable;
-import com.github.benmanes.caffeine.cache.TinyCacheWrapper;
+import com.github.benmanes.caffeine.cache.TinyCache;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.typesafe.config.Config;
 
@@ -40,7 +40,7 @@ public final class TinyLfu implements Admittor {
     } else if (type.equalsIgnoreCase("random-table")) {
       sketch = new RandomRemovalFrequencyTable<>(config);
     } else if (type.equalsIgnoreCase("tiny-table")) {
-        sketch = new TinyCacheWrapper<>(config);
+        sketch = new TinyCache<>(config);
     } else {
       throw new IllegalStateException("Unknown sketch type: " + type);
     }

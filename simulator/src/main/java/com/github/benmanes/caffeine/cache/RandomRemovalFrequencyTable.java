@@ -25,7 +25,6 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
 import com.typesafe.config.Config;
 
-
 /**
  * A probabilistic multiset for estimating the popularity of an element within a time window. The
  * maximum frequency of an element. The size of the sample in relation to the cache size can be
