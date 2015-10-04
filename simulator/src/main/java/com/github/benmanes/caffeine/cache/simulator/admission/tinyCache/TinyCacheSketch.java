@@ -114,25 +114,17 @@ public final class TinyCacheSketch {
 	}
 
 	private void selectVictim(int bucketStart) {
-		byte victim = (byte) rnd.nextInt(64);
-		//		((this.nrItems) & 63);
-		HashedItem hashedItem = new HashedItem(hashFunc.fpaux.set, (byte) 0, hashFunc.fpaux.fingerprint);
-
-		for(int i=0; i<64;i++){
-			if(!TinySetIndexing.chainExist(chainIndex[hashedItem.set], i))
-				continue;
-			hashedItem.chainId = (byte) i;
-			TinySetIndexing.getChain(hashedItem, chainIndex, isLast);
-			if(victim>= TinySetIndexing.ChainStart && victim<= TinySetIndexing.ChainEnd)
-			{
-				replace(hashFunc.fpaux, (byte) i, bucketStart);
-				return;
-			}
-			    	 
+		byte victimOffset = (byte) rnd.nextInt(64);
+		int victimChain = TinySetIndexing.getChainAtOffset(hashFunc.fpaux, chainIndex, isLast, victimOffset);
+		if(TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], victimChain))
+			replace(hashFunc.fpaux, (byte) victimChain, bucketStart);	  
+		else{
+			throw new RuntimeException("Failed to replace");
 		}
-			
-
 	}
+
+
+
 
 	protected void replaceBackwards(int start, final int maxToShift, byte value) {
 		start += maxToShift;
