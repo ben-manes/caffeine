@@ -97,11 +97,13 @@ public final class TinySetIndexing {
 
 	public static int getChainAtOffset(HashedItem fpaux, long[] chainIndex, long[] isLastIndex,int offset) {
 		int nonEmptyChainsToSee = rank(isLastIndex[fpaux.set], offset);
-		int nonEmptyChainSeen = 0;
-		for(int i =0; i<=64; i++)
+		int nonEmptyChainSeen = rank(chainIndex[fpaux.set],nonEmptyChainsToSee);
+		for(int i =nonEmptyChainSeen; i<=64; )
 		{
-			if(rank(chainIndex[fpaux.set], i)==nonEmptyChainsToSee && TinySetIndexing.chainExist(chainIndex[fpaux.set], i))
+			nonEmptyChainSeen = rank(chainIndex[fpaux.set], i);
+			if(TinySetIndexing.chainExist(chainIndex[fpaux.set], i)&& (nonEmptyChainSeen ==nonEmptyChainsToSee))
 				return i;
+			i+= Math.max(1, nonEmptyChainsToSee- nonEmptyChainSeen);
 		}
 		throw new RuntimeException("Cannot choose victim!");
 	}
