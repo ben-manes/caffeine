@@ -53,25 +53,7 @@ public final class TinySetIndexing {
 		return Long.bitCount(index & (~(-1L << bitNum)));
 	}
 
-	public static int getChainEnd(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
-		int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
-		int currentChainNumber = rank(isLastIndex[fpaux.set], requiredChainNumber);
-		int currentOffset = requiredChainNumber;
 
-		long tempisLastIndex = isLastIndex[fpaux.set] >>> requiredChainNumber;
-		while (currentChainNumber < requiredChainNumber) {
-			currentChainNumber += tempisLastIndex & 1L;
-			currentOffset++;
-			tempisLastIndex >>>= 1;
-
-		}
-		while ((tempisLastIndex & 1L) == 0) {
-			currentOffset++;
-			tempisLastIndex >>>= 1;
-
-		}
-		return currentOffset;
-	}
 
 	public static int getChain(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
 		int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
@@ -86,6 +68,7 @@ public final class TinySetIndexing {
 
 		}
 		TinySetIndexing.ChainStart = currentOffset;
+		
 		while ((tempisLastIndex & 1L) == 0) {
 			currentOffset++;
 			tempisLastIndex >>>= 1;
@@ -98,12 +81,13 @@ public final class TinySetIndexing {
 	public static int getChainAtOffset(HashedItem fpaux, long[] chainIndex, long[] isLastIndex,int offset) {
 		int nonEmptyChainsToSee = rank(isLastIndex[fpaux.set], offset);
 		int nonEmptyChainSeen = rank(chainIndex[fpaux.set],nonEmptyChainsToSee);
-		for(int i =nonEmptyChainSeen; i<=64; )
+		for(int i =nonEmptyChainsToSee; i<=64; )
 		{
-			nonEmptyChainSeen = rank(chainIndex[fpaux.set], i);
 			if(TinySetIndexing.chainExist(chainIndex[fpaux.set], i)&& (nonEmptyChainSeen ==nonEmptyChainsToSee))
 				return i;
 			i+= Math.max(1, nonEmptyChainsToSee- nonEmptyChainSeen);
+			nonEmptyChainSeen = rank(chainIndex[fpaux.set], i);
+
 		}
 		throw new RuntimeException("Cannot choose victim!");
 	}

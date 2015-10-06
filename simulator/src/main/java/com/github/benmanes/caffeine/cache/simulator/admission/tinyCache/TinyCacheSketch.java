@@ -56,9 +56,6 @@ public final class TinyCacheSketch {
 		// time. As far as I understand it is working right now.
 		while (TinySetIndexing.ChainStart <= TinySetIndexing.ChainEnd) {
 			try {
-				if (TinySetIndexing.ChainStart == this.cache.length) {
-					break;
-				}
 				$ += (cache[TinySetIndexing.ChainStart % cache.length] == hashFunc.fpaux.fingerprint)
 						? 1L
 								: 0L;
@@ -81,22 +78,19 @@ public final class TinyCacheSketch {
 	 * @param bucketStart
 	 * @return
 	 */
-	private int replace(HashedItem fpaux, byte victim, int bucketStart) {
+	private int replace(HashedItem fpaux, byte victim, int bucketStart,int removedOffset) {
 		byte chainId = fpaux.chainId;
 		fpaux.chainId = victim;
 
-		int removedOffset = TinySetIndexing.getChainEnd(fpaux, chainIndex, isLast);
 		this.cache[bucketStart + removedOffset] = 0;
 
 		TinySetIndexing.removeItem(fpaux, chainIndex, isLast);
 		fpaux.chainId = chainId;
 		int idxToAdd = TinySetIndexing.addItem(fpaux, chainIndex, isLast);
+		int delta = (removedOffset < idxToAdd)?-1:1;
 
-		if (removedOffset < idxToAdd) {
-			replaceBackwards(bucketStart, idxToAdd, fpaux.fingerprint);
-		} else {
-			replaceForward(idxToAdd, fpaux.fingerprint, bucketStart);
-		}
+			replaceItems(idxToAdd, fpaux.fingerprint, bucketStart,delta);
+		
 		return removedOffset;
 	}
 
@@ -110,41 +104,27 @@ public final class TinyCacheSketch {
 		}
 
 		int idxToAdd = TinySetIndexing.addItem(hashFunc.fpaux, chainIndex, isLast);
-		this.replaceForward(idxToAdd, hashFunc.fpaux.fingerprint, bucketStart);
+		this.replaceItems(idxToAdd, hashFunc.fpaux.fingerprint, bucketStart,1);
 	}
 
 	private void selectVictim(int bucketStart) {
 		byte victimOffset = (byte) rnd.nextInt(64);
 		int victimChain = TinySetIndexing.getChainAtOffset(hashFunc.fpaux, chainIndex, isLast, victimOffset);
 		if(TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], victimChain))
-			replace(hashFunc.fpaux, (byte) victimChain, bucketStart);	  
+			replace(hashFunc.fpaux, (byte) victimChain, bucketStart,victimOffset);	  
 		else{
 			throw new RuntimeException("Failed to replace");
 		}
 	}
 
-
-
-
-	protected void replaceBackwards(int start, final int maxToShift, byte value) {
-		start += maxToShift;
+	protected void replaceItems(final int idx,  byte value, int start,final int delta) {
+		start += idx;
 		byte $;
 		do {
-			$ = this.cache[start];
+			$= this.cache[start];
 			this.cache[start] = value;
 			value = $;
-			start--;
-		} while (value != 0);
-	}
-
-	protected void replaceForward(final int idx, byte value, int start) {
-		start += idx;
-
-		do {
-			byte $ = this.cache[start];
-			this.cache[start] = value;
-			value = $;
-			start++;
+			start+= delta;
 		} while (value != 0);
 	}
 }
