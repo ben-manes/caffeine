@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
+import com.github.benmanes.caffeine.cache.simulator.report.ReportFormat;
 import com.typesafe.config.Config;
 
 /**
@@ -88,6 +89,9 @@ public class BasicSettings {
   }
 
   public final class ReportSettings {
+    public ReportFormat format() {
+      return ReportFormat.valueOf(config().getString("report.format").toUpperCase());
+    }
     public String sortBy() {
       return config().getString("report.sort-by").trim();
     }

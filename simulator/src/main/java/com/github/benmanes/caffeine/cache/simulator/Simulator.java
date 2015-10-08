@@ -27,7 +27,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyBuilder;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.simulator.report.TextReport;
+import com.github.benmanes.caffeine.cache.simulator.report.Reporter;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterators;
 import com.typesafe.config.Config;
@@ -64,7 +64,7 @@ public final class Simulator extends UntypedActor {
 
   private final BasicSettings settings;
   private final Stopwatch stopwatch;
-  private final TextReport report;
+  private final Reporter report;
   private final Config config;
   private final Router router;
   private final int batchSize;
@@ -73,14 +73,14 @@ public final class Simulator extends UntypedActor {
   public Simulator() {
     config = getContext().system().settings().config().getConfig("caffeine.simulator");
     settings = new BasicSettings(config);
-    report = new TextReport(settings);
-    batchSize = settings.batchSize();
 
     List<Routee> routes = makeRoutes();
     router = new Router(new BroadcastRoutingLogic(), routes);
     remaining = routes.size();
 
+    batchSize = settings.batchSize();
     stopwatch = Stopwatch.createStarted();
+    report = settings.report().format().create(config);
     getSelf().tell(Message.START, ActorRef.noSender());
   }
 

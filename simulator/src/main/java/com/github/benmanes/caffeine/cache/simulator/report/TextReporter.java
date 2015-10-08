@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -25,74 +23,56 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.jooq.lambda.Seq;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
-import com.jakewharton.fliptables.FlipTable;
+import com.typesafe.config.Config;
 
 /**
- * A plain text report applicable for printing to the console or a file.
+ * A skeletal plain text implementation applicable for printing to the console or a file.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TextReport {
+public abstract class TextReporter implements Reporter {
   private static final String[] HEADERS = {
       "Policy", "Hit rate", "Hits", "Misses", "Requests", "Evictions", "Steps", "Time"};
 
   private final List<PolicyStats> results;
   private final BasicSettings settings;
 
-  public TextReport(BasicSettings settings) {
-    this.settings = requireNonNull(settings);
+  public TextReporter(Config config) {
+    settings = new BasicSettings(config);
     results = new ArrayList<>();
   }
 
+  /** Returns the column headers. */
+  protected String[] headers() {
+    return HEADERS.clone();
+  }
+
   /** Adds the result of a policy simulation. */
+  @Override
   public void add(PolicyStats policyStats) {
     results.add(policyStats);
   }
 
   /** Writes the report to the output destination. */
+  @Override
   public void print() throws IOException {
+    results.sort(comparator());
+    String report = assemble(results);
     String output = settings.report().output();
-    String results = assemble();
     if (output.equalsIgnoreCase("console")) {
-      System.out.println(results);
+      System.out.println(report);
     } else {
       File file = Paths.get(output).toFile();
-      Files.write(results, file, Charsets.UTF_8);
+      Files.write(report, file, Charsets.UTF_8);
     }
   }
 
   /** Assembles an aggregated report. */
-  private String assemble() {
-    results.sort(comparator());
-    String[][] data = new String[results.size()][HEADERS.length];
-    Seq.seq(results).zipWithIndex().forEach(statsAndIndex -> {
-      PolicyStats policyStats = statsAndIndex.v1;
-      int index = statsAndIndex.v2.intValue();
-      data[index] = new String[] {
-          policyStats.name(),
-          String.format("%.2f %%", 100 * policyStats.hitRate()),
-          String.format("%,d", policyStats.hitCount()),
-          String.format("%,d", policyStats.missCount()),
-          String.format("%,d", policyStats.requestCount()),
-          String.format("%,d", policyStats.evictionCount()),
-          steps(policyStats),
-          policyStats.stopwatch().toString()
-      };
-    });
-    return FlipTable.of(HEADERS, data);
-  }
-
-  private static String steps(PolicyStats policyStats) {
-    long operations = policyStats.operationCount();
-    long complexity = (long) (100 * policyStats.complexity());
-    return (operations == 0) ? "?" : String.format("%,d (%,d %%)", operations, complexity);
-  }
+  protected abstract String assemble(List<PolicyStats> results);
 
   /** Returns a comparator that sorts by the specified column. */
   private Comparator<PolicyStats> comparator() {
