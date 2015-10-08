@@ -7,16 +7,16 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
-public class TinyCachePolicy implements Policy {
+public class TinyCachePolicywithGhostCache implements Policy {
 
 	  private final PolicyStats policyStats;
 	  
-	  TinyCache tinyCache; 
-	public TinyCachePolicy(String name,Config config)
+	  TinyCacheWithGhostCache tinyCache; 
+	public TinyCachePolicywithGhostCache(String name,Config config)
 	{
 	    BasicSettings settings = new BasicSettings(config);
 		policyStats = new PolicyStats(name);
-		tinyCache = new TinyCache((int) Math.ceil(settings.maximumSize()/64.0), 64,settings.randomSeed());
+		tinyCache = new TinyCacheWithGhostCache((int) Math.ceil(settings.maximumSize()/64.0), 64,settings.randomSeed());
 	}
 	@Override
 	public void record(Comparable<Object> key) {

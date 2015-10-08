@@ -21,7 +21,10 @@ import java.util.Locale;
 
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
+import com.github.benmanes.caffeine.cache.simulator.admission.tinyCache.TinyCacheWithGhostCache;
 import com.github.benmanes.caffeine.cache.simulator.policy.TinyCache.TinyCachePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.TinyCache.TinyCachePolicywithGhostCache;
+import com.github.benmanes.caffeine.cache.simulator.policy.TinyCache.WindowTinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
@@ -107,9 +110,16 @@ public final class PolicyBuilder {
         if (strategy.equalsIgnoreCase("WindowTinyLfu")) {
           return new WindowTinyLfuPolicy(type, config);
         }
+        if (strategy.equalsIgnoreCase("TinyCache_GhostCache")) {
+            return new TinyCachePolicywithGhostCache(type,config);
+        }
         if (strategy.equalsIgnoreCase("TinyCache")) {
             return new TinyCachePolicy(type,config);
         }
+        if (strategy.equalsIgnoreCase("WindowTinyCache")) {
+            return new WindowTinyCachePolicy(type,config);
+        }
+        
         break;
       case "irr":
         if (strategy.equalsIgnoreCase("Lirs")) {

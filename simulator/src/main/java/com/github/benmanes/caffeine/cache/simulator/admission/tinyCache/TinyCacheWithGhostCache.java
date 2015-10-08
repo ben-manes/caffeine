@@ -24,7 +24,7 @@ import java.util.Random;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-public final class TinyCache {
+public final class TinyCacheWithGhostCache {
 	protected int nrItems;
 
 	public final long[] chainIndex;
@@ -34,16 +34,18 @@ public final class TinyCache {
 	private final long[] cache;
 	private final Random rnd;
 	private final int sampleSize;
+	private final TinyCacheSketch ghostCache;
 
 
 
-	public TinyCache(int nrSets, int itemsPerSet, int randomSeed) {
+	public TinyCacheWithGhostCache(int nrSets, int itemsPerSet, int randomSeed) {
 		chainIndex = new long[nrSets];
 		isLastIndex = new long[nrSets];
 		hashFunc = new HashFunctionParser(nrSets);
 		this.itemsPerSet = itemsPerSet;
 		cache = new long[nrSets * itemsPerSet];
 		sampleSize = 10; 
+		ghostCache = new TinyCacheSketch(nrSets*sampleSize,itemsPerSet,randomSeed+1);
 		rnd = new Random(randomSeed);
 	}
 
@@ -94,6 +96,8 @@ public final class TinyCache {
 
 	public void recordItem(long item)
 	{
+		if(this.ghostCache.countItem(hashFunc.fpaux.value)<sampleSize);
+		this.ghostCache.addItem(hashFunc.fpaux.value);
 
 	}
 	public boolean addItem(long item) {
@@ -116,9 +120,16 @@ public final class TinyCache {
 		// this if is still for debugging and common sense. Should be eliminated for performance once 
 		// I am sure of the correctness. 
 		if(TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], victimChain)){
-			replace(hashFunc.fpaux, (byte) victimChain, bucketStart,victimOffset);
-			return true;
-
+			int victimScore = this.ghostCache.countItem(victim);
+			int currItemScore = this.ghostCache.countItem(hashFunc.fpaux.value);
+			if(currItemScore>victimScore){
+				replace(hashFunc.fpaux, (byte) victimChain, bucketStart,victimOffset);
+				return true;
+			}
+			else
+			{
+				return false;
+			}
 		}
 		else{
 			throw new RuntimeException("Failed to replace");
