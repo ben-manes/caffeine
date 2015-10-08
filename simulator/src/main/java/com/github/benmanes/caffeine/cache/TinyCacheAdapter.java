@@ -25,7 +25,7 @@ import com.typesafe.config.Config;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-public final class TinyCache<E> implements Frequency<E> {
+public final class TinyCacheAdapter<E> implements Frequency<E> {
   // the actual data structure.
   TinyCacheSketch tcs;
   // number of (independent sets)
@@ -38,10 +38,10 @@ public final class TinyCache<E> implements Frequency<E> {
   /**
    * Note that in this implementation there are always 64 items per set.
    */
-  public TinyCache(Config config) {
+  public TinyCacheAdapter(Config config) {
     BasicSettings settings = new BasicSettings(config);
     nrSets = sampleFactor * settings.maximumSize() / 64;
-    tcs = new TinyCacheSketch(nrSets, 64);
+    tcs = new TinyCacheSketch(nrSets, 64,settings.randomSeed());
   }
 
   @Override

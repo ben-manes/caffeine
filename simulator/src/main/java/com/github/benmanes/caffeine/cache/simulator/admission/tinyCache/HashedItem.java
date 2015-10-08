@@ -16,12 +16,13 @@ public class HashedItem
 	public  int set;
 	public  byte chainId;
 	public  byte fingerprint;
-	
-	public HashedItem(int set, byte chainid, byte fingerprit)
+	public long value; 
+	public HashedItem(int set, byte chainid, byte fingerprit,long value)
 	{
 		this.set = set;
 		this.chainId = chainid;
 		this.fingerprint = fingerprit;
+		this.value = value; 
 		
 	}
 

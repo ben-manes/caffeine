@@ -34,7 +34,7 @@ public final class HashFunctionParser {
 
   public HashFunctionParser(int nrsets) {
     this.nrSets = nrsets;
-    fpaux = new HashedItem(fpMask, fpMask, fpMask);
+    fpaux = new HashedItem(fpMask, fpMask, fpMask,0l);
   }
 
   public HashedItem createHash(Object item) {
@@ -58,7 +58,12 @@ public final class HashFunctionParser {
     fpaux.chainId = (byte) (h & chainMask);
     h >>>= 6;
     fpaux.set = (int) ((h & Long.MAX_VALUE) % nrSets);
-
+    
+    fpaux.value = (item<<1)|1; 
+    if(item== 0)
+    {
+    	fpaux.value=1;
+    }
     return fpaux;
   }
 }
