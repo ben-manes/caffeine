@@ -60,7 +60,7 @@ public final class FrequencySketch<E> {
    * [2] TinyLFU: A Highly Efficient Cache Admission Policy
    * http://www.cs.technion.ac.il/~gilga/TinyLFU_PDP2014.pdf
    * [3] Denial of Service via Algorithmic Complexity Attack
-   * http://www.cs.virginia.edu/~cs216/Fall2005/notes/CrosbyWallach_UsenixSec2003.pdf
+   * https://www.usenix.org/legacy/events/sec03/tech/full_papers/crosby/crosby.pdf
    */
 
   static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
@@ -107,7 +107,7 @@ public final class FrequencySketch<E> {
 
     table = new long[(maximum == 0) ? 1 : ceilingNextPowerOfTwo(maximum)];
     tableMask = Math.max(0, table.length - 1);
-    sampleSize = (10 * maximum);
+    sampleSize = (maximumSize == 0) ? 10 : (10 * maximum);
     if (sampleSize <= 0) {
       sampleSize = Integer.MAX_VALUE;
     }

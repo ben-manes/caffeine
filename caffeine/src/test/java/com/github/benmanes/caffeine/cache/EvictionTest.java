@@ -158,20 +158,20 @@ public final class EvictionTest {
     assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(10L));
 
-    // evict (3)
+    // [0 | 1, 2, 3] -> [0, 4 | 2, 3]
     cache.put(4, value4);
-    assertThat(cache.asMap().containsKey(3), is(false));
+    assertThat(cache.asMap().containsKey(1), is(false));
     assertThat(cache.estimatedSize(), is(4L));
-    assertThat(eviction.weightedSize().getAsLong(), is(9L));
+    assertThat(eviction.weightedSize().getAsLong(), is(8L));
     verifyWriter(context, (verifier, ignored) -> {
-      verify(writer).delete(3, value3, RemovalCause.SIZE);
+      verify(writer).delete(1, value1, RemovalCause.SIZE);
       verifier.deletions(1, RemovalCause.SIZE);
     });
 
-    // evict 5
+    // [0, 4 | 2, 3] remains (5 exceeds window and has the same usage history, so evicted)
     cache.put(5, value5);
     assertThat(cache.estimatedSize(), is(4L));
-    assertThat(eviction.weightedSize().getAsLong(), is(9L));
+    assertThat(eviction.weightedSize().getAsLong(), is(8L));
     verifyWriter(context, (verifier, ignored) -> {
       verify(writer).delete(5, value5, RemovalCause.SIZE);
       verifier.deletions(2);

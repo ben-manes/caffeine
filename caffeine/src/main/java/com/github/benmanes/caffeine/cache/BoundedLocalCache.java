@@ -94,8 +94,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    *
    * A memento of the reads and writes that were performed on the map are recorded in buffers. These
    * buffers are drained at the first opportunity after a write or when a read buffer is full. The
-   * reads are offered in a buffer that will reject additions if contented on or if it is full and
-   * a draining process is required. Due to the concurrent nature of the read and write operations a
+   * reads are offered in a buffer that will reject additions if contented on or if it is full and a
+   * draining process is required. Due to the concurrent nature of the read and write operations a
    * strict policy ordering is not possible, but is observably strict when single threaded.
    *
    * Due to a lack of a strict ordering guarantee, a task can be executed out-of-order, such as a
@@ -106,11 +106,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * the hash table nor the page replacement policy. Both the retired and dead states are
    * represented by a sentinel key that should not be used for map lookups.
    *
-   * The maximum size policy is implemented using the Least Recently Used page replacement algorithm
-   * due to its simplicity, high hit rate, and ability to be implemented with O(1) time complexity.
-   * The expiration policy is implemented with O(1) time complexity by sharing the access-order
-   * queue (with the LRU policy) for a time-to-idle setting and using a write-order queue for a
-   * time-to-live policy.
+   * Expiration is implemented in O(1) time complexity. The time-to-idle policy uses an access-order
+   * queue and the time-to-live policy uses a write-order queue. This allows peeking at oldest entry
+   * in the queue to see if it is expired and, if it is not then the younger entries must not be
+   * too.
+   *
+   * Maximum size is implemented using the Window TinyLfu policy due to its high hit rate, O(1) time
+   * complexity, and small footprint. A new entry starts in the eden space and remains there as long
+   * as it has high temporal locality. Eventually an entry will slip from the eden space into the
+   * main space. If the main space is already full, then a historic frequency filter determines
+   * whether to evict the newly admitted entry or the victim entry chosen by main space's policy.
+   * This process ensures that the entries in the main space have both a high recency and frequency.
+   * The windowing allows the policy to have a high hit rate when entries exhibit a high temporal
+   * but low frequency access pattern. Both the eden and main spaces use LRU queues.
    */
 
   static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
@@ -425,31 +433,30 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return next;
   }
 
-  /**
-   * Attempts to evict entries from the map if it exceeds the maximum capacity. If the eviction
-   * fails due to a concurrent removal of the victim, that removal may cancel out the addition that
-   * triggered this eviction. The victim is eagerly unlinked before the removal task so that if an
-   * eviction is still required then a new victim will be chosen for removal.
-   */
+  /** Attempts to evict entries from the cache if it exceeds the maximum capacity. */
   @GuardedBy("evictionLock")
   void evictEntries() {
     if (!evicts()) {
       return;
     }
-    evictFromEden();
-    evictFromMain();
+    int candidates = evictFromEden();
+    evictFromMain(candidates);
   }
 
+  /**
+   * Evicts entries from the eden space into the main space while the eden size exceeds a maximum.
+   *
+   * @return the number of candidate entries evicted from the eden space
+   */
   @GuardedBy("evictionLock")
-  void evictFromEden() {
+  int evictFromEden() {
+    int candidates = 0;
     long mainMaximum = maximum() - edenMaximum();
     Node<K, V> node = accessOrderEdenDeque().peek();
     while (edenWeightedSize() > edenMaximum() || (weightedSize() < mainMaximum)) {
-
-      // If weighted values are used, then the pending operations will adjust the size to reflect
-      // the correct weight
+      // The pending operations will adjust the size to reflect the correct weight
       if (node == null) {
-        return;
+        break;
       }
 
       Node<K, V> next = node.getNextInAccessOrder();
@@ -457,35 +464,92 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         node.setMoveCount(incrementAndGetMoveCount());
         accessOrderEdenDeque().remove(node);
         accessOrderMainDeque().add(node);
+        candidates++;
 
         lazySetEdenWeightedSize(edenWeightedSize() - node.getPolicyWeight());
       }
       node = next;
     }
+
+    return candidates;
   }
 
+  /**
+   * Evicts entries from the main space if the cache exceeds the maximum capacity. The main space
+   * determines whether admitting an entry (coming from the eden space) is preferable to retaining
+   * the eviction policy's victim. This is decision is made using a frequency filter so that the
+   * least frequently used entry is removed.
+   *
+   * The eden space candidates were previously placed in the MRU position and the eviction policy's
+   * victim is at the LRU position. The two ends of the queue are evaluated while an eviction is
+   * required. The number of remaining candidates is provided and decremented on eviction, so that
+   * when there are no more candidates the victim is evicted.
+   *
+   * @param candidates the number of candidate entries evicted from the eden space
+   */
   @GuardedBy("evictionLock")
-  void evictFromMain() {
+  void evictFromMain(int candidates) {
+    Node<K, V> victim = accessOrderMainDeque().peekFirst();
+    Node<K, V> candidate = accessOrderMainDeque().peekLast();
     while (weightedSize() > maximum()) {
-      Node<K, V> victim = accessOrderMainDeque().peekFirst();
-      Node<K, V> candidate = accessOrderMainDeque().peekLast();
-
-      // If weighted values are used, then the pending operations will adjust the size to reflect
-      // the correct weight
-      if (victim == null) {
+      // The pending operations will adjust the size to reflect the correct weight
+      if ((candidate == null) && (victim == null)) {
         return;
       }
 
+      // Stop trying to evict candidates and always prefer the victim
+      if (candidates == 0) {
+        candidate = null;
+      }
+
+      // Skip over entries with zero weight
+      if ((victim != null) && (victim.getPolicyWeight() == 0)) {
+        victim = victim.getNextInAccessOrder();
+        continue;
+      } else if ((candidate != null) && (candidate.getPolicyWeight() == 0)) {
+        candidate = candidate.getPreviousInAccessOrder();
+        candidates--;
+        continue;
+      }
+
+      // Evict immediately if only one of the entries is present
+      if (victim == null) {
+        candidates--;
+        Node<K, V> evict = candidate;
+        candidate = candidate.getPreviousInAccessOrder();
+        evictEntry(evict, RemovalCause.SIZE, 0L);
+        continue;
+      } else if (candidate == null) {
+        Node<K, V> evict = victim;
+        victim = victim.getNextInAccessOrder();
+        evictEntry(evict, RemovalCause.SIZE, 0L);
+        continue;
+      }
+
+      // Evict immediately if an entry was collected
       K victimKey = victim.getKey();
       K candidateKey = candidate.getKey();
       if (victimKey == null) {
-        evictEntry(victim, RemovalCause.COLLECTED, 0L);
+        Node<K, V> evict = victim;
+        victim = victim.getNextInAccessOrder();
+        evictEntry(evict, RemovalCause.COLLECTED, 0L);
       } else if (candidateKey == null) {
-        evictEntry(candidate, RemovalCause.COLLECTED, 0L);
+        candidates--;
+        Node<K, V> evict = candidate;
+        candidate = candidate.getPreviousInAccessOrder();
+        evictEntry(evict, RemovalCause.COLLECTED, 0L);
+      }
+
+      // Evict the entry with the lowest frequency
+      int victimFreq = frequencySketch().frequency(victimKey);
+      int candidateFreq = frequencySketch().frequency(candidateKey);
+      if (candidateFreq > victimFreq) {
+        Node<K, V> evict = victim;
+        victim = victim.getNextInAccessOrder();
+        evictEntry(evict, RemovalCause.SIZE, 0L);
       } else {
-        int victimFreq = frequencySketch().frequency(victimKey);
-        int candidateFreq = frequencySketch().frequency(candidateKey);
-        Node<K, V> evict = (candidateFreq > victimFreq) ? victim : candidate;
+        Node<K, V> evict = candidate;
+        candidate = candidate.getPreviousInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
       }
     }
@@ -578,17 +642,25 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           resurrect[0] = true;
           return n;
         }
+      } else if (actualCause == RemovalCause.SIZE) {
+        if (node.getWeight() == 0) {
+          resurrect[0] = true;
+          return n;
+        }
       }
       writer.delete(key, value, actualCause);
       removed[0] = true;
       return null;
     });
 
+    // The entry is no longer eligible for eviction
     if (resurrect[0]) {
-      // The entry is no longer expired and will be reordered in the next maintenance cycle
       return;
     }
 
+    // If the eviction fails due to a concurrent removal of the victim, that removal may cancel out
+    // the addition that triggered this eviction. The victim is eagerly unlinked before the removal
+    // task so that if an eviction is still required then a new victim will be chosen for removal.
     makeDead(node);
     if (node.isEden() && (evicts() || expiresAfterAccess())) {
       accessOrderEdenDeque().remove(node);

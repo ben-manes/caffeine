@@ -35,7 +35,7 @@ import com.typesafe.config.Config;
  * This implementation is based on the pseudo code provided by the authors in their paper
  * <a href="http://www.vldb.org/conf/1994/P439.PDF">2Q: A Low Overhead High Performance Buffer
  * Management Replacement Algorithm</a>. For consistency with other policies, this version places
- * the next item to be removed at the tail and most recently added at the head of the queue.
+ * the next item to be removed at the head and most recently added at the tail of the queue.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
