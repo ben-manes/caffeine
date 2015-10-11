@@ -114,13 +114,16 @@ public final class GuavaCacheFromContext {
     }
     Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker;
     if (context.loader == null) {
-      context.cache = new GuavaCache<>(builder.<Integer, Integer>build(), ticker);
+      context.cache = new GuavaCache<>(builder.<Integer, Integer>build(),
+          ticker, context.isRecordingStats());
     } else if (context.loader().isBulk()) {
       context.cache = new GuavaLoadingCache<>(builder.build(
-          new BulkLoader<Integer, Integer>(context.loader())), ticker);
+          new BulkLoader<Integer, Integer>(context.loader())),
+          ticker, context.isRecordingStats());
     } else {
       context.cache = new GuavaLoadingCache<>(builder.build(
-          new SingleLoader<Integer, Integer>(context.loader())), ticker);
+          new SingleLoader<Integer, Integer>(context.loader())),
+          ticker, context.isRecordingStats());
     }
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) context.cache;
@@ -131,12 +134,14 @@ public final class GuavaCacheFromContext {
     private static final long serialVersionUID = 1L;
 
     private final com.google.common.cache.Cache<K, V> cache;
+    private final boolean isRecordingStats;
     private final Ticker ticker;
 
     transient StatsCounter statsCounter;
 
-    GuavaCache(com.google.common.cache.Cache<K, V> cache, Ticker ticker) {
+    GuavaCache(com.google.common.cache.Cache<K, V> cache, Ticker ticker, boolean isRecordingStats) {
       this.statsCounter = new SimpleStatsCounter();
+      this.isRecordingStats = isRecordingStats;
       this.cache = requireNonNull(cache);
       this.ticker = ticker;
     }
@@ -387,6 +392,9 @@ public final class GuavaCacheFromContext {
     @Override
     public Policy<K, V> policy() {
       return new Policy<K, V>() {
+        @Override public boolean isRecordingStats() {
+          return isRecordingStats;
+        }
         @Override public Optional<Eviction<K, V>> eviction() {
           return Optional.empty();
         }
@@ -409,8 +417,9 @@ public final class GuavaCacheFromContext {
 
     private final com.google.common.cache.LoadingCache<K, V> cache;
 
-    GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache, Ticker ticker) {
-      super(cache, ticker);
+    GuavaLoadingCache(com.google.common.cache.LoadingCache<K, V> cache,
+        Ticker ticker, boolean isRecordingStats) {
+      super(cache, ticker, isRecordingStats);
       this.cache = requireNonNull(cache);
     }
 

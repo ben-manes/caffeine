@@ -2163,6 +2163,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       this.cache = cache;
     }
 
+    @Override public boolean isRecordingStats() {
+      return cache.isRecordingStats();
+    }
     @Override public Optional<Eviction<K, V>> eviction() {
       return cache.evicts()
           ? (eviction == null) ? (eviction = Optional.of(new BoundedEviction())) : eviction

@@ -34,6 +34,9 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public interface Policy<K, V> {
 
+  /** Returns whether the cache statistics are being accumulated. */
+  boolean isRecordingStats();
+
   /**
    * Returns access to perform operations based on the maximum size or maximum weight eviction
    * policy. If the cache was not constructed with a size-based bound or the implementation does

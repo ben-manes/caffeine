@@ -776,7 +776,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<>()) : policy;
+      return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
@@ -795,6 +795,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   /** An eviction policy that supports no boundings. */
   static final class UnboundedPolicy<K, V> implements Policy<K, V> {
+    private final boolean isRecordingStats;
+
+    UnboundedPolicy(boolean isRecordingStats) {
+      this.isRecordingStats = isRecordingStats;
+    }
+    @Override public boolean isRecordingStats() {
+      return isRecordingStats;
+    }
     @Override public Optional<Eviction<K, V>> eviction() {
       return Optional.empty();
     }
@@ -868,7 +876,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     protected Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<>()) : policy;
+      return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
     }
 
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
