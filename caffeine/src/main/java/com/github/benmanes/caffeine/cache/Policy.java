@@ -34,7 +34,11 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public interface Policy<K, V> {
 
-  /** Returns whether the cache statistics are being accumulated. */
+  /**
+   * Returns whether the cache statistics are being accumulated.
+   *
+   * @return if cache statistics are being recorded
+   */
   boolean isRecordingStats();
 
   /**

@@ -93,7 +93,7 @@ final class CacheFactory {
     if (configuration instanceof CompleteConfiguration<?, ?>) {
       CaffeineConfiguration<K, V> config = new CaffeineConfiguration<>(
           (CompleteConfiguration<K, V>) configuration);
-      config.setCopyStrategyFactory(defaults.getCopyStrategyFactory());
+      config.setCopierFactory(defaults.getCopierFactory());
       return config;
     }
 

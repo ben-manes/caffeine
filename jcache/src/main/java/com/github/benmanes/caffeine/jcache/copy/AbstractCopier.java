@@ -49,7 +49,7 @@ import java.util.regex.Pattern;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public abstract class AbstractCopyStrategy<A> implements CopyStrategy {
+public abstract class AbstractCopier<A> implements Copier {
   private static final Map<Class<?>, Function<Object, Object>> JAVA_DEEP_COPY;
   private static final Set<Class<?>> JAVA_IMMUTABLE;
 
@@ -69,11 +69,11 @@ public abstract class AbstractCopyStrategy<A> implements CopyStrategy {
   private final Set<Class<?>> immutableClasses;
   private final Map<Class<?>, Function<Object, Object>> deepCopyStrategies;
 
-  public AbstractCopyStrategy() {
+  public AbstractCopier() {
     this(javaImmutableClasses(), javaDeepCopyStrategies());
   }
 
-  public AbstractCopyStrategy(Set<Class<?>> immutableClasses,
+  public AbstractCopier(Set<Class<?>> immutableClasses,
       Map<Class<?>, Function<Object, Object>> deepCopyStrategies) {
     this.immutableClasses = requireNonNull(immutableClasses);
     this.deepCopyStrategies = requireNonNull(deepCopyStrategies);

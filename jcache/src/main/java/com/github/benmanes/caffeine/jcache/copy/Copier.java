@@ -26,7 +26,7 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 @FunctionalInterface
-public interface CopyStrategy {
+public interface Copier {
 
   /**
    * Returns a deep copy of the object.
@@ -40,12 +40,12 @@ public interface CopyStrategy {
   <T> T copy(@Nonnull T object, @Nonnull ClassLoader classLoader);
 
   /** @return a copy strategy that performs an identity function, for use by store-by-reference */
-  static CopyStrategy identity() {
-    return ReferenceCopyStrategy.INSTANCE;
+  static Copier identity() {
+    return IdentityCopier.INSTANCE;
   }
 }
 
-enum ReferenceCopyStrategy implements CopyStrategy {
+enum IdentityCopier implements Copier {
   INSTANCE;
 
   @Override

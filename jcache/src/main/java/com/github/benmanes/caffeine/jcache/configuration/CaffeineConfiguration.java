@@ -28,7 +28,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 
 import com.github.benmanes.caffeine.cache.Weigher;
-import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
 
 /**
  * A JCache configuration with Caffeine specific settings.
@@ -40,8 +40,8 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   private final MutableConfiguration<K, V> delegate;
 
-  private Factory<CopyStrategy> copyStrategyFactory;
   private Factory<Weigher<K, V>> weigherFactory;
+  private Factory<Copier> copierFactory;
   private Long expireAfterAccessNanos;
   private Long expireAfterWriteNanos;
   private Long maximumWeight;
@@ -57,7 +57,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       CaffeineConfiguration<K, V> config = (CaffeineConfiguration<K, V>) configuration;
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
-      copyStrategyFactory = config.copyStrategyFactory;
+      copierFactory = config.copierFactory;
       weigherFactory = config.weigherFactory;
       maximumWeight = config.maximumWeight;
       maximumSize = config.maximumSize;
@@ -193,21 +193,21 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
-   * Returns the {@link Factory} for the {@link CopyStrategy} to be used for the cache.
+   * Returns the {@link Factory} for the {@link Copier} to be used for the cache.
    *
-   * @return the {@link Factory} for the {@link CopyStrategy}
+   * @return the {@link Factory} for the {@link Copier}
    */
-  public Factory<CopyStrategy> getCopyStrategyFactory() {
-    return copyStrategyFactory;
+  public Factory<Copier> getCopierFactory() {
+    return copierFactory;
   }
 
   /**
-   * Set the {@link Factory} for the {@link CopyStrategy}.
+   * Set the {@link Factory} for the {@link Copier}.
    *
-   * @param factory the {@link CopyStrategy} {@link Factory}
+   * @param factory the {@link Copier} {@link Factory}
    */
-  public void setCopyStrategyFactory(Factory<CopyStrategy> factory) {
-    copyStrategyFactory = factory;
+  public void setCopierFactory(Factory<Copier> factory) {
+    copierFactory = factory;
   }
 
   /**
@@ -308,9 +308,9 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
-   * Set the {@link Factory} for the {@link CopyStrategy}.
+   * Set the {@link Factory} for the {@link Copier}.
    *
-   * @param factory the {@link CopyStrategy} {@link Factory}
+   * @param factory the {@link Copier} {@link Factory}
    */
   public void setWeigherFactory(Factory<Weigher<K, V>> factory) {
     weigherFactory = factory;
@@ -326,7 +326,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     CaffeineConfiguration<?, ?> config = (CaffeineConfiguration<?, ?>) o;
     return Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
         && Objects.equals(expireAfterWriteNanos, config.expireAfterWriteNanos)
-        && Objects.equals(copyStrategyFactory, config.copyStrategyFactory)
+        && Objects.equals(copierFactory, config.copierFactory)
         && Objects.equals(weigherFactory, config.weigherFactory)
         && Objects.equals(maximumWeight, config.maximumWeight)
         && Objects.equals(maximumSize, config.maximumSize)

@@ -54,7 +54,7 @@ import javax.cache.processor.EntryProcessorResult;
 
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
-import com.github.benmanes.caffeine.jcache.copy.CopyStrategy;
+import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
 import com.github.benmanes.caffeine.jcache.integration.DisabledCacheWriter;
 import com.github.benmanes.caffeine.jcache.management.JCacheMXBean;
@@ -73,7 +73,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   private final com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache;
   private final CaffeineConfiguration<K, V> configuration;
-  private final CopyStrategy copyStrategy;
+  private final Copier copyStrategy;
   private final CacheManager cacheManager;
   private final CacheWriter<K, V> writer;
   private final JCacheMXBean cacheMXBean;
@@ -106,8 +106,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     this.name = requireNonNull(name);
 
     copyStrategy = configuration.isStoreByValue()
-        ? configuration.getCopyStrategyFactory().create()
-        : CopyStrategy.identity();
+        ? configuration.getCopierFactory().create()
+        : Copier.identity();
     writer = configuration.hasCacheWriter()
         ? configuration.getCacheWriter()
         : DisabledCacheWriter.get();

@@ -112,7 +112,7 @@ public final class TypesafeConfigurator {
       boolean enabled = config.getBoolean("store-by-value.enabled");
       configuration.setStatisticsEnabled(enabled);
       if (config.hasPath("store-by-value.strategy")) {
-        configuration.setCopyStrategyFactory(FactoryBuilder.factoryOf(
+        configuration.setCopierFactory(FactoryBuilder.factoryOf(
             config.getString("store-by-value.strategy")));
       }
     }
