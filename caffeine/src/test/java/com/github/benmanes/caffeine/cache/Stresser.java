@@ -57,7 +57,7 @@ public final class Stresser {
     statusExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
     statusExecutor.scheduleAtFixedRate(newStatusTask(), THREADS, STATUS_INTERVAL, SECONDS);
     cache = Caffeine.newBuilder()
-        .removalListener(notif -> evictions.increment())
+        .removalListener((k, v, c) -> evictions.increment())
         .executor(MoreExecutors.directExecutor())
         .maximumSize(SIZE)
         .build();

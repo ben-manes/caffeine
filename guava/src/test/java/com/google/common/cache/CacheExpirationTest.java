@@ -26,8 +26,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
@@ -184,10 +184,10 @@ public class CacheExpirationTest extends TestCase {
     RemovalListener<Integer, AtomicInteger> removalListener =
         new RemovalListener<Integer, AtomicInteger>() {
           @Override
-          public void onRemoval(RemovalNotification<Integer, AtomicInteger> notification) {
-            if (notification.wasEvicted()) {
+          public void onRemoval(Integer key, AtomicInteger value, RemovalCause cause) {
+            if (cause.wasEvicted()) {
               evictionCount.incrementAndGet();
-              totalSum.addAndGet(notification.getValue().get());
+              totalSum.addAndGet(value.get());
             }
           }
         };

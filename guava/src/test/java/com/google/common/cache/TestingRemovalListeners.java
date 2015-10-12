@@ -17,6 +17,7 @@ package com.google.common.cache;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.google.common.annotations.GwtCompatible;
@@ -61,8 +62,8 @@ class TestingRemovalListeners {
     private static final long serialVersionUID = 1L;
 
     @Override
-    public void onRemoval(RemovalNotification<K, V> notification) {
-      add(notification);
+    public void onRemoval(K key, V value, RemovalCause cause) {
+      add(new RemovalNotification<>(key, value, cause));
     }
   }
 
@@ -75,9 +76,9 @@ class TestingRemovalListeners {
     private volatile RemovalNotification<K, V> lastNotification;
 
     @Override
-    public void onRemoval(RemovalNotification<K, V> notification) {
+    public void onRemoval(K key, V value, RemovalCause cause) {
       count.incrementAndGet();
-      lastNotification = notification;
+      lastNotification = new RemovalNotification<>(key, value, cause);
     }
 
     public int getCount() {
@@ -102,6 +103,6 @@ class TestingRemovalListeners {
    */
   static class NullRemovalListener<K, V> implements RemovalListener<K, V> {
     @Override
-    public void onRemoval(RemovalNotification<K, V> notification) {}
+    public void onRemoval(K key, V value, RemovalCause cause) {}
   }
 }

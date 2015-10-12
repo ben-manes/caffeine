@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 
@@ -50,10 +51,11 @@ public final class RemovalListeners {
     public int rejected;
 
     @Override
-    public void onRemoval(RemovalNotification<K, V> notification) {
+    public void onRemoval(K key, V value, RemovalCause cause) {
       if (reject) {
         rejected++;
-        throw new RejectedExecutionException("Rejected eviction of " + notification);
+        throw new RejectedExecutionException("Rejected eviction of " +
+            new RemovalNotification<>(key, value, cause));
       }
     }
   }
@@ -69,8 +71,8 @@ public final class RemovalListeners {
     }
 
     @Override
-    public synchronized void onRemoval(RemovalNotification<K, V> notification) {
-      evicted.add(notification);
+    public synchronized void onRemoval(K key, V value, RemovalCause cause) {
+      evicted.add(new RemovalNotification<>(key, value, cause));
     }
 
     public List<RemovalNotification<K, V>> evicted() {

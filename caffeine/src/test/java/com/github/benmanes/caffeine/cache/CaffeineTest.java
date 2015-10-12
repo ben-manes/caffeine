@@ -60,7 +60,7 @@ public final class CaffeineTest {
     Caffeine<Object, Object> configured = Caffeine.newBuilder()
         .initialCapacity(1).weakKeys().softValues()
         .expireAfterAccess(1, TimeUnit.SECONDS).expireAfterWrite(1, TimeUnit.SECONDS)
-        .removalListener(x -> {}).recordStats();
+        .removalListener((k, v, c) -> {}).recordStats();
     assertThat(configured.build(), is(not(nullValue())));
     assertThat(configured.build(loader), is(not(nullValue())));
     assertThat(Caffeine.newBuilder().buildAsync(loader), is(not(nullValue())));
@@ -415,12 +415,12 @@ public final class CaffeineTest {
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void removalListener_twice() {
-    Caffeine.newBuilder().removalListener(notif -> {}).removalListener(notif -> {});
+    Caffeine.newBuilder().removalListener((k, v, c) -> {}).removalListener((k, v, c) -> {});
   }
 
   @Test
   public void removalListener() {
-    RemovalListener<Object, Object> removalListener = notif -> {};
+    RemovalListener<Object, Object> removalListener = (k, v, c) -> {};
     Caffeine<?, ?> builder = Caffeine.newBuilder().removalListener(removalListener);
     assertThat(builder.getRemovalListener(false), is(removalListener));
     builder.build();

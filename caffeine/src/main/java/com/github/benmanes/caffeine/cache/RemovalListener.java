@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -43,7 +44,9 @@ public interface RemovalListener<K, V> {
    * This does not always signify that the key is now absent from the cache, as it may have already
    * been re-added.
    *
-   * @param notification information regarding the removed entry
+   * @param key the key represented by this entry
+   * @param value the value represented by this entry
+   * @param cause the reason for which the entry was removed
    */
-  void onRemoval(@Nonnull RemovalNotification<K, V> notification);
+  void onRemoval(@Nullable K key, @Nullable V value, @Nonnull RemovalCause cause);
 }

@@ -38,7 +38,7 @@ public final class CaffeinePolicy implements Policy {
         .executor(Runnable::run)
         .maximumSize(settings.maximumSize())
         .initialCapacity(settings.maximumSize())
-        .removalListener(notification -> policyStats.recordEviction())
+        .removalListener((k, v, c) -> policyStats.recordEviction())
         .build();
   }
 

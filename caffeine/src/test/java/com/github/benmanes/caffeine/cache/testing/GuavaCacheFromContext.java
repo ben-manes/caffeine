@@ -494,8 +494,7 @@ public final class GuavaCacheFromContext {
         // Guava internally uses sizing logic for null cache case
         cause = RemovalCause.EXPIRED;
       }
-      delegate.onRemoval(new com.github.benmanes.caffeine.cache.RemovalNotification<K, V>(
-          notification.getKey(), notification.getValue(), cause));
+      delegate.onRemoval(notification.getKey(), notification.getValue(), cause);
     }
   }
 

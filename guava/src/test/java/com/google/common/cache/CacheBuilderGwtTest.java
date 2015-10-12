@@ -26,8 +26,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.collect.ImmutableList;
@@ -258,8 +258,8 @@ public class CacheBuilderGwtTest extends TestCase {
 
     RemovalListener<Integer, Integer> countingListener = new RemovalListener<Integer, Integer>() {
       @Override
-      public void onRemoval(RemovalNotification<Integer, Integer> notification) {
-        switch (notification.getCause()) {
+      public void onRemoval(Integer key, Integer value, RemovalCause cause) {
+        switch (cause) {
           case EXPIRED:
             stats[0]++;
             break;

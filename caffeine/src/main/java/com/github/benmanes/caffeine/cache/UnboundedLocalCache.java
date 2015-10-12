@@ -37,6 +37,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -122,12 +123,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
-    notifyRemoval(new RemovalNotification<K, V>(key, value, cause));
+    requireNonNull(removalListener, "Notification should be guarded with a check");
+    executor.execute(() -> removalListener.onRemoval(key, value, cause));
   }
 
-  void notifyRemoval(RemovalNotification<K, V> notification) {
-    requireNonNull(removalListener, "Notification should be guarded with a check");
-    executor.execute(() -> removalListener.onRemoval(notification));
+  void notifyRemoval(@Nonnull RemovalNotification<K, V> notification) {
+    notifyRemoval(notification.getKey(), notification.getValue(), notification.getCause());
   }
 
   boolean hasRemovalListener() {

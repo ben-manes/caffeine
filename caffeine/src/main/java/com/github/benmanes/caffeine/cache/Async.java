@@ -73,10 +73,9 @@ final class Async {
     }
 
     @Override
-    public void onRemoval(RemovalNotification<K, CompletableFuture<V>> notification) {
-      notification.getValue().thenAcceptAsync(value -> {
-        delegate.onRemoval(new RemovalNotification<K, V>(
-            notification.getKey(), value, notification.getCause()));
+    public void onRemoval(K key, CompletableFuture<V> future, RemovalCause cause) {
+      future.thenAcceptAsync(value -> {
+        delegate.onRemoval(key, value, cause);
       }, executor);
     }
 
