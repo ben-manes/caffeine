@@ -327,13 +327,13 @@ public final class LoadingCacheTest {
   /* ---------------- CacheLoader -------------- */
 
   @Test(expectedExceptions = UnsupportedOperationException.class)
-  public void loadAll() {
+  public void loadAll() throws Exception {
     CacheLoader<Object, ?> loader = key -> key;
     loader.loadAll(Collections.emptyList());
   }
 
   @Test
-  public void reload() {
+  public void reload() throws Exception {
     CacheLoader<Integer, Integer> loader = key -> key;
     assertThat(loader.reload(1, 1), is(1));
   }

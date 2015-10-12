@@ -25,7 +25,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletionException;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,6 +44,8 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
   /** Returns the {@link CacheLoader} used by this cache. */
   CacheLoader<? super K, V> cacheLoader();
 
+  Function<K, V> mappingFunction();
+
   /** Returns whether the cache loader supports bulk loading. */
   boolean hasBulkLoader();
 
@@ -57,7 +61,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
 
   @Override
   default V get(K key) {
-    return cache().computeIfAbsent(key, cacheLoader()::load);
+    return cache().computeIfAbsent(key, mappingFunction());
   }
 
   @Override
@@ -134,6 +138,10 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
         }
       }
       success = !loaded.isEmpty();
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new CompletionException(e);
     } finally {
       long loadTime = cache().statsTicker().read() - startTime;
       if (success) {
@@ -148,9 +156,19 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
   default void refresh(K key) {
     requireNonNull(key);
     cache().executor().execute(() -> {
+      BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) -> {
+        try {
+          return (oldValue == null)
+              ? cacheLoader().load(key)
+              : cacheLoader().reload(key, oldValue);
+        } catch (Exception e) {
+          if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+          }
+          return LocalCache.throwUnchecked(e);
+        }
+      };
       try {
-        BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
-            (oldValue == null) ? cacheLoader().load(key) : cacheLoader().reload(key, oldValue);
         cache().compute(key, refreshFunction, false, false);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown during refresh", t);

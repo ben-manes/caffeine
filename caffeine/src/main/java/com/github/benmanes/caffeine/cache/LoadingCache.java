@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.concurrent.CompletionException;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -56,6 +57,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @throws NullPointerException if the specified key is null
    * @throws IllegalStateException if the computation detectably attempts a recursive update to this
    *         cache that would otherwise never complete
+   * @throws CompletionException if a checked exception was thrown while loading the value
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping
    *         is left unestablished
    */
@@ -82,6 +84,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @param keys the keys whose associated values are to be returned
    * @return the unmodifiable mapping of keys to values for the specified keys in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element
+   * @throws CompletionException if a checked exception was thrown while loading the value
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
    *         {@link CacheLoader#loadAll} returns {@code null}, returns a map containing null keys or
    *         values, or fails to return an entry for each requested key. In all cases, the mapping

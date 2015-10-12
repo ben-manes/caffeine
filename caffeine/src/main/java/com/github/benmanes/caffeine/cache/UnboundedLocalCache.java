@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
@@ -810,17 +811,35 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     private static final long serialVersionUID = 1;
 
     final CacheLoader<? super K, V> loader;
+    final Function<K, V> mappingFunction;
     final boolean hasBulkLoader;
 
     UnboundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder);
       this.loader = loader;
       this.hasBulkLoader = hasLoadAll(loader);
+      this.mappingFunction = key -> {
+        try {
+          return loader.load(key);
+        } catch (RuntimeException e) {
+          throw e;
+        } catch (Exception e) {
+          if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+          }
+          throw new CompletionException(e);
+        }
+      };
     }
 
     @Override
     public CacheLoader<? super K, V> cacheLoader() {
       return loader;
+    }
+
+    @Override
+    public Function<K, V> mappingFunction() {
+      return mappingFunction;
     }
 
     @Override

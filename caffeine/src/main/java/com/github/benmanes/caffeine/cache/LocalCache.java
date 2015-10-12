@@ -177,4 +177,9 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
       return result;
     };
   }
+
+  @SuppressWarnings("unchecked")
+  static <T extends Exception, V> V throwUnchecked(Exception e) throws T {
+    throw (T) e;
+  }
 }

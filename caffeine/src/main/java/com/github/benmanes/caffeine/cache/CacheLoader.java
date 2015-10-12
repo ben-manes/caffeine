@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 
 import javax.annotation.CheckForNull;
@@ -49,10 +50,13 @@ public interface CacheLoader<K, V> {
    *
    * @param key the non-null key whose value should be loaded
    * @return the value associated with {@code key} or {@code null} if not found
-   * @throws RuntimeException or Error, in which case the mapping is unchanged
+   * @throws Exception or Error, in which case the mapping is unchanged
+   * @throws InterruptedException if this method is interrupted. {@code InterruptedException} is
+   *         treated like any other {@code Exception} in all respects except that, when it is
+   *         caught, the thread's interrupt status is set
    */
   @CheckForNull
-  V load(@Nonnull K key);
+  V load(@Nonnull K key) throws Exception;
 
   /**
    * Computes or retrieves the values corresponding to {@code keys}. This method is called by
@@ -70,10 +74,13 @@ public interface CacheLoader<K, V> {
    * @param keys the unique, non-null keys whose values should be loaded
    * @return a map from each key in {@code keys} to the value associated with that key; <b>may not
    *         contain null values</b>
-   * @throws RuntimeException or Error, in which case the mappings are unchanged
+   * @throws Exception or Error, in which case the mappings are unchanged
+   * @throws InterruptedException if this method is interrupted. {@code InterruptedException} is
+   *         treated like any other {@code Exception} in all respects except that, when it is
+   *         caught, the thread's interrupt status is set
    */
   @Nonnull
-  default Map<K, V> loadAll(@Nonnull Iterable<? extends K> keys) {
+  default Map<K, V> loadAll(@Nonnull Iterable<? extends K> keys) throws Exception {
     throw new UnsupportedOperationException();
   }
 
@@ -88,7 +95,15 @@ public interface CacheLoader<K, V> {
   default CompletableFuture<V> asyncLoad(@Nonnull K key, @Nonnull Executor executor) {
     requireNonNull(key);
     requireNonNull(executor);
-    return CompletableFuture.supplyAsync(() -> load(key), executor);
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        return load(key);
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
+    }, executor);
   }
 
   /**
@@ -114,7 +129,15 @@ public interface CacheLoader<K, V> {
       Iterable<? extends K> keys, @Nonnull Executor executor) {
     requireNonNull(keys);
     requireNonNull(executor);
-    return CompletableFuture.supplyAsync(() -> loadAll(keys), executor);
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        return loadAll(keys);
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
+    }, executor);
   }
 
   /**
@@ -129,10 +152,13 @@ public interface CacheLoader<K, V> {
    * @param oldValue the non-null old value corresponding to {@code key}
    * @return the new value associated with {@code key}, or {@code null} if the mapping is to be
    *         removed
-   * @throws RuntimeException or Error, in which case the mapping is unchanged
+   * @throws Exception or Error, in which case the mapping is unchanged
+   * @throws InterruptedException if this method is interrupted. {@code InterruptedException} is
+   *         treated like any other {@code Exception} in all respects except that, when it is
+   *         caught, the thread's interrupt status is set
    */
   @CheckForNull
-  default V reload(@Nonnull K key, @Nonnull V oldValue) {
+  default V reload(@Nonnull K key, @Nonnull V oldValue) throws Exception {
     return load(key);
   }
 }

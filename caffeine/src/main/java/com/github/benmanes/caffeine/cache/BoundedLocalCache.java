@@ -41,6 +41,7 @@ import java.util.OptionalLong;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -713,11 +714,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         executor().execute(() -> {
           K key = node.getKey();
           if ((key != null) && node.isAlive()) {
-            try {
-              computeIfPresent(key, cacheLoader()::reload);
-            } catch (Throwable t) {
-              logger.log(Level.WARNING, "Exception thrown during reload", t);
-            }
+            computeIfPresent(key, (k, v) -> {
+              try {
+                return cacheLoader().reload(k, v);
+              } catch (Exception e) {
+                return LocalCache.throwUnchecked(e);
+              }
+            });
           }
         });
       } catch (Throwable t) {
@@ -2322,16 +2325,34 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     private static final long serialVersionUID = 1;
 
     final boolean hasBulkLoader;
+    final Function<K, V> mappingFunction;
 
     BoundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder, loader);
       requireNonNull(loader);
-      this.hasBulkLoader = hasLoadAll(loader);
+      hasBulkLoader = hasLoadAll(loader);
+      mappingFunction = key -> {
+        try {
+          return loader.load(key);
+        } catch (RuntimeException e) {
+          throw e;
+        } catch (Exception e) {
+          if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+          }
+          throw new CompletionException(e);
+        }
+      };
     }
 
     @Override
     public CacheLoader<? super K, V> cacheLoader() {
       return cache.cacheLoader();
+    }
+
+    @Override
+    public Function<K, V> mappingFunction() {
+      return mappingFunction;
     }
 
     @Override

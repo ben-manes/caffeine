@@ -414,7 +414,8 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys)
+          throws Exception {
         List<Integer> moreKeys = new ArrayList<>(ImmutableList.copyOf(keys));
         for (int i = 0; i < 10; i++) {
           moreKeys.add(ThreadLocalRandom.current().nextInt());

@@ -436,9 +436,16 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
       BiFunction<K, CompletableFuture<V>, CompletableFuture<V>> refreshFunction =
           (k, oldValueFuture) -> {
-            V oldValue = (oldValueFuture == null) ? null : oldValueFuture.join();
-            V newValue = (oldValue == null) ? loader.load(key) : loader.reload(key, oldValue);
-            return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
+            try {
+              V oldValue = (oldValueFuture == null) ? null : oldValueFuture.join();
+              V newValue = (oldValue == null) ? loader.load(key) : loader.reload(key, oldValue);
+              return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
+            } catch (Exception e) {
+              if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+              }
+              return LocalCache.throwUnchecked(e);
+            }
           };
       cache.executor().execute(() -> {
         try {
