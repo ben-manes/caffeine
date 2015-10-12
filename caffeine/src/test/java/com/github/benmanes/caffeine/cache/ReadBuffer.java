@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
-import com.github.benmanes.caffeine.locks.NonReentrantLock;
-
 /**
  * A skeletal implementation of a read buffer strategy.
  *

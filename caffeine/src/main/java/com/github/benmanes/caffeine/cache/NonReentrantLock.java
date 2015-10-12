@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.locks;
+package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
@@ -63,7 +63,7 @@ import java.util.concurrent.locks.Lock;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public class NonReentrantLock implements Lock, Serializable {
+final class NonReentrantLock implements Lock, Serializable {
   static final long serialVersionUID = 1L;
 
   /** Synchronizer providing all implementation mechanics */

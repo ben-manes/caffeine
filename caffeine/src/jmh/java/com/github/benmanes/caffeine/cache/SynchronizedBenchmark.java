@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine;
+package com.github.benmanes.caffeine.cache;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -26,7 +26,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
-import com.github.benmanes.caffeine.locks.NonReentrantLock;
+import com.github.benmanes.caffeine.cache.NonReentrantLock;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

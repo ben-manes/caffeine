@@ -63,7 +63,6 @@ import com.github.benmanes.caffeine.cache.LinkedDeque.PeekingIterator;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.locks.NonReentrantLock;
 
 /**
  * An in-memory cache implementation that supports full concurrency of retrievals, a high expected
