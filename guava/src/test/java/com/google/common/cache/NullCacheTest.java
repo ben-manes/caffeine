@@ -19,16 +19,15 @@ import static com.google.common.cache.TestingCacheLoaders.constantLoader;
 import static com.google.common.cache.TestingCacheLoaders.exceptionLoader;
 import static com.google.common.cache.TestingRemovalListeners.queuingRemovalListener;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import junit.framework.TestCase;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.RemovalCause;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.TestingRemovalListeners.QueuingRemovalListener;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+
+import junit.framework.TestCase;
 
 /**
  * {@link LoadingCache} tests for caches with a maximum size of zero.

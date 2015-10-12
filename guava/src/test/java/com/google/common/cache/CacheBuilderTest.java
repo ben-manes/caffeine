@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.annotations.GwtCompatible;

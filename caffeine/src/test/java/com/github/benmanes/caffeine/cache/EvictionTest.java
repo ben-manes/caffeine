@@ -23,7 +23,6 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
@@ -34,7 +33,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -90,23 +88,6 @@ public final class EvictionTest {
       }
     }
     assertThat(removalListener.rejected, is(1));
-  }
-
-  @Test
-  public void removalNotification() {
-    RemovalNotification<Integer, Integer> sizeOne =
-        new RemovalNotification<>(1, -1, RemovalCause.SIZE);
-    RemovalNotification<Integer, Integer> explicitOne =
-        new RemovalNotification<>(1, -1, RemovalCause.EXPLICIT);
-    RemovalNotification<Integer, Integer> sizeTwo =
-        new RemovalNotification<>(2, -2, RemovalCause.SIZE);
-    assertThat(sizeOne, is(equalTo(explicitOne)));
-    assertThat(sizeTwo, is(not(equalTo(explicitOne))));
-
-    try {
-      sizeOne.setValue(-2);
-      Assert.fail();
-    } catch (UnsupportedOperationException e) {}
   }
 
   /* ---------------- Evict (size/weight) -------------- */

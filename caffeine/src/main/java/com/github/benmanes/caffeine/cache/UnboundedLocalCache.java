@@ -37,7 +37,6 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -127,10 +126,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     executor.execute(() -> removalListener.onRemoval(key, value, cause));
   }
 
-  void notifyRemoval(@Nonnull RemovalNotification<K, V> notification) {
-    notifyRemoval(notification.getKey(), notification.getValue(), notification.getCause());
-  }
-
   boolean hasRemovalListener() {
     return (removalListener != null);
   }
@@ -173,11 +168,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+    K[] notificationKey = (K[]) new Object[1];
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    V[] notificationValue = (V[]) new Object[1];
     data.replaceAll((key, value) -> {
-      if (notification[0] != null) {
-        notifyRemoval(notification[0]);
-        notification[0] = null;
+      if (notificationKey[0] != null) {
+        notifyRemoval(notificationKey[0], notificationValue[0], RemovalCause.REPLACED);
+        notificationValue[0] = null;
+        notificationKey[0] = null;
       }
 
       V newValue = requireNonNull(function.apply(key, value));
@@ -185,13 +183,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
         writer.write(key, newValue);
       }
       if (hasRemovalListener() && (newValue != value)) {
-        notification[0] = new RemovalNotification<>(key, value, RemovalCause.REPLACED);
+        notificationKey[0] = key;
+        notificationValue[0] = value;
       }
 
       return newValue;
     });
-    if (notification[0] != null) {
-      notifyRemoval(notification[0]);
+    if (notificationKey[0] != null) {
+      notifyRemoval(notificationKey[0], notificationValue[0], RemovalCause.REPLACED);
     }
   }
 
@@ -231,19 +230,20 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
-    V nv = data.computeIfPresent(key, (K k, V oldValue) -> {
-      V newValue = statsAware(remappingFunction, false, false).apply(k, oldValue);
+    V[] oldValue = (V[]) new Object[1];
+    RemovalCause[] cause = new RemovalCause[1];
+    V nv = data.computeIfPresent(key, (K k, V value) -> {
+      V newValue = statsAware(remappingFunction, false, false).apply(k, value);
 
-      RemovalCause cause = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
-      if (hasRemovalListener() && (newValue != oldValue)) {
-        notification[0] = new RemovalNotification<>(key, oldValue, cause);
+      cause[0] = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+      if (hasRemovalListener() && (newValue != value)) {
+        oldValue[0] = value;
       }
 
       return newValue;
     });
-    if (notification[0] != null) {
-      notifyRemoval(notification[0]);
+    if (oldValue[0] != null) {
+      notifyRemoval(key, oldValue[0], cause[0]);
     }
     return nv;
   }
@@ -274,22 +274,23 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
-    V nv = data.compute(key, (K k, V oldValue) -> {
-      V newValue = remappingFunction.apply(k, oldValue);
-      if ((oldValue == null) && (newValue == null)) {
+    V[] oldValue = (V[]) new Object[1];
+    RemovalCause[] cause = new RemovalCause[1];
+    V nv = data.compute(key, (K k, V value) -> {
+      V newValue = remappingFunction.apply(k, value);
+      if ((value == null) && (newValue == null)) {
         return null;
       }
 
-      RemovalCause cause = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
-      if (hasRemovalListener() && (oldValue != null) && (newValue != oldValue)) {
-        notification[0] = new RemovalNotification<>(key, oldValue, cause);
+      cause[0] = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+      if (hasRemovalListener() && (value != null) && (newValue != value)) {
+        oldValue[0] = value;
       }
 
       return newValue;
     });
-    if (notification[0] != null) {
-      notifyRemoval(notification[0]);
+    if (oldValue[0] != null) {
+      notifyRemoval(key, oldValue[0], cause[0]);
     }
     return nv;
   }

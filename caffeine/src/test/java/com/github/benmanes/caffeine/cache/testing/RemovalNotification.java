@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.testing;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,6 +23,9 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 
 /**
  * A notification of the removal of a single entry. The key and/or value may be null if they were

@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
 
@@ -63,7 +62,8 @@ class TestingRemovalListeners {
 
     @Override
     public void onRemoval(K key, V value, RemovalCause cause) {
-      add(new RemovalNotification<>(key, value, cause));
+      add(RemovalNotification.create(key, value,
+          com.google.common.cache.RemovalCause.valueOf(cause.name())));
     }
   }
 
@@ -78,7 +78,8 @@ class TestingRemovalListeners {
     @Override
     public void onRemoval(K key, V value, RemovalCause cause) {
       count.incrementAndGet();
-      lastNotification = new RemovalNotification<>(key, value, cause);
+      lastNotification = RemovalNotification.create(key, value,
+          com.google.common.cache.RemovalCause.valueOf(cause.name()));
     }
 
     public int getCount() {

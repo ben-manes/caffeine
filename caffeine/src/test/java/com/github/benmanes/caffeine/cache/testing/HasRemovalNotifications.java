@@ -32,7 +32,6 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 

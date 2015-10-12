@@ -22,7 +22,6 @@ import java.util.concurrent.RejectedExecutionException;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 
 /**
  * Some common removal listener implementations for tests.
