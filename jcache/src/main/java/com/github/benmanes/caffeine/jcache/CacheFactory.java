@@ -127,7 +127,7 @@ final class CacheFactory {
       this.executor = USE_DIRECT_EXECUTOR ? Runnable::run : ForkJoinPool.commonPool();
       this.dispatcher = new EventDispatcher<>(executor);
 
-      caffeine.name(cacheName::toString).executor(executor);
+      caffeine.executor(executor);
       if (config.getCacheLoaderFactory() != null) {
         cacheLoader = config.getCacheLoaderFactory().create();
       }

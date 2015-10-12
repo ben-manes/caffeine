@@ -67,8 +67,6 @@ tasks.withType(Test) {
       threadCount = 6
     }
   }
-  systemProperty 'caffeine.tracing.enabled', 'false'
-
   // ensure tasks don't overwrite the default report directories used by the 'test' task
   reports.html.destination = "${buildDir}/reports/${name}"
   reports.junitXml.destination = "${buildDir}/reports/${name}/results"

@@ -19,8 +19,6 @@ import java.util.function.Function;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.caffeine.CaffeineBinaryTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.caffeine.CaffeineTextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
 
@@ -32,8 +30,6 @@ import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTr
 public enum TraceFormat {
   ADDRESS(AddressTraceReader::new),
   ARC(ArcTraceReader::new),
-  CAFFEINE_BINARY(CaffeineBinaryTraceReader::new),
-  CAFFEINE_TEXT(CaffeineTextTraceReader::new),
   LIRS(LirsTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new);
 

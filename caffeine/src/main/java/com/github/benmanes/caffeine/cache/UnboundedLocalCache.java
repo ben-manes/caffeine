@@ -40,7 +40,6 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
 /**
  * An in-memory cache that has no capabilities for bounding the map. This implementation provides
@@ -54,7 +53,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   final CacheWriter<K, V> writer;
   final Executor executor;
   final Ticker ticker;
-  final long id;
 
   transient Set<K> keySet;
   transient Collection<V> values;
@@ -68,7 +66,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     this.statsCounter = builder.getStatsCounterSupplier().get();
     this.removalListener = builder.getRemovalListener(async);
     this.isRecordingStats = builder.isRecordingStats();
-    this.id = tracer().register(builder.name());
     this.writer = builder.getCacheWriter();
     this.executor = builder.getExecutor();
     this.ticker = builder.getTicker();
@@ -79,7 +76,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public V getIfPresent(Object key, boolean recordStats) {
     V value = data.get(key);
-    tracer().recordRead(id, key);
 
     if (recordStats) {
       if (value == null) {
@@ -102,7 +98,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     int misses = 0;
     Map<K, V> result = new LinkedHashMap<>();
     for (Object key : keys) {
-      tracer().recordRead(id, key);
       V value = data.get(key);
       if (value == null) {
         misses++;
@@ -179,7 +174,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
     data.replaceAll((key, value) -> {
-      tracer().recordWrite(id, key, 1);
       if (notification[0] != null) {
         notifyRemoval(notification[0]);
         notification[0] = null;
@@ -204,7 +198,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
       boolean isAsync) {
     requireNonNull(mappingFunction);
-    tracer().recordWrite(id, key, 1);
 
     // optimistic fast path due to computeIfAbsent always locking
     V value = data.get(key);
@@ -229,7 +222,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public V computeIfPresent(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     requireNonNull(remappingFunction);
-    tracer().recordWrite(id, key, 1);
 
     // optimistic fast path due to computeIfAbsent always locking
     if (!data.containsKey(key)) {
@@ -279,8 +271,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
    * @return the new value associated with the specified key, or null if none
    */
   V remap(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-    tracer().recordWrite(id, key, 1);
-
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
     RemovalNotification<K, V>[] notification = new RemovalNotification[1];
@@ -312,7 +302,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public void clear() {
-    if (!hasRemovalListener() && !Tracer.isEnabled() && (writer == CacheWriter.disabledWriter())) {
+    if (!hasRemovalListener() && (writer == CacheWriter.disabledWriter())) {
       data.clear();
       return;
     }
@@ -361,7 +351,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return value;
     });
 
-    tracer().recordWrite(id, key, 1);
     if (hasRemovalListener() && (oldValue[0] != null) && (oldValue[0] != value)) {
       notifyRemoval(key, oldValue[0], RemovalCause.REPLACED);
     }
@@ -379,13 +368,12 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       wasAbsent[0] = true;
       return value;
     });
-    tracer().recordWrite(id, key, 1);
     return wasAbsent[0] ? null : val;
   }
 
   @Override
   public void putAll(Map<? extends K, ? extends V> map) {
-    if (!hasRemovalListener() && !Tracer.isEnabled() && (writer == CacheWriter.disabledWriter())) {
+    if (!hasRemovalListener() && (writer == CacheWriter.disabledWriter())) {
       data.putAll(map);
       return;
     }
@@ -406,7 +394,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       oldValue[0] = v;
       return null;
     });
-    tracer().recordDelete(id, key);
 
     if (hasRemovalListener() && (oldValue[0] != null)) {
       notifyRemoval(castKey, oldValue[0], RemovalCause.EXPLICIT);
@@ -440,7 +427,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     if (hasRemovalListener() && removed) {
       notifyRemoval(castKey, oldValue[0], RemovalCause.EXPLICIT);
     }
-    tracer().recordDelete(id, key);
     return removed;
   }
 
@@ -461,7 +447,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     if (hasRemovalListener() && (oldValue[0] != null) && (oldValue[0] != value)) {
       notifyRemoval(key, value, RemovalCause.REPLACED);
     }
-    tracer().recordWrite(id, key, 1);
     return oldValue[0];
   }
 
@@ -487,7 +472,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     if (hasRemovalListener() && replaced && (prev[0] != newValue)) {
       notifyRemoval(key, prev[0], RemovalCause.REPLACED);
     }
-    tracer().recordWrite(id, key, 1);
     return replaced;
   }
 

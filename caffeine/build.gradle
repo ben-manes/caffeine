@@ -19,8 +19,6 @@ plugins.withType(EclipsePlugin) {
 }
 
 dependencies {
-  compile project(':tracing:api')
-
   testCompile libraries.guava
   testCompile libraries.ycsb
   testCompile test_libraries.testng
@@ -52,7 +50,6 @@ dependencies {
 bundle {
   instruction 'Import-Package', [
     'sun.misc.*',
-    'com.github.benmanes.caffeine.cache.tracing',
     'resolution:=optional'
   ].join(';')
   instruction 'Export-Package', [

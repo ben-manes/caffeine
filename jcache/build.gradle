@@ -57,7 +57,6 @@ task testCompatibilityKit(type: Test, group: 'Build', description: 'Runs the JCa
 
   def pkg = 'com.github.benmanes.caffeine.jcache'
   systemProperty 'java.net.preferIPv4Stack', 'true'
-  systemProperty 'caffeine.tracing.enabled', 'false'
   systemProperty 'javax.cache.Cache', "${pkg}.CacheProxy"
   systemProperty 'javax.cache.Cache.Entry', "${pkg}.EntryProxy"
   systemProperty 'javax.cache.CacheManager', "${pkg}.CacheManagerImpl"

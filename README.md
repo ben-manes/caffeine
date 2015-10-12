@@ -36,10 +36,9 @@ Caffeine provide flexible construction to create a cache with a combination of t
  * accumulation of cache access [statistics][statistics]
 
 In addition, Caffeine offers the following extensions:
- * [tracing][tracing]
- * [simulation][simulator]
- * [Guava adapters][guava-adapter]
  * [JSR-107 JCache][jsr107]
+ * [Guava adapters][guava-adapter]
+ * [Simulation][simulator]
 
 #### Coming Soon in 2.0
 
@@ -58,7 +57,6 @@ compile 'com.github.ben-manes.caffeine:caffeine:1.3.3'
 // Optional extensions
 compile 'com.github.ben-manes.caffeine:guava:1.3.3'
 compile 'com.github.ben-manes.caffeine:jcache:1.3.3'
-compile 'com.github.ben-manes.caffeine:tracing-async:1.3.3'
 ```
 
 Snapshots of the development version are available in
@@ -76,7 +74,6 @@ Snapshots of the development version are available in
 [listener]: https://github.com/ben-manes/caffeine/wiki/Removal
 [writer]: https://github.com/ben-manes/caffeine/wiki/Writer
 [statistics]: https://github.com/ben-manes/caffeine/wiki/Statistics
-[tracing]: https://github.com/ben-manes/caffeine/wiki/Tracing
 [simulator]: https://github.com/ben-manes/caffeine/wiki/Simulator
 [guava-adapter]: https://github.com/ben-manes/caffeine/wiki/Guava
 [jsr107]: https://github.com/ben-manes/caffeine/wiki/JCache

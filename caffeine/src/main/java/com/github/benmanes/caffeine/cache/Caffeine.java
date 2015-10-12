@@ -38,7 +38,6 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
 /**
  * A builder of {@link AsyncLoadingCache}, {@link LoadingCache}, and {@link Cache} instances
@@ -718,67 +717,6 @@ public final class Caffeine<K, V> {
     return (statsCounterSupplier == null)
         ? DISABLED_STATS_COUNTER_SUPPLIER
         : ENABLED_STATS_COUNTER_SUPPLIER;
-  }
-
-  /**
-   * Specifies the supplier that provides the name of the cache. The cache name is used if tracing
-   * is enabled to help identify the instance when simulating the alternative configurations. The
-   * name of the cache is not required to be unique. If a strategy is not explicitly configured then
-   * a best effort guess of the calling class is used as the identifier.
-   *
-   * @param nameSupplier a supplier instance that returns the name of a cache
-   * @return this builder instance
-   * @throws IllegalStateException if a removal listener was already set
-   * @throws NullPointerException if the specified supplier is null
-   */
-  @Nonnull
-  public Caffeine<K, V> name(@Nonnull Supplier<String> nameSupplier) {
-    requireState(this.nameSupplier == null);
-    this.nameSupplier = requireNonNull(nameSupplier);
-    return this;
-  }
-
-  @Nonnull
-  String name() {
-    if (Tracer.isEnabled()) {
-      Supplier<String> named = (nameSupplier == null) ? Caffeine::callerClassName : nameSupplier;
-      return named.get();
-    }
-    return "";
-  }
-
-  /** Returns a best effort guess of the calling class's simple name. */
-  @SuppressWarnings({"PMD.AvoidDeeplyNestedIfStmts", "PMD.UselessOverridingMethod"})
-  static String callerClassName() {
-    Class<?>[] classContext = new SecurityManager() {
-      @Override public Class<?>[] getClassContext() {
-        return super.getClassContext();
-      }
-    }.getClassContext();
-    if (classContext != null) {
-      for (Class<?> clazz : classContext) {
-        String pkg = clazz.getPackage().getName();
-        if (!pkg.startsWith("com.github.benmanes.caffeine") && !pkg.startsWith("java")) {
-          String name = clazz.getSimpleName();
-          if (!name.isEmpty()) {
-            int end = name.indexOf('$');
-            return (end == -1) ? name : name.substring(0, end);
-          }
-        }
-      }
-    }
-    for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
-      String className = element.getClassName();
-      if (!className.startsWith("com.github.benmanes.caffeine") && !className.startsWith("java")) {
-        String name = element.getClassName().replaceAll("\\$[0-9]+", "\\$");
-        int start = name.lastIndexOf('$');
-        if (start == -1) {
-          start = name.lastIndexOf('.');
-        }
-        return name.substring(start + 1);
-      }
-    }
-    return "Unknown";
   }
 
   boolean isBounded() {

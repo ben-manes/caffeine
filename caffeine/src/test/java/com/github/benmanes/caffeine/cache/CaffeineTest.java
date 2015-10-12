@@ -22,7 +22,6 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -32,7 +31,6 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.Expiration;
 import com.github.benmanes.caffeine.cache.testing.FakeTicker;
-import com.google.common.base.Suppliers;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -450,31 +448,5 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder().writer(writer);
     assertThat(builder.getCacheWriter(), is(writer));
     builder.build();
-  }
-
-  /* ---------------- named -------------- */
-
-  @Test(expectedExceptions = NullPointerException.class)
-  public void name_null() {
-    Caffeine.newBuilder().name(null);
-  }
-
-  @Test(expectedExceptions = IllegalStateException.class)
-  public void name_twice() {
-    Caffeine.newBuilder().name(() -> "a").name(() -> "b");
-  }
-
-  @Test
-  public void name() {
-    Supplier<String> nameSupplier = () -> "a";
-    Caffeine<?, ?> builder = Caffeine.newBuilder().name(nameSupplier);
-    assertThat(builder.nameSupplier, is(nameSupplier));
-    builder.build();
-  }
-
-  @Test
-  public void name_caller() {
-    String name = Suppliers.memoize(Caffeine::callerClassName).get();
-    assertThat(name, is("MemoizingSupplier"));
   }
 }

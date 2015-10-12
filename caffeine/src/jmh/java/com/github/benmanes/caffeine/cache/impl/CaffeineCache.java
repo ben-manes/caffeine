@@ -20,7 +20,6 @@ import java.util.concurrent.Executors;
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -29,7 +28,6 @@ public final class CaffeineCache<K, V> implements BasicCache<K, V> {
   private final Cache<K, V> cache;
 
   public CaffeineCache(int maximumSize) {
-    System.setProperty(Tracer.TRACING_ENABLED, "false");
     cache = Caffeine.newBuilder()
         .executor(Executors.newWorkStealingPool(1))
         .maximumSize(maximumSize)

@@ -26,7 +26,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
 /**
  * An in-memory cache providing thread safety and atomicity guarantees. This interface provides an
@@ -58,11 +57,6 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Returns the {@link Ticker} used by this cache for statistics. */
   @Nonnull
   Ticker statsTicker();
-
-  /** Returns the {@link Tracer} used by this cache. */
-  default Tracer tracer() {
-    return Tracer.getDefault();
-  }
 
   /** See {@link Cache#estimatedSize()}. */
   @Nonnegative
