@@ -25,7 +25,10 @@ allprojects {
   apply from: "${rootDir}/gradle/eclipse.gradle"
 
   repositories {
-    maven { url 'https://jitpack.io' }
+    maven { 
+      name 'jitpack'
+      url 'https://jitpack.io'
+    }
     mavenCentral()
     jcenter()
   }

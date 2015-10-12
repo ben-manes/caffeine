@@ -34,12 +34,11 @@ ext {
     guava: '19.0-rc2',
     javapoet: '1.3.0',
     jcache: '1.0.0',
-    jool: '0.9.7',
     joor: '0.9.5',
-    jsr305: '3.0.0',
+    jsr305: '3.0.1',
     stream: '2.9.0',
     univocity_parsers: '1.5.6',
-    ycsb: '0.3.1',
+    ycsb: '0.4.0-RC2',
   ]
   test_versions = [
     awaitility: '1.6.5',
@@ -50,7 +49,7 @@ ext {
     jimfs: '1.0',
     junit: '4.12',
     mockito: '2.0.31-beta',
-    testng: '6.9.6',
+    testng: '6.9.7',
     truth: '0.24',
   ]
   benchmark_versions = [
@@ -63,14 +62,14 @@ ext {
     jackrabbit: '1.3.7',
     jamm: '0.3.1',
     java_object_layout: '0.3.2',
-    koloboke: '0.6.7',
+    koloboke: '0.6.8',
     slf4j: '1.7.12',
   ]
   plugin_versions = [
     bundle: '0.6.2',
     checkstyle: '6.7',
     coveralls: '2.4.0',
-    extra_conf: '3.0.2',
+    extra_conf: '3.0.3',
     error_prone: '0.0.8',
     jmh: '0.2.0',
     nexus: '2.3.1',
@@ -89,7 +88,6 @@ ext {
     guava: "com.google.guava:guava:${versions.guava}",
     javapoet: "com.squareup:javapoet:${versions.javapoet}",
     jcache: "javax.cache:cache-api:${versions.jcache}",
-    jool: "org.jooq:jool:${versions.jool}",
     joor: "org.jooq:joor:${versions.joor}",
     jsr305: "com.google.code.findbugs:jsr305:${versions.jsr305}",
     stream: "com.clearspring.analytics:stream:${versions.stream}",

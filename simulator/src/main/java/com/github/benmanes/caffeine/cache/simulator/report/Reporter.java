@@ -18,7 +18,7 @@ import java.io.IOException;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 
 /**
- * A reporter that collects the results and prints output.
+ * A reporter that collects the results and prints the output.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

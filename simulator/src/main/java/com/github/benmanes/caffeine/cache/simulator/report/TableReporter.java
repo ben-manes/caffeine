@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.report;
 
 import java.util.List;
 
-import org.jooq.lambda.Seq;
-
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;
@@ -38,10 +36,9 @@ public final class TableReporter extends TextReporter {
   @Override
   protected String assemble(List<PolicyStats> results) {
     String[][] data = new String[results.size()][headers().length];
-    Seq.seq(results).zipWithIndex().forEach(statsAndIndex -> {
-      PolicyStats policyStats = statsAndIndex.v1;
-      int index = statsAndIndex.v2.intValue();
-      data[index] = new String[] {
+    for (int i = 0; i < results.size(); i++) {
+      PolicyStats policyStats = results.get(i);
+      data[i] = new String[] {
           policyStats.name(),
           String.format("%.2f %%", 100 * policyStats.hitRate()),
           String.format("%,d", policyStats.hitCount()),
@@ -51,7 +48,7 @@ public final class TableReporter extends TextReporter {
           steps(policyStats),
           policyStats.stopwatch().toString()
       };
-    });
+    }
     return FlipTable.of(headers(), data);
   }
 

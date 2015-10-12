@@ -21,10 +21,6 @@ import java.util.Locale;
 
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
-import com.github.benmanes.caffeine.cache.simulator.admission.tinyCache.TinyCacheWithGhostCache;
-import com.github.benmanes.caffeine.cache.simulator.policy.TinyCache.TinyCachePolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.TinyCache.TinyCachePolicywithGhostCache;
-import com.github.benmanes.caffeine.cache.simulator.policy.TinyCache.WindowTinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
@@ -43,6 +39,9 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.InfinispanPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicywithGhostCache;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.WindowTinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.typesafe.config.Config;
@@ -109,17 +108,13 @@ public final class PolicyBuilder {
       case "sketch":
         if (strategy.equalsIgnoreCase("WindowTinyLfu")) {
           return new WindowTinyLfuPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("TinyCache_GhostCache")) {
+          return new TinyCachePolicywithGhostCache(type, config);
+        } else if (strategy.equalsIgnoreCase("TinyCache")) {
+          return new TinyCachePolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("WindowTinyCache")) {
+          return new WindowTinyCachePolicy(type, config);
         }
-        if (strategy.equalsIgnoreCase("TinyCache_GhostCache")) {
-            return new TinyCachePolicywithGhostCache(type,config);
-        }
-        if (strategy.equalsIgnoreCase("TinyCache")) {
-            return new TinyCachePolicy(type,config);
-        }
-        if (strategy.equalsIgnoreCase("WindowTinyCache")) {
-            return new WindowTinyCachePolicy(type,config);
-        }
-        
         break;
       case "irr":
         if (strategy.equalsIgnoreCase("Lirs")) {

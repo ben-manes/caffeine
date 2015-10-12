@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
-import com.github.benmanes.caffeine.cache.simulator.admission.tinyCache.TinyCacheSketch;
+import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheSketch;
 import com.typesafe.config.Config;
 
 /**

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.admission.tinyCache;
+package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 
 /**
  * This is a hash function and parser tp simplify parsing the hash value, it split it to . This
@@ -34,7 +34,7 @@ public final class HashFunctionParser {
 
   public HashFunctionParser(int nrsets) {
     this.nrSets = nrsets;
-    fpaux = new HashedItem(fpMask, fpMask, fpMask,0L);
+    fpaux = new HashedItem(fpMask, fpMask, fpMask, 0L);
   }
 
   public HashedItem createHash(Object item) {
@@ -59,10 +59,9 @@ public final class HashFunctionParser {
     h >>>= 6;
     fpaux.set = (int) ((h & Long.MAX_VALUE) % nrSets);
 
-    fpaux.value = (item<<1)|1;
-    if(item== 0)
-    {
-    	fpaux.value=1;
+    fpaux.value = (item << 1) | 1;
+    if (item == 0) {
+      fpaux.value = 1;
     }
     return fpaux;
   }

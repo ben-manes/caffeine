@@ -7,7 +7,6 @@ dependencies {
   compile project(':caffeine')
 
   compile libraries.akka
-  compile libraries.jool
   compile libraries.joor
   compile libraries.guava
   compile libraries.stream
