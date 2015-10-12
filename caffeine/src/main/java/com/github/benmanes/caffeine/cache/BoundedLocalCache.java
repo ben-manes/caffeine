@@ -754,6 +754,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   void scheduleDrainBuffers() {
     if (evictionLock.tryLock()) {
+      if (drainStatus() == PROCESSING) {
+        return;
+      }
       try {
         lazySetDrainStatus(PROCESSING);
         executor().execute(drainBuffersTask);
@@ -2467,6 +2470,10 @@ final class BLCHeader {
         default:
           throw new IllegalStateException();
       }
+    }
+
+    int drainStatus() {
+      return UnsafeAccess.UNSAFE.getInt(this, DRAIN_STATUS_OFFSET);
     }
 
     void lazySetDrainStatus(int drainStatus) {
