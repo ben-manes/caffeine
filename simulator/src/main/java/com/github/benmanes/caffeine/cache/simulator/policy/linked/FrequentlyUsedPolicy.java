@@ -17,15 +17,15 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * Least/Most Frequency Used in O(1) time as described in <a href="http://dhruvbird.com/lfu.pdf"> An
@@ -37,7 +37,7 @@ public final class FrequentlyUsedPolicy implements Policy {
   public enum EvictionPolicy { LFU, MFU }
 
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
+  private final Long2ObjectMap<Node> data;
   private final EvictionPolicy policy;
   private final FrequencyNode freq0;
   private final Admittor admittor;
@@ -46,12 +46,12 @@ public final class FrequentlyUsedPolicy implements Policy {
   public FrequentlyUsedPolicy(String name, Admittor admittor,
       Config config, EvictionPolicy frequency) {
     BasicSettings settings = new BasicSettings(config);
-    this.policy = requireNonNull(frequency);
+    this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
+    this.policy = requireNonNull(frequency);
     this.policyStats = new PolicyStats(name);
     this.admittor = requireNonNull(admittor);
     this.freq0 = new FrequencyNode(0);
-    this.data = new HashMap<>();
   }
 
   @Override
@@ -60,7 +60,7 @@ public final class FrequentlyUsedPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     admittor.record(key);
@@ -88,7 +88,7 @@ public final class FrequentlyUsedPolicy implements Policy {
   }
 
   /** Adds the entry, creating an initial frequency list of 1 if necessary, and evicts if needed. */
-  private void onMiss(Object key) {
+  private void onMiss(long key) {
     FrequencyNode freq1 = (freq0.next.count == 1)
         ? freq0.next
         : new FrequencyNode(1, freq0);
@@ -188,20 +188,20 @@ public final class FrequentlyUsedPolicy implements Policy {
 
   /** A cache entry on the frequency node's chain. */
   static final class Node {
-    private final Object key;
+    private final long key;
 
     private FrequencyNode freq;
     private Node prev;
     private Node next;
 
     public Node(FrequencyNode freq) {
+      this.key = Long.MIN_VALUE;
       this.freq = freq;
       this.prev = this;
       this.next = this;
-      this.key = null;
     }
 
-    public Node(Object key, FrequencyNode freq) {
+    public Node(long key, FrequencyNode freq) {
       this.next = null;
       this.prev = null;
       this.freq = freq;

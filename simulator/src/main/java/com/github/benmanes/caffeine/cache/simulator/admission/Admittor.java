@@ -26,7 +26,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission;
 public interface Admittor {
 
   /** Records the access to the entry. */
-  void record(Object key);
+  void record(long key);
 
   /**
    * Returns if the candidate should be added to the cache and the page replacement policy's chosen
@@ -36,7 +36,7 @@ public interface Admittor {
    * @param victimKey the key to the entry the policy recommends removing
    * @return if the candidate should be added and the victim removed due to eviction
    */
-  boolean admit(Object candidateKey, Object victimKey);
+  boolean admit(long candidateKey, long victimKey);
 
   /** Returns an admittor that admits every candidate. */
   static Admittor always() {
@@ -48,10 +48,10 @@ enum AlwaysAdmit implements Admittor {
   INSTANCE;
 
   @Override
-  public void record(Object key) {}
+  public void record(long key) {}
 
   @Override
-  public boolean admit(Object candidateKey, Object victimKey) {
+  public boolean admit(long candidateKey, long victimKey) {
     return true;
   }
 }

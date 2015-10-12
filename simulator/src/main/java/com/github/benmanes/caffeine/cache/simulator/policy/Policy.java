@@ -26,7 +26,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 public interface Policy {
 
   /** Records that the entry was accessed. */
-  void record(Comparable<Object> key);
+  void record(long key);
 
   /** Indicates that the recording has completed. */
   default void finished() {}

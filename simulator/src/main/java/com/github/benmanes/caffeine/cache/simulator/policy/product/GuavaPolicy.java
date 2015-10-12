@@ -45,7 +45,7 @@ public final class GuavaPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     boolean[] hit = { true };
     try {
       cache.get(key, () -> {

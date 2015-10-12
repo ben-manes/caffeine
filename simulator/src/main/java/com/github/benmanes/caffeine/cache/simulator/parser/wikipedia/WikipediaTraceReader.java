@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.wikipedia;
 
 import java.io.IOException;
-import java.util.stream.Stream;
+import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
@@ -33,7 +33,7 @@ public final class WikipediaTraceReader extends TextTraceReader<Long> {
   }
 
   @Override
-  public Stream<Long> events() throws IOException {
-    return lines().map(Long::parseLong);
+  public LongStream events() throws IOException {
+    return lines().mapToLong(Long::parseLong);
   }
 }

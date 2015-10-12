@@ -66,7 +66,7 @@ public final class Cache2kPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     Object value = cache.peek(key);
     if (value == null) {
       policyStats.recordMiss();

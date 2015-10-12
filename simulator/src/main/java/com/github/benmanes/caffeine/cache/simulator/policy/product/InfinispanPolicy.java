@@ -46,7 +46,7 @@ public final class InfinispanPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     Object value = cache.get(key);
     if (value == null) {
       policyStats.recordMiss();

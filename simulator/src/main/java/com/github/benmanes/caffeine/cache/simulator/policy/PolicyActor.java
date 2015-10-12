@@ -17,14 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-
 import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import akka.dispatch.BoundedMessageQueueSemantics;
 import akka.dispatch.RequiresMessageQueue;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 /**
  * An actor that proxies to the page replacement policy.
@@ -41,10 +40,9 @@ public final class PolicyActor extends UntypedActor
 
   @Override
   public void onReceive(Object msg) {
-    if (msg instanceof List) {
-      @SuppressWarnings("unchecked")
-      List<Comparable<Object>> events = (List<Comparable<Object>>) msg;
-      events.forEach(this::process);
+    if (msg instanceof LongArrayList) {
+      LongArrayList events = (LongArrayList) msg;
+      process(events);
     } else if (msg == Message.FINISH) {
       policy.finished();
       getSender().tell(policy.stats(), ActorRef.noSender());
@@ -56,10 +54,12 @@ public final class PolicyActor extends UntypedActor
     }
   }
 
-  private void process(Comparable<Object> o) {
+  private void process(LongArrayList events) {
     policy.stats().stopwatch().start();
     try {
-      policy.record(o);
+      for (int i = 0; i < events.size(); i++) {
+        policy.record(events.getLong(i));
+      }
     } catch (Exception e) {
       context().system().log().error(e, "");
       getSender().tell(Message.ERROR, ActorRef.noSender());

@@ -18,13 +18,13 @@ package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * The ClockPro algorithm. This algorithm differs from LIRS by replacing the LRU stacks with Clock
@@ -48,8 +48,8 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ClockProPolicy implements Policy {
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
 
   // Points to the hot page with the largest recency. The position of this hand actually serves as a
   // threshold of being a hot page. Any hot pages swept by the hand turn into cold ones. For the
@@ -83,16 +83,16 @@ public final class ClockProPolicy implements Policy {
   public ClockProPolicy(String name, Config config) {
     BasicSettings settings = new BasicSettings(config);
     maximumColdSize = settings.maximumSize();
+    data = new Long2ObjectOpenHashMap<>();
     maximumSize = settings.maximumSize();
     policyStats = new PolicyStats(name);
-    data = new HashMap<>();
 
     // All the hands move in the clockwise direction
     handHot = handCold = handTest = null;
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     Node node = data.get(key);
 
     if (node == null) {
@@ -104,7 +104,7 @@ public final class ClockProPolicy implements Policy {
     }
   }
 
-  private void onMiss(Object key) {
+  private void onMiss(long key) {
     policyStats.recordOperation();
     policyStats.recordMiss();
 
@@ -303,14 +303,14 @@ public final class ClockProPolicy implements Policy {
   }
 
   private static final class Node {
-    final Object key;
+    final long key;
     boolean marked;
     Status status;
 
     Node prev;
     Node next;
 
-    public Node(Object key) {
+    public Node(long key) {
       status = Status.COLD;
       this.key = key;
     }

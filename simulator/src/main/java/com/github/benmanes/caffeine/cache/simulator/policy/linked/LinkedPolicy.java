@@ -15,10 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -27,6 +25,9 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+
 /**
  * A cache that uses a linked list, in either insertion or access order, to implement simple
  * page replacement algorithms.
@@ -34,8 +35,8 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LinkedPolicy implements Policy {
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
   private final EvictionPolicy policy;
   private final Admittor admittor;
   private final int maximumSize;
@@ -43,9 +44,9 @@ public final class LinkedPolicy implements Policy {
 
   public LinkedPolicy(String name, Admittor admittor, Config config, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
+    this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
-    this.data = new HashMap<>();
     this.sentinel = new Node();
     this.admittor = admittor;
     this.policy = policy;
@@ -57,7 +58,7 @@ public final class LinkedPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     Node old = data.get(key);
     admittor.record(key);
     if (old == null) {
@@ -169,20 +170,20 @@ public final class LinkedPolicy implements Policy {
     private final Node sentinel;
 
     private boolean marked;
-    private Object key;
     private Node prev;
     private Node next;
+    private long key;
 
     /** Creates a new sentinel node. */
     public Node() {
+      this.key = Long.MIN_VALUE;
       this.sentinel = this;
       this.prev = this;
       this.next = this;
-      this.key = null;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(Object key, Node sentinel) {
+    public Node(long key, Node sentinel) {
       this.sentinel = sentinel;
       this.key = key;
     }
@@ -201,12 +202,12 @@ public final class LinkedPolicy implements Policy {
       prev.next = next;
       next.prev = prev;
       prev = next = null;
-      key = null;
+      key = Long.MIN_VALUE;
     }
 
     /** Moves the node to the head. */
     public void moveToHead() {
-      requireNonNull(key);
+      checkState(key != Long.MIN_VALUE);
 
       // unlink
       prev.next = next;

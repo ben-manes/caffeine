@@ -25,7 +25,7 @@ import com.typesafe.config.Config;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-public final class TinyCacheAdapter<E> implements Frequency<E> {
+public final class TinyCacheAdapter implements Frequency {
   // the actual data structure.
   TinyCacheSketch tcs;
   // number of (independent sets)
@@ -45,15 +45,14 @@ public final class TinyCacheAdapter<E> implements Frequency<E> {
   }
 
   @Override
-  public int frequency(E e) {
-    return tcs.countItem(e.hashCode());
+  public int frequency(long e) {
+    return tcs.countItem(e);
   }
 
   @Override
-  public void increment(E e) {
-    int hash = e.hashCode();
-    if (tcs.countItem(hash) < maxcount) {
-      tcs.addItem(hash);
+  public void increment(long e) {
+    if (tcs.countItem(e) < maxcount) {
+      tcs.addItem(e);
     }
   }
 }

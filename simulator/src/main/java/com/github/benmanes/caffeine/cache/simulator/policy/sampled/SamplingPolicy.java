@@ -18,9 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -31,14 +29,17 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Ticker;
 import com.typesafe.config.Config;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+
 /**
  * A cache that uses a sampled array of entries to implement simple page replacement algorithms.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SamplingPolicy implements Policy {
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
   private final EvictionPolicy policy;
   private final Sample sampleStrategy;
   private final Admittor admittor;
@@ -52,12 +53,12 @@ public final class SamplingPolicy implements Policy {
     SamplingSettings settings = new SamplingSettings(config);
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
+    this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];
     this.ticker = new CountTicker();
-    this.data = new HashMap<>();
     this.admittor = admittor;
     this.policy = policy;
   }
@@ -68,7 +69,7 @@ public final class SamplingPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     Node node = data.get(key);
     long now = ticker.read();
     admittor.record(key);
@@ -230,7 +231,7 @@ public final class SamplingPolicy implements Policy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    private final Object key;
+    private final long key;
     private final long insertionTime;
 
     private long accessTime;
@@ -238,7 +239,7 @@ public final class SamplingPolicy implements Policy {
     private int index;
 
     /** Creates a new node. */
-    public Node(Object key, int index, long tick) {
+    public Node(long key, int index, long tick) {
       this.insertionTime = tick;
       this.accessTime = tick;
       this.index = index;

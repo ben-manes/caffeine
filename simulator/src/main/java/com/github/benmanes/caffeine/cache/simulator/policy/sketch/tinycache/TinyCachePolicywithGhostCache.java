@@ -22,7 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
 public final class TinyCachePolicywithGhostCache implements Policy {
-  private final  TinyCacheWithGhostCache tinyCache;
+  private final TinyCacheWithGhostCache tinyCache;
   private final PolicyStats policyStats;
 
   public TinyCachePolicywithGhostCache(String name, Config config) {
@@ -33,13 +33,13 @@ public final class TinyCachePolicywithGhostCache implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
-    if (tinyCache.contains(key.hashCode())) {
-      tinyCache.recordItem(key.hashCode());
+  public void record(long key) {
+    if (tinyCache.contains(key)) {
+      tinyCache.recordItem(key);
       policyStats.recordHit();
     } else {
-      boolean evicted = tinyCache.addItem(key.hashCode());
-      tinyCache.recordItem(key.hashCode());
+      boolean evicted = tinyCache.addItem(key);
+      tinyCache.recordItem(key);
       policyStats.recordMiss();
       if (evicted) {
         policyStats.recordEviction();

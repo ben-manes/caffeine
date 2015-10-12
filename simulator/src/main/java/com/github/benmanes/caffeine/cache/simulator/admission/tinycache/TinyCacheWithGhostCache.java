@@ -36,8 +36,6 @@ public final class TinyCacheWithGhostCache {
   private final int sampleSize;
   private final TinyCacheSketch ghostCache;
 
-
-
   public TinyCacheWithGhostCache(int nrSets, int itemsPerSet, int randomSeed) {
     chainIndex = new long[nrSets];
     isLastIndex = new long[nrSets];

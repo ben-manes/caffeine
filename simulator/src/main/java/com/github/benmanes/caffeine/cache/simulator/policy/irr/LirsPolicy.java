@@ -16,18 +16,18 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * Low Inter-reference Recency Set (LIRS) algorithm. This algorithm organizes blocks by their
@@ -52,8 +52,8 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LirsPolicy implements Policy {
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
   private final List<Object> evicted;
   private final Node headNR;
   private final Node headS;
@@ -79,17 +79,17 @@ public final class LirsPolicy implements Policy {
     this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
     this.stackMoveDistance = (int) (settings.maximumSize() * settings.percentFastPath());
     this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
+    this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.evicted = new ArrayList<>();
-    this.data = new HashMap<>();
     this.headNR = new Node();
     this.headS = new Node();
     this.headQ = new Node();
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -363,7 +363,7 @@ public final class LirsPolicy implements Policy {
   // Each entry in the stack records the LIR/HIR status of a block and its residence status,
   // indicating whether or not the block resides in the cache.
   final class Node {
-    final Object key;
+    final long key;
 
     Status status;
     int stackMove;
@@ -380,18 +380,18 @@ public final class LirsPolicy implements Policy {
     boolean isInNR;
 
     Node() {
-      key = null;
+      key = Long.MIN_VALUE;
       prevS = nextS = this;
       prevQ = nextQ = this;
       prevNR = nextNR = this;
     }
 
-    Node(Object key) {
+    Node(long key) {
       this.key = key;
     }
 
     public boolean isInStack(StackType stackType) {
-      requireNonNull(key);
+      checkState(key != Long.MIN_VALUE);
 
       if (stackType == StackType.S) {
         return isInS;

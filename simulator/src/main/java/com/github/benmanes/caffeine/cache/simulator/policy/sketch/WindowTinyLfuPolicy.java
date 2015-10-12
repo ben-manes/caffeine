@@ -17,9 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
@@ -27,6 +24,9 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * An adaption of the TinyLfu policy that adds a temporal admission window. This window allows the
@@ -46,9 +46,9 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class WindowTinyLfuPolicy implements Policy {
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final int recencyMoveDistance;
-  private final Map<Object, Node> data;
   private final Admittor admittor;
   private final Node headEden;
   private final Node headMain;
@@ -64,9 +64,9 @@ public final class WindowTinyLfuPolicy implements Policy {
     this.maxMain = (int) (settings.maximumSize() * settings.percentMain());
     this.maxEden = settings.maximumSize() - maxMain;
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
+    this.data = new Long2ObjectOpenHashMap<>();
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(config);
-    this.data = new HashMap<>();
     this.headEden = new Node();
     this.headMain = new Node();
   }
@@ -77,7 +77,7 @@ public final class WindowTinyLfuPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -148,7 +148,7 @@ public final class WindowTinyLfuPolicy implements Policy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    final Object key;
+    final long key;
 
     int recencyMove;
     Status status;
@@ -157,13 +157,13 @@ public final class WindowTinyLfuPolicy implements Policy {
 
     /** Creates a new sentinel node. */
     public Node() {
+      this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
-      this.key = null;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(Object key, Status status) {
+    public Node(long key, Status status) {
       this.status = status;
       this.key = key;
     }

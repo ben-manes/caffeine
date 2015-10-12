@@ -17,14 +17,14 @@ package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * An adaption of the 2Q algorithm used by OpenBSD and memcached. Unlike the original 2Q algorithm,
@@ -50,8 +50,8 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class TuQueuePolicy implements Policy {
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
   private final int maximumSize;
 
   private int maxHot;
@@ -71,15 +71,15 @@ public class TuQueuePolicy implements Policy {
     this.headHot = new Node();
     this.headWarm = new Node();
     this.headCold = new Node();
-    this.data = new HashMap<>();
     this.policyStats = new PolicyStats(name);
     this.maximumSize = settings.maximumSize();
+    this.data = new Long2ObjectOpenHashMap<>();
     this.maxHot = (int) (maximumSize * settings.percentHot());
     this.maxWarm = (int) (maximumSize * settings.percentWarm());
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -121,7 +121,7 @@ public class TuQueuePolicy implements Policy {
   }
 
   /** Adds the entry to the cache as HOT, overflowing to the COLD queue, and evicts if necessary. */
-  private void onMiss(Object key) {
+  private void onMiss(long key) {
     Node node = new Node(key);
     node.type = QueueType.HOT;
     node.appendToTail(headHot);
@@ -167,19 +167,19 @@ public class TuQueuePolicy implements Policy {
   }
 
   static final class Node {
-    final Object key;
+    final long key;
 
     Node prev;
     Node next;
     QueueType type;
 
     Node() {
-      this.key = null;
+      this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
-    Node(Object key) {
+    Node(long key) {
       this.key = key;
     }
 
@@ -207,7 +207,7 @@ public class TuQueuePolicy implements Policy {
 
     /** Removes the node from the list. */
     public void remove() {
-      checkState(key != null);
+      checkState(key != Long.MIN_VALUE);
 
       prev.next = next;
       next.prev = prev;

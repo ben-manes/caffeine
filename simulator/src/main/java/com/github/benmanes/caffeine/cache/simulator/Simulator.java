@@ -18,9 +18,10 @@ package com.github.benmanes.caffeine.cache.simulator;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.PrimitiveIterator;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -29,7 +30,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyBuilder;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.report.Reporter;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Iterators;
 import com.typesafe.config.Config;
 
 import akka.actor.ActorRef;
@@ -39,6 +39,7 @@ import akka.routing.ActorRefRoutee;
 import akka.routing.BroadcastRoutingLogic;
 import akka.routing.Routee;
 import akka.routing.Router;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 /**
  * A simulator that broadcasts the recorded cache events to each policy and generates an aggregated
@@ -102,10 +103,16 @@ public final class Simulator extends UntypedActor {
 
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() throws IOException {
-    try (Stream<?> events = eventStream()) {
-      Iterators.partition(events.iterator(), batchSize).forEachRemaining(batch -> {
-        router.route(batch, getSelf());
-      });
+    try (LongStream events = eventStream()) {
+      LongArrayList batch = new LongArrayList(batchSize);
+      for (PrimitiveIterator.OfLong i = events.iterator(); i.hasNext();) {
+        batch.add(i.nextLong());
+        if (batch.size() == batchSize) {
+          router.route(batch, getSelf());
+          batch = new LongArrayList(batchSize);
+        }
+      }
+      router.route(batch, getSelf());
       router.route(Message.FINISH, getSelf());
     } catch (Exception e) {
       router.route(Message.ERROR, getSelf());
@@ -115,9 +122,9 @@ public final class Simulator extends UntypedActor {
   }
 
   /** Returns a stream of trace events. */
-  private Stream<?> eventStream() throws IOException {
+  private LongStream eventStream() throws IOException {
     if (settings.isSynthetic()) {
-      return Synthetic.generate(settings).boxed();
+      return Synthetic.generate(settings);
     }
     String filePath = settings.traceFile().path();
     TraceFormat format = settings.traceFile().format();

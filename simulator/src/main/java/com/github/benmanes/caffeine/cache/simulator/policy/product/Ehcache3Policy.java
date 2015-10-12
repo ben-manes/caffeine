@@ -55,7 +55,7 @@ public final class Ehcache3Policy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     Object value = cache.putIfAbsent(key, key);
     if (value == null) {
       size++;

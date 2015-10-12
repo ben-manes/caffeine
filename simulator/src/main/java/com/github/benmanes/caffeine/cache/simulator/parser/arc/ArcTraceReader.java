@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser.arc;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.stream.Stream;
+import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
@@ -34,7 +34,7 @@ public final class ArcTraceReader extends TextTraceReader<Long> {
   }
 
   @Override
-  public Stream<Long> events() throws IOException {
+  public LongStream events() throws IOException {
     return lines().flatMapToLong(line -> {
       String[] array = line.split(" ", 3);
       long startBlock = Long.parseLong(array[0]);
@@ -44,6 +44,6 @@ public final class ArcTraceReader extends TextTraceReader<Long> {
         block[i] = startBlock + i;
       }
       return Arrays.stream(block);
-    }).boxed();
+    });
   }
 }

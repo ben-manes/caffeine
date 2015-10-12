@@ -43,7 +43,7 @@ public final class CaffeinePolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     boolean[] hit = { true };
     cache.get(key, k -> {
       hit[0] = false;

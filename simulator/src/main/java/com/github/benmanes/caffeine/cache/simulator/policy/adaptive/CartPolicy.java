@@ -16,16 +16,15 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.adaptive;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * CAR with Temporal filtering policy. This algorithm differs from CAR by maintaining a temporal
@@ -42,8 +41,8 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CartPolicy implements Policy {
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
   private final int maximumSize;
 
   private final Node headT1;
@@ -62,9 +61,9 @@ public final class CartPolicy implements Policy {
 
   public CartPolicy(String name, Config config) {
     BasicSettings settings = new BasicSettings(config);
+    this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
-    this.data = new HashMap<>();
     this.headT1 = new Node();
     this.headT2 = new Node();
     this.headB1 = new Node();
@@ -72,7 +71,7 @@ public final class CartPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     Node node = data.get(key);
     if (isHit(node)) {
       policyStats.recordHit();
@@ -94,7 +93,7 @@ public final class CartPolicy implements Policy {
     policyStats.recordOperation();
   }
 
-  private void onMiss(Object key, Node node) {
+  private void onMiss(long key, Node node) {
     // if (|T1| + |T2| = c) then
     //   /* cache full, replace a page from cache */
     //   replace()
@@ -320,7 +319,7 @@ public final class CartPolicy implements Policy {
   }
 
   static final class Node {
-    final Object key;
+    final long key;
 
     Node prev;
     Node next;
@@ -330,12 +329,12 @@ public final class CartPolicy implements Policy {
     boolean marked;
 
     Node() {
-      this.key = null;
+      this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
-    Node(Object key) {
+    Node(long key) {
       this.key = key;
     }
 
@@ -363,7 +362,7 @@ public final class CartPolicy implements Policy {
 
     /** Removes the node from the list. */
     public void remove() {
-      requireNonNull(key);
+      checkState(key != Long.MIN_VALUE);
       prev.next = next;
       next.prev = prev;
       prev = next = null;

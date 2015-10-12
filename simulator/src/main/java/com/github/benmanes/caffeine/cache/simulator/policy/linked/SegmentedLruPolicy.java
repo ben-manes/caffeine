@@ -18,15 +18,15 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * "Segmented LRU is based on the observation that objects with at least two accesses are much more
@@ -49,8 +49,8 @@ import com.typesafe.config.Config;
 public final class SegmentedLruPolicy implements Policy {
   private static final Node UNLINKED = new Node();
 
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
   private final Node headProtected;
   private final Node headProbation;
   private final Admittor admittor;
@@ -62,17 +62,17 @@ public final class SegmentedLruPolicy implements Policy {
   public SegmentedLruPolicy(String name, Admittor admittor, Config config) {
     SegmentedLruSettings settings = new SegmentedLruSettings(config);
 
-    this.data = new HashMap<>();
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.admittor = requireNonNull(admittor);
     this.policyStats = new PolicyStats(name);
     this.maximumSize = settings.maximumSize();
+    this.data = new Long2ObjectOpenHashMap<>();
     this.maxProtected = (int) (maximumSize * settings.percentProtected());
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     admittor.record(key);
@@ -102,7 +102,7 @@ public final class SegmentedLruPolicy implements Policy {
     policyStats.recordHit();
   }
 
-  private void onMiss(Object key) {
+  private void onMiss(long key) {
     Node node = new Node(key);
     data.put(key, node);
     policyStats.recordMiss();
@@ -143,19 +143,19 @@ public final class SegmentedLruPolicy implements Policy {
   }
 
   static final class Node {
-    final Object key;
+    final long key;
 
     Node prev;
     Node next;
     QueueType type;
 
     Node() {
-      this.key = null;
+      this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
-    Node(Object key) {
+    Node(long key) {
       this.key = key;
       this.prev = UNLINKED;
       this.next = UNLINKED;
@@ -185,7 +185,7 @@ public final class SegmentedLruPolicy implements Policy {
 
     /** Removes the node from the list. */
     public void remove() {
-      checkState(key != null);
+      checkState(key != Long.MIN_VALUE);
 
       prev.next = next;
       next.prev = prev;

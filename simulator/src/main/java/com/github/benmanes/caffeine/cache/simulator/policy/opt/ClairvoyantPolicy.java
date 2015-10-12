@@ -15,12 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Queue;
-import java.util.function.Function;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -30,6 +24,9 @@ import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
 import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 
 /**
  * Bélády's optimal page replacement policy. The upper bound of the hit rate is estimated by
@@ -38,10 +35,8 @@ import it.unimi.dsi.fastutil.ints.IntSortedSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ClairvoyantPolicy implements Policy {
-  private static final Function<Object, IntPriorityQueue> FACTORY = key -> new IntArrayFIFOQueue();
-
-  private final Map<Object, IntPriorityQueue> accessTimes;
-  private final Queue<Comparable<Object>> future;
+  private final Long2ObjectMap<IntPriorityQueue> accessTimes;
+  private final LongArrayFIFOQueue future;
   private final PolicyStats policyStats;
   private final IntSortedSet data;
   private final int maximumSize;
@@ -51,19 +46,24 @@ public final class ClairvoyantPolicy implements Policy {
 
   public ClairvoyantPolicy(String name, Config config) {
     BasicSettings settings = new BasicSettings(config);
+    accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
     maximumSize = settings.maximumSize();
     policyStats = new PolicyStats(name);
-    accessTimes = new HashMap<>();
-    future = new ArrayDeque<>();
+    future = new LongArrayFIFOQueue();
     data = new IntRBTreeSet();
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     tick++;
-    future.add(key);
-    accessTimes.computeIfAbsent(key, FACTORY).enqueue(tick);
+    future.enqueue(key);
+    IntPriorityQueue times = accessTimes.get(key);
+    if (times == null) {
+      times = new IntArrayFIFOQueue();
+      accessTimes.put(key, times);
+    }
+    times.enqueue(tick);
   }
 
   @Override
@@ -74,14 +74,14 @@ public final class ClairvoyantPolicy implements Policy {
   @Override
   public void finished() {
     policyStats.stopwatch().start();
-    for (Comparable<Object> key : future) {
-      process(key);
+    while (!future.isEmpty()) {
+      process(future.dequeueLong());
     }
     policyStats.stopwatch().stop();
   }
 
   /** Performs the cache operations for the given key. */
-  private void process(Comparable<Object> key) {
+  private void process(long key) {
     IntPriorityQueue times = accessTimes.get(key);
 
     int lastAccess = times.dequeueInt();

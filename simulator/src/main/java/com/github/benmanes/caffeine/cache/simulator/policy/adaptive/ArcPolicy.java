@@ -16,16 +16,15 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.adaptive;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * Adaptive Replacement Cache. This algorithm uses a queue for items that are seen once (T1), a
@@ -55,8 +54,8 @@ public final class ArcPolicy implements Policy {
   // - Hit in B1 should increase size of T1, drop entry from T2 to B2
   // - Hit in B2 should increase size of T2, drop entry from T1 to B1
 
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
   private final int maximumSize;
 
   private final Node headT1;
@@ -74,7 +73,7 @@ public final class ArcPolicy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
-    this.data = new HashMap<>();
+    this.data = new Long2ObjectOpenHashMap<>();
     this.headT1 = new Node();
     this.headT2 = new Node();
     this.headB1 = new Node();
@@ -82,7 +81,7 @@ public final class ArcPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -141,7 +140,7 @@ public final class ArcPolicy implements Policy {
     policyStats.recordMiss();
   }
 
-  private void onMiss(Object key) {
+  private void onMiss(long key) {
     // x ∈ L1 ∪ L2 (a miss in DBL(2c) and ARC(c)):
     // case (i) |L1| = c:
     //   If |T1| < c then delete the LRU page of B1 and REPLACE(p).
@@ -232,19 +231,19 @@ public final class ArcPolicy implements Policy {
   }
 
   static final class Node {
-    final Object key;
+    final long key;
 
     Node prev;
     Node next;
     QueueType type;
 
     Node() {
-      this.key = null;
+      this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
-    Node(Object key) {
+    Node(long key) {
       this.key = key;
     }
 
@@ -259,7 +258,7 @@ public final class ArcPolicy implements Policy {
 
     /** Removes the node from the list. */
     public void remove() {
-      requireNonNull(key);
+      checkState(key != Long.MIN_VALUE);
       prev.next = next;
       next.prev = prev;
       prev = next = null;

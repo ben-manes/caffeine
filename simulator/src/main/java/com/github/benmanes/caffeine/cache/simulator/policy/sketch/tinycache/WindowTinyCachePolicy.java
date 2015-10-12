@@ -38,16 +38,16 @@ public final class WindowTinyCachePolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
-    if (tinyCache.contains(key.hashCode()) || window.contains(key.hashCode())) {
-      tinyCache.recordItem(key.hashCode());
+  public void record(long key) {
+    if (tinyCache.contains(key) || window.contains(key)) {
+      tinyCache.recordItem(key);
       policyStats.recordHit();
     } else {
-      boolean evicted = tinyCache.addItem(key.hashCode());
+      boolean evicted = tinyCache.addItem(key);
       if (!evicted) {
-        evicted = window.addItem(key.hashCode());
+        evicted = window.addItem(key);
       }
-      tinyCache.recordItem(key.hashCode());
+      tinyCache.recordItem(key);
       policyStats.recordMiss();
       if (evicted) {
         policyStats.recordEviction();

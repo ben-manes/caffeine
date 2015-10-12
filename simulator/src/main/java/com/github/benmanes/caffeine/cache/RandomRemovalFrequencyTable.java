@@ -35,7 +35,7 @@ import com.typesafe.config.Config;
  *
  * @author gilg1983@gmail.com (Gil Einziger)
  */
-public final class RandomRemovalFrequencyTable<E> implements Frequency<E> {
+public final class RandomRemovalFrequencyTable implements Frequency {
   /** sum of total items */
   private final int maxSum;
   /** total sum of stored items **/
@@ -45,7 +45,7 @@ public final class RandomRemovalFrequencyTable<E> implements Frequency<E> {
   /** used to dropped items at random */
   private final Random random;
   /** a place holder for TinyTable */
-  private final Map<E, Integer> table;
+  private final Map<Long, Integer> table;
 
   public RandomRemovalFrequencyTable(Config config) {
     BasicSettings settings = new BasicSettings(config);
@@ -55,12 +55,12 @@ public final class RandomRemovalFrequencyTable<E> implements Frequency<E> {
   }
 
   @Override
-  public int frequency(E e) {
+  public int frequency(long e) {
     return table.getOrDefault(e, 0);
   }
 
   @Override
-  public void increment(E e) {
+  public void increment(long e) {
     // read and increments value
     int value = table.getOrDefault(e, 0) + 1;
     // if the value is big enough there is no point in dropping a value so we just quit
@@ -80,8 +80,8 @@ public final class RandomRemovalFrequencyTable<E> implements Frequency<E> {
     // converge to their true frequency. but I do not think it is worth fixing right now as this is
     // just a model.
     if (currSum == maxSum) {
-      List<E> array = new ArrayList<>(table.keySet());
-      E itemToRemove = array.get(random.nextInt(array.size()));
+      List<Long> array = new ArrayList<>(table.keySet());
+      long itemToRemove = array.get(random.nextInt(array.size()));
       value = table.remove(itemToRemove);
 
       if (value > 1) {

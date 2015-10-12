@@ -15,18 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
-import javax.annotation.Nonnull;
-
 /**
  * A multiset for estimating the popularity of an element.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface Frequency<E> {
+public interface Frequency {
 
   /** Returns the estimated number of times the element was seen. */
-  int frequency(@Nonnull E e);
+  int frequency(long e);
 
   /** Increments the popularity of the element. */
-  void increment(@Nonnull E e);
+  void increment(long e);
 }

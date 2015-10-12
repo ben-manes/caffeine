@@ -15,11 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 /**
  * A cache that has no maximum size. This demonstrates the upper bound of the hit rate due to
@@ -30,11 +29,11 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
  */
 public final class UnboundedPolicy implements Policy {
   private final PolicyStats policyStats;
-  private final Set<Object> data;
+  private final LongOpenHashSet data;
 
   public UnboundedPolicy(String name) {
     this.policyStats = new PolicyStats(name);
-    this.data = new HashSet<>();
+    this.data = new LongOpenHashSet();
   }
 
   @Override
@@ -43,7 +42,7 @@ public final class UnboundedPolicy implements Policy {
   }
 
   @Override
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     policyStats.recordOperation();
     if (data.add(key)) {
       policyStats.recordMiss();

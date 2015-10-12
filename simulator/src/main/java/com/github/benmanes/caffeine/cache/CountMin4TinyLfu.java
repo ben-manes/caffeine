@@ -24,8 +24,8 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CountMin4TinyLfu<E> implements Frequency<E> {
-  private final FrequencySketch<E> sketch;
+public final class CountMin4TinyLfu implements Frequency {
+  private final FrequencySketch<Long> sketch;
 
   public CountMin4TinyLfu(Config config) {
     BasicSettings settings = new BasicSettings(config);
@@ -33,12 +33,12 @@ public final class CountMin4TinyLfu<E> implements Frequency<E> {
   }
 
   @Override
-  public int frequency(E e) {
+  public int frequency(long e) {
     return sketch.frequency(e);
   }
 
   @Override
-  public void increment(E e) {
+  public void increment(long e) {
     sketch.increment(e);
   }
 }

@@ -17,14 +17,14 @@ package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * The 2Q algorithm. This algorithm uses a queue for items that are seen once (IN), a queue for
@@ -42,8 +42,8 @@ import com.typesafe.config.Config;
 public final class TwoQueuePolicy implements Policy {
   private static final Node UNLINKED = new Node();
 
+  private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Map<Object, Node> data;
   private final int maximumSize;
 
   private int sizeIn;
@@ -63,16 +63,16 @@ public final class TwoQueuePolicy implements Policy {
     this.headIn = new Node();
     this.headOut = new Node();
     this.headMain = new Node();
-    this.data = new HashMap<>();
     this.policyStats = new PolicyStats(name);
     this.maximumSize = settings.maximumSize();
+    this.data = new Long2ObjectOpenHashMap<>();
     this.maxIn = (int) (maximumSize * settings.percentIn());
     this.maxOut = (int) (maximumSize * settings.percentOut());
   }
 
   @Override
   @SuppressWarnings("PMD.ConfusingTernary")
-  public void record(Comparable<Object> key) {
+  public void record(long key) {
     // On accessing a page X :
     //   if X is in Am then
     //     move X to the head of Am
@@ -183,19 +183,19 @@ public final class TwoQueuePolicy implements Policy {
   }
 
   static final class Node {
-    final Object key;
+    final long key;
 
     Node prev;
     Node next;
     QueueType type;
 
     Node() {
-      this.key = null;
+      this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
-    Node(Object key) {
+    Node(long key) {
       this.key = key;
       this.prev = UNLINKED;
       this.next = UNLINKED;
@@ -225,7 +225,7 @@ public final class TwoQueuePolicy implements Policy {
 
     /** Removes the node from the list. */
     public void remove() {
-      checkState(key != null);
+      checkState(key != Long.MIN_VALUE);
 
       prev.next = next;
       next.prev = prev;

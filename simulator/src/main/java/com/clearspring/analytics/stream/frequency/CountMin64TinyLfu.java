@@ -33,7 +33,7 @@ import com.typesafe.config.Config;
  *
  * @author gilga1983@gmail.com (Gilga Einziger)
  */
-public final class CountMin64TinyLfu<E> implements Frequency<E> {
+public final class CountMin64TinyLfu implements Frequency {
   private static final int MAX_COUNT = 15;
 
   final CountMinSketch sketch;
@@ -49,15 +49,14 @@ public final class CountMin64TinyLfu<E> implements Frequency<E> {
 
   /** Returns the estimated usage frequency of the item. */
   @Override
-  public int frequency(Object o) {
-    return (int) sketch.estimateCount(o.hashCode());
+  public int frequency(long o) {
+    return (int) sketch.estimateCount(o);
   }
 
   @Override
-  public void increment(Object o) {
-    int hash = o.hashCode();
-    if (sketch.estimateCount(hash) < MAX_COUNT) {
-      sketch.add(hash, 1);
+  public void increment(long o) {
+    if (sketch.estimateCount(o) < MAX_COUNT) {
+      sketch.add(o, 1);
     }
     size += 1;
     resetIfNeeded();
