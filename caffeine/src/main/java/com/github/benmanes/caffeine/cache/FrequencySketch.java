@@ -31,7 +31,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NotThreadSafe
-public final class FrequencySketch<E> {
+final class FrequencySketch<E> {
 
   /*
    * This class maintains a 4-bit CountMinSketch [1] with periodic aging to provide the popularity

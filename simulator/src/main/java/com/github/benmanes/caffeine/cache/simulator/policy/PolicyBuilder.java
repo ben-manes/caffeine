@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.LirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.MultiQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
@@ -92,6 +93,8 @@ public final class PolicyBuilder {
               FrequentlyUsedPolicy.EvictionPolicy.valueOf(strategy));
         } else if (strategy.equalsIgnoreCase("SegmentedLru")) {
           return new SegmentedLruPolicy(name(), admittor, config);
+        } else if (strategy.equalsIgnoreCase("MultiQueue")) {
+          return new MultiQueuePolicy(type, config);
         }
         return new LinkedPolicy(name(), admittor, config,
             LinkedPolicy.EvictionPolicy.valueOf(strategy));
