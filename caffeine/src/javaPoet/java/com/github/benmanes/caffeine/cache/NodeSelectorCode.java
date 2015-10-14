@@ -21,15 +21,15 @@ import com.squareup.javapoet.CodeBlock;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class NodeSelectorCode {
-  private final CodeBlock.Builder name;
+  private final CodeBlock.Builder block;
 
   private NodeSelectorCode() {
-    name = CodeBlock.builder()
+    block = CodeBlock.builder()
         .addStatement("$T sb = new $T()", StringBuilder.class, StringBuilder.class);
   }
 
   private NodeSelectorCode keys() {
-    name.beginControlFlow("if (strongKeys)")
+    block.beginControlFlow("if (strongKeys)")
             .addStatement("sb.append('S')")
         .nextControlFlow("else")
             .addStatement("sb.append('W')")
@@ -38,7 +38,7 @@ public final class NodeSelectorCode {
   }
 
   private NodeSelectorCode values() {
-    name.beginControlFlow("if (strongValues)")
+    block.beginControlFlow("if (strongValues)")
             .addStatement("sb.append(\"St\")")
         .nextControlFlow("else if (weakValues)")
             .addStatement("sb.append('W')")
@@ -49,7 +49,7 @@ public final class NodeSelectorCode {
   }
 
   private NodeSelectorCode expires() {
-    name.beginControlFlow("if (expiresAfterAccess)")
+    block.beginControlFlow("if (expiresAfterAccess)")
             .addStatement("sb.append('A')")
         .endControlFlow()
         .beginControlFlow("if (expiresAfterWrite)")
@@ -62,7 +62,7 @@ public final class NodeSelectorCode {
   }
 
   private NodeSelectorCode maximum() {
-    name.beginControlFlow("if (maximumSize)")
+    block.beginControlFlow("if (maximumSize)")
             .addStatement("sb.append('M')")
             .beginControlFlow("if (weighed)")
                 .addStatement("sb.append('W')")
@@ -74,7 +74,7 @@ public final class NodeSelectorCode {
   }
 
   private CodeBlock build() {
-    return name
+    return block
         .addStatement("return valueOf(sb.toString())")
         .build();
   }

@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.Sets;
 
 /**
  * The features that may be code generated.
@@ -39,12 +40,12 @@ public enum Feature {
   EXPIRE_WRITE,
   REFRESH_WRITE,
 
+  FASTPATH,
   MAXIMUM_SIZE,
   MAXIMUM_WEIGHT,
 
-  LOADING,
   LISTENING,
-  EXECUTOR,
+  LOADING,
   STATS;
 
   public static String makeEnumName(Iterable<Feature> features) {
@@ -107,5 +108,14 @@ public enum Feature {
   public static boolean usesMaximum(Set<Feature> features) {
     return features.contains(Feature.MAXIMUM_SIZE)
         || features.contains(Feature.MAXIMUM_WEIGHT);
+  }
+
+  public static boolean canUseFastPath(Set<Feature> features) {
+    Set<Feature> incompatible = Sets.immutableEnumSet(Feature.WEAK_KEYS, Feature.INFIRM_VALUES,
+        Feature.WEAK_VALUES, Feature.SOFT_VALUES, Feature.EXPIRE_ACCESS);
+    if (features.stream().anyMatch(incompatible::contains)) {
+      return false;
+    }
+    return usesMaximum(features);
   }
 }

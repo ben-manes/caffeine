@@ -38,10 +38,10 @@ import javax.lang.model.element.Modifier;
 import com.github.benmanes.caffeine.cache.local.AddCacheLoader;
 import com.github.benmanes.caffeine.cache.local.AddConstructor;
 import com.github.benmanes.caffeine.cache.local.AddDeques;
-import com.github.benmanes.caffeine.cache.local.AddExecutor;
 import com.github.benmanes.caffeine.cache.local.AddExpirationTicker;
 import com.github.benmanes.caffeine.cache.local.AddExpireAfterAccess;
 import com.github.benmanes.caffeine.cache.local.AddExpireAfterWrite;
+import com.github.benmanes.caffeine.cache.local.AddFastPath;
 import com.github.benmanes.caffeine.cache.local.AddKeyValueStrength;
 import com.github.benmanes.caffeine.cache.local.AddMaximum;
 import com.github.benmanes.caffeine.cache.local.AddRefreshAfterWrite;
@@ -71,15 +71,14 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
-  final Feature[] featureByIndex = new Feature[] { null, null,
-      Feature.LOADING, Feature.LISTENING, Feature.EXECUTOR, Feature.STATS, Feature.MAXIMUM_SIZE,
-      Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
-  };
+  final Feature[] featureByIndex = new Feature[] {null, null, Feature.LOADING, Feature.LISTENING,
+      Feature.STATS, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
+      Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE, Feature.FASTPATH};
   final List<LocalCacheRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructor(),
-      new AddKeyValueStrength(), new AddCacheLoader(), new AddRemovalListener(), new AddExecutor(),
-      new AddStats(), new AddExpirationTicker(), new AddMaximum(), new AddDeques(),
-      new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
-      new AddWriteQueue(), new Finalize());
+      new AddKeyValueStrength(), new AddCacheLoader(), new AddRemovalListener(),
+      new AddStats(), new AddExpirationTicker(), new AddMaximum(), new AddFastPath(),
+      new AddDeques(), new AddExpireAfterAccess(), new AddExpireAfterWrite(),
+      new AddRefreshAfterWrite(), new AddWriteQueue(), new Finalize());
   final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
   final Path directory;
 
@@ -114,7 +113,7 @@ public final class LocalCacheFactoryGenerator {
         .addTypeVariable(vTypeVar)
         .returns(BOUNDED_LOCAL_CACHE)
         .addModifiers(Modifier.STATIC)
-        .addCode(CacheSelectorCode.get(classNameToFeatures.keySet()))
+        .addCode(LocalCacheSelectorCode.get(classNameToFeatures.keySet()))
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
@@ -153,6 +152,9 @@ public final class LocalCacheFactoryGenerator {
       }
       if (features.contains(Feature.MAXIMUM_WEIGHT)) {
         features.remove(Feature.MAXIMUM_SIZE);
+      }
+      if (features.contains(Feature.FASTPATH) && !Feature.canUseFastPath(features)) {
+        continue;
       }
 
       String className = encode(Feature.makeClassName(features));
@@ -207,14 +209,14 @@ public final class LocalCacheFactoryGenerator {
         .replaceFirst("_INFIRM_VALUES", "I")
         .replaceFirst("_LOADING", "Lo")
         .replaceFirst("_LISTENING", "Li")
-        .replaceFirst("_EXECUTOR", "E")
         .replaceFirst("_STATS", "S")
         .replaceFirst("_MAXIMUM", "M")
         .replaceFirst("_WEIGHT", "W")
         .replaceFirst("_SIZE", "S")
         .replaceFirst("_EXPIRE_ACCESS", "A")
         .replaceFirst("_EXPIRE_WRITE", "W")
-        .replaceFirst("_REFRESH_WRITE", "R");
+        .replaceFirst("_REFRESH_WRITE", "R")
+        .replace("_FASTPATH", "F");
   }
 
   public static void main(String[] args) throws IOException {

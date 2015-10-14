@@ -21,8 +21,6 @@ import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
 import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
-import javax.lang.model.element.Modifier;
-
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -49,8 +47,6 @@ public final class AddMaximum extends LocalCacheRule {
     addWeightedSize("");
     addWeightedSize("eden");
     addFrequencySketch();
-    addMoveDistance();
-    addMoveCount();
   }
 
   private void addEvicts() {
@@ -106,36 +102,6 @@ public final class AddMaximum extends LocalCacheRule {
         .addModifiers(protectedFinalModifiers)
         .addStatement("return sketch")
         .returns(FREQUENCY_SKETCH)
-        .build());
-  }
-
-  private void addMoveDistance() {
-    context.cache.addField(FieldSpec.builder(
-        int.class, "moveDistance", Modifier.PRIVATE).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("moveDistance")
-        .addModifiers(protectedFinalModifiers)
-        .addStatement("return moveDistance")
-        .returns(int.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("setMoveDistance")
-        .addModifiers(protectedFinalModifiers)
-        .addParameter(int.class, "moveDistance")
-        .addStatement("this.moveDistance = moveDistance")
-        .build());
-  }
-
-  private void addMoveCount() {
-    context.cache.addField(FieldSpec.builder(
-        int.class, "moveCount", Modifier.PRIVATE).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("moveCount")
-        .addModifiers(protectedFinalModifiers)
-        .addStatement("return moveCount")
-        .returns(int.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("setMoveCount")
-        .addModifiers(protectedFinalModifiers)
-        .addParameter(int.class, "moveCount")
-        .addStatement("this.moveCount = moveCount")
         .build());
   }
 }
