@@ -45,11 +45,13 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -278,6 +280,52 @@ public final class BoundedLocalCacheTest {
     assertThat(ran[0], is(true));
 
     assertThat(localCache.writeQueue(), hasSize(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.PARTIAL, maximumSize = MaximumSize.FULL,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  public void fastpath(Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    Node<Integer, Integer> first = localCache.data.get(context.firstKey());
+    Node<Integer, Integer> middle = localCache.data.get(context.middleKey());
+    Node<Integer, Integer> last = localCache.data.get(context.lastKey());
+    int initialMoveCount = localCache.moveCount();
+
+    assertThat(first.getMoveCount(), is(1));
+    assertThat(middle.getMoveCount(), is(initialMoveCount / 2));
+    assertThat(last.getMoveCount(), is(initialMoveCount));
+    assertThat(initialMoveCount, is(cache.asMap().size()));
+
+    // Hot entry is not reordered
+    cache.getIfPresent(context.lastKey());
+    localCache.maintenance();
+    assertThat(last.getMoveCount(), is(initialMoveCount));
+
+    // Cold entry is reordered
+    cache.getIfPresent(context.middleKey());
+    localCache.maintenance();
+    assertThat(middle.getMoveCount(), is(initialMoveCount + 1));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  public void fastpath_eden(Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    Node<Integer, Integer> node = localCache.accessOrderEdenDeque().peek();
+
+    assertThat(localCache.canFastpath(node), is(false));
+    cache.getIfPresent(context.lastKey());
+    localCache.maintenance();
+
+    // Eden entry is reordered and not assigned a move count
+    assertThat(localCache.accessOrderEdenDeque().peekLast(), is(node));
+    assertThat(node.getMoveCount(), is(0));
   }
 
   @Test(dataProvider = "caches")

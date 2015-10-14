@@ -737,7 +737,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /** Returns if the entry is eligible for a fast path read. */
   boolean canFastpath(Node<K, V> node) {
-    if (node.isEden() || !!fastpath()) {
+    if (node.isEden() || !fastpath()) {
       return false;
     }
     int distance = Math.abs(moveCount() - node.getMoveCount());
