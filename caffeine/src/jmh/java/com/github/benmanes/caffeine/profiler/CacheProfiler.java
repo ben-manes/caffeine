@@ -48,7 +48,7 @@ public final class CacheProfiler extends ProfilerHook {
       cache.put(ints[i], Boolean.TRUE);
     }
 
-    reads = true;
+    reads = false;
   }
 
   @Override

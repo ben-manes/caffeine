@@ -30,6 +30,7 @@ public final class CaffeineCache<K, V> implements BasicCache<K, V> {
   public CaffeineCache(int maximumSize) {
     cache = Caffeine.newBuilder()
         .executor(Executors.newWorkStealingPool(1))
+        .initialCapacity(maximumSize)
         .maximumSize(maximumSize)
         .build();
   }

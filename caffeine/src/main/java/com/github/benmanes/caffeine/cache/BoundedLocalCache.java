@@ -979,8 +979,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         node.setPolicyWeight(weight);
         lazySetWeightedSize(weightedSize() + weight);
         lazySetEdenWeightedSize(edenWeightedSize() + weight);
+
         long size = (weigher == Weigher.singleton()) ? adjustedWeightedSize() : data.mappingCount();
-        frequencySketch().ensureCapacity(size);
+        frequencySketch().ensureCapacity(Math.min(maximum(), size));
 
         K key = node.getKey();
         if (key != null) {
@@ -1236,22 +1237,33 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public V put(K key, V value) {
-    return put(key, value, true, false);
+    return (weigher == Weigher.singleton())
+        ? putSingletonWeigher(key, value, true, false)
+        : putCustomWeigher(key, value, true, false);
   }
 
   @Override
   public V put(K key, V value, boolean notifyWriter) {
-    return put(key, value, notifyWriter, false);
+    return (weigher == Weigher.singleton())
+        ? putSingletonWeigher(key, value, notifyWriter, false)
+        : putCustomWeigher(key, value, notifyWriter, false);
   }
 
   @Override
   public V putIfAbsent(K key, V value) {
-    return put(key, value, true, true);
+    return (weigher == Weigher.singleton())
+        ? putSingletonWeigher(key, value, true, true)
+        : putCustomWeigher(key, value, true, true);
   }
 
   /**
    * Adds a node to the list and the data store. If an existing node is found, then its value is
    * updated if allowed.
+   *
+   * This implementation is optimized for the default weigher, as it does not provide correctness if
+   * the weight is allowed to change to zero and be concurrently evicted. This assumption allows it
+   * to use a cheap read, falling back to a short computation for an insert, and perform an update
+   * without creating garbage on the heap (e.g. lambda).
    *
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
@@ -1259,7 +1271,93 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
    * @return the prior value in the data store or null if no mapping was found
    */
-  V put(K key, V value, boolean notifyWriter, boolean onlyIfAbsent) {
+  V putSingletonWeigher(K key, V value, boolean notifyWriter, boolean onlyIfAbsent) {
+    requireNonNull(key);
+    requireNonNull(value);
+
+    Node<K, V> node = null;
+    long now = expirationTicker().read();
+
+    for (;;) {
+      Node<K, V> prior = data.get(nodeFactory.newLookupKey(key));
+      if (prior == null) {
+        if (node == null) {
+          node = nodeFactory.newNode(key, keyReferenceQueue(),
+              value, valueReferenceQueue(), 1, now);
+        }
+        Node<K, V> computed = node;
+        prior = data.computeIfAbsent(node.getKeyReference(), k -> {
+          if (notifyWriter) {
+            writer.write(key, value);
+          }
+          return computed;
+        });
+        if (prior == node) {
+          afterWrite(node, new AddTask(node, 1), now);
+          return null;
+        }
+      }
+
+      V oldValue;
+      boolean expired = false;
+      boolean mayUpdate = true;
+      synchronized (prior) {
+        if (!prior.isAlive()) {
+          continue;
+        }
+        oldValue = prior.getValue();
+        if (oldValue == null) {
+          writer.delete(key, null, RemovalCause.COLLECTED);
+        } else if (hasExpired(prior, now)) {
+          writer.delete(key, oldValue, RemovalCause.EXPIRED);
+          expired = true;
+        } else if (onlyIfAbsent) {
+          mayUpdate = false;
+        }
+
+        if (notifyWriter && (expired || (mayUpdate && (value != oldValue)))) {
+          writer.write(key, value);
+        }
+        if (mayUpdate) {
+          prior.setValue(value, valueReferenceQueue());
+        }
+      }
+
+      if (hasRemovalListener()) {
+        if (expired) {
+          notifyRemoval(key, oldValue, RemovalCause.EXPIRED);
+        } else if (oldValue == null) {
+          notifyRemoval(key, oldValue, RemovalCause.COLLECTED);
+        } else if (mayUpdate && (value != oldValue)) {
+          notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+        }
+      }
+
+      if ((oldValue == null) || expired
+          || (!onlyIfAbsent && (oldValue != null) && expiresAfterWrite())) {
+        afterWrite(prior, new UpdateTask(prior, 0), now);
+      } else {
+        afterRead(prior, now, false);
+      }
+
+      return expired ? null : oldValue;
+    }
+  }
+
+  /**
+   * Adds a node to the list and the data store. If an existing node is found, then its value is
+   * updated if allowed. This implementation is strict by using a compute to block other writers
+   * to that entry. This guards against an eviction trying to discard an entry concurrently updated
+   * to have a zero weight, making it ineligible. The penalty is 50% of the throughput when
+   * compared to {@link #putSingletonWeigher}.
+   *
+   * @param key key with which the specified value is to be associated
+   * @param value value to be associated with the specified key
+   * @param notifyWriter if the writer should be notified for an inserted or updated entry
+   * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
+   * @return the prior value in the data store or null if no mapping was found
+   */
+  V putCustomWeigher(K key, V value, boolean notifyWriter, boolean onlyIfAbsent) {
     requireNonNull(key);
     requireNonNull(value);
 
@@ -1329,7 +1427,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       afterRead(node, now, false);
     } else {
       int weightedDifference = newWeight - oldWeight[0];
-      afterWrite(node, new UpdateTask(node, weightedDifference), now);
+      if (expiresAfterWrite() || (oldValue[0] == null) || (weightedDifference != 0)
+          || ((cause[0] != null) && (cause[0] != RemovalCause.REPLACED))) {
+        afterWrite(node, new UpdateTask(node, weightedDifference), now);
+      } else {
+        afterRead(node, now, false);
+      }
     }
 
     return (cause[0] == null) || (cause[0] == RemovalCause.REPLACED) ? oldValue[0] : null;

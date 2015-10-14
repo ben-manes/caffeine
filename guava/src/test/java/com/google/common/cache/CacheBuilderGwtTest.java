@@ -86,6 +86,7 @@ public class CacheBuilderGwtTest extends TestCase {
   public void testSizeConstraint() {
     final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .executor(MoreExecutors.directExecutor())
+        .initialCapacity(100)
         .maximumSize(4));
 
     cache.put(1, 10);
@@ -282,6 +283,7 @@ public class CacheBuilderGwtTest extends TestCase {
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .removalListener(countingListener)
+        .initialCapacity(100)
         .ticker(fakeTicker)
         .maximumSize(2));
 
@@ -294,9 +296,9 @@ public class CacheBuilderGwtTest extends TestCase {
 
     // Replace the two present elements.
     cache.put(23, 20);
-    cache.put(56, 49);
+    cache.put(3, 49);
     cache.put(23, 2);
-    cache.put(56, 4);
+    cache.put(3, 4);
 
     // Expire the two present elements.
     fakeTicker.advance(1001, TimeUnit.MILLISECONDS);
@@ -312,8 +314,8 @@ public class CacheBuilderGwtTest extends TestCase {
 
     assertEquals(2, stats[0]);
     assertEquals(2, stats[1]);
-    assertEquals(3, stats[2]);
-    assertEquals(4, stats[3]);
+    assertEquals(4, stats[2]);
+    assertEquals(3, stats[3]);
   }
 
   public void testPutAll() {

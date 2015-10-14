@@ -31,6 +31,7 @@ public final class GuavaCache<K, V> implements BasicCache<K, V> {
   public GuavaCache(int maximumSize) {
     cache = CacheBuilder.newBuilder()
         .concurrencyLevel(CONCURRENCY_LEVEL)
+        .initialCapacity(maximumSize)
         .maximumSize(maximumSize)
         .build();
   }

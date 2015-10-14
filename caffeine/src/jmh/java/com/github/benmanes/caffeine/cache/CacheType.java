@@ -89,6 +89,7 @@ public enum CacheType {
       return new ConcurrentMapCache<>(
           new ConcurrentLinkedHashMap.Builder<K, V>()
             .maximumWeightedCapacity(maximumSize)
+            .initialCapacity(maximumSize)
             .build());
     }
   },
