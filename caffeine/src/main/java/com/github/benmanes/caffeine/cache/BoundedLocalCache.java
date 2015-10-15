@@ -1241,33 +1241,36 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public V put(K key, V value) {
-    return (weigher == Weigher.singleton())
-        ? putSingletonWeigher(key, value, true, false)
-        : putCustomWeigher(key, value, true, false);
+    int weight = weigher.weigh(key, value);
+    return (weight > 0)
+        ? putFast(key, value, weight, true, false)
+        : putSlow(key, value, weight, true, false);
   }
 
   @Override
   public V put(K key, V value, boolean notifyWriter) {
-    return (weigher == Weigher.singleton())
-        ? putSingletonWeigher(key, value, notifyWriter, false)
-        : putCustomWeigher(key, value, notifyWriter, false);
+    int weight = weigher.weigh(key, value);
+    return (weight > 0)
+        ? putFast(key, value, weight, notifyWriter, false)
+        : putSlow(key, value, weight, notifyWriter, false);
   }
 
   @Override
   public V putIfAbsent(K key, V value) {
-    return (weigher == Weigher.singleton())
-        ? putSingletonWeigher(key, value, true, true)
-        : putCustomWeigher(key, value, true, true);
+    int weight = weigher.weigh(key, value);
+    return (weight > 0)
+        ? putFast(key, value, weight, true, true)
+        : putSlow(key, value, weight, true, true);
   }
 
   /**
    * Adds a node to the list and the data store. If an existing node is found, then its value is
    * updated if allowed.
    *
-   * This implementation is optimized for the default weigher, as it does not provide correctness if
-   * the weight is allowed to change to zero and be concurrently evicted. This assumption allows it
-   * to use a cheap read, falling back to a short computation for an insert, and perform an update
-   * without creating garbage on the heap (e.g. lambda).
+   * This implementation is optimized for writing values with a non-zero weight. A zero weight is
+   * incompatible due to the potential for the update to race with eviction, where the entry should
+   * no longer be eligible if the update was successful. This implementation is ~50% faster than
+   * {@link #putSlow} due to not incurring the penalty of a compute and lambda in the common case.
    *
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
@@ -1275,9 +1278,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
    * @return the prior value in the data store or null if no mapping was found
    */
-  V putSingletonWeigher(K key, V value, boolean notifyWriter, boolean onlyIfAbsent) {
+  V putFast(K key, V value, int newWeight, boolean notifyWriter, boolean onlyIfAbsent) {
     requireNonNull(key);
     requireNonNull(value);
+    requireState(newWeight != 0);
 
     Node<K, V> node = null;
     long now = expirationTicker().read();
@@ -1287,7 +1291,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (prior == null) {
         if (node == null) {
           node = nodeFactory.newNode(key, keyReferenceQueue(),
-              value, valueReferenceQueue(), 1, now);
+              value, valueReferenceQueue(), newWeight, now);
         }
         Node<K, V> computed = node;
         prior = data.computeIfAbsent(node.getKeyReference(), k -> {
@@ -1297,12 +1301,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           return computed;
         });
         if (prior == node) {
-          afterWrite(node, new AddTask(node, 1), now);
+          afterWrite(node, new AddTask(node, newWeight), now);
           return null;
         }
       }
 
       V oldValue;
+      int oldWeight;
       boolean expired = false;
       boolean mayUpdate = true;
       synchronized (prior) {
@@ -1310,6 +1315,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           continue;
         }
         oldValue = prior.getValue();
+        oldWeight = prior.getWeight();
         if (oldValue == null) {
           writer.delete(key, null, RemovalCause.COLLECTED);
         } else if (hasExpired(prior, now)) {
@@ -1324,6 +1330,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
         if (mayUpdate) {
           prior.setValue(value, valueReferenceQueue());
+          prior.setWeight(newWeight);
         }
       }
 
@@ -1337,9 +1344,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
       }
 
-      if ((oldValue == null) || expired
+      int weightedDifference = mayUpdate ? (newWeight - oldWeight) : 0;
+      if ((oldValue == null) || (weightedDifference != 0) || expired
           || (!onlyIfAbsent && (oldValue != null) && expiresAfterWrite())) {
-        afterWrite(prior, new UpdateTask(prior, 0), now);
+        afterWrite(prior, new UpdateTask(prior, weightedDifference), now);
       } else {
         afterRead(prior, now, false);
       }
@@ -1350,10 +1358,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /**
    * Adds a node to the list and the data store. If an existing node is found, then its value is
-   * updated if allowed. This implementation is strict by using a compute to block other writers
-   * to that entry. This guards against an eviction trying to discard an entry concurrently updated
-   * to have a zero weight, making it ineligible. The penalty is 50% of the throughput when
-   * compared to {@link #putSingletonWeigher}.
+   * updated if allowed.
+   *
+   * This implementation is strict by using a compute to block other writers to that entry. This
+   * guards against an eviction trying to discard an entry concurrently (and successfully) updated
+   * to have a zero weight. The penalty is 50% of the throughput when compared to {@link #putFast}.
    *
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
@@ -1361,7 +1370,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
    * @return the prior value in the data store or null if no mapping was found
    */
-  V putCustomWeigher(K key, V value, boolean notifyWriter, boolean onlyIfAbsent) {
+  V putSlow(K key, V value, int newWeight, boolean notifyWriter, boolean onlyIfAbsent) {
     requireNonNull(key);
     requireNonNull(value);
 
@@ -1374,7 +1383,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     long now = expirationTicker().read();
 
     int[] oldWeight = new int[1];
-    int newWeight = weigher.weigh(key, value);
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     Node<K, V> node = data.compute(keyRef, (kr, n) -> {
       if (n == null) {
