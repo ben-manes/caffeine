@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache2Polic
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache3Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.InfinispanPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicy;
@@ -148,6 +149,8 @@ public final class PolicyBuilder {
           return new CaffeinePolicy(type, config);
         } else if (strategy.equalsIgnoreCase("Infinispan")) {
           return new InfinispanPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("TCache")) {
+          return new TCachePolicy(type, config);
         }
         break;
       default:

@@ -64,6 +64,7 @@ ext {
     java_object_layout: '0.3.2',
     koloboke: '0.6.8',
     slf4j: '1.7.12',
+    tcache: 'bc77a19e9b',
   ]
   plugin_versions = [
     bundle: '0.6.2',
@@ -139,6 +140,7 @@ ext {
       "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",
     ],
     slf4j_nop: "org.slf4j:slf4j-nop:${benchmark_versions.slf4j}",
+    tcache: "com.github.trivago:triava:${benchmark_versions.tcache}",
   ]
   gradle_plugins = [
     bundle: "org.dm.gradle:gradle-bundle-plugin:${plugin_versions.bundle}",

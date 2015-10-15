@@ -31,6 +31,7 @@ dependencies {
 
   jmh libraries.flip_tables
   jmh benchmark_libraries.jamm
+  jmh benchmark_libraries.tcache
   jmh benchmark_libraries.cache2k
   jmh benchmark_libraries.ehcache2
   jmh benchmark_libraries.ehcache3

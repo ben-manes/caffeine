@@ -58,6 +58,8 @@ public class GetPutBenchmark {
     "Ehcache3_Lru",
     "Infinispan_Old_Lru",
     "Infinispan_New_Lru",
+    "TCache_Lfu",
+    "TCache_Lru",
   })
   CacheType cacheType;
 
