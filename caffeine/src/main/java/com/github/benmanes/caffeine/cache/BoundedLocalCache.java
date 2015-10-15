@@ -127,7 +127,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** The percent of the maximum weighted capacity dedicated to the main space. */
   static final double PERCENT_MAIN = 0.99f;
   /** The percent of the total entries that are considered hot and can skip policy maintenance. */
-  static final int FAST_PATH_RSHIFT = 4; // 6.25%
+  static final int FAST_PATH_RSHIFT = 3; // 12.5%
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
   final Consumer<Node<K, V>> accessPolicy;
@@ -737,10 +737,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /** Returns if the entry is eligible for a fast path read. */
   boolean canFastpath(Node<K, V> node) {
-    if (node.isEden() || !fastpath()) {
+    int moveCount = node.getMoveCount();
+    if (!fastpath() || (moveCount == 0)) {
       return false;
     }
-    int distance = Math.abs(moveCount() - node.getMoveCount());
+    int distance = Math.abs(moveCount() - moveCount);
     return distance <= moveDistance();
   }
 
@@ -799,6 +800,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * replacement policy. If the executor rejects the task then it is run directly.
    */
   void scheduleDrainBuffers() {
+    if (drainStatus() == PROCESSING) {
+      return;
+    }
     if (evictionLock.tryLock()) {
       try {
         if (drainStatus() == PROCESSING) {
@@ -2624,7 +2628,7 @@ final class BLCHeader {
      * @param delayable if draining the read buffer can be delayed
      */
     boolean shouldDrainBuffers(boolean delayable) {
-      switch (drainStatus) {
+      switch (drainStatus()) {
         case IDLE:
           return !delayable;
         case REQUIRED:

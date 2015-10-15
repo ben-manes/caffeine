@@ -49,13 +49,13 @@ ext {
     jimfs: '1.0',
     junit: '4.12',
     mockito: '2.0.31-beta',
-    testng: '6.9.7',
+    testng: '6.9.8',
     truth: '0.24',
   ]
   benchmark_versions = [
     cache2k: '0.21.1',
     concurrentlinkedhashmap: '1.4.2',
-    ehcache2: '2.10.0-10',
+    ehcache2: '2.10.1-55',
     ehcache3: '3.0.0.m3',
     high_scale_lib: '1.0.6',
     infinispan: '8.1.0.Alpha1',

@@ -29,7 +29,7 @@ import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
  */
 public final class CacheProfiler extends ProfilerHook {
   static final CacheType cacheType = CacheType.Caffeine;
-  static final int MAX_SIZE = 2 * NUM_THREADS;
+  static final int MAX_SIZE = 10 * NUM_THREADS;
   static final int SIZE = (2 << 14);
   static final int MASK = SIZE - 1;
   static final int ITEMS = SIZE / 4;
@@ -48,7 +48,7 @@ public final class CacheProfiler extends ProfilerHook {
       cache.put(ints[i], Boolean.TRUE);
     }
 
-    reads = false;
+    reads = true;
   }
 
   @Override
