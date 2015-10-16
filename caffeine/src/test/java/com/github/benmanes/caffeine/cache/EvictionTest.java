@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCou
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.verify;
@@ -530,8 +531,8 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = MaximumSize.FULL)
   public void coldest_partial(CacheContext context, Eviction<Integer, Integer> eviction) {
     int count = (int) context.initialSize() / 2;
     assertThat(eviction.coldest(count).size(), is(count));
@@ -553,11 +554,12 @@ public final class EvictionTest {
         Iterables.skip(context.original().keySet(), main),
         Iterables.limit(ImmutableList.copyOf(context.original().keySet()), main));
     Set<Integer> coldest = eviction.coldest(Integer.MAX_VALUE).keySet();
-    assertThat(Iterables.elementsEqual(keys, coldest), is(true));
+    assertThat(coldest, contains(Iterables.toArray(keys, Integer.class)));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, initialCapacity = InitialCapacity.EXCESSIVE,
+      maximumSize = MaximumSize.FULL)
   public void coldest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
     Map<Integer, Integer> coldest = eviction.coldest(Integer.MAX_VALUE);
@@ -586,24 +588,26 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = MaximumSize.FULL)
   public void hottest_partial(CacheContext context, Eviction<Integer, Integer> eviction) {
     int count = (int) context.initialSize() / 2;
     assertThat(eviction.hottest(count).size(), is(count));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void hottest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
     Map<Integer, Integer> hottest = eviction.hottest(Integer.MAX_VALUE);
     Set<Integer> keys = new LinkedHashSet<>(ImmutableList.copyOf(hottest.keySet()).reverse());
-    assertThat(Iterables.elementsEqual(keys, context.original().keySet()), is(true));
+    assertThat(keys, contains(context.original().keySet().toArray(new Integer[0])));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
+  @CacheSpec(implementation = Implementation.Caffeine, initialCapacity = InitialCapacity.EXCESSIVE,
+      maximumSize = MaximumSize.FULL)
   public void hottest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
     Map<Integer, Integer> hottest = eviction.hottest(Integer.MAX_VALUE);

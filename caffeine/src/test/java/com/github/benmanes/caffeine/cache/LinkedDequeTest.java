@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -417,7 +418,7 @@ public final class LinkedDequeTest {
     List<LinkedValue> expected = new ArrayList<>();
     populate(expected);
     assertThat(deque.addAll(expected), is(true));
-    assertThat(Iterables.elementsEqual(deque, expected), is(true));
+    assertThat(deque, contains(expected.toArray(new LinkedValue[0])));
   }
 
   @Test(dataProvider = "full")

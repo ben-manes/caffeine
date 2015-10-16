@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.ver
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -249,12 +250,13 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE,
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = {Population.PARTIAL, Population.FULL}, expireAfterWrite = Expire.ONE_MINUTE,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void oldest_order(CacheContext context,
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     Map<Integer, Integer> oldest = expireAfterWrite.oldest(Integer.MAX_VALUE);
-    assertThat(Iterables.elementsEqual(oldest.keySet(), context.original().keySet()), is(true));
+    assertThat(oldest.keySet(), contains(context.original().keySet().toArray(new Integer[0])));
   }
 
   @Test(dataProvider = "caches")
@@ -297,13 +299,14 @@ public final class ExpireAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE,
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = {Population.PARTIAL, Population.FULL}, expireAfterWrite = Expire.ONE_MINUTE,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void youngest_order(CacheContext context,
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     Map<Integer, Integer> youngest = expireAfterWrite.youngest(Integer.MAX_VALUE);
     Set<Integer> keys = new LinkedHashSet<>(ImmutableList.copyOf(youngest.keySet()).reverse());
-    assertThat(Iterables.elementsEqual(keys, context.original().keySet()), is(true));
+    assertThat(keys, contains(Iterables.toArray(keys, Integer.class)));
   }
 
   @Test(dataProvider = "caches")

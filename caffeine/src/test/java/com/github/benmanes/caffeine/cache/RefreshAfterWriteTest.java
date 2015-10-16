@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
@@ -47,7 +48,6 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 
 /**
  * The test cases for caches that support the refresh after write policy.
@@ -259,13 +259,13 @@ public final class RefreshAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, advanceOnPopulation = Advance.ONE_MINUTE,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void oldest_order(CacheContext context,
       @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
     Map<Integer, Integer> oldest = refreshAfterWrite.oldest(Integer.MAX_VALUE);
-    assertThat(Iterables.elementsEqual(oldest.keySet(), context.original().keySet()), is(true));
+    assertThat(oldest.keySet(), contains(context.original().keySet().toArray(new Integer[0])));
   }
 
   @Test(dataProvider = "caches")
@@ -308,14 +308,14 @@ public final class RefreshAfterWriteTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       refreshAfterWrite = Expire.ONE_MINUTE, advanceOnPopulation = Advance.ONE_MINUTE,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void youngest_order(CacheContext context,
       @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
     Map<Integer, Integer> youngest = refreshAfterWrite.youngest(Integer.MAX_VALUE);
     Set<Integer> keys = new LinkedHashSet<>(ImmutableList.copyOf(youngest.keySet()).reverse());
-    assertThat(Iterables.elementsEqual(keys, context.original().keySet()), is(true));
+    assertThat(keys, contains(context.original().keySet().toArray(new Integer[0])));
   }
 
   @Test(dataProvider = "caches")
