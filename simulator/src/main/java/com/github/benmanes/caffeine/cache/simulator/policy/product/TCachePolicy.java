@@ -18,9 +18,13 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.trivago.triava.tcache.EvictionPolicy;
+import com.trivago.triava.tcache.JamPolicy;
 import com.trivago.triava.tcache.TCacheFactory;
-import com.trivago.triava.tcache.eviction.Cache;
+import com.trivago.triava.tcache.core.Builder;
+import com.trivago.triava.tcache.core.EvictionInterface;
+import com.trivago.triava.tcache.eviction.CacheLimit;
+import com.trivago.triava.tcache.eviction.LFUEviction;
+import com.trivago.triava.tcache.eviction.LRUEviction;
 import com.typesafe.config.Config;
 
 /**
@@ -29,7 +33,7 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TCachePolicy implements Policy {
-  private final Cache<Object, Object> cache;
+  private final SyncCache<Object, Object> cache;
   private final PolicyStats policyStats;
   private final int maximumSize;
 
@@ -37,15 +41,15 @@ public final class TCachePolicy implements Policy {
     TCacheSettings settings = new TCacheSettings(config);
     maximumSize = settings.maximumSize();
     policyStats = new PolicyStats(name);
-    cache = TCacheFactory.standardFactory().builder()
-        .setEvictionPolicy(settings.policy())
+    cache = new SyncCache<>(TCacheFactory.standardFactory().builder()
+        .setEvictionClass(settings.policy())
         .setExpectedMapSize(maximumSize)
-        .build();
+        .setJamPolicy(JamPolicy.DROP));
   }
 
   @Override
   public void record(long key) {
-    while (cache.size() > maximumSize) {
+    while (!cache.ensureFreeCapacity() || (cache.size() > maximumSize)) {
       // spin
     }
     Object value = cache.get(key);
@@ -65,13 +69,29 @@ public final class TCachePolicy implements Policy {
     return policyStats;
   }
 
+  static final class SyncCache<K, V> extends CacheLimit<K, V> {
+    public SyncCache(Builder<K, V> builder) {
+      super(builder);
+    }
+    @Override public boolean ensureFreeCapacity() {
+      return super.ensureFreeCapacity();
+    }
+  }
+
   static final class TCacheSettings extends BasicSettings {
     public TCacheSettings(Config config) {
       super(config);
     }
-    public EvictionPolicy policy() {
-      String policy = config().getString("tcache.policy").toUpperCase();
-      return EvictionPolicy.valueOf(policy);
+    public <K, V> EvictionInterface<K, V> policy() {
+      String policy = config().getString("tcache.policy").toLowerCase();
+      switch (policy) {
+        case "lfu":
+          return new LFUEviction<>();
+        case "lru":
+          return new LRUEviction<>();
+        default:
+          throw new IllegalArgumentException("Unknown policy type: " + policy);
+      }
     }
   }
 }
