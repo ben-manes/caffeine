@@ -38,8 +38,8 @@ subprojects { proj ->
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'nebula.provided-base'
   apply plugin: 'net.ltgt.errorprone'
-  apply plugin: 'org.dm.bundle'
   apply plugin: 'java'
+  apply plugin: 'osgi'
 
   apply from: "${rootDir}/gradle/publish.gradle"
   apply from: "${rootDir}/gradle/code_quality.gradle"

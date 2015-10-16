@@ -38,7 +38,7 @@ ext {
     jsr305: '3.0.1',
     stream: '2.9.0',
     univocity_parsers: '1.5.6',
-    ycsb: '0.4.0-RC2',
+    ycsb: '0.4.0-RC4',
   ]
   test_versions = [
     awaitility: '1.6.5',
@@ -67,7 +67,6 @@ ext {
     tcache: 'bc77a19e9b',
   ]
   plugin_versions = [
-    bundle: '0.6.2',
     checkstyle: '6.7',
     coveralls: '2.4.0',
     extra_conf: '3.0.3',
@@ -143,7 +142,6 @@ ext {
     tcache: "com.github.trivago:triava:${benchmark_versions.tcache}",
   ]
   gradle_plugins = [
-    bundle: "org.dm.gradle:gradle-bundle-plugin:${plugin_versions.bundle}",
     checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${plugin_versions.checkstyle}") {
       transitive = false
     },

@@ -28,18 +28,12 @@ test {
   useTestNG()
 }
 
-bundle {
-  instruction 'Import-Package', [
-    'com.github.benmanes.caffeine.cache',
-  ].join(';')
-  instruction 'Export-Package', [
-    'com.github.benmanes.caffeine.simulator',
-    'com.github.benmanes.caffeine.simulator.admission',
-    'com.github.benmanes.caffeine.simulator.generator',
-    'com.github.benmanes.caffeine.simulator.parser',
-    'com.github.benmanes.caffeine.simulator.policy',
-    'com.github.benmanes.caffeine.simulator.report',
-  ].join(';')
+jar.manifest {
+  name 'com.github.ben-manes.caffeine.simulator'
+  instruction 'Import-Package',
+    'com.github.benmanes.caffeine.cache.*'
+  instruction 'Export-Package',
+    'com.github.benmanes.caffeine.cache.simulator.*'
 }
 
 tasks.withType(Javadoc) {

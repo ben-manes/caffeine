@@ -48,18 +48,17 @@ dependencies {
   javaPoetCompile libraries.commons_lang3
 }
 
-bundle {
-  instruction 'Import-Package', [
+jar.manifest {
+  name 'com.github.ben-manes.caffeine'
+  instruction 'Import-Package',
     'sun.misc.*',
     'resolution:=optional'
-  ].join(';')
-  instruction 'Export-Package', [
+  instruction 'Export-Package',
     'com.github.benmanes.caffeine',
     'com.github.benmanes.caffeine.base',
     'com.github.benmanes.caffeine.cache',
     'com.github.benmanes.caffeine.cache.stats',
-    'com.github.benmanes.caffeine.locks',
-  ].join(';')
+    'com.github.benmanes.caffeine.locks'
 }
 
 task generateLocalCaches(type: JavaExec) {

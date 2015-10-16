@@ -12,13 +12,13 @@ dependencies {
   testCompile test_libraries.truth
   testCompile test_libraries.easymock
 }
-
-bundle {
-  instruction 'Import-Package', [
+jar.manifest {
+  name 'com.github.ben-manes.caffeine.guava'
+  instruction 'Import-Package',
     'com.github.benmanes.caffeine.cache',
-    'com.github.benmanes.caffeine.cache.stats',
-  ].join(';')
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.guava.*'
+    'com.github.benmanes.caffeine.cache.stats'
+  instruction 'Export-Package',
+    'com.github.benmanes.caffeine.guava.*'
 }
 
 tasks.withType(Javadoc) {
