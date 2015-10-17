@@ -57,8 +57,7 @@ jar.manifest {
     'com.github.benmanes.caffeine',
     'com.github.benmanes.caffeine.base',
     'com.github.benmanes.caffeine.cache',
-    'com.github.benmanes.caffeine.cache.stats',
-    'com.github.benmanes.caffeine.locks'
+    'com.github.benmanes.caffeine.cache.stats'
 }
 
 task generateLocalCaches(type: JavaExec) {

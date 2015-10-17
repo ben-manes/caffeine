@@ -1,6 +1,7 @@
 /**
  * Java microbenchmark harness: https://github.com/melix/jmh-gradle-plugin
  */
+apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'me.champeau.gradle.jmh'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
@@ -26,6 +27,10 @@ dependencies {
 tasks.jmh {
   group = 'Benchmarks'
   description = 'Executes a Java microbenchmark'
+}
+
+jmhJar {
+  mergeServiceFiles()
 }
 
 jmh {

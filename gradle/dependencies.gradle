@@ -75,6 +75,7 @@ ext {
     nexus: '2.3.1',
     versions: '0.11.3',
     semantic_versioning: '1.1.0',
+    shadow: '1.2.2',
     stats: '0.1.5',
   ]
 
@@ -151,6 +152,7 @@ ext {
     jmh: "me.champeau.gradle:jmh-gradle-plugin:${plugin_versions.jmh}",
     nexus: "com.bmuschko:gradle-nexus-plugin:${plugin_versions.nexus}",
     semantic_versioning: "io.ehdev:gradle-semantic-versioning:${plugin_versions.semantic_versioning}",
+    shadow: "com.github.jengelman.gradle.plugins:shadow:${plugin_versions.shadow}",
     stats: "org.kordamp.gradle:stats-gradle-plugin:${plugin_versions.stats}",
     versions: "com.github.ben-manes:gradle-versions-plugin:${plugin_versions.versions}",
   ]
