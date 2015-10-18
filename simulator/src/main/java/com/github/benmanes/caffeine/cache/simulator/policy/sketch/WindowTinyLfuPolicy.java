@@ -97,6 +97,7 @@ public final class WindowTinyLfuPolicy implements Policy {
     } else if (node.status == Status.MAIN) {
       // Fast path skips the hottest entries, useful for concurrent caches
       if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {
+        node.recencyMove = ++mainRecencyCounter;
         node.moveToTail(headMain);
         admittor.record(key);
       }
