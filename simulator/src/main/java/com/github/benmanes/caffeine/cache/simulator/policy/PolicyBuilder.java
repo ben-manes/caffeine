@@ -40,7 +40,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.InfinispanPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.SegmentedWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.FullSegmentedWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.PartialSegmentedWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicywithGhostCache;
@@ -113,8 +114,10 @@ public final class PolicyBuilder {
       case "sketch":
         if (strategy.equalsIgnoreCase("WindowTinyLfu")) {
           return new WindowTinyLfuPolicy(type, config);
-        } else if (strategy.equalsIgnoreCase("SegmentedWindowTinyLfu")) {
-          return new SegmentedWindowTinyLfuPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("PartialSegmentedWindowTinyLfu")) {
+          return new PartialSegmentedWindowTinyLfuPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("FullSegmentedWindowTinyLfu")) {
+          return new FullSegmentedWindowTinyLfuPolicy(type, config);
         } else if (strategy.equalsIgnoreCase("TinyCache_GhostCache")) {
           return new TinyCachePolicywithGhostCache(type, config);
         } else if (strategy.equalsIgnoreCase("TinyCache")) {
