@@ -409,6 +409,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       int distance = ((int) Math.min(max, Integer.MAX_VALUE)) >>> FAST_PATH_RSHIFT;
       setMoveDistance(distance);
     }
+
+    if ((weigher == Weigher.singleton()) && (frequencySketch() != null)) {
+      if (weightedSize() >= (max >>> 1)) {
+        // Lazily initialize when close to the maximum size
+        frequencySketch().ensureCapacity(max);
+      }
+    }
   }
 
   /** Returns the combined weight of the values in the cache. */
@@ -981,11 +988,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     public void run() {
       if (evicts()) {
         node.setPolicyWeight(weight);
-        lazySetWeightedSize(weightedSize() + weight);
+        long weightedSize = weightedSize();
+        lazySetWeightedSize(weightedSize + weight);
         lazySetEdenWeightedSize(edenWeightedSize() + weight);
 
-        long size = (weigher == Weigher.singleton()) ? adjustedWeightedSize() : data.mappingCount();
-        frequencySketch().ensureCapacity(Math.min(maximum(), size));
+        if (weigher == Weigher.singleton()) {
+          long maximumSize = maximum();
+          if (weightedSize >= (maximumSize >>> 1)) {
+            // Lazily initialize when close to the maximum size
+            frequencySketch().ensureCapacity(maximumSize);
+          }
+        } else {
+          frequencySketch().ensureCapacity(data.mappingCount());
+        }
 
         K key = node.getKey();
         if (key != null) {
