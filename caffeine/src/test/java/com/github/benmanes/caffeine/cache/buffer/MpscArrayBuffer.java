@@ -34,7 +34,7 @@ final class MpscArrayBuffer<E> extends ReadBuffer<E> {
 
   @Override
   public int offer(E e) {
-    return queue.weakOffer(e);
+    return queue.relaxedOffer(e) ? SUCCESS : FULL;
   }
 
   @Override

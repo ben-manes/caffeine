@@ -17,19 +17,18 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-import java.text.NumberFormat;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.LongAdder;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.yahoo.ycsb.generator.IntegerGenerator;
-import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * A stress test to observe if the cache has a memory leak by not being able to drain the buffers
@@ -38,16 +37,20 @@ import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Stresser {
+  private static final String[] STATUS = { "Idle", "Required", "Processing" };
+  private static final int THREADS = 2 * Runtime.getRuntime().availableProcessors();
   private static final long STATUS_INTERVAL = 5;
-  private static final int SIZE = (2 << 14);
-  private static final int MASK = SIZE - 1;
-  private static final int THREADS = 8;
+  private static final int MAX_SIZE = (1 << 12);
+  private static final int LENGTH = (1 << 20);
+  private static final int MASK = LENGTH - 1;
 
-  private Integer[] ints;
-  private Cache<Integer, Boolean> cache;
-  private BoundedLocalCache<Integer, Boolean> local;
-  private ScheduledExecutorService statusExecutor;
-  private LongAdder evictions;
+  private final BoundedLocalCache<Integer, Integer> local;
+  private final ScheduledExecutorService statusExecutor;
+  private final Cache<Integer, Integer> cache;
+  private final LongAdder evictions;
+  private final Integer[] ints;
+
+  private final boolean reads = false;
 
   public Stresser() {
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
@@ -56,31 +59,33 @@ public final class Stresser {
         .build();
     statusExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
     statusExecutor.scheduleAtFixedRate(newStatusTask(), THREADS, STATUS_INTERVAL, SECONDS);
+    evictions = new LongAdder();
     cache = Caffeine.newBuilder()
         .removalListener((k, v, c) -> evictions.increment())
-        .executor(MoreExecutors.directExecutor())
-        .maximumSize(SIZE)
+        .maximumSize(reads ? LENGTH : MAX_SIZE)
+        .initialCapacity(MAX_SIZE)
         .build();
-    evictions = new LongAdder();
-    local = (BoundedLocalCache<Integer, Boolean>) cache.asMap();
+    local = (BoundedLocalCache<Integer, Integer>) cache.asMap();
+
+    ints = new Integer[LENGTH];
+    Arrays.setAll(ints, i-> {
+      Integer key = i;
+      cache.put(key, key);
+      return key;
+    });
   }
 
   public void run() throws InterruptedException {
-    for (int i = 0; i < SIZE; i++) {
-      cache.put(i, Boolean.TRUE);
-    }
-    ints = new Integer[SIZE];
-    IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
-    for (int i = 0; i < SIZE; i++) {
-      ints[i] = generator.nextInt();
-    }
-
     ConcurrentTestHarness.timeTasks(THREADS, () -> {
       int index = ThreadLocalRandom.current().nextInt();
       for (;;) {
-        cache.put(ints[index++ & MASK], Boolean.FALSE);
-        cache.getIfPresent(ints[index++ & MASK]);
-        Thread.yield();
+        Integer key = ints[index++ & MASK];
+        if (reads) {
+          cache.getIfPresent(ints[index++ & MASK]);
+        } else {
+          cache.put(key, key);
+          Thread.yield();
+        }
       }
     });
   }
@@ -91,16 +96,20 @@ public final class Stresser {
 
       @Override
       public void run() {
+        local.evictionLock.lock();
+        int pendingWrites = local.writeQueue().size();
+        local.evictionLock.unlock();
+
         runningTime += STATUS_INTERVAL;
         String elapsedTime = LocalTime.ofSecondOfDay(runningTime).toString();
-        String pendingReads = NumberFormat.getInstance().format(local.readBuffer.size());
-        String pendingWrites = NumberFormat.getInstance().format(local.writeQueue().size());
         System.out.printf("---------- %s ----------%n", elapsedTime);
-        System.out.printf("Pending reads = %s%n", pendingReads);
-        System.out.printf("Pending write = %s%n", pendingWrites);
-        System.out.printf("Drain status = %s%n", local.drainStatus);
+        System.out.printf("Pending reads = %,d%n", local.readBuffer.size());
+        System.out.printf("Pending write = %,d%n", pendingWrites);
+        System.out.printf("Drain status = %s%n", STATUS[local.drainStatus]);
         System.out.printf("Evictions = %,d%n", evictions.intValue());
-        System.out.printf("Lock = %s%n", local.evictionLock);
+        System.out.printf("Size = %,d%n", local.data.mappingCount());
+        System.out.printf("Lock = [%s%n", StringUtils.substringAfter(
+            local.evictionLock.toString(), "["));
       }
     };
   }

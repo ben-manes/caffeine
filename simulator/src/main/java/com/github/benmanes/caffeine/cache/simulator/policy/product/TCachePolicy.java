@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.trivago.triava.tcache.JamPolicy;
 import com.trivago.triava.tcache.TCacheFactory;
 import com.trivago.triava.tcache.core.Builder;
 import com.trivago.triava.tcache.core.EvictionInterface;
@@ -28,7 +27,7 @@ import com.trivago.triava.tcache.eviction.LRUEviction;
 import com.typesafe.config.Config;
 
 /**
- * TCache implementation.
+ * TCache implementation. This library uses high/low watermarks and does not honor a strict bound.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -44,14 +43,11 @@ public final class TCachePolicy implements Policy {
     cache = new SyncCache<>(TCacheFactory.standardFactory().builder()
         .setEvictionClass(settings.policy())
         .setExpectedMapSize(maximumSize)
-        .setJamPolicy(JamPolicy.DROP));
+        .setStatistics(true));
   }
 
   @Override
   public void record(long key) {
-    while (!cache.ensureFreeCapacity() || (cache.size() > maximumSize)) {
-      // spin
-    }
     Object value = cache.get(key);
     if (value == null) {
       policyStats.recordMiss();
@@ -67,6 +63,11 @@ public final class TCachePolicy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
+  }
+
+  @Override
+  public void finished() {
+    policyStats.addEvictions(cache.statistics().getEvictionCount());
   }
 
   static final class SyncCache<K, V> extends CacheLimit<K, V> {

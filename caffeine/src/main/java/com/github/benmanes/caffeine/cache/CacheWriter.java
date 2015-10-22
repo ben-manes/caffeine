@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 /**
  * Communicates the write or deletion of a value, based on a key, to an external resource. A writer
  * is notified by the cache each time an entry is explicitly created or modified, or removed for any
- * {@linkplain RemovalCause reason}. The writer is not notified when an entry is loaded or computed.
+ * {@link RemovalCause reason}. The writer is not notified when an entry is loaded or computed.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <K> the most general type of keys this writer can write; for example {@code Object} if any
