@@ -120,14 +120,30 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /* ---------------- Access order -------------- */
 
-  /** Returns if the entry is in the Eden or Main access queue. */
+  /** Returns if the entry is in the Eden or Main space. */
   default boolean isEden() {
     return getMoveCount() == 0;
   }
 
+  /** Returns if the entry is in the Main space's probation queue. */
+  default boolean isMainProbation() {
+    return getMoveCount() < 0;
+  }
+
+  /** Returns if the entry is in the Main space's protected queue. */
+  default boolean isMainProtected() {
+    return getMoveCount() > 0;
+  }
+
+  /** Sets the status to the Main space's probation queue. */
+  default void makeMainProbation() {
+    setMoveCount(-1);
+  }
+
   /**
    * Returns the entry's move count in the Main access queue. A move count of zero indicates that
-   * the entry is in the Eden queue.
+   * the entry is in the Eden queue, a negative that its in the Main's probation queue, and a
+   * positive that it is in the Main's protected queue.
    */
   @Nonnegative
   default int getMoveCount() {

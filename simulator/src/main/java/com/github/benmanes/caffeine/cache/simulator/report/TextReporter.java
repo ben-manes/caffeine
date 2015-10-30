@@ -83,21 +83,19 @@ public abstract class TextReporter implements Reporter {
   private Comparator<PolicyStats> makeComparator() {
     switch (settings.report().sortBy().toLowerCase()) {
       case "policy":
-        return (first, second) -> first.name().compareTo(second.name());
+        return Comparator.comparing(PolicyStats::name);
       case "hit rate":
-        return (first, second) -> Double.compare(first.hitRate(), second.hitRate());
+        return Comparator.comparingDouble(PolicyStats::hitRate);
       case "hits":
-        return (first, second) -> Long.compare(first.hitCount(), second.hitCount());
+        return Comparator.comparingLong(PolicyStats::hitCount);
       case "misses":
-        return (first, second) -> Long.compare(first.hitCount(), second.hitCount());
+        return Comparator.comparingLong(PolicyStats::missCount);
       case "evictions":
-        return (first, second) -> Long.compare(first.evictionCount(), second.evictionCount());
+        return Comparator.comparingLong(PolicyStats::evictionCount);
       case "steps":
-        return (first, second) -> Long.compare(first.operationCount(), second.operationCount());
+        return Comparator.comparingLong(PolicyStats::operationCount);
       case "time":
-        return (first, second) -> Long.compare(
-            first.stopwatch().elapsed(TimeUnit.NANOSECONDS),
-            second.stopwatch().elapsed(TimeUnit.NANOSECONDS));
+        return Comparator.comparingLong(stats -> stats.stopwatch().elapsed(TimeUnit.NANOSECONDS));
       default:
         throw new IllegalArgumentException("Unknown sort order: " + settings.report().sortBy());
     }

@@ -109,10 +109,12 @@ public final class IsValidBoundedLocalCache<K, V>
   private void checkEvictionDeque(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
     if (cache.evicts()) {
       ImmutableList<LinkedDeque<Node<K, V>>> deques = ImmutableList.of(
-          cache.accessOrderEdenDeque(), cache.accessOrderMainDeque());
+          cache.accessOrderEdenDeque(),
+          cache.accessOrderProbationDeque(),
+          cache.accessOrderProtectedDeque());
       checkLinks(cache, deques, desc);
       checkDeque(cache.accessOrderEdenDeque(), desc);
-      checkDeque(cache.accessOrderMainDeque(), desc);
+      checkDeque(cache.accessOrderProbationDeque(), desc);
     } else if (cache.expiresAfterAccess()) {
       checkLinks(cache, ImmutableList.of(cache.accessOrderEdenDeque()), desc);
       checkDeque(cache.accessOrderEdenDeque(), desc);
@@ -137,7 +139,9 @@ public final class IsValidBoundedLocalCache<K, V>
       size += deque.size();
       weightedSize += scanLinks(cache, seen, deque, desc);
     }
-    desc.expectThat(() -> "deque size " + deques, size, is(cache.size()));
+    if (cache.size() != size) {
+      desc.expectThat(() -> "deque size " + deques, size, is(cache.size()));
+    }
 
     Supplier<String> errorMsg = () -> String.format(
         "Size != list length; pending=%s, additional: %s", cache.writeQueue().size(),

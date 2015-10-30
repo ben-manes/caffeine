@@ -53,7 +53,8 @@ public final class AddDeques extends LocalCacheRule {
         || !Feature.usesAccessOrderMainDeque(context.generateFeatures)) {
       return;
     }
-    addDeque(ACCESS_ORDER_DEQUE, "accessOrderMainDeque");
+    addDeque(ACCESS_ORDER_DEQUE, "accessOrderProbationDeque");
+    addDeque(ACCESS_ORDER_DEQUE, "accessOrderProtectedDeque");
   }
 
   private void addWriteOrderDeque() {

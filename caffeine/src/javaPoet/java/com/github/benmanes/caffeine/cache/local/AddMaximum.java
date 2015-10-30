@@ -44,8 +44,10 @@ public final class AddMaximum extends LocalCacheRule {
     addEvicts();
     addMaximum("");
     addMaximum("eden");
+    addMaximum("mainProtected");
     addWeightedSize("");
     addWeightedSize("eden");
+    addWeightedSize("mainProtected");
     addFrequencySketch();
   }
 

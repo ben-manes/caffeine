@@ -116,8 +116,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * main space. If the main space is already full, then a historic frequency filter determines
    * whether to evict the newly admitted entry or the victim entry chosen by main space's policy.
    * This process ensures that the entries in the main space have both a high recency and frequency.
-   * The windowing allows the policy to have a high hit rate when entries exhibit a high temporal
-   * but low frequency access pattern. Both the eden and main spaces use LRU queues.
+   * The windowing allows the policy to have a high hit rate when entries exhibit a bursty high
+   * temporal but low frequency access pattern. The eden space uses LRU and the main space uses
+   * Segmented LRU.
    */
 
   static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
@@ -126,6 +127,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final long MAXIMUM_CAPACITY = Long.MAX_VALUE - Integer.MAX_VALUE;
   /** The percent of the maximum weighted capacity dedicated to the main space. */
   static final double PERCENT_MAIN = 0.99f;
+  /** The percent of the maximum weighted capacity dedicated to the main's protected space. */
+  static final double PERCENT_MAIN_PROTECTED = 0.80f;
   /** The percent of the total entries that are considered hot and can skip policy maintenance. */
   static final int FAST_PATH_RSHIFT = 3; // 12.5%
 
@@ -183,7 +186,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @GuardedBy("evictionLock")
-  protected AccessOrderDeque<Node<K, V>> accessOrderMainDeque() {
+  protected AccessOrderDeque<Node<K, V>> accessOrderProbationDeque() {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected AccessOrderDeque<Node<K, V>> accessOrderProtectedDeque() {
     throw new UnsupportedOperationException();
   }
 
@@ -381,6 +389,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
+  /** Returns the maximum weighted size of the main's protected space. */
+  protected long mainProtectedMaximum() {
+    throw new UnsupportedOperationException();
+  }
+
   @GuardedBy("evictionLock") // must write under lock
   protected void lazySetMaximum(long maximum) {
     throw new UnsupportedOperationException();
@@ -388,6 +401,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @GuardedBy("evictionLock") // must write under lock
   protected void lazySetEdenMaximum(long maximum) {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock") // must write under lock
+  protected void lazySetMainProtectedMaximum(long maximum) {
     throw new UnsupportedOperationException();
   }
 
@@ -401,9 +419,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     long max = Math.min(maximum, MAXIMUM_CAPACITY);
     long eden = max - (long) (max * PERCENT_MAIN);
+    long mainProtected = (long) (max * PERCENT_MAIN_PROTECTED);
 
     lazySetMaximum(max);
     lazySetEdenMaximum(eden);
+    lazySetMainProtectedMaximum(mainProtected);
 
     if (fastpath()) {
       int distance = ((int) Math.min(max, Integer.MAX_VALUE)) >>> FAST_PATH_RSHIFT;
@@ -433,6 +453,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
+  /** Returns the uncorrected combined weight of the values in the main's protected space. */
+  protected long mainProtectedWeightedSize() {
+    throw new UnsupportedOperationException();
+  }
+
   @GuardedBy("evictionLock") // must write under lock
   protected void lazySetWeightedSize(long weightedSize) {
     throw new UnsupportedOperationException();
@@ -440,6 +465,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @GuardedBy("evictionLock") // must write under lock
   protected void lazySetEdenWeightedSize(long weightedSize) {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock") // must write under lock
+  protected void lazySetMainProtectedWeightedSize(long weightedSize) {
     throw new UnsupportedOperationException();
   }
 
@@ -482,9 +512,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       Node<K, V> next = node.getNextInAccessOrder();
       if (node.getWeight() != 0) {
-        node.setMoveCount(incrementAndGetMoveCount());
+        node.makeMainProbation();
         accessOrderEdenDeque().remove(node);
-        accessOrderMainDeque().add(node);
+        accessOrderProbationDeque().add(node);
         candidates++;
 
         lazySetEdenWeightedSize(edenWeightedSize() - node.getPolicyWeight());
@@ -512,17 +542,22 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @GuardedBy("evictionLock")
   boolean evictFromMain(int candidates) {
     boolean modified = false;
-    Node<K, V> victim = accessOrderMainDeque().peekFirst();
-    Node<K, V> candidate = accessOrderMainDeque().peekLast();
+    Node<K, V> victim = accessOrderProbationDeque().peekFirst();
+    Node<K, V> candidate = accessOrderProbationDeque().peekLast();
     while (weightedSize() > maximum()) {
-      // The pending operations will adjust the size to reflect the correct weight
-      if ((candidate == null) && (victim == null)) {
-        break;
-      }
-
       // Stop trying to evict candidates and always prefer the victim
       if (candidates == 0) {
         candidate = null;
+      }
+
+      // Start evicting from the protected queue
+      if ((candidate == null) && (victim == null)) {
+        victim = accessOrderProtectedDeque().peekFirst();
+
+        // The pending operations will adjust the size to reflect the correct weight
+        if (victim == null) {
+          break;
+        }
       }
 
       // Skip over entries with zero weight
@@ -610,7 +645,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
       if (evicts()) {
         for (;;) {
-          final Node<K, V> node = accessOrderMainDeque().peekFirst();
+          final Node<K, V> node = accessOrderProbationDeque().peekFirst();
+          if ((node == null) || (node.getAccessTime() > expirationTime)) {
+            break;
+          }
+          modified = true;
+          evictEntry(node, RemovalCause.EXPIRED, now);
+        }
+        for (;;) {
+          final Node<K, V> node = accessOrderProtectedDeque().peekFirst();
           if ((node == null) || (node.getAccessTime() > expirationTime)) {
             break;
           }
@@ -706,7 +749,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (node.isEden() && (evicts() || expiresAfterAccess())) {
       accessOrderEdenDeque().remove(node);
     } else if (evicts()) {
-      accessOrderMainDeque().remove(node);
+      if (node.isMainProbation()) {
+        accessOrderProbationDeque().remove(node);
+      } else {
+        accessOrderProtectedDeque().remove(node);
+      }
     }
     if (expiresAfterWrite()) {
       writeOrderDeque().remove(node);
@@ -745,7 +792,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** Returns if the entry is eligible for a fast path read. */
   boolean canFastpath(Node<K, V> node) {
     int moveCount = node.getMoveCount();
-    if (!fastpath() || (moveCount == 0)) {
+    if (!fastpath() || (moveCount <= 0)) {
       return false;
     }
     int distance = Math.abs(moveCount() - moveCount);
@@ -914,8 +961,33 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       frequencySketch().increment(key);
       if (node.isEden()) {
         reorder(accessOrderEdenDeque(), node);
+      } else if (node.isMainProbation()) {
+        if (!accessOrderProbationDeque().contains(node)) {
+          // Ignore stale accesses for an entry that is no longer present
+          return;
+        } else if (node.getPolicyWeight() > mainProtectedMaximum()) {
+          return;
+        }
+
+        long mainProtectedWeightedSize = mainProtectedWeightedSize() + node.getPolicyWeight();
+        node.setMoveCount(incrementAndGetMoveCount());
+        accessOrderProbationDeque().remove(node);
+        accessOrderProtectedDeque().add(node);
+
+        long mainProtectedMaximum = mainProtectedMaximum();
+        while (mainProtectedWeightedSize > mainProtectedMaximum) {
+          Node<K, V> demoted = accessOrderProtectedDeque().pollFirst();
+          if (demoted == null) {
+            break;
+          }
+          demoted.makeMainProbation();
+          Caffeine.requireState( accessOrderProbationDeque().add(demoted));
+          mainProtectedWeightedSize -= node.getPolicyWeight();
+        }
+
+        lazySetMainProtectedWeightedSize(mainProtectedWeightedSize);
       } else {
-        reorder(accessOrderMainDeque(), node);
+        reorder(accessOrderProtectedDeque(), node);
         node.setMoveCount(incrementAndGetMoveCount());
       }
     } else if (expiresAfterAccess()) {
@@ -966,6 +1038,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         // taken from the node's perspective and the sizes will be adjusted correctly.
         if (node.isEden()) {
           lazySetEdenWeightedSize(edenWeightedSize() - node.getWeight());
+        } else if (node.isMainProtected()) {
+          lazySetMainProtectedWeightedSize(mainProtectedWeightedSize() - node.getWeight());
         }
         lazySetWeightedSize(weightedSize() - node.getWeight());
       }
@@ -1050,7 +1124,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (node.isEden() && (evicts() || expiresAfterAccess())) {
         accessOrderEdenDeque().remove(node);
       } else if (evicts()) {
-        accessOrderMainDeque().remove(node);
+        if (node.isMainProbation()) {
+          accessOrderProbationDeque().remove(node);
+        } else {
+          accessOrderProtectedDeque().remove(node);
+        }
       }
       if (expiresAfterWrite()) {
         writeOrderDeque().remove(node);
@@ -1075,6 +1153,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (evicts()) {
         if (node.isEden()) {
           lazySetEdenWeightedSize(edenWeightedSize() + weightDifference);
+        } else if (node.isMainProtected()) {
+          lazySetMainProtectedWeightedSize(mainProtectedMaximum() + weightDifference);
         }
         lazySetWeightedSize(weightedSize() + weightDifference);
         node.setPolicyWeight(node.getPolicyWeight() + weightDifference);
@@ -1128,7 +1208,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         removeNodes(accessOrderEdenDeque(), now);
       }
       if (evicts()) {
-        removeNodes(accessOrderMainDeque(), now);
+        removeNodes(accessOrderProbationDeque(), now);
+        removeNodes(accessOrderProtectedDeque(), now);
       }
       if (expiresAfterWrite()) {
         removeNodes(writeOrderDeque(), now);
@@ -1934,14 +2015,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> evictionOrder(int limit, Function<V, V> transformer, boolean ascending) {
-    Comparator<Node<K, V>> comparator = (n1, n2) -> Integer.compare(
-        frequencySketch().frequency(n1.getKey()), frequencySketch().frequency(n2.getKey()));
+    Comparator<Node<K, V>> comparator = Comparator.comparingInt(node ->
+        frequencySketch().frequency(node.getKey()));
     comparator = ascending ? comparator : comparator.reversed();
-    PeekingIterator<Node<K, V>> first =
-        ascending ? accessOrderEdenDeque().iterator() : accessOrderEdenDeque().descendingIterator();
-    PeekingIterator<Node<K, V>> second =
-        ascending ? accessOrderMainDeque().iterator() : accessOrderMainDeque().descendingIterator();
-    return orderBy(limit, transformer, comparator, first, second);
+    PeekingIterator<Node<K, V>> eden;
+    PeekingIterator<Node<K, V>> main;
+    if (ascending) {
+      eden = accessOrderEdenDeque().iterator();
+      main = PeekingIterator.concat(
+          accessOrderProbationDeque().iterator(),
+          accessOrderProtectedDeque().iterator());
+    } else {
+      eden = accessOrderEdenDeque().descendingIterator();
+      main = PeekingIterator.concat(
+          accessOrderProbationDeque().descendingIterator(),
+          accessOrderProtectedDeque().descendingIterator());
+    }
+    return orderBy(limit, transformer, comparator, eden, main, PeekingIterator.empty());
   }
 
   /**
@@ -1955,15 +2045,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> expireAfterAcessOrder(int limit, Function<V, V> transformer, boolean ascending) {
-    Comparator<Node<K, V>> comparator = (n1, n2) ->
-        Long.compare(n1.getAccessTime(), n2.getAccessTime());
+    Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getAccessTime);
     comparator = ascending ? comparator : comparator.reversed();
     Function<LinkedDeque<Node<K, V>>, PeekingIterator<Node<K, V>>> ordering =
         deque -> ascending ? deque.iterator() : deque.descendingIterator();
     PeekingIterator<Node<K, V>> first = ordering.apply(accessOrderEdenDeque());
-    PeekingIterator<Node<K, V>> second =
-        evicts() ? ordering.apply(accessOrderMainDeque()) : PeekingIterator.empty();
-    return orderBy(limit, transformer, comparator, first, second);
+    PeekingIterator<Node<K, V>> second;
+    PeekingIterator<Node<K, V>> third;
+    if (evicts()) {
+      second = ordering.apply(accessOrderProbationDeque());
+      third = ordering.apply(accessOrderProtectedDeque());
+    } else {
+      second = third = PeekingIterator.empty();
+    }
+    return orderBy(limit, transformer, comparator, first, second, third);
   }
 
   /**
@@ -1977,12 +2072,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> expireAfterWriteOrder(int limit, Function<V, V> transformer, boolean ascending) {
-    Comparator<Node<K, V>> comparator = (n1, n2) ->
-        Long.compare(n1.getAccessTime(), n2.getAccessTime());
+    Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getWriteTime);
     comparator = ascending ? comparator : comparator.reversed();
-    PeekingIterator<Node<K, V>> deque =
-        ascending ? writeOrderDeque().iterator() : writeOrderDeque().descendingIterator();
-    return orderBy(limit, transformer, comparator, deque, PeekingIterator.empty());
+    PeekingIterator<Node<K, V>> deque;
+    if (ascending) {
+      deque = writeOrderDeque().iterator();
+    } else {
+      deque = writeOrderDeque().descendingIterator();
+    }
+    return orderBy(limit, transformer, comparator, deque,
+        PeekingIterator.empty(), PeekingIterator.empty());
   }
 
   /**
@@ -1998,7 +2097,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @return an unmodifiable snapshot in a specified order
    */
   Map<K, V> orderBy(int limit, Function<V, V> transformer, Comparator<Node<K, V>> comparator,
-      PeekingIterator<Node<K, V>> first, PeekingIterator<Node<K, V>> second) {
+      PeekingIterator<Node<K, V>> first, PeekingIterator<Node<K, V>> second,
+      PeekingIterator<Node<K, V>> third) {
     Caffeine.requireArgument(limit >= 0);
     evictionLock.lock();
     try {
@@ -2015,19 +2115,45 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           map.put(key, transformer.apply(value));
         }
       };
-      Node<K, V> node1, node2;
+
+      Node<K, V> node1, node2, node3;
       while ((map.size() < limit) && ((node1 = first.peek()) != null)
-          && ((node2 = second.peek()) != null)) {
+          && ((node2 = second.peek()) != null) && ((node3 = second.peek()) != null)) {
         if (comparator.compare(node1, node2) <= 0) {
-          first.next();
+          if (comparator.compare(node1, node3) <= 0) {
+            first.next();
+            consumer.accept(node1);
+          } else {
+            third.next();
+            consumer.accept(node3);
+          }
+        } else {
+          if (comparator.compare(node2, node3) <= 0) {
+            second.next();
+            consumer.accept(node2);
+          } else {
+            third.next();
+            consumer.accept(node3);
+          }
+        }
+      }
+
+      PeekingIterator<Node<K, V>> remaining1 = first.hasNext() ? first : second;
+      PeekingIterator<Node<K, V>> remaining2 = second.hasNext() ? second : third;
+      while ((map.size() < limit) && ((node1 = remaining1.peek()) != null)
+          && ((node2 = remaining2.peek()) != null)) {
+        if (comparator.compare(node1, node2) <= 0) {
+          remaining1.next();
           consumer.accept(node1);
         } else {
-          second.next();
+          remaining2.next();
           consumer.accept(node2);
         }
       }
+
       first.asStream().limit(Math.max(0, limit - map.size())).forEach(consumer);
       second.asStream().limit(Math.max(0, limit - map.size())).forEach(consumer);
+      third.asStream().limit(Math.max(0, limit - map.size())).forEach(consumer);
       return Collections.unmodifiableMap(map);
     } finally {
       evictionLock.unlock();
