@@ -36,8 +36,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * Eventually an entry will slip from the end of the eden queue onto the front of the main queue. If
  * the main queue is already full, then a historic frequency filter determines whether to evict the
  * newly admitted entry or the victim entry chosen by main queue's policy. This process ensures that
- * the entries in the main queue have both a high recency and frequency. Both the eden and main
- * spaces use LRU queues.
+ * the entries in the main queue have both a high recency and frequency. The eden space uses LRU
+ * and the main uses Segmented LRU.
  * <p>
  * Scan resistance is achieved by means of the eden queue. Transient data will pass through from the
  * eden queue and not be accepted into the main queue. Responsiveness is maintained by the main
@@ -50,25 +50,32 @@ public final class WindowTinyLfuPolicy implements Policy {
   private final PolicyStats policyStats;
   private final int recencyMoveDistance;
   private final Admittor admittor;
+  private final int maximumSize;
+
   private final Node headEden;
-  private final Node headMain;
+  private final Node headProbation;
+  private final Node headProtected;
+
   private final int maxEden;
-  private final int maxMain;
+  private final int maxProtected;
 
   private int sizeEden;
-  private int sizeMain;
+  private int sizeProtected;
   private int mainRecencyCounter;
 
   public WindowTinyLfuPolicy(String name, Config config) {
     WindowTinyLfuSettings settings = new WindowTinyLfuSettings(config);
-    this.maxMain = (int) (settings.maximumSize() * settings.percentMain());
-    this.maxEden = settings.maximumSize() - maxMain;
+    int maxMain = (int) (settings.maximumSize() * settings.percentMain());
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
+    this.maxProtected = (int) (maxMain * settings.percentMainProtected());
+    this.maxEden = settings.maximumSize() - maxMain;
     this.data = new Long2ObjectOpenHashMap<>();
+    this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(config);
+    this.headProtected = new Node();
+    this.headProbation = new Node();
     this.headEden = new Node();
-    this.headMain = new Node();
   }
 
   @Override
@@ -81,70 +88,109 @@ public final class WindowTinyLfuPolicy implements Policy {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      admittor.record(key);
-
-      node = new Node(key, Status.EDEN);
-      node.appendToTail(headEden);
-      data.put(key, node);
-      sizeEden++;
-      evict();
-
+      onMiss(key);
       policyStats.recordMiss();
     } else if (node.status == Status.EDEN) {
-      admittor.record(key);
-      node.moveToTail(headEden);
+      onEdenHit(node);
       policyStats.recordHit();
-    } else if (node.status == Status.MAIN) {
-      // Fast path skips the hottest entries, useful for concurrent caches
-      if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {
-        node.recencyMove = ++mainRecencyCounter;
-        node.moveToTail(headMain);
-        admittor.record(key);
-      }
+    } else if (node.status == Status.PROBATION) {
+      onProbationHit(node);
+      policyStats.recordHit();
+    } else if (node.status == Status.PROTECTED) {
+      onProtectedHit(node);
       policyStats.recordHit();
     } else {
       throw new IllegalStateException();
     }
   }
 
-  /** Evicts if the map exceeds the maximum capacity. */
+  /** Adds the entry to the admission window, evicting if necessary. */
+  private void onMiss(long key) {
+    admittor.record(key);
+
+    Node node = new Node(key, Status.EDEN);
+    node.appendToTail(headEden);
+    data.put(key, node);
+    sizeEden++;
+    evict();
+  }
+
+  /** Moves the entry to the LRU position in the admission window. */
+  private void onEdenHit(Node node) {
+    admittor.record(node.key);
+    node.moveToTail(headEden);
+  }
+
+  /** Promotes the entry to the protected region's LRU position, demoting an entry if necessary. */
+  private void onProbationHit(Node node) {
+    admittor.record(node.key);
+
+    node.remove();
+    node.status = Status.PROTECTED;
+    node.appendToTail(headProtected);
+    node.recencyMove = ++mainRecencyCounter;
+
+    sizeProtected++;
+    if (sizeProtected > maxProtected) {
+      Node demote = headProtected.next;
+      demote.remove();
+      demote.status = Status.PROBATION;
+      demote.appendToTail(headProbation);
+      sizeProtected--;
+    }
+  }
+
+  /** Moves the entry to the LRU position, if it falls outside of the fast-path threshold. */
+  private void onProtectedHit(Node node) {
+    // Fast path skips the hottest entries, useful for concurrent caches
+    if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {
+      admittor.record(node.key);
+      node.moveToTail(headProtected);
+      node.recencyMove = ++mainRecencyCounter;
+    }
+  }
+
+  /**
+   * Evicts from the admission window into the probation space. If the size exceeds the maximum,
+   * then the admission candidate and probation's victim are evaluated and one is evicted.
+   */
   private void evict() {
     if (sizeEden <= maxEden) {
       return;
     }
 
     Node candidate = headEden.next;
-    candidate.remove();
     sizeEden--;
 
-    candidate.appendToTail(headMain);
-    candidate.status = Status.MAIN;
-    sizeMain++;
+    candidate.remove();
+    candidate.status = Status.PROBATION;
+    candidate.appendToTail(headProbation);
 
-    if (sizeMain > maxMain) {
-      Node victim = headMain.next;
+    if (data.size() > maximumSize) {
+      Node victim = headProbation.next;
       Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
-      sizeMain--;
 
       policyStats.recordEviction();
-    }
-
-    if (candidate.isInQueue()) {
-      candidate.recencyMove = ++mainRecencyCounter;
     }
   }
 
   @Override
   public void finished() {
-    checkState(data.values().stream().filter(n -> n.status == Status.EDEN).count() == sizeEden);
-    checkState(sizeEden + sizeMain == data.size());
-    checkState(data.size() <= maxEden + maxMain);
+    long edenSize = data.values().stream().filter(n -> n.status == Status.EDEN).count();
+    long probationSize = data.values().stream().filter(n -> n.status == Status.PROBATION).count();
+    long protectedSize = data.values().stream().filter(n -> n.status == Status.PROTECTED).count();
+
+    checkState(edenSize == sizeEden);
+    checkState(protectedSize == sizeProtected);
+    checkState(probationSize == data.size() - edenSize - protectedSize);
+
+    checkState(data.size() <= maximumSize);
   }
 
   enum Status {
-    EDEN, MAIN
+    EDEN, PROBATION, PROTECTED
   }
 
   /** A node on the double-linked list. */
@@ -167,10 +213,6 @@ public final class WindowTinyLfuPolicy implements Policy {
     public Node(long key, Status status) {
       this.status = status;
       this.key = key;
-    }
-
-    public boolean isInQueue() {
-      return next != null;
     }
 
     public void moveToTail(Node head) {
@@ -198,6 +240,8 @@ public final class WindowTinyLfuPolicy implements Policy {
     public String toString() {
       return MoreObjects.toStringHelper(this)
           .add("key", key)
+          .add("status", status)
+          .add("move", recencyMove)
           .toString();
     }
   }
@@ -208,6 +252,9 @@ public final class WindowTinyLfuPolicy implements Policy {
     }
     public double percentMain() {
       return config().getDouble("window-tiny-lfu.percent-main");
+    }
+    public double percentMainProtected() {
+      return config().getDouble("window-tiny-lfu.percent-main-protected");
     }
     public double percentFastPath() {
       return config().getDouble("window-tiny-lfu.percent-fast-path");

@@ -34,7 +34,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class FullSegmentedWindowTinyLfuPolicy implements Policy {
+public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final int recencyMoveDistance;
@@ -57,8 +57,8 @@ public final class FullSegmentedWindowTinyLfuPolicy implements Policy {
   private int sizeMainProtected;
   private int mainRecencyCounter;
 
-  public FullSegmentedWindowTinyLfuPolicy(String name, Config config) {
-    FullSegmentedWindowTinyLfuSettings settings = new FullSegmentedWindowTinyLfuSettings(config);
+  public FullySegmentedWindowTinyLfuPolicy(String name, Config config) {
+    FullySegmentedWindowTinyLfuSettings settings = new FullySegmentedWindowTinyLfuSettings(config);
     this.maxMain = (int) (settings.maximumSize() * settings.percentMain());
     this.maxEden = settings.maximumSize() - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
@@ -268,21 +268,21 @@ public final class FullSegmentedWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class FullSegmentedWindowTinyLfuSettings extends BasicSettings {
-    public FullSegmentedWindowTinyLfuSettings(Config config) {
+  static final class FullySegmentedWindowTinyLfuSettings extends BasicSettings {
+    public FullySegmentedWindowTinyLfuSettings(Config config) {
       super(config);
     }
     public double percentMain() {
-      return config().getDouble("full-segmented-window-tiny-lfu.percent-main");
+      return config().getDouble("fully-segmented-window-tiny-lfu.percent-main");
     }
     public double percentMainProtected() {
-      return config().getDouble("full-segmented-window-tiny-lfu.percent-main-protected");
+      return config().getDouble("fully-segmented-window-tiny-lfu.percent-main-protected");
     }
     public double percentEdenProtected() {
-      return config().getDouble("full-segmented-window-tiny-lfu.percent-eden-protected");
+      return config().getDouble("fully-segmented-window-tiny-lfu.percent-eden-protected");
     }
     public double percentFastPath() {
-      return config().getDouble("full-segmented-window-tiny-lfu.percent-fast-path");
+      return config().getDouble("fully-segmented-window-tiny-lfu.percent-fast-path");
     }
   }
 }
