@@ -15,13 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -107,21 +104,7 @@ interface LinkedDeque<E> extends Deque<E> {
     /** Returns the next element in the iteration, without advancing the iteration. */
     E peek();
 
-    /** Returns a stream that consumes this iterator's contents. */
-    default Stream<E> asStream() {
-      return StreamSupport.stream(
-          Spliterators.spliteratorUnknownSize(this, Spliterator.ORDERED), false);
-    }
-
-    /** Returns an iterator that has no elements. */
-    static <E> PeekingIterator<E> empty() {
-      return new PeekingIterator<E>() {
-        @Override public E peek() { return null; }
-        @Override public boolean hasNext() { return false; }
-        @Override public E next() { throw new NoSuchElementException(); }
-      };
-    }
-
+    /** Returns an iterator that returns the first iteration followed by the second iteration. */
     static <E> PeekingIterator<E> concat(PeekingIterator<E> first, PeekingIterator<E> second) {
       return new PeekingIterator<E>() {
         @Override public boolean hasNext() {
@@ -136,12 +119,35 @@ interface LinkedDeque<E> extends Deque<E> {
           throw new NoSuchElementException();
         }
         @Override public E peek() {
-          if (first.hasNext()) {
-            return first.peek();
-          } else if (second.hasNext()) {
-            return second.peek();
+          return first.hasNext() ? first.peek() : second.peek();
+        }
+      };
+    }
+
+    /** Returns an iterator that selects the greater element from the backing iterators. */
+    static <E> PeekingIterator<E> comparing(PeekingIterator<E> first,
+          PeekingIterator<E> second, Comparator<E> comparator) {
+      return new PeekingIterator<E>() {
+        @Override public boolean hasNext() {
+          return first.hasNext() || second.hasNext();
+        }
+        @Override public E next() {
+          if (!first.hasNext()) {
+            return second.next();
+          } else if (!second.hasNext()) {
+            return first.next();
           }
-          return null;
+          boolean greaterOrEqual = (comparator.compare(first.peek(), second.peek()) >= 0);
+          return greaterOrEqual ? first.next() : second.next();
+        }
+        @Override public E peek() {
+          if (!first.hasNext()) {
+            return second.peek();
+          } else if (!second.hasNext()) {
+            return first.peek();
+          }
+          boolean greaterOrEqual = (comparator.compare(first.peek(), second.peek()) >= 0);
+          return greaterOrEqual ? first.peek() : second.peek();
         }
       };
     }

@@ -75,7 +75,7 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = MaximumSize.FULL,
-      removalListener = Listener.REJECTING)
+      weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN}, removalListener = Listener.REJECTING)
   public void removalListener_fails(Cache<Integer, Integer> cache, CacheContext context) {
     RejectingRemovalListener<Integer, Integer> removalListener =
         (RejectingRemovalListener<Integer, Integer>) context.removalListener();
@@ -95,7 +95,8 @@ public final class EvictionTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
-      maximumSize = { MaximumSize.ZERO, MaximumSize.ONE, MaximumSize.FULL })
+      maximumSize = { MaximumSize.ZERO, MaximumSize.ONE, MaximumSize.FULL },
+      weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN})
   public void evict(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
     cache.putAll(context.absent());
@@ -219,6 +220,7 @@ public final class EvictionTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = Population.FULL, maximumSize = MaximumSize.FULL,
+      weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
       compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void evict_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
@@ -459,8 +461,13 @@ public final class EvictionTest {
     eviction.setMaximum(newSize);
     assertThat(eviction.getMaximum(), is(newSize));
     if (context.initialSize() > newSize) {
-      assertThat(cache.estimatedSize(), is(newSize));
-      assertThat(cache, hasRemovalNotifications(context, newSize, RemovalCause.SIZE));
+      if (context.isZeroWeighted()) {
+        assertThat(cache.estimatedSize(), is(context.initialSize()));
+        assertThat(cache, hasRemovalNotifications(context, 0, RemovalCause.SIZE));
+      } else {
+        assertThat(cache.estimatedSize(), is(newSize));
+        assertThat(cache, hasRemovalNotifications(context, newSize, RemovalCause.SIZE));
+      }
     }
   }
 
@@ -472,7 +479,8 @@ public final class EvictionTest {
     eviction.setMaximum(0);
     assertThat(eviction.getMaximum(), is(0L));
     if (context.initialSize() > 0) {
-      assertThat(cache.estimatedSize(), is(0L));
+      long expect = context.isZeroWeighted() ? context.initialSize() : 0;
+      assertThat(cache.estimatedSize(), is(expect));
     }
     assertThat(cache, hasRemovalNotifications(context, context.initialSize(), RemovalCause.SIZE));
   }
@@ -541,6 +549,7 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = MaximumSize.FULL,
+      weigher = { CacheWeigher.DEFAULT, CacheWeigher.TEN },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void coldest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
     int size = context.original().size();

@@ -165,6 +165,7 @@ public @interface CacheSpec {
   /** The weigher, each resulting in a new combination. */
   CacheWeigher[] weigher() default {
     CacheWeigher.DEFAULT,
+    CacheWeigher.ZERO,
     CacheWeigher.TEN
   };
 

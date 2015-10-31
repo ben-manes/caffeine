@@ -69,11 +69,17 @@ public final class ExpirationTest {
       expireAfterWrite = {Expire.DISABLED, Expire.IMMEDIATELY}, population = Population.EMPTY)
   public void expire_zero(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
-    assertThat(cache.estimatedSize(), is(0L));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPIRED));
-    verifyWriter(context, (verifier, writer) -> {
-      verifier.deleted(context.absentKey(), context.absentValue(), RemovalCause.EXPIRED);
-    });
+    if (context.isZeroWeighted() && context.isGuava()) {
+      // Guava translates to maximumSize=0, which won't evict
+      assertThat(cache.estimatedSize(), is(1L));
+      assertThat(cache, hasRemovalNotifications(context, 0, RemovalCause.EXPIRED));
+    } else {
+      assertThat(cache.estimatedSize(), is(0L));
+      assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPIRED));
+      verifyWriter(context, (verifier, writer) -> {
+        verifier.deleted(context.absentKey(), context.absentValue(), RemovalCause.EXPIRED);
+      });
+    }
   }
 
   /* ---------------- Cache -------------- */

@@ -2031,7 +2031,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           accessOrderProbationDeque().descendingIterator(),
           accessOrderProtectedDeque().descendingIterator());
     }
-    return orderBy(limit, transformer, comparator, eden, main, PeekingIterator.empty());
+
+    Iterator<Node<K, V>> iterator = PeekingIterator.comparing(eden, main, comparator);
+    return snapshot(iterator, transformer, limit);
   }
 
   /**
@@ -2045,20 +2047,28 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> expireAfterAcessOrder(int limit, Function<V, V> transformer, boolean ascending) {
-    Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getAccessTime);
-    comparator = ascending ? comparator : comparator.reversed();
-    Function<LinkedDeque<Node<K, V>>, PeekingIterator<Node<K, V>>> ordering =
-        deque -> ascending ? deque.iterator() : deque.descendingIterator();
-    PeekingIterator<Node<K, V>> first = ordering.apply(accessOrderEdenDeque());
-    PeekingIterator<Node<K, V>> second;
-    PeekingIterator<Node<K, V>> third;
-    if (evicts()) {
-      second = ordering.apply(accessOrderProbationDeque());
-      third = ordering.apply(accessOrderProtectedDeque());
-    } else {
-      second = third = PeekingIterator.empty();
+    if (!evicts()) {
+      Iterator<Node<K, V>> iterator = ascending
+          ? accessOrderEdenDeque().iterator()
+          : accessOrderEdenDeque().descendingIterator();
+      return snapshot(iterator, transformer, limit);
     }
-    return orderBy(limit, transformer, comparator, first, second, third);
+
+    Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getAccessTime);
+    PeekingIterator<Node<K, V>> first, second, third;
+    if (ascending) {
+      first = accessOrderEdenDeque().iterator();
+      second = accessOrderProbationDeque().iterator();
+      third = accessOrderProtectedDeque().iterator();
+    } else {
+      comparator = comparator.reversed();
+      first = accessOrderEdenDeque().descendingIterator();
+      second = accessOrderProbationDeque().descendingIterator();
+      third = accessOrderProtectedDeque().descendingIterator();
+    }
+    Iterator<Node<K, V>> iterator = PeekingIterator.comparing(
+        PeekingIterator.comparing(first, second, comparator), third, comparator);
+    return snapshot(iterator, transformer, limit);
   }
 
   /**
@@ -2072,33 +2082,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> expireAfterWriteOrder(int limit, Function<V, V> transformer, boolean ascending) {
-    Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getWriteTime);
-    comparator = ascending ? comparator : comparator.reversed();
-    PeekingIterator<Node<K, V>> deque;
-    if (ascending) {
-      deque = writeOrderDeque().iterator();
-    } else {
-      deque = writeOrderDeque().descendingIterator();
-    }
-    return orderBy(limit, transformer, comparator, deque,
-        PeekingIterator.empty(), PeekingIterator.empty());
+    Iterator<Node<K, V>> iterator = ascending
+        ? writeOrderDeque().iterator()
+        : writeOrderDeque().descendingIterator();
+    return snapshot(iterator, transformer, limit);
   }
 
   /**
-   * Returns an unmodifiable snapshot map ordered by merging the two iterators and selecting which
-   * element to consume first by the comparator. Beware that obtaining the mappings is <em>NOT</em>
-   * a constant-time operation.
+   * Returns an unmodifiable snapshot map ordered by the provided iterator. Beware that obtaining
+   * the mappings is <em>NOT</em> a constant-time operation.
    *
    * @param limit the maximum number of entries
    * @param transformer a function that unwraps the value
-   * @param comparator a function that chooses an element
-   * @param first the first ordered iterator
-   * @param second the second ordered iterator
-   * @return an unmodifiable snapshot in a specified order
+   * @return an unmodifiable snapshot in the iterator's order
    */
-  Map<K, V> orderBy(int limit, Function<V, V> transformer, Comparator<Node<K, V>> comparator,
-      PeekingIterator<Node<K, V>> first, PeekingIterator<Node<K, V>> second,
-      PeekingIterator<Node<K, V>> third) {
+  Map<K, V> snapshot(Iterator<Node<K, V>> iterator, Function<V, V> transformer, int limit) {
     Caffeine.requireArgument(limit >= 0);
     evictionLock.lock();
     try {
@@ -2108,52 +2106,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           ? Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size())
           : 16;
       Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
-      Consumer<Node<K, V>> consumer = node -> {
+      while ((map.size() < limit) && iterator.hasNext()) {
+        Node<K, V> node = iterator.next();
         K key = node.getKey();
         V value = node.getValue();
         if ((key != null) && (value != null) && node.isAlive()) {
           map.put(key, transformer.apply(value));
         }
-      };
-
-      Node<K, V> node1, node2, node3;
-      while ((map.size() < limit) && ((node1 = first.peek()) != null)
-          && ((node2 = second.peek()) != null) && ((node3 = second.peek()) != null)) {
-        if (comparator.compare(node1, node2) <= 0) {
-          if (comparator.compare(node1, node3) <= 0) {
-            first.next();
-            consumer.accept(node1);
-          } else {
-            third.next();
-            consumer.accept(node3);
-          }
-        } else {
-          if (comparator.compare(node2, node3) <= 0) {
-            second.next();
-            consumer.accept(node2);
-          } else {
-            third.next();
-            consumer.accept(node3);
-          }
-        }
       }
-
-      PeekingIterator<Node<K, V>> remaining1 = first.hasNext() ? first : second;
-      PeekingIterator<Node<K, V>> remaining2 = second.hasNext() ? second : third;
-      while ((map.size() < limit) && ((node1 = remaining1.peek()) != null)
-          && ((node2 = remaining2.peek()) != null)) {
-        if (comparator.compare(node1, node2) <= 0) {
-          remaining1.next();
-          consumer.accept(node1);
-        } else {
-          remaining2.next();
-          consumer.accept(node2);
-        }
-      }
-
-      first.asStream().limit(Math.max(0, limit - map.size())).forEach(consumer);
-      second.asStream().limit(Math.max(0, limit - map.size())).forEach(consumer);
-      third.asStream().limit(Math.max(0, limit - map.size())).forEach(consumer);
       return Collections.unmodifiableMap(map);
     } finally {
       evictionLock.unlock();
@@ -2614,26 +2574,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             ? expireAfterWrite().get().youngest(limit)
             : sortedByWriteTime(limit, false);
       }
-
-      private Map<K, V> sortedByWriteTime(int limit, boolean ascending) {
-        Caffeine.requireArgument(limit >= 0);
-        Iterator<Node<K, V>> iterator = cache.data.values().stream().sorted((a, b) -> {
-          int comparison = Long.compare(a.getWriteTime(), b.getWriteTime());
-          return ascending ? comparison : -comparison;
-        }).iterator();
-        int initialCapacity = (cache.weigher == Weigher.singleton())
-            ? Math.min(limit, cache.evicts() ? (int) cache.adjustedWeightedSize() : cache.size())
-            : 16;
-        Map<K, V> map = new LinkedHashMap<>(initialCapacity);
-        while (iterator.hasNext() && (limit > map.size())) {
-          Node<K, V> node = iterator.next();
-          K key = node.getKey();
-          V value = transformer.apply(node.getValue());
-          if ((key != null) && (value != null) && node.isAlive()) {
-            map.put(key, value);
-          }
-        }
-        return Collections.unmodifiableMap(map);
+      Map<K, V> sortedByWriteTime(int limit, boolean ascending) {
+        Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getWriteTime);
+        Iterator<Node<K, V>> iterator = cache.data.values().stream().parallel().sorted(
+            ascending ? comparator : comparator.reversed()).limit(limit).iterator();
+        return cache.snapshot(iterator, transformer, limit);
       }
     }
   }

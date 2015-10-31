@@ -226,6 +226,10 @@ public final class CacheContext {
     return (weigher != CacheWeigher.DEFAULT);
   }
 
+  public boolean isZeroWeighted() {
+    return (weigher == CacheWeigher.ZERO);
+  }
+
   public boolean isUnbounded() {
     return (maximumSize == MaximumSize.DISABLED);
   }
@@ -340,6 +344,10 @@ public final class CacheContext {
 
   public Implementation implementation() {
     return implementation;
+  }
+
+  public boolean isGuava() {
+    return (implementation == Implementation.Guava);
   }
 
   public CacheExecutor executorType() {

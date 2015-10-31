@@ -193,37 +193,37 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
-  public void updateRecency_onGet(Cache<Integer, Integer> cache) {
+  public void updateRecency_onGet(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderProbationDeque().peek();
-    updateRecency(localCache, () -> localCache.get(first.getKey()));
+    Node<Integer, Integer> first = firstBeforeAccess(localCache, context);
+    updateRecency(localCache, context, () -> localCache.get(first.getKey()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
-  public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache) {
+  public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderProbationDeque().peek();
-    updateRecency(localCache, () -> localCache.putIfAbsent(first.getKey(), first.getKey()));
+    Node<Integer, Integer> first = firstBeforeAccess(localCache, context);
+    updateRecency(localCache, context, () -> localCache.putIfAbsent(first.getKey(), first.getKey()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
-  public void updateRecency_onPut(Cache<Integer, Integer> cache) {
+  public void updateRecency_onPut(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderProbationDeque().peek();
-    updateRecency(localCache, () -> localCache.put(first.getKey(), first.getKey()));
+    Node<Integer, Integer> first = firstBeforeAccess(localCache, context);
+    updateRecency(localCache, context, () -> localCache.put(first.getKey(), first.getKey()));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL)
-  public void updateRecency_onReplace(Cache<Integer, Integer> cache) {
+  public void updateRecency_onReplace(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderProbationDeque().peek();
-    updateRecency(localCache, () -> localCache.replace(first.getKey(), first.getKey()));
+    Node<Integer, Integer> first = firstBeforeAccess(localCache, context);
+    updateRecency(localCache, context, () -> localCache.replace(first.getKey(), first.getKey()));
   }
 
   @Test(dataProvider = "caches")
@@ -232,21 +232,33 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onReplaceConditionally(
       Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.accessOrderProbationDeque().peek();
-    Integer key = first.getKey();
-    Integer value = context.original().get(key);
+    Node<Integer, Integer> first = firstBeforeAccess(localCache, context);
+    Integer value = first.getValue();
 
-    updateRecency(localCache, () -> localCache.replace(first.getKey(), value, value));
+    updateRecency(localCache, context, () -> localCache.replace(first.getKey(), value, value));
   }
 
-  private void updateRecency(BoundedLocalCache<Integer, Integer> cache, Runnable operation) {
-    Node<Integer, Integer> first = cache.accessOrderProbationDeque().peek();
+  private static Node<Integer, Integer> firstBeforeAccess(
+      BoundedLocalCache<Integer, Integer> localCache, CacheContext context) {
+    return context.isZeroWeighted()
+        ? localCache.accessOrderEdenDeque().peek()
+        : localCache.accessOrderProbationDeque().peek();
+  }
+
+  private static void updateRecency(BoundedLocalCache<Integer, Integer> cache,
+      CacheContext context, Runnable operation) {
+    Node<Integer, Integer> first = firstBeforeAccess(cache, context);
 
     operation.run();
     cache.maintenance();
 
-    assertThat(cache.accessOrderProbationDeque().peekFirst(), is(not(first)));
-    assertThat(cache.accessOrderProtectedDeque().peekLast(), is(first));
+    if (context.isZeroWeighted()) {
+      assertThat(cache.accessOrderEdenDeque().peekFirst(), is(not(first)));
+      assertThat(cache.accessOrderEdenDeque().peekLast(), is(first));
+    } else {
+      assertThat(cache.accessOrderProbationDeque().peekFirst(), is(not(first)));
+      assertThat(cache.accessOrderProtectedDeque().peekLast(), is(first));
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -285,6 +297,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.PARTIAL, maximumSize = MaximumSize.FULL,
+      weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void fastpath(Cache<Integer, Integer> cache, CacheContext context) {
