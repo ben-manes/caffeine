@@ -24,9 +24,8 @@ import java.util.Random;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
+@SuppressWarnings("PMD.AvoidDollarSigns")
 public final class TinyCacheWithGhostCache {
-  protected int nrItems;
-
   public final long[] chainIndex;
   public final long[] isLastIndex;
   private final HashFunctionParser hashFunc;
@@ -54,19 +53,19 @@ public final class TinyCacheWithGhostCache {
     }
     TinySetIndexing.getChain(hashFunc.fpaux, chainIndex, isLastIndex);
     int offset = this.itemsPerSet * hashFunc.fpaux.set;
-    TinySetIndexing.ChainStart += offset;
-    TinySetIndexing.ChainEnd += offset;
+    TinySetIndexing.chainStart += offset;
+    TinySetIndexing.chainEnd += offset;
 
     // Gil : I think some of these tests are, I till carefully examine this function when I have
     // time. As far as I understand it is working right now.
-    while (TinySetIndexing.ChainStart <= TinySetIndexing.ChainEnd) {
+    while (TinySetIndexing.chainStart <= TinySetIndexing.chainEnd) {
       try {
-        if (cache[TinySetIndexing.ChainStart % cache.length] == hashFunc.fpaux.value) {
+        if (cache[TinySetIndexing.chainStart % cache.length] == hashFunc.fpaux.value) {
           return true;
         }
-        TinySetIndexing.ChainStart++;
+        TinySetIndexing.chainStart++;
       } catch (Exception e) {
-        System.out.println(" length: " + cache.length + " Access: " + TinySetIndexing.ChainStart);
+        System.out.println(" length: " + cache.length + " Access: " + TinySetIndexing.chainStart);
       }
     }
     return false;
@@ -100,7 +99,6 @@ public final class TinyCacheWithGhostCache {
   }
 
   public boolean addItem(long item) {
-    nrItems++;
     hashFunc.createHash(item);
     int bucketStart = this.itemsPerSet * hashFunc.fpaux.set;
     if (cache[bucketStart + this.itemsPerSet - 1] != 0) {
@@ -132,7 +130,7 @@ public final class TinyCacheWithGhostCache {
     }
   }
 
-  protected void replaceItems(final int idx, long value, int start, final int delta) {
+  private void replaceItems(final int idx, long value, int start, final int delta) {
     start += idx;
     long $;
     do {

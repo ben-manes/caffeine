@@ -175,7 +175,7 @@ final class NonReentrantLock implements Lock, Serializable {
    *
    * @return the owner, or {@code null} if not owned
    */
-  protected Thread getOwner() {
+  public Thread getOwner() {
     return sync.getOwner();
   }
 
@@ -186,7 +186,7 @@ final class NonReentrantLock implements Lock, Serializable {
    *
    * @return {@code true} if there may be other threads waiting to acquire the lock
    */
-  public final boolean hasQueuedThreads() {
+  public boolean hasQueuedThreads() {
     return sync.hasQueuedThreads();
   }
 
@@ -200,7 +200,7 @@ final class NonReentrantLock implements Lock, Serializable {
    * @return {@code true} if the given thread is queued waiting for this lock
    * @throws NullPointerException if the thread is null
    */
-  public final boolean hasQueuedThread(Thread thread) {
+  public boolean hasQueuedThread(Thread thread) {
     return sync.isQueued(thread);
   }
 
@@ -212,7 +212,7 @@ final class NonReentrantLock implements Lock, Serializable {
    *
    * @return the estimated number of threads waiting for this lock
    */
-  public final int getQueueLength() {
+  public int getQueueLength() {
     return sync.getQueueLength();
   }
 
@@ -225,7 +225,7 @@ final class NonReentrantLock implements Lock, Serializable {
    *
    * @return the collection of threads
    */
-  protected Collection<Thread> getQueuedThreads() {
+  public Collection<Thread> getQueuedThreads() {
     return sync.getQueuedThreads();
   }
 
@@ -282,7 +282,7 @@ final class NonReentrantLock implements Lock, Serializable {
    * @throws IllegalArgumentException if the given condition is not associated with this lock
    * @throws NullPointerException if the condition is null
    */
-  protected Collection<Thread> getWaitingThreads(Condition condition) {
+  public Collection<Thread> getWaitingThreads(Condition condition) {
     requireNonNull(condition);
     if (!(condition instanceof AbstractQueuedSynchronizer.ConditionObject)) {
       throw new IllegalArgumentException("not owner");

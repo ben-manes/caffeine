@@ -32,8 +32,10 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
  */
 public final class TinySetIndexing {
   // for performance - for functions that need to know both the start and the end of the chain.
-  public static int ChainStart;
-  public static int ChainEnd;
+  static int chainStart;
+  static int chainEnd;
+
+  private TinySetIndexing() {}
 
   public static int getChainStart(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
@@ -63,13 +65,13 @@ public final class TinySetIndexing {
       currentOffset++;
       tempisLastIndex >>>= 1;
     }
-    TinySetIndexing.ChainStart = currentOffset;
+    TinySetIndexing.chainStart = currentOffset;
 
     while ((tempisLastIndex & 1L) == 0) {
       currentOffset++;
       tempisLastIndex >>>= 1;
     }
-    TinySetIndexing.ChainEnd = currentOffset;
+    TinySetIndexing.chainEnd = currentOffset;
     return currentOffset;
   }
 
@@ -125,8 +127,9 @@ public final class TinySetIndexing {
   public static void removeItem(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int chainStart = getChainStart(fpaux, chainIndex, isLastIndex);
     // avoid an if command: either update chainIndex to the new state or keep it the way it is.
-    chainIndex[fpaux.set] = (isLastIndex[fpaux.set] & (1L << chainStart)) != 0L
-        ? chainIndex[fpaux.set] & ~(1L << fpaux.chainId) : chainIndex[fpaux.set];
+    chainIndex[fpaux.set] = (isLastIndex[fpaux.set] & (1L << chainStart)) == 0L
+        ? chainIndex[fpaux.set]
+        : chainIndex[fpaux.set] & ~(1L << fpaux.chainId);
     // update isLastIndex.
     isLastIndex[fpaux.set] = shrinkOffset(isLastIndex[fpaux.set], chainStart);
   }

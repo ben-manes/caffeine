@@ -440,10 +440,10 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
               V oldValue = (oldValueFuture == null) ? null : oldValueFuture.join();
               V newValue = (oldValue == null) ? loader.load(key) : loader.reload(key, oldValue);
               return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              return LocalCache.throwUnchecked(e);
             } catch (Exception e) {
-              if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-              }
               return LocalCache.throwUnchecked(e);
             }
           };

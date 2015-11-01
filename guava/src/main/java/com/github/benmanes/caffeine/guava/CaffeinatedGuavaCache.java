@@ -45,7 +45,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
-  private static final long serialVersionUID = 1L;
+  static final long serialVersionUID = 1L;
 
   final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
 

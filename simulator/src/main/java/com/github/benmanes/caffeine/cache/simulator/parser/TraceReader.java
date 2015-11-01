@@ -15,7 +15,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import java.io.IOException;
 import java.util.stream.LongStream;
-import java.util.stream.Stream;
 
 /**
  * A reader to an access trace.
@@ -28,8 +27,8 @@ public interface TraceReader<E extends Comparable<E>> {
    * Creates a {@link LongStream} that lazily reads the trace source.
    * <p>
    * If timely disposal of underlying resources is required, the try-with-resources construct should
-   * be used to ensure that the stream's {@link Stream#close close} method is invoked after the
-   * stream operations are completed.
+   * be used to ensure that the stream's {@link java.util.stream.Stream#close close} method is
+   * invoked after the stream operations are completed.
    *
    * @return a lazy stream of cache events
    */

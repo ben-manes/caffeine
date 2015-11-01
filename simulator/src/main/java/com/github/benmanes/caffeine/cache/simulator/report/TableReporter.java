@@ -34,6 +34,7 @@ public final class TableReporter extends TextReporter {
 
   /** Assembles an aggregated report. */
   @Override
+  @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   protected String assemble(List<PolicyStats> results) {
     String[][] data = new String[results.size()][headers().length];
     for (int i = 0; i < results.size(); i++) {

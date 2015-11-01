@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -73,7 +74,7 @@ final class Async {
     }
 
     @Override
-    public void onRemoval(K key, CompletableFuture<V> future, RemovalCause cause) {
+    public void onRemoval(K key, @Nonnull CompletableFuture<V> future, RemovalCause cause) {
       future.thenAcceptAsync(value -> {
         delegate.onRemoval(key, value, cause);
       }, executor);

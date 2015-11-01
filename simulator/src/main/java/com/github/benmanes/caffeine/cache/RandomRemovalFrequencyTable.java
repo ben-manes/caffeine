@@ -39,9 +39,9 @@ public final class RandomRemovalFrequencyTable implements Frequency {
   /** sum of total items */
   private final int maxSum;
   /** total sum of stored items **/
-  private int currSum = 0;
+  private int currSum;
   /** controls both the max count and how many items are remembered (the sum) */
-  private final int sampleFactor = 8;
+  private static final int sampleFactor = 8;
   /** used to dropped items at random */
   private final Random random;
   /** a place holder for TinyTable */

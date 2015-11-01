@@ -31,9 +31,9 @@ public final class TinyCacheAdapter implements Frequency {
   // number of (independent sets)
   int nrSets;
   // size between cache and sample.
-  final int sampleFactor = 10;
+  static final int sampleFactor = 10;
   // max frequency estimation of an item.
-  final int maxcount = 10;
+  static final int maxcount = 10;
 
   /**
    * Note that in this implementation there are always 64 items per set.

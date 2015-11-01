@@ -161,10 +161,10 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
           return (oldValue == null)
               ? cacheLoader().load(key)
               : cacheLoader().reload(key, oldValue);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return LocalCache.throwUnchecked(e);
         } catch (Exception e) {
-          if (e instanceof InterruptedException) {
-            Thread.currentThread().interrupt();
-          }
           return LocalCache.throwUnchecked(e);
         }
       };

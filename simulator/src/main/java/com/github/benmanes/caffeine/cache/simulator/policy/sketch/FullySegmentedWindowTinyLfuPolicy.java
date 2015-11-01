@@ -34,6 +34,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.TooManyFields")
 public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -48,8 +49,6 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
   private final int maxEden;
   private final int maxEdenProtected;
-
-  private final int maxMain;
   private final int maxMainProtected;
 
   private int sizeEden;
@@ -59,7 +58,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
   public FullySegmentedWindowTinyLfuPolicy(String name, Config config) {
     FullySegmentedWindowTinyLfuSettings settings = new FullySegmentedWindowTinyLfuSettings(config);
-    this.maxMain = (int) (settings.maximumSize() * settings.percentMain());
+    int maxMain = (int) (settings.maximumSize() * settings.percentMain());
     this.maxEden = settings.maximumSize() - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxEdenProtected = (int) (maxEden * settings.percentEdenProtected());

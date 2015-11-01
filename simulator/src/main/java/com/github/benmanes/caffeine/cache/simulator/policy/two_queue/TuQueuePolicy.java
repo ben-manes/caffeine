@@ -54,12 +54,12 @@ public class TuQueuePolicy implements Policy {
   private final PolicyStats policyStats;
   private final int maximumSize;
 
-  private int maxHot;
   private int sizeHot;
+  private final int maxHot;
   private final Node headHot;
 
-  private int maxWarm;
   private int sizeWarm;
+  private final int maxWarm;
   private final Node headWarm;
 
   private int sizeCold;

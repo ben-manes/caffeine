@@ -216,7 +216,8 @@ public final class MultiQueuePolicy implements Policy {
     }
     public int numberOfQueues() {
       int queues = config().getInt("multi-queue.num-queues");
-      checkArgument(queues <= 62);
+      checkArgument(queues > 0, "Must have one or more queues");
+      checkArgument(queues <= 62, "May not have more than 62 queues");
       return queues;
     }
     public double percentOut() {

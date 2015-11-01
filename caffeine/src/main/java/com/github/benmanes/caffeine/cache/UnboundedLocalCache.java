@@ -823,10 +823,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
           return loader.load(key);
         } catch (RuntimeException e) {
           throw e;
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new CompletionException(e);
         } catch (Exception e) {
-          if (e instanceof InterruptedException) {
-            Thread.currentThread().interrupt();
-          }
           throw new CompletionException(e);
         }
       };

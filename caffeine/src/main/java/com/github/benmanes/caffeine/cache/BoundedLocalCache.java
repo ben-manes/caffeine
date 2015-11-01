@@ -341,6 +341,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return false;
   }
 
+  /** Returns if entries may be assigned different weights. */
+  protected boolean isWeighted() {
+    return (weigher == Weigher.singleton());
+  }
+
   protected FrequencySketch<K> frequencySketch() {
     throw new UnsupportedOperationException();
   }
@@ -430,11 +435,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       setMoveDistance(distance);
     }
 
-    if ((weigher == Weigher.singleton()) && (frequencySketch() != null)) {
-      if (weightedSize() >= (max >>> 1)) {
-        // Lazily initialize when close to the maximum size
-        frequencySketch().ensureCapacity(max);
-      }
+    if (isWeighted() && (frequencySketch() != null) && (weightedSize() >= (max >>> 1))) {
+      // Lazily initialize when close to the maximum size
+      frequencySketch().ensureCapacity(max);
     }
   }
 
@@ -594,12 +597,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
+        continue;
       } else if (candidateKey == null) {
         candidates--;
         modified = true;
         Node<K, V> evict = candidate;
         candidate = candidate.getPreviousInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
+        continue;
       }
 
       // Evict the entry with the lowest frequency
@@ -701,6 +706,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param now the current time, used only if expiring
    */
   @GuardedBy("evictionLock")
+  @SuppressWarnings("PMD.CollapsibleIfStatements")
   void evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
     V value = node.getValue();
@@ -1066,7 +1072,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         lazySetWeightedSize(weightedSize + weight);
         lazySetEdenWeightedSize(edenWeightedSize() + weight);
 
-        if (weigher == Weigher.singleton()) {
+        if (isWeighted()) {
           long maximumSize = maximum();
           if (weightedSize >= (maximumSize >>> 1)) {
             // Lazily initialize when close to the maximum size
@@ -1255,10 +1261,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return n;
     });
 
-    if (removed[0]) {
-      if (hasRemovalListener()) {
-        notifyRemoval(key, value, cause);
-      }
+    if (removed[0] && hasRemovalListener()) {
+      notifyRemoval(key, value, cause);
     }
 
     makeDead(node);
@@ -2102,7 +2106,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     try {
       maintenance();
 
-      int initialCapacity = (weigher == Weigher.singleton())
+      int initialCapacity = isWeighted()
           ? Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size())
           : 16;
       Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
@@ -2601,10 +2605,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           return loader.load(key);
         } catch (RuntimeException e) {
           throw e;
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new CompletionException(e);
         } catch (Exception e) {
-          if (e instanceof InterruptedException) {
-            Thread.currentThread().interrupt();
-          }
           throw new CompletionException(e);
         }
       };
@@ -2649,7 +2653,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     private static final long serialVersionUID = 1;
 
     final boolean isWeighted;
-    transient Policy<K, V> policy;
+    Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
     BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {

@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 
+import javax.annotation.Nonnull;
+
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
@@ -110,7 +112,7 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
   }
 
   @Override
-  public V apply(K key) {
+  public V apply(@Nonnull K key) {
     return cache.get(key);
   }
 

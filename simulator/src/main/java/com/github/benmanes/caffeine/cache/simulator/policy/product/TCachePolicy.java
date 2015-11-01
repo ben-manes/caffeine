@@ -19,9 +19,8 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.trivago.triava.tcache.TCacheFactory;
-import com.trivago.triava.tcache.core.Builder;
 import com.trivago.triava.tcache.core.EvictionInterface;
-import com.trivago.triava.tcache.eviction.CacheLimit;
+import com.trivago.triava.tcache.eviction.Cache;
 import com.trivago.triava.tcache.eviction.LFUEviction;
 import com.trivago.triava.tcache.eviction.LRUEviction;
 import com.typesafe.config.Config;
@@ -32,7 +31,7 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TCachePolicy implements Policy {
-  private final SyncCache<Object, Object> cache;
+  private final Cache<Object, Object> cache;
   private final PolicyStats policyStats;
   private final int maximumSize;
 
@@ -40,10 +39,11 @@ public final class TCachePolicy implements Policy {
     TCacheSettings settings = new TCacheSettings(config);
     maximumSize = settings.maximumSize();
     policyStats = new PolicyStats(name);
-    cache = new SyncCache<>(TCacheFactory.standardFactory().builder()
+    cache = TCacheFactory.standardFactory().builder()
         .setEvictionClass(settings.policy())
         .setExpectedMapSize(maximumSize)
-        .setStatistics(true));
+        .setStatistics(true)
+        .build();
   }
 
   @Override
@@ -68,15 +68,6 @@ public final class TCachePolicy implements Policy {
   @Override
   public void finished() {
     policyStats.addEvictions(cache.statistics().getEvictionCount());
-  }
-
-  static final class SyncCache<K, V> extends CacheLimit<K, V> {
-    public SyncCache(Builder<K, V> builder) {
-      super(builder);
-    }
-    @Override public boolean ensureFreeCapacity() {
-      return super.ensureFreeCapacity();
-    }
   }
 
   static final class TCacheSettings extends BasicSettings {

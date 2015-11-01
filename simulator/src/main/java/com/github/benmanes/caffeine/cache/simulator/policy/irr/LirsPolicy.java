@@ -51,6 +51,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.TooManyFields")
 public final class LirsPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -72,7 +73,7 @@ public final class LirsPolicy implements Policy {
   private int stackCounter;
 
   // Enable to print out the internal state
-  private final boolean debug = false;
+  private static final boolean debug = false;
 
   public LirsPolicy(String name, Config config) {
     LirsSettings settings = new LirsSettings(config);
