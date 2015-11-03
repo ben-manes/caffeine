@@ -84,4 +84,13 @@ public interface StatsCounter {
    */
   @Nonnull
   CacheStats snapshot();
+
+  /**
+   * Returns an accumulator that does not record any cache events.
+   *
+   * @return an accumulator that does not record metrics
+   */
+  static @Nonnull StatsCounter disabledStatsCounter() {
+    return DisabledStatsCounter.INSTANCE;
+  }
 }

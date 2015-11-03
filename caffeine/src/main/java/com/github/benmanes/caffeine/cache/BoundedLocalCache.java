@@ -62,7 +62,6 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.github.benmanes.caffeine.cache.LinkedDeque.PeekingIterator;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
-import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
@@ -227,7 +226,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public StatsCounter statsCounter() {
-    return DisabledStatsCounter.INSTANCE;
+    return StatsCounter.disabledStatsCounter();
   }
 
   @Override

@@ -36,7 +36,6 @@ import com.github.benmanes.caffeine.cache.Async.AsyncRemovalListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
-import com.github.benmanes.caffeine.cache.stats.DisabledStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
@@ -120,7 +119,6 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @param <V> the base value type for all caches created by this builder
  */
 public final class Caffeine<K, V> {
-  static final Supplier<StatsCounter> DISABLED_STATS_COUNTER_SUPPLIER = DisabledStatsCounter::get;
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
 
   enum Strength { STRONG, WEAK, SOFT }
@@ -715,7 +713,7 @@ public final class Caffeine<K, V> {
   @Nonnull
   Supplier<? extends StatsCounter> getStatsCounterSupplier() {
     return (statsCounterSupplier == null)
-        ? DISABLED_STATS_COUNTER_SUPPLIER
+        ? StatsCounter::disabledStatsCounter
         : ENABLED_STATS_COUNTER_SUPPLIER;
   }
 

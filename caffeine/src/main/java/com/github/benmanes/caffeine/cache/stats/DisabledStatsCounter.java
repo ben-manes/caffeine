@@ -20,15 +20,10 @@ package com.github.benmanes.caffeine.cache.stats;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public enum DisabledStatsCounter implements StatsCounter {
+enum DisabledStatsCounter implements StatsCounter {
   INSTANCE;
 
   private static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0);
-
-  /** @return a disabled statistics counter */
-  public static StatsCounter get() {
-    return INSTANCE;
-  }
 
   @Override
   public void recordHits(int count) {}
