@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.irr.LirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.MultiQueuePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.S4LruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
@@ -41,6 +42,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.InfinispanPol
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.FullySegmentedWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.S4WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.SimpleWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicy;
@@ -98,6 +100,8 @@ public final class PolicyBuilder {
           return new SegmentedLruPolicy(name(), admittor, config);
         } else if (strategy.equalsIgnoreCase("MultiQueue")) {
           return new MultiQueuePolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("S4Lru")) {
+          return new S4LruPolicy(name(), admittor, config);
         }
         return new LinkedPolicy(name(), admittor, config,
             LinkedPolicy.EvictionPolicy.valueOf(strategy));
@@ -118,6 +122,8 @@ public final class PolicyBuilder {
           return new SimpleWindowTinyLfuPolicy(type, config);
         } else if (strategy.equalsIgnoreCase("FullySegmentedWindowTinyLfu")) {
           return new FullySegmentedWindowTinyLfuPolicy(type, config);
+        } else if (strategy.equalsIgnoreCase("S4WindowTinyLfu")) {
+          return new S4WindowTinyLfuPolicy(type, config);
         } else if (strategy.equalsIgnoreCase("TinyCache_GhostCache")) {
           return new TinyCachePolicywithGhostCache(type, config);
         } else if (strategy.equalsIgnoreCase("TinyCache")) {
