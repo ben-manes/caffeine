@@ -342,7 +342,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /** Returns if entries may be assigned different weights. */
   protected boolean isWeighted() {
-    return (weigher == Weigher.singleton());
+    return (weigher != Weigher.singletonWeigher());
   }
 
   protected FrequencySketch<K> frequencySketch() {
@@ -434,7 +434,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       setMoveDistance(distance);
     }
 
-    if (isWeighted() && (frequencySketch() != null) && (weightedSize() >= (max >>> 1))) {
+    if ((frequencySketch() != null) && !isWeighted() && (weightedSize() >= (max >>> 1))) {
       // Lazily initialize when close to the maximum size
       frequencySketch().ensureCapacity(max);
     }
@@ -906,7 +906,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     modified |= expireEntries();
     modified |= evictEntries();
 
-    if (fastpath() && modified && (weigher != Weigher.singleton())) {
+    if (fastpath() && modified && isWeighted()) {
       setMoveDistance(data.size() >>> FAST_PATH_RSHIFT);
     }
   }
@@ -986,7 +986,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             break;
           }
           demoted.makeMainProbation();
-          Caffeine.requireState( accessOrderProbationDeque().add(demoted));
+          accessOrderProbationDeque().add(demoted);
           mainProtectedWeightedSize -= node.getPolicyWeight();
         }
 
@@ -1072,13 +1072,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         lazySetEdenWeightedSize(edenWeightedSize() + weight);
 
         if (isWeighted()) {
+          frequencySketch().ensureCapacity(data.mappingCount());
+        } else {
           long maximumSize = maximum();
           if (weightedSize >= (maximumSize >>> 1)) {
             // Lazily initialize when close to the maximum size
             frequencySketch().ensureCapacity(maximumSize);
           }
-        } else {
-          frequencySketch().ensureCapacity(data.mappingCount());
         }
 
         K key = node.getKey();
@@ -2105,10 +2105,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     try {
       maintenance();
 
-      int initialCapacity = isWeighted()
-          ? Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size())
-          : 16;
-      Map<K, V> map = new LinkedHashMap<K, V>(initialCapacity);
+      int initialCapacity =
+          isWeighted() ? 16 : Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size());
+      Map<K, V> map = new LinkedHashMap<>(initialCapacity);
       while ((map.size() < limit) && iterator.hasNext()) {
         Node<K, V> node = iterator.next();
         K key = node.getKey();

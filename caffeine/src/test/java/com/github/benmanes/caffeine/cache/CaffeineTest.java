@@ -20,16 +20,20 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
+import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.Expiration;
+import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.github.benmanes.caffeine.cache.testing.FakeTicker;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -39,6 +43,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineTest {
+  @Mock StatsCounter statsCounter;
   @Mock CacheLoader<Object, Object> loader;
   @Mock CacheWriter<Object, Object> writer;
 
@@ -146,7 +151,7 @@ public final class CaffeineTest {
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void maximumSize_weigher() {
-    Caffeine.newBuilder().weigher(Weigher.singleton()).maximumSize(1);
+    Caffeine.newBuilder().weigher(Weigher.singletonWeigher()).maximumSize(1);
   }
 
   @Test
@@ -189,8 +194,9 @@ public final class CaffeineTest {
 
   @Test
   public void maximumWeight_small() {
-    Caffeine<?, ?> builder = Caffeine.newBuilder().maximumWeight(0).weigher(Weigher.singleton());
-    assertThat(builder.weigher, is(Weigher.singleton()));
+    Caffeine<?, ?> builder = Caffeine.newBuilder()
+        .maximumWeight(0).weigher(Weigher.singletonWeigher());
+    assertThat(builder.weigher, is(Weigher.singletonWeigher()));
     assertThat(builder.maximumWeight, is(0L));
     Eviction<?, ?> eviction = builder.build().policy().eviction().get();
     assertThat(eviction.getMaximum(), is(0L));
@@ -200,9 +206,9 @@ public final class CaffeineTest {
   @Test
   public void maximumWeight_large() {
     Caffeine<?, ?> builder = Caffeine.newBuilder()
-        .maximumWeight(Integer.MAX_VALUE).weigher(Weigher.singleton());
+        .maximumWeight(Integer.MAX_VALUE).weigher(Weigher.singletonWeigher());
     assertThat(builder.maximumWeight, is((long) Integer.MAX_VALUE));
-    assertThat(builder.weigher, is(Weigher.singleton()));
+    assertThat(builder.weigher, is(Weigher.singletonWeigher()));
 
     Eviction<?, ?> eviction = builder.build().policy().eviction().get();
     assertThat(eviction.getMaximum(), is((long) Integer.MAX_VALUE));
@@ -218,17 +224,17 @@ public final class CaffeineTest {
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void weigher_twice() {
-    Caffeine.newBuilder().weigher(Weigher.singleton()).weigher(Weigher.singleton());
+    Caffeine.newBuilder().weigher(Weigher.singletonWeigher()).weigher(Weigher.singletonWeigher());
   }
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void weigher_maximumSize() {
-    Caffeine.newBuilder().maximumSize(1).weigher(Weigher.singleton());
+    Caffeine.newBuilder().maximumSize(1).weigher(Weigher.singletonWeigher());
   }
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void weigher_noMaximumWeight() {
-    Caffeine.newBuilder().weigher(Weigher.singleton()).build();
+    Caffeine.newBuilder().weigher(Weigher.singletonWeigher()).build();
   }
 
   @Test
@@ -403,6 +409,46 @@ public final class CaffeineTest {
     Ticker ticker = new FakeTicker();
     Caffeine<?, ?> builder = Caffeine.newBuilder().ticker(ticker);
     assertThat(builder.ticker, is(ticker));
+    builder.build();
+  }
+
+  /* ---------------- stats -------------- */
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void recordStats_null() {
+    Caffeine.newBuilder().recordStats(null);
+  }
+
+  @Test
+  public void recordStats_twice() {
+    Supplier<StatsCounter> supplier = () -> statsCounter;
+    Runnable[] tasks = {
+        () -> Caffeine.newBuilder().recordStats().recordStats(),
+        () -> Caffeine.newBuilder().recordStats(supplier).recordStats(),
+        () -> Caffeine.newBuilder().recordStats().recordStats(supplier),
+        () -> Caffeine.newBuilder().recordStats(supplier).recordStats(supplier),
+    };
+    for (Runnable task : tasks) {
+      try {
+        task.run();
+        Assert.fail();
+      } catch (IllegalStateException expected) {}
+    }
+  }
+
+  @Test
+  public void recordStats() {
+    Caffeine<?, ?> builder = Caffeine.newBuilder().recordStats();
+    assertThat(builder.statsCounterSupplier, is(Caffeine.ENABLED_STATS_COUNTER_SUPPLIER));
+    builder.build();
+  }
+
+  @Test
+  public void recordStats_custom() {
+    Supplier<StatsCounter> supplier = () -> statsCounter;
+    Caffeine<?, ?> builder = Caffeine.newBuilder().recordStats(supplier);
+    builder.statsCounterSupplier.get().recordEviction();
+    verify(statsCounter).recordEviction();
     builder.build();
   }
 

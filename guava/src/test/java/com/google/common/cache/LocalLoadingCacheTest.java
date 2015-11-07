@@ -195,9 +195,7 @@ public class LocalLoadingCacheTest extends TestCase {
   }
 
   public void testRecordStats() {
-    Caffeine<Object, Object> builder = createCacheBuilder()
-        .recordStats()
-        .maximumSize(2);
+    Caffeine<Object, Object> builder = createCacheBuilder().maximumSize(2);
     LoadingCache<Object, Object> cache = makeCache(builder, identityLoader());
     assertEquals(0, cache.stats().hitCount());
     assertEquals(0, cache.stats().missCount());

@@ -17,7 +17,13 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -69,5 +75,30 @@ public final class StatsCounterTest {
       counter.recordLoadFailure(1);
     });
     assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 5)));
+  }
+
+  @Test
+  public void guarded() {
+    StatsCounter statsCounter = Mockito.mock(StatsCounter.class);
+    when(statsCounter.snapshot()).thenThrow(new NullPointerException());
+    doThrow(NullPointerException.class).when(statsCounter).recordEviction();
+    doThrow(NullPointerException.class).when(statsCounter).recordHits(anyInt());
+    doThrow(NullPointerException.class).when(statsCounter).recordMisses(anyInt());
+    doThrow(NullPointerException.class).when(statsCounter).recordLoadSuccess(anyLong());
+    doThrow(NullPointerException.class).when(statsCounter).recordLoadFailure(anyLong());
+
+    StatsCounter guarded = StatsCounter.guardedStatsCounter(statsCounter);
+    guarded.recordHits(1);
+    guarded.recordMisses(1);
+    guarded.recordEviction();
+    guarded.recordLoadSuccess(1);
+    guarded.recordLoadFailure(1);
+    assertThat(guarded.snapshot(), is(DisabledStatsCounter.EMPTY_STATS));
+
+    verify(statsCounter).recordHits(1);
+    verify(statsCounter).recordMisses(1);
+    verify(statsCounter).recordEviction();
+    verify(statsCounter).recordLoadSuccess(1);
+    verify(statsCounter).recordLoadFailure(1);
   }
 }

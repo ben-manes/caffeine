@@ -360,9 +360,9 @@ public final class Caffeine<K, V> {
 
   @Nonnull @SuppressWarnings("unchecked")
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
-    Weigher<K1, V1> delegate = isWeighted() && (weigher != Weigher.singleton())
-        ? Weigher.bounded((Weigher<K1, V1>) weigher)
-        : Weigher.singleton();
+    Weigher<K1, V1> delegate = isWeighted() && (weigher != Weigher.singletonWeigher())
+        ? Weigher.boundedWeigher((Weigher<K1, V1>) weigher)
+        : Weigher.singletonWeigher();
     return (Weigher<K1, V1>) (isAsync ? new AsyncWeigher<>(delegate) : delegate);
   }
 
@@ -693,28 +693,48 @@ public final class Caffeine<K, V> {
   }
 
   /**
-   * Enable the accumulation of {@link CacheStats} during the operation of the cache. Without this
-   * {@link Cache#stats} will return zero for all statistics. Note that recording stats requires
-   * bookkeeping to be performed with each operation, and thus imposes a performance penalty on
-   * cache operation.
+   * Enables the accumulation of {@link CacheStats} during the operation of the cache. Without this
+   * {@link Cache#stats} will return zero for all statistics. Note that recording statistics
+   * requires bookkeeping to be performed with each operation, and thus imposes a performance
+   * penalty on cache operation.
    *
    * @return this builder instance
    */
   @Nonnull
   public Caffeine<K, V> recordStats() {
+    requireState(this.statsCounterSupplier == null, "Statistics recording was already set");
     statsCounterSupplier = ENABLED_STATS_COUNTER_SUPPLIER;
     return this;
   }
 
+  /**
+   * Enables the accumulation of {@link CacheStats} during the operation of the cache. Without this
+   * {@link Cache#stats} will return zero for all statistics. Note that recording statistics
+   * requires bookkeeping to be performed with each operation, and thus imposes a performance
+   * penalty on cache operation. Any exception thrown by the supplied {@link StatsCounter} will be
+   * suppressed and logged.
+   *
+   * @param statsCounterSupplier a supplier instance that returns a new {@link StatsCounter}
+   * @return this builder instance
+   */
+  @Nonnull
+  public Caffeine<K, V> recordStats(
+      @Nonnull Supplier<? extends StatsCounter> statsCounterSupplier) {
+    requireState(this.statsCounterSupplier == null, "Statistics recording was already set");
+    requireNonNull(statsCounterSupplier);
+    this.statsCounterSupplier = () -> StatsCounter.guardedStatsCounter(statsCounterSupplier.get());
+    return this;
+  }
+
   boolean isRecordingStats() {
-    return (statsCounterSupplier == ENABLED_STATS_COUNTER_SUPPLIER);
+    return (statsCounterSupplier != null);
   }
 
   @Nonnull
   Supplier<? extends StatsCounter> getStatsCounterSupplier() {
     return (statsCounterSupplier == null)
         ? StatsCounter::disabledStatsCounter
-        : ENABLED_STATS_COUNTER_SUPPLIER;
+        : statsCounterSupplier;
   }
 
   boolean isBounded() {

@@ -93,4 +93,14 @@ public interface StatsCounter {
   static @Nonnull StatsCounter disabledStatsCounter() {
     return DisabledStatsCounter.INSTANCE;
   }
+
+  /**
+   * Returns an accumulator that suppresses and logs any exception thrown by the delegate
+   * <tt>statsCounter</tt>.
+   *
+   * @return an accumulator that suppresses and logs any exception thrown by the delegate
+   */
+  static @Nonnull StatsCounter guardedStatsCounter(@Nonnull StatsCounter statsCounter) {
+    return new GuardedStatsCounter(statsCounter);
+  }
 }
