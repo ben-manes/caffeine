@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/ben-manes/caffeine.svg)](https://travis-ci.org/ben-manes/caffeine)
 [![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine)
-[![JavaDoc](https://img.shields.io/badge/javadoc-1.3.3-brightgreen.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
+[![JavaDoc](https://img.shields.io/badge/javadoc-2.0.0-brightgreen.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
 [![License](http://img.shields.io/:license-apache-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 Caffeine is a [high performance][benchmarks] caching library based on Java 8. For more
@@ -10,9 +10,8 @@ the latest release.
 
 ### Cache
 
-Caffeine provides an in-memory cache using a Google Guava inspired API. The
-[improvements][benchmarks] draw on our experience designing [Guava's cache][guava-cache]
-and [ConcurrentLinkedHashMap][clhm].
+Caffeine provides an in-memory cache using a Google Guava inspired API. The [improvements][benchmarks] 
+draw on our experience designing [Guava's cache][guava-cache] and [ConcurrentLinkedHashMap][clhm].
 
 ```java
 LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
@@ -27,7 +26,7 @@ LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
 Caffeine provide flexible construction to create a cache with a combination of the following features:
 
  * [automatic loading of entries][population] into the cache, optionally asynchronously
- * [least-recently-used eviction][size] when a maximum size is exceeded
+ * [size-based eviction][size] when a maximum is exceeded based on [frequency and recency][efficiency]
  * [time-based expiration][time] of entries, measured since last access or last write
  * keys automatically wrapped in [weak references][reference]
  * values automatically wrapped in [weak or soft references][reference]
@@ -40,23 +39,16 @@ In addition, Caffeine offers the following extensions:
  * [Guava adapters][guava-adapter]
  * [Simulation][simulator]
 
-#### Coming Soon in 2.0
-
-A new eviction policy, [Window TinyLfu][efficiency], substantially improves upon the classic _Least 
-Recently Used_ policy. It provides a near optimal hit rate in O(1) time with a small footprint. The 
-adoption of this policy will also enable the use of a fast path that can significantly increase the
-throughput.
-
 ### Download
 
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:1.3.3'
+compile 'com.github.ben-manes.caffeine:caffeine:2.0.0'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:1.3.3'
-compile 'com.github.ben-manes.caffeine:jcache:1.3.3'
+compile 'com.github.ben-manes.caffeine:guava:2.0.0'
+compile 'com.github.ben-manes.caffeine:jcache:2.0.0'
 ```
 
 Snapshots of the development version are available in

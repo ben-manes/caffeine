@@ -43,7 +43,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * having a combination of the following features:
  * <ul>
  *   <li>automatic loading of entries into the cache, optionally asynchronously
- *   <li>eviction when a maximum size is exceeded based on frequency and recency
+ *   <li>size-based eviction when a maximum is exceeded based on frequency and recency
  *   <li>time-based expiration of entries, measured since last access or last write
  *   <li>keys automatically wrapped in {@linkplain WeakReference weak} references
  *   <li>values automatically wrapped in {@linkplain WeakReference weak} or
