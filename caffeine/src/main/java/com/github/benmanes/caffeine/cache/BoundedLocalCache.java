@@ -787,7 +787,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
     node.setAccessTime(now);
 
-    boolean delayable = canFastpath(node) || (readBuffer.offer(node) != Buffer.FULL);
+    // fastpath is disabled due to unfavorable benchmarks
+    // boolean delayable = canFastpath(node) || (readBuffer.offer(node) != Buffer.FULL);
+    boolean delayable = (readBuffer.offer(node) != Buffer.FULL);
     if (shouldDrainBuffers(delayable)) {
       scheduleDrainBuffers();
     }

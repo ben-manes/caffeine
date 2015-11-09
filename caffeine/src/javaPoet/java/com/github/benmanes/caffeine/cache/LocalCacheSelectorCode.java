@@ -102,7 +102,8 @@ public final class LocalCacheSelectorCode {
 
   private LocalCacheSelectorCode fastpath() {
     block.beginControlFlow("if (fastpath)")
-            .addStatement("sb.append('F')")
+            .addStatement("// disabled due to unfavorable benchmarks")
+            .addStatement("// sb.append('F')")
         .endControlFlow();
     return this;
   }

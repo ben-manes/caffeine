@@ -294,7 +294,7 @@ public final class BoundedLocalCacheTest {
     assertThat(localCache.writeQueue(), hasSize(0));
   }
 
-  @Test(dataProvider = "caches")
+  @Test(enabled = false, dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.PARTIAL, maximumSize = MaximumSize.FULL,
       weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
@@ -330,7 +330,7 @@ public final class BoundedLocalCacheTest {
     assertThat(middle.getMoveCount(), is(initialMoveCount + 1));
   }
 
-  @Test(dataProvider = "caches")
+  @Test(enabled = false, dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
