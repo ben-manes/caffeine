@@ -115,13 +115,13 @@ public final class WindowTinyLfuPolicy implements Policy {
     evict();
   }
 
-  /** Moves the entry to the LRU position in the admission window. */
+  /** Moves the entry to the MRU position in the admission window. */
   private void onEdenHit(Node node) {
     admittor.record(node.key);
     node.moveToTail(headEden);
   }
 
-  /** Promotes the entry to the protected region's LRU position, demoting an entry if necessary. */
+  /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onProbationHit(Node node) {
     admittor.record(node.key);
 
@@ -140,7 +140,7 @@ public final class WindowTinyLfuPolicy implements Policy {
     }
   }
 
-  /** Moves the entry to the LRU position, if it falls outside of the fast-path threshold. */
+  /** Moves the entry to the MRU position, if it falls outside of the fast-path threshold. */
   private void onProtectedHit(Node node) {
     // Fast path skips the hottest entries, useful for concurrent caches
     if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {

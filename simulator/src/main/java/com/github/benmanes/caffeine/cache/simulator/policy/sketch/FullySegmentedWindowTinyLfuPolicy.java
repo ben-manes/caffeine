@@ -113,7 +113,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     evict();
   }
 
-  /** Promotes the entry to the protected region's LRU position, demoting an entry if necessary. */
+  /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onEdenProbationHit(Node node) {
     admittor.record(node.key);
 
@@ -131,13 +131,13 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  /** Moves the entry to the LRU position in the admission window. */
+  /** Moves the entry to the MRU position in the admission window. */
   private void onEdenProtectedHit(Node node) {
     admittor.record(node.key);
     node.moveToTail(headEdenProtected);
   }
 
-  /** Promotes the entry to the protected region's LRU position, demoting an entry if necessary. */
+  /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onMainProbationHit(Node node) {
     admittor.record(node.key);
 
@@ -156,7 +156,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  /** Moves the entry to the LRU position, if it falls outside of the fast-path threshold. */
+  /** Moves the entry to the MRU position, if it falls outside of the fast-path threshold. */
   private void onMainProtectedHit(Node node) {
     // Fast path skips the hottest entries, useful for concurrent caches
     if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {

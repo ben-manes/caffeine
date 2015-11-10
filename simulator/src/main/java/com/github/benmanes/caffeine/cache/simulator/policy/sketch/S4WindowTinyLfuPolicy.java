@@ -98,12 +98,12 @@ public final class S4WindowTinyLfuPolicy implements Policy {
     evict();
   }
 
-  /** Moves the entry to the LRU position in the admission window. */
+  /** Moves the entry to the MRU position in the admission window. */
   private void onEdenHit(Node node) {
     node.moveToTail(headEden);
   }
 
-  /** Promotes the entry to the protected region's LRU position, demoting an entry if necessary. */
+  /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onMainHit(Node node) {
     node.remove();
     sizeMainQ[node.level]--;
