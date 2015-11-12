@@ -21,6 +21,7 @@ plugins.withType(EclipsePlugin) {
 dependencies {
   testCompile libraries.ycsb
   testCompile libraries.guava
+  testCompile test_libraries.junit
   testCompile test_libraries.testng
   testCompile test_libraries.jctools
   testCompile test_libraries.mockito
@@ -52,8 +53,7 @@ dependencies {
 jar.manifest {
   name 'com.github.ben-manes.caffeine'
   instruction 'Import-Package',
-    'sun.misc.*',
-    'resolution:=optional'
+    'sun.misc.*;resolution:=optional'
   instruction 'Export-Package',
     'com.github.benmanes.caffeine',
     'com.github.benmanes.caffeine.base',

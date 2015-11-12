@@ -36,7 +36,7 @@ ext {
     jsr305: '3.0.1',
     stream: '2.9.0',
     univocity_parsers: '1.5.6',
-    ycsb: '0.5.0-RC1',
+    ycsb: '0.5.0-RC2',
   ]
   test_versions = [
     awaitility: '1.6.5',
@@ -47,6 +47,7 @@ ext {
     jimfs: '1.0',
     junit: '4.12',
     mockito: '2.0.31-beta',
+    pax_exam: '4.6.0',
     testng: '6.9.9',
     truth: '0.24',
   ]
@@ -56,12 +57,12 @@ ext {
     ehcache2: '2.10.1-55',
     ehcache3: '3.0.0.m3',
     high_scale_lib: '1.0.6',
-    infinispan: '8.1.0.Alpha2',
-    jackrabbit: '1.3.9',
+    infinispan: '8.1.0.Beta1',
+    jackrabbit: '1.3.10',
     jamm: '0.3.1',
     java_object_layout: '0.3.2',
     koloboke: '0.6.8',
-    slf4j: '1.7.12',
+    slf4j: '1.7.13',
     tcache: '0.4.0',
   ]
   plugin_versions = [
@@ -110,6 +111,15 @@ ext {
     mockito: dependencies.create("org.mockito:mockito-core:${test_versions.mockito}") {
       exclude group: 'org.hamcrest'
     },
+    osgi_compile: [
+      "org.apache.felix:org.apache.felix.framework:5.4.0",
+      "org.ops4j.pax.exam:pax-exam-junit4:${test_versions.pax_exam}",
+    ],
+    osgi_runtime: [
+      "org.ops4j.pax.exam:pax-exam-container-native:${test_versions.pax_exam}",
+      "org.ops4j.pax.exam:pax-exam-link-mvn:${test_versions.pax_exam}",
+      "org.ops4j.pax.url:pax-url-aether:2.4.3",
+    ],
     testng: [
       dependencies.create("org.testng:testng:${test_versions.testng}") {
         exclude group: 'junit'

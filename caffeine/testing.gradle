@@ -2,6 +2,7 @@
  * The configuration to break cache tests into independant tasks.
  */
 test {
+  useTestNG()
   exclude 'com/github/benmanes/caffeine/cache/**'
 }
 
@@ -23,6 +24,7 @@ testNames.each { testName ->
   def labels = testType.split('And').collect { it[0].toLowerCase() + it.substring(1) }
 
   task "${testName}"(type: Test) {
+    it.useTestNG()
     group = 'Cache tests'
     description = 'Runs ' + labels.join(' with ') + 
       implementation + ' and ' + (hasStats ? 'stats ' : 'no stats ') +
@@ -48,25 +50,34 @@ testNames.each { testName ->
 task isolatedTests(type: Test, group: 'Cache tests') {
   description = 'Tests that must be run in isolation'
 
+  useTestNG()
   if (!System.env.'CI') {
     tasks.test.dependsOn(it)
   }
 }
 
+task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tests') {
+  useJUnit()
+  tasks.test.dependsOn(it)
+  systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
+}
+
 tasks.withType(Test) {
-  useTestNG()
-  if (name.startsWith('slow')) {
-    maxParallelForks = 2
-    options.includeGroups = ['slow']
-  } else if (name.startsWith('isolated')) {
-    options.includeGroups = ['isolated']
-  } else {
-    options {
-      excludeGroups = ['slow', 'isolated']
-      parallel = 'methods'
-      threadCount = 6
+  if (options instanceof TestNGOptions) {
+    if (name.startsWith('slow')) {
+      maxParallelForks = 2
+      options.includeGroups = ['slow']
+    } else if (name.startsWith('isolated')) {
+      options.includeGroups = ['isolated']
+    } else {
+      options {
+        excludeGroups = ['slow', 'isolated']
+        parallel = 'methods'
+        threadCount = 6
+      }
     }
   }
+
   // ensure tasks don't overwrite the default report directories used by the 'test' task
   reports.html.destination = "${buildDir}/reports/${name}"
   reports.junitXml.destination = "${buildDir}/reports/${name}/results"

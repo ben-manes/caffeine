@@ -27,10 +27,18 @@ dependencies {
 jar.manifest {
   name 'com.github.ben-manes.caffeine.jcache'
   instruction 'Import-Package',
+    'javax.cache.*',
+    'com.typesafe.config',
     'com.github.benmanes.caffeine.cache',
     'com.github.benmanes.caffeine.cache.stats'
   instruction 'Export-Package',
-    'com.github.benmanes.caffeine.jcache.*'
+    'com.github.benmanes.caffeine.jcache.spi',
+    'com.github.benmanes.caffeine.jcache.copy',
+    'com.github.benmanes.caffeine.jcache.configuration'
+  instruction 'Require-Capability',
+    'osgi.extender;filter:="(osgi.extender=osgi.serviceloader.registrar)"'
+  instruction 'Provide-Capability',
+    'osgi.serviceloader;osgi.serviceloader=com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider'
 }
 
 tasks.withType(Javadoc) {
@@ -65,3 +73,12 @@ task testCompatibilityKit(type: Test, group: 'Build', description: 'Runs the JCa
   systemProperty 'javax.management.builder.initial', "${pkg}.management.JCacheMBeanServerBuilder"
 }
 test.dependsOn(testCompatibilityKit)
+
+task osgiTests(type: Test, group: 'Build', description: 'Isolated OSGi tests') {
+  useJUnit()
+  tasks.test.dependsOn(it)
+  systemProperty 'config.osgi.version', versions.config
+  systemProperty 'jcache.osgi.version', versions.jcache
+  systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
+  systemProperty 'caffeine-jcache.osgi.jar', project(':jcache').jar.archivePath.path
+}

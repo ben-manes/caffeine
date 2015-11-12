@@ -8,19 +8,27 @@ dependencies {
   compile libraries.guava
 
   testCompile test_libraries.junit
-  testCompile test_libraries.guava_testlib
   testCompile test_libraries.truth
   testCompile test_libraries.easymock
+  testCompile test_libraries.guava_testlib
 }
+
 jar.manifest {
   name 'com.github.ben-manes.caffeine.guava'
   instruction 'Import-Package',
+    'com.google.common.cache',
     'com.github.benmanes.caffeine.cache',
     'com.github.benmanes.caffeine.cache.stats'
   instruction 'Export-Package',
-    'com.github.benmanes.caffeine.guava.*'
+    'com.github.benmanes.caffeine.guava'
 }
 
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+test {
+  systemProperty 'guava.osgi.version', versions.guava
+  systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
+  systemProperty 'caffeine-guava.osgi.jar', project(':guava').jar.archivePath.path
 }

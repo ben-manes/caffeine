@@ -28,14 +28,6 @@ test {
   useTestNG()
 }
 
-jar.manifest {
-  name 'com.github.ben-manes.caffeine.simulator'
-  instruction 'Import-Package',
-    'com.github.benmanes.caffeine.cache.*'
-  instruction 'Export-Package',
-    'com.github.benmanes.caffeine.cache.simulator.*'
-}
-
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
 }
