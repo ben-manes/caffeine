@@ -20,6 +20,7 @@ import java.util.function.Function;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
 
 /**
@@ -31,11 +32,12 @@ public enum TraceFormat {
   ADDRESS(AddressTraceReader::new),
   ARC(ArcTraceReader::new),
   LIRS(LirsTraceReader::new),
+  UMASS_STORAGE(StorageTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new);
 
-  private final Function<String, TraceReader<?>> factory;
+  private final Function<String, TraceReader> factory;
 
-  private TraceFormat(Function<String, TraceReader<?>> factory) {
+  private TraceFormat(Function<String, TraceReader> factory) {
     this.factory = factory;
   }
 
@@ -45,7 +47,7 @@ public enum TraceFormat {
    * @param filePath the path to the file in the trace's format
    * @return a reader for streaming the events from the file
    */
-  public TraceReader<?> readFile(String filePath) {
+  public TraceReader readFile(String filePath) {
     return factory.apply(filePath);
   }
 }

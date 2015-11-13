@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,7 +27,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
+
+import org.apache.commons.compress.archivers.ArchiveException;
+import org.apache.commons.compress.archivers.ArchiveStreamFactory;
+import org.apache.commons.compress.compressors.CompressorException;
+import org.apache.commons.compress.compressors.CompressorStreamFactory;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Closeables;
@@ -36,7 +41,7 @@ import com.google.common.io.Closeables;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public abstract class TextTraceReader<E extends Comparable<E>> implements TraceReader<E> {
+public abstract class TextTraceReader implements TraceReader {
   private final String filePath;
 
   public TextTraceReader(String filePath) {
@@ -45,20 +50,27 @@ public abstract class TextTraceReader<E extends Comparable<E>> implements TraceR
 
   /** Returns a stream of each line in the trace file. */
   protected Stream<String> lines() throws IOException {
-    IOException e = null;
-    for (boolean compressed : new boolean[] { true, false }) {
-      InputStream input = openFile();
-      try {
-        InputStream stream = compressed ? new GZIPInputStream(input) : input;
-        Reader reader = new InputStreamReader(stream, Charsets.UTF_8);
-        return new BufferedReader(reader, 1 << 16).lines().map(String::trim)
-            .onClose(() -> Closeables.closeQuietly(input));
-      } catch (IOException ex) {
-        input.close();
-        e = ex;
-      }
+    InputStream input = readFile();
+    Reader reader = new InputStreamReader(input, Charsets.UTF_8);
+    return new BufferedReader(reader, 1 << 16).lines().map(String::trim)
+        .onClose(() -> Closeables.closeQuietly(input));
+  }
+
+  /** Returns the input stream, decompressing if required. */
+  private InputStream readFile() throws IOException {
+    BufferedInputStream input = new BufferedInputStream(openFile());
+    input.mark(100);
+    try {
+      return new CompressorStreamFactory().createCompressorInputStream(input);
+    } catch (CompressorException e) {
+      input.reset();
     }
-    throw e;
+    try {
+      return new ArchiveStreamFactory().createArchiveInputStream(input);
+    } catch (ArchiveException e) {
+      input.reset();
+    }
+    return input;
   }
 
   /** Returns the input stream for the raw file. */

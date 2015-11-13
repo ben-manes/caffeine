@@ -25,7 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LirsTraceReader extends TextTraceReader<Long> {
+public final class LirsTraceReader extends TextTraceReader {
 
   public LirsTraceReader(String filePath) {
     super(filePath);

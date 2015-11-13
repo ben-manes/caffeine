@@ -26,7 +26,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddressTraceReader extends TextTraceReader<Long> {
+public final class AddressTraceReader extends TextTraceReader {
 
   public AddressTraceReader(String filePath) {
     super(filePath);

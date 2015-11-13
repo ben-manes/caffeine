@@ -13,32 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.parser.arc;
+package com.github.benmanes.caffeine.cache.simulator.parser.umass.storage;
 
 import java.io.IOException;
+import java.math.RoundingMode;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.google.common.math.IntMath;
 
 /**
- * A reader for the trace files provided by the authors of the ARC algorithm. See
- * <a href="http://researcher.watson.ibm.com/researcher/view_person_subpage.php?id=4700">traces</a>.
+ * A reader for the trace files provided by the
+ * <a href="http://traces.cs.umass.edu/index.php/Storage/Storage">UMass Trace Repository</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ArcTraceReader extends TextTraceReader {
+public final class StorageTraceReader extends TextTraceReader {
+  static final int BLOCK_SIZE = 512;
 
-  public ArcTraceReader(String filePath) {
+  public StorageTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
   public LongStream events() throws IOException {
     return lines().flatMapToLong(line -> {
-      String[] array = line.split(" ", 3);
-      long startBlock = Long.parseLong(array[0]);
-      int sequence = Integer.parseInt(array[1]);
-      return LongStream.range(startBlock, startBlock + sequence);
+      String[] array = line.split(",", 5);
+      if (array.length <= 4) {
+        return LongStream.empty();
+      }
+      long startBlock = Long.parseLong(array[1]);
+      int size = Integer.parseInt(array[2]);
+      int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
+      char readWrite = Character.toLowerCase(array[3].charAt(0));
+      return (readWrite == 'w')
+          ? LongStream.empty()
+          : LongStream.range(startBlock, startBlock + sequence);
     });
   }
 }
