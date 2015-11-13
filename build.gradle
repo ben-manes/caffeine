@@ -25,7 +25,7 @@ allprojects {
   apply from: "${rootDir}/gradle/eclipse.gradle"
 
   repositories {
-    maven { 
+    maven {
       name 'jitpack'
       url 'https://jitpack.io'
     }
@@ -52,7 +52,7 @@ subprojects {
   version.with {
     major = 2 // incompatible API changes
     minor = 0 // backwards-compatible additions
-    patch = 1 // backwards-compatible bug fixes
+    patch = 2 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
