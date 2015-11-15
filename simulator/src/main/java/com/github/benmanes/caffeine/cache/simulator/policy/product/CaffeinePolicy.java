@@ -15,11 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
@@ -31,8 +34,8 @@ public final class CaffeinePolicy implements Policy {
   private final Cache<Object, Object> cache;
   private final PolicyStats policyStats;
 
-  public CaffeinePolicy(String name, Config config) {
-    policyStats = new PolicyStats(name);
+  public CaffeinePolicy(Config config) {
+    policyStats = new PolicyStats("product.Caffeine");
     BasicSettings settings = new BasicSettings(config);
     cache = Caffeine.newBuilder()
         .executor(Runnable::run)
@@ -40,6 +43,11 @@ public final class CaffeinePolicy implements Policy {
         .initialCapacity(settings.maximumSize())
         .removalListener((k, v, c) -> policyStats.recordEviction())
         .build();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new CaffeinePolicy(config));
   }
 
   @Override

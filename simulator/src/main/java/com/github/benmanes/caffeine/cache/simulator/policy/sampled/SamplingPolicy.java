@@ -15,13 +15,19 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
+import static java.util.stream.Collectors.toSet;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -49,7 +55,8 @@ public final class SamplingPolicy implements Policy {
   private final Random random;
   private final Node[] table;
 
-  public SamplingPolicy(String name, Admittor admittor, Config config, EvictionPolicy policy) {
+  public SamplingPolicy(Admission admission, EvictionPolicy policy, Config config) {
+    String name = admission.format("sampled." + policy.label());
     SamplingSettings settings = new SamplingSettings(config);
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
@@ -58,9 +65,17 @@ public final class SamplingPolicy implements Policy {
     this.policyStats = new PolicyStats(name);
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];
+    this.admittor = admission.from(config);
     this.ticker = new CountTicker();
-    this.admittor = admittor;
     this.policy = policy;
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config, EvictionPolicy policy) {
+    BasicSettings settings = new BasicSettings(config);
+    return settings.admission().stream().map(admission ->
+      new SamplingPolicy(admission, policy, config)
+    ).collect(toSet());
   }
 
   @Override
@@ -224,6 +239,10 @@ public final class SamplingPolicy implements Policy {
         return sample.get(victim);
       }
     };
+
+    public String label() {
+      return StringUtils.capitalize(name().toLowerCase());
+    }
 
     /** Determines which node to evict. */
     abstract Node select(List<Node> sample, Random random);

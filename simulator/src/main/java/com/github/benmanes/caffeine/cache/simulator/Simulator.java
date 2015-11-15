@@ -17,17 +17,14 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.PrimitiveIterator;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyBuilder;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
 import com.github.benmanes.caffeine.cache.simulator.report.Reporter;
 import com.google.common.base.Stopwatch;
 import com.typesafe.config.Config;
@@ -133,17 +130,7 @@ public final class Simulator extends UntypedActor {
 
   /** Returns the actors to broadcast trace events to. */
   private List<Routee> makeRoutes() {
-    Map<String, Policy> policies = new TreeMap<>();
-    for (String policyType : settings.policies()) {
-      for (String admittorType : settings.admission()) {
-        Policy policy = new PolicyBuilder(config)
-            .admittor(admittorType)
-            .type(policyType)
-            .build();
-        policies.put(policy.stats().name(), policy);
-      }
-    }
-    return policies.values().stream().map(policy -> {
+    return Registry.policies(settings).stream().map(policy -> {
       ActorRef actorRef = getContext().actorOf(Props.create(PolicyActor.class, policy));
       getContext().watch(actorRef);
       return new ActorRefRoutee(actorRef);

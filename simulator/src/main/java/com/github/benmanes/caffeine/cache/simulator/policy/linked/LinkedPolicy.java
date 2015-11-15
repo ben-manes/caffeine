@@ -17,8 +17,14 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
+
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -42,14 +48,23 @@ public final class LinkedPolicy implements Policy {
   private final int maximumSize;
   private final Node sentinel;
 
-  public LinkedPolicy(String name, Admittor admittor, Config config, EvictionPolicy policy) {
+  public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
+    String name = admission.format("linked." + policy.label());
     BasicSettings settings = new BasicSettings(config);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
+    this.admittor = admission.from(config);
     this.sentinel = new Node();
-    this.admittor = admittor;
     this.policy = policy;
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config, EvictionPolicy policy) {
+    BasicSettings settings = new BasicSettings(config);
+    return settings.admission().stream().map(admission ->
+      new LinkedPolicy(admission, policy, config)
+    ).collect(toSet());
   }
 
   @Override
@@ -157,6 +172,10 @@ public final class LinkedPolicy implements Policy {
         return sentinel.next;
       }
     };
+
+    public String label() {
+      return StringUtils.capitalize(name().toLowerCase());
+    }
 
     /** Performs any operations required by the policy after a node was successfully retrieved. */
     abstract void onAccess(Node node, PolicyStats policyStats);

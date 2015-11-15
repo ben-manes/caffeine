@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.infinispan.commons.equivalence.AnyEquivalence;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8;
@@ -24,6 +25,7 @@ import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentCo
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
@@ -36,13 +38,18 @@ public final class InfinispanPolicy implements Policy {
   private final PolicyStats policyStats;
   private final int maximumSize;
 
-  public InfinispanPolicy(String name, Config config) {
-    policyStats = new PolicyStats(name);
+  public InfinispanPolicy(Config config) {
+    policyStats = new PolicyStats("product.Infinispan");
     InfinispanSettings settings = new InfinispanSettings(config);
     cache = new BoundedEquivalentConcurrentHashMapV8<>(settings.maximumSize(), settings.policy(),
         BoundedEquivalentConcurrentHashMapV8.getNullEvictionListener(),
         AnyEquivalence.getInstance(), AnyEquivalence.getInstance());
     maximumSize = settings.maximumSize();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new InfinispanPolicy(config));
   }
 
   @Override

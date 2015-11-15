@@ -265,7 +265,7 @@ public final class NodeFactoryGenerator {
     } else {
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
       generateFeatures = ImmutableSet.of(Iterables.getLast(features));
-      superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
+      superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME + ".NodeFactory",
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
 

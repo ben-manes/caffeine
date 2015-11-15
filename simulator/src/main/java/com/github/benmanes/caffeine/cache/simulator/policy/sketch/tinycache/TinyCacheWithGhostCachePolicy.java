@@ -15,24 +15,32 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheWithGhostCache;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-public final class TinyCachePolicywithGhostCache implements Policy {
+public final class TinyCacheWithGhostCachePolicy implements Policy {
   private final TinyCacheWithGhostCache tinyCache;
   private final PolicyStats policyStats;
 
-  public TinyCachePolicywithGhostCache(String name, Config config) {
+  public TinyCacheWithGhostCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats(name);
+    this.policyStats = new PolicyStats("sketch.TinyCache_GhostCache");
     tinyCache = new TinyCacheWithGhostCache((int) Math.ceil(settings.maximumSize() / 64.0),
         64, settings.randomSeed());
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new TinyCacheWithGhostCachePolicy(config));
   }
 
   @Override

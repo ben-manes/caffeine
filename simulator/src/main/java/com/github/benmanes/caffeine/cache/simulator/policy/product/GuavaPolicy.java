@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -22,6 +23,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
@@ -33,15 +35,19 @@ public final class GuavaPolicy implements Policy {
   private final Cache<Object, Object> cache;
   private final PolicyStats policyStats;
 
-  public GuavaPolicy(String name, Config config) {
-    policyStats = new PolicyStats(name);
+  public GuavaPolicy(Config config) {
+    policyStats = new PolicyStats("product.Guava");
     BasicSettings settings = new BasicSettings(config);
     cache = CacheBuilder.newBuilder()
         .maximumSize(settings.maximumSize())
         .initialCapacity(settings.maximumSize())
         .removalListener(notification -> policyStats.recordEviction())
-        .recordStats()
         .build();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new GuavaPolicy(config));
   }
 
   @Override

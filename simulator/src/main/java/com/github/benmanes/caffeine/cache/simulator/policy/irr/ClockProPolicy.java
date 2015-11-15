@@ -18,9 +18,12 @@ package com.github.benmanes.caffeine.cache.simulator.policy.irr;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -80,15 +83,20 @@ public final class ClockProPolicy implements Policy {
   private int sizeCold;
   private int sizeTest;
 
-  public ClockProPolicy(String name, Config config) {
+  public ClockProPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("irr.ClockPro");
     maximumColdSize = settings.maximumSize();
     data = new Long2ObjectOpenHashMap<>();
     maximumSize = settings.maximumSize();
-    policyStats = new PolicyStats(name);
 
     // All the hands move in the clockwise direction
     handHot = handCold = handTest = null;
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new ClockProPolicy(config));
   }
 
   @Override

@@ -15,9 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.trivago.triava.tcache.TCacheFactory;
 import com.trivago.triava.tcache.core.EvictionInterface;
 import com.trivago.triava.tcache.eviction.Cache;
@@ -35,15 +38,20 @@ public final class TCachePolicy implements Policy {
   private final PolicyStats policyStats;
   private final int maximumSize;
 
-  public TCachePolicy(String name, Config config) {
+  public TCachePolicy(Config config) {
     TCacheSettings settings = new TCacheSettings(config);
     maximumSize = settings.maximumSize();
-    policyStats = new PolicyStats(name);
+    policyStats = new PolicyStats("product.TCache");
     cache = TCacheFactory.standardFactory().builder()
         .setEvictionClass(settings.policy())
         .setExpectedMapSize(maximumSize)
         .setStatistics(true)
         .build();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new TCachePolicy(config));
   }
 
   @Override

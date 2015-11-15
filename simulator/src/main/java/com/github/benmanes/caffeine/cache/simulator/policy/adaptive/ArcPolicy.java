@@ -17,10 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator.policy.adaptive;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -69,15 +72,20 @@ public final class ArcPolicy implements Policy {
   private int sizeB2;
   private int p;
 
-  public ArcPolicy(String name, Config config) {
+  public ArcPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
+    this.policyStats = new PolicyStats("adaptive.Arc");
     this.maximumSize = settings.maximumSize();
-    this.policyStats = new PolicyStats(name);
     this.data = new Long2ObjectOpenHashMap<>();
     this.headT1 = new Node();
     this.headT2 = new Node();
     this.headB1 = new Node();
     this.headB2 = new Node();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new ArcPolicy(config));
   }
 
   @Override

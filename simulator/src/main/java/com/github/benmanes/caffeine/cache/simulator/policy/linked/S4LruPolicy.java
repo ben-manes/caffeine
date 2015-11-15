@@ -16,10 +16,13 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.stream.Collectors.toSet;
 
 import java.util.Arrays;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -50,17 +53,25 @@ public final class S4LruPolicy implements Policy {
   private final int[] sizeQ;
   private final int levels;
 
-  public S4LruPolicy(String name, Admittor admittor, Config config) {
+  public S4LruPolicy(Admission admission, Config config) {
     S4LruSettings settings = new S4LruSettings(config);
+    this.policyStats = new PolicyStats(admission.format("linked.S4Lru"));
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
-    this.policyStats = new PolicyStats(name);
+    this.admittor = admission.from(config);
     this.levels = settings.levels();
     this.headQ = new Node[levels];
     this.sizeQ = new int[levels];
-    this.admittor = admittor;
 
     Arrays.setAll(headQ, Node::sentinel);
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    BasicSettings settings = new BasicSettings(config);
+    return settings.admission().stream().map(admission ->
+      new S4LruPolicy(admission, config)
+    ).collect(toSet());
   }
 
   @Override

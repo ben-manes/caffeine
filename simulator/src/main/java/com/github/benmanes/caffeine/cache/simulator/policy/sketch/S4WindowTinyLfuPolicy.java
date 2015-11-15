@@ -16,8 +16,11 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.stream.Collectors.toSet;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -50,19 +53,27 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   private int sizeEden;
   private int[] sizeMainQ;
 
-  public S4WindowTinyLfuPolicy(String name, Config config) {
-    S4WindowTinyLfuSettings settings = new S4WindowTinyLfuSettings(config);
-    this.maximumSize = settings.maximumSize();
-    this.maxMain = (int) (maximumSize * settings.percentMain());
-    this.maxEden = maximumSize - maxMain;
-    this.data = new Long2ObjectOpenHashMap<>();
+  public S4WindowTinyLfuPolicy(double percentMain, S4WindowTinyLfuSettings settings) {
+    String name = String.format("sketch.S4WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
     this.policyStats = new PolicyStats(name);
-    this.admittor = new TinyLfu(config);
+    this.maximumSize = settings.maximumSize();
+    this.maxMain = (int) (maximumSize * percentMain);
+    this.maxEden = maximumSize - maxMain;
+    this.admittor = new TinyLfu(settings.config());
+    this.data = new Long2ObjectOpenHashMap<>();
     this.headEden = Node.sentinel(-1);
     this.levels = settings.levels();
     this.sizeMainQ = new int[levels];
     this.headMainQ = new Node[levels];
     Arrays.setAll(headMainQ, Node::sentinel);
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    S4WindowTinyLfuSettings settings = new S4WindowTinyLfuSettings(config);
+    return settings.percentMain().stream()
+        .map(percentMain -> new S4WindowTinyLfuPolicy(percentMain, settings))
+        .collect(toSet());
   }
 
   @Override
@@ -242,8 +253,8 @@ public final class S4WindowTinyLfuPolicy implements Policy {
     public int levels() {
       return config().getInt("s4-window-tiny-lfu.levels");
     }
-    public double percentMain() {
-      return config().getDouble("s4-window-tiny-lfu.percent-main");
+    public List<Double> percentMain() {
+      return config().getDoubleList("s4-window-tiny-lfu.percent-main");
     }
   }
 }

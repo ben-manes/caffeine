@@ -17,9 +17,11 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
-import java.util.List;
+import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.report.ReportFormat;
 import com.typesafe.config.Config;
@@ -49,12 +51,17 @@ public class BasicSettings {
     return config().getInt("batch-size");
   }
 
-  public List<String> policies() {
-    return config().getStringList("policies");
+  public Set<String> policies() {
+    return config().getStringList("policies").stream()
+        .map(String::toLowerCase)
+        .collect(toSet());
   }
 
-  public List<String> admission() {
-    return config().getStringList("admission");
+  public Set<Admission> admission() {
+    return config().getStringList("admission").stream()
+        .map(String::toUpperCase)
+        .map(Admission::valueOf)
+        .collect(toSet());
   }
 
   public TinyLfuSettings tinyLfu() {
@@ -84,7 +91,7 @@ public class BasicSettings {
   }
 
   /** Returns the config resolved at the simulator's path. */
-  protected Config config() {
+  public Config config() {
     return config;
   }
 
@@ -123,7 +130,6 @@ public class BasicSettings {
       }
     }
   }
-
 
   public final class TraceFileSettings {
     public String path() {

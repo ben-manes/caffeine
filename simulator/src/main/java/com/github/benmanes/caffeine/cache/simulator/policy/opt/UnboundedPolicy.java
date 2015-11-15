@@ -15,8 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
+import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
@@ -31,9 +35,14 @@ public final class UnboundedPolicy implements Policy {
   private final PolicyStats policyStats;
   private final LongOpenHashSet data;
 
-  public UnboundedPolicy(String name) {
-    this.policyStats = new PolicyStats(name);
+  public UnboundedPolicy() {
+    this.policyStats = new PolicyStats("opt.Unbounded");
     this.data = new LongOpenHashSet();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new UnboundedPolicy());
   }
 
   @Override

@@ -17,10 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -65,17 +68,22 @@ public class TuQueuePolicy implements Policy {
   private int sizeCold;
   private final Node headCold;
 
-  public TuQueuePolicy(String name, Config config) {
+  public TuQueuePolicy(Config config) {
     TuQueueSettings settings = new TuQueueSettings(config);
 
     this.headHot = new Node();
     this.headWarm = new Node();
     this.headCold = new Node();
-    this.policyStats = new PolicyStats(name);
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
+    this.policyStats = new PolicyStats("two-queue.TuQueue");
     this.maxHot = (int) (maximumSize * settings.percentHot());
     this.maxWarm = (int) (maximumSize * settings.percentWarm());
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new TuQueuePolicy(config));
   }
 
   @Override

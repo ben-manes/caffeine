@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import java.util.Set;
+
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.CacheManagerBuilder;
@@ -27,6 +29,7 @@ import org.ehcache.config.units.EntryUnit;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
@@ -40,11 +43,11 @@ public final class Ehcache3Policy implements Policy {
   private final int maximumSize;
   private int size;
 
-  public Ehcache3Policy(String name, Config config) {
-    policyStats = new PolicyStats(name);
+  public Ehcache3Policy(Config config) {
+    policyStats = new PolicyStats("product.Ehcache3");
     Ehcache3Settings settings = new Ehcache3Settings(config);
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
-    cache = cacheManager.createCache(name,
+    cache = cacheManager.createCache("ehcache3",
         CacheConfigurationBuilder.newCacheConfigurationBuilder()
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .heap(settings.maximumSize(), EntryUnit.ENTRIES)
@@ -52,6 +55,11 @@ public final class Ehcache3Policy implements Policy {
             .usingEvictionPrioritizer(settings.prioritizer())
             .buildConfig(Object.class, Object.class));
     maximumSize = settings.maximumSize();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new Ehcache3Policy(config));
   }
 
   @Override

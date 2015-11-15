@@ -16,6 +16,10 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.stream.Collectors.toSet;
+
+import java.util.List;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -56,21 +60,31 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
   private int sizeMainProtected;
   private int mainRecencyCounter;
 
-  public FullySegmentedWindowTinyLfuPolicy(String name, Config config) {
-    FullySegmentedWindowTinyLfuSettings settings = new FullySegmentedWindowTinyLfuSettings(config);
-    int maxMain = (int) (settings.maximumSize() * settings.percentMain());
+  public FullySegmentedWindowTinyLfuPolicy(
+      double percentMain, FullySegmentedWindowTinyLfuSettings settings) {
+    String name = String.format(
+        "sketch.FullySegmentedWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+    this.policyStats = new PolicyStats(name);
+    int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxEden = settings.maximumSize() - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxEdenProtected = (int) (maxEden * settings.percentEdenProtected());
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
+    this.admittor = new TinyLfu(settings.config());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
-    this.policyStats = new PolicyStats(name);
-    this.admittor = new TinyLfu(config);
     this.headEdenProbation = new Node();
     this.headEdenProtected = new Node();
     this.headMainProbation = new Node();
     this.headMainProtected = new Node();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    FullySegmentedWindowTinyLfuSettings settings = new FullySegmentedWindowTinyLfuSettings(config);
+    return settings.percentMain().stream()
+        .map(percentMain -> new FullySegmentedWindowTinyLfuPolicy(percentMain, settings))
+        .collect(toSet());
   }
 
   @Override
@@ -271,8 +285,8 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     public FullySegmentedWindowTinyLfuSettings(Config config) {
       super(config);
     }
-    public double percentMain() {
-      return config().getDouble("fully-segmented-window-tiny-lfu.percent-main");
+    public List<Double> percentMain() {
+      return config().getDoubleList("fully-segmented-window-tiny-lfu.percent-main");
     }
     public double percentMainProtected() {
       return config().getDouble("fully-segmented-window-tiny-lfu.percent-main-protected");

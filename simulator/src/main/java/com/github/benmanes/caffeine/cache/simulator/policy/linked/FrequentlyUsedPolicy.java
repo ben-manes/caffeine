@@ -16,8 +16,14 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
+
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -34,8 +40,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class FrequentlyUsedPolicy implements Policy {
-  public enum EvictionPolicy { LFU, MFU }
-
   private final PolicyStats policyStats;
   private final Long2ObjectMap<Node> data;
   private final EvictionPolicy policy;
@@ -43,15 +47,23 @@ public final class FrequentlyUsedPolicy implements Policy {
   private final Admittor admittor;
   private final int maximumSize;
 
-  public FrequentlyUsedPolicy(String name, Admittor admittor,
-      Config config, EvictionPolicy frequency) {
+  public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
+    String name = admission.format("linked." + policy.label());
     BasicSettings settings = new BasicSettings(config);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
-    this.policy = requireNonNull(frequency);
     this.policyStats = new PolicyStats(name);
-    this.admittor = requireNonNull(admittor);
+    this.admittor = admission.from(config);
+    this.policy = requireNonNull(policy);
     this.freq0 = new FrequencyNode(0);
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config, EvictionPolicy policy) {
+    BasicSettings settings = new BasicSettings(config);
+    return settings.admission().stream().map(admission ->
+      new FrequentlyUsedPolicy(admission, policy, config)
+    ).collect(toSet());
   }
 
   @Override
@@ -140,6 +152,14 @@ public final class FrequentlyUsedPolicy implements Policy {
     node.remove();
     if (node.freq.isEmpty()) {
       node.freq.remove();
+    }
+  }
+
+  public enum EvictionPolicy {
+    LFU, MFU;
+
+    public String label() {
+      return StringUtils.capitalize(name().toLowerCase());
     }
   }
 

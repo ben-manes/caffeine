@@ -16,9 +16,12 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
+
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -59,16 +62,25 @@ public final class SegmentedLruPolicy implements Policy {
 
   private int sizeProtected;
 
-  public SegmentedLruPolicy(String name, Admittor admittor, Config config) {
+  public SegmentedLruPolicy(Admission admission, Config config) {
     SegmentedLruSettings settings = new SegmentedLruSettings(config);
+    String name = admission.format("linked.SegmentedLru");
 
     this.headProtected = new Node();
     this.headProbation = new Node();
-    this.admittor = requireNonNull(admittor);
+    this.admittor = admission.from(config);
     this.policyStats = new PolicyStats(name);
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
     this.maxProtected = (int) (maximumSize * settings.percentProtected());
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    BasicSettings settings = new BasicSettings(config);
+    return settings.admission().stream().map(admission ->
+      new SegmentedLruPolicy(admission, config)
+    ).collect(toSet());
   }
 
   @Override

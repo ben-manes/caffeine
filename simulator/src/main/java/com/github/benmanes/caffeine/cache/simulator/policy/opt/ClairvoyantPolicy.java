@@ -15,9 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
@@ -44,14 +47,19 @@ public final class ClairvoyantPolicy implements Policy {
   private int infiniteTimestamp;
   private int tick;
 
-  public ClairvoyantPolicy(String name, Config config) {
+  public ClairvoyantPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("opt.Clairvoyant");
     accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
     maximumSize = settings.maximumSize();
-    policyStats = new PolicyStats(name);
     future = new LongArrayFIFOQueue();
     data = new IntRBTreeSet();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new ClairvoyantPolicy(config));
   }
 
   @Override

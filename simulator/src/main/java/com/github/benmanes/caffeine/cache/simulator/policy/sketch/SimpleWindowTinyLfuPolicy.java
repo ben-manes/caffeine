@@ -16,6 +16,10 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.stream.Collectors.toSet;
+
+import java.util.List;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -48,16 +52,24 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
   private int sizeMain;
   private int mainRecencyCounter;
 
-  public SimpleWindowTinyLfuPolicy(String name, Config config) {
-    SimpleWindowTinyLfuSettings settings = new SimpleWindowTinyLfuSettings(config);
-    this.maxMain = (int) (settings.maximumSize() * settings.percentMain());
+  public SimpleWindowTinyLfuPolicy(double percentMain, SimpleWindowTinyLfuSettings settings) {
+    String name = String.format("sketch.SimpleWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+    this.maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxEden = settings.maximumSize() - maxMain;
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
+    this.admittor = new TinyLfu(settings.config());
     this.data = new Long2ObjectOpenHashMap<>();
     this.policyStats = new PolicyStats(name);
-    this.admittor = new TinyLfu(config);
     this.headEden = new Node();
     this.headMain = new Node();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    SimpleWindowTinyLfuSettings settings = new SimpleWindowTinyLfuSettings(config);
+    return settings.percentMain().stream()
+        .map(percentMain -> new SimpleWindowTinyLfuPolicy(percentMain, settings))
+        .collect(toSet());
   }
 
   @Override
@@ -195,8 +207,8 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
     public SimpleWindowTinyLfuSettings(Config config) {
       super(config);
     }
-    public double percentMain() {
-      return config().getDouble("simple-window-tiny-lfu.percent-main");
+    public List<Double> percentMain() {
+      return config().getDoubleList("simple-window-tiny-lfu.percent-main");
     }
     public double percentFastPath() {
       return config().getDouble("simple-window-tiny-lfu.percent-fast-path");

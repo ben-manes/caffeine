@@ -17,10 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator.policy.two_queue;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.Set;
+
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -57,17 +60,22 @@ public final class TwoQueuePolicy implements Policy {
   private int sizeMain;
   private final Node headMain;
 
-  public TwoQueuePolicy(String name, Config config) {
+  public TwoQueuePolicy(Config config) {
     TwoQueueSettings settings = new TwoQueueSettings(config);
 
     this.headIn = new Node();
     this.headOut = new Node();
     this.headMain = new Node();
-    this.policyStats = new PolicyStats(name);
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
     this.maxIn = (int) (maximumSize * settings.percentIn());
+    this.policyStats = new PolicyStats("two-queue.TwoQueue");
     this.maxOut = (int) (maximumSize * settings.percentOut());
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new TwoQueuePolicy(config));
   }
 
   @Override

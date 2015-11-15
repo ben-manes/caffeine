@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import java.io.PrintStream;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -31,6 +32,7 @@ import org.cache2k.impl.RandomCache;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
 import com.typesafe.config.Config;
 
@@ -44,14 +46,14 @@ public final class Cache2kPolicy implements Policy {
   private final PolicyStats policyStats;
   private final int maximumSize;
 
-  public Cache2kPolicy(String name, Config config) {
+  public Cache2kPolicy(Config config) {
     Logger logger = LogManager.getLogManager().getLogger("");
     Level level = logger.getLevel();
     logger.setLevel(Level.OFF);
     PrintStream err = System.err;
     System.setErr(new PrintStream(ByteStreams.nullOutputStream()));
     try {
-      this.policyStats = new PolicyStats(name);
+      this.policyStats = new PolicyStats("product.Cache2k");
       Cache2kSettings settings = new Cache2kSettings(config);
       cache = CacheBuilder.newCache(Object.class, Object.class)
           .implementation(settings.implementation())
@@ -63,6 +65,11 @@ public final class Cache2kPolicy implements Policy {
       System.setErr(err);
       LogManager.getLogManager().getLogger("").setLevel(level);
     }
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new Cache2kPolicy(config));
   }
 
   @Override

@@ -19,11 +19,13 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -75,18 +77,23 @@ public final class LirsPolicy implements Policy {
   // Enable to print out the internal state
   private static final boolean debug = false;
 
-  public LirsPolicy(String name, Config config) {
+  public LirsPolicy(Config config) {
     LirsSettings settings = new LirsSettings(config);
     this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
     this.stackMoveDistance = (int) (settings.maximumSize() * settings.percentFastPath());
     this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
+    this.policyStats = new PolicyStats("irr.Lirs");
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
-    this.policyStats = new PolicyStats(name);
     this.evicted = new ArrayList<>();
     this.headNR = new Node();
     this.headS = new Node();
     this.headQ = new Node();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new LirsPolicy(config));
   }
 
   @Override

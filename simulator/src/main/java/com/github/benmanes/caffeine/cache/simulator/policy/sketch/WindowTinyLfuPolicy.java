@@ -16,6 +16,10 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.stream.Collectors.toSet;
+
+import java.util.List;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -63,19 +67,27 @@ public final class WindowTinyLfuPolicy implements Policy {
   private int sizeProtected;
   private int mainRecencyCounter;
 
-  public WindowTinyLfuPolicy(String name, Config config) {
-    WindowTinyLfuSettings settings = new WindowTinyLfuSettings(config);
-    int maxMain = (int) (settings.maximumSize() * settings.percentMain());
+  public WindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
+    String name = String.format("sketch.WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+    int maxMain = (int) (settings.maximumSize() * percentMain);
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxEden = settings.maximumSize() - maxMain;
+    this.admittor = new TinyLfu(settings.config());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policyStats = new PolicyStats(name);
-    this.admittor = new TinyLfu(config);
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headEden = new Node();
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    WindowTinyLfuSettings settings = new WindowTinyLfuSettings(config);
+    return settings.percentMain().stream()
+        .map(percentMain -> new WindowTinyLfuPolicy(percentMain, settings))
+        .collect(toSet());
   }
 
   @Override
@@ -250,8 +262,8 @@ public final class WindowTinyLfuPolicy implements Policy {
     public WindowTinyLfuSettings(Config config) {
       super(config);
     }
-    public double percentMain() {
-      return config().getDouble("window-tiny-lfu.percent-main");
+    public List<Double> percentMain() {
+      return config().getDoubleList("window-tiny-lfu.percent-main");
     }
     public double percentMainProtected() {
       return config().getDouble("window-tiny-lfu.percent-main-protected");

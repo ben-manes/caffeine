@@ -15,11 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import net.sf.ehcache.Cache;
@@ -35,23 +36,26 @@ import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Ehcache2Policy implements Policy {
-  private static final AtomicInteger counter = new AtomicInteger();
   private static final CacheManager cacheManager = new CacheManager();
 
   private final PolicyStats policyStats;
   private final int maximumSize;
   private final Ehcache cache;
 
-  public Ehcache2Policy(String name, Config config) {
+  public Ehcache2Policy(Config config) {
     Ehcache2Settings settings = new Ehcache2Settings(config);
     maximumSize = settings.maximumSize();
-    policyStats = new PolicyStats(name);
+    policyStats = new PolicyStats("product.ehcache2");
 
-    CacheConfiguration configuration = new CacheConfiguration(
-        name + "-" + counter.incrementAndGet(), maximumSize);
+    CacheConfiguration configuration = new CacheConfiguration("ehcache2", maximumSize);
     configuration.setMemoryStoreEvictionPolicyFromObject(settings.policy());
     cache = new Cache(configuration);
     cacheManager.addCache(cache);
+  }
+
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new Ehcache2Policy(config));
   }
 
   @Override
