@@ -37,8 +37,12 @@ public final class WindowTinyCachePolicy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     this.policyStats = new PolicyStats("sketch.WindowTinyCache");
     int maxSize = settings.maximumSize();
-    window = new TinyCache(1, 64, 0);
-    maxSize -= 64;
+    if (maxSize <= 64) {
+      window = null;
+    } else {
+      maxSize -= 64;
+      window = new TinyCache(1, 64, 0);
+    }
     tinyCache = new TinyCacheWithGhostCache((int) Math.ceil(maxSize / 64.0),
         64, settings.randomSeed());
   }
@@ -50,12 +54,12 @@ public final class WindowTinyCachePolicy implements Policy {
 
   @Override
   public void record(long key) {
-    if (tinyCache.contains(key) || window.contains(key)) {
+    if (tinyCache.contains(key) || ((window != null) && window.contains(key))) {
       tinyCache.recordItem(key);
       policyStats.recordHit();
     } else {
       boolean evicted = tinyCache.addItem(key);
-      if (!evicted) {
+      if (!evicted && (window != null)) {
         evicted = window.addItem(key);
       }
       tinyCache.recordItem(key);
