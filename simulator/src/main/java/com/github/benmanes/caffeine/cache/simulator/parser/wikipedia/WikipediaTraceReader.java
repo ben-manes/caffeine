@@ -38,7 +38,7 @@ public final class WikipediaTraceReader extends TextTraceReader {
   private static final String[] CONTAINS_FILTER = {"?search=", "&search=", "User+talk", "User_talk",
       "User:", "Talk:", "&diff=", "&action=rollback", "Special:Watchlist"};
   private static final String[] STARTS_WITH_FILTER = {"wiki/Special:Search", "w/query.php",
-      "wiki/Talk:", "wiki/Special:AutoLogin", "Special:UserLogin", "w/api.php"};
+      "wiki/Talk:", "wiki/Special:AutoLogin", "Special:UserLogin", "w/api.php", "error:"};
   private static final String[] SEARCH_LIST = { "%2F", "%20", "&amp;", "%3A" };
   private static final String[] REPLACEMENT_LIST = { "/", " ", "&", ":" };
 
@@ -101,7 +101,7 @@ public final class WikipediaTraceReader extends TextTraceReader {
   private String getPath(String url) {
     int index = url.indexOf('/', 7);
     if (index == -1) {
-      return "";
+      return url;
     }
     String path = url.substring(index + 1);
 

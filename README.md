@@ -4,8 +4,8 @@
 [![JavaDoc](https://img.shields.io/badge/javadoc-2.0.1-brightgreen.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
 [![License](http://img.shields.io/:license-apache-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-Caffeine is a [high performance][benchmarks] caching library based on Java 8. For more
-details, see our [user's guide][users-guide] and browse the [API docs][javadoc] for
+Caffeine is a [high performance][benchmarks], [near optimal][efficiency] caching library based on
+Java 8. For more details, see our [user's guide][users-guide] and browse the [API docs][javadoc] for
 the latest release.
 
 ### Cache
