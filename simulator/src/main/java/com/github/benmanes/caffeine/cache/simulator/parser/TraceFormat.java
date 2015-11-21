@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import java.util.List;
 import java.util.function.Function;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
@@ -35,19 +36,19 @@ public enum TraceFormat {
   UMASS_STORAGE(StorageTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new);
 
-  private final Function<String, TraceReader> factory;
+  private final Function<List<String>, TraceReader> factory;
 
-  private TraceFormat(Function<String, TraceReader> factory) {
+  private TraceFormat(Function<List<String>, TraceReader> factory) {
     this.factory = factory;
   }
 
   /**
    * Returns a new reader for streaming the events from the trace file.
    *
-   * @param filePath the path to the file in the trace's format
+   * @param filePaths the path to the files in the trace's format
    * @return a reader for streaming the events from the file
    */
-  public TraceReader readFile(String filePath) {
-    return factory.apply(filePath);
+  public TraceReader readFiles(List<String> filePaths) {
+    return factory.apply(filePaths);
   }
 }

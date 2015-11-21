@@ -123,9 +123,9 @@ public final class Simulator extends UntypedActor {
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings);
     }
-    String filePath = settings.traceFile().path();
-    TraceFormat format = settings.traceFile().format();
-    return format.readFile(filePath).events();
+    List<String> filePaths = settings.traceFiles().paths();
+    TraceFormat format = settings.traceFiles().format();
+    return format.readFiles(filePaths).events();
   }
 
   /** Returns the actors to broadcast trace events to. */

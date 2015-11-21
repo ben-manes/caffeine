@@ -26,6 +26,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.SequenceInputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -42,23 +46,31 @@ import com.google.common.io.Closeables;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public abstract class TextTraceReader implements TraceReader {
-  private final String filePath;
+  private final List<String> filePaths;
 
-  public TextTraceReader(String filePath) {
-    this.filePath = requireNonNull(filePath);
+  public TextTraceReader(List<String> filePaths) {
+    this.filePaths = requireNonNull(filePaths);
   }
 
   /** Returns a stream of each line in the trace file. */
   protected Stream<String> lines() throws IOException {
-    InputStream input = readFile();
+    InputStream input = readFiles();
     Reader reader = new InputStreamReader(input, Charsets.UTF_8);
     return new BufferedReader(reader, 1 << 16).lines().map(String::trim)
         .onClose(() -> Closeables.closeQuietly(input));
   }
 
+  private InputStream readFiles() throws IOException {
+    List<InputStream> inputs = new ArrayList<>(filePaths.size());
+    for (String filePath : filePaths) {
+      inputs.add(readFile(filePath));
+    }
+    return new SequenceInputStream(Collections.enumeration(inputs));
+  }
+
   /** Returns the input stream, decompressing if required. */
-  private InputStream readFile() throws IOException {
-    BufferedInputStream input = new BufferedInputStream(openFile());
+  private InputStream readFile(String filePath) throws IOException {
+    BufferedInputStream input = new BufferedInputStream(openFile(filePath));
     input.mark(100);
     try {
       return new CompressorStreamFactory().createCompressorInputStream(input);
@@ -74,7 +86,7 @@ public abstract class TextTraceReader implements TraceReader {
   }
 
   /** Returns the input stream for the raw file. */
-  private InputStream openFile() throws IOException {
+  private InputStream openFile(String filePath) throws IOException {
     File file = new File(filePath);
     if (file.exists()) {
       return new FileInputStream(file);

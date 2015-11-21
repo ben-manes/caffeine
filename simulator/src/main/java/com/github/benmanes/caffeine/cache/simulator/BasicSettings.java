@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
+import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
@@ -72,17 +73,17 @@ public class BasicSettings {
     return config().getInt("maximum-size");
   }
 
-  public boolean isFile() {
-    return config().getString("source").equals("file");
+  public boolean isFiles() {
+    return config().getString("source").equals("files");
   }
 
   public boolean isSynthetic() {
     return config().getString("source").equals("synthetic");
   }
 
-  public TraceFileSettings traceFile() {
-    checkState(isFile());
-    return new TraceFileSettings();
+  public TraceFilesSettings traceFiles() {
+    checkState(isFiles());
+    return new TraceFilesSettings();
   }
 
   public SyntheticSettings synthetic() {
@@ -131,12 +132,13 @@ public class BasicSettings {
     }
   }
 
-  public final class TraceFileSettings {
-    public String path() {
-      return config().getString("file.path");
+  public final class TraceFilesSettings {
+    public List<String> paths() {
+      return config().getStringList("files.paths");
     }
     public TraceFormat format() {
-      return TraceFormat.valueOf(config().getString("file.format").replace('-', '_').toUpperCase());
+      String format = config().getString("files.format").replace('-', '_').toUpperCase();
+      return TraceFormat.valueOf(format);
     }
   }
 
