@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.report;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.typesafe.config.Config;
 
@@ -67,7 +67,7 @@ public abstract class TextReporter implements Reporter {
       System.out.println(report);
     } else {
       File file = Paths.get(output).toFile();
-      Files.write(report, file, Charsets.UTF_8);
+      Files.write(report, file, StandardCharsets.UTF_8);
     }
   }
 

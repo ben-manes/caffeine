@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.wikipedia;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.LongStream;
@@ -25,7 +26,6 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
-import com.google.common.base.Charsets;
 import com.google.common.hash.Hashing;
 
 /**
@@ -51,7 +51,7 @@ public final class WikipediaTraceReader extends TextTraceReader {
     return lines()
         .map(this::parseRequest)
         .filter(Objects::nonNull)
-        .mapToLong(path -> Hashing.murmur3_128().hashString(path, Charsets.UTF_8).asLong());
+        .mapToLong(path -> Hashing.murmur3_128().hashString(path, StandardCharsets.UTF_8).asLong());
   }
 
   /**

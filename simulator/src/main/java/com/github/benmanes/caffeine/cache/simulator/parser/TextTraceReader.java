@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.SequenceInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +38,6 @@ import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 
-import com.google.common.base.Charsets;
 import com.google.common.io.Closeables;
 
 /**
@@ -55,7 +55,7 @@ public abstract class TextTraceReader implements TraceReader {
   /** Returns a stream of each line in the trace file. */
   protected Stream<String> lines() throws IOException {
     InputStream input = readFiles();
-    Reader reader = new InputStreamReader(input, Charsets.UTF_8);
+    Reader reader = new InputStreamReader(input, StandardCharsets.UTF_8);
     return new BufferedReader(reader, 1 << 16).lines().map(String::trim)
         .onClose(() -> Closeables.closeQuietly(input));
   }
