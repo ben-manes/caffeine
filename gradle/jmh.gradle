@@ -57,7 +57,7 @@ jmh {
   resultFormat = 'json'
   resultsFile = file("${buildDir}/reports/jmh/results.json")
 
-  jvmArgs = '-server -Xmx512m -XX:+UseG1GC -XX:-UseBiasedLocking'
+  jvmArgs = '-server -Xmx2G -XX:+UseG1GC -XX:-UseBiasedLocking'
   warmupIterations = 10
   failOnError = true
   iterations = 10

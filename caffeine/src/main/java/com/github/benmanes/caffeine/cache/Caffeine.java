@@ -277,8 +277,9 @@ public final class Caffeine<K, V> {
    * grows close to the maximum, the cache evicts entries that are less likely to be used again. For
    * example, the cache may evict an entry because it hasn't been used recently or very often.
    * <p>
-   * When {@code weight} is zero, elements will be evicted immediately after being loaded into
-   * cache. This can be useful in testing, or to disable caching temporarily without a code change.
+   * When {@code maximumWeight} is zero, elements will be evicted immediately after being loaded
+   * into cache. This can be useful in testing, or to disable caching temporarily without a code
+   * change.
    * <p>
    * Note that weight is only used to determine whether the cache is over capacity; it has no effect
    * on selecting which entry should be evicted next.
@@ -287,7 +288,7 @@ public final class Caffeine<K, V> {
    *
    * @param maximumWeight the maximum total weight of entries the cache may contain
    * @return this builder instance
-   * @throws IllegalArgumentException if {@code weight} is negative
+   * @throws IllegalArgumentException if {@code maximumWeight} is negative
    * @throws IllegalStateException if a maximum weight or size was already set
    */
   @Nonnull

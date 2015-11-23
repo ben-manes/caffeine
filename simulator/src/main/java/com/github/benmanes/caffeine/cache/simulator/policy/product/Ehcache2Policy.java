@@ -45,7 +45,7 @@ public final class Ehcache2Policy implements Policy {
   public Ehcache2Policy(Config config) {
     Ehcache2Settings settings = new Ehcache2Settings(config);
     maximumSize = settings.maximumSize();
-    policyStats = new PolicyStats("product.ehcache2");
+    policyStats = new PolicyStats("product.Ehcache2");
 
     CacheConfiguration configuration = new CacheConfiguration("ehcache2", maximumSize);
     configuration.setMemoryStoreEvictionPolicyFromObject(settings.policy());
