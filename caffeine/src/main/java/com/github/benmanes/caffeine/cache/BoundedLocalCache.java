@@ -105,9 +105,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * represented by a sentinel key that should not be used for map lookups.
    *
    * Expiration is implemented in O(1) time complexity. The time-to-idle policy uses an access-order
-   * queue and the time-to-live policy uses a write-order queue. This allows peeking at oldest entry
-   * in the queue to see if it is expired and, if it is not then the younger entries must not be
-   * too.
+   * queue and the time-to-live policy uses a write-order queue. This allows peeking at the oldest
+   * entry in the queue to see if it has expired and, if it has not, then the younger entries must
+   * not have too. If a maximum size is set then expiration will share the queues in order to
+   * minimize the per-entry footprint.
    *
    * Maximum size is implemented using the Window TinyLfu policy due to its high hit rate, O(1) time
    * complexity, and small footprint. A new entry starts in the eden space and remains there as long
@@ -115,8 +116,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * main space. If the main space is already full, then a historic frequency filter determines
    * whether to evict the newly admitted entry or the victim entry chosen by main space's policy.
    * This process ensures that the entries in the main space have both a high recency and frequency.
-   * The windowing allows the policy to have a high hit rate when entries exhibit a bursty high
-   * temporal but low frequency access pattern. The eden space uses LRU and the main space uses
+   * The windowing allows the policy to have a high hit rate when entries exhibit a bursty (high
+   * temporal, low frequency) access pattern. The eden space uses LRU and the main space uses
    * Segmented LRU.
    */
 
