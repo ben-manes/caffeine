@@ -40,7 +40,7 @@ ext {
     ycsb: '0.5.0',
   ]
   test_versions = [
-    awaitility: '1.6.5',
+    awaitility: '1.7.0',
     easymock: '3.4',
     hamcrest: '2.0.0.0',
     jcache_tck: '1.0.1',
@@ -58,8 +58,8 @@ ext {
     ehcache2: '2.10.1-55',
     ehcache3: '3.0.0.m4',
     high_scale_lib: '1.0.6',
-    infinispan: '8.1.0.Beta1',
-    jackrabbit: '1.3.10',
+    infinispan: '8.1.0.CR1',
+    jackrabbit: '1.3.11',
     jamm: '0.3.1',
     java_object_layout: '0.3.2',
     koloboke: '0.6.8',
@@ -67,7 +67,7 @@ ext {
     tcache: '0.4.0',
   ]
   plugin_versions = [
-    checkstyle: '6.7',
+    checkstyle: '6.13',
     coveralls: '2.4.0',
     extra_conf: '3.0.3',
     error_prone: '0.0.8',

@@ -71,6 +71,8 @@ public final class LoadingCacheTest {
   @CacheSpec(loader = Loader.NULL)
   public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey()), is(nullValue()));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
   }
 
   @CheckNoWriter

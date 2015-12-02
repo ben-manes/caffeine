@@ -94,7 +94,7 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.FULL, maximumSize = MaximumSize.FULL,
+      population = Population.FULL, maximumSize = MaximumSize.FULL, executorMayFail = true,
       executor = CacheExecutor.REJECTING, removalListener = Listener.CONSUMING)
   public void evict_rejected(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
@@ -283,7 +283,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
-  public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache) {
+  public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
@@ -383,7 +383,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
-  public void drain_nonblocking(Cache<Integer, Integer> cache) {
+  public void drain_nonblocking(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     AtomicBoolean done = new AtomicBoolean();
     Runnable task = () -> {
@@ -403,7 +403,7 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = MaximumSize.FULL)
-  public void drain_blocksClear(Cache<Integer, Integer> cache) {
+  public void drain_blocksClear(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     checkDrainBlocks(localCache, localCache::clear);
   }

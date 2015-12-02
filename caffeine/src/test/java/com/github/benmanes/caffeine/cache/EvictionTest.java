@@ -122,7 +122,7 @@ public final class EvictionTest {
       initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = MaximumSize.TEN,
       weigher = CacheWeigher.COLLECTION, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void evict_weighted(Cache<Integer, List<Integer>> cache,
-      Eviction<?, ?> eviction, CacheContext context) {
+      CacheContext context, Eviction<?, ?> eviction) {
     @SuppressWarnings({"unchecked", "rawtypes"})
     CacheWriter<Integer, List<Integer>> writer = (CacheWriter) context.cacheWriter();
 
@@ -256,7 +256,8 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void put(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void put(Cache<String, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
     cache.put("a", asList(1, 2, 3));
     assertThat(cache.estimatedSize(), is(1L));
     assertThat(eviction.weightedSize().getAsLong(), is(3L));
@@ -266,7 +267,8 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void put_sameWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void put_sameWeight(Cache<String, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     cache.put("a", asList(-1, -2, -3));
@@ -279,7 +281,7 @@ public final class EvictionTest {
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void put_changeWeight(Cache<String, List<Integer>> cache,
-      Eviction<?, ?> eviction, CacheContext context) {
+      CacheContext context, Eviction<?, ?> eviction) {
     @SuppressWarnings({"unchecked", "rawtypes"})
     CacheWriter<String, List<Integer>> writer = (CacheWriter) context.cacheWriter();
 
@@ -324,7 +326,8 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void replace_sameWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void replace_sameWeight(Cache<String, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     cache.asMap().replace("a", asList(-1, -2, -3));
@@ -336,7 +339,8 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void replace_changeWeight(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void replace_changeWeight(Cache<String, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     cache.asMap().replace("a", asList(-1, -2, -3, -4));
@@ -349,7 +353,7 @@ public final class EvictionTest {
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_sameWeight(
-      Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+      Cache<String, List<Integer>> cache, CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     assertThat(cache.asMap().replace("a", asList(1, 2, 3), asList(4, 5, 6)), is(true));
@@ -362,7 +366,7 @@ public final class EvictionTest {
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_changeWeight(
-      Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+      Cache<String, List<Integer>> cache, CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     cache.asMap().replace("a", asList(1, 2, 3), asList(-1, -2, -3, -4));
@@ -375,7 +379,7 @@ public final class EvictionTest {
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void replaceConditionally_fails(
-      Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+      Cache<String, List<Integer>> cache, CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     assertThat(cache.asMap().replace("a", asList(1), asList(4, 5)), is(false));
@@ -387,7 +391,8 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void remove(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void remove(Cache<String, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     assertThat(cache.asMap().remove("a"), is(asList(1, 2, 3)));
@@ -399,7 +404,8 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void removeConditionally(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void removeConditionally(Cache<String, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     assertThat(cache.asMap().remove("a", asList(1, 2, 3)), is(true));
@@ -412,7 +418,7 @@ public final class EvictionTest {
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void removeConditionally_fails(
-      Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+      Cache<String, List<Integer>> cache, CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     assertThat(cache.asMap().remove("a", asList(-1, -2, -3)), is(false));
@@ -424,7 +430,8 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void invalidateAll(Cache<String, List<Integer>> cache, Eviction<?, ?> eviction) {
+  public void invalidateAll(Cache<String, List<Integer>> cache,
+      CacheContext context, Eviction<?, ?> eviction) {
     cache.putAll(ImmutableMap.of("a", asList(1, 2, 3), "b", asList(1)));
 
     cache.invalidateAll();
@@ -446,7 +453,8 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       maximumSize = MaximumSize.FULL, weigher = CacheWeigher.TEN)
-  public void weightedSize(Cache<Integer, Integer> cache, Eviction<Integer, Integer> eviction) {
+  public void weightedSize(Cache<Integer, Integer> cache, CacheContext context,
+      Eviction<Integer, Integer> eviction) {
     assertThat(eviction.weightedSize().getAsLong(), is(10 * cache.estimatedSize()));
   }
 
@@ -455,8 +463,8 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-  public void maximumSize_decrease(Cache<Integer, Integer> cache, CacheContext context,
-      Eviction<Integer, Integer> eviction) {
+  public void maximumSize_decrease(Cache<Integer, Integer> cache,
+      CacheContext context, Eviction<Integer, Integer> eviction) {
     long newSize = context.maximumWeightOrSize() / 2;
     eviction.setMaximum(newSize);
     assertThat(eviction.getMaximum(), is(newSize));
@@ -474,8 +482,8 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-  public void maximumSize_decrease_min(Cache<Integer, Integer> cache, CacheContext context,
-      Eviction<Integer, Integer> eviction) {
+  public void maximumSize_decrease_min(Cache<Integer, Integer> cache,
+      CacheContext context, Eviction<Integer, Integer> eviction) {
     eviction.setMaximum(0);
     assertThat(eviction.getMaximum(), is(0L));
     if (context.initialSize() > 0) {
@@ -488,8 +496,8 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  public void maximumSize_decrease_negative(Cache<Integer, Integer> cache, CacheContext context,
-      Eviction<Integer, Integer> eviction) {
+  public void maximumSize_decrease_negative(Cache<Integer, Integer> cache,
+      CacheContext context, Eviction<Integer, Integer> eviction) {
     try {
       eviction.setMaximum(-1);
     } finally {
@@ -501,8 +509,8 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void maximumSize_increase(Cache<Integer, Integer> cache, CacheContext context,
-      Eviction<Integer, Integer> eviction) {
+  public void maximumSize_increase(Cache<Integer, Integer> cache,
+      CacheContext context, Eviction<Integer, Integer> eviction) {
     eviction.setMaximum(2 * context.maximumWeightOrSize());
     assertThat(cache.estimatedSize(), is(context.initialSize()));
     assertThat(eviction.getMaximum(), is(2 * context.maximumWeightOrSize()));
@@ -511,8 +519,8 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       maximumSize = MaximumSize.FULL, removalListener = Listener.REJECTING)
-  public void maximumSize_increase_max(Cache<Integer, Integer> cache, CacheContext context,
-      Eviction<Integer, Integer> eviction) {
+  public void maximumSize_increase_max(Cache<Integer, Integer> cache,
+      CacheContext context, Eviction<Integer, Integer> eviction) {
     eviction.setMaximum(Long.MAX_VALUE);
     assertThat(cache.estimatedSize(), is(context.initialSize()));
     assertThat(eviction.getMaximum(), is(Long.MAX_VALUE - Integer.MAX_VALUE)); // impl detail
@@ -522,19 +530,19 @@ public final class EvictionTest {
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void coldest_unmodifiable(Eviction<Integer, Integer> eviction) {
+  public void coldest_unmodifiable(CacheContext context, Eviction<Integer, Integer> eviction) {
     eviction.coldest(Integer.MAX_VALUE).clear();;
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  public void coldest_negative(Eviction<Integer, Integer> eviction) {
+  public void coldest_negative(CacheContext context, Eviction<Integer, Integer> eviction) {
     eviction.coldest(-1);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
-  public void coldest_zero(Eviction<Integer, Integer> eviction) {
+  public void coldest_zero(CacheContext context, Eviction<Integer, Integer> eviction) {
     assertThat(eviction.coldest(0), is(emptyMap()));
   }
 
@@ -580,19 +588,19 @@ public final class EvictionTest {
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void hottest_unmodifiable(Eviction<Integer, Integer> eviction) {
+  public void hottest_unmodifiable(CacheContext context, Eviction<Integer, Integer> eviction) {
     eviction.hottest(Integer.MAX_VALUE).clear();;
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  public void hottest_negative(Eviction<Integer, Integer> eviction) {
+  public void hottest_negative(CacheContext context, Eviction<Integer, Integer> eviction) {
     eviction.hottest(-1);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = MaximumSize.FULL)
-  public void hottest_zero(Eviction<Integer, Integer> eviction) {
+  public void hottest_zero(CacheContext context, Eviction<Integer, Integer> eviction) {
     assertThat(eviction.hottest(0), is(emptyMap()));
   }
 
@@ -617,8 +625,8 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, initialCapacity = InitialCapacity.EXCESSIVE,
       maximumSize = MaximumSize.FULL)
-  public void hottest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
-      Eviction<Integer, Integer> eviction) {
+  public void hottest_snapshot(Cache<Integer, Integer> cache,
+      CacheContext context, Eviction<Integer, Integer> eviction) {
     Map<Integer, Integer> hottest = eviction.hottest(Integer.MAX_VALUE);
     cache.invalidateAll();
     assertThat(hottest, is(equalTo(context.original())));

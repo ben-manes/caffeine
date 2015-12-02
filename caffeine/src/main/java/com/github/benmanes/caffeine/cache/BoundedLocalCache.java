@@ -698,8 +698,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
-   * Attempts to evict the entry based on the given removal cause. A removal due to expiration may
-   * be ignored if the entry was since updated and is no longer eligible for eviction.
+   * Attempts to evict the entry based on the given removal cause. A removal due to expiration or
+   * size may be ignored if the entry was since updated and is no longer eligible for eviction.
    *
    * @param node the entry to evict
    * @param cause the reason to evict
@@ -1811,7 +1811,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     });
 
     if (node == null) {
-      afterWrite(null, new RemovalTask(removed[0]), now);
+      if (removed[0] != null) {
+        afterWrite(null, new RemovalTask(removed[0]), now);
+      }
       return null;
     }
     if (cause[0] != null) {
@@ -1978,6 +1980,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     if (removed[0] != null) {
       afterWrite(removed[0], new RemovalTask(removed[0]), now);
+    } else if (node == null) {
+      // absent and not computable
     } else if ((oldValue[0] == null) && (cause[0] == null)) {
       afterWrite(node, new AddTask(node, weight[1]), now);
     } else {

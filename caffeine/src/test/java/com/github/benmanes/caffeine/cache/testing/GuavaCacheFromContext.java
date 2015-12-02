@@ -329,6 +329,7 @@ public final class GuavaCacheFromContext {
                 statsCounter.recordLoadException(ticker.read() - now);
                 return null;
               } else {
+                statsCounter.recordLoadException(ticker.read() - now);
                 return null;
               }
             } else {

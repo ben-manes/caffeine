@@ -23,6 +23,7 @@ import java.util.Optional;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
@@ -48,7 +49,7 @@ public final class UnboundedLocalCacheTest {
       refreshAfterWrite = Expire.DISABLED, keys = ReferenceType.STRONG,
       values = ReferenceType.STRONG)
   @Test(dataProvider = "caches")
-  public void noPolicy(Cache<Integer, Integer> cache) {
+  public void noPolicy(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.policy().eviction(), is(Optional.empty()));
     assertThat(cache.policy().expireAfterWrite(), is(Optional.empty()));
     assertThat(cache.policy().expireAfterAccess(), is(Optional.empty()));
@@ -61,7 +62,7 @@ public final class UnboundedLocalCacheTest {
       refreshAfterWrite = Expire.DISABLED, keys = ReferenceType.STRONG,
       values = ReferenceType.STRONG)
   @Test(dataProvider = "caches")
-  public void noPolicy_async(AsyncLoadingCache<Integer, Integer> cache) {
+  public void noPolicy_async(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.synchronous().policy().eviction(), is(Optional.empty()));
     assertThat(cache.synchronous().policy().expireAfterWrite(), is(Optional.empty()));
     assertThat(cache.synchronous().policy().expireAfterAccess(), is(Optional.empty()));

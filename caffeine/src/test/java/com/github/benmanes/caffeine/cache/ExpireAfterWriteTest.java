@@ -190,7 +190,7 @@ public final class ExpireAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
-  public void getExpiresAfter(
+  public void getExpiresAfter(CacheContext context,
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     assertThat(expireAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(1L));
   }
@@ -223,20 +223,22 @@ public final class ExpireAfterWriteTest {
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void oldest_unmodifiable(
+  public void oldest_unmodifiable(CacheContext context,
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     expireAfterWrite.oldest(Integer.MAX_VALUE).clear();;
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  public void oldest_negative(@ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
+  public void oldest_negative(CacheContext context,
+      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     expireAfterWrite.oldest(-1);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
-  public void oldest_zero(@ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
+  public void oldest_zero(CacheContext context,
+      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     assertThat(expireAfterWrite.oldest(0), is(emptyMap()));
   }
 
@@ -272,20 +274,22 @@ public final class ExpireAfterWriteTest {
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void youngest_unmodifiable(
+  public void youngest_unmodifiable(CacheContext context,
       @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     expireAfterWrite.youngest(Integer.MAX_VALUE).clear();;
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  public void youngest_negative(@ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
+  public void youngest_negative(CacheContext context,
+      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     expireAfterWrite.youngest(-1);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterWrite = Expire.ONE_MINUTE)
-  public void youngest_zero(@ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
+  public void youngest_zero(CacheContext context,
+      @ExpireAfterWrite Expiration<Integer, Integer> expireAfterWrite) {
     assertThat(expireAfterWrite.youngest(0), is(emptyMap()));
   }
 

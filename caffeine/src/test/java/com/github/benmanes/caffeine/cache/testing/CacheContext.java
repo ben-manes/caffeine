@@ -26,7 +26,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
@@ -66,12 +65,12 @@ public final class CacheContext {
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
   final ReferenceType keyStrength;
+  final TrackingExecutor executor;
   final MaximumSize maximumSize;
   final Population population;
   final CacheWeigher weigher;
   final Expire afterAccess;
   final Expire afterWrite;
-  final Executor executor;
   final Compute compute;
   final Advance advance;
   final Expire refresh;
@@ -354,7 +353,7 @@ public final class CacheContext {
     return cacheExecutor;
   }
 
-  public Executor executor() {
+  public TrackingExecutor executor() {
     return executor;
   }
 

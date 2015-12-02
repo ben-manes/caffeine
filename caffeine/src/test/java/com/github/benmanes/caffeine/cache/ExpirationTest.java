@@ -87,7 +87,7 @@ public final class ExpirationTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = Population.FULL, writer = Writer.EXCEPTIONAL, requiresExpiration = true,
-      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, executorMayFail = true,
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       compute = Compute.SYNC, removalListener = Listener.REJECTING)
   public void getIfPresent_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
@@ -837,7 +837,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, requiresExpiration = true,
+      population = Population.FULL, requiresExpiration = true, executorMayFail = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)

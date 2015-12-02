@@ -24,6 +24,7 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailure
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -67,12 +68,30 @@ public final class CacheValidationListener implements IInvokedMethodListener {
         }
         checkWriter(testResult, context);
         checkNoStats(testResult, context);
+        checkExecutor(testResult, context);
       }
     } catch (Throwable caught) {
       testResult.setStatus(ITestResult.FAILURE);
       testResult.setThrowable(caught);
     } finally {
       cleanUp(testResult);
+    }
+  }
+
+  /** Checks whether the {@link TrackingExecutor} had unexpected failures. */
+  private static void checkExecutor(ITestResult testResult, CacheContext context) {
+    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+    CacheSpec cacheSpec = testMethod.getAnnotation(CacheSpec.class);
+    if (cacheSpec == null) {
+      return;
+    }
+
+    assertThat("CacheContext required", context, is(not(nullValue())));
+    TrackingExecutor executor = context.executor();
+    if (cacheSpec.executorMayFail()) {
+      assertThat(executor.failureCount(), is(greaterThan(0)));
+    } else {
+      assertThat(executor.failureCount(), is(0));
     }
   }
 
@@ -83,6 +102,7 @@ public final class CacheValidationListener implements IInvokedMethodListener {
     if (checkWriter == null) {
       return;
     }
+
     assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
     verifyWriter(context, (verifier, writer) -> verifier.zeroInteractions());
   }

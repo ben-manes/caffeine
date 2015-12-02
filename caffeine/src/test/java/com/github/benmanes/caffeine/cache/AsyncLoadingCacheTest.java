@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
@@ -176,8 +175,7 @@ public final class AsyncLoadingCacheTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
+    MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -216,8 +214,7 @@ public final class AsyncLoadingCacheTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
+    MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -240,8 +237,7 @@ public final class AsyncLoadingCacheTest {
     valueFuture.cancel(true);
 
     Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
+    MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -445,8 +441,7 @@ public final class AsyncLoadingCacheTest {
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(
-        (ExecutorService) context.executor(), 1, TimeUnit.MINUTES);
+    MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));

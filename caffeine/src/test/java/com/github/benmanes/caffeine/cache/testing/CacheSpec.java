@@ -25,10 +25,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -483,36 +480,41 @@ public @interface CacheSpec {
     CacheExecutor.DIRECT,
   };
 
+  /** If the executor is allowed to have failures. */
+  boolean executorMayFail() default false;
+
   /** The executors that the cache can be configured with. */
-  enum CacheExecutor implements Supplier<Executor> {
+  enum CacheExecutor implements Supplier<TrackingExecutor> {
     DEFAULT { // fork-join common pool
-      @Override public Executor get() {
+      @Override public TrackingExecutor get() {
         // Use with caution as may be unpredictable during tests if awaiting completion
-        return ForkJoinPool.commonPool();
+        return null;
       }
     },
     DIRECT {
-      @Override public Executor get() {
+      @Override public TrackingExecutor get() {
         // Cache implementations must avoid deadlocks by incorrectly assuming async execution
-        return MoreExecutors.directExecutor();
+        return new TrackingExecutor(MoreExecutors.newDirectExecutorService());
       }
     },
     SINGLE {
-      @Override public Executor get() {
+      @Override public TrackingExecutor get() {
         // Isolated to the test execution - may be shutdown by test to assert completion
-        return Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder().setDaemon(true).build());
+        return new TrackingExecutor(Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setDaemon(true).build()));
       }
     },
     REJECTING {
-      @Override public Executor get() {
+      @Override public TrackingExecutor get() {
         // Cache implementations must avoid corrupting internal state due to rejections
-        return runnable -> { throw new RejectedExecutionException(); };
+        TrackingExecutor executor = CacheExecutor.DIRECT.get();
+        executor.shutdown();
+        return executor;
       }
     };
 
     @Override
-    public abstract Executor get();
+    public abstract TrackingExecutor get();
   }
 
   /* ---------------- Populated -------------- */

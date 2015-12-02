@@ -1098,7 +1098,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void compute_nullMappingFunction(Map<Integer, Integer> map, CacheContext context) {
-    map.computeIfPresent(1, null);
+    map.compute(1, null);
   }
 
   @CheckNoWriter
@@ -1156,6 +1156,17 @@ public final class AsMapTest {
     assertThat(map, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void compute_absent_nullValue(Map<Integer, Integer> map, CacheContext context) {
+    assertThat(map.compute(context.absentKey(), (key, value) -> null), is(nullValue()));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    assertThat(map.get(context.absentKey()), is(nullValue()));
+    assertThat(map.size(), is(context.original().size()));
   }
 
   @CheckNoWriter
