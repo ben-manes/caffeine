@@ -335,21 +335,19 @@ public final class ReferenceTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void cleanUp_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
-    try {
-      context.clear();
-      GcFinalization.awaitFullGc();
-      cache.cleanUp();
-    } finally {
-      context.disableRejectingCacheWriter();
-      assertThat(cache.asMap().isEmpty(), is(false));
-    }
+    context.clear();
+    GcFinalization.awaitFullGc();
+    cache.cleanUp();
+
+    context.disableRejectingCacheWriter();
+    assertThat(cache.asMap().isEmpty(), is(false));
   }
 
   /* ---------------- LoadingCache -------------- */

@@ -339,21 +339,18 @@ public final class ExpirationTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
-  @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
+  @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void cleanUp_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
-    try {
-      context.ticker().advance(1, TimeUnit.HOURS);
-      cache.cleanUp();
-    } finally {
-      context.disableRejectingCacheWriter();
-      context.ticker().advance(-1, TimeUnit.HOURS);
-      assertThat(cache.asMap(), equalTo(context.original()));
-    }
+    context.ticker().advance(1, TimeUnit.HOURS);
+    cache.cleanUp();
+    context.disableRejectingCacheWriter();
+    context.ticker().advance(-1, TimeUnit.HOURS);
+    assertThat(cache.asMap(), equalTo(context.original()));
   }
 
   /* ---------------- LoadingCache -------------- */

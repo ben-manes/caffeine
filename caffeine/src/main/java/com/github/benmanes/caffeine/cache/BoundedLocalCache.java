@@ -166,7 +166,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
-    drainBuffersTask = this::cleanUp;
+    drainBuffersTask = this::performCleanUp;
 
     if (evicts()) {
       setMaximum(builder.getMaximumWeight());
@@ -873,8 +873,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         lazySetDrainStatus(PROCESSING);
         executor().execute(drainBuffersTask);
       } catch (Throwable t) {
-        cleanUp();
         logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
+        performCleanUp();
       } finally {
         evictionLock.unlock();
       }
@@ -883,6 +883,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public void cleanUp() {
+    try {
+      performCleanUp();
+    } catch (Throwable t) {
+      logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", t);
+    }
+  }
+
+  /**
+   * Performs the maintenance work, blocking until the lock is acquired, and sets the state flags
+   * to avoid excess scheduling attempts. Any exception thrown, such as by
+   * {@link CacheWriter#delete()}, is propagated to the caller.
+   */
+  void performCleanUp() {
     evictionLock.lock();
     try {
       lazySetDrainStatus(PROCESSING);
