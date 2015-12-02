@@ -39,6 +39,7 @@ import org.testng.ITestResult;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -88,9 +89,9 @@ public final class CacheValidationListener implements IInvokedMethodListener {
 
     assertThat("CacheContext required", context, is(not(nullValue())));
     TrackingExecutor executor = context.executor();
-    if (cacheSpec.executorMayFail()) {
+    if (cacheSpec.executorFailure() == ExecutorFailure.EXPECTED) {
       assertThat(executor.failureCount(), is(greaterThan(0)));
-    } else {
+    } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
       assertThat(executor.failureCount(), is(0));
     }
   }

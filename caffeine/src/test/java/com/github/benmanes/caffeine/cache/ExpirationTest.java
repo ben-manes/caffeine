@@ -39,6 +39,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
@@ -87,9 +88,9 @@ public final class ExpirationTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = Population.FULL, writer = Writer.EXCEPTIONAL, requiresExpiration = true,
-      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, executorMayFail = true,
-      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      compute = Compute.SYNC, removalListener = Listener.REJECTING)
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, compute = Compute.SYNC,
+      executorFailure = ExecutorFailure.EXPECTED, removalListener = Listener.REJECTING)
   public void getIfPresent_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
     try {
       context.ticker().advance(1, TimeUnit.HOURS);
@@ -834,10 +835,11 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      population = Population.FULL, requiresExpiration = true, executorMayFail = true,
+      population = Population.FULL, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
-      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
+      compute = Compute.SYNC, writer = Writer.EXCEPTIONAL,
+      executorFailure = ExecutorFailure.EXPECTED, removalListener = Listener.REJECTING)
   public void computeIfPresent_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
       Integer key = context.firstKey();

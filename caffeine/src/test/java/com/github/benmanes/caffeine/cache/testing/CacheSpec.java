@@ -481,7 +481,11 @@ public @interface CacheSpec {
   };
 
   /** If the executor is allowed to have failures. */
-  boolean executorMayFail() default false;
+  ExecutorFailure executorFailure() default ExecutorFailure.DISALLOWED;
+
+  enum ExecutorFailure {
+    EXPECTED, DISALLOWED, IGNORED
+  }
 
   /** The executors that the cache can be configured with. */
   enum CacheExecutor implements Supplier<TrackingExecutor> {
