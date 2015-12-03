@@ -885,8 +885,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   public void cleanUp() {
     try {
       performCleanUp();
-    } catch (Throwable t) {
-      logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", t);
+    } catch (RuntimeException e) {
+      logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", e);
     }
   }
 

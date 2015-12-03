@@ -40,20 +40,19 @@ public final class TrackingExecutor extends ForwardingExecutorService {
 
   @Override
   public void execute(Runnable command) {
-    totalTasks.incrementAndGet();
-    Runnable submit = makeFailureAware(() -> delegate.execute(makeFailureAware(command)));
-    submit.run();
-  }
-
-  private Runnable makeFailureAware(Runnable task) {
-    return () -> {
-      try {
-        task.run();
-      } catch (Throwable t) {
-        failures.incrementAndGet();
-        throw t;
-      }
-    };
+    try {
+      delegate.execute(() -> {
+        try {
+          command.run();
+        } catch (Throwable t) {
+          failures.incrementAndGet();
+          throw t;
+        }
+      });
+    } catch (Throwable t) {
+      failures.incrementAndGet();
+      throw t;
+    }
   }
 
   public int totalTasksCount() {

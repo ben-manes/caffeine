@@ -36,7 +36,7 @@ final class FrequencySketch<E> {
   /*
    * This class maintains a 4-bit CountMinSketch [1] with periodic aging to provide the popularity
    * history for the TinyLfu admission policy [2]. The time and space efficiency of the sketch
-   * allows it to estimate the frequency of an entry in a stream of cache access events.
+   * allows it to cheaply estimate the frequency of an entry in a stream of cache access events.
    *
    * The counter matrix is represented as a single dimensional array holding 16 counters per slot. A
    * fixed depth of four balances the accuracy and cost, resulting in a width of four times the
@@ -57,7 +57,7 @@ final class FrequencySketch<E> {
    * [1] An Improved Data Stream Summary: The Count-Min Sketch and its Applications
    * http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
    * [2] TinyLFU: A Highly Efficient Cache Admission Policy
-   * http://www.cs.technion.ac.il/~gilga/TinyLFU_PDP2014.pdf
+   * http://arxiv.org/pdf/1512.00727v1.pdf
    * [3] Denial of Service via Algorithmic Complexity Attack
    * https://www.usenix.org/legacy/events/sec03/tech/full_papers/crosby/crosby.pdf
    */

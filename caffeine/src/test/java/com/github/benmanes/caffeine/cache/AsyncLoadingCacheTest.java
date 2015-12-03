@@ -178,10 +178,9 @@ public final class AsyncLoadingCacheTest {
     ready.set(true);
     Awaits.await().untilTrue(done);
     Awaits.await().until(() -> cache.getIfPresent(key) == null);
+    Awaits.await().until(() -> context, both(hasMissCount(2)).and(hasHitCount(0)));
+    Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
     MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
-
-    assertThat(context, both(hasMissCount(2)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isDone(), is(true));
     assertThat(cache.synchronous().asMap(), not(hasKey(key)));
@@ -218,10 +217,9 @@ public final class AsyncLoadingCacheTest {
     ready.set(true);
     Awaits.await().untilTrue(done);
     Awaits.await().until(() -> cache.getIfPresent(context.absentKey()) == null);
+    Awaits.await().until(() -> context, both(hasMissCount(2)).and(hasHitCount(0)));
+    Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
     MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
-
-    assertThat(context, both(hasMissCount(2)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
@@ -447,10 +445,9 @@ public final class AsyncLoadingCacheTest {
 
     Awaits.await().untilTrue(done);
     Awaits.await().until(() -> cache.getIfPresent(context.absentKey()) == null);
+    Awaits.await().until(() -> context, both(hasMissCount(2)).and(hasHitCount(0)));
+    Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
     MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
-
-    assertThat(context, both(hasMissCount(2)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.getIfPresent(key), is(nullValue()));
