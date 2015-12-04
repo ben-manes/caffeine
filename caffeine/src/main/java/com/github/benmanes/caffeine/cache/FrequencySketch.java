@@ -57,7 +57,7 @@ final class FrequencySketch<E> {
    * [1] An Improved Data Stream Summary: The Count-Min Sketch and its Applications
    * http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
    * [2] TinyLFU: A Highly Efficient Cache Admission Policy
-   * http://arxiv.org/pdf/1512.00727v1.pdf
+   * http://arxiv.org/pdf/1512.00727.pdf
    * [3] Denial of Service via Algorithmic Complexity Attack
    * https://www.usenix.org/legacy/events/sec03/tech/full_papers/crosby/crosby.pdf
    */

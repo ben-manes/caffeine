@@ -39,6 +39,9 @@ In addition, Caffeine offers the following extensions:
  * [Guava adapters][guava-adapter]
  * [Simulation][simulator]
 
+Caffeine is presented as part of a research paper evaluating its novel eviction policy.
+ * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
+
 ### Download
 
 Download from [Maven Central][maven] or depend via Gradle:
@@ -71,3 +74,4 @@ Snapshots of the development version are available in
 [jsr107]: https://github.com/ben-manes/caffeine/wiki/JCache
 [maven]: https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
+[tinylfu]: http://arxiv.org/pdf/1512.00727.pdf
