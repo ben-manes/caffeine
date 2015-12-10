@@ -23,7 +23,7 @@ LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
 
 #### Features at a Glance
 
-Caffeine provide flexible construction to create a cache with a combination of the following features:
+Caffeine provides flexible construction to create a cache with a combination of the following features:
 
  * [automatic loading of entries][population] into the cache, optionally asynchronously
  * [size-based eviction][size] when a maximum is exceeded based on [frequency and recency][efficiency]
@@ -39,8 +39,17 @@ In addition, Caffeine offers the following extensions:
  * [Guava adapters][guava-adapter]
  * [Simulation][simulator]
 
-Caffeine is presented as part of a research paper evaluating its novel eviction policy.
- * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
+### In the News
+
+ * A short look at what Caffeine brings to your applications.
+   * [Add a Boost of Caffeine to Your Java][add-a-boost] at [VOXXED][voxxed]
+ * Caffeine is presented as part of a research paper evaluating its novel eviction policy.
+   * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
+
+On the radar,
+ * Spring Cache support is [targeted][spring] for the Spring 4.3 / Boot 1.4 releases
+ * Early discussions with Apache Cassandra shows promise towards adoption
+ * Postgres is [evaluating][postgres] whether to port the cache
 
 ### Download
 
@@ -75,3 +84,7 @@ Snapshots of the development version are available in
 [maven]: https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
 [tinylfu]: http://arxiv.org/pdf/1512.00727.pdf
+[add-a-boost]: https://www.voxxed.com/blog/2015/12/add-a-boost-of-caffeine-to-your-java
+[voxxed]: https://www.voxxed.com
+[spring]: https://jira.spring.io/browse/SPR-13690
+[postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html

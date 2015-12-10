@@ -37,7 +37,7 @@ import com.github.benmanes.caffeine.jcache.CacheManagerImpl;
  * <p>
  * This provider is expected to be used for application life cycle events, like initialization. It
  * is not expected that all requests flow through the provider in obtain the cache manager and cache
- * instances for frequest operations. Internally, this implementation is synchronized to avoid using
+ * instances for request operations. Internally, this implementation is synchronized to avoid using
  * excess memory due to its infrequent usage.
  *
  * @author ben.manes@gmail.com (Ben Manes)
