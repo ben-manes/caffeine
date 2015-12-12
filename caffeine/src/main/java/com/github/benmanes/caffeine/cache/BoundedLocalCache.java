@@ -1913,6 +1913,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param computeIfAbsent if an absent entry can be computed
    * @return the new value associated with the specified key, or null if none
    */
+  @SuppressWarnings("PMD.EmptyIfStmt")
   V remap(K key, Object keyRef, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       long now, boolean computeIfAbsent) {
     @SuppressWarnings("unchecked")

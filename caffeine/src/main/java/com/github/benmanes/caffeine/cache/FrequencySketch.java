@@ -79,8 +79,9 @@ final class FrequencySketch<E> {
    * @param maximumSize the maximum size of the cache
    */
   public FrequencySketch(@Nonnegative long maximumSize) {
-    this(maximumSize, (ThreadLocalRandom.current().nextBoolean() ? 1 : -1)
-        * ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE));
+    int seed = ThreadLocalRandom.current().nextInt();
+    randomSeed = (seed == 0) ? ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE) : seed;
+    ensureCapacity(maximumSize);
   }
 
   FrequencySketch(@Nonnegative long maximumSize, int randomSeed) {

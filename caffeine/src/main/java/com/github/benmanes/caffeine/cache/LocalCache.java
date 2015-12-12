@@ -178,7 +178,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
     };
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
   static <T extends Exception, V> V throwUnchecked(Exception e) throws T {
     throw (T) e;
   }
