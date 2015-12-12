@@ -45,32 +45,32 @@ public class ConcurrentQueueBenchmark {
   }
 
   @Benchmark @Group("low_contention") @GroupThreads(1)
-  public void low_contention_offer() {
-    queue.offer(Boolean.TRUE);
+  public boolean low_contention_offer() {
+    return queue.offer(Boolean.TRUE);
   }
 
   @Benchmark @Group("low_contention") @GroupThreads(1)
-  public void low_contention_poll() {
-    queue.poll();
+  public Boolean low_contention_poll() {
+    return queue.poll();
   }
 
   @Benchmark @Group("medium_contention") @GroupThreads(4)
-  public void medium_contention_offer() {
-    queue.offer(Boolean.TRUE);
+  public boolean medium_contention_offer() {
+    return queue.offer(Boolean.TRUE);
   }
 
   @Benchmark @Group("medium_contention") @GroupThreads(4)
-  public void medium_contention_poll() {
-    queue.poll();
+  public Boolean medium_contention_poll() {
+    return queue.poll();
   }
 
   @Benchmark @Group("high_contention") @GroupThreads(8)
-  public void high_contention_offer() {
-    queue.offer(Boolean.TRUE);
+  public boolean high_contention_offer() {
+    return queue.offer(Boolean.TRUE);
   }
 
   @Benchmark @Group("high_contention") @GroupThreads(8)
-  public void high_contention_poll() {
-    queue.poll();
+  public Boolean high_contention_poll() {
+    return queue.poll();
   }
 }

@@ -24,6 +24,10 @@ import com.yahoo.ycsb.generator.IntegerGenerator;
 import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
+ * <pre>{@code
+ *   ./gradlew jmh -PincludePattern=FrequencySketchBenchmark
+ * }</pre>
+ *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
@@ -53,7 +57,7 @@ public class FrequencySketchBenchmark {
   }
 
   @Benchmark
-  public void frequency() {
-    sketch.frequency(ints[index++ & MASK]);
+  public int frequency() {
+    return sketch.frequency(ints[index++ & MASK]);
   }
 }

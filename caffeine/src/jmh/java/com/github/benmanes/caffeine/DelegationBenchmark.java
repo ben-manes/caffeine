@@ -53,13 +53,13 @@ public class DelegationBenchmark {
   }
 
   @Benchmark
-  public void inherit_get(ThreadState threadState) {
-    inherit.get(threadState.index++ & MASK);
+  public Integer inherit_get(ThreadState threadState) {
+    return inherit.get(threadState.index++ & MASK);
   }
 
   @Benchmark
-  public void delegate_get(ThreadState threadState) {
-    delegate.get(threadState.index++ & MASK);
+  public Integer delegate_get(ThreadState threadState) {
+    return delegate.get(threadState.index++ & MASK);
   }
 
   static final class InheritMap extends ConcurrentHashMap<Integer, Integer> {

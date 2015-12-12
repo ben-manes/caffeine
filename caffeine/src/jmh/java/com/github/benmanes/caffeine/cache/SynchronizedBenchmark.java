@@ -26,7 +26,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
-import com.github.benmanes.caffeine.cache.NonReentrantLock;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -48,29 +47,29 @@ public class SynchronizedBenchmark {
   }
 
   @Benchmark @Threads(4)
-  public void synchronized_contention() {
+  public int synchronized_contention() {
     synchronized (olock) {
-      counter++;
+      return counter++;
     }
   }
 
   /* ---------------- monitor byte code -------------- */
 
   @Benchmark @Threads(1)
-  public void monitor_noContention() {
+  public int monitor_noContention() {
     UnsafeAccess.UNSAFE.monitorEnter(olock);
     try {
-      counter++;
+      return counter++;
     } finally {
       UnsafeAccess.UNSAFE.monitorExit(olock);
     }
   }
 
   @Benchmark @Threads(4)
-  public void monitor_contention() {
+  public int monitor_contention() {
     UnsafeAccess.UNSAFE.monitorEnter(olock);
     try {
-      counter++;
+      return counter++;
     } finally {
       UnsafeAccess.UNSAFE.monitorExit(olock);
     }
@@ -79,39 +78,39 @@ public class SynchronizedBenchmark {
   /* ---------------- mixed -------------- */
 
   @Benchmark  @Group("mixed") @GroupThreads(1)
-  public void mixed_monitor() {
+  public int mixed_monitor() {
     UnsafeAccess.UNSAFE.monitorEnter(olock);
     try {
-      counter++;
+      return counter++;
     } finally {
       UnsafeAccess.UNSAFE.monitorExit(olock);
     }
   }
 
   @Benchmark  @Group("mixed") @GroupThreads(3)
-  public void mixed_sync() {
+  public int mixed_sync() {
     synchronized (olock) {
-      counter++;
+      return counter++;
     }
   }
 
   /* ---------------- ReentrantLock -------------- */
 
   @Benchmark @Threads(1)
-  public void reentrantLock_noContention() {
+  public int reentrantLock_noContention() {
     rlock.lock();
     try {
-      counter++;
+      return counter++;
     } finally {
       rlock.unlock();
     }
   }
 
   @Benchmark @Threads(4)
-  public void reentrantLock_contention() {
+  public int reentrantLock_contention() {
     rlock.lock();
     try {
-      counter++;
+      return counter++;
     } finally {
       rlock.unlock();
     }
@@ -120,20 +119,20 @@ public class SynchronizedBenchmark {
   /* ---------------- NonReentrantLock -------------- */
 
   @Benchmark @Threads(1)
-  public void nonReentrantLock_noContention() {
+  public int nonReentrantLock_noContention() {
     nrlock.lock();
     try {
-      counter++;
+      return counter++;
     } finally {
       nrlock.unlock();
     }
   }
 
   @Benchmark @Threads(4)
-  public void nonReentrantLock_contention() {
+  public int nonReentrantLock_contention() {
     nrlock.lock();
     try {
-      counter++;
+      return counter++;
     } finally {
       nrlock.unlock();
     }

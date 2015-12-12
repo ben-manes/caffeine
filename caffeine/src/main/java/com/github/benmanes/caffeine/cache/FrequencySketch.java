@@ -21,8 +21,6 @@ import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
-import com.github.benmanes.caffeine.base.UnsafeAccess;
-
 /**
  * A probabilistic multiset for estimating the popularity of an element within a time window. The
  * maximum frequency of an element is limited to 15 (4-bits) and an aging process periodically
@@ -66,8 +64,6 @@ final class FrequencySketch<E> {
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final long RESET_MASK = 0x7777777777777777L;
   static final long ONE_MASK = 0x1111111111111111L;
-  static final int TABLE_SHIFT;
-  static final int TABLE_BASE;
 
   final int randomSeed;
 
@@ -128,8 +124,7 @@ final class FrequencySketch<E> {
     int frequency = Integer.MAX_VALUE;
     for (int i = 0; i < 4; i++) {
       int index = indexOf(hash, i);
-      long slot = UnsafeAccess.UNSAFE.getLong(table, byteOffset(index));
-      int count = (int) ((slot >>> ((start + i) << 2)) & 0xfL);
+      int count = (int) ((table[index] >>> ((start + i) << 2)) & 0xfL);
       frequency = Math.min(frequency, count);
     }
     return frequency;
@@ -172,9 +167,8 @@ final class FrequencySketch<E> {
   boolean incrementAt(int i, int j) {
     int offset = j << 2;
     long mask = (0xfL << offset);
-    long slot = UnsafeAccess.UNSAFE.getLong(table, byteOffset(i));
-    if ((slot & mask) != mask) {
-      table[i] = slot + (1L << offset);
+    if ((table[i] & mask) != mask) {
+      table[i] += (1L << offset);
       return true;
     }
     return false;
@@ -216,18 +210,5 @@ final class FrequencySketch<E> {
   static int ceilingNextPowerOfTwo(int x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
     return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
-  }
-
-  static long byteOffset(int i) {
-    return ((long) i << TABLE_SHIFT) + TABLE_BASE;
-  }
-
-  static {
-    TABLE_BASE = UnsafeAccess.UNSAFE.arrayBaseOffset(long[].class);
-    int scale = UnsafeAccess.UNSAFE.arrayIndexScale(long[].class);
-    if ((scale & (scale - 1)) != 0) {
-      throw new Error("data type scale not a power of two");
-    }
-    TABLE_SHIFT = 31 - Integer.numberOfLeadingZeros(scale);
   }
 }

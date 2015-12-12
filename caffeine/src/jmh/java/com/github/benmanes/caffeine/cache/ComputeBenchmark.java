@@ -81,13 +81,13 @@ public class ComputeBenchmark {
   }
 
   @Benchmark @Threads(32)
-  public void compute_sameKey(ThreadState threadState) {
-    benchmarkFunction.apply(COMPUTE_KEY);
+  public Boolean compute_sameKey(ThreadState threadState) {
+    return benchmarkFunction.apply(COMPUTE_KEY);
   }
 
   @Benchmark @Threads(32)
-  public void compute_spread(ThreadState threadState) {
-    benchmarkFunction.apply(ints[threadState.index++ & MASK]);
+  public Boolean compute_spread(ThreadState threadState) {
+    return benchmarkFunction.apply(ints[threadState.index++ & MASK]);
   }
 
   private void setupConcurrentHashMap() {

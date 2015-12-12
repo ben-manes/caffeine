@@ -89,8 +89,8 @@ public class GetPutBenchmark {
   }
 
   @Benchmark @Group("read_only") @GroupThreads(8)
-  public void readOnly(ThreadState threadState) {
-    cache.get(ints[threadState.index++ & MASK]);
+  public Boolean readOnly(ThreadState threadState) {
+    return cache.get(ints[threadState.index++ & MASK]);
   }
 
   @Benchmark @Group("write_only") @GroupThreads(8)
@@ -99,8 +99,8 @@ public class GetPutBenchmark {
   }
 
   @Benchmark @Group("readwrite") @GroupThreads(6)
-  public void readwrite_get(ThreadState threadState) {
-    cache.get(ints[threadState.index++ & MASK]);
+  public Boolean readwrite_get(ThreadState threadState) {
+    return cache.get(ints[threadState.index++ & MASK]);
   }
 
   @Benchmark @Group("readwrite") @GroupThreads(2)

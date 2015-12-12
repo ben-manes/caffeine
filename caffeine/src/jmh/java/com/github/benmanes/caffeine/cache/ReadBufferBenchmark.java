@@ -53,8 +53,8 @@ public class ReadBufferBenchmark {
   }
 
   @Benchmark @Group @GroupThreads(8)
-  public void record() {
-    buffer.offer(Boolean.TRUE);
+  public int record() {
+    return buffer.offer(Boolean.TRUE);
   }
 
   @Benchmark @Group @GroupThreads(1)

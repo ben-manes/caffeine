@@ -24,22 +24,22 @@ import org.openjdk.jmh.annotations.Threads;
 public class TimeBenchmark {
 
   @Benchmark @Threads(1)
-  public void nanos_noContention() {
-    System.nanoTime();
+  public long nanos_noContention() {
+    return System.nanoTime();
   }
 
   @Benchmark @Threads(8)
-  public void nanos_contention() {
-    System.nanoTime();
+  public long nanos_contention() {
+    return System.nanoTime();
   }
 
   @Benchmark @Threads(1)
-  public void millis_noContention() {
-    System.currentTimeMillis();
+  public long millis_noContention() {
+    return System.currentTimeMillis();
   }
 
   @Benchmark @Threads(8)
-  public void millis_contention() {
-    System.currentTimeMillis();
+  public long millis_contention() {
+    return System.currentTimeMillis();
   }
 }

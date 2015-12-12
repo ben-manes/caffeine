@@ -46,32 +46,32 @@ public class SingleConsumerQueueBenchmark {
   }
 
   @Benchmark  @Group("no_contention") @GroupThreads(1)
-  public void no_contention_offer() {
-    queue.offer(Boolean.TRUE);
+  public boolean no_contention_offer() {
+    return queue.offer(Boolean.TRUE);
   }
 
   @Benchmark @Group("no_contention") @GroupThreads(1)
-  public void no_contention_poll() {
-    queue.poll();
+  public Boolean no_contention_poll() {
+    return queue.poll();
   }
 
   @Benchmark @Group("mild_contention") @GroupThreads(2)
-  public void mild_contention_offer() {
-    queue.offer(Boolean.TRUE);
+  public boolean mild_contention_offer() {
+    return queue.offer(Boolean.TRUE);
   }
 
   @Benchmark @Group("mild_contention") @GroupThreads(1)
-  public void mild_contention_poll() {
-    queue.poll();
+  public Boolean mild_contention_poll() {
+    return queue.poll();
   }
 
   @Benchmark @Group("high_contention") @GroupThreads(8)
-  public void high_contention_offer() {
-    queue.offer(Boolean.TRUE);
+  public boolean high_contention_offer() {
+    return queue.offer(Boolean.TRUE);
   }
 
   @Benchmark @Group("high_contention") @GroupThreads(1)
-  public void high_contention_poll() {
-    queue.poll();
+  public Boolean high_contention_poll() {
+    return queue.poll();
   }
 }
