@@ -954,7 +954,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** @return an approximate of the current time in milliseconds */
   protected long currentTimeMillis() {
-    return ticker.read() >> 10;
+    return ticker.read() >> 20;
   }
 
   /**
