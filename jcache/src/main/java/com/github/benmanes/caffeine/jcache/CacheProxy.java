@@ -135,13 +135,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   @Override
   public V get(K key) {
     Expirable<V> expirable = doSafely(() -> cache.getIfPresent(key));
-
-    long now = ticker.read();
-    long millis = currentTimeMillis();
     if (expirable == null) {
       statistics.recordMisses(1L);
       return null;
-    } else if (expirable.hasExpired(millis)) {
+    }
+
+    long start = ticker.read();
+    long millis = nanoToMillis(start);
+    if (expirable.hasExpired(millis)) {
       if (cache.asMap().remove(key, expirable)) {
         dispatcher.publishExpired(this, key, expirable.get());
         dispatcher.awaitSynchronous();
@@ -157,7 +158,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } else {
       statistics.recordHits(1L);
     }
-    statistics.recordGetTime(ticker.read() - now);
+    statistics.recordGetTime(ticker.read() - start);
     return value;
   }
 
@@ -269,7 +270,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   public V getAndPut(K key, V value) {
     requireNotClosed();
     int[] puts = { 0 };
-    long start = ticker.read();
+    long now = ticker.read();
     V val = putNoCopyOrAwait(key, value, true, puts);
     dispatcher.awaitSynchronous();
     statistics.recordPuts(puts[0]);
@@ -280,7 +281,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       statistics.recordHits(1L);
     }
     V copy = copyOf(val);
-    long duration = ticker.read() - start;
+    long duration = ticker.read() - now;
     statistics.recordGetTime(duration);
     statistics.recordPutTime(duration);
     return copy;
@@ -452,9 +453,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     requireNonNull(key);
     requireNonNull(oldValue);
 
-    long now = ticker.read();
+    long start = ticker.read();
     boolean[] removed = { false };
-    long millis = currentTimeMillis();
+    long millis = nanoToMillis(start);
     cache.asMap().computeIfPresent(key, (k, expirable) -> {
       if (expirable.hasExpired(millis)) {
         dispatcher.publishExpired(this, key, expirable.get());
@@ -477,7 +478,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } else {
       statistics.recordMisses(1L);
     }
-    statistics.recordRemoveTime(ticker.read() - now);
+    statistics.recordRemoveTime(ticker.read() - start);
     return removed[0];
   }
 
@@ -512,7 +513,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     long start = ticker.read();
     boolean[] found = { false };
     boolean[] replaced = { false };
-    long millis = currentTimeMillis();
+    long millis = nanoToMillis(start);
     cache.asMap().computeIfPresent(key, (k, expirable) -> {
       if (expirable.hasExpired(millis)) {
         dispatcher.publishExpired(this, key, expirable.get());
@@ -954,7 +955,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** @return an approximate of the current time in milliseconds */
   protected long currentTimeMillis() {
-    return ticker.read() >> 20;
+    return nanoToMillis(ticker.read());
+  }
+
+  /** @return an approximate of the nanosecond time in milliseconds */
+  protected static long nanoToMillis(long nanos) {
+    return nanos >> 20;
   }
 
   /**

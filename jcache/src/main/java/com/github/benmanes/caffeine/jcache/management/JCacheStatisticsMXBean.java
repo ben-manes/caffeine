@@ -217,7 +217,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
     if ((requestCount == 0) || (opsTimeNanos == 0)) {
       return 0;
     }
-    long opsTimeMillis = TimeUnit.MILLISECONDS.toNanos(opsTimeNanos);
-    return (float) opsTimeMillis / requestCount;
+    long opsTimeMicro = TimeUnit.NANOSECONDS.toMicros(opsTimeNanos);
+    return (float) opsTimeMicro / requestCount;
   }
 }

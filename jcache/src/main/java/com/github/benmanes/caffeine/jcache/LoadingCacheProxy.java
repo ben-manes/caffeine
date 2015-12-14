@@ -55,8 +55,8 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   @Override
   public V get(K key) {
-    long now = ticker.read();
-    long millis = currentTimeMillis();
+    long start = ticker.read();
+    long millis = nanoToMillis(start);
     V value = doSafely(() -> {
       Expirable<V> expirable = cache.getIfPresent(key);
       if ((expirable != null) && expirable.hasExpired(millis)) {
@@ -78,7 +78,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       }
       return null;
     });
-    statistics.recordGetTime(ticker.read() - now);
+    statistics.recordGetTime(ticker.read() - start);
     return value;
   }
 
