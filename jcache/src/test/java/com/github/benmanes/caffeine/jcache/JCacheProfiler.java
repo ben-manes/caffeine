@@ -15,10 +15,16 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.cache.annotation.CacheDefaults;
+import javax.cache.annotation.CachePut;
+import javax.cache.annotation.CacheResult;
+import javax.cache.annotation.CacheValue;
+
 import org.jsr107.ri.annotations.guice.module.CacheAnnotationsModule;
 
 import com.github.benmanes.caffeine.jcache.JCacheGuiceTest.CaffeineJCacheModule;
-import com.github.benmanes.caffeine.jcache.JCacheGuiceTest.Service;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -34,10 +40,32 @@ public final class JCacheProfiler {
   public static void main(String[] args) {
     Module module = Modules.override(new CacheAnnotationsModule()).with(new CaffeineJCacheModule());
     Injector injector = Guice.createInjector(module);
-    Service service = injector.getInstance(Service.class);
+    ProfilerService service = injector.getInstance(ProfilerService.class);
 
-    for (;;) {
-      service.get();
+    boolean read = true;
+    for (int i = 0; ; i++) {
+      if (read) {
+        service.get(i % 100);
+      } else {
+        service.put(i % 100, Boolean.TRUE);
+      }
+    }
+  }
+
+  @CacheDefaults(cacheName = "profiler")
+  static final class ProfilerService {
+    final AtomicInteger gets = new AtomicInteger();
+    final AtomicInteger puts = new AtomicInteger();
+
+    @CacheResult
+    public Boolean get(int key) {
+      gets.incrementAndGet();
+      return Boolean.TRUE;
+    }
+
+    @CachePut
+    public void put(int key, @CacheValue Boolean value) {
+      puts.incrementAndGet();
     }
   }
 }

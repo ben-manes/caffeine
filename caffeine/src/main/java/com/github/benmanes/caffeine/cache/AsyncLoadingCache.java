@@ -60,6 +60,9 @@ public interface AsyncLoadingCache<K, V> {
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
    * is performed atomically, so the function is applied at most once per key. If the asynchronous
    * computation fails, the entry will be automatically removed.
+   * <p>
+   * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
+   * attempt to update any other mappings of this cache.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
@@ -79,6 +82,9 @@ public interface AsyncLoadingCache<K, V> {
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
    * is performed atomically, so the function is applied at most once per key. If the asynchronous
    * computation fails, the entry will be automatically removed.
+   * <p>
+   * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
+   * attempt to update any other mappings of this cache.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value

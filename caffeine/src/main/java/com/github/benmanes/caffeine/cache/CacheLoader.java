@@ -48,6 +48,8 @@ public interface CacheLoader<K, V> {
 
   /**
    * Computes or retrieves the value corresponding to {@code key}.
+   * <p>
+   * <b>Warning:</b> loading <b>must not</b> attempt to update any other mappings of this cache.
    *
    * @param key the non-null key whose value should be loaded
    * @return the value associated with {@code key} or {@code null} if not found
@@ -71,6 +73,8 @@ public interface CacheLoader<K, V> {
    * This method should be overridden when bulk retrieval is significantly more efficient than many
    * individual lookups. Note that {@link LoadingCache#getAll} will defer to individual calls to
    * {@link LoadingCache#get} if this method is not overridden.
+   * <p>
+   * <b>Warning:</b> loading <b>must not</b> attempt to update any other mappings of this cache.
    *
    * @param keys the unique, non-null keys whose values should be loaded
    * @return a map from each key in {@code keys} to the value associated with that key; <b>may not

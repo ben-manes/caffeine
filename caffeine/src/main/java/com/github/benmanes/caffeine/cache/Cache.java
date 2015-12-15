@@ -65,6 +65,9 @@ public interface Cache<K, V> {
    * Some attempted update operations on this cache by other threads may be blocked while
    * computation is in progress, so the computation should be short and simple, and must not attempt
    * to update any other mappings of this cache.
+   * <p>
+   * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
+   * attempt to update any other mappings of this cache.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to compute a value

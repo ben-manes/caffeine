@@ -61,7 +61,8 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  *   LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
  *       .maximumSize(10_000)
  *       .expireAfterWrite(10, TimeUnit.MINUTES)
- *       .removalListener(MY_LISTENER)
+ *       .removalListener((Key key, Graph graph, RemovalCause cause) ->
+ *           System.out.printf("Key %s was removed (%s)%n", key, cause))
  *       .build(key -> createExpensiveGraph(key));
  * }</pre>
  * <p>
@@ -242,9 +243,10 @@ public final class Caffeine<K, V> {
 
   /**
    * Specifies the maximum number of entries the cache may contain. Note that the cache <b>may evict
-   * an entry before this limit is exceeded</b>. As the cache size grows close to the maximum, the
-   * cache evicts entries that are less likely to be used again. For example, the cache may evict an
-   * entry because it hasn't been used recently or very often.
+   * an entry before this limit is exceeded or temporarily exceed the threshold while evicting</b>.
+   * As the cache size grows close to the maximum, the cache evicts entries that are less likely to
+   * be used again. For example, the cache may evict an entry because it hasn't been used recently
+   * or very often.
    * <p>
    * When {@code size} is zero, elements will be evicted immediately after being loaded into the
    * cache. This can be useful in testing, or to disable caching temporarily without a code change.
@@ -273,9 +275,10 @@ public final class Caffeine<K, V> {
    * {@link Weigher} specified with {@link #weigher}, and use of this method requires a
    * corresponding call to {@link #weigher} prior to calling {@link #build}.
    * <p>
-   * Note that the cache <b>may evict an entry before this limit is exceeded</b>. As the cache size
-   * grows close to the maximum, the cache evicts entries that are less likely to be used again. For
-   * example, the cache may evict an entry because it hasn't been used recently or very often.
+   * Note that the cache <b>may evict an entry before this limit is exceeded or temporarily exceed
+   * the threshold while evicting</b>. As the cache size grows close to the maximum, the cache
+   * evicts entries that are less likely to be used again. For example, the cache may evict an entry
+   * because it hasn't been used recently or very often.
    * <p>
    * When {@code maximumWeight} is zero, elements will be evicted immediately after being loaded
    * into cache. This can be useful in testing, or to disable caching temporarily without a code
