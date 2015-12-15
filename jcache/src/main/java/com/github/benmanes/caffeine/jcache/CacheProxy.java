@@ -28,6 +28,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -37,7 +38,6 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 import javax.cache.Cache;
-import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
@@ -73,10 +73,10 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   private final com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache;
   private final CaffeineConfiguration<K, V> configuration;
-  private final Copier copyStrategy;
   private final CacheManager cacheManager;
   private final CacheWriter<K, V> writer;
   private final JCacheMXBean cacheMXBean;
+  private final Copier copier;
   private final String name;
 
   protected final Optional<CacheLoader<K, V>> cacheLoader;
@@ -105,7 +105,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     this.cache = requireNonNull(cache);
     this.name = requireNonNull(name);
 
-    copyStrategy = configuration.isStoreByValue()
+    copier = configuration.isStoreByValue()
         ? configuration.getCopierFactory().create()
         : Copier.identity();
     writer = configuration.hasCacheWriter()
@@ -134,14 +134,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public V get(K key) {
-    Expirable<V> expirable = doSafely(() -> cache.getIfPresent(key));
+    requireNotClosed();
+    Expirable<V> expirable = cache.getIfPresent(key);
     if (expirable == null) {
       statistics.recordMisses(1L);
       return null;
     }
 
     long start = ticker.read();
-    long millis = nanoToMillis(start);
+    long millis = nanosToMillis(start);
     if (expirable.hasExpired(millis)) {
       if (cache.asMap().remove(key, expirable)) {
         dispatcher.publishExpired(this, key, expirable.get());
@@ -151,7 +152,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       statistics.recordMisses(1L);
       return null;
     }
-    setExpirationTime(expirable, millis, expiry::getExpiryForAccess);
+    setAccessExpirationTime(expirable, millis);
     V value = copyValue(expirable);
     if (value == null) {
       statistics.recordMisses(1L);
@@ -164,12 +165,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public Map<K, V> getAll(Set<? extends K> keys) {
-    return doSafely(() -> {
-      long now = ticker.read();
-      Map<K, Expirable<V>> result = getAndFilterExpiredEntries(keys, true);
-      statistics.recordGetTime(ticker.read() - now);
-      return copyMap(result);
-    });
+    requireNotClosed();
+    long now = ticker.read();
+    Map<K, Expirable<V>> result = getAndFilterExpiredEntries(keys, true);
+    statistics.recordGetTime(ticker.read() - now);
+    return copyMap(result);
   }
 
   /**
@@ -191,7 +191,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         return true;
       }
       if (updateAccessTime) {
-        setExpirationTime(entry.getValue(), millis, expiry::getExpiryForAccess);
+        setAccessExpirationTime(entry.getValue(), millis);
       }
       return false;
     });
@@ -455,7 +455,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
     long start = ticker.read();
     boolean[] removed = { false };
-    long millis = nanoToMillis(start);
+    long millis = nanosToMillis(start);
     cache.asMap().computeIfPresent(key, (k, expirable) -> {
       if (expirable.hasExpired(millis)) {
         dispatcher.publishExpired(this, key, expirable.get());
@@ -468,7 +468,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         removed[0] = true;
         return null;
       }
-      setExpirationTime(expirable, millis, expiry::getExpiryForAccess);
+      setAccessExpirationTime(expirable, millis);
       return expirable;
     });
     dispatcher.awaitSynchronous();
@@ -513,7 +513,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     long start = ticker.read();
     boolean[] found = { false };
     boolean[] replaced = { false };
-    long millis = nanoToMillis(start);
+    long millis = nanosToMillis(start);
     cache.asMap().computeIfPresent(key, (k, expirable) -> {
       if (expirable.hasExpired(millis)) {
         dispatcher.publishExpired(this, key, expirable.get());
@@ -534,7 +534,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         replaced[0] = true;
       } else {
         result = expirable;
-        setExpirationTime(expirable, millis, expiry::getExpiryForAccess);
+        setAccessExpirationTime(expirable, millis);
       }
       return result;
     });
@@ -923,8 +923,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param <T> the type of object being copied
    * @return a copy of the object if storing by value or the same instance if by reference
    */
-  protected @Nullable <T> T copyOf(@Nullable T object) {
-    return (object == null) ? null : copyStrategy.copy(object, cacheManager.getClassLoader());
+  protected final @Nullable <T> T copyOf(@Nullable T object) {
+    return (object == null) ? null : copier.copy(object, cacheManager.getClassLoader());
   }
 
   /**
@@ -933,11 +933,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param expirable the expirable value to be copied
    * @return a copy of the value if storing by value or the same instance if by reference
    */
-  protected @Nullable V copyValue(@Nullable Expirable<V> expirable) {
+  protected final @Nullable V copyValue(@Nullable Expirable<V> expirable) {
     if (expirable == null) {
       return null;
     }
-    return copyStrategy.copy(expirable.get(), cacheManager.getClassLoader());
+    return copier.copy(expirable.get(), cacheManager.getClassLoader());
   }
 
   /**
@@ -946,21 +946,21 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param map the mapping of keys to expirable values
    * @return a copy of the mappings if storing by value or the same instance if by reference
    */
-  protected Map<K, V> copyMap(Map<K, Expirable<V>> map) {
+  protected final Map<K, V> copyMap(Map<K, Expirable<V>> map) {
     final ClassLoader classLoader = cacheManager.getClassLoader();
     return map.entrySet().stream().collect(Collectors.toMap(
-        entry -> (K) copyStrategy.copy(entry.getKey(), classLoader),
-        entry -> (V) copyStrategy.copy(entry.getValue().get(), classLoader)));
+        entry -> (K) copier.copy(entry.getKey(), classLoader),
+        entry -> (V) copier.copy(entry.getValue().get(), classLoader)));
   }
 
-  /** @return an approximate of the current time in milliseconds */
-  protected long currentTimeMillis() {
-    return nanoToMillis(ticker.read());
+  /** @return the current time in milliseconds */
+  protected final long currentTimeMillis() {
+    return nanosToMillis(ticker.read());
   }
 
-  /** @return an approximate of the nanosecond time in milliseconds */
-  protected static long nanoToMillis(long nanos) {
-    return nanos >> 20;
+  /** @return the nanosecond time in milliseconds */
+  protected static long nanosToMillis(long nanos) {
+    return TimeUnit.NANOSECONDS.toMillis(nanos);
   }
 
   /**
@@ -970,10 +970,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param currentTimeMS the current time
    * @param expires the expiration function
    */
-  protected static void setExpirationTime(Expirable<?> expirable,
-      long currentTimeMS, Supplier<Duration> expires) {
+  protected final void setAccessExpirationTime(Expirable<?> expirable, long currentTimeMS) {
     try {
-      Duration duration = expires.get();
+      Duration duration = expiry.getExpiryForAccess();
       if (duration != null) {
         long expireTimeMS = duration.getAdjustedTime(currentTimeMS);
         expirable.setExpireTimeMS(expireTimeMS);
@@ -989,7 +988,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param expires the expiration function
    * @return the time when the entry will expire, or negative if the time should not be changed
    */
-  protected long expireTimeMS(Supplier<Duration> expires) {
+  protected final long expireTimeMS(Supplier<Duration> expires) {
     try {
       Duration duration = expires.get();
       if (duration == null) {
@@ -999,26 +998,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     } catch (Exception e) {
       logger.log(Level.WARNING, "Failed to get the policy's expiration time", e);
       return -1;
-    }
-  }
-
-  /**
-   * Performs the cache function, propagating the exception properly.
-   *
-   * @param task the operation to perform
-   * @return the result if successful
-   */
-  @SuppressWarnings("PMD.AvoidCatchingNPE")
-  protected <T> T doSafely(Supplier<T> task) {
-    requireNotClosed();
-    try {
-      return task.get();
-    } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
-      throw e;
-    } catch (RuntimeException e) {
-      throw new CacheException(e);
-    } finally {
-      dispatcher.awaitSynchronous();
     }
   }
 
@@ -1034,7 +1013,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         Map.Entry<K, Expirable<V>> entry = delegate.next();
         long millis = currentTimeMillis();
         if (!entry.getValue().hasExpired(millis)) {
-          setExpirationTime(entry.getValue(), millis, expiry::getExpiryForAccess);
+          setAccessExpirationTime(entry.getValue(), millis);
           cursor = entry;
         }
       }

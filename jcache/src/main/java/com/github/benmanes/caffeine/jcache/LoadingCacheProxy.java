@@ -24,6 +24,7 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -54,30 +55,44 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   @Override
+  @SuppressWarnings("PMD.AvoidCatchingNPE")
   public V get(K key) {
+    requireNotClosed();
+    try {
+      return getOrLoad(key);
+    } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new CacheException(e);
+    } finally {
+      dispatcher.awaitSynchronous();
+    }
+  }
+
+  /** Retrieves the value from the cache, loading it if necessary. */
+  private V getOrLoad(K key) {
     long start = ticker.read();
-    long millis = nanoToMillis(start);
-    V value = doSafely(() -> {
-      Expirable<V> expirable = cache.getIfPresent(key);
-      if ((expirable != null) && expirable.hasExpired(millis)) {
-        if (cache.asMap().remove(key, expirable)) {
-          dispatcher.publishExpired(this, key, expirable.get());
-          statistics.recordEvictions(1);
-        }
-        expirable = null;
+    long millis = nanosToMillis(start);
+    Expirable<V> expirable = cache.getIfPresent(key);
+    if ((expirable != null) && expirable.hasExpired(millis)) {
+      if (cache.asMap().remove(key, expirable)) {
+        dispatcher.publishExpired(this, key, expirable.get());
+        statistics.recordEvictions(1);
       }
-      if (expirable == null) {
-        expirable = cache.get(key);
-        statistics.recordMisses(1L);
-      } else {
-        statistics.recordHits(1L);
-      }
-      if (expirable != null) {
-        setExpirationTime(expirable, millis, expiry::getExpiryForAccess);
-        return copyValue(expirable);
-      }
-      return null;
-    });
+      expirable = null;
+    }
+    if (expirable == null) {
+      expirable = cache.get(key);
+      statistics.recordMisses(1L);
+    } else {
+      statistics.recordHits(1L);
+    }
+
+    V value = null;
+    if (expirable != null) {
+      setAccessExpirationTime(expirable, millis);
+      value = copyValue(expirable);
+    }
     statistics.recordGetTime(ticker.read() - start);
     return value;
   }
@@ -88,9 +103,11 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   /** Returns the entries, loading if necessary, and optionally updates their access expiry time. */
+  @SuppressWarnings("PMD.AvoidCatchingNPE")
   private Map<K, V> getAll(Set<? extends K> keys, boolean updateAccessTime) {
-    final long now = ticker.read();
-    Map<K, V> result = doSafely(() -> {
+    requireNotClosed();
+    long now = ticker.read();
+    try {
       Map<K, Expirable<V>> entries = getAndFilterExpiredEntries(keys, updateAccessTime);
 
       if (entries.size() != keys.size()) {
@@ -100,10 +117,16 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
         entries.putAll(cache.getAll(keysToLoad));
       }
 
-      return copyMap(entries);
-    });
-    statistics.recordGetTime(ticker.read() - now);
-    return result;
+      Map<K, V> result = copyMap(entries);
+      statistics.recordGetTime(ticker.read() - now);
+      return result;
+    } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new CacheException(e);
+    } finally {
+      dispatcher.awaitSynchronous();
+    }
   }
 
   @Override
