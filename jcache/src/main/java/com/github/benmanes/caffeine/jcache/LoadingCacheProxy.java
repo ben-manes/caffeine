@@ -80,10 +80,15 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
     if ((expirable != null) && !expirable.isEternal()) {
       millis = nanosToMillis((start == 0L) ? ticker.read() : start);
       if (expirable.hasExpired(millis)) {
-        if (cache.asMap().remove(key, expirable)) {
-          dispatcher.publishExpired(this, key, expirable.get());
-          statistics.recordEvictions(1);
-        }
+        Expirable<V> expired = expirable;
+        cache.asMap().computeIfPresent(key, (k, e) -> {
+          if (e == expired) {
+            dispatcher.publishExpired(this, key, expired.get());
+            statistics.recordEvictions(1);
+            return null;
+          }
+          return expired;
+        });
         expirable = null;
       }
     }

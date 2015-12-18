@@ -122,11 +122,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return false;
     }
     if (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis())) {
-      if (cache.asMap().remove(key, expirable)) {
-        dispatcher.publishExpired(this, key, expirable.get());
-        dispatcher.awaitSynchronous();
-        statistics.recordEvictions(1);
-      }
+      cache.asMap().computeIfPresent(key, (k, e) -> {
+        if (e == expirable) {
+          dispatcher.publishExpired(this, key, expirable.get());
+          statistics.recordEvictions(1);
+          return null;
+        }
+        return e;
+      });
+      dispatcher.awaitSynchronous();
       return false;
     }
     return true;
@@ -145,11 +149,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     long start = (statsEnabled || !expirable.isEternal()) ? ticker.read() : 0L;
     long millis = nanosToMillis(start);
     if (expirable.hasExpired(millis)) {
-      if (cache.asMap().remove(key, expirable)) {
-        dispatcher.publishExpired(this, key, expirable.get());
-        dispatcher.awaitSynchronous();
-        statistics.recordEvictions(1);
-      }
+      cache.asMap().computeIfPresent(key, (k, e) -> {
+        if (e == expirable) {
+          dispatcher.publishExpired(this, key, expirable.get());
+          statistics.recordEvictions(1);
+          return null;
+        }
+        return e;
+      });
+      dispatcher.awaitSynchronous();
       statistics.recordMisses(1L);
       return null;
     }
@@ -196,10 +204,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         millis[0] = currentTimeMillis();
       }
       if (entry.getValue().hasExpired(millis[0])) {
-        if (cache.asMap().remove(entry.getKey(), entry.getValue())) {
-          dispatcher.publishExpired(this, entry.getKey(), entry.getValue().get());
-          expired[0]++;
-        }
+        cache.asMap().computeIfPresent(entry.getKey(), (k, expirable) -> {
+          if (expirable == entry.getValue()) {
+            dispatcher.publishExpired(this, entry.getKey(), entry.getValue().get());
+            expired[0]++;
+            return null;
+          }
+          return expirable;
+        });
         return true;
       }
       if (updateAccessTime) {
@@ -329,7 +341,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (publishToWriter && configuration.isWriteThrough()) {
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
       }
-      if ((expirable != null) && !expirable.isEternal() 
+      if ((expirable != null) && !expirable.isEternal()
           && expirable.hasExpired(currentTimeMillis())) {
         dispatcher.publishExpired(this, key, expirable.get());
         statistics.recordEvictions(1L);
@@ -414,7 +426,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   private boolean putIfAbsentNoAwait(K key, V value, boolean publishToWriter) {
     boolean[] absent = { false };
     cache.asMap().compute(copyOf(key), (k, expirable) -> {
-      if ((expirable != null) && !expirable.isEternal() 
+      if ((expirable != null) && !expirable.isEternal()
           && expirable.hasExpired(currentTimeMillis())) {
         dispatcher.publishExpired(this, key, expirable.get());
         statistics.recordEvictions(1L);
@@ -740,7 +752,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     Object[] result = new Object[1];
     BiFunction<K, Expirable<V>, Expirable<V>> remappingFunction = (k, expirable) -> {
       V value;
-      if ((expirable == null) 
+      if ((expirable == null)
           || (expirable.isEternal() && expirable.hasExpired(currentTimeMillis()))) {
         statistics.recordMisses(1L);
         value = null;
