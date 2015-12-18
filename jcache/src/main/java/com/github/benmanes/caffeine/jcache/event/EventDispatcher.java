@@ -104,6 +104,9 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishCreated(Cache<K, V> cache, K key, V value) {
+    if (dispatchQueues.isEmpty()) {
+      return;
+    }
     publish(new JCacheEntryEvent<>(cache, EventType.CREATED, key, null, value), false);
   }
 
@@ -116,6 +119,9 @@ public final class EventDispatcher<K, V> {
    * @param newValue the entry's new value
    */
   public void publishUpdated(Cache<K, V> cache, K key, V oldValue, V newValue) {
+    if (dispatchQueues.isEmpty()) {
+      return;
+    }
     publish(new JCacheEntryEvent<>(cache, EventType.UPDATED, key, oldValue, newValue), false);
   }
 
@@ -127,6 +133,9 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemoved(Cache<K, V> cache, K key, V value) {
+    if (dispatchQueues.isEmpty()) {
+      return;
+    }
     publish(new JCacheEntryEvent<>(cache, EventType.REMOVED, key, null, value), false);
   }
 
@@ -139,6 +148,9 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemovedQuietly(Cache<K, V> cache, K key, V value) {
+    if (dispatchQueues.isEmpty()) {
+      return;
+    }
     publish(new JCacheEntryEvent<>(cache, EventType.REMOVED, key, null, value), true);
   }
 
@@ -150,6 +162,9 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpired(Cache<K, V> cache, K key, V value) {
+    if (dispatchQueues.isEmpty()) {
+      return;
+    }
     publish(new JCacheEntryEvent<>(cache, EventType.EXPIRED, key, value, null), false);
   }
 
@@ -162,6 +177,9 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpiredQuietly(Cache<K, V> cache, K key, V value) {
+    if (dispatchQueues.isEmpty()) {
+      return;
+    }
     publish(new JCacheEntryEvent<>(cache, EventType.EXPIRED, key, value, null), true);
   }
 
@@ -171,10 +189,11 @@ public final class EventDispatcher<K, V> {
    */
   public void awaitSynchronous() {
     List<CompletableFuture<Void>> futures = pending.get();
+    if (futures.isEmpty()) {
+      return;
+    }
     try {
-      if (!futures.isEmpty()) {
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])).join();
-      }
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])).join();
     } catch (CompletionException e) {
       logger.log(Level.WARNING, null, e);
     } finally {

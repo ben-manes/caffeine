@@ -18,8 +18,10 @@ package com.github.benmanes.caffeine.jcache.integration;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
@@ -66,12 +68,17 @@ public final class JCacheLoaderAdapter<K, V>
   @Override
   public Expirable<V> load(K key) {
     try {
-      long start = ticker.read();
+      boolean statsEnabled = statistics.isEnabled();
+      long start = statsEnabled ? ticker.read() : 0L;
+
       V value = delegate.load(key);
       dispatcher.publishCreated(cache, key, value);
-      long end = ticker.read();
-      statistics.recordGetTime(start - end);
-      return new Expirable<>(value, expireTimeMS(end));
+
+      if (statsEnabled) {
+        // Subtracts the load time from the get time
+        statistics.recordGetTime(start - ticker.read());
+      }
+      return new Expirable<>(value, expireTimeMS());
     } catch (CacheLoaderException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -82,15 +89,21 @@ public final class JCacheLoaderAdapter<K, V>
   @Override
   public Map<K, Expirable<V>> loadAll(Iterable<? extends K> keys) {
     try {
-      long start = ticker.read();
+      boolean statsEnabled = statistics.isEnabled();
+      long start = statsEnabled ? ticker.read() : 0L;
+
       Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
           .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
           .collect(Collectors.toMap(Map.Entry::getKey,
-              entry -> new Expirable<>(entry.getValue(), expireTimeMS(start))));
+              entry -> new Expirable<>(entry.getValue(), expireTimeMS())));
       for (Map.Entry<K, Expirable<V>> entry : result.entrySet()) {
         dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
       }
-      statistics.recordGetTime(start - ticker.read());
+
+      if (statsEnabled) {
+        // Subtracts the load time from the get time
+        statistics.recordGetTime(start - ticker.read());
+      }
       return result;
     } catch (CacheLoaderException e) {
       throw e;
@@ -99,9 +112,16 @@ public final class JCacheLoaderAdapter<K, V>
     }
   }
 
-  private long expireTimeMS(long now) {
+  private long expireTimeMS() {
     try {
-      return expiry.getExpiryForCreation().getAdjustedTime(now >> 10);
+      Duration duration = expiry.getExpiryForCreation();
+      if (duration.isZero()) {
+        return 0;
+      } else if (duration.isEternal()) {
+        return Long.MAX_VALUE;
+      }
+      long millis = TimeUnit.NANOSECONDS.toMillis(ticker.read());
+      return duration.getAdjustedTime(millis);
     } catch (Exception e) {
       return Long.MAX_VALUE;
     }

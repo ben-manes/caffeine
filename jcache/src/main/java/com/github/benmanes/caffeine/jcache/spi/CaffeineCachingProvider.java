@@ -62,7 +62,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
 
   @Override
   public Properties getDefaultProperties() {
-    return null;
+    return new Properties();
   }
 
   @Override
@@ -84,7 +84,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
       Map<URI, CacheManager> cacheManagersByURI = cacheManagers.computeIfAbsent(
           managerClassLoader, any -> new HashMap<>());
       return cacheManagersByURI.computeIfAbsent(managerURI, any -> {
-        Properties managerProperties = (properties == null) ? new Properties() : properties;
+        Properties managerProperties = (properties == null) ? getDefaultProperties() : properties;
         return new CacheManagerImpl(this, managerURI, managerClassLoader, managerProperties);
       });
     }

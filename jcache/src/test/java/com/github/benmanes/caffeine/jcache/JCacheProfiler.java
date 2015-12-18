@@ -15,20 +15,21 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import static java.util.Objects.requireNonNull;
 
-import javax.cache.annotation.CacheDefaults;
-import javax.cache.annotation.CachePut;
-import javax.cache.annotation.CacheResult;
-import javax.cache.annotation.CacheValue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
-import org.jsr107.ri.annotations.guice.module.CacheAnnotationsModule;
+import javax.cache.Cache;
+import javax.cache.CacheManager;
+import javax.cache.Caching;
+import javax.cache.configuration.MutableConfiguration;
+import javax.cache.spi.CachingProvider;
 
-import com.github.benmanes.caffeine.jcache.JCacheGuiceTest.CaffeineJCacheModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import com.google.inject.util.Modules;
+import com.google.common.base.Stopwatch;
 
 /**
  * A hook for profiling the JCache adapter.
@@ -36,36 +37,55 @@ import com.google.inject.util.Modules;
  * @author Ben Manes (ben.manes@gmail.com)
  */
 public final class JCacheProfiler {
+  private static final int THREADS = 10;
+  private static final int KEYS = 10_000;
+  private static final boolean READ = true;
+  private static final String PROVIDER_CLASS =
+      "com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider";
 
-  public static void main(String[] args) {
-    Module module = Modules.override(new CacheAnnotationsModule()).with(new CaffeineJCacheModule());
-    Injector injector = Guice.createInjector(module);
-    ProfilerService service = injector.getInstance(ProfilerService.class);
+  private final Cache<Integer, Boolean> cache;
+  private final LongAdder count;
 
-    boolean read = true;
-    for (int i = 0; ; i++) {
-      if (read) {
-        service.get(i % 100);
-      } else {
-        service.put(i % 100, Boolean.TRUE);
+  JCacheProfiler() {
+    this.count = new LongAdder();
+    CachingProvider provider = Caching.getCachingProvider(PROVIDER_CLASS);
+    CacheManager cacheManager = provider.getCacheManager(
+        provider.getDefaultURI(), provider.getDefaultClassLoader());
+    cache = cacheManager.createCache("profiler", new MutableConfiguration<>());
+  }
+
+  public void start() {
+    for (Integer i = 0; i < KEYS; i++) {
+      cache.put(i, Boolean.TRUE);
+    }
+    Runnable task = () -> {
+      for (int i = ThreadLocalRandom.current().nextInt(); ; i++) {
+        Integer key = Math.abs(i % KEYS);
+        if (READ) {
+          requireNonNull(cache.get(key));
+        } else {
+          cache.put(key, Boolean.TRUE);
+        }
+        count.increment();
       }
+    };
+
+    scheduleStatusTask();
+    for (int i = 0; i < THREADS; i++) {
+      ForkJoinPool.commonPool().execute(task);
     }
   }
 
-  @CacheDefaults(cacheName = "profiler")
-  static final class ProfilerService {
-    final AtomicInteger gets = new AtomicInteger();
-    final AtomicInteger puts = new AtomicInteger();
+  private void scheduleStatusTask() {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
+      long count = this.count.longValue();
+      long rate = count / stopwatch.elapsed(TimeUnit.SECONDS);
+      System.out.printf("%s - %,d [%,d / sec]%n", stopwatch, count, rate);
+    }, 5, 5, TimeUnit.SECONDS);
+  }
 
-    @CacheResult
-    public Boolean get(int key) {
-      gets.incrementAndGet();
-      return Boolean.TRUE;
-    }
-
-    @CachePut
-    public void put(int key, @CacheValue Boolean value) {
-      puts.incrementAndGet();
-    }
+  public static void main(String[] args) {
+    new JCacheProfiler().start();
   }
 }

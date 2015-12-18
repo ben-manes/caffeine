@@ -70,17 +70,24 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   }
 
   /** Retrieves the value from the cache, loading it if necessary. */
+  @SuppressWarnings("PMD.AvoidDeeplyNestedIfStmts")
   private V getOrLoad(K key) {
-    long start = ticker.read();
-    long millis = nanosToMillis(start);
+    boolean statsEnabled = statistics.isEnabled();
+    long start = statsEnabled ? ticker.read() : 0L;
+
+    long millis = 0L;
     Expirable<V> expirable = cache.getIfPresent(key);
-    if ((expirable != null) && expirable.hasExpired(millis)) {
-      if (cache.asMap().remove(key, expirable)) {
-        dispatcher.publishExpired(this, key, expirable.get());
-        statistics.recordEvictions(1);
+    if ((expirable != null) && !expirable.isEternal()) {
+      millis = nanosToMillis((start == 0L) ? ticker.read() : start);
+      if (expirable.hasExpired(millis)) {
+        if (cache.asMap().remove(key, expirable)) {
+          dispatcher.publishExpired(this, key, expirable.get());
+          statistics.recordEvictions(1);
+        }
+        expirable = null;
       }
-      expirable = null;
     }
+
     if (expirable == null) {
       expirable = cache.get(key);
       statistics.recordMisses(1L);
@@ -93,7 +100,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       setAccessExpirationTime(expirable, millis);
       value = copyValue(expirable);
     }
-    statistics.recordGetTime(ticker.read() - start);
+    if (statsEnabled) {
+      statistics.recordGetTime(ticker.read() - start);
+    }
     return value;
   }
 
@@ -106,7 +115,8 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
   @SuppressWarnings("PMD.AvoidCatchingNPE")
   private Map<K, V> getAll(Set<? extends K> keys, boolean updateAccessTime) {
     requireNotClosed();
-    long now = ticker.read();
+    boolean statsEnabled = statistics.isEnabled();
+    long start = statsEnabled ? ticker.read() : 0L;
     try {
       Map<K, Expirable<V>> entries = getAndFilterExpiredEntries(keys, updateAccessTime);
 
@@ -118,7 +128,9 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
       }
 
       Map<K, V> result = copyMap(entries);
-      statistics.recordGetTime(ticker.read() - now);
+      if (statsEnabled) {
+        statistics.recordGetTime(ticker.read() - start);
+      }
       return result;
     } catch (NullPointerException | IllegalStateException | ClassCastException | CacheException e) {
       throw e;

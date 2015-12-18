@@ -52,8 +52,14 @@ public final class Expirable<V> {
     return (expireTimeMS <= currentTimeMS);
   }
 
+  /** Returns if the value will never expire. */
+  public boolean isEternal() {
+    return (expireTimeMS == Long.MAX_VALUE);
+  }
+
   @Override
   public String toString() {
-    return value.toString();
+    return String.format("%s{value=%s, expireTimeMS=%,d}",
+        getClass().getSimpleName(), value, expireTimeMS);
   }
 }
