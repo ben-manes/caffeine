@@ -115,10 +115,21 @@ public class BasicSettings {
     public String sketch() {
       return config().getString("tiny-lfu.sketch");
     }
+    public CountMin4Settings countMin4() {
+      return new CountMin4Settings();
+    }
     public CountMin64Settings countMin64() {
       return new CountMin64Settings();
     }
 
+    public final class CountMin4Settings {
+      public String reset() {
+        return config().getString("tiny-lfu.count-min-4.reset");
+      }
+      public int increment() {
+        return config().getInt("tiny-lfu.count-min-4.increment");
+      }
+    }
     public final class CountMin64Settings {
       public double eps() {
         return config().getDouble("tiny-lfu.count-min-64.eps");

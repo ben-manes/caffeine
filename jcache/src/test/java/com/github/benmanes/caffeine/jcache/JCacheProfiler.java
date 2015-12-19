@@ -17,9 +17,9 @@ package com.github.benmanes.caffeine.jcache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -45,9 +45,11 @@ public final class JCacheProfiler {
 
   private final Cache<Integer, Boolean> cache;
   private final LongAdder count;
+  private final Random random;
 
   JCacheProfiler() {
-    this.count = new LongAdder();
+    random = new Random();
+    count = new LongAdder();
     CachingProvider provider = Caching.getCachingProvider(PROVIDER_CLASS);
     CacheManager cacheManager = provider.getCacheManager(
         provider.getDefaultURI(), provider.getDefaultClassLoader());
@@ -59,7 +61,7 @@ public final class JCacheProfiler {
       cache.put(i, Boolean.TRUE);
     }
     Runnable task = () -> {
-      for (int i = ThreadLocalRandom.current().nextInt(); ; i++) {
+      for (int i = random.nextInt(); ; i++) {
         Integer key = Math.abs(i % KEYS);
         if (READ) {
           requireNonNull(cache.get(key));

@@ -13,32 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.simulator.admission.perfect;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
 import com.typesafe.config.Config;
 
+import it.unimi.dsi.fastutil.longs.Long2IntMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+
 /**
- * An adapter to expose the 4-bit CountMinSketch used by the cache.
+ * A the perfect frequency with aging performed using a periodic reset.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CountMin4TinyLfu implements Frequency {
-  private final FrequencySketch<Long> sketch;
+public final class PerfectFrequency implements Frequency {
+  private final Long2IntMap counts;
+  private final int sampleSize;
 
-  public CountMin4TinyLfu(Config config) {
-    BasicSettings settings = new BasicSettings(config);
-    sketch = new FrequencySketch<>(settings.maximumSize(), settings.randomSeed());
+  private int size;
+
+  public PerfectFrequency(Config config) {
+    sampleSize = 10 * new BasicSettings(config).maximumSize();
+    counts = new Long2IntOpenHashMap();
   }
 
   @Override
   public int frequency(long e) {
-    return sketch.frequency(e);
+    return counts.get(e);
   }
 
   @Override
   public void increment(long e) {
-    sketch.increment(e);
+    counts.put(e, counts.get(e) + 1);
+
+    size++;
+    if (size == sampleSize) {
+      reset();
+    }
+  }
+
+  private void reset() {
+    for (Long2IntMap.Entry entry : counts.long2IntEntrySet()) {
+      entry.setValue(entry.getValue() / 2);
+    }
+    size = (size / 2);
   }
 }

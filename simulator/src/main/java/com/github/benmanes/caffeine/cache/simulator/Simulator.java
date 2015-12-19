@@ -63,13 +63,12 @@ public final class Simulator extends UntypedActor {
   private final BasicSettings settings;
   private final Stopwatch stopwatch;
   private final Reporter report;
-  private final Config config;
   private final Router router;
   private final int batchSize;
   private int remaining;
 
   public Simulator() {
-    config = getContext().system().settings().config().getConfig("caffeine.simulator");
+    Config config = getContext().system().settings().config().getConfig("caffeine.simulator");
     settings = new BasicSettings(config);
 
     List<Routee> routes = makeRoutes();

@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
-import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheSketch;
 import com.typesafe.config.Config;
 
 /**

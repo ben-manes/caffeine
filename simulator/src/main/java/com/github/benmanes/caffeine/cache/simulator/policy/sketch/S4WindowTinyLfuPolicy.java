@@ -48,8 +48,8 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   private final Node headEden;
   private final int maxMain;
   private final int maxEden;
+  private final int levels;
 
-  private int levels;
   private int sizeEden;
   private int[] sizeMainQ;
 

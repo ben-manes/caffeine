@@ -1,0 +1,167 @@
+/*
+ * Copyright 2015 Ben Manes. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.github.benmanes.caffeine.cache.simulator.admission.countmin4;
+
+import static com.google.common.base.Preconditions.checkArgument;
+
+import javax.annotation.Nonnegative;
+
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
+import com.typesafe.config.Config;
+
+/**
+ * A probabilistic multiset for estimating the popularity of an element within a time window. The
+ * maximum frequency of an element is limited to 15 (4-bits) and extensions provide the aging
+ * process.
+ *
+ * @author ben.manes@gmail.com (Ben Manes)
+ */
+abstract class CountMin4 implements Frequency {
+  static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
+      0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
+  static final long RESET_MASK = 0x7777777777777777L;
+
+  final int randomSeed;
+
+  int tableMask;
+  long[] table;
+
+  /**
+   * Creates a frequency sketch that can accurately estimate the popularity of elements given
+   * the maximum size of the cache.
+   */
+  CountMin4(Config config) {
+    BasicSettings settings = new BasicSettings(config);
+    checkArgument(settings.randomSeed() != 0);
+    randomSeed = settings.randomSeed();
+
+    ensureCapacity(settings.maximumSize());
+  }
+
+  /**
+   * Increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary, to ensure that
+   * it can accurately estimate the popularity of elements given the maximum size of the cache.
+   *
+   * @param maximumSize the maximum size of the cache
+   */
+  public void ensureCapacity(@Nonnegative long maximumSize) {
+    checkArgument(maximumSize >= 0);
+    int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
+    if ((table != null) && (table.length >= maximum)) {
+      return;
+    }
+
+    table = new long[(maximum == 0) ? 1 : ceilingNextPowerOfTwo(maximum)];
+    tableMask = Math.max(0, table.length - 1);
+  }
+
+  /**
+   * Returns the estimated number of occurrences of an element, up to the maximum (15).
+   *
+   * @param e the element to count occurrences of
+   * @return the estimated number of occurrences of the element; possibly zero but never negative
+   */
+  @Override
+  @Nonnegative
+  public int frequency(long e) {
+    int hash = spread(Long.hashCode(e));
+    int start = (hash & 3) << 2;
+    int frequency = Integer.MAX_VALUE;
+    for (int i = 0; i < 4; i++) {
+      int index = indexOf(hash, i);
+      int count = (int) ((table[index] >>> ((start + i) << 2)) & 0xfL);
+      frequency = Math.min(frequency, count);
+    }
+    return frequency;
+  }
+
+  /**
+   * Increments the popularity of the element if it does not exceed the maximum (15). The popularity
+   * of all elements will be periodically down sampled when the observed events exceeds a threshold.
+   * This process provides a frequency aging to allow expired long term entries to fade away.
+   *
+   * @param e the element to add
+   */
+  @Override
+  public void increment(long e) {
+    int hash = spread(Long.hashCode(e));
+    int start = (hash & 3) << 2;
+
+    // Loop unrolling improves throughput by 5m ops/s
+    int index0 = indexOf(hash, 0);
+    int index1 = indexOf(hash, 1);
+    int index2 = indexOf(hash, 2);
+    int index3 = indexOf(hash, 3);
+
+    boolean added = incrementAt(index0, start);
+    added |= incrementAt(index1, start + 1);
+    added |= incrementAt(index2, start + 2);
+    added |= incrementAt(index3, start + 3);
+
+    if (added) {
+      tryReset();
+    }
+  }
+
+  /** Performs the aging process after an addition to allow old entries to fade away. */
+  abstract void tryReset();
+
+  /**
+   * Increments the specified counter by 1 if it is not already at the maximum value (15).
+   *
+   * @param i the table index (16 counters)
+   * @param j the counter to increment
+   * @return if incremented
+   */
+  boolean incrementAt(int i, int j) {
+    int offset = j << 2;
+    long mask = (0xfL << offset);
+    if ((table[i] & mask) != mask) {
+      table[i] += (1L << offset);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Returns the table index for the counter at the specified depth.
+   *
+   * @param item the element's hash
+   * @param i the counter depth
+   * @return the table index
+   */
+  int indexOf(int item, int i) {
+    long hash = SEED[i] * item;
+    hash += hash >> 32;
+    return ((int) hash) & tableMask;
+  }
+
+  /**
+   * Applies a supplemental hash function to a given hashCode, which defends against poor quality
+   * hash functions.
+   */
+  int spread(int x) {
+    x = ((x >>> 16) ^ x) * 0x45d9f3b;
+    x = ((x >>> 16) ^ x) * randomSeed;
+    return (x >>> 16) ^ x;
+  }
+
+  static int ceilingNextPowerOfTwo(int x) {
+    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
+    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
+  }
+}

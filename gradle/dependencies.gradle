@@ -47,8 +47,8 @@ ext {
     jctools: '1.1',
     jimfs: '1.0',
     junit: '4.12',
-    mockito: '2.0.32-beta',
-    pax_exam: '4.7.0',
+    mockito: '2.0.33-beta',
+    pax_exam: '4.8.0',
     testng: '6.9.10',
     truth: '0.24',
   ]

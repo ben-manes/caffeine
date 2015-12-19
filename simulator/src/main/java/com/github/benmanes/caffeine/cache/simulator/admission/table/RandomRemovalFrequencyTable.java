@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache;
+package com.github.benmanes.caffeine.cache.simulator.admission.table;
 
 import java.util.ArrayList;
 import java.util.HashMap;

@@ -64,6 +64,8 @@ import com.typesafe.config.Config;
 public final class Registry {
   private static final Map<String, Function<Config, Set<Policy>>> FACTORIES = makeRegistry();
 
+  private Registry() {}
+
   private static Map<String, Function<Config, Set<Policy>>> makeRegistry() {
     Map<String, Function<Config, Set<Policy>>> factories = new HashMap<>();
     registerIRR(factories);
