@@ -77,11 +77,6 @@ tasks.withType(Test) {
       }
     }
   }
-
-  // ensure tasks don't overwrite the default report directories used by the 'test' task
-  reports.html.destination = "${buildDir}/reports/${name}"
-  reports.junitXml.destination = "${buildDir}/reports/${name}/results"
-  binResultsDir = file("${buildDir}/reports/${name}/results/binary/${name}")
 }
 
 task stress(type: JavaExec, group: 'Cache tests', description: 'Executes a stress test') {

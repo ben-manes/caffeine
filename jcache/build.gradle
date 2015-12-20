@@ -60,9 +60,6 @@ task testCompatibilityKit(type: Test, group: 'Build', description: 'Runs the JCa
 
   useJUnit()
   testClassesDir = file("${buildDir}/tck")
-  reports.html.destination = "${buildDir}/reports/${name}"
-  reports.junitXml.destination = "${buildDir}/${name}-results"
-  binResultsDir = file("${buildDir}/${name}-results/binary/${name}")
 
   def pkg = 'com.github.benmanes.caffeine.jcache'
   systemProperty 'java.net.preferIPv4Stack', 'true'

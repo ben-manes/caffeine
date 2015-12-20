@@ -78,6 +78,11 @@ subprojects {
       rootProject.testReport.reportOn it
     }
     it.dependsOn('jar')
+
+    // ensure tasks don't overwrite the default report directories used by the 'test' task
+    reports.html.destination = "${buildDir}/reports/${name}"
+    reports.junitXml.destination = "${buildDir}/reports/${name}/results"
+    binResultsDir = file("${buildDir}/reports/${name}/results/binary/${name}")
   }
 
   task testJar(type: Jar, group: "Build") {

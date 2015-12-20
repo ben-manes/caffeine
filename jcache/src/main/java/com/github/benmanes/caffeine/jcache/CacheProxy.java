@@ -145,30 +145,35 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return null;
     }
 
+    long start, millis;
     boolean statsEnabled = statistics.isEnabled();
-    long start = (statsEnabled || !expirable.isEternal()) ? ticker.read() : 0L;
-    long millis = nanosToMillis(start);
-    if (expirable.hasExpired(millis)) {
-      cache.asMap().computeIfPresent(key, (k, e) -> {
-        if (e == expirable) {
-          dispatcher.publishExpired(this, key, expirable.get());
-          statistics.recordEvictions(1);
-          return null;
-        }
-        return e;
-      });
-      dispatcher.awaitSynchronous();
-      statistics.recordMisses(1L);
-      return null;
+    if (!expirable.isEternal()) {
+      start = ticker.read();
+      millis = nanosToMillis(start);
+      if (expirable.hasExpired(millis)) {
+        cache.asMap().computeIfPresent(key, (k, e) -> {
+          if (e == expirable) {
+            dispatcher.publishExpired(this, key, expirable.get());
+            statistics.recordEvictions(1);
+            return null;
+          }
+          return e;
+        });
+        dispatcher.awaitSynchronous();
+        statistics.recordMisses(1L);
+        return null;
+      }      
+    } else if (statsEnabled) {
+      start = ticker.read();
+      millis = nanosToMillis(start);
+    } else {
+      start = millis = 0L;
     }
+    
     setAccessExpirationTime(expirable, millis);
     V value = copyValue(expirable);
     if (statsEnabled) {
-      if (value == null) {
-        statistics.recordMisses(1L);
-      } else {
-        statistics.recordHits(1L);
-      }
+      statistics.recordHits(1L);
       statistics.recordGetTime(ticker.read() - start);
     }
     return value;
@@ -304,19 +309,18 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     int[] puts = { 0 };
     V val = putNoCopyOrAwait(key, value, true, puts);
     dispatcher.awaitSynchronous();
-    statistics.recordPuts(puts[0]);
-
-    if (val == null) {
-      statistics.recordMisses(1L);
-    } else {
-      statistics.recordHits(1L);
-    }
     V copy = copyOf(val);
 
     if (statsEnabled) {
+      if (val == null) {
+        statistics.recordMisses(1L);
+      } else {
+        statistics.recordHits(1L);
+      }
       long duration = ticker.read() - start;
       statistics.recordGetTime(duration);
       statistics.recordPutTime(duration);
+      statistics.recordPuts(puts[0]);
     }
     return copy;
   }
@@ -547,15 +551,15 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     publishToCacheWriter(writer::delete, () -> key);
     V value = removeNoCopyOrAwait(key);
     dispatcher.awaitSynchronous();
-    if (value == null) {
-      statistics.recordMisses(1L);
-    } else {
-      statistics.recordHits(1L);
-      statistics.recordRemovals(1L);
-    }
     V copy = copyOf(value);
 
     if (statsEnabled) {
+      if (value == null) {
+        statistics.recordMisses(1L);
+      } else {
+        statistics.recordHits(1L);
+        statistics.recordRemovals(1L);
+      }
       long duration = ticker.read() - start;
       statistics.recordRemoveTime(duration);
       statistics.recordGetTime(duration);
@@ -1013,10 +1017,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return a copy of the value if storing by value or the same instance if by reference
    */
   protected final @Nullable V copyValue(@Nullable Expirable<V> expirable) {
-    if (expirable == null) {
-      return null;
-    }
-    return copier.copy(expirable.get(), cacheManager.getClassLoader());
+    return (expirable == null) ? null : copier.copy(expirable.get(), cacheManager.getClassLoader());
   }
 
   /**
@@ -1026,7 +1027,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return a copy of the mappings if storing by value or the same instance if by reference
    */
   protected final Map<K, V> copyMap(Map<K, Expirable<V>> map) {
-    final ClassLoader classLoader = cacheManager.getClassLoader();
+    ClassLoader classLoader = cacheManager.getClassLoader();
     return map.entrySet().stream().collect(Collectors.toMap(
         entry -> (K) copier.copy(entry.getKey(), classLoader),
         entry -> (V) copier.copy(entry.getValue().get(), classLoader)));

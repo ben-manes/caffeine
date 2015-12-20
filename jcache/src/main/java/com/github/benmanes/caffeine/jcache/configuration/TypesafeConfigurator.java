@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
@@ -169,7 +170,9 @@ public final class TypesafeConfigurator {
       Duration update = getDurationFor("policy.lazy-expiration.update");
       Duration access = getDurationFor("policy.lazy-expiration.access");
 
-      boolean eternal = creation.isEternal() && update.isEternal() && access.isEternal();
+      boolean eternal = (creation == Duration.ETERNAL)
+          && (update == Duration.ETERNAL)
+          && (access == Duration.ETERNAL);
       Factory<? extends ExpiryPolicy> factory = eternal
           ? EternalExpiryPolicy.factoryOf()
           : FactoryBuilder.factoryOf(new JCacheExpiryPolicy(creation, update, access));
@@ -177,12 +180,15 @@ public final class TypesafeConfigurator {
     }
 
     /** Returns the duration for the expiration time. */
-    private Duration getDurationFor(String path) {
-      if (config.hasPath(path)) {
-        long nanos = config.getDuration(path, TimeUnit.MILLISECONDS);
-        return new Duration(TimeUnit.MILLISECONDS, nanos);
+    private @Nullable Duration getDurationFor(String path) {
+      if (!config.hasPath(path)) {
+        return null;
       }
-      return Duration.ETERNAL;
+      if (config.getString(path).equalsIgnoreCase("eternal")) {
+        return Duration.ETERNAL;
+      }
+      long nanos = config.getDuration(path, TimeUnit.MILLISECONDS);
+      return new Duration(TimeUnit.MILLISECONDS, nanos);
     }
 
     /** Adds the Caffeine eager expiration settings. */
