@@ -112,13 +112,11 @@ abstract class CountMin4 implements Frequency {
     added |= incrementAt(index2, start + 2);
     added |= incrementAt(index3, start + 3);
 
-    if (added) {
-      tryReset();
-    }
+    tryReset(added);
   }
 
   /** Performs the aging process after an addition to allow old entries to fade away. */
-  abstract void tryReset();
+  abstract void tryReset(boolean added);
 
   /**
    * Increments the specified counter by 1 if it is not already at the maximum value (15).

@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
@@ -76,7 +75,6 @@ public interface Cache<K, V> {
    * @throws NullPointerException if the specified key or mappingFunction is null
    * @throws IllegalStateException if the computation detectably attempts a recursive update to this
    *         cache that would otherwise never complete
-   * @throws CompletionException if a checked exception was thrown while loading the value
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
    *         left unestablished
    */

@@ -757,7 +757,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     BiFunction<K, Expirable<V>, Expirable<V>> remappingFunction = (k, expirable) -> {
       V value;
       if ((expirable == null)
-          || (expirable.isEternal() && expirable.hasExpired(currentTimeMillis()))) {
+          || (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis()))) {
         statistics.recordMisses(1L);
         value = null;
       } else {

@@ -187,8 +187,8 @@ public final class TypesafeConfigurator {
       if (config.getString(path).equalsIgnoreCase("eternal")) {
         return Duration.ETERNAL;
       }
-      long nanos = config.getDuration(path, TimeUnit.MILLISECONDS);
-      return new Duration(TimeUnit.MILLISECONDS, nanos);
+      long millis = config.getDuration(path, TimeUnit.MILLISECONDS);
+      return new Duration(TimeUnit.MILLISECONDS, millis);
     }
 
     /** Adds the Caffeine eager expiration settings. */

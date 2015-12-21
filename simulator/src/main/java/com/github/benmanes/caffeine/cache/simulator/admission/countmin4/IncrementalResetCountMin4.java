@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission.countmin4;
 
-import javax.annotation.Nonnegative;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.typesafe.config.Config;
 
@@ -33,19 +31,13 @@ public final class IncrementalResetCountMin4 extends CountMin4 {
 
   public IncrementalResetCountMin4(Config config) {
     super(config);
+    cursor = randomSeed;
     BasicSettings settings = new BasicSettings(config);
     interval = settings.tinyLfu().countMin4().increment();
   }
 
   @Override
-  public void ensureCapacity(@Nonnegative long maximumSize) {
-    super.ensureCapacity(maximumSize);
-    additions = 0;
-    cursor = 0;
-  }
-
-  @Override
-  void tryReset() {
+  void tryReset(boolean added) {
     additions++;
 
     if (additions != interval) {

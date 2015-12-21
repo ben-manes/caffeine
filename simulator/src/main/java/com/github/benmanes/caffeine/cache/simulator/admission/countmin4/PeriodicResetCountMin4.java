@@ -37,12 +37,10 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
   @Override
   public void ensureCapacity(@Nonnegative long maximumSize) {
     super.ensureCapacity(maximumSize);
-
     period = (maximumSize == 0) ? 10 : (10 * table.length);
     if (period <= 0) {
       period = Integer.MAX_VALUE;
     }
-    additions = 0;
   }
 
   /**
@@ -50,9 +48,12 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
    * is reduced by the number of counters with an odd value.
    */
   @Override
-  void tryReset() {
-    additions++;
+  void tryReset(boolean added) {
+    if (!added) {
+      return;
+    }
 
+    additions++;
     if (additions != period) {
       return;
     }
