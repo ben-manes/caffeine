@@ -120,7 +120,7 @@ ext {
     osgi_runtime: [
       "org.ops4j.pax.exam:pax-exam-container-native:${test_versions.pax_exam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${test_versions.pax_exam}",
-      "org.ops4j.pax.url:pax-url-aether:2.4.4",
+      "org.ops4j.pax.url:pax-url-aether:2.4.5",
     ],
     testng: [
       dependencies.create("org.testng:testng:${test_versions.testng}") {
