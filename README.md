@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/ben-manes/caffeine.svg)](https://travis-ci.org/ben-manes/caffeine)
 [![Coverage Status](https://img.shields.io/coveralls/ben-manes/caffeine.svg)](https://coveralls.io/r/ben-manes/caffeine?branch=master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine)
-[![JavaDoc](https://img.shields.io/badge/javadoc-2.0.3-brightgreen.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
+[![JavaDoc](https://javadocbadge-valery1707.rhcloud.com/doc/com.github.ben-manes.caffeine/caffeine/badge.svg)](http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine)
 [![License](http://img.shields.io/:license-apache-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 Caffeine is a [high performance][benchmarks], [near optimal][efficiency] caching library based on
