@@ -96,7 +96,7 @@ subprojects {
   }
 }
 
-// Only report code coverage for projects that are distrubuted
+// Only report code coverage for projects that are distributed
 def publishedProjects = subprojects.findAll { it.path != ':simulator' }
 
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
@@ -109,8 +109,8 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
   executionData = files(publishedProjects.jacocoTestReport.executionData)
 
   reports {
-    html.enabled = true
-    xml.enabled = true
+    html.enabled = true // human readable
+    xml.enabled = true // required by coveralls
   }
 
   doFirst {
