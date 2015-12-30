@@ -37,7 +37,7 @@ ext {
     jsr305: '3.0.1',
     stream: '2.9.0',
     univocity_parsers: '1.5.6',
-    ycsb: '0.5.0',
+    ycsb: '0.6.0-RC1',
   ]
   test_versions = [
     awaitility: '1.7.0',
@@ -47,13 +47,13 @@ ext {
     jctools: '1.1',
     jimfs: '1.0',
     junit: '4.12',
-    mockito: '2.0.33-beta',
+    mockito: '2.0.34-beta',
     pax_exam: '4.8.0',
     testng: '6.9.10',
     truth: '0.24',
   ]
   benchmark_versions = [
-    cache2k: '0.21.1',
+    cache2k: '0.22',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.1-55',
     ehcache3: '3.0.0.m4',

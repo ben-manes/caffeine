@@ -113,8 +113,8 @@ public final class BoundedLocalCacheTest {
     localCache.put(oldEntry.getKey(), oldEntry.getValue());
     localCache.evictionLock.lock();
     try {
-      Object keyRef = localCache.nodeFactory.newLookupKey(oldEntry.getKey());
-      Node<Integer, Integer> node = localCache.data.get(keyRef);
+      Object lookupKey = localCache.nodeFactory.newLookupKey(oldEntry.getKey());
+      Node<Integer, Integer> node = localCache.data.get(lookupKey);
       checkStatus(node, Status.ALIVE);
       ConcurrentTestHarness.execute(() -> {
         localCache.put(newEntry.getKey(), newEntry.getValue());

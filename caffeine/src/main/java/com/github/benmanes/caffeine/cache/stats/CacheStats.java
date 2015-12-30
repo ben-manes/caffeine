@@ -317,7 +317,7 @@ public final class CacheStats {
         + "loadSuccessCount=" + loadSuccessCount + ','
         + "loadFailureCount=" + loadFailureCount + ','
         + "totalLoadTime=" + totalLoadTime + ','
-        + "evictionCount=" + evictionCount + ','
+        + "evictionCount=" + evictionCount
         + '}';
   }
 }

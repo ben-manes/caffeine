@@ -218,6 +218,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return executor;
   }
 
+  /** Returns whether this cache notifies a writer when an entry is modified. */
+  protected boolean hasWriter() {
+    return (writer != CacheWriter.disabledWriter());
+  }
+
   /* ---------------- Stats Support -------------- */
 
   @Override
@@ -699,7 +704,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /**
    * Attempts to evict the entry based on the given removal cause. A removal due to expiration or
-   * size may be ignored if the entry was since updated and is no longer eligible for eviction.
+   * size may be ignored if the entry was updated and is no longer eligible for eviction.
    *
    * @param node the entry to evict
    * @param cause the reason to evict
@@ -1400,15 +1405,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     Node<K, V> node = null;
     long now = expirationTicker().read();
+    Object lookupKey = nodeFactory.newLookupKey(key);
 
     for (;;) {
-      Node<K, V> prior = data.get(nodeFactory.newLookupKey(key));
+      Node<K, V> prior = data.get(lookupKey);
       if (prior == null) {
         if (node == null) {
           node = nodeFactory.newNode(key, keyReferenceQueue(),
               value, valueReferenceQueue(), newWeight, now);
         }
-        if (notifyWriter && (writer != CacheWriter.disabledWriter())) {
+        if (notifyWriter && hasWriter()) {
           Node<K, V> computed = node;
           prior = data.computeIfAbsent(node.getKeyReference(), k -> {
             writer.write(key, value);
@@ -1612,8 +1618,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   public boolean remove(Object key, Object value) {
     requireNonNull(key);
 
-    Object keyRef = nodeFactory.newLookupKey(key);
-    if ((data.get(keyRef) == null) || (value == null)) {
+    Object lookupKey = nodeFactory.newLookupKey(key);
+    if ((data.get(lookupKey) == null) || (value == null)) {
       return false;
     }
 
@@ -1626,7 +1632,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     RemovalCause[] cause = new RemovalCause[1];
 
     long now = expirationTicker().read();
-    data.computeIfPresent(keyRef, (kR, node) -> {
+    data.computeIfPresent(lookupKey, (kR, node) -> {
       synchronized (node) {
         oldKey[0] = node.getKey();
         oldValue[0] = node.getValue();
@@ -1862,8 +1868,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     requireNonNull(remappingFunction);
 
     // A optimistic fast path to avoid unnecessary locking
-    Object keyRef = nodeFactory.newLookupKey(key);
-    Node<K, V> node = data.get(keyRef);
+    Object lookupKey = nodeFactory.newLookupKey(key);
+    Node<K, V> node = data.get(lookupKey);
     long now;
     if ((node == null) || (node.getValue() == null)
         || hasExpired(node, (now = expirationTicker().read()))) {
@@ -1874,7 +1880,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     boolean computeIfAbsent = false;
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
         statsAware(remappingFunction, false, false);
-    return remap(key, keyRef, statsAwareRemappingFunction, now, computeIfAbsent);
+    return remap(key, lookupKey, statsAwareRemappingFunction, now, computeIfAbsent);
   }
 
   @Override
@@ -1914,6 +1920,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * remappingFuntion to be statistics aware.
    *
    * @param key key with which the specified value is to be associated
+   * @param keyRef the key to associate with or a lookup only key if not <tt>computeIfAbsent</tt>
    * @param remappingFunction the function to compute a value
    * @param now the current time, according to the ticker
    * @param computeIfAbsent if an absent entry can be computed
@@ -2519,8 +2526,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     final class BoundedExpireAfterAccess implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
-        Object keyRef = cache.nodeFactory.newLookupKey(key);
-        Node<?, ?> node = cache.data.get(keyRef);
+        Object lookupKey = cache.nodeFactory.newLookupKey(key);
+        Node<?, ?> node = cache.data.get(lookupKey);
         if (node == null) {
           return OptionalLong.empty();
         }
@@ -2547,8 +2554,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     final class BoundedExpireAfterWrite implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
-        Object keyRef = cache.nodeFactory.newLookupKey(key);
-        Node<?, ?> node = cache.data.get(keyRef);
+        Object lookupKey = cache.nodeFactory.newLookupKey(key);
+        Node<?, ?> node = cache.data.get(lookupKey);
         if (node == null) {
           return OptionalLong.empty();
         }
@@ -2575,8 +2582,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     final class BoundedRefreshAfterWrite implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
-        Object keyRef = cache.nodeFactory.newLookupKey(key);
-        Node<?, ?> node = cache.data.get(keyRef);
+        Object lookupKey = cache.nodeFactory.newLookupKey(key);
+        Node<?, ?> node = cache.data.get(lookupKey);
         if (node == null) {
           return OptionalLong.empty();
         }

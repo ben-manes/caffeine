@@ -50,6 +50,7 @@ On the radar,
  * Spring Cache support is [targeted][spring] for the Spring 4.3 / Boot 1.4 releases
  * Early discussions with Apache Cassandra shows promise towards adoption
  * Postgres is [evaluating][postgres] whether to port the cache
+ * Go [implementation][go-tinylfu] of the W-TinyLfu policy
 
 ### Download
 
@@ -88,3 +89,4 @@ Snapshots of the development version are available in
 [voxxed]: https://www.voxxed.com
 [spring]: https://jira.spring.io/browse/SPR-13690
 [postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html
+[go-tinylfu]: https://github.com/dgryski/go-tinylfu
