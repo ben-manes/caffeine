@@ -42,9 +42,15 @@ public final class CountMin64TinyLfu implements Frequency {
 
   public CountMin64TinyLfu(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    sketch = new ConservativeAddSketch(settings.tinyLfu().countMin64().eps(),
-        settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
     sampleSize = 10 * settings.maximumSize();
+
+    if (settings.tinyLfu().conservative()) {
+      sketch = new ConservativeAddSketch(settings.tinyLfu().countMin64().eps(),
+          settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
+    } else {
+      sketch = new CountMinSketch(settings.tinyLfu().countMin64().eps(),
+          settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
+    }
   }
 
   /** Returns the estimated usage frequency of the item. */

@@ -115,6 +115,9 @@ public class BasicSettings {
     public String sketch() {
       return config().getString("tiny-lfu.sketch");
     }
+    public boolean conservative() {
+      return config().getBoolean("tiny-lfu.count-min.conservative");
+    }
     public CountMin4Settings countMin4() {
       return new CountMin4Settings();
     }

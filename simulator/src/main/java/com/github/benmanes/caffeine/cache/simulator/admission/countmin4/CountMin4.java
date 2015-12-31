@@ -37,6 +37,7 @@ abstract class CountMin4 implements Frequency {
 
   final int randomSeed;
 
+  boolean conservative;
   int tableMask;
   long[] table;
 
@@ -46,6 +47,7 @@ abstract class CountMin4 implements Frequency {
    */
   CountMin4(Config config) {
     BasicSettings settings = new BasicSettings(config);
+    conservative = settings.tinyLfu().conservative();
     checkArgument(settings.randomSeed() != 0);
     randomSeed = settings.randomSeed();
 
@@ -98,6 +100,15 @@ abstract class CountMin4 implements Frequency {
    */
   @Override
   public void increment(long e) {
+    if (conservative) {
+      conservativeIncrement(e);
+    } else {
+      regularIncrement(e);
+    }
+  }
+
+  /** Increments all of the associated counters. */
+  void regularIncrement(long e) {
     int hash = spread(Long.hashCode(e));
     int start = (hash & 3) << 2;
 
@@ -113,6 +124,33 @@ abstract class CountMin4 implements Frequency {
     added |= incrementAt(index3, start + 3);
 
     tryReset(added);
+  }
+
+  /** Increments the associated counters that are at the observed minimum. */
+  void conservativeIncrement(long e) {
+    int hash = spread(Long.hashCode(e));
+    int start = (hash & 3) << 2;
+
+    int[] index = new int[4];
+    int[] count = new int[4];
+    int min = Integer.MAX_VALUE;
+    for (int i = 0; i < 4; i++) {
+      index[i] = indexOf(hash, i);
+      count[i] = (int) ((table[index[i]] >>> ((start + i) << 2)) & 0xfL);
+      min = Math.min(min, count[i]);
+    }
+
+    if (min == 15) {
+      tryReset(false);
+      return;
+    }
+
+    for (int i = 0; i < 4; i++) {
+      if (count[i] == min) {
+        incrementAt(index[i], start + i);
+      }
+    }
+    tryReset(true);
   }
 
   /** Performs the aging process after an addition to allow old entries to fade away. */
