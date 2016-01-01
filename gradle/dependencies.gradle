@@ -47,7 +47,7 @@ ext {
     jctools: '1.1',
     jimfs: '1.0',
     junit: '4.12',
-    mockito: '2.0.34-beta',
+    mockito: '2.0.35-beta',
     pax_exam: '4.8.0',
     testng: '6.9.10',
     truth: '0.24',
@@ -67,7 +67,7 @@ ext {
     tcache: '0.4.0',
   ]
   plugin_versions = [
-    checkstyle: '6.13',
+    checkstyle: '6.14.1',
     coveralls: '2.4.0',
     extra_conf: '3.0.3',
     error_prone: '0.0.8',
