@@ -828,13 +828,22 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         executor().execute(() -> {
           K key = node.getKey();
           if ((key != null) && node.isAlive()) {
-            computeIfPresent(key, (k, v) -> {
+            BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, v) -> {
+              if (node.getWriteTime() != now) {
+                return v;
+              }
               try {
                 return cacheLoader().reload(k, v);
               } catch (Exception e) {
+                node.setWriteTime(writeTime);
                 return LocalCache.throwUnchecked(e);
               }
-            });
+            };
+            try {
+              computeIfPresent(key, refreshFunction);
+            } catch (Throwable t) {
+              logger.log(Level.WARNING, "Exception thrown during refresh", t);
+            }
           }
         });
       } catch (Throwable t) {
