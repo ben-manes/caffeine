@@ -27,7 +27,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
@@ -157,11 +156,6 @@ public final class BoundedLocalCacheTest {
     // Enforce full initialization of internal structures; clear sketch
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     localCache.frequencySketch().ensureCapacity(10);
-
-    // Force the random seed to a predictable value
-    Field field = FrequencySketch.class.getDeclaredField("randomSeed");
-    field.setAccessible(true);
-    field.setInt(localCache.frequencySketch(), 1033096058);
 
     for (int i = 0; i < 10; i++) {
       cache.put(i, -i);
