@@ -25,7 +25,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
@@ -151,7 +153,16 @@ public final class BoundedLocalCacheTest {
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, initialCapacity = InitialCapacity.EXCESSIVE,
       maximumSize = MaximumSize.TEN, weigher = CacheWeigher.DEFAULT)
-  public void evict_wtinylfu(Cache<Integer, Integer> cache, CacheContext context) {
+  public void evict_wtinylfu(Cache<Integer, Integer> cache, CacheContext context) throws Exception {
+    // Enforce full initialization of internal structures; clear sketch
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    localCache.frequencySketch().ensureCapacity(10);
+
+    // Force the random seed to a predictable value
+    Field field = FrequencySketch.class.getDeclaredField("randomSeed");
+    field.setAccessible(true);
+    field.setInt(localCache.frequencySketch(), 1033096058);
+
     for (int i = 0; i < 10; i++) {
       cache.put(i, -i);
     }
@@ -296,58 +307,27 @@ public final class BoundedLocalCacheTest {
     assertThat(localCache.writeQueue(), hasSize(0));
   }
 
-  @Test(enabled = false, dataProvider = "caches")
+  @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.PARTIAL, maximumSize = MaximumSize.FULL,
-      weigher = {CacheWeigher.DEFAULT, CacheWeigher.TEN},
+      population = Population.EMPTY, maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
   public void fastpath(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> first = localCache.data.get(context.firstKey());
-    Node<Integer, Integer> middle = localCache.data.get(context.middleKey());
-    Node<Integer, Integer> last = localCache.data.get(context.lastKey());
+    assertThat(localCache.skipReadBuffer(), is(true));
 
-    // In probation
-    assertThat(first.getMoveCount(), is(-1));
-    assertThat(middle.getMoveCount(), is(-1));
-    assertThat(last.getMoveCount(), is(-1));
-    assertThat(localCache.moveCount(), is(0));
+    for (int i = 0; i < context.maximumSize() / 2; i++) {
+      cache.put(i, -i);
+    }
+    assertThat(localCache.skipReadBuffer(), is(true));
 
-    // Hot entry moves to protected
-    cache.getIfPresent(context.lastKey());
-    localCache.maintenance();
-    assertThat(last.getMoveCount(), is(1));
+    cache.put(-1, -1);
+    assertThat(localCache.skipReadBuffer(), is(false));
+    assertThat(cache.getIfPresent(0), is(not(nullValue())));
+    assertThat(localCache.readBuffer.writes(), is(1));
 
-    int initialMoveCount = localCache.moveCount();
-
-    // Hot entry is not reordered
-    cache.getIfPresent(context.lastKey());
-    localCache.maintenance();
-    assertThat(last.getMoveCount(), is(initialMoveCount));
-
-    // Cold entry is reordered
-    cache.getIfPresent(context.middleKey());
-    localCache.maintenance();
-    assertThat(middle.getMoveCount(), is(initialMoveCount + 1));
-  }
-
-  @Test(enabled = false, dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.FULL, maximumSize = MaximumSize.FULL, weigher = CacheWeigher.DEFAULT,
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
-  public void fastpath_eden(Cache<Integer, Integer> cache, CacheContext context) {
-    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> node = localCache.accessOrderEdenDeque().peek();
-
-    assertThat(localCache.canFastpath(node), is(false));
-    cache.getIfPresent(context.lastKey());
-    localCache.maintenance();
-
-    // Eden entry is reordered and not assigned a move count
-    assertThat(localCache.accessOrderEdenDeque().peekLast(), is(node));
-    assertThat(node.getMoveCount(), is(0));
+    cache.cleanUp();
+    assertThat(localCache.readBuffer.reads(), is(1));
   }
 
   @Test(dataProvider = "caches")

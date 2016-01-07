@@ -73,17 +73,21 @@ final class FrequencySketch<E> {
   int size;
 
   /**
+   * Creates a lazily initialized frequency sketch, requiring {@link #ensureCapacity} be called
+   * when the maximum size of the cache has been determined.
+   */
+  public FrequencySketch() {
+    int seed = ThreadLocalRandom.current().nextInt();
+    randomSeed = (seed == 0) ? ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE) : seed;
+  }
+
+  /**
    * Creates a frequency sketch that can accurately estimate the popularity of elements given
    * the maximum size of the cache.
    *
    * @param maximumSize the maximum size of the cache
+   * @param randomSeed the random seed used to smear the hash
    */
-  public FrequencySketch(@Nonnegative long maximumSize) {
-    int seed = ThreadLocalRandom.current().nextInt();
-    randomSeed = (seed == 0) ? ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE) : seed;
-    ensureCapacity(maximumSize);
-  }
-
   FrequencySketch(@Nonnegative long maximumSize, int randomSeed) {
     Caffeine.requireArgument(randomSeed != 0);
     this.randomSeed = randomSeed;
@@ -91,8 +95,9 @@ final class FrequencySketch<E> {
   }
 
   /**
-   * Increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary, to ensure that
-   * it can accurately estimate the popularity of elements given the maximum size of the cache.
+   * Initializes and increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary,
+   * to ensure that it can accurately estimate the popularity of elements given the maximum size of
+   * the cache.
    *
    * @param maximumSize the maximum size of the cache
    */
@@ -113,6 +118,14 @@ final class FrequencySketch<E> {
   }
 
   /**
+   * Returns if the sketch has not yet been initialized, requiring that {@link #ensureCapacity} is
+   * called before it begins to track frequencies.
+   */
+  public boolean isNotInitialized() {
+    return (table == null);
+  }
+
+  /**
    * Returns the estimated number of occurrences of an element, up to the maximum (15).
    *
    * @param e the element to count occurrences of
@@ -120,6 +133,10 @@ final class FrequencySketch<E> {
    */
   @Nonnegative
   public int frequency(@Nonnull E e) {
+    if (isNotInitialized()) {
+      return 0;
+    }
+
     int hash = spread(e.hashCode());
     int start = (hash & 3) << 2;
     int frequency = Integer.MAX_VALUE;
@@ -139,6 +156,10 @@ final class FrequencySketch<E> {
    * @param e the element to add
    */
   public void increment(@Nonnull E e) {
+    if (isNotInitialized()) {
+      return;
+    }
+
     int hash = spread(e.hashCode());
     int start = (hash & 3) << 2;
 

@@ -50,4 +50,9 @@ public final class Ehcache2<K, V> implements BasicCache<K, V> {
   public void put(K key, V value) {
     cache.put(new Element(key, value));
   }
+
+  @Override
+  public void clear() {
+    cache.removeAll();
+  }
 }

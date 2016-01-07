@@ -46,6 +46,13 @@ public final class LinkedHashMapCache<K, V> implements BasicCache<K, V> {
     }
   }
 
+  @Override
+  public void clear() {
+    synchronized (map) {
+      map.clear();
+    }
+  }
+
   @NotThreadSafe
   static final class BoundedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
     private static final long serialVersionUID = 1L;

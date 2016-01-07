@@ -73,7 +73,7 @@ import com.squareup.javapoet.TypeSpec;
 public final class LocalCacheFactoryGenerator {
   final Feature[] featureByIndex = new Feature[] {null, null, Feature.LOADING, Feature.LISTENING,
       Feature.STATS, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
-      Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE, Feature.FASTPATH};
+      Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
   final List<LocalCacheRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructor(),
       new AddKeyValueStrength(), new AddCacheLoader(), new AddRemovalListener(),
       new AddStats(), new AddExpirationTicker(), new AddMaximum(), new AddFastPath(),
@@ -153,9 +153,6 @@ public final class LocalCacheFactoryGenerator {
       if (features.contains(Feature.MAXIMUM_WEIGHT)) {
         features.remove(Feature.MAXIMUM_SIZE);
       }
-      if (features.contains(Feature.FASTPATH) && !Feature.canUseFastPath(features)) {
-        continue;
-      }
 
       String className = encode(Feature.makeClassName(features));
       classNameToFeatures.put(className, ImmutableSet.copyOf(features));
@@ -215,8 +212,7 @@ public final class LocalCacheFactoryGenerator {
         .replaceFirst("_SIZE", "S")
         .replaceFirst("_EXPIRE_ACCESS", "A")
         .replaceFirst("_EXPIRE_WRITE", "W")
-        .replaceFirst("_REFRESH_WRITE", "R")
-        .replace("_FASTPATH", "F");
+        .replaceFirst("_REFRESH_WRITE", "R");
   }
 
   public static void main(String[] args) throws IOException {

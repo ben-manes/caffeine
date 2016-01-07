@@ -34,6 +34,9 @@ public interface BasicCache<K, V> {
   /** Stores the value into the cache, replacing an existing mapping if present. */
   void put(@Nonnull K key, @Nonnull V value);
 
+  /** Invalidates all entries from the cache. */
+  void clear();
+
   /** Performs any pending maintenance operations needed by the cache. */
   default void cleanUp() {}
 }

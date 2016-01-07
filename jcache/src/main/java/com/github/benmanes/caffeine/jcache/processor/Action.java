@@ -27,7 +27,7 @@ public enum Action {
   /** The entry exists, was read, and never mutated. */
   READ,
 
-  /** The entry was did not exist and was created. */
+  /** The entry did not exist and was created. */
   CREATED,
 
   /** The entry exists and was updated. */

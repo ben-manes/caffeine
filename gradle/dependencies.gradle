@@ -37,7 +37,7 @@ ext {
     jsr305: '3.0.1',
     stream: '2.9.0',
     univocity_parsers: '1.5.6',
-    ycsb: '0.6.0-RC1',
+    ycsb: '0.6.0-RC2',
   ]
   test_versions = [
     awaitility: '1.7.0',
@@ -47,7 +47,7 @@ ext {
     jctools: '1.1',
     jimfs: '1.0',
     junit: '4.12',
-    mockito: '2.0.35-beta',
+    mockito: '2.0.36-beta',
     pax_exam: '4.8.0',
     testng: '6.9.10',
     truth: '0.24',
@@ -64,7 +64,7 @@ ext {
     java_object_layout: '0.4',
     koloboke: '0.6.8',
     slf4j: '1.7.13',
-    tcache: '0.4.0',
+    tcache: '0.9.0',
   ]
   plugin_versions = [
     checkstyle: '6.14.1',

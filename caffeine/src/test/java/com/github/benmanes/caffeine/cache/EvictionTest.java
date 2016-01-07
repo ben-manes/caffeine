@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.verify;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -125,6 +127,13 @@ public final class EvictionTest {
       CacheContext context, Eviction<?, ?> eviction) {
     @SuppressWarnings({"unchecked", "rawtypes"})
     CacheWriter<Integer, List<Integer>> writer = (CacheWriter) context.cacheWriter();
+
+    // Enforce full initialization of internal structures
+    for (int i = 0; i < context.maximumSize(); i++) {
+      cache.put(i, Collections.emptyList());
+    }
+    cache.invalidateAll();
+    Mockito.<Object>reset(writer);
 
     List<Integer> value1 = asList(8, 9, 10);
     List<Integer> value2 = asList(3, 4, 5, 6, 7);

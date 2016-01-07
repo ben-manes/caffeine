@@ -40,4 +40,9 @@ public final class ConcurrentMapCache<K, V> implements BasicCache<K, V> {
   public void put(K key, V value) {
     map.put(key, value);
   }
+
+  @Override
+  public void clear() {
+    map.clear();
+  }
 }

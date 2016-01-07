@@ -40,7 +40,6 @@ public enum Feature {
   EXPIRE_WRITE,
   REFRESH_WRITE,
 
-  FASTPATH,
   MAXIMUM_SIZE,
   MAXIMUM_WEIGHT,
 
@@ -110,9 +109,9 @@ public enum Feature {
         || features.contains(Feature.MAXIMUM_WEIGHT);
   }
 
-  public static boolean canUseFastPath(Set<Feature> features) {
-    Set<Feature> incompatible = Sets.immutableEnumSet(Feature.WEAK_KEYS, Feature.INFIRM_VALUES,
-        Feature.WEAK_VALUES, Feature.SOFT_VALUES, Feature.EXPIRE_ACCESS);
+  public static boolean usesFastPath(Set<Feature> features) {
+    Set<Feature> incompatible = Sets.immutableEnumSet(Feature.EXPIRE_ACCESS,
+        Feature.WEAK_KEYS, Feature.INFIRM_VALUES, Feature.WEAK_VALUES, Feature.SOFT_VALUES);
     if (features.stream().anyMatch(incompatible::contains)) {
       return false;
     }

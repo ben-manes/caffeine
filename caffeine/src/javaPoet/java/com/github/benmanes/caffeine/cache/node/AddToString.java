@@ -36,7 +36,7 @@ public final class AddToString extends NodeRule {
     String statement = "return String.format(\"%s=[key=%s, value=%s, weight=%d, moveCount=%,d, "
         + "accessTimeNS=%,d, \"\n+ \"writeTimeNS=%,d, prevInAccess=%s, nextInAccess=%s, "
         + "prevInWrite=%s, nextInWrite=%s]\",\ngetClass().getSimpleName(), getKey(), getValue(), "
-        + "getWeight(), getMoveCount(), \ngetAccessTime(), getWriteTime(), "
+        + "getWeight(), getQueueType(), \ngetAccessTime(), getWriteTime(), "
         + "getPreviousInAccessOrder() != null,\ngetNextInAccessOrder() != null, "
         + "getPreviousInWriteOrder() != null,\ngetNextInWriteOrder() != null)";
 

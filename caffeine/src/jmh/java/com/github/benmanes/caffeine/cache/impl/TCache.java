@@ -44,4 +44,9 @@ public final class TCache<K, V> implements BasicCache<K, V> {
   public void put(K key, V value) {
     cache.put(key, value);
   }
+
+  @Override
+  public void clear() {
+    cache.clear();
+  }
 }

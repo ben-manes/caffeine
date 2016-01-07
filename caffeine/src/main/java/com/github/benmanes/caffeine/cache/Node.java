@@ -120,41 +120,42 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /* ---------------- Access order -------------- */
 
+  static final int EDEN = 0;
+  static final int PROBATION = 1;
+  static final int PROTECTED = 2;
+
   /** Returns if the entry is in the Eden or Main space. */
   default boolean isEden() {
-    return getMoveCount() == 0;
+    return getQueueType() == EDEN;
   }
 
   /** Returns if the entry is in the Main space's probation queue. */
   default boolean isMainProbation() {
-    return getMoveCount() < 0;
+    return getQueueType() == PROBATION;
   }
 
   /** Returns if the entry is in the Main space's protected queue. */
   default boolean isMainProtected() {
-    return getMoveCount() > 0;
+    return getQueueType() == PROTECTED;
   }
 
   /** Sets the status to the Main space's probation queue. */
   default void makeMainProbation() {
-    setMoveCount(-1);
+    setQueueType(PROBATION);
   }
 
-  /**
-   * Returns the entry's move count in the Main access queue. A move count of zero indicates that
-   * the entry is in the Eden queue, a negative that its in the Main's probation queue, and a
-   * positive that it is in the Main's protected queue.
-   */
-  @Nonnegative
-  default int getMoveCount() {
-    return 0;
+  /** Sets the status to the Main space's protected queue. */
+  default void makeMainProtected() {
+    setQueueType(PROTECTED);
   }
 
-  /**
-   * Set entry's move count in the Main access queue. The value indicates that the entry resides in
-   * the Eden queue if zero, Probation queue if negative, or Protected if positive.
-   */
-  default void setMoveCount(int move) {
+  /** Returns the queue that the entry's resides in (eden, probation, or protected). */
+  default int getQueueType() {
+    return EDEN;
+  }
+
+  /** Set queue that the entry resides in (eden, probation, or protected). */
+  default void setQueueType(int queueType) {
     throw new UnsupportedOperationException();
   }
 

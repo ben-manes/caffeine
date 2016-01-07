@@ -35,21 +35,21 @@ public final class AddMaximum extends NodeRule {
 
   @Override
   protected void execute() {
-    addMoveCount();
+    addQueueFlag();
     addWeight();
   }
 
-  private void addMoveCount() {
-    context.nodeSubtype.addField(int.class, "moveCount", Modifier.PRIVATE);
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getMoveCount")
+  private void addQueueFlag() {
+    context.nodeSubtype.addField(int.class, "queueType", Modifier.PRIVATE);
+    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getQueueType")
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(int.class)
-        .addStatement("return moveCount")
+        .addStatement("return queueType")
         .build());
-    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("setMoveCount")
+    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("setQueueType")
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-        .addParameter(int.class, "moveCount")
-        .addStatement("this.moveCount = moveCount")
+        .addParameter(int.class, "queueType")
+        .addStatement("this.queueType = queueType")
         .build());
   }
 

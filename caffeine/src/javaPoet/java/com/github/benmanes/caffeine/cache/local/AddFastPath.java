@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache.local;
 import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
-import com.squareup.javapoet.FieldSpec;
+import com.google.common.collect.Sets;
 import com.squareup.javapoet.MethodSpec;
 
 /**
@@ -28,50 +28,19 @@ public final class AddFastPath extends LocalCacheRule {
 
   @Override
   protected boolean applies() {
-    return context.generateFeatures.contains(Feature.FASTPATH);
+    boolean parentFastPath = Feature.usesFastPath(context.parentFeatures);
+    boolean fastpath = Feature.usesFastPath(Sets.union(
+        context.parentFeatures, context.generateFeatures));
+    return (parentFastPath != fastpath);
   }
 
   @Override
   protected void execute() {
-    addMoveDistance();
-    addMoveCount();
-    addFlag();
-  }
-
-  private void addMoveDistance() {
-    context.cache.addField(FieldSpec.builder(
-        int.class, "moveDistance", Modifier.PRIVATE).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("moveDistance")
-        .addModifiers(protectedFinalModifiers)
-        .addStatement("return moveDistance")
-        .returns(int.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("setMoveDistance")
-        .addModifiers(protectedFinalModifiers)
-        .addParameter(int.class, "moveDistance")
-        .addStatement("this.moveDistance = moveDistance")
-        .build());
-  }
-
-  private void addMoveCount() {
-    context.cache.addField(FieldSpec.builder(
-        int.class, "moveCount", Modifier.PRIVATE).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("moveCount")
-        .addModifiers(protectedFinalModifiers)
-        .addStatement("return moveCount")
-        .returns(int.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("setMoveCount")
-        .addModifiers(protectedFinalModifiers)
-        .addParameter(int.class, "moveCount")
-        .addStatement("this.moveCount = moveCount")
-        .build());
-  }
-
-  private void addFlag() {
+    boolean fastpath = Feature.usesFastPath(Sets.union(
+        context.parentFeatures, context.generateFeatures));
     context.cache.addMethod(MethodSpec.methodBuilder("fastpath")
-        .addModifiers(protectedFinalModifiers)
-        .addStatement("return true")
+        .addStatement("return " + Boolean.toString(fastpath))
+        .addModifiers(Modifier.PROTECTED)
         .returns(boolean.class)
         .build());
   }

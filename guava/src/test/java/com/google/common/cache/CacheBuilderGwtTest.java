@@ -16,6 +16,7 @@
 
 package com.google.common.cache;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -88,6 +89,12 @@ public class CacheBuilderGwtTest extends TestCase {
         .executor(MoreExecutors.directExecutor())
         .initialCapacity(100)
         .maximumSize(4));
+
+    // Enforce full initialization of internal structures
+    for (int i = 0; i < 4; i++) {
+      cache.put(i, i);
+    }
+    cache.invalidateAll();
 
     cache.put(1, 10);
     cache.put(2, 20);
@@ -286,6 +293,11 @@ public class CacheBuilderGwtTest extends TestCase {
         .initialCapacity(100)
         .ticker(fakeTicker)
         .maximumSize(2));
+
+    // Enforce full initialization of internal structures
+    cache.putAll(ImmutableMap.of(1, 1, 2, 2, 3, 3));
+    cache.invalidateAll();
+    Arrays.fill(stats, 0);
 
     // Add more than two elements to increment size removals.
     cache.put(3, 20);

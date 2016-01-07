@@ -27,7 +27,6 @@ public final class LocalCacheSelectorCode {
 
   private LocalCacheSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$T fastpath = true", boolean.class)
         .addStatement("$T sb = new $T()", StringBuilder.class, StringBuilder.class);
   }
 
@@ -36,7 +35,6 @@ public final class LocalCacheSelectorCode {
             .addStatement("sb.append('S')")
         .nextControlFlow("else")
             .addStatement("sb.append('W')")
-            .addStatement("fastpath = false")
         .endControlFlow();
     return this;
   }
@@ -46,7 +44,6 @@ public final class LocalCacheSelectorCode {
             .addStatement("sb.append('S')")
         .nextControlFlow("else")
             .addStatement("sb.append('I')")
-            .addStatement("fastpath = false")
         .endControlFlow();
     return this;
   }
@@ -80,8 +77,6 @@ public final class LocalCacheSelectorCode {
             .nextControlFlow("else")
                 .addStatement("sb.append('S')")
             .endControlFlow()
-        .nextControlFlow("else")
-            .addStatement("fastpath = false")
         .endControlFlow();
     return this;
   }
@@ -89,21 +84,12 @@ public final class LocalCacheSelectorCode {
   private LocalCacheSelectorCode expires() {
     block.beginControlFlow("if (builder.expiresAfterAccess())")
             .addStatement("sb.append('A')")
-            .addStatement("fastpath = false")
         .endControlFlow()
         .beginControlFlow("if (builder.expiresAfterWrite())")
             .addStatement("sb.append('W')")
         .endControlFlow()
         .beginControlFlow("if (builder.refreshes())")
             .addStatement("sb.append('R')")
-        .endControlFlow();
-    return this;
-  }
-
-  private LocalCacheSelectorCode fastpath() {
-    block.beginControlFlow("if (fastpath)")
-            .addStatement("// disabled due to unfavorable benchmarks")
-            .addStatement("// sb.append('F')")
         .endControlFlow();
     return this;
   }
@@ -134,7 +120,6 @@ public final class LocalCacheSelectorCode {
         .stats()
         .maximum()
         .expires()
-        .fastpath()
         .selector(classNames)
         .build();
   }

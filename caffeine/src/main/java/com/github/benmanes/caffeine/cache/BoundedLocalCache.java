@@ -54,7 +54,6 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnegative;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
@@ -129,8 +128,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final double PERCENT_MAIN = 0.99f;
   /** The percent of the maximum weighted capacity dedicated to the main's protected space. */
   static final double PERCENT_MAIN_PROTECTED = 0.80f;
-  /** The percent of the total entries that are considered hot and can skip policy maintenance. */
-  static final int FAST_PATH_RSHIFT = 3; // 12.5%
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
   final Consumer<Node<K, V>> accessPolicy;
@@ -355,38 +352,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  /** Returns if an access to a hot entry can skip notifying the eviction policy. */
+  /** Returns if an access to an entry can skip notifying the eviction policy. */
   protected boolean fastpath() {
     return false;
-  }
-
-  /**
-   * Returns the maximum distance that an entry can move from the least-recently-used position in
-   * the Main queue before recording its access is required. An entry falling within the interval is
-   * eligible for a fast-path read by not updating its access history.
-   */
-  @Nonnegative
-  protected int moveDistance() {
-    return 0;
-  }
-
-  @GuardedBy("evictionLock")
-  protected void setMoveDistance(@Nonnegative int distance) {
-    throw new UnsupportedOperationException();
-  }
-
-  /***
-   * Returns the movement count in the Main queue. The returned value equals the count held by the
-   * least-recently-used entry in the queue.
-   */
-  @Nonnegative
-  protected int moveCount() {
-    return 0;
-  }
-
-  @GuardedBy("evictionLock")
-  protected void setMoveCount(@Nonnegative int count) {
-    throw new UnsupportedOperationException();
   }
 
   /** Returns the maximum weighted size of the main space. */
@@ -435,11 +403,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     lazySetEdenMaximum(eden);
     lazySetMainProtectedMaximum(mainProtected);
 
-    if (fastpath()) {
-      int distance = ((int) Math.min(max, Integer.MAX_VALUE)) >>> FAST_PATH_RSHIFT;
-      setMoveDistance(distance);
-    }
-
     if ((frequencySketch() != null) && !isWeighted() && (weightedSize() >= (max >>> 1))) {
       // Lazily initialize when close to the maximum size
       frequencySketch().ensureCapacity(max);
@@ -481,25 +444,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  /** Returns the incremented move count. */
+  /** Evicts entries if the cache exceeds the maximum. */
   @GuardedBy("evictionLock")
-  int incrementAndGetMoveCount() {
-    if (fastpath()) {
-      int next = Math.max(1, moveCount() + 1);
-      setMoveCount(next);
-      return next;
-    }
-    return 1;
-  }
-
-  /** Evicts entries if the cache exceeds the maximum returns if the cache was modified. */
-  @GuardedBy("evictionLock")
-  boolean evictEntries() {
+  void evictEntries() {
     if (!evicts()) {
-      return false;
+      return;
     }
     int candidates = evictFromEden();
-    return evictFromMain(candidates);
+    evictFromMain(candidates);
   }
 
   /**
@@ -548,8 +500,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @return if an eviction occurred
    */
   @GuardedBy("evictionLock")
-  boolean evictFromMain(int candidates) {
-    boolean modified = false;
+  void evictFromMain(int candidates) {
     Node<K, V> victim = accessOrderProbationDeque().peekFirst();
     Node<K, V> candidate = accessOrderProbationDeque().peekLast();
     while (weightedSize() > maximum()) {
@@ -581,13 +532,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       // Evict immediately if only one of the entries is present
       if (victim == null) {
         candidates--;
-        modified = true;
         Node<K, V> evict = candidate;
         candidate = candidate.getPreviousInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
         continue;
       } else if (candidate == null) {
-        modified = true;
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
@@ -598,14 +547,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       K victimKey = victim.getKey();
       K candidateKey = candidate.getKey();
       if (victimKey == null) {
-        modified = true;
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       } else if (candidateKey == null) {
         candidates--;
-        modified = true;
         Node<K, V> evict = candidate;
         candidate = candidate.getPreviousInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
@@ -624,25 +571,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         candidate = candidate.getPreviousInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
       }
-      modified = true;
     }
-    return modified;
   }
 
-  /** Expires entries and returns if the cache was modified. */
+  /** Expires entries that have expired in the access and write queues. */
   @GuardedBy("evictionLock")
-  boolean expireEntries() {
-    boolean modified = false;
+  void expireEntries() {
     long now = expirationTicker().read();
-    modified |= expireAfterAccessEntries(now);
-    modified |= expireAfterWriteEntries(now);
-    return modified;
+    expireAfterAccessEntries(now);
+    expireAfterWriteEntries(now);
   }
 
-  /** Expires entries on the access-order queue and returns if the cache was modified. */
+  /** Expires entries on the access-order queue. */
   @GuardedBy("evictionLock")
-  boolean expireAfterAccessEntries(long now) {
-    boolean modified = false;
+  void expireAfterAccessEntries(long now) {
     if (expiresAfterAccess()) {
       long expirationTime = now - expiresAfterAccessNanos();
       for (;;) {
@@ -650,7 +592,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if ((node == null) || (node.getAccessTime() > expirationTime)) {
           break;
         }
-        modified = true;
         evictEntry(node, RemovalCause.EXPIRED, now);
       }
       if (evicts()) {
@@ -659,7 +600,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           if ((node == null) || (node.getAccessTime() > expirationTime)) {
             break;
           }
-          modified = true;
           evictEntry(node, RemovalCause.EXPIRED, now);
         }
         for (;;) {
@@ -667,18 +607,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           if ((node == null) || (node.getAccessTime() > expirationTime)) {
             break;
           }
-          modified = true;
           evictEntry(node, RemovalCause.EXPIRED, now);
         }
       }
     }
-    return modified;
   }
 
-  /** Expires entries on the write-order queue and returns if the cache was modified. */
+  /** Expires entries on the write-order queue. */
   @GuardedBy("evictionLock")
-  boolean expireAfterWriteEntries(long now) {
-    boolean modified = false;
+  void expireAfterWriteEntries(long now) {
     if (expiresAfterWrite()) {
       long expirationTime = now - expiresAfterWriteNanos();
       for (;;) {
@@ -686,11 +623,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if ((node == null) || (node.getWriteTime() > expirationTime)) {
           break;
         }
-        modified = true;
         evictEntry(node, RemovalCause.EXPIRED, now);
       }
     }
-    return modified;
+    return;
   }
 
   /** Returns if the entry has expired. */
@@ -795,21 +731,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     // fastpath is disabled due to unfavorable benchmarks
     // boolean delayable = canFastpath(node) || (readBuffer.offer(node) != Buffer.FULL);
-    boolean delayable = (readBuffer.offer(node) != Buffer.FULL);
+    boolean delayable = skipReadBuffer() || (readBuffer.offer(node) != Buffer.FULL);
     if (shouldDrainBuffers(delayable)) {
       scheduleDrainBuffers();
     }
     refreshIfNeeded(node, now);
   }
 
-  /** Returns if the entry is eligible for a fast path read. */
-  boolean canFastpath(Node<K, V> node) {
-    int moveCount = node.getMoveCount();
-    if (!fastpath() || (moveCount <= 0)) {
-      return false;
-    }
-    int distance = Math.abs(moveCount() - moveCount);
-    return distance <= moveDistance();
+  /** Returns if the cache should bypass the read buffer. */
+  boolean skipReadBuffer() {
+    return fastpath() && frequencySketch().isNotInitialized();
   }
 
   /**
@@ -928,44 +859,35 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   void maintenance() {
     drainReadBuffer();
 
-    boolean modified = false;
-    modified |= drainWriteBuffer();
-    modified |= drainKeyReferences();
-    modified |= drainValueReferences();
+    drainWriteBuffer();
+    drainKeyReferences();
+    drainValueReferences();
 
-    modified |= expireEntries();
-    modified |= evictEntries();
-
-    if (fastpath() && modified && isWeighted()) {
-      setMoveDistance(data.size() >>> FAST_PATH_RSHIFT);
-    }
+    expireEntries();
+    evictEntries();
   }
 
-  /** Drains the weak key references queue and returns if the cache was modified. */
+  /** Drains the weak key references queue. */
   @GuardedBy("evictionLock")
-  boolean drainKeyReferences() {
+  void drainKeyReferences() {
     if (!collectKeys()) {
-      return false;
+      return;
     }
-    boolean modified = false;
     Reference<? extends K> keyRef;
     while ((keyRef = keyReferenceQueue().poll()) != null) {
       Node<K, V> node = data.get(keyRef);
       if (node != null) {
-        modified = true;
         evictEntry(node, RemovalCause.COLLECTED, 0L);
       }
     }
-    return modified;
   }
 
-  /** Drains the weak / soft value references queue and returns if the cache was modified. */
+  /** Drains the weak / soft value references queue. */
   @GuardedBy("evictionLock")
-  boolean drainValueReferences() {
+  void drainValueReferences() {
     if (!collectValues()) {
-      return false;
+      return;
     }
-    boolean modified = false;
     Reference<? extends V> valueRef;
     while ((valueRef = valueReferenceQueue().poll()) != null) {
       @SuppressWarnings("unchecked")
@@ -973,16 +895,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       Node<K, V> node = data.get(ref.getKeyReference());
       if ((node != null) && (valueRef == node.getValueReference())) {
         evictEntry(node, RemovalCause.COLLECTED, 0L);
-        modified = true;
       }
     }
-    return modified;
   }
 
-  /** Drains the read buffers */
+  /** Drains the read buffer. */
   @GuardedBy("evictionLock")
   void drainReadBuffer() {
-    readBuffer.drainTo(accessPolicy);
+    if (!skipReadBuffer()) {
+      readBuffer.drainTo(accessPolicy);
+    }
   }
 
   /** Updates the node's location in the page replacement policy. */
@@ -1005,9 +927,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
 
         long mainProtectedWeightedSize = mainProtectedWeightedSize() + node.getPolicyWeight();
-        node.setMoveCount(incrementAndGetMoveCount());
         accessOrderProbationDeque().remove(node);
         accessOrderProtectedDeque().add(node);
+        node.makeMainProtected();
 
         long mainProtectedMaximum = mainProtectedMaximum();
         while (mainProtectedWeightedSize > mainProtectedMaximum) {
@@ -1023,7 +945,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         lazySetMainProtectedWeightedSize(mainProtectedWeightedSize);
       } else {
         reorder(accessOrderProtectedDeque(), node);
-        node.setMoveCount(incrementAndGetMoveCount());
       }
     } else if (expiresAfterAccess()) {
       reorder(accessOrderEdenDeque(), node);
@@ -1040,19 +961,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /** Drains the write buffer and returns if the cache was modified. */
+  /** Drains the write buffer. */
   @GuardedBy("evictionLock")
-  boolean drainWriteBuffer() {
+  void drainWriteBuffer() {
     if (!buffersWrites()) {
-      return false;
+      return;
     }
     Runnable task;
-    boolean modified = false;
     while ((task = writeQueue().poll()) != null) {
-      modified = true;
       task.run();
     }
-    return modified;
   }
 
   /**

@@ -98,8 +98,7 @@ public final class AddMaximum extends LocalCacheRule {
   private void addFrequencySketch() {
     context.cache.addField(FieldSpec.builder(
         FREQUENCY_SKETCH, "sketch", privateFinalModifiers).build());
-    context.constructor.addStatement(
-        "this.sketch = new $T(builder.getInitialCapacity())", FREQUENCY_SKETCH);
+    context.constructor.addStatement("this.sketch = new $T()", FREQUENCY_SKETCH);
     context.cache.addMethod(MethodSpec.methodBuilder("frequencySketch")
         .addModifiers(protectedFinalModifiers)
         .addStatement("return sketch")

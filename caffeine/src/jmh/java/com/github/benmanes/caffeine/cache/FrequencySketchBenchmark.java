@@ -43,7 +43,9 @@ public class FrequencySketchBenchmark {
   @Setup
   public void setup() {
     ints = new Integer[SIZE];
-    sketch = new FrequencySketch<>(ITEMS);
+    sketch = new FrequencySketch<>();
+    sketch.ensureCapacity(ITEMS);
+
     IntegerGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
       ints[i] = generator.nextInt();

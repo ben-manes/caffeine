@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.nullValue;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -30,23 +31,10 @@ import org.testng.annotations.Test;
 public final class FrequencySketchTest {
   final Integer item = ThreadLocalRandom.current().nextInt();
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void construct_negative() {
-    new FrequencySketch<Integer>(-1);
-  }
-
   @Test
-  public void construct_zero() {
-    FrequencySketch<Integer> sketch = new FrequencySketch<>(0);
-    assertThat(sketch.table.length, is(1));
-    assertThat(sketch.tableMask, is(0));
-  }
-
-  @Test
-  public void construct_positive() {
-    FrequencySketch<Integer> sketch = new FrequencySketch<>(10);
-    assertThat(sketch.table.length, is(16));
-    assertThat(sketch.tableMask, is(15));
+  public void construc() {
+    FrequencySketch<Integer> sketch = new FrequencySketch<>();
+    assertThat(sketch.table, is(nullValue()));
   }
 
   @Test(dataProvider = "sketch", expectedExceptions = IllegalArgumentException.class)
@@ -98,7 +86,9 @@ public final class FrequencySketchTest {
   @Test
   public void reset() {
     boolean reset = false;
-    FrequencySketch<Integer> sketch = new FrequencySketch<>(64);
+    FrequencySketch<Integer> sketch = new FrequencySketch<>();
+    sketch.ensureCapacity(64);
+
     for (int i = 1; i < 20 * sketch.table.length; i++) {
       sketch.increment(i);
       if (sketch.size != i) {
@@ -142,6 +132,8 @@ public final class FrequencySketchTest {
 
   @DataProvider(name = "sketch")
   public Object[][] providesSketch() {
-    return new Object[][] {{ new FrequencySketch<>(512) }};
+    FrequencySketch<Integer> sketch = new FrequencySketch<>();
+    sketch.ensureCapacity(512);
+    return new Object[][] {{ sketch }};
   }
 }
