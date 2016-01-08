@@ -15,9 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import org.openjdk.jmh.annotations.AuxCounters;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.GroupThreads;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -47,14 +49,37 @@ public class ReadBufferBenchmark {
   @Param BufferType bufferType;
   ReadBuffer<Boolean> buffer;
 
+  @AuxCounters
+  @State(Scope.Thread)
+  public static class RecordCounter {
+    public int recordFailed;
+    public int recordSuccess;
+    public int recordFull;
+
+    @Setup(Level.Iteration)
+    public void clean() {
+      recordFailed = recordSuccess = recordFull = 0;
+    }
+  }
+
   @Setup
   public void setup() {
     buffer = bufferType.create();
   }
 
   @Benchmark @Group @GroupThreads(8)
-  public int record() {
-    return buffer.offer(Boolean.TRUE);
+  public void record(RecordCounter counters) {
+    switch (buffer.offer(Boolean.TRUE)) {
+      case ReadBuffer.FAILED:
+        counters.recordFailed++;
+        break;
+      case ReadBuffer.SUCCESS:
+        counters.recordSuccess++;
+        break;
+      case ReadBuffer.FULL:
+        counters.recordFull++;
+        break;
+    }
   }
 
   @Benchmark @Group @GroupThreads(1)

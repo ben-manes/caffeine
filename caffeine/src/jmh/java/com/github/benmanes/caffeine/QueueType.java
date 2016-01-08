@@ -24,16 +24,17 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.function.Supplier;
 
+import org.jctools.queues.MpscLinkedQueue8;
+
 import com.google.common.collect.Queues;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum QueueType {
+  MpscLinkedQueue(MpscLinkedQueue8::new),
   SingleConsumerQueue_optimistic(SingleConsumerQueue::optimistic),
   SingleConsumerQueue_linearizable(SingleConsumerQueue::linearizable),
-  ConcurrentLinkedStack_optimistic(ConcurrentLinkedStack.optimistic()::asLifoQueue),
-  ConcurrentLinkedStack_linearizable(ConcurrentLinkedStack.linearizable()::asLifoQueue),
   ConcurrentLinkedQueue(ConcurrentLinkedQueue<Object>::new),
   ArrayBlockingQueue(() -> new ArrayBlockingQueue<>(10000)),
   LinkedBlockingQueue(LinkedBlockingQueue<Object>::new),

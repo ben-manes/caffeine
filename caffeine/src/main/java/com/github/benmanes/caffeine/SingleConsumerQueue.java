@@ -70,6 +70,8 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * constant-time operation. Because of the asynchronous nature of these queues, determining the
  * current number of elements requires a traversal of the elements, and so may report inaccurate
  * results if this collection is modified during traversal.
+ * <p>
+ * <b>Warning:</b> This class is scheduled for removal in version <tt>3.0.0</tt>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection

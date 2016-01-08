@@ -17,9 +17,11 @@ package com.github.benmanes.caffeine;
 
 import java.util.Queue;
 
+import org.openjdk.jmh.annotations.AuxCounters;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.GroupThreads;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -33,12 +35,37 @@ import org.openjdk.jmh.annotations.State;
  */
 @State(Scope.Group)
 public class SingleConsumerQueueBenchmark {
-  @Param({"SingleConsumerQueue_optimistic",
+  @Param({
+    "SingleConsumerQueue_optimistic",
     "SingleConsumerQueue_linearizable",
     "ConcurrentLinkedQueue"})
   QueueType queueType;
 
   Queue<Boolean> queue;
+
+  @AuxCounters
+  @State(Scope.Thread)
+  public static class PollCounters {
+    public int pollsFailed;
+    public int pollsMade;
+
+    @Setup(Level.Iteration)
+    public void clean() {
+      pollsFailed = pollsMade = 0;
+    }
+  }
+
+  @AuxCounters
+  @State(Scope.Thread)
+  public static class OfferCounters {
+    public int offersFailed;
+    public int offersMade;
+
+    @Setup(Level.Iteration)
+    public void clean() {
+      offersFailed = offersMade = 0;
+    }
+  }
 
   @Setup
   public void setup() {
@@ -46,32 +73,56 @@ public class SingleConsumerQueueBenchmark {
   }
 
   @Benchmark  @Group("no_contention") @GroupThreads(1)
-  public boolean no_contention_offer() {
-    return queue.offer(Boolean.TRUE);
+  public void no_contention_offer(OfferCounters counters) {
+    if (queue.offer(Boolean.TRUE)) {
+      counters.offersMade++;
+    } else {
+      counters.offersFailed++;
+    }
   }
 
   @Benchmark @Group("no_contention") @GroupThreads(1)
-  public Boolean no_contention_poll() {
-    return queue.poll();
+  public void no_contention_poll(PollCounters counters) {
+    if (queue.poll() == null) {
+      counters.pollsFailed++;
+    } else {
+      counters.pollsMade++;
+    }
   }
 
   @Benchmark @Group("mild_contention") @GroupThreads(2)
-  public boolean mild_contention_offer() {
-    return queue.offer(Boolean.TRUE);
+  public void mild_contention_offer(OfferCounters counters) {
+    if (queue.offer(Boolean.TRUE)) {
+      counters.offersMade++;
+    } else {
+      counters.offersFailed++;
+    }
   }
 
   @Benchmark @Group("mild_contention") @GroupThreads(1)
-  public Boolean mild_contention_poll() {
-    return queue.poll();
+  public void mild_contention_poll(PollCounters counters) {
+    if (queue.poll() == null) {
+      counters.pollsFailed++;
+    } else {
+      counters.pollsMade++;
+    }
   }
 
   @Benchmark @Group("high_contention") @GroupThreads(8)
-  public boolean high_contention_offer() {
-    return queue.offer(Boolean.TRUE);
+  public void high_contention_offer(OfferCounters counters) {
+    if (queue.offer(Boolean.TRUE)) {
+      counters.offersMade++;
+    } else {
+      counters.offersFailed++;
+    }
   }
 
   @Benchmark @Group("high_contention") @GroupThreads(1)
-  public Boolean high_contention_poll() {
-    return queue.poll();
+  public void high_contention_poll(PollCounters counters) {
+    if (queue.poll() == null) {
+      counters.pollsFailed++;
+    } else {
+      counters.pollsMade++;
+    }
   }
 }
