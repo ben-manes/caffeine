@@ -162,14 +162,14 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         dispatcher.awaitSynchronous();
         statistics.recordMisses(1L);
         return null;
-      }      
+      }
     } else if (statsEnabled) {
       start = ticker.read();
       millis = nanosToMillis(start);
     } else {
       start = millis = 0L;
     }
-    
+
     setAccessExpirationTime(expirable, millis);
     V value = copyValue(expirable);
     if (statsEnabled) {
@@ -1044,7 +1044,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /**
-   * Sets the expiration time based on the supplied expiration function.
+   * Sets the access expiration time.
    *
    * @param expirable the entry that was operated on
    * @param currentTimeMS the current time, or 0 if not read yet
@@ -1059,10 +1059,12 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         expirable.setExpireTimeMS(0L);
       } else if (duration.isEternal()) {
         expirable.setExpireTimeMS(Long.MAX_VALUE);
-      } else if (currentTimeMS == 0L) {
-        expirable.setExpireTimeMS(ticker.read());
       } else {
-        expirable.setExpireTimeMS(currentTimeMS);
+        if (currentTimeMS == 0) {
+          currentTimeMS = ticker.read();
+        }
+        long expireTimeMS = duration.getAdjustedTime(currentTimeMS);
+        expirable.setExpireTimeMS(expireTimeMS);
       }
     } catch (Exception e) {
       logger.log(Level.WARNING, "Failed to set the entry's expiration time", e);
