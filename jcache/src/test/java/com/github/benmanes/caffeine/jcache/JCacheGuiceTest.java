@@ -28,6 +28,7 @@ import org.jsr107.ri.annotations.DefaultCacheResolverFactory;
 import org.jsr107.ri.annotations.guice.module.CacheAnnotationsModule;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -61,11 +62,10 @@ public final class JCacheGuiceTest {
 
   /** Resolves the annotations to the Caffeine provider as multiple are on the IDE classpath. */
   static final class CaffeineJCacheModule extends AbstractModule {
-    private static final String PROVIDER_CLASS =
-        "com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider";
 
     @Override protected void configure() {
-      CachingProvider provider = Caching.getCachingProvider(PROVIDER_CLASS);
+      CachingProvider provider = Caching.getCachingProvider(
+          CaffeineCachingProvider.class.getName());
       CacheManager cacheManager = provider.getCacheManager(
           provider.getDefaultURI(), provider.getDefaultClassLoader());
       bind(CacheResolverFactory.class).toInstance(new DefaultCacheResolverFactory(cacheManager));

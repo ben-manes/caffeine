@@ -1,0 +1,243 @@
+/*
+ * Copyright 2016 Ben Manes. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.github.benmanes.caffeine.jcache.expiry;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anEmptyMap;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import javax.cache.expiry.AccessedExpiryPolicy;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheLoaderException;
+import javax.cache.processor.EntryProcessorResult;
+
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
+import com.github.benmanes.caffeine.jcache.Expirable;
+import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.google.common.base.Functions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+
+/**
+ * The test cases that ensure the <tt>expiry for access</tt> time is updated for the accessed
+ * entries. The TCK asserts that the {@link ExpiryPolicy#getExpiryForAccess()} is only called for
+ * the following methods, but does not check that the expiration time was updated.
+ * <ul>
+ *   <li>get
+ *   <li>getAll
+ *   <li>invoke
+ *   <li>invokeAll
+ *   <li>conditional remove (failure)
+ *   <li>conditional replace (failure)
+ * </ul>
+ *
+ * @author ben.manes@gmail.com (Ben Manes)
+ */
+@Test(singleThreaded = true)
+public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
+  static final long ACCESS_DURATION = TimeUnit.MINUTES.toMillis(1);
+
+  static final Integer KEY_1 = 1, VALUE_1 = -1;
+  static final Integer KEY_2 = 2, VALUE_2 = -2;
+  static final Integer KEY_3 = 3, VALUE_3 = -3;
+
+  final Set<Integer> keys = ImmutableSet.of(KEY_1, KEY_2, KEY_3);
+  final Map<Integer, Integer> entries = ImmutableMap.of(
+      KEY_1, VALUE_1, KEY_2, VALUE_2, KEY_3, VALUE_3);
+
+  @BeforeMethod
+  public void setup() {
+    for (int i = 0; i < 100; i++) {
+      jcacheLoading.put(i, -i);
+      jcache.put(i, -i);
+    }
+  }
+
+  @Override
+  protected CaffeineConfiguration<Integer, Integer> getConfiguration() {
+    CaffeineConfiguration<Integer, Integer> configuration = new CaffeineConfiguration<>();
+    configuration.setExpiryPolicyFactory(() -> new AccessedExpiryPolicy(
+        new Duration(TimeUnit.MILLISECONDS, ACCESS_DURATION)));
+    configuration.setTickerFactory(() -> ticker);
+    return configuration;
+  }
+
+  @Override
+  protected CaffeineConfiguration<Integer, Integer> getLoadingConfiguration() {
+    CaffeineConfiguration<Integer, Integer> configuration = getConfiguration();
+    configuration.setCacheLoaderFactory(() -> new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) throws CacheLoaderException {
+        return key;
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        return Maps.asMap(ImmutableSet.copyOf(keys), Functions.identity());
+      }
+    });
+    configuration.setReadThrough(true);
+    return configuration;
+  }
+
+  /* ---------------- get -------------- */
+
+  @Test
+  public void get_absent() {
+    assertThat(jcache.get(KEY_1), is(VALUE_1));
+
+    advancePastExpiry();
+    assertThat(jcache.get(KEY_1), is(nullValue()));
+    assertThat(getExpirable(KEY_1), is(nullValue()));
+  }
+
+  @Test
+  public void get_present() {
+    assertThat(jcache.get(KEY_1), is(VALUE_1));
+
+    Expirable<Integer> expirable = getExpirable(KEY_1);
+    assertThat(expirable.getExpireTimeMS(), is(ACCESS_DURATION));
+  }
+
+  /* ---------------- get (loading) -------------- */
+
+  @Test
+  public void get_loading_absent() {
+    assertThat(jcacheLoading.get(KEY_1), is(VALUE_1));
+
+    advancePastExpiry();
+    assertThat(jcacheLoading.get(KEY_1), is(KEY_1));
+
+    Expirable<Integer> expirable = getExpirable(KEY_1);
+    assertThat(expirable.getExpireTimeMS(), is(ACCESS_DURATION));
+  }
+
+  @Test
+  public void get_loading_present() {
+    assertThat(jcacheLoading.get(KEY_1), is(VALUE_1));
+
+    Expirable<Integer> expirable = getExpirable(KEY_1);
+    assertThat(expirable.getExpireTimeMS(), is(ACCESS_DURATION));
+  }
+
+  /* ---------------- getAllPresent -------------- */
+
+  @Test
+  public void getAll_absent() {
+    assertThat(jcache.getAll(keys), is(entries));
+
+    advancePastExpiry();
+    assertThat(jcache.getAll(keys), is(anEmptyMap()));
+
+    for (Integer key : keys) {
+      assertThat(getExpirable(key), is(nullValue()));
+    }
+  }
+
+  @Test
+  public void getAll_present() {
+    assertThat(jcache.getAll(keys), is(entries));
+
+    for (Integer key : keys) {
+      Expirable<Integer> expirable = getExpirable(key);
+      assertThat(expirable.getExpireTimeMS(), is(ACCESS_DURATION));
+    }
+  }
+
+  /* ---------------- invoke -------------- */
+
+  @Test
+  public void invoke_absent() {
+    assertThat(jcache.get(KEY_1), is(VALUE_1));
+
+    advancePastExpiry();
+    assertThat(jcache.invoke(KEY_1, (entry, args) -> entry.getValue()), is(nullValue()));
+
+    assertThat(getExpirable(KEY_1), is(nullValue()));
+  }
+
+  @Test
+  public void invoke_present() {
+    assertThat(jcache.invoke(KEY_1, (entry, args) -> entry.getValue()), is(VALUE_1));
+
+    Expirable<Integer> expirable = getExpirable(KEY_1);
+    assertThat(expirable.getExpireTimeMS(), is(ACCESS_DURATION));
+  }
+
+  /* ---------------- invokeAll -------------- */
+
+  @Test
+  public void invokeAll_absent() {
+    assertThat(jcache.getAll(keys), is(entries));
+
+    advancePastExpiry();
+    assertThat(jcache.invokeAll(keys, (entry, args) -> entry.getValue()), is(anEmptyMap()));
+
+    for (Integer key : keys) {
+      assertThat(getExpirable(key), is(nullValue()));
+    }
+  }
+
+  @Test
+  public void invokeAll_present() {
+    Map<Integer, EntryProcessorResult<Integer>> result =
+        jcache.invokeAll(keys, (entry, args) -> entry.getValue());
+    Map<Integer, Integer> unwrapped = result.entrySet().stream().collect(
+        Collectors.toMap(Entry::getKey, entry -> entry.getValue().get()));
+    assertThat(unwrapped, is(entries));
+
+    for (Integer key : keys) {
+      Expirable<Integer> expirable = getExpirable(key);
+      assertThat(expirable.getExpireTimeMS(), is(ACCESS_DURATION));
+    }
+  }
+
+  /* ---------------- conditional remove -------------- */
+
+  @Test
+  public void removeConditionally() {
+    assertThat(jcache.remove(KEY_1, VALUE_2), is(false));
+
+    Expirable<Integer> expirable = getExpirable(KEY_1);
+    assertThat(expirable.getExpireTimeMS(), is(ACCESS_DURATION));
+  }
+
+  /* ---------------- conditional replace -------------- */
+
+  @Test
+  public void replaceConditionally() {
+    assertThat(jcache.replace(KEY_1, VALUE_2, VALUE_3), is(false));
+
+    Expirable<Integer> expirable = getExpirable(KEY_1);
+    assertThat(expirable.getExpireTimeMS(), is(ACCESS_DURATION));
+  }
+
+  /* ---------------- Utility methods ------------- */
+
+  public void advancePastExpiry() {
+    ticker.advance(2 * ACCESS_DURATION, TimeUnit.MILLISECONDS);
+  }
+}

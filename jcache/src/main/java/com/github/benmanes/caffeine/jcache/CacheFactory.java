@@ -86,7 +86,7 @@ final class CacheFactory {
   private <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
       Configuration<K, V> configuration) {
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
-      return new CaffeineConfiguration<K, V>((CaffeineConfiguration<K, V>) configuration);
+      return new CaffeineConfiguration<>((CaffeineConfiguration<K, V>) configuration);
     }
 
     CaffeineConfiguration<K, V> defaults = TypesafeConfigurator.defaults(rootConfig);
@@ -120,9 +120,9 @@ final class CacheFactory {
     Builder(String cacheName, CaffeineConfiguration<K, V> config) {
       this.config = config;
       this.cacheName = cacheName;
-      this.ticker = Ticker.systemTicker();
       this.caffeine = Caffeine.newBuilder();
       this.statistics = new JCacheStatisticsMXBean();
+      this.ticker = config.getTickerFactory().create();
       this.expiry = config.getExpiryPolicyFactory().create();
       this.executor = USE_DIRECT_EXECUTOR ? Runnable::run : ForkJoinPool.commonPool();
       this.dispatcher = new EventDispatcher<>(executor);
@@ -156,7 +156,7 @@ final class CacheFactory {
 
     /** Creates a cache that does not read through on a cache miss. */
     private CacheProxy<K, V> newCacheProxy() {
-      return new CacheProxy<K, V>(cacheName, executor, cacheManager, config, caffeine.build(),
+      return new CacheProxy<>(cacheName, executor, cacheManager, config, caffeine.build(),
           dispatcher, Optional.ofNullable(cacheLoader), expiry, ticker, statistics);
     }
 
@@ -164,7 +164,7 @@ final class CacheFactory {
     private CacheProxy<K, V> newLoadingCacheProxy() {
       JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
           cacheLoader, dispatcher, expiry, ticker, statistics);
-      CacheProxy<K, V> cache = new LoadingCacheProxy<K, V>(cacheName, executor, cacheManager,
+      CacheProxy<K, V> cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager,
           config, caffeine.build(adapter), dispatcher, cacheLoader, expiry, ticker, statistics);
       adapter.setCache(cache);
       return cache;

@@ -140,7 +140,7 @@ public interface Policy<K, V> {
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
      * order of iteration is from the entries least likely to be retained (coldest) to the entries
-     * most likely to be retained (hottest). This order to determined by the eviction policy's best
+     * most likely to be retained (hottest). This order is determined by the eviction policy's best
      * guess at the time of creating this snapshot view.
      * <p>
      * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation. Because of the
@@ -157,7 +157,7 @@ public interface Policy<K, V> {
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
      * order of iteration is from the entries most likely to be retained (hottest) to the entries
-     * least likely to be retained (coldest). This order to determined by the eviction policy's best
+     * least likely to be retained (coldest). This order is determined by the eviction policy's best
      * guess at the time of creating this snapshot view.
      * <p>
      * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation. Because of the
@@ -215,7 +215,7 @@ public interface Policy<K, V> {
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
      * order of iteration is from the entries most likely to expire (oldest) to the entries least
-     * likely to expire (youngest). This order to determined by the expiration policy's best guess
+     * likely to expire (youngest). This order is determined by the expiration policy's best guess
      * at the time of creating this snapshot view.
      * <p>
      * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation. Because of the
@@ -232,7 +232,7 @@ public interface Policy<K, V> {
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
      * order of iteration is from the entries least likely to expire (youngest) to the entries most
-     * likely to expire (oldest). This order to determined by the expiration policy's best guess at
+     * likely to expire (oldest). This order is determined by the expiration policy's best guess at
      * the time of creating this snapshot view.
      * <p>
      * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation. Because of the

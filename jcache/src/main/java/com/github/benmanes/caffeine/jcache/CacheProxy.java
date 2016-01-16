@@ -71,13 +71,13 @@ import com.github.benmanes.caffeine.jcache.processor.EntryProcessorEntry;
 public class CacheProxy<K, V> implements Cache<K, V> {
   private static final Logger logger = Logger.getLogger(CacheProxy.class.getName());
 
-  private final com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache;
-  private final CaffeineConfiguration<K, V> configuration;
-  private final CacheManager cacheManager;
-  private final CacheWriter<K, V> writer;
-  private final JCacheMXBean cacheMXBean;
-  private final Copier copier;
-  private final String name;
+  final com.github.benmanes.caffeine.cache.Cache<K, Expirable<V>> cache;
+  final CaffeineConfiguration<K, V> configuration;
+  final CacheManager cacheManager;
+  final CacheWriter<K, V> writer;
+  final JCacheMXBean cacheMXBean;
+  final Copier copier;
+  final String name;
 
   protected final Optional<CacheLoader<K, V>> cacheLoader;
   protected final JCacheStatisticsMXBean statistics;
@@ -86,7 +86,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final Executor executor;
   protected final Ticker ticker;
 
-  private volatile boolean closed;
+  volatile boolean closed;
 
   @SuppressWarnings("PMD.ExcessiveParameterList")
   public CacheProxy(String name, Executor executor, CacheManager cacheManager,
@@ -756,8 +756,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     Object[] result = new Object[1];
     BiFunction<K, Expirable<V>, Expirable<V>> remappingFunction = (k, expirable) -> {
       V value;
+      long millis = 0L;
       if ((expirable == null)
-          || (!expirable.isEternal() && expirable.hasExpired(currentTimeMillis()))) {
+          || (!expirable.isEternal() && expirable.hasExpired(millis = currentTimeMillis()))) {
         statistics.recordMisses(1L);
         value = null;
       } else {
@@ -768,7 +769,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           configuration.isReadThrough() ? cacheLoader : Optional.empty());
       try {
         result[0] = entryProcessor.process(entry, arguments);
-        return postProcess(expirable, entry);
+        return postProcess(expirable, entry, millis);
       } catch (EntryProcessorException e) {
         throw e;
       } catch (RuntimeException e) {
@@ -790,9 +791,23 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   /** Returns the updated expirable value after performing the post processing actions. */
   @SuppressWarnings({"fallthrough", "PMD.MissingBreakInSwitch"})
-  private Expirable<V> postProcess(Expirable<V> expirable, EntryProcessorEntry<K, V> entry) {
+  private Expirable<V> postProcess(Expirable<V> expirable,
+      EntryProcessorEntry<K, V> entry, long currentTimeMS) {
     switch (entry.getAction()) {
       case NONE:
+        if (expirable == null) {
+          return null;
+        } else if (expirable.isEternal()) {
+          return expirable;
+        }
+        if (currentTimeMS == 0) {
+          currentTimeMS = currentTimeMillis();
+        }
+        if (expirable.hasExpired(currentTimeMS)) {
+          dispatcher.publishExpired(this, entry.getKey(), expirable.get());
+          statistics.recordEvictions(1);
+          return null;
+        }
         return expirable;
       case READ: {
         long expireTimeMS = expireTimeMS(expiry::getExpiryForAccess);
@@ -1048,7 +1063,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    *
    * @param expirable the entry that was operated on
    * @param currentTimeMS the current time, or 0 if not read yet
-   * @param expires the expiration function
    */
   protected final void setAccessExpirationTime(Expirable<?> expirable, long currentTimeMS) {
     try {

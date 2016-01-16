@@ -18,6 +18,7 @@ dependencies {
   testCompile test_libraries.jcache_tck
   testCompile test_libraries.jcache_tck_tests
   testCompile test_libraries.jcache_guice
+  testCompile test_libraries.guava_testlib
 
   tck dependencies.create(test_libraries.jcache_tck_tests) {
     transitive = false

@@ -29,6 +29,7 @@ import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
 import javax.cache.spi.CachingProvider;
 
+import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.common.base.Stopwatch;
 
 /**
@@ -40,8 +41,6 @@ public final class JCacheProfiler {
   private static final int THREADS = 10;
   private static final int KEYS = 10_000;
   private static final boolean READ = true;
-  private static final String PROVIDER_CLASS =
-      "com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider";
 
   private final Cache<Integer, Boolean> cache;
   private final LongAdder count;
@@ -50,7 +49,7 @@ public final class JCacheProfiler {
   JCacheProfiler() {
     random = new Random();
     count = new LongAdder();
-    CachingProvider provider = Caching.getCachingProvider(PROVIDER_CLASS);
+    CachingProvider provider = Caching.getCachingProvider(CaffeineCachingProvider.class.getName());
     CacheManager cacheManager = provider.getCacheManager(
         provider.getDefaultURI(), provider.getDefaultClassLoader());
     cache = cacheManager.createCache("profiler", new MutableConfiguration<>());

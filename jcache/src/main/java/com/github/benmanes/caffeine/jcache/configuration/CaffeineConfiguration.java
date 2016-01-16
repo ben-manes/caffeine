@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Objects;
 import java.util.OptionalLong;
 
@@ -27,6 +29,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
 
@@ -36,12 +39,15 @@ import com.github.benmanes.caffeine.jcache.copy.Copier;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<K, V> {
+  private static final Factory<Ticker> SYSTEM_TICKER = Ticker::systemTicker;
   private static final long serialVersionUID = 1L;
 
   private final MutableConfiguration<K, V> delegate;
 
   private Factory<Weigher<K, V>> weigherFactory;
   private Factory<Copier> copierFactory;
+  private Factory<Ticker> tickerFactory;
+
   private Long expireAfterAccessNanos;
   private Long expireAfterWriteNanos;
   private Long maximumWeight;
@@ -49,6 +55,8 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   public CaffeineConfiguration() {
     delegate = new MutableConfiguration<>();
+    delegate.setStoreByValue(false);
+    tickerFactory = SYSTEM_TICKER;
   }
 
   public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
@@ -58,9 +66,12 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
       copierFactory = config.copierFactory;
+      tickerFactory = config.tickerFactory;
       weigherFactory = config.weigherFactory;
       maximumWeight = config.maximumWeight;
       maximumSize = config.maximumSize;
+    } else {
+      tickerFactory = SYSTEM_TICKER;
     }
   }
 
@@ -207,7 +218,25 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param factory the {@link Copier} {@link Factory}
    */
   public void setCopierFactory(Factory<Copier> factory) {
-    copierFactory = factory;
+    copierFactory = requireNonNull(factory);
+  }
+
+  /**
+   * Returns the {@link Factory} for the {@link Ticker} to be used for the cache.
+   *
+   * @return the {@link Factory} for the {@link Ticker}
+   */
+  public Factory<Ticker> getTickerFactory() {
+    return tickerFactory;
+  }
+
+  /**
+   * Set the {@link Factory} for the {@link Ticker}.
+   *
+   * @param factory the {@link Ticker} {@link Factory}
+   */
+  public void setTickerFactory(Factory<Ticker> factory) {
+    tickerFactory = requireNonNull(factory);
   }
 
   /**
@@ -313,7 +342,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    * @param factory the {@link Copier} {@link Factory}
    */
   public void setWeigherFactory(Factory<Weigher<K, V>> factory) {
-    weigherFactory = factory;
+    weigherFactory = requireNonNull(factory);
   }
 
   @Override
@@ -327,6 +356,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     return Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
         && Objects.equals(expireAfterWriteNanos, config.expireAfterWriteNanos)
         && Objects.equals(copierFactory, config.copierFactory)
+        && Objects.equals(tickerFactory, config.tickerFactory)
         && Objects.equals(weigherFactory, config.weigherFactory)
         && Objects.equals(maximumWeight, config.maximumWeight)
         && Objects.equals(maximumSize, config.maximumSize)
