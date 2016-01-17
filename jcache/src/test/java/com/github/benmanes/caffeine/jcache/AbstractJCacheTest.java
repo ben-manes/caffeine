@@ -16,10 +16,15 @@
 package com.github.benmanes.caffeine.jcache;
 
 import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
+import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheLoaderException;
 import javax.cache.spi.CachingProvider;
 
 import org.testng.annotations.AfterMethod;
@@ -30,6 +35,10 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
+import com.google.common.base.Functions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 
 /**
  * A testing harness for simplifying the unit tests.
@@ -38,6 +47,16 @@ import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
  */
 @Test(singleThreaded = true)
 public abstract class AbstractJCacheTest {
+  protected static final long EXPIRY_DURATION = TimeUnit.MINUTES.toMillis(1);
+
+  protected static final Integer KEY_1 = 1, VALUE_1 = -1;
+  protected static final Integer KEY_2 = 2, VALUE_2 = -2;
+  protected static final Integer KEY_3 = 3, VALUE_3 = -3;
+
+  protected final Set<Integer> keys = ImmutableSet.of(KEY_1, KEY_2, KEY_3);
+  protected final Map<Integer, Integer> entries = ImmutableMap.of(
+      KEY_1, VALUE_1, KEY_2, VALUE_2, KEY_3, VALUE_3);
+
   protected LoadingCacheProxy<Integer, Integer> jcacheLoading;
   protected CacheProxy<Integer, Integer> jcache;
   protected CacheManager cacheManager;
@@ -64,16 +83,43 @@ public abstract class AbstractJCacheTest {
     cacheManager.destroyCache("jcacheLoading");
   }
 
-  @Nullable
-  public Expirable<Integer> getExpirable(Integer key) {
-    return jcache.cache.getIfPresent(key);
-  }
-
   /** The base configuration used by the test. */
   protected abstract CaffeineConfiguration<Integer, Integer> getConfiguration();
 
+  /* ---------------- Utility methods ------------- */
+
+  @Nullable
+  public static Expirable<Integer> getExpirable(CacheProxy<Integer, Integer> cache, Integer key) {
+    return cache.cache.getIfPresent(key);
+  }
+
+  public void advanceHalfExpiry() {
+    ticker.advance(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
+  }
+
+  public void advancePastExpiry() {
+    ticker.advance(2 * EXPIRY_DURATION, TimeUnit.MILLISECONDS);
+  }
+
+  /** @return the current time in milliseconds */
+  protected final long currentTimeMillis() {
+    return TimeUnit.NANOSECONDS.toMillis(ticker.read());
+  }
+
   /** The loading configuration used by the test. */
-  protected abstract CaffeineConfiguration<Integer, Integer> getLoadingConfiguration();
+  protected CaffeineConfiguration<Integer, Integer> getLoadingConfiguration() {
+    CaffeineConfiguration<Integer, Integer> configuration = getConfiguration();
+    configuration.setCacheLoaderFactory(() -> new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) throws CacheLoaderException {
+        return key;
+      }
+      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+        return Maps.asMap(ImmutableSet.copyOf(keys), Functions.identity());
+      }
+    });
+    configuration.setReadThrough(true);
+    return configuration;
+  }
 
   protected final class JFakeTicker extends com.google.common.testing.FakeTicker
       implements Ticker, Serializable {
