@@ -616,17 +616,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** Expires entries on the write-order queue. */
   @GuardedBy("evictionLock")
   void expireAfterWriteEntries(long now) {
-    if (expiresAfterWrite()) {
-      long expirationTime = now - expiresAfterWriteNanos();
-      for (;;) {
-        final Node<K, V> node = writeOrderDeque().peekFirst();
-        if ((node == null) || (node.getWriteTime() > expirationTime)) {
-          break;
-        }
-        evictEntry(node, RemovalCause.EXPIRED, now);
-      }
+    if (!expiresAfterWrite()) {
+      return;
     }
-    return;
+    long expirationTime = now - expiresAfterWriteNanos();
+    for (;;) {
+      final Node<K, V> node = writeOrderDeque().peekFirst();
+      if ((node == null) || (node.getWriteTime() > expirationTime)) {
+        break;
+      }
+      evictEntry(node, RemovalCause.EXPIRED, now);
+    }
   }
 
   /** Returns if the entry has expired. */

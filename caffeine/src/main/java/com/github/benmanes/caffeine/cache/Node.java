@@ -120,9 +120,9 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /* ---------------- Access order -------------- */
 
-  static final int EDEN = 0;
-  static final int PROBATION = 1;
-  static final int PROTECTED = 2;
+  int EDEN = 0;
+  int PROBATION = 1;
+  int PROTECTED = 2;
 
   /** Returns if the entry is in the Eden or Main space. */
   default boolean isEden() {
