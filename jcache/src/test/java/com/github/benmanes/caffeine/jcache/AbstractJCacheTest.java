@@ -89,15 +89,15 @@ public abstract class AbstractJCacheTest {
   /* ---------------- Utility methods ------------- */
 
   @Nullable
-  public static Expirable<Integer> getExpirable(CacheProxy<Integer, Integer> cache, Integer key) {
+  protected static Expirable<Integer> getExpirable(CacheProxy<Integer, Integer> cache, Integer key) {
     return cache.cache.getIfPresent(key);
   }
 
-  public void advanceHalfExpiry() {
+  protected void advanceHalfExpiry() {
     ticker.advance(EXPIRY_DURATION / 2, TimeUnit.MILLISECONDS);
   }
 
-  public void advancePastExpiry() {
+  protected void advancePastExpiry() {
     ticker.advance(2 * EXPIRY_DURATION, TimeUnit.MILLISECONDS);
   }
 

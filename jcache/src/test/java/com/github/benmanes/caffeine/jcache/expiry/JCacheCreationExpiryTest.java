@@ -101,11 +101,12 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
   @Test
   public void getAndPut_expired() {
-    assertThat(jcache.getAndPut(KEY_1, VALUE_1), is(nullValue()));
+    jcache.put(KEY_1, VALUE_1);
     advancePastExpiry();
 
+    assertThat(jcache.getAndPut(KEY_1, VALUE_1), is(nullValue()));
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
   @Test
