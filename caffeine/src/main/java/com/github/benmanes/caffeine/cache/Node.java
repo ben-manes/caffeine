@@ -125,17 +125,17 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   int PROTECTED = 2;
 
   /** Returns if the entry is in the Eden or Main space. */
-  default boolean isEden() {
+  default boolean inEden() {
     return getQueueType() == EDEN;
   }
 
   /** Returns if the entry is in the Main space's probation queue. */
-  default boolean isMainProbation() {
+  default boolean inMainProbation() {
     return getQueueType() == PROBATION;
   }
 
   /** Returns if the entry is in the Main space's protected queue. */
-  default boolean isMainProtected() {
+  default boolean inMainProtected() {
     return getQueueType() == PROTECTED;
   }
 

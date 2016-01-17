@@ -35,7 +35,7 @@ findbugs {
 
 pmd {
   ruleSets = []
-  toolVersion = '5.3.3'
+  toolVersion = '5.4.1'
   ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
 }
 

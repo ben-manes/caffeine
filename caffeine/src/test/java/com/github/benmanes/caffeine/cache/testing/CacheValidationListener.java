@@ -33,6 +33,7 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.commons.lang3.StringUtils;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
 import org.testng.ITestResult;
@@ -73,10 +74,16 @@ public final class CacheValidationListener implements IInvokedMethodListener {
       }
     } catch (Throwable caught) {
       testResult.setStatus(ITestResult.FAILURE);
-      testResult.setThrowable(caught);
+      testResult.setThrowable(new AssertionError(getTestName(method), caught));
     } finally {
       cleanUp(testResult);
     }
+  }
+
+  /** Returns the name of the executed test. */
+  private static String getTestName(IInvokedMethod method) {
+    return StringUtils.substringAfterLast(method.getTestMethod().getTestClass().getName(), ".")
+        + "#" + method.getTestMethod().getConstructorOrMethod().getName();
   }
 
   /** Checks whether the {@link TrackingExecutor} had unexpected failures. */

@@ -6,7 +6,6 @@
 
   <rule ref="rulesets/java/basic.xml">
     <exclude name="AvoidBranchingStatementAsLastInLoop"/>
-    <exclude name="UselessParentheses"/>
   </rule>
 
   <rule ref="rulesets/java/braces.xml"/>
@@ -28,6 +27,7 @@
   <rule ref="rulesets/java/comments.xml">
     <exclude name="CommentSize"/>
     <exclude name="CommentRequired"/>
+    <exclude name="CommentDefaultAccessModifier"/>
   </rule>
 
   <rule ref="rulesets/java/coupling.xml">

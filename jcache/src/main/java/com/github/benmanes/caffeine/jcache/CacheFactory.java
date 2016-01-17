@@ -116,7 +116,6 @@ final class CacheFactory {
     CacheLoader<K, V> cacheLoader;
     JCacheEvictionListener<K, V> evictionListener;
 
-    @SuppressWarnings("PMD.StringToString")
     Builder(String cacheName, CaffeineConfiguration<K, V> config) {
       this.config = config;
       this.cacheName = cacheName;

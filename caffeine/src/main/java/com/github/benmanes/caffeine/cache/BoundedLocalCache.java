@@ -582,34 +582,31 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     expireAfterWriteEntries(now);
   }
 
-  /** Expires entries on the access-order queue. */
+  /** Expires entries in the access-order queue. */
   @GuardedBy("evictionLock")
   void expireAfterAccessEntries(long now) {
-    if (expiresAfterAccess()) {
-      long expirationTime = now - expiresAfterAccessNanos();
-      for (;;) {
-        final Node<K, V> node = accessOrderEdenDeque().peekFirst();
-        if ((node == null) || (node.getAccessTime() > expirationTime)) {
-          break;
-        }
-        evictEntry(node, RemovalCause.EXPIRED, now);
+    if (!expiresAfterAccess()) {
+      return;
+    }
+
+    long expirationTime = (now - expiresAfterAccessNanos());
+    expireAfterAccessEntries(accessOrderEdenDeque(), expirationTime, now);
+    if (evicts()) {
+      expireAfterAccessEntries(accessOrderProbationDeque(), expirationTime, now);
+      expireAfterAccessEntries(accessOrderProtectedDeque(), expirationTime, now);
+    }
+  }
+
+  /** Expires entries in an access-order queue. */
+  @GuardedBy("evictionLock")
+  void expireAfterAccessEntries(AccessOrderDeque<Node<K, V>> accessOrderDeque,
+      long expirationTime, long now) {
+    for (;;) {
+      final Node<K, V> node = accessOrderDeque.peekFirst();
+      if ((node == null) || (node.getAccessTime() > expirationTime)) {
+        break;
       }
-      if (evicts()) {
-        for (;;) {
-          final Node<K, V> node = accessOrderProbationDeque().peekFirst();
-          if ((node == null) || (node.getAccessTime() > expirationTime)) {
-            break;
-          }
-          evictEntry(node, RemovalCause.EXPIRED, now);
-        }
-        for (;;) {
-          final Node<K, V> node = accessOrderProtectedDeque().peekFirst();
-          if ((node == null) || (node.getAccessTime() > expirationTime)) {
-            break;
-          }
-          evictEntry(node, RemovalCause.EXPIRED, now);
-        }
-      }
+      evictEntry(node, RemovalCause.EXPIRED, now);
     }
   }
 
@@ -693,10 +690,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     // the addition that triggered this eviction. The victim is eagerly unlinked before the removal
     // task so that if an eviction is still required then a new victim will be chosen for removal.
     makeDead(node);
-    if (node.isEden() && (evicts() || expiresAfterAccess())) {
+    if (node.inEden() && (evicts() || expiresAfterAccess())) {
       accessOrderEdenDeque().remove(node);
     } else if (evicts()) {
-      if (node.isMainProbation()) {
+      if (node.inMainProbation()) {
         accessOrderProbationDeque().remove(node);
       } else {
         accessOrderProtectedDeque().remove(node);
@@ -916,39 +913,45 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return;
       }
       frequencySketch().increment(key);
-      if (node.isEden()) {
+      if (node.inEden()) {
         reorder(accessOrderEdenDeque(), node);
-      } else if (node.isMainProbation()) {
-        if (!accessOrderProbationDeque().contains(node)) {
-          // Ignore stale accesses for an entry that is no longer present
-          return;
-        } else if (node.getPolicyWeight() > mainProtectedMaximum()) {
-          return;
-        }
-
-        long mainProtectedWeightedSize = mainProtectedWeightedSize() + node.getPolicyWeight();
-        accessOrderProbationDeque().remove(node);
-        accessOrderProtectedDeque().add(node);
-        node.makeMainProtected();
-
-        long mainProtectedMaximum = mainProtectedMaximum();
-        while (mainProtectedWeightedSize > mainProtectedMaximum) {
-          Node<K, V> demoted = accessOrderProtectedDeque().pollFirst();
-          if (demoted == null) {
-            break;
-          }
-          demoted.makeMainProbation();
-          accessOrderProbationDeque().add(demoted);
-          mainProtectedWeightedSize -= node.getPolicyWeight();
-        }
-
-        lazySetMainProtectedWeightedSize(mainProtectedWeightedSize);
+      } else if (node.inMainProbation()) {
+        reorderProbation(node);
       } else {
         reorder(accessOrderProtectedDeque(), node);
       }
     } else if (expiresAfterAccess()) {
       reorder(accessOrderEdenDeque(), node);
     }
+  }
+
+  /** Updates the node's location in the probation queue. */
+  @GuardedBy("evictionLock")
+  void reorderProbation(Node<K, V> node) {
+    if (!accessOrderProbationDeque().contains(node)) {
+      // Ignore stale accesses for an entry that is no longer present
+      return;
+    } else if (node.getPolicyWeight() > mainProtectedMaximum()) {
+      return;
+    }
+
+    long mainProtectedWeightedSize = mainProtectedWeightedSize() + node.getPolicyWeight();
+    accessOrderProbationDeque().remove(node);
+    accessOrderProtectedDeque().add(node);
+    node.makeMainProtected();
+
+    long mainProtectedMaximum = mainProtectedMaximum();
+    while (mainProtectedWeightedSize > mainProtectedMaximum) {
+      Node<K, V> demoted = accessOrderProtectedDeque().pollFirst();
+      if (demoted == null) {
+        break;
+      }
+      demoted.makeMainProbation();
+      accessOrderProbationDeque().add(demoted);
+      mainProtectedWeightedSize -= node.getPolicyWeight();
+    }
+
+    lazySetMainProtectedWeightedSize(mainProtectedWeightedSize);
   }
 
   /** Updates the node's location in the policy's deque. */
@@ -989,9 +992,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         // The node's policy weight may be out of sync due to a pending update waiting to be
         // processed. At this point the node's weight is finalized, so the weight can be safely
         // taken from the node's perspective and the sizes will be adjusted correctly.
-        if (node.isEden()) {
+        if (node.inEden()) {
           lazySetEdenWeightedSize(edenWeightedSize() - node.getWeight());
-        } else if (node.isMainProtected()) {
+        } else if (node.inMainProtected()) {
           lazySetMainProtectedWeightedSize(mainProtectedWeightedSize() - node.getWeight());
         }
         lazySetWeightedSize(weightedSize() - node.getWeight());
@@ -1074,10 +1077,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       // add may not have been processed yet
-      if (node.isEden() && (evicts() || expiresAfterAccess())) {
+      if (node.inEden() && (evicts() || expiresAfterAccess())) {
         accessOrderEdenDeque().remove(node);
       } else if (evicts()) {
-        if (node.isMainProbation()) {
+        if (node.inMainProbation()) {
           accessOrderProbationDeque().remove(node);
         } else {
           accessOrderProtectedDeque().remove(node);
@@ -1104,9 +1107,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       if (evicts()) {
-        if (node.isEden()) {
+        if (node.inEden()) {
           lazySetEdenWeightedSize(edenWeightedSize() + weightDifference);
-        } else if (node.isMainProtected()) {
+        } else if (node.inMainProtected()) {
           lazySetMainProtectedWeightedSize(mainProtectedMaximum() + weightDifference);
         }
         lazySetWeightedSize(weightedSize() + weightDifference);
@@ -2156,7 +2159,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public void remove() {
-      Caffeine.requireState(current != null);
+      requireState(current != null);
       BoundedLocalCache.this.remove(current);
       current = null;
     }
@@ -2292,7 +2295,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public void remove() {
-      Caffeine.requireState(removalKey != null);
+      requireState(removalKey != null);
       BoundedLocalCache.this.remove(removalKey);
       removalKey = null;
     }
@@ -2527,11 +2530,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         cache.setRefreshAfterWriteNanos(unit.toNanos(duration));
         cache.executor().execute(cache.drainBuffersTask);
       }
+      @SuppressWarnings("PMD.SimplifiedTernary") // false positive (#1424)
       @Override public Map<K, V> oldest(int limit) {
         return cache.expiresAfterWrite()
             ? expireAfterWrite().get().oldest(limit)
             : sortedByWriteTime(limit, true);
       }
+      @SuppressWarnings("PMD.SimplifiedTernary") // false positive (#1424)
       @Override public Map<K, V> youngest(int limit) {
         return cache.expiresAfterWrite()
             ? expireAfterWrite().get().youngest(limit)

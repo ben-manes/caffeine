@@ -43,6 +43,7 @@ import com.typesafe.config.ConfigException;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class TypesafeConfigurator {
   static final Logger logger = Logger.getLogger(TypesafeConfigurator.class.getName());
 

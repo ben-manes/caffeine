@@ -548,8 +548,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       requireNonNull(newValue);
       CompletableFuture<V> oldValueFuture = delegate.get(key);
       return oldValue.equals(Async.getIfReady(oldValueFuture))
-          ? delegate.replace(key, oldValueFuture, CompletableFuture.completedFuture(newValue))
-          : false;
+          && delegate.replace(key, oldValueFuture, CompletableFuture.completedFuture(newValue));
     }
 
     @Override
@@ -560,8 +559,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       }
       CompletableFuture<V> oldValueFuture = delegate.get(key);
       return value.equals(Async.getIfReady(oldValueFuture))
-          ? delegate.remove(key, oldValueFuture)
-          : false;
+          && delegate.remove(key, oldValueFuture);
     }
 
     @Override

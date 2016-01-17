@@ -38,8 +38,8 @@ import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
  * A JCache configuration with Caffeine specific settings.
  * <p>
  * The initial settings disable <tt>store by value</tt> so that entries are not copied when crossing
- * the {@link javax.cache.Cache} API boundary. If enabled and the {@link Copier} is explicitly set,
- * then the {@link JavaSerializationCopier} will be used. This differs from
+ * the {@link javax.cache.Cache} API boundary. If enabled and the {@link Copier} is not explicitly
+ * set, then the {@link JavaSerializationCopier} will be used. This differs from
  * {@link MutableConfiguration} which enables <tt>store by value</tt> at construction.
  *
  * @author ben.manes@gmail.com (Ben Manes)
