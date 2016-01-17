@@ -103,6 +103,7 @@ public final class TypesafeConfigurator {
       addMonitoring();
       addLazyExpiration();
       addEagerExpiration();
+      addRefresh();
       addMaximum();
 
       return configuration;
@@ -201,6 +202,15 @@ public final class TypesafeConfigurator {
       if (expiration.hasPath("after-access")) {
         long nanos = expiration.getDuration("after-access", TimeUnit.NANOSECONDS);
         configuration.setExpireAfterAccess(OptionalLong.of(nanos));
+      }
+    }
+
+    /** Adds the Caffeine refresh settings. */
+    public void addRefresh() {
+      Config refresh = config.getConfig("policy.refresh");
+      if (refresh.hasPath("after-write")) {
+        long nanos = refresh.getDuration("after-write", TimeUnit.NANOSECONDS);
+        configuration.setRefreshAfterWrite(OptionalLong.of(nanos));
       }
     }
 

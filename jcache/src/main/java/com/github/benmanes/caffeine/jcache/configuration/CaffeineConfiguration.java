@@ -32,13 +32,20 @@ import javax.cache.integration.CacheWriter;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
+import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
 
 /**
  * A JCache configuration with Caffeine specific settings.
+ * <p>
+ * The initial settings disable <tt>store by value</tt> so that entries are not copied when crossing
+ * the {@link javax.cache.Cache} API boundary. If enabled and the {@link Copier} is explicitly set,
+ * then the {@link JavaSerializationCopier} will be used. This differs from
+ * {@link MutableConfiguration} which enables <tt>store by value</tt> at construction.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<K, V> {
+  private static final Factory<Copier> JAVA_COPIER = JavaSerializationCopier::new;
   private static final Factory<Ticker> SYSTEM_TICKER = Ticker::systemTicker;
   private static final long serialVersionUID = 1L;
 
@@ -48,6 +55,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private Factory<Copier> copierFactory;
   private Factory<Ticker> tickerFactory;
 
+  private Long refreshAfterWriteNanos;
   private Long expireAfterAccessNanos;
   private Long expireAfterWriteNanos;
   private Long maximumWeight;
@@ -57,12 +65,14 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     delegate = new MutableConfiguration<>();
     delegate.setStoreByValue(false);
     tickerFactory = SYSTEM_TICKER;
+    copierFactory = JAVA_COPIER;
   }
 
   public CaffeineConfiguration(CompleteConfiguration<K, V> configuration) {
     delegate = new MutableConfiguration<>(configuration);
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       CaffeineConfiguration<K, V> config = (CaffeineConfiguration<K, V>) configuration;
+      refreshAfterWriteNanos = config.refreshAfterWriteNanos;
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
       copierFactory = config.copierFactory;
@@ -72,6 +82,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       maximumSize = config.maximumSize;
     } else {
       tickerFactory = SYSTEM_TICKER;
+      copierFactory = JAVA_COPIER;
     }
   }
 
@@ -240,6 +251,28 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
+   * Set the refresh after write in nanoseconds.
+   *
+   * @param refreshAfterWriteNanos the duration in nanoseconds
+   */
+  public void setRefreshAfterWrite(OptionalLong refreshAfterWriteNanos) {
+    this.refreshAfterWriteNanos = refreshAfterWriteNanos.isPresent()
+        ? refreshAfterWriteNanos.getAsLong()
+        : null;
+  }
+
+  /**
+   * Returns the refresh after write in nanoseconds.
+   *
+   * @return the duration in nanoseconds
+   */
+  public OptionalLong getRefreshAfterWrite() {
+    return (refreshAfterWriteNanos == null)
+        ? OptionalLong.empty()
+        : OptionalLong.of(refreshAfterWriteNanos);
+  }
+
+  /**
    * Set the expire after write in nanoseconds.
    *
    * @param expireAfterWriteNanos the duration in nanoseconds
@@ -353,7 +386,8 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       return false;
     }
     CaffeineConfiguration<?, ?> config = (CaffeineConfiguration<?, ?>) o;
-    return Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
+    return Objects.equals(refreshAfterWriteNanos, config.refreshAfterWriteNanos)
+        && Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
         && Objects.equals(expireAfterWriteNanos, config.expireAfterWriteNanos)
         && Objects.equals(copierFactory, config.copierFactory)
         && Objects.equals(tickerFactory, config.tickerFactory)

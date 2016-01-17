@@ -142,7 +142,14 @@ final class CacheFactory {
         configureEvictionListener();
       }
 
-      CacheProxy<K, V> cache = isReadThrough() ? newLoadingCacheProxy() : newCacheProxy();
+      CacheProxy<K, V> cache;
+      if (isReadThrough()) {
+        configureRefreshAfterWrite();
+        cache = newLoadingCacheProxy();
+      } else {
+        cache = newCacheProxy();
+      }
+
       if (evicts) {
         evictionListener.setCache(cache);
       }
@@ -201,6 +208,13 @@ final class CacheFactory {
         caffeine.expireAfterAccess(config.getExpireAfterAccess().getAsLong(), TimeUnit.NANOSECONDS);
       }
       return config.getExpireAfterAccess().isPresent();
+    }
+
+    private boolean configureRefreshAfterWrite() {
+      if (config.getRefreshAfterWrite().isPresent()) {
+        caffeine.refreshAfterWrite(config.getRefreshAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
+      }
+      return config.getRefreshAfterWrite().isPresent();
     }
 
     /** Configures the removal listener. */

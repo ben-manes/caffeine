@@ -71,6 +71,7 @@ public final class TypesafeConfigurationTest {
     assertThat(config.isManagementEnabled(), is(true));
 
     checkSize(config);
+    checkRefresh(config);
     checkLazyExpiration(config);
     checkEagerExpiration(config);
   }
@@ -102,6 +103,10 @@ public final class TypesafeConfigurationTest {
   static void checkEagerExpiration(CaffeineConfiguration<?, ?> config) {
     assertThat(config.getExpireAfterWrite().getAsLong(), is(TimeUnit.MINUTES.toNanos(1)));
     assertThat(config.getExpireAfterAccess().getAsLong(), is(TimeUnit.MINUTES.toNanos(5)));
+  }
+
+  static void checkRefresh(CaffeineConfiguration<?, ?> config) {
+    assertThat(config.getRefreshAfterWrite().getAsLong(), is(TimeUnit.SECONDS.toNanos(30)));
   }
 
   static void checkSize(CaffeineConfiguration<?, ?> config) {
