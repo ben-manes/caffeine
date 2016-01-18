@@ -76,6 +76,36 @@ public final class CaffeineTest {
         is(not(Caffeine.newBuilder().maximumWeight(1).toString())));
   }
 
+  @Test(expectedExceptions = NullPointerException.class)
+  public void fromSpec_null() {
+    Caffeine.from((CaffeineSpec) null);
+  }
+
+  @Test
+  public void fromSpec_lenientParsing() {
+    Caffeine.from(CaffeineSpec.parse("maximumSize=100")).weigher((k, v) -> 0).build();
+  }
+
+  @Test
+  public void fromSpec() {
+    assertThat(Caffeine.from(CaffeineSpec.parse("")), is(not(nullValue())));
+  }
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void fromString_null() {
+    Caffeine.from((String) null);
+  }
+
+  @Test
+  public void fromString_lenientParsing() {
+    Caffeine.from("maximumSize=100").weigher((k, v) -> 0).build();
+  }
+
+  @Test
+  public void fromString() {
+    assertThat(Caffeine.from(""), is(not(nullValue())));
+  }
+
   /* ---------------- loading -------------- */
 
   @Test(expectedExceptions = NullPointerException.class)

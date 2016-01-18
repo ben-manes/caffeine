@@ -35,7 +35,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
@@ -138,7 +138,7 @@ final class CacheGenerator {
         (InitialCapacity) combination.get(index++),
         (Stats) combination.get(index++),
         (CacheWeigher) combination.get(index++),
-        (MaximumSize) combination.get(index++),
+        (Maximum) combination.get(index++),
         (Expire) combination.get(index++),
         (Expire) combination.get(index++),
         (Expire) combination.get(index++),

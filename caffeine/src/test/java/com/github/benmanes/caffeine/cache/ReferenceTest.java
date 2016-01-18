@@ -41,7 +41,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
@@ -85,7 +85,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getIfPresent(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
@@ -97,7 +97,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void get(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
@@ -113,7 +113,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void get_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
@@ -131,7 +131,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getAllPresent(Cache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
@@ -143,7 +143,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void put(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
@@ -159,7 +159,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void put_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
@@ -177,7 +177,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void putAll(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> entries = ImmutableMap.of(context.firstKey(), context.absentValue(),
@@ -194,7 +194,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void putAll_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
@@ -212,7 +212,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidate(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
@@ -228,7 +228,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void invalidate_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
@@ -246,7 +246,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
@@ -262,7 +262,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void invalidateAll_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
@@ -280,7 +280,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void invalidateAll_full(Cache<Integer, Integer> cache, CacheContext context) {
     context.clear();
@@ -295,7 +295,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void invalidateAll_full_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
@@ -312,7 +312,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void estimatedSize(Cache<Integer, Integer> cache, CacheContext context) {
     context.clear();
@@ -323,7 +323,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void cleanUp(Cache<Integer, Integer> cache, CacheContext context) {
     context.clear();
@@ -338,7 +338,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void cleanUp_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
@@ -355,7 +355,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.SINGLETON, stats = Stats.ENABLED, loader = Loader.IDENTITY,
       removalListener = Listener.CONSUMING)
   public void get(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -371,7 +371,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void get_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -389,7 +389,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED,
       loader = {Loader.IDENTITY, Loader.BULK_IDENTITY}, removalListener = Listener.CONSUMING)
   public void getAll(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -406,7 +406,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL,
       compute = Compute.SYNC, loader = {Loader.IDENTITY, Loader.BULK_IDENTITY})
@@ -425,7 +425,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, loader = Loader.IDENTITY,
       removalListener = Listener.CONSUMING)
   public void refresh(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -444,7 +444,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void refresh_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -461,7 +461,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void getIfPresent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
@@ -473,7 +473,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.SINGLETON, stats = Stats.ENABLED, loader = Loader.IDENTITY,
       removalListener = Listener.CONSUMING)
   public void get(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -489,7 +489,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void get_writerFails(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -507,7 +507,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED,
       loader = {Loader.IDENTITY, Loader.BULK_IDENTITY}, removalListener = Listener.CONSUMING)
   public void getAll(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -524,7 +524,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void getAll_writerFails(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -542,7 +542,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED,  removalListener = Listener.CONSUMING)
   public void put(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
@@ -560,7 +560,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void isEmpty(Map<Integer, Integer> cache, CacheContext context) {
     context.clear();
@@ -571,7 +571,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void size(Map<Integer, Integer> cache, CacheContext context) {
     context.clear();
@@ -582,7 +582,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void containsKey(Map<Integer, Integer> map, CacheContext context) {
     Integer first = context.firstKey();
@@ -594,7 +594,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void containsValue(Map<Integer, Integer> map, CacheContext context) {
     Integer value = context.original().get(context.firstKey());
@@ -606,7 +606,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void clear(Map<Integer, Integer> map, CacheContext context) {
     context.clear();
@@ -621,7 +621,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void clear_writerFails(Map<Integer, Integer> map, CacheContext context) {
@@ -638,7 +638,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void putIfAbsent(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -655,7 +655,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void putIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
@@ -673,7 +673,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void put(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -690,7 +690,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void put_writerFails(Map<Integer, Integer> map, CacheContext context) {
@@ -708,7 +708,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void replace(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -722,7 +722,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void replaceConditionally(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -736,7 +736,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void remove(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -752,7 +752,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void remove_writerFails(Map<Integer, Integer> map, CacheContext context) {
@@ -770,7 +770,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void removeConditionally(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -788,7 +788,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void computeIfAbsent(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -804,7 +804,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void computeIfAbsent_writerFails(Map<Integer, Integer> map, CacheContext context) {
@@ -822,7 +822,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void computeIfPresent(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -840,7 +840,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void compute(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -859,7 +859,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void compute_writerFails(Map<Integer, Integer> map, CacheContext context) {
@@ -877,7 +877,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void merge(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
@@ -895,7 +895,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
       implementation = Implementation.Caffeine, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
       compute = Compute.SYNC, removalListener = Listener.CONSUMING, writer = Writer.EXCEPTIONAL)
   public void merge_writerFails(Map<Integer, Integer> map, CacheContext context) {
@@ -925,7 +925,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING, writer = Writer.DISABLED)
   public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
@@ -940,7 +940,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
   public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
@@ -955,7 +955,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
   public void computeIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
@@ -970,7 +970,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
   public void compute_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
@@ -985,7 +985,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = MaximumSize.UNREACHABLE,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
       removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
   public void merge_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {

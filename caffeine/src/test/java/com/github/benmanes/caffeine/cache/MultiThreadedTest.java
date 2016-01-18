@@ -31,7 +31,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
@@ -53,7 +53,7 @@ import com.google.common.testing.SerializableTester;
 public final class MultiThreadedTest {
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.DISABLED, stats = Stats.DISABLED,
+  @CacheSpec(maximumSize = Maximum.DISABLED, stats = Stats.DISABLED,
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, refreshAfterWrite = Expire.DISABLED,
       removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,
@@ -63,7 +63,7 @@ public final class MultiThreadedTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
+  @CacheSpec(maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.DISABLED,
       removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,
@@ -73,7 +73,7 @@ public final class MultiThreadedTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.DISABLED, stats = Stats.DISABLED,
+  @CacheSpec(maximumSize = Maximum.DISABLED, stats = Stats.DISABLED,
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, refreshAfterWrite = Expire.DISABLED,
       removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,
@@ -84,7 +84,7 @@ public final class MultiThreadedTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(maximumSize = MaximumSize.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
+  @CacheSpec(maximumSize = Maximum.FULL, weigher = {CacheWeigher.DEFAULT, CacheWeigher.RANDOM},
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       expireAfterWrite = Expire.FOREVER, refreshAfterWrite = Expire.DISABLED,
       removalListener = Listener.DEFAULT, keys = ReferenceType.STRONG,

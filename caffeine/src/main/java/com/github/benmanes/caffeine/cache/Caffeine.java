@@ -27,6 +27,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnegative;
@@ -120,6 +121,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @param <V> the base value type for all caches created by this builder
  */
 public final class Caffeine<K, V> {
+  static final Logger logger = Logger.getLogger(Caffeine.class.getName());
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
 
   enum Strength { STRONG, WEAK, SOFT }
@@ -128,6 +130,8 @@ public final class Caffeine<K, V> {
   static final int DEFAULT_INITIAL_CAPACITY = 0;
   static final int DEFAULT_EXPIRATION_NANOS = 0;
   static final int DEFAULT_REFRESH_NANOS = 0;
+
+  boolean strictParsing = true;
 
   long maximumSize = UNSET_INT;
   long maximumWeight = UNSET_INT;
@@ -141,7 +145,6 @@ public final class Caffeine<K, V> {
   Supplier<StatsCounter> statsCounterSupplier;
   CacheWriter<? super K, ? super V> writer;
   Weigher<? super K, ? super V> weigher;
-  Supplier<String> nameSupplier;
   Executor executor;
   Ticker ticker;
 
@@ -187,6 +190,29 @@ public final class Caffeine<K, V> {
   @Nonnull
   public static Caffeine<Object, Object> newBuilder() {
     return new Caffeine<Object, Object>();
+  }
+
+  /**
+   * Constructs a new {@code Caffeine} instance with the settings specified in {@code spec}.
+   *
+   * @return a new instance with the specification's settings
+   */
+  @Nonnull
+  public static Caffeine<Object, Object> from(CaffeineSpec spec) {
+    Caffeine<Object, Object> builder = spec.toBuilder();
+    builder.strictParsing = false;
+    return builder;
+  }
+
+  /**
+   * Constructs a new {@code Caffeine} instance with the settings specified in {@code spec}.
+   *
+   * @param spec a String in the format specified by {@link CaffeineSpec}
+   * @return a new instance with the specification's settings
+   */
+  @Nonnull
+  public static Caffeine<Object, Object> from(String spec) {
+    return from(CaffeineSpec.parse(spec));
   }
 
   /**
@@ -341,8 +367,9 @@ public final class Caffeine<K, V> {
       @Nonnull Weigher<? super K1, ? super V1> weigher) {
     requireNonNull(weigher);
     requireState(this.weigher == null, "weigher was already set to %s", this.weigher);
-    requireState(this.maximumSize == UNSET_INT,
+    requireState(!strictParsing || this.maximumSize == UNSET_INT,
         "weigher can not be combined with maximum size", this.maximumSize);
+
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
     self.weigher = weigher;
@@ -841,8 +868,10 @@ public final class Caffeine<K, V> {
   private void requireWeightWithWeigher() {
     if (weigher == null) {
       requireState(maximumWeight == UNSET_INT, "maximumWeight requires weigher");
-    } else {
+    } else if (strictParsing) {
       requireState(maximumWeight != UNSET_INT, "weigher requires maximumWeight");
+    } else if (maximumWeight == UNSET_INT) {
+      logger.log(Level.WARNING, "ignoring weigher specified without maximumWeight");
     }
   }
 

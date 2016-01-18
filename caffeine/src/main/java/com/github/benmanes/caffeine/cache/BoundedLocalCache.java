@@ -602,9 +602,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   void expireAfterAccessEntries(AccessOrderDeque<Node<K, V>> accessOrderDeque,
       long expirationTime, long now) {
     for (;;) {
-      final Node<K, V> node = accessOrderDeque.peekFirst();
+      Node<K, V> node = accessOrderDeque.peekFirst();
       if ((node == null) || (node.getAccessTime() > expirationTime)) {
-        break;
+        return;
       }
       evictEntry(node, RemovalCause.EXPIRED, now);
     }
@@ -925,7 +925,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /** Updates the node's location in the probation queue. */
+  /** Promote the node from probation to protected on an access. */
   @GuardedBy("evictionLock")
   void reorderProbation(Node<K, V> node) {
     if (!accessOrderProbationDeque().contains(node)) {

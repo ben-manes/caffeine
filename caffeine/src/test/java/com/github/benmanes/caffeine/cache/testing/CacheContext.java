@@ -44,7 +44,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
@@ -66,7 +66,7 @@ public final class CacheContext {
   final ReferenceType valueStrength;
   final ReferenceType keyStrength;
   final TrackingExecutor executor;
-  final MaximumSize maximumSize;
+  final Maximum maximumSize;
   final Population population;
   final CacheWeigher weigher;
   final Expire afterAccess;
@@ -98,7 +98,7 @@ public final class CacheContext {
   Map<Integer, Integer> absent;
 
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
-      MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, Expire refresh,
+      Maximum maximumSize, Expire afterAccess, Expire afterWrite, Expire refresh,
       Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, Listener removalListenerType, Population population,
       boolean isLoading, Compute compute, Loader loader, Writer writer,
@@ -126,6 +126,10 @@ public final class CacheContext {
     this.original = new LinkedHashMap<>();
     this.initialSize = -1;
     this.compute = compute;
+  }
+
+  public InitialCapacity initialCapacity() {
+    return initialCapacity;
   }
 
   public boolean isAsync() {
@@ -202,6 +206,10 @@ public final class CacheContext {
     return (initialSize < 0) ? (initialSize = original.size()) : initialSize;
   }
 
+  public Maximum maximum() {
+    return maximumSize;
+  }
+
   public long maximumSize() {
     assertThat("Invalid usage of context", maximumSize, is(not(nullValue())));
     return maximumSize.max();
@@ -230,11 +238,15 @@ public final class CacheContext {
   }
 
   public boolean isUnbounded() {
-    return (maximumSize == MaximumSize.DISABLED);
+    return (maximumSize == Maximum.DISABLED);
   }
 
   public boolean refreshes() {
     return (refresh != Expire.DISABLED);
+  }
+
+  public Expire refreshAfterWrite() {
+    return refresh;
   }
 
   /** The initial entries in the cache, iterable in insertion order. */

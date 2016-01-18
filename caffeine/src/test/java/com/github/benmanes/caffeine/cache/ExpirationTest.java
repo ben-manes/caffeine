@@ -44,7 +44,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
@@ -939,7 +939,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.COLLECTION,
       requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
@@ -952,7 +952,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.COLLECTION,
       requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
@@ -965,7 +965,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.COLLECTION,
       requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void computeIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
@@ -978,7 +978,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.COLLECTION,
       requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void compute_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
@@ -991,7 +991,7 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = MaximumSize.FULL, weigher = CacheWeigher.COLLECTION,
+      maximumSize = Maximum.FULL, weigher = CacheWeigher.COLLECTION,
       requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void merge_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {

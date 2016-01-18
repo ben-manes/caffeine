@@ -127,28 +127,28 @@ public @interface CacheSpec {
   /* ---------------- Maximum size -------------- */
 
   /** The maximum size, each resulting in a new combination. */
-  MaximumSize[] maximumSize() default {
-    MaximumSize.DISABLED,
-    MaximumSize.UNREACHABLE
+  Maximum[] maximumSize() default {
+    Maximum.DISABLED,
+    Maximum.UNREACHABLE
   };
 
-  enum MaximumSize {
-    /** A flag indicating that entries are not evicted due to a maximum size threshold. */
+  enum Maximum {
+    /** A flag indicating that entries are not evicted due to a maximum threshold. */
     DISABLED(Long.MAX_VALUE),
     /** A configuration where entries are evicted immediately. */
     ZERO(0L),
-    /** A configuration that holds a single entry. */
+    /** A configuration that holds a single unit. */
     ONE(1L),
-    /** A configuration that holds ten entries. */
+    /** A configuration that holds ten units. */
     TEN(10L),
-    /** A configuration that holds the {@link Population#FULL} count. */
+    /** A configuration that holds the {@link Population#FULL} unit count. */
     FULL(InitialCapacity.FULL.size()),
     /** A configuration where the threshold is too high for eviction to occur. */
     UNREACHABLE(Long.MAX_VALUE);
 
     private final long max;
 
-    private MaximumSize(long max) {
+    private Maximum(long max) {
       this.max = max;
     }
 

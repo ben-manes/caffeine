@@ -29,7 +29,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
@@ -44,7 +44,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 public final class UnboundedLocalCacheTest {
 
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       refreshAfterWrite = Expire.DISABLED, keys = ReferenceType.STRONG,
       values = ReferenceType.STRONG)
@@ -57,7 +57,7 @@ public final class UnboundedLocalCacheTest {
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      maximumSize = MaximumSize.DISABLED, weigher = CacheWeigher.DEFAULT,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
       expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
       refreshAfterWrite = Expire.DISABLED, keys = ReferenceType.STRONG,
       values = ReferenceType.STRONG)
