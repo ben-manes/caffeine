@@ -351,7 +351,7 @@ public final class CaffeineSpec {
         durationInNanos(refreshAfterWriteDuration, refreshAfterWriteTimeUnit));
   }
 
-  /** Converts an expiration duration/unit pair into a single Long for hashing and equality. */
+  /** Converts an expiration duration/unit pair into a single long for hashing and equality. */
   static long durationInNanos(long duration, @Nullable TimeUnit unit) {
     return (unit == null) ? UNSET_INT : unit.toNanos(duration);
   }

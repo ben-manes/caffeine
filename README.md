@@ -65,8 +65,10 @@ compile 'com.github.ben-manes.caffeine:guava:2.1.0'
 compile 'com.github.ben-manes.caffeine:jcache:2.1.0'
 ```
 
+See the [release notes][releases] for details of the changes.
+
 Snapshots of the development version are available in
-[Sonatype's snapshots repository](https://oss.sonatype.org/content/repositories/snapshots).
+[Sonatype's snapshots repository][snapshots].
 
 [benchmarks]: https://github.com/ben-manes/caffeine/wiki/Benchmarks
 [users-guide]: https://github.com/ben-manes/caffeine/wiki
@@ -85,6 +87,8 @@ Snapshots of the development version are available in
 [guava-adapter]: https://github.com/ben-manes/caffeine/wiki/Guava
 [jsr107]: https://github.com/ben-manes/caffeine/wiki/JCache
 [maven]: https://maven-badges.herokuapp.com/maven-central/com.github.ben-manes.caffeine/caffeine
+[releases]: https://github.com/ben-manes/caffeine/releases
+[snapshots]: https://oss.sonatype.org/content/repositories/snapshots
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
 [tinylfu]: http://arxiv.org/pdf/1512.00727.pdf
 [add-a-boost]: https://www.voxxed.com/blog/2015/12/add-a-boost-of-caffeine-to-your-java

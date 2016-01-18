@@ -68,7 +68,7 @@ ext {
   ]
   plugin_versions = [
     checkstyle: '6.14.1',
-    coveralls: '2.4.0',
+    coveralls: '2.5.0',
     extra_conf: '3.0.3',
     error_prone: '0.0.8',
     jmh: '0.2.0',
