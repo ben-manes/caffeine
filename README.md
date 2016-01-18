@@ -28,6 +28,7 @@ Caffeine provides flexible construction to create a cache with a combination of 
  * [automatic loading of entries][population] into the cache, optionally asynchronously
  * [size-based eviction][size] when a maximum is exceeded based on [frequency and recency][efficiency]
  * [time-based expiration][time] of entries, measured since last access or last write
+ * [asynchronously refresh][refresh] when the first stale request for an entry occurs
  * keys automatically wrapped in [weak references][reference]
  * values automatically wrapped in [weak or soft references][reference]
  * [notification][listener] of evicted (or otherwise removed) entries
@@ -75,6 +76,7 @@ Snapshots of the development version are available in
 [population]: https://github.com/ben-manes/caffeine/wiki/Population
 [size]: https://github.com/ben-manes/caffeine/wiki/Eviction#size-based
 [time]: https://github.com/ben-manes/caffeine/wiki/Eviction#time-based
+[refresh]: https://github.com/ben-manes/caffeine/wiki/Refresh
 [reference]: https://github.com/ben-manes/caffeine/wiki/Eviction#reference-based
 [listener]: https://github.com/ben-manes/caffeine/wiki/Removal
 [writer]: https://github.com/ben-manes/caffeine/wiki/Writer
