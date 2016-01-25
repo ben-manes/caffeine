@@ -10,8 +10,8 @@ the latest release.
 
 ### Cache
 
-Caffeine provides an in-memory cache using a Google Guava inspired API. The [improvements][benchmarks]
-draw on our experience designing [Guava's cache][guava-cache] and [ConcurrentLinkedHashMap][clhm].
+Caffeine provides an in-memory cache using a Google Guava inspired API. The improvements draw on our
+experience designing [Guava's cache][guava-cache] and [ConcurrentLinkedHashMap][clhm].
 
 ```java
 LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
@@ -44,6 +44,8 @@ In addition, Caffeine offers the following extensions:
 
  * A short look at what Caffeine brings to your applications.
    * [Add a Boost of Caffeine to Your Java][add-a-boost] at [VOXXED][voxxed]
+ * A in-depth description of Caffeine's architecture.
+   * [Design of a Modern Cache][modern-cache] at [HighScalability][HighScalability]
  * Caffeine is presented as part of a research paper evaluating its novel eviction policy.
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
 
@@ -93,6 +95,8 @@ Snapshots of the development version are available in
 [tinylfu]: http://arxiv.org/pdf/1512.00727.pdf
 [add-a-boost]: https://www.voxxed.com/blog/2015/12/add-a-boost-of-caffeine-to-your-java
 [voxxed]: https://www.voxxed.com
+[modern-cache]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
+[highscalability]: http://highscalability.com
 [spring]: https://jira.spring.io/browse/SPR-13690
 [postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu

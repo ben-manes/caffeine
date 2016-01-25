@@ -56,13 +56,13 @@ import com.github.benmanes.caffeine.cache.Caffeine.Strength;
  * also illegal to use the following pairs of keys in a single value:
  * <ul>
  *   <li>{@code maximumSize} and {@code maximumWeight}
- *   <li>{@code softValues} and {@code weakValues}
+ *   <li>{@code weakValues} and {@code softValues}
  * </ul>
  * <p>
  * {@code CaffeineSpec} does not support configuring {@code Caffeine} methods with non-value
  * parameters. These must be configured in code.
  * <p>
- * A new {@code Caffeine} can be instantiated from a {@code CaffeineSpec} using
+ * A new {@code Caffeine} builder can be instantiated from a {@code CaffeineSpec} using
  * {@link Caffeine#from(CaffeineSpec)} or {@link Caffeine#from(String)}.
  *
  * @author ben.manes@gmail.com (Ben Manes)

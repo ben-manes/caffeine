@@ -496,19 +496,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public Set<K> keySet() {
     final Set<K> ks = keySet;
-    return (ks == null) ? (keySet = new KeySetView<K>(this)) : ks;
+    return (ks == null) ? (keySet = new KeySetView<>(this)) : ks;
   }
 
   @Override
   public Collection<V> values() {
     final Collection<V> vs = values;
-    return (vs == null) ? (values = new ValuesView(this)) : vs;
+    return (vs == null) ? (values = new ValuesView<>(this)) : vs;
   }
 
   @Override
   public Set<Entry<K, V>> entrySet() {
     final Set<Entry<K, V>> es = entrySet;
-    return (es == null) ? (entrySet = new EntrySetView(this)) : es;
+    return (es == null) ? (entrySet = new EntrySetView<>(this)) : es;
   }
 
   /** An adapter to safely externalize the keys. */
@@ -586,7 +586,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the values. */
-  final class ValuesView extends AbstractCollection<V> {
+  static final class ValuesView<K, V> extends AbstractCollection<V> {
     final UnboundedLocalCache<K, V> cache;
 
     ValuesView(UnboundedLocalCache<K, V> cache) {
@@ -621,7 +621,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Iterator<V> iterator() {
-      return new ValuesIterator<K, V>(cache);
+      return new ValuesIterator<>(cache);
     }
 
     @Override
@@ -661,7 +661,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   /** An adapter to safely externalize the entries. */
-  final class EntrySetView extends AbstractSet<Entry<K, V>> {
+  static final class EntrySetView<K, V> extends AbstractSet<Entry<K, V>> {
     final UnboundedLocalCache<K, V> cache;
 
     EntrySetView(UnboundedLocalCache<K, V> cache) {
@@ -704,7 +704,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Iterator<Entry<K, V>> iterator() {
-      return new EntryIterator<K, V>(cache);
+      return new EntryIterator<>(cache);
     }
 
     @Override
@@ -732,7 +732,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public Entry<K, V> next() {
       entry = iterator.next();
-      return new WriteThroughEntry<K, V>(cache, entry.getKey(), entry.getValue());
+      return new WriteThroughEntry<>(cache, entry.getKey(), entry.getValue());
     }
 
     @Override
@@ -869,14 +869,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     Policy<K, V> policy;
 
-    UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      super(makeCache(builder), loader);
-    }
-
     @SuppressWarnings("unchecked")
-    static <K, V> UnboundedLocalCache<K, CompletableFuture<V>> makeCache(Caffeine<K, V> builder) {
-      return new UnboundedLocalCache<K, CompletableFuture<V>>(
-          (Caffeine<K, CompletableFuture<V>>) builder, true);
+    UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+      super(new UnboundedLocalCache<>((Caffeine<K, CompletableFuture<V>>) builder, true), loader);
     }
 
     @Override

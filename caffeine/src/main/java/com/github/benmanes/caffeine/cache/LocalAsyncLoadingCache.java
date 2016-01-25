@@ -189,8 +189,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       return CompletableFuture.completedFuture(Collections.emptyMap());
     }
     @SuppressWarnings("rawtypes")
-    CompletableFuture<?>[] array = futures.values().toArray(
-        new CompletableFuture[futures.size()]);
+    CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
     return CompletableFuture.allOf(array).thenApply(ignored -> {
       Map<K, V> result = new HashMap<>(futures.size());
       for (Entry<K, CompletableFuture<V>> entry : futures.entrySet()) {

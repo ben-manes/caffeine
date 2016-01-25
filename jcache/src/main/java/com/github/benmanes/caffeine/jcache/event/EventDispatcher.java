@@ -193,7 +193,7 @@ public final class EventDispatcher<K, V> {
       return;
     }
     try {
-      CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[futures.size()])).join();
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();
     } catch (CompletionException e) {
       logger.log(Level.WARNING, null, e);
     } finally {

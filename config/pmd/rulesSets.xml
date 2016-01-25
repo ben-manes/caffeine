@@ -41,6 +41,7 @@
     <exclude name="GodClass"/>
     <exclude name="UseVarargs"/>
     <exclude name="ConfusingTernary"/>
+    <exclude name="OptimizableToArrayCall"/>
     <exclude name="CompareObjectsWithEquals"/>
     <exclude name="UncommentedEmptyMethodBody"/>
     <exclude name="AvoidReassigningParameters"/>
