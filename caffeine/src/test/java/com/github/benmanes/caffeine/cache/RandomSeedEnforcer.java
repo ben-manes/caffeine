@@ -35,15 +35,18 @@ public final class RandomSeedEnforcer {
       return;
     }
 
-    BoundedLocalCache<?, ?> localCache = (BoundedLocalCache<?, ?>) cache.asMap();
-    if (!localCache.evicts()) {
-      return;
+    BoundedLocalCache<?, ?> map = (BoundedLocalCache<?, ?>) cache.asMap();
+    if (map.evicts()) {
+      ensureRandomSeed(map.frequencySketch());
     }
+  }
 
+  /** Force the random seed to a predictable value. */
+  public static void ensureRandomSeed(FrequencySketch<?> sketch) {
     try {
       Field field = FrequencySketch.class.getDeclaredField("randomSeed");
       field.setAccessible(true);
-      field.setInt(localCache.frequencySketch(), RANDOM_SEED);
+      field.setInt(sketch, RANDOM_SEED);
     } catch (Exception e) {
       throw Throwables.propagate(e);
     }

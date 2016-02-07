@@ -37,6 +37,7 @@ import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -614,9 +615,15 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public boolean remove(Object o) {
-      requireNonNull(o);
-      return super.remove(o);
+    public boolean removeIf(Predicate<? super V> filter) {
+      requireNonNull(filter);
+      boolean removed = false;
+      for (Entry<K, V> entry : cache.entrySet()) {
+        if (filter.test(entry.getValue())) {
+          removed |= cache.remove(entry.getKey(), entry.getValue());
+        }
+      }
+      return removed;
     }
 
     @Override
@@ -700,6 +707,18 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       }
       Entry<?, ?> entry = (Entry<?, ?>) obj;
       return cache.remove(entry.getKey(), entry.getValue());
+    }
+
+    @Override
+    public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
+      requireNonNull(filter);
+      boolean removed = false;
+      for (Entry<K, V> entry : this) {
+        if (filter.test(entry)) {
+          removed |= cache.remove(entry.getKey(), entry.getValue());
+        }
+      }
+      return removed;
     }
 
     @Override

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.RandomSeedEnforcer.ensureRandomSeed;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -102,7 +103,7 @@ public final class FrequencySketchTest {
 
   @Test
   public void heavyHitters() {
-    FrequencySketch<Double> sketch = new FrequencySketch<>(512, 1033096058);
+    FrequencySketch<Double> sketch = makeSketch(512);
     for (int i = 100; i < 100_000; i++) {
       sketch.increment((double) i);
     }
@@ -132,8 +133,13 @@ public final class FrequencySketchTest {
 
   @DataProvider(name = "sketch")
   public Object[][] providesSketch() {
-    FrequencySketch<Integer> sketch = new FrequencySketch<>();
-    sketch.ensureCapacity(512);
-    return new Object[][] {{ sketch }};
+    return new Object[][] {{ makeSketch(512) }};
+  }
+
+  private static <T> FrequencySketch<T> makeSketch(long maximumSize) {
+    FrequencySketch<T> sketch = new FrequencySketch<>();
+    sketch.ensureCapacity(maximumSize);
+    ensureRandomSeed(sketch);
+    return sketch;
   }
 }

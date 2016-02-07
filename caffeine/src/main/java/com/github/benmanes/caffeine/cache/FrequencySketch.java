@@ -82,19 +82,6 @@ final class FrequencySketch<E> {
   }
 
   /**
-   * Creates a frequency sketch that can accurately estimate the popularity of elements given
-   * the maximum size of the cache.
-   *
-   * @param maximumSize the maximum size of the cache
-   * @param randomSeed the random seed used to smear the hash
-   */
-  FrequencySketch(@Nonnegative long maximumSize, int randomSeed) {
-    Caffeine.requireArgument(randomSeed != 0);
-    this.randomSeed = randomSeed;
-    ensureCapacity(maximumSize);
-  }
-
-  /**
    * Initializes and increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary,
    * to ensure that it can accurately estimate the popularity of elements given the maximum size of
    * the cache.

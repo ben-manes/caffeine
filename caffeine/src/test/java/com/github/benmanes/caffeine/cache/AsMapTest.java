@@ -31,6 +31,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -47,6 +48,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -1642,6 +1644,28 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void values_removeIf_null(Map<Integer, Integer> map, CacheContext context) {
+    map.values().removeIf(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void values_removeIf(Map<Integer, Integer> map, CacheContext context) {
+    Predicate<Integer> isEven = value -> (value % 2) == 0;
+    boolean hasEven = map.values().stream().anyMatch(isEven);
+
+    boolean removedIfEven = map.values().removeIf(isEven);
+    assertThat(map.values().stream().anyMatch(isEven), is(false));
+    assertThat(removedIfEven, is(hasEven));
+    if (removedIfEven) {
+      assertThat(map.size(), is(lessThan(context.original().size())));
+    }
+  }
+
+  @CacheSpec
+  @CheckNoStats
   @Test(dataProvider = "caches")
   public void values(Map<Integer, Integer> map, CacheContext context) {
     Collection<Integer> values = map.values();
@@ -1783,6 +1807,28 @@ public final class AsMapTest {
     verifyWriter(context, (verifier, writer) -> {
       verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
     });
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void entrySet_removeIf_null(Map<Integer, Integer> map, CacheContext context) {
+    map.entrySet().removeIf(null);
+  }
+
+  @CacheSpec
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySet_removeIf(Map<Integer, Integer> map, CacheContext context) {
+    Predicate<Entry<Integer, Integer>> isEven = entry -> (entry.getValue() % 2) == 0;
+    boolean hasEven = map.entrySet().stream().anyMatch(isEven);
+
+    boolean removedIfEven = map.entrySet().removeIf(isEven);
+    assertThat(map.entrySet().stream().anyMatch(isEven), is(false));
+    assertThat(removedIfEven, is(hasEven));
+    if (removedIfEven) {
+      assertThat(map.size(), is(lessThan(context.original().size())));
+    }
   }
 
   @CacheSpec

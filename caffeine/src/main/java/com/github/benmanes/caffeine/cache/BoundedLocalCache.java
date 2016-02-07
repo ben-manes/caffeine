@@ -51,6 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -1956,19 +1957,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @Override
   public Set<K> keySet() {
     final Set<K> ks = keySet;
-    return (ks == null) ? (keySet = new KeySet()) : ks;
+    return (ks == null) ? (keySet = new KeySetView<>(this)) : ks;
   }
 
   @Override
   public Collection<V> values() {
     final Collection<V> vs = values;
-    return (vs == null) ? (values = new Values()) : vs;
+    return (vs == null) ? (values = new ValuesView<>(this)) : vs;
   }
 
   @Override
   public Set<Entry<K, V>> entrySet() {
     final Set<Entry<K, V>> es = entrySet;
-    return (es == null) ? (entrySet = new EntrySet()) : es;
+    return (es == null) ? (entrySet = new EntrySetView<>(this)) : es;
   }
 
   /**
@@ -2087,63 +2088,73 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /** An adapter to safely externalize the keys. */
-  final class KeySet extends AbstractSet<K> {
-    final BoundedLocalCache<K, V> map = BoundedLocalCache.this;
+  static final class KeySetView<K, V> extends AbstractSet<K> {
+    final BoundedLocalCache<K, V> cache;
+
+    KeySetView(BoundedLocalCache<K, V> cache) {
+      this.cache = requireNonNull(cache);
+    }
 
     @Override
     public int size() {
-      return map.size();
+      return cache.size();
     }
 
     @Override
     public void clear() {
-      map.clear();
+      cache.clear();
     }
 
     @Override
     public Iterator<K> iterator() {
-      return new KeyIterator();
+      return new KeyIterator<>(cache);
     }
 
     @Override
     public boolean contains(Object obj) {
-      return containsKey(obj);
+      return cache.containsKey(obj);
     }
 
     @Override
     public boolean remove(Object obj) {
-      return (map.remove(obj) != null);
+      return (cache.remove(obj) != null);
     }
 
     @Override
     public Object[] toArray() {
-      if (collectKeys()) {
+      if (cache.collectKeys()) {
         List<Object> keys = new ArrayList<>(size());
         for (Object key : this) {
           keys.add(key);
         }
         return keys.toArray();
       }
-      return map.data.keySet().toArray();
+      return cache.data.keySet().toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] array) {
-      if (collectKeys()) {
+      if (cache.collectKeys()) {
         List<Object> keys = new ArrayList<>(size());
         for (Object key : this) {
           keys.add(key);
         }
         return keys.toArray(array);
       }
-      return map.data.keySet().toArray(array);
+      return cache.data.keySet().toArray(array);
     }
   }
 
   /** An adapter to safely externalize the key iterator. */
-  final class KeyIterator implements Iterator<K> {
-    final Iterator<Entry<K, V>> iterator = entrySet().iterator();
+  static final class KeyIterator<K, V> implements Iterator<K> {
+    final Iterator<Entry<K, V>> iterator;
+    final BoundedLocalCache<K, V> cache;
     K current;
+
+    KeyIterator(BoundedLocalCache<K, V> cache) {
+      this.iterator = cache.entrySet().iterator();
+      this.cache = cache;
+    }
 
     @Override
     public boolean hasNext() {
@@ -2160,38 +2171,59 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public void remove() {
       requireState(current != null);
-      BoundedLocalCache.this.remove(current);
+      cache.remove(current);
       current = null;
     }
   }
 
   /** An adapter to safely externalize the values. */
-  final class Values extends AbstractCollection<V> {
+  static final class ValuesView<K, V> extends AbstractCollection<V> {
+    final BoundedLocalCache<K, V> cache;
+
+    ValuesView(BoundedLocalCache<K, V> cache) {
+      this.cache = requireNonNull(cache);
+    }
 
     @Override
     public int size() {
-      return BoundedLocalCache.this.size();
+      return cache.size();
     }
 
     @Override
     public void clear() {
-      BoundedLocalCache.this.clear();
+      cache.clear();
+    }
+
+    @Override
+    public boolean removeIf(Predicate<? super V> filter) {
+      requireNonNull(filter);
+      boolean removed = false;
+      for (Entry<K, V> entry : cache.entrySet()) {
+        if (filter.test(entry.getValue())) {
+          removed |= cache.remove(entry.getKey(), entry.getValue());
+        }
+      }
+      return removed;
     }
 
     @Override
     public Iterator<V> iterator() {
-      return new ValueIterator();
+      return new ValueIterator<>(cache);
     }
 
     @Override
     public boolean contains(Object o) {
-      return containsValue(o);
+      return cache.containsValue(o);
     }
   }
 
   /** An adapter to safely externalize the value iterator. */
-  final class ValueIterator implements Iterator<V> {
-    final Iterator<Entry<K, V>> iterator = entrySet().iterator();
+  static final class ValueIterator<K, V> implements Iterator<V> {
+    final Iterator<Entry<K, V>> iterator;
+
+    ValueIterator(BoundedLocalCache<K, V> cache) {
+      this.iterator = cache.entrySet().iterator();
+    }
 
     @Override
     public boolean hasNext() {
@@ -2210,22 +2242,26 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /** An adapter to safely externalize the entries. */
-  final class EntrySet extends AbstractSet<Entry<K, V>> {
-    final BoundedLocalCache<K, V> map = BoundedLocalCache.this;
+  static final class EntrySetView<K, V> extends AbstractSet<Entry<K, V>> {
+    final BoundedLocalCache<K, V> cache;
+
+    EntrySetView(BoundedLocalCache<K, V> cache) {
+      this.cache = requireNonNull(cache);
+    }
 
     @Override
     public int size() {
-      return map.size();
+      return cache.size();
     }
 
     @Override
     public void clear() {
-      map.clear();
+      cache.clear();
     }
 
     @Override
     public Iterator<Entry<K, V>> iterator() {
-      return new EntryIterator();
+      return new EntryIterator<>(cache);
     }
 
     @Override
@@ -2234,7 +2270,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return false;
       }
       Entry<?, ?> entry = (Entry<?, ?>) obj;
-      Node<K, V> node = map.data.get(nodeFactory.newLookupKey(entry.getKey()));
+      Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(entry.getKey()));
       return (node != null) && Objects.equals(node.getValue(), entry.getValue());
     }
 
@@ -2244,19 +2280,38 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return false;
       }
       Entry<?, ?> entry = (Entry<?, ?>) obj;
-      return map.remove(entry.getKey(), entry.getValue());
+      return cache.remove(entry.getKey(), entry.getValue());
+    }
+
+    @Override
+    public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
+      requireNonNull(filter);
+      boolean removed = false;
+      for (Entry<K, V> entry : this) {
+        if (filter.test(entry)) {
+          removed |= cache.remove(entry.getKey(), entry.getValue());
+        }
+      }
+      return removed;
     }
   }
 
   /** An adapter to safely externalize the entry iterator. */
-  final class EntryIterator implements Iterator<Entry<K, V>> {
-    final Iterator<Node<K, V>> iterator = data.values().iterator();
-    final long now = expirationTicker().read();
+  static final class EntryIterator<K, V> implements Iterator<Entry<K, V>> {
+    final BoundedLocalCache<K, V> cache;
+    final Iterator<Node<K, V>> iterator;
+    final long now;
 
     K key;
     V value;
     K removalKey;
     Node<K, V> next;
+
+    EntryIterator(BoundedLocalCache<K, V> cache) {
+      this.iterator = cache.data.values().iterator();
+      this.now = cache.expirationTicker().read();
+      this.cache = cache;
+    }
 
     @Override
     public boolean hasNext() {
@@ -2268,7 +2323,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           next = iterator.next();
           value = next.getValue();
           key = next.getKey();
-          if (hasExpired(next, now) || (key == null) || (value == null) || !next.isAlive()) {
+          if (cache.hasExpired(next, now) || (key == null) || (value == null) || !next.isAlive()) {
             value = null;
             next = null;
             key = null;
@@ -2285,7 +2340,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      Entry<K, V> entry = new WriteThroughEntry<>(BoundedLocalCache.this, key, value);
+      Entry<K, V> entry = new WriteThroughEntry<>(cache, key, value);
       removalKey = key;
       value = null;
       next = null;
@@ -2296,7 +2351,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public void remove() {
       requireState(removalKey != null);
-      BoundedLocalCache.this.remove(removalKey);
+      cache.remove(removalKey);
       removalKey = null;
     }
   }
