@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -211,19 +210,20 @@ public final class EventDispatcher<K, V> {
 
   /** Broadcasts the event to all of the interested listener's dispatch queues. */
   private void publish(JCacheEntryEvent<K, V> event, boolean quiet) {
-    dispatchQueues.keySet().stream()
-        .filter(registration -> registration.getCacheEntryFilter().evaluate(event))
-        .filter(registration -> registration.getCacheEntryListener().isCompatible(event))
-        .map(registration -> {
-          CompletableFuture<Void> future = dispatchQueues.computeIfPresent(registration,
-              (key, queue) -> {
-                Runnable action = () -> registration.getCacheEntryListener().dispatch(event);
-                return queue.thenRunAsync(action, exectuor);
-              });
-          if ((future != null) && registration.isSynchronous() && !quiet) {
-            return future;
-          }
-          return null;
-        }).filter(Objects::nonNull).forEach(pending.get()::add);
+    for (Registration<K, V> registration : dispatchQueues.keySet()) {
+      if (!registration.getCacheEntryFilter().evaluate(event)
+          || !registration.getCacheEntryListener().isCompatible(event)) {
+        continue;
+      }
+
+      CompletableFuture<Void> future =
+          dispatchQueues.computeIfPresent(registration, (key, queue) -> {
+            Runnable action = () -> registration.getCacheEntryListener().dispatch(event);
+            return queue.thenRunAsync(action, exectuor);
+          });
+      if ((future != null) && registration.isSynchronous() && !quiet) {
+        pending.get().add(future);
+      }
+    }
   }
 }
