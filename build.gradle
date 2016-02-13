@@ -115,6 +115,10 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
   }
 }
 
+jacoco {
+  toolVersion = plugin_versions.jacoco
+}
+
 coveralls {
   sourceDirs = publishedProjects.sourceSets.main.allSource.srcDirs.flatten()
   jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"

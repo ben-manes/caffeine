@@ -45,7 +45,6 @@ ext {
     hamcrest: '2.0.0.0',
     jcache_tck: '1.0.1',
     jctools: '1.1',
-    jimfs: '1.1-rc1',
     junit: '4.12',
     mockito: '2.0.42-beta',
     pax_exam: '4.8.0',
@@ -71,6 +70,7 @@ ext {
     coveralls: '2.6.3',
     extra_conf: '3.0.3',
     error_prone: '0.0.8',
+    jacoco: '0.7.5.201505241946',
     jmh: '0.2.0',
     nexus: '2.3.1',
     versions: '0.12.0',
@@ -108,7 +108,6 @@ ext {
     jcache_tck: "javax.cache:cache-tests:${test_versions.jcache_tck}",
     jcache_tck_tests: "javax.cache:cache-tests:${test_versions.jcache_tck}:tests",
     jctools: "org.jctools:jctools-core:${test_versions.jctools}",
-    jimfs: "com.google.jimfs:jimfs:${test_versions.jimfs}",
     junit: "junit:junit:${test_versions.junit}",
     mockito: dependencies.create("org.mockito:mockito-core:${test_versions.mockito}") {
       exclude group: 'org.hamcrest'

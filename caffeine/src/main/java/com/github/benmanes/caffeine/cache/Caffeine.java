@@ -242,8 +242,8 @@ public final class Caffeine<K, V> {
   /**
    * Specifies the executor to use when running asynchronous tasks. The executor is delegated to
    * when sending removal notifications, when asynchronous computations are performed by
-   * {@link AsyncLoadingCache} and {@link LoadingCache#refresh}, or when performing periodic
-   * maintenance. By default, {@link ForkJoinPool#commonPool()} is used.
+   * {@link AsyncLoadingCache} or {@link LoadingCache#refresh} or {@link #refreshAfterWrite}, or
+   * when performing periodic maintenance. By default, {@link ForkJoinPool#commonPool()} is used.
    * <p>
    * The primary intent of this method is to facilitate testing of caches which have been
    * configured with {@link #removalListener} or utilize asynchronous computations. A test may

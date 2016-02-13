@@ -19,6 +19,11 @@ after_success:
 matrix:
   fast_finish: true
 
+addons:
+  apt:
+    packages:
+      - oracle-java8-installer
+
 cache:
   directories:
     - $HOME/.gradle
