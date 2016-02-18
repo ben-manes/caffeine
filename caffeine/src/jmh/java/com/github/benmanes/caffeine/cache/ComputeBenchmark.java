@@ -31,7 +31,7 @@ import org.openjdk.jmh.annotations.Threads;
 
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
-import com.yahoo.ycsb.generator.IntegerGenerator;
+import com.yahoo.ycsb.generator.NumberGenerator;
 import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
@@ -60,9 +60,9 @@ public class ComputeBenchmark {
 
   public ComputeBenchmark() {
     ints = new Integer[SIZE];
-    IntegerGenerator generator = new ScrambledZipfianGenerator(ITEMS);
+    NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
-      ints[i] = generator.nextInt();
+      ints[i] = generator.nextValue().intValue();
     }
   }
 

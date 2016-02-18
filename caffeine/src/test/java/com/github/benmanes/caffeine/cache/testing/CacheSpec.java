@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.testing;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import java.io.ObjectStreamException;
+import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.ArrayList;
@@ -25,6 +27,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +36,7 @@ import java.util.function.Supplier;
 
 import org.mockito.Mockito;
 
+import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -354,32 +359,32 @@ public @interface CacheSpec {
   /** The {@link CacheLoader} for constructing the {@link LoadingCache}. */
   enum Loader implements CacheLoader<Integer, Integer> {
     /** A loader that always returns null (no mapping). */
-    NULL(false) {
+    NULL {
       @Override public Integer load(Integer key) {
         return null;
       }
     },
     /** A loader that returns the key. */
-    IDENTITY(false) {
+    IDENTITY {
       @Override public Integer load(Integer key) {
         return key;
       }
     },
     /** A loader that returns the key's negation. */
-    NEGATIVE(false) {
+    NEGATIVE {
       @Override public Integer load(Integer key) {
         return interner.get().intern(-key);
       }
     },
     /** A loader that always throws an exception. */
-    EXCEPTIONAL(false) {
+    EXCEPTIONAL {
       @Override public Integer load(Integer key) {
         throw new IllegalStateException();
       }
     },
 
     /** A loader that always returns null (no mapping). */
-    BULK_NULL(true) {
+    BULK_NULL {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
@@ -387,7 +392,7 @@ public @interface CacheSpec {
         return null;
       }
     },
-    BULK_IDENTITY(true) {
+    BULK_IDENTITY {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
@@ -397,7 +402,7 @@ public @interface CacheSpec {
         return result;
       }
     },
-    BULK_NEGATIVE(true) {
+    BULK_NEGATIVE {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
@@ -408,7 +413,7 @@ public @interface CacheSpec {
       }
     },
     /** A bulk-only loader that loads more than requested. */
-    BULK_NEGATIVE_EXCEEDS(true) {
+    BULK_NEGATIVE_EXCEEDS {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
@@ -422,7 +427,7 @@ public @interface CacheSpec {
       }
     },
     /** A bulk-only loader that always throws an exception. */
-    BULK_EXCEPTIONAL(true) {
+    BULK_EXCEPTIONAL {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
@@ -432,13 +437,54 @@ public @interface CacheSpec {
     };
 
     private final boolean bulk;
+    private final AsyncCacheLoader<Integer, Integer> asyncLoader;
 
-    private Loader(boolean bulk) {
-      this.bulk = bulk;
+    private Loader() {
+      bulk = name().startsWith("BULK");
+      asyncLoader = bulk
+          ? new BulkSeriazableAsyncCacheLoader(this)
+          : new SeriazableAsyncCacheLoader(this);
     }
 
     public boolean isBulk() {
       return bulk;
+    }
+
+    /** Returns a serializable view restricted to the {@link AsyncCacheLoader} interface. */
+    public AsyncCacheLoader<Integer, Integer> async() {
+      return asyncLoader;
+    }
+
+    private static class SeriazableAsyncCacheLoader
+        implements AsyncCacheLoader<Integer, Integer>, Serializable {
+      private static final long serialVersionUID = 1L;
+
+      final Loader loader;
+
+      SeriazableAsyncCacheLoader(Loader loader) {
+        this.loader = loader;
+      }
+      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+        return loader.asyncLoad(key, executor);
+      }
+      private Object readResolve() throws ObjectStreamException {
+        return loader.asyncLoader;
+      }
+    }
+
+    private static final class BulkSeriazableAsyncCacheLoader extends SeriazableAsyncCacheLoader {
+      private static final long serialVersionUID = 1L;
+
+      BulkSeriazableAsyncCacheLoader(Loader loader) {
+        super(loader);
+      }
+      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Map<Integer, Integer>> asyncLoadAll(
+          Iterable<? extends Integer> keys, Executor executor) {
+        return loader.asyncLoadAll(keys, executor);
+      }
     }
   }
 

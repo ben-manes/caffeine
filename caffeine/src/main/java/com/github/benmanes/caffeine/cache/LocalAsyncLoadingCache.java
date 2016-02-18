@@ -59,12 +59,13 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
   final C cache;
   final boolean canBulkLoad;
-  final CacheLoader<K, V> loader;
+  final AsyncCacheLoader<K, V> loader;
+
   LoadingCacheView localCacheView;
 
   @SuppressWarnings("unchecked")
-  LocalAsyncLoadingCache(C cache, CacheLoader<? super K, V> loader) {
-    this.loader = (CacheLoader<K, V>) loader;
+  LocalAsyncLoadingCache(C cache, AsyncCacheLoader<? super K, V> loader) {
+    this.loader = (AsyncCacheLoader<K, V>) loader;
     this.canBulkLoad = canBulkLoad(loader);
     this.cache = cache;
   }
@@ -73,13 +74,24 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   protected abstract Policy<K, V> policy();
 
   /** Returns whether the supplied cache loader has bulk load functionality. */
-  private static boolean canBulkLoad(CacheLoader<?, ?> loader) {
+  private static boolean canBulkLoad(AsyncCacheLoader<?, ?> loader) {
     try {
-      Method loadAll = loader.getClass().getMethod(
-          "loadAll", Iterable.class);
-      Method asyncLoadAll = loader.getClass().getMethod(
+      Class<?> defaultLoaderClass = AsyncCacheLoader.class;
+      if (loader instanceof CacheLoader<?, ?>) {
+        defaultLoaderClass = CacheLoader.class;
+
+        Method classLoadAll = loader.getClass().getMethod("loadAll", Iterable.class);
+        Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Iterable.class);
+        if (!classLoadAll.equals(defaultLoadAll)) {
+          return true;
+        }
+      }
+
+      Method classAsyncLoadAll = loader.getClass().getMethod(
           "asyncLoadAll", Iterable.class, Executor.class);
-      return !loadAll.isDefault() || !asyncLoadAll.isDefault();
+      Method defaultAsyncLoadAll = defaultLoaderClass.getMethod(
+          "asyncLoadAll", Iterable.class, Executor.class);
+      return !classAsyncLoadAll.equals(defaultAsyncLoadAll);
     } catch (NoSuchMethodException | SecurityException e) {
       logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
       return false;
@@ -436,12 +448,26 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       BiFunction<K, CompletableFuture<V>, CompletableFuture<V>> refreshFunction =
           (k, oldValueFuture) -> {
             try {
-              V oldValue = (oldValueFuture == null) ? null : oldValueFuture.join();
-              V newValue = (oldValue == null) ? loader.load(key) : loader.reload(key, oldValue);
-              return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
+              V oldValue = Async.getWhenSuccessful(oldValueFuture);
+              if (loader instanceof CacheLoader<?, ?>) {
+                CacheLoader<K, V> cacheLoader = (CacheLoader<K, V>) loader;
+                V newValue = (oldValue == null)
+                    ? cacheLoader.load(key)
+                    : cacheLoader.reload(key, oldValue);
+                return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
+              } else {
+                // Hint that the async task should be run on this async task's thread
+                CompletableFuture<V> newValueFuture = (oldValue == null)
+                    ? loader.asyncLoad(key, Runnable::run)
+                    : loader.asyncReload(key, oldValue, Runnable::run);
+                V newValue = newValueFuture.get();
+                return (newValue == null) ? null : newValueFuture;
+              }
             } catch (InterruptedException e) {
               Thread.currentThread().interrupt();
               return LocalCache.throwUnchecked(e);
+            } catch (ExecutionException e) {
+              return LocalCache.throwUnchecked(e.getCause());
             } catch (Exception e) {
               return LocalCache.throwUnchecked(e);
             }

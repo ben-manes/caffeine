@@ -59,18 +59,22 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheContext {
+  final RemovalListener<Integer, Integer> removalListener;
+  final CacheWriter<Integer, Integer> cacheWriter;
   final InitialCapacity initialCapacity;
+  final Map<Integer, Integer> original;
   final Implementation implementation;
   final Listener removalListenerType;
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
   final ReferenceType keyStrength;
   final TrackingExecutor executor;
-  final Maximum maximumSize;
   final Population population;
   final CacheWeigher weigher;
+  final Maximum maximumSize;
   final Expire afterAccess;
   final Expire afterWrite;
+  final FakeTicker ticker;
   final Compute compute;
   final Advance advance;
   final Expire refresh;
@@ -78,10 +82,7 @@ public final class CacheContext {
   final Writer writer;
   final Stats stats;
 
-  final FakeTicker ticker;
-  final Map<Integer, Integer> original;
-  final CacheWriter<Integer, Integer> cacheWriter;
-  final RemovalListener<Integer, Integer> removalListener;
+  final boolean isAsyncLoading;
 
   Cache<?, ?> cache;
   AsyncLoadingCache<?, ?> asyncCache;
@@ -101,7 +102,7 @@ public final class CacheContext {
       Maximum maximumSize, Expire afterAccess, Expire afterWrite, Expire refresh,
       Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, Listener removalListenerType, Population population,
-      boolean isLoading, Compute compute, Loader loader, Writer writer,
+      boolean isLoading, boolean isAsyncLoading, Compute compute, Loader loader, Writer writer,
       Implementation implementation) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
@@ -119,6 +120,7 @@ public final class CacheContext {
     this.removalListener = removalListenerType.create();
     this.population = requireNonNull(population);
     this.loader = isLoading ? requireNonNull(loader) : null;
+    this.isAsyncLoading = isAsyncLoading;
     this.writer = requireNonNull(writer);
     this.cacheWriter = writer.get();
     this.ticker = new FakeTicker();
@@ -287,6 +289,10 @@ public final class CacheContext {
     return (loader != null);
   }
 
+  public boolean isAsyncLoading() {
+    return isAsyncLoading;
+  }
+
   public Loader loader() {
     return loader;
   }
@@ -382,6 +388,7 @@ public final class CacheContext {
         .add("valueStrength", valueStrength)
         .add("compute", compute)
         .add("loader", loader)
+        .add("isAsyncLoading", isAsyncLoading)
         .add("writer", writer)
         .add("cacheExecutor", cacheExecutor)
         .add("removalListener", removalListenerType)

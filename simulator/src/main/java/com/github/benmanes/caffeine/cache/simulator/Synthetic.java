@@ -22,7 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSetti
 import com.yahoo.ycsb.generator.CounterGenerator;
 import com.yahoo.ycsb.generator.ExponentialGenerator;
 import com.yahoo.ycsb.generator.HotspotIntegerGenerator;
-import com.yahoo.ycsb.generator.IntegerGenerator;
+import com.yahoo.ycsb.generator.NumberGenerator;
 import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 import com.yahoo.ycsb.generator.SkewedLatestGenerator;
 import com.yahoo.ycsb.generator.UniformIntegerGenerator;
@@ -150,7 +150,7 @@ public final class Synthetic {
   }
 
   /** Returns a sequence of items constructed by the generator. */
-  private static LongStream generate(IntegerGenerator generator, long count) {
-    return LongStream.range(0, count).map(ignored -> generator.nextInt());
+  private static LongStream generate(NumberGenerator generator, long count) {
+    return LongStream.range(0, count).map(ignored -> generator.nextValue().intValue());
   }
 }

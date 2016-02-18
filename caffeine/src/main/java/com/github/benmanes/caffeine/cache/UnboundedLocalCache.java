@@ -889,7 +889,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
-    UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+    UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, AsyncCacheLoader<? super K, V> loader) {
       super(new UnboundedLocalCache<>((Caffeine<K, CompletableFuture<V>>) builder, true), loader);
     }
 

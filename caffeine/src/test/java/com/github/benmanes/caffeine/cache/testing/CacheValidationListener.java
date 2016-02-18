@@ -71,6 +71,8 @@ public final class CacheValidationListener implements IInvokedMethodListener {
         checkWriter(testResult, context);
         checkNoStats(testResult, context);
         checkExecutor(testResult, context);
+      } else {
+        testResult.setThrowable(new AssertionError(getTestName(method), testResult.getThrowable()));
       }
     } catch (Throwable caught) {
       testResult.setStatus(ITestResult.FAILURE);

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -52,7 +53,9 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
   /** Returns whether the supplied cache loader has bulk load functionality. */
   default boolean hasLoadAll(CacheLoader<? super K, V> loader) {
     try {
-      return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
+      Method classLoadAll = loader.getClass().getMethod("loadAll", Iterable.class);
+      Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Iterable.class);
+      return !classLoadAll.equals(defaultLoadAll);
     } catch (NoSuchMethodException | SecurityException e) {
       logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
       return false;

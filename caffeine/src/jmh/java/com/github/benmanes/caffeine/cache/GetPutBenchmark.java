@@ -27,7 +27,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
-import com.yahoo.ycsb.generator.IntegerGenerator;
+import com.yahoo.ycsb.generator.NumberGenerator;
 import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
@@ -85,9 +85,9 @@ public class GetPutBenchmark {
     cache.cleanUp();
 
     // Populate with a realistic access distribution
-    IntegerGenerator generator = new ScrambledZipfianGenerator(ITEMS);
+    NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
-      ints[i] = generator.nextInt();
+      ints[i] = generator.nextValue().intValue();
       cache.put(ints[i], Boolean.TRUE);
     }
   }

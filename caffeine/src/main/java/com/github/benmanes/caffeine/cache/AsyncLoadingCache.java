@@ -93,7 +93,7 @@ public interface AsyncLoadingCache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
    *         in which case the mapping is left unestablished
    */
-  @CheckForNull
+  @Nonnull
   CompletableFuture<V> get(@Nonnull K key,
       @Nonnull BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction);
 

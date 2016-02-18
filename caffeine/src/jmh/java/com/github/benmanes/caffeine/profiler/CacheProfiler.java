@@ -19,7 +19,7 @@ import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.CacheType;
-import com.yahoo.ycsb.generator.IntegerGenerator;
+import com.yahoo.ycsb.generator.NumberGenerator;
 import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
@@ -42,9 +42,9 @@ public final class CacheProfiler extends ProfilerHook {
   CacheProfiler() {
     ints = new Integer[SIZE];
     cache = cacheType.create(2 * SIZE);
-    IntegerGenerator generator = new ScrambledZipfianGenerator(ITEMS);
+    NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);
     for (int i = 0; i < SIZE; i++) {
-      ints[i] = generator.nextInt();
+      ints[i] = generator.nextValue().intValue();
       cache.put(ints[i], Boolean.TRUE);
     }
 

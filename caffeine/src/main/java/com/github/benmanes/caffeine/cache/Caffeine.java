@@ -833,9 +833,9 @@ public final class Caffeine<K, V> {
   /**
    * Builds a cache, which either returns a {@link CompletableFuture} already loaded or currently
    * computing the value for a given key or atomically computes the value asynchronously through a
-   * supplied mapping function or the supplied {@code CacheLoader}. If the asynchronous
-   * computation fails then the entry will be automatically removed. Note that multiple threads can
-   * concurrently load values for distinct keys.
+   * supplied mapping function or the supplied {@code CacheLoader}. If the asynchronous computation
+   * fails or computes a {@code null} value then the entry will be automatically removed. Note that
+   * multiple threads can concurrently load values for distinct keys.
    * <p>
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
@@ -850,6 +850,29 @@ public final class Caffeine<K, V> {
   @Nonnull
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       @Nonnull CacheLoader<? super K1, V1> loader) {
+    return buildAsync((AsyncCacheLoader<? super K1, V1>) loader);
+  }
+
+  /**
+   * Builds a cache, which either returns a {@link CompletableFuture} already loaded or currently
+   * computing the value for a given key or atomically computes the value asynchronously through a
+   * supplied mapping function or the supplied {@code AsyncCacheLoader}. If the asynchronous
+   * computation fails or computes a {@code null} value then the entry will be automatically
+   * removed. Note that multiple threads can concurrently load values for distinct keys.
+   * <p>
+   * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
+   * again to create multiple independent caches.
+   *
+   * @param loader the cache loader used to obtain new values
+   * @param <K1> the key type of the loader
+   * @param <V1> the value type of the loader
+   * @return a cache having the requested features
+   * @throws IllegalStateException if the value strength is weak or soft
+   * @throws NullPointerException if the specified cache loader is null
+   */
+  @Nonnull
+  public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
+      @Nonnull AsyncCacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null);
     requireState(writer == null);
     requireWeightWithWeigher();

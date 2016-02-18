@@ -2675,14 +2675,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
-    BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+    BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, AsyncCacheLoader<? super K, V> loader) {
       super(LocalCacheFactory.newBoundedLocalCache((Caffeine<K, CompletableFuture<V>>) builder,
           asyncLoader(loader, builder), true), loader);
       isWeighted = builder.isWeighted();
     }
 
     private static <K, V> CacheLoader<? super K, CompletableFuture<V>> asyncLoader(
-        CacheLoader<? super K, V> loader, Caffeine<?, ?> builder) {
+        AsyncCacheLoader<? super K, V> loader, Caffeine<?, ?> builder) {
       Executor executor = builder.getExecutor();
       return key -> loader.asyncLoad(key, executor);
     }

@@ -78,6 +78,7 @@ final class CacheGenerator {
   /** Returns the Cartesian set of the possible cache configurations. */
   @SuppressWarnings("unchecked")
   private Set<List<Object>> combinations() {
+    Set<Boolean> asyncLoading = ImmutableSet.of(true, false);
     Set<Stats> statistics = filterTypes(options.stats(), cacheSpec.stats());
     Set<ReferenceType> keys = filterTypes(options.keys(), cacheSpec.keys());
     Set<ReferenceType> values = filterTypes(options.values(), cacheSpec.values());
@@ -95,6 +96,9 @@ final class CacheGenerator {
       implementations = implementations.contains(Implementation.Caffeine)
           ? ImmutableSet.of(Implementation.Caffeine)
           : ImmutableSet.of();
+    }
+    if (computations.equals(ImmutableSet.of(Compute.SYNC))) {
+      asyncLoading = ImmutableSet.of(false);
     }
 
     if (computations.isEmpty() || implementations.isEmpty() || keys.isEmpty() || values.isEmpty()) {
@@ -115,6 +119,7 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.removalListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
         ImmutableSet.of(true, isLoadingOnly),
+        ImmutableSet.copyOf(asyncLoading),
         ImmutableSet.copyOf(computations),
         ImmutableSet.copyOf(cacheSpec.loader()),
         ImmutableSet.copyOf(cacheSpec.writer()),
@@ -149,6 +154,7 @@ final class CacheGenerator {
         (Listener) combination.get(index++),
         (Population) combination.get(index++),
         (Boolean) combination.get(index++),
+        (Boolean) combination.get(index++),
         (Compute) combination.get(index++),
         (Loader) combination.get(index++),
         (Writer) combination.get(index++),
@@ -159,14 +165,16 @@ final class CacheGenerator {
   private boolean isCompatible(CacheContext context) {
     boolean asyncIncompatible = context.isAsync()
         && ((context.implementation() != Implementation.Caffeine)
-            || !context.isStrongValues() || !context.isLoading());
+        || !context.isStrongValues() || !context.isLoading());
+    boolean asyncLoaderIncompatible = context.isAsyncLoading()
+        && (!context.isAsync() || !context.isLoading());
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
     boolean weigherIncompatible = context.isUnbounded() && context.isWeighted();
     boolean expirationIncompatible = cacheSpec.requiresExpiration() && !context.expires();
     boolean referenceIncompatible = cacheSpec.requiresWeakOrSoft()
         && (context.isWeakKeys() || context.isWeakValues() || context.isSoftValues());
 
-    boolean skip = asyncIncompatible
+    boolean skip = asyncIncompatible || asyncLoaderIncompatible
         || refreshIncompatible || weigherIncompatible
         || expirationIncompatible || referenceIncompatible;
     return !skip;

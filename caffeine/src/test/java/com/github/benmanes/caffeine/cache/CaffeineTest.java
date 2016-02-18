@@ -115,9 +115,22 @@ public final class CaffeineTest {
 
   /* ---------------- async -------------- */
 
-  @Test(expectedExceptions = NullPointerException.class)
+  @Test
   public void async_nullLoader() {
-    Caffeine.newBuilder().buildAsync(null);
+    try {
+      Caffeine.newBuilder().buildAsync((CacheLoader<?, ?>) null);
+      Assert.fail();
+    } catch (NullPointerException expected) {}
+
+    try {
+      Caffeine.newBuilder().buildAsync((AsyncCacheLoader<?, ?>) null);
+      Assert.fail();
+    } catch (NullPointerException expected) {}
+  }
+
+  @Test
+  public void async_asyncLoader() {
+    Caffeine.newBuilder().buildAsync(loader::asyncLoad);
   }
 
   @Test(expectedExceptions = IllegalStateException.class)

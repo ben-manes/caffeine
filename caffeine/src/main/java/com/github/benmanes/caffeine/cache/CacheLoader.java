@@ -44,7 +44,7 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 @FunctionalInterface
 @SuppressWarnings("PMD.SignatureDeclareThrowsException")
-public interface CacheLoader<K, V> {
+public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
 
   /**
    * Computes or retrieves the value corresponding to {@code key}.
@@ -96,7 +96,7 @@ public interface CacheLoader<K, V> {
    * @param executor the executor that asynchronously loads the entry
    * @return the future value associated with {@code key}
    */
-  @Nonnull
+  @Override @Nonnull
   default CompletableFuture<V> asyncLoad(@Nonnull K key, @Nonnull Executor executor) {
     requireNonNull(key);
     requireNonNull(executor);
@@ -129,9 +129,9 @@ public interface CacheLoader<K, V> {
    * @return a future containing the map from each key in {@code keys} to the value associated with
    *         that key; <b>may not contain null values</b>
    */
-  @Nonnull
+  @Override @Nonnull
   default CompletableFuture<Map<K, V>> asyncLoadAll(
-      Iterable<? extends K> keys, @Nonnull Executor executor) {
+      @Nonnull Iterable<? extends K> keys, @Nonnull Executor executor) {
     requireNonNull(keys);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {
@@ -165,5 +165,35 @@ public interface CacheLoader<K, V> {
   @CheckForNull
   default V reload(@Nonnull K key, @Nonnull V oldValue) throws Exception {
     return load(key);
+  }
+
+  /**
+   * Asynchronously computes or retrieves a replacement value corresponding to an already-cached
+   * {@code key}. If the replacement value is not found then the mapping will be removed if
+   * {@code null} is computed. This method is called when an existing cache entry is refreshed by
+   * {@link Caffeine#refreshAfterWrite}, or through a call to {@link LoadingCache#refresh}.
+   * <p>
+   * <b>Note:</b> <i>all exceptions thrown by this method will be logged and then swallowed</i>.
+   *
+   * @param key the non-null key whose value should be loaded
+   * @param oldValue the non-null old value corresponding to {@code key}
+   * @param executor the executor with which the entry is asynchronously loaded
+   * @return a future containing the new value associated with {@code key}, or containing
+   *         {@code null} if the mapping is to be removed
+   */
+  @Override @Nonnull
+  default CompletableFuture<V> asyncReload(
+      @Nonnull K key, @Nonnull V oldValue, @Nonnull Executor executor) {
+    requireNonNull(key);
+    requireNonNull(executor);
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        return reload(key, oldValue);
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
+    }, executor);
   }
 }
