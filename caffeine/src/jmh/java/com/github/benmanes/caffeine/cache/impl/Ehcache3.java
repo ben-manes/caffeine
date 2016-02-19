@@ -17,10 +17,9 @@ package com.github.benmanes.caffeine.cache.impl;
 
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
-import org.ehcache.CacheManagerBuilder;
-import org.ehcache.config.CacheConfigurationBuilder;
-import org.ehcache.config.Eviction.Prioritizer;
-import org.ehcache.config.ResourcePoolsBuilder;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
@@ -32,15 +31,14 @@ public final class Ehcache3<K, V> implements BasicCache<K, V> {
   private final Cache<K, V> cache;
 
   @SuppressWarnings("unchecked")
-  public Ehcache3(Prioritizer evictionPolicy, int maximumSize) {
+  public Ehcache3(int maximumSize) {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = (Cache<K, V>) cacheManager.createCache("benchmark",
-        CacheConfigurationBuilder.newCacheConfigurationBuilder()
+        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class)
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .heap(maximumSize, EntryUnit.ENTRIES)
                 .build())
-            .usingEvictionPrioritizer(evictionPolicy)
-            .buildConfig(Object.class, Object.class));
+            .build());
   }
 
   @Override

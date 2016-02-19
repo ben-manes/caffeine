@@ -21,7 +21,6 @@ import org.apache.jackrabbit.oak.cache.CacheLIRS;
 import org.cache2k.impl.ClockProPlusCache;
 import org.cache2k.impl.LruCache;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
-import org.ehcache.config.Eviction.Prioritizer;
 import org.infinispan.commons.equivalence.AnyEquivalence;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.Eviction;
@@ -100,9 +99,9 @@ public enum CacheType {
       return new Ehcache2<>(MemoryStoreEvictionPolicy.LRU, maximumSize);
     }
   },
-  Ehcache3_Lru {
+  Ehcache3 {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new Ehcache3<>(Prioritizer.LRU, maximumSize);
+      return new Ehcache3<>(maximumSize);
     }
   },
   Guava {

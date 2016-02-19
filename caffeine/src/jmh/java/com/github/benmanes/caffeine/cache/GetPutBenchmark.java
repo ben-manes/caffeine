@@ -55,7 +55,7 @@ public class GetPutBenchmark {
     "Cache2k_ClockProPlus",
     "Cache2k_Lru",
     "Ehcache2_Lru",
-    "Ehcache3_Lru",
+    "Ehcache3",
     "Infinispan_Old_Lru",
     "Infinispan_New_Lru",
     "TCache_Lfu",

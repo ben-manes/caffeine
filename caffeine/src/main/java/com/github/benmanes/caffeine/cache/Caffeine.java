@@ -832,7 +832,7 @@ public final class Caffeine<K, V> {
 
   /**
    * Builds a cache, which either returns a {@link CompletableFuture} already loaded or currently
-   * computing the value for a given key or atomically computes the value asynchronously through a
+   * computing the value for a given key, or atomically computes the value asynchronously through a
    * supplied mapping function or the supplied {@code CacheLoader}. If the asynchronous computation
    * fails or computes a {@code null} value then the entry will be automatically removed. Note that
    * multiple threads can concurrently load values for distinct keys.
@@ -855,7 +855,7 @@ public final class Caffeine<K, V> {
 
   /**
    * Builds a cache, which either returns a {@link CompletableFuture} already loaded or currently
-   * computing the value for a given key or atomically computes the value asynchronously through a
+   * computing the value for a given key, or atomically computes the value asynchronously through a
    * supplied mapping function or the supplied {@code AsyncCacheLoader}. If the asynchronous
    * computation fails or computes a {@code null} value then the entry will be automatically
    * removed. Note that multiple threads can concurrently load values for distinct keys.
@@ -885,11 +885,11 @@ public final class Caffeine<K, V> {
         : new UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K1, V1>(self, loader);
   }
 
-  private void requireNonLoadingCache() {
+  void requireNonLoadingCache() {
     requireState(refreshNanos == UNSET_INT, "refreshAfterWrite requires a LoadingCache");
   }
 
-  private void requireWeightWithWeigher() {
+  void requireWeightWithWeigher() {
     if (weigher == null) {
       requireState(maximumWeight == UNSET_INT, "maximumWeight requires weigher");
     } else if (strictParsing) {

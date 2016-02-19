@@ -40,7 +40,7 @@ public class EvictionBenchmark {
     "LinkedHashMap_Lru",
     "Caffeine",
     "Ehcache2_Lru",
-    "Ehcache3_Lru",
+    "Ehcache3",
   })
   CacheType cacheType;
 

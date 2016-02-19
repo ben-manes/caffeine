@@ -19,11 +19,9 @@ import java.util.Set;
 
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
-import org.ehcache.CacheManagerBuilder;
-import org.ehcache.config.CacheConfigurationBuilder;
-import org.ehcache.config.Eviction.Prioritizer;
-import org.ehcache.config.EvictionPrioritizer;
-import org.ehcache.config.ResourcePoolsBuilder;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -45,15 +43,14 @@ public final class Ehcache3Policy implements Policy {
 
   public Ehcache3Policy(Config config) {
     policyStats = new PolicyStats("product.Ehcache3");
-    Ehcache3Settings settings = new Ehcache3Settings(config);
+    BasicSettings settings = new BasicSettings(config);
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = cacheManager.createCache("ehcache3",
-        CacheConfigurationBuilder.newCacheConfigurationBuilder()
+        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class)
             .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
                 .heap(settings.maximumSize(), EntryUnit.ENTRIES)
                 .build())
-            .usingEvictionPrioritizer(settings.prioritizer())
-            .buildConfig(Object.class, Object.class));
+            .build());
     maximumSize = settings.maximumSize();
   }
 
@@ -80,14 +77,5 @@ public final class Ehcache3Policy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
-  }
-
-  static final class Ehcache3Settings extends BasicSettings {
-    public Ehcache3Settings(Config config) {
-      super(config);
-    }
-    public EvictionPrioritizer<Object, Object> prioritizer() {
-      return Prioritizer.valueOf(config().getString("ehcache3.policy").toUpperCase());
-    }
   }
 }
