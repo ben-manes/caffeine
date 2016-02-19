@@ -33,7 +33,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * <pre>{@code
  *   AsyncCacheLoader<Key, Graph> loader = (key, executor) ->
  *       createExpensiveGraphAsync(key, executor);
- *   AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
+ *   AsyncLoadingCache<Key, Graph> cache = Caffeine.newBuilder().buildAsync(loader);
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)
