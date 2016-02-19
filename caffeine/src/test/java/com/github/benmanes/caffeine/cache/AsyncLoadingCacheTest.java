@@ -88,6 +88,13 @@ public final class AsyncLoadingCacheTest {
       throw e.getCause();
     }
   }
+  
+  @Test
+  public void asyncReload() throws Exception {
+    CacheLoader<Integer, Integer> loader = key -> -key;
+    CompletableFuture<?> future = loader.asyncReload(1, 2, MoreExecutors.directExecutor());
+    assertThat(future.get(), is(-1));
+  }
 
   /* ---------------- getIfPresent -------------- */
 

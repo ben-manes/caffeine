@@ -196,7 +196,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
   private static <K, V> void checkBoundedLocalLoadingCache(
       BoundedLocalCache.BoundedLocalLoadingCache<K, V> original,
       BoundedLocalCache.BoundedLocalLoadingCache<K, V> copy, DescriptionBuilder desc) {
-    desc.expectThat("same cacheLoader", copy.cache.cacheLoader(), is(original.cache.cacheLoader()));
+    desc.expectThat("same cacheLoader", copy.cache.cacheLoader, is(original.cache.cacheLoader));
   }
 
   private static <K, V> void checkBoundedAsyncLocalLoadingCache(

@@ -48,13 +48,6 @@ public final class LocalCacheSelectorCode {
     return this;
   }
 
-  private LocalCacheSelectorCode cacheLoader() {
-    block.beginControlFlow("if (cacheLoader != null)")
-            .addStatement("sb.append(\"Lo\")")
-        .endControlFlow();
-    return this;
-  }
-
   private LocalCacheSelectorCode removalListener() {
     block.beginControlFlow("if (builder.removalListener != null)")
             .addStatement("sb.append(\"Li\")")
@@ -115,7 +108,6 @@ public final class LocalCacheSelectorCode {
     return new LocalCacheSelectorCode()
         .keys()
         .values()
-        .cacheLoader()
         .removalListener()
         .stats()
         .maximum()

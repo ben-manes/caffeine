@@ -132,6 +132,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
   final Consumer<Node<K, V>> accessPolicy;
+  final CacheLoader<K, V> cacheLoader;
   final Buffer<Node<K, V>> readBuffer;
   final Runnable drainBuffersTask;
   final CacheWriter<K, V> writer;
@@ -147,8 +148,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   transient Set<Entry<K, V>> entrySet;
 
   /** Creates an instance based on the builder's configuration. */
-  protected BoundedLocalCache(Caffeine<K, V> builder, boolean isAsync) {
+  protected BoundedLocalCache(Caffeine<K, V> builder,
+      @Nullable CacheLoader<K, V> cacheLoader, boolean isAsync) {
     this.isAsync = isAsync;
+    this.cacheLoader = cacheLoader;
     executor = builder.getExecutor();
     writer = builder.getCacheWriter();
     weigher = builder.getWeigher(isAsync);
@@ -204,10 +207,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   protected Queue<Runnable> writeQueue() {
-    throw new UnsupportedOperationException();
-  }
-
-  protected CacheLoader<? super K, V> cacheLoader() {
     throw new UnsupportedOperationException();
   }
 
@@ -762,7 +761,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
                 return v;
               }
               try {
-                return cacheLoader().reload(k, v);
+                return cacheLoader.reload(k, v);
               } catch (Exception e) {
                 node.setWriteTime(writeTime);
                 return LocalCache.throwUnchecked(e);
@@ -2635,7 +2634,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public CacheLoader<? super K, V> cacheLoader() {
-      return cache.cacheLoader();
+      return cache.cacheLoader;
     }
 
     @Override
@@ -2659,7 +2658,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (cache.refreshAfterWrite()) {
         proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
       }
-      proxy.loader = cache.cacheLoader();
+      proxy.loader = cache.cacheLoader;
       return proxy;
     }
   }

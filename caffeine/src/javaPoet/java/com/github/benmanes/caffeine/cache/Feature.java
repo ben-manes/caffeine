@@ -44,7 +44,6 @@ public enum Feature {
   MAXIMUM_WEIGHT,
 
   LISTENING,
-  LOADING,
   STATS;
 
   public static String makeEnumName(Iterable<Feature> features) {

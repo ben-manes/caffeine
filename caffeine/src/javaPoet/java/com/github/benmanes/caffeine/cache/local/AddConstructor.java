@@ -36,8 +36,6 @@ public final class AddConstructor extends LocalCacheRule {
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
-        .addStatement(context.parentFeatures.isEmpty()
-            ? "super(builder, async)"
-            : "super(builder, cacheLoader, async)");
+        .addStatement("super(builder, (CacheLoader<K, V>) cacheLoader, async)");
   }
 }
