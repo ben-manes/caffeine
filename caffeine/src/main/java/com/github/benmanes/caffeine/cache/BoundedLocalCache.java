@@ -1693,6 +1693,24 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @Override
+  public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+    requireNonNull(function);
+
+    BiFunction<K, V, V> remappingFunction = (key, oldValue) -> {
+      V newValue = requireNonNull(function.apply(key, oldValue));
+      if (oldValue != newValue) {
+        writer.write(key, newValue);
+      }
+      return newValue;
+    };
+    for (K key : keySet()) {
+      long now = expirationTicker().read();
+      Object lookupKey = nodeFactory.newLookupKey(key);
+      remap(key, lookupKey, remappingFunction, now, /* computeIfAbsent */ false);
+    }
+  }
+
+  @Override
   public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
       boolean isAsync) {
     requireNonNull(key);
@@ -2162,8 +2180,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public K next() {
-      K castedKey = iterator.next().getKey();
-      current = castedKey;
+      K next = iterator.next().getKey();
+      current = next;
       return current;
     }
 

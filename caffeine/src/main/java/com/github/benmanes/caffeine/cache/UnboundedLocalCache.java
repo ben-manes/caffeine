@@ -381,9 +381,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       data.putAll(map);
       return;
     }
-    for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      put(entry.getKey(), entry.getValue());
-    }
+    map.forEach(this::put);
   }
 
   @Override
@@ -618,7 +616,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public boolean removeIf(Predicate<? super V> filter) {
       requireNonNull(filter);
       boolean removed = false;
-      for (Entry<K, V> entry : cache.entrySet()) {
+      for (Entry<K, V> entry : cache.data.entrySet()) {
         if (filter.test(entry.getValue())) {
           removed |= cache.remove(entry.getKey(), entry.getValue());
         }
@@ -713,7 +711,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
       requireNonNull(filter);
       boolean removed = false;
-      for (Entry<K, V> entry : this) {
+      for (Entry<K, V> entry : cache.data.entrySet()) {
         if (filter.test(entry)) {
           removed |= cache.remove(entry.getKey(), entry.getValue());
         }

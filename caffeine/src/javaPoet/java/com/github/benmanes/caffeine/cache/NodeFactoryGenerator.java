@@ -222,11 +222,10 @@ public final class NodeFactoryGenerator {
 
   private void generatedNodes() throws IOException {
     fillClassNameToFeatures();
-    classNameToFeatures.entrySet().stream().forEach(entry -> {
-      String className = entry.getKey();
+    classNameToFeatures.forEach((className, features) -> {
       String higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
-      addNodeSpec(entry.getKey(), isLeaf, entry.getValue());
+      addNodeSpec(className, isLeaf, features);
     });
   }
 

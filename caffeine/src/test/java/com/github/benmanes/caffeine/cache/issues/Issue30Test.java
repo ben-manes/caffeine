@@ -35,8 +35,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -137,18 +137,13 @@ public final class Issue30Test {
     assertThat("serve cached first updated value", cache.get(A_KEY), is(futureOf(A_UPDATE_1)));
   }
 
-  static final class Loader implements CacheLoader<String, String> {
+  static final class Loader implements AsyncCacheLoader<String, String> {
     final ConcurrentMap<String, String> source;
     final ConcurrentMap<String, Date> lastLoad;
 
     Loader(ConcurrentMap<String, String> source, ConcurrentMap<String, Date> lastLoad) {
       this.source = source;
       this.lastLoad = lastLoad;
-    }
-
-    @Override
-    public String load(String key) {
-      throw new IllegalStateException();
     }
 
     @Override

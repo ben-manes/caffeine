@@ -1431,9 +1431,9 @@ public final class AsMapTest {
   public void toString(Map<Integer, Integer> map, CacheContext context) {
     String toString = map.toString();
     if (!context.original().toString().equals(toString)) {
-      for (Entry<Integer, Integer> entry : map.entrySet()) {
-        assertThat(toString, containsString(entry.getKey() + "=" + entry.getValue()));
-      }
+      map.forEach((key, value) -> {
+        assertThat(toString, containsString(key + "=" + value));
+      });
     }
   }
 
@@ -1839,12 +1839,12 @@ public final class AsMapTest {
     assertThat(entries.contains(new Object()), is(false));
     assertThat(entries.remove(new Object()), is(false));
     assertThat(entries, hasSize(context.original().size()));
-    for (Entry<Integer, Integer> entry : entries) {
+    entries.forEach(entry -> {
       assertThat(entries.contains(entry), is(true));
       assertThat(entries.remove(entry), is(true));
       assertThat(entries.remove(entry), is(false));
       assertThat(entries.contains(entry), is(false));
-    }
+    });
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));

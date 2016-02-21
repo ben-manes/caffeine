@@ -130,11 +130,10 @@ public final class LocalCacheFactoryGenerator {
 
   private void generateLocalCaches() {
     fillClassNameToFeatures();
-    classNameToFeatures.entrySet().stream().forEach(entry -> {
-      String className = entry.getKey();
+    classNameToFeatures.forEach((className, features) -> {
       String higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
-      addLocalCacheSpec(entry.getKey(), isLeaf, entry.getValue());
+      addLocalCacheSpec(className, isLeaf, features);
     });
   }
 

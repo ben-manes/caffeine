@@ -204,12 +204,12 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
     return CompletableFuture.allOf(array).thenApply(ignored -> {
       Map<K, V> result = new HashMap<>(futures.size());
-      for (Entry<K, CompletableFuture<V>> entry : futures.entrySet()) {
-        V value = entry.getValue().getNow(null);
+      futures.forEach((key, future) -> {
+        V value = future.getNow(null);
         if (value != null) {
-          result.put(entry.getKey(), value);
+          result.put(key, value);
         }
-      }
+      });
       return Collections.unmodifiableMap(result);
     });
   }
@@ -279,16 +279,16 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
     /** Populates the proxies with the computed result. */
     private void fillProxies(Map<K, V> result) {
-      for (Entry<K, CompletableFuture<V>> proxy : proxies.entrySet()) {
-        V value = result.get(proxy.getKey());
-        proxy.getValue().obtrudeValue(value);
+      proxies.forEach((key, future) -> {
+        V value = result.get(key);
+        future.obtrudeValue(value);
         if (value == null) {
-          cache.remove(proxy.getKey(), proxy.getValue());
+          cache.remove(key, future);
         } else {
           // update the weight and expiration timestamps
-          cache.replace(proxy.getKey(), proxy.getValue(), proxy.getValue());
+          cache.replace(key, future, future);
         }
-      }
+      });
     }
 
     /** Adds to the cache any extra entries computed that were not requested. */
@@ -296,11 +296,11 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       if (proxies.size() == result.size()) {
         return;
       }
-      for (Entry<K, V> entry : result.entrySet()) {
-        if (!proxies.containsKey(entry.getKey())) {
-          cache.put(entry.getKey(), CompletableFuture.completedFuture(entry.getValue()));
+      result.forEach((key, value) -> {
+        if (!proxies.containsKey(key)) {
+          cache.put(key, CompletableFuture.completedFuture(value));
         }
-      }
+      });
     }
   }
 
@@ -406,9 +406,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
-      for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
-        put(entry.getKey(), entry.getValue());
-      }
+      map.forEach(this::put);
     }
 
     @Override

@@ -20,7 +20,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
 import org.hamcrest.Description;
@@ -57,17 +56,17 @@ public final class IsValidUnboundedLocalCache<K, V>
       desc.expectThat("empty map", map, emptyMap());
     }
 
-    for (Entry<K, V> entry : map.data.entrySet()) {
-      desc.expectThat("non null key", entry.getKey(), is(not(nullValue())));
-      desc.expectThat("non null value", entry.getValue(), is(not(nullValue())));
+    map.data.forEach((key, value) -> {
+      desc.expectThat("non null key", key, is(not(nullValue())));
+      desc.expectThat("non null value", value, is(not(nullValue())));
 
-      if (entry.getValue() instanceof CompletableFuture<?>) {
-        CompletableFuture<?> future = (CompletableFuture<?>) entry.getValue();
+      if (value instanceof CompletableFuture<?>) {
+        CompletableFuture<?> future = (CompletableFuture<?>) value;
         boolean success = future.isDone() && !future.isCompletedExceptionally();
         desc.expectThat("future is done", success, is(true));
         desc.expectThat("not null value", future.getNow(null), is(not(nullValue())));
       }
-    }
+    });
   }
 
   public static <K, V> IsValidUnboundedLocalCache<K, V> valid() {

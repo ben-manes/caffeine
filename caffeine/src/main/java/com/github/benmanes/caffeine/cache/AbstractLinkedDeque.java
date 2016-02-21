@@ -384,11 +384,6 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       return e;
     }
 
-    @Override
-    public void remove() {
-      throw new UnsupportedOperationException();
-    }
-
     /** Retrieves the next element to traverse to or <tt>null</tt> if there are no more elements. */
     abstract E computeNext();
   }

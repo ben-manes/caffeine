@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
@@ -180,13 +179,13 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
           throw new InvalidCacheLoadException("null map");
         }
         Map<K, V> result = new HashMap<>(loaded.size());
-        for (Entry<K, V> entry : loaded.entrySet()) {
-          if ((entry.getKey() == null) || (entry.getValue() == null)) {
+        loaded.forEach((key, value) -> {
+          if ((key == null) || (value == null)) {
             nullBulkLoad.set(true);
           } else {
-            result.put(entry.getKey(), entry.getValue());
+            result.put(key, value);
           }
-        }
+        });
         return result;
       } catch (RuntimeException | Error e) {
         throw e;
