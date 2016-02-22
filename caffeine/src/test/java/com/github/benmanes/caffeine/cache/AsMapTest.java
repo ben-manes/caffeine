@@ -30,6 +30,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
@@ -46,6 +47,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -69,6 +72,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.WriteException;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.testing.SerializableTester;
 
@@ -1570,10 +1574,43 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  public void keySpliterator(Map<Integer, Integer> map, CacheContext context) {
+  public void keySpliterator_forEachRemaining(Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
     map.keySet().spliterator().forEachRemaining(key -> count[0]++);
     assertThat(count[0], is(map.size()));
+  }
+
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySpliterator_tryAdvance(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Integer> spliterator = map.keySet().spliterator();
+    int[] count = new int[1];
+    boolean advanced;
+    do {
+      advanced = spliterator.tryAdvance(key -> count[0]++);
+    } while (advanced);
+    assertThat(count[0], is(map.size()));
+  }
+
+  // FIXME: ConcurrentHashMap bug for SINGLETON and PARTIAL resulting in two empty spliterators
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = {Population.EMPTY, Population.FULL})
+  public void keySpliterator_trySplit(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Integer> spliterator = map.keySet().spliterator();
+    Spliterator<Integer> other = MoreObjects.firstNonNull(
+        spliterator.trySplit(), Spliterators.emptySpliterator());
+    int size = (int) (spliterator.estimateSize() + other.estimateSize());
+    assertThat(size, is(map.size()));
+  }
+
+  @CacheSpec(population = Population.SINGLETON)
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void keySpliterator_estimateSize(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Integer> spliterator = map.keySet().spliterator();
+    assertThat((int) spliterator.estimateSize(), is(map.size()));
   }
 
   /* ---------------- Values -------------- */
@@ -1734,10 +1771,43 @@ public final class AsMapTest {
   @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  public void valueSpliterator(Map<Integer, Integer> map, CacheContext context) {
+  public void valueSpliterator_forEachRemaining(Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
-    map.values().spliterator().forEachRemaining(key -> count[0]++);
+    map.values().spliterator().forEachRemaining(value -> count[0]++);
     assertThat(count[0], is(map.size()));
+  }
+
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void valueSpliterator_tryAdvance(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Integer> spliterator = map.values().spliterator();
+    int[] count = new int[1];
+    boolean advanced;
+    do {
+      advanced = spliterator.tryAdvance(value -> count[0]++);
+    } while (advanced);
+    assertThat(count[0], is(map.size()));
+  }
+
+  // FIXME: ConcurrentHashMap bug for SINGLETON and PARTIAL resulting in two empty spliterators
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = {Population.EMPTY, Population.FULL})
+  public void valueSpliterator_trySplit(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Integer> spliterator = map.values().spliterator();
+    Spliterator<Integer> other = MoreObjects.firstNonNull(
+        spliterator.trySplit(), Spliterators.emptySpliterator());
+    int size = (int) (spliterator.estimateSize() + other.estimateSize());
+    assertThat(size, is(map.size()));
+  }
+
+  @CacheSpec(population = Population.SINGLETON)
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void valueSpliterator_estimateSize(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Integer> spliterator = map.values().spliterator();
+    assertThat((int) spliterator.estimateSize(), is(map.size()));
   }
 
   /* ---------------- Entry Set -------------- */
@@ -1899,14 +1969,57 @@ public final class AsMapTest {
     }
   }
 
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySetSpliterator_forEachRemaining(
+      Map<Integer, Integer> map, CacheContext context) {
+    int[] count = new int[1];
+    map.entrySet().spliterator().forEachRemaining(entry -> {
+      if (!context.isGuava()) {
+        assertThat(entry, is(instanceOf(WriteThroughEntry.class)));
+      }
+      count[0]++;
+    });
+    assertThat(count[0], is(map.size()));
+  }
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySetSpliterator(Map<Integer, Integer> map, CacheContext context) {
+  public void entrySetSpliterator_tryAdvance(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
     int[] count = new int[1];
-    map.entrySet().spliterator().forEachRemaining(key -> count[0]++);
+    boolean advanced;
+    do {
+      advanced = spliterator.tryAdvance(entry -> {
+        if (!context.isGuava()) {
+          assertThat(entry, is(instanceOf(WriteThroughEntry.class)));
+        }
+        count[0]++;
+      });
+    } while (advanced);
     assertThat(count[0], is(map.size()));
+  }
+
+  // FIXME: ConcurrentHashMap bug for SINGLETON and PARTIAL resulting in two empty spliterators
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = {Population.EMPTY, Population.FULL})
+  public void entrySetSpliterator_trySplit(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
+    Spliterator<Entry<Integer, Integer>> other = MoreObjects.firstNonNull(
+        spliterator.trySplit(), Spliterators.emptySpliterator());
+    int size = (int) (spliterator.estimateSize() + other.estimateSize());
+    assertThat(size, is(map.size()));
+  }
+
+  @CacheSpec(population = Population.SINGLETON)
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  public void entrySetSpliterator_estimateSize(Map<Integer, Integer> map, CacheContext context) {
+    Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
+    assertThat((int) spliterator.estimateSize(), is(map.size()));
   }
 
   /* ---------------- WriteThroughEntry -------------- */

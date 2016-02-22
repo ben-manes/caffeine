@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -512,45 +513,45 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   /** An adapter to safely externalize the keys. */
   static final class KeySetView<K> extends AbstractSet<K> {
-    final UnboundedLocalCache<K, ?> local;
+    final UnboundedLocalCache<K, ?> cache;
 
-    KeySetView(UnboundedLocalCache<K, ?> local) {
-      this.local = requireNonNull(local);
+    KeySetView(UnboundedLocalCache<K, ?> cache) {
+      this.cache = requireNonNull(cache);
     }
 
     @Override
     public boolean isEmpty() {
-      return local.isEmpty();
+      return cache.isEmpty();
     }
 
     @Override
     public int size() {
-      return local.size();
+      return cache.size();
     }
 
     @Override
     public void clear() {
-      local.clear();
+      cache.clear();
     }
 
     @Override
     public boolean contains(Object o) {
-      return local.containsKey(o);
+      return cache.containsKey(o);
     }
 
     @Override
     public boolean remove(Object obj) {
-      return (local.remove(obj) != null);
+      return (cache.remove(obj) != null);
     }
 
     @Override
     public Iterator<K> iterator() {
-      return new KeyIterator<K>(local);
+      return new KeyIterator<K>(cache);
     }
 
     @Override
     public Spliterator<K> spliterator() {
-      return local.data.keySet().spliterator();
+      return cache.data.keySet().spliterator();
     }
   }
 
@@ -726,7 +727,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Spliterator<Entry<K, V>> spliterator() {
-      return cache.data.entrySet().spliterator();
+      return (cache.writer == CacheWriter.disabledWriter())
+          ? cache.data.entrySet().spliterator()
+          : new EntrySpliterator<>(cache);
     }
   }
 
@@ -757,6 +760,55 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       Caffeine.requireState(entry != null);
       cache.remove(entry.getKey());
       entry = null;
+    }
+  }
+
+  /** An adapter to safely externalize the entry spliterator. */
+  static final class EntrySpliterator<K, V> implements Spliterator<Entry<K, V>> {
+    final Spliterator<Entry<K, V>> spliterator;
+    final UnboundedLocalCache<K, V> cache;
+
+    EntrySpliterator(UnboundedLocalCache<K, V> cache) {
+      this(cache, cache.data.entrySet().spliterator());
+    }
+
+    EntrySpliterator(UnboundedLocalCache<K, V> cache, Spliterator<Entry<K, V>> spliterator) {
+      this.spliterator = requireNonNull(spliterator);
+      this.cache = requireNonNull(cache);
+    }
+
+    @Override
+    public void forEachRemaining(Consumer<? super Entry<K, V>> action) {
+      requireNonNull(action);
+      spliterator.forEachRemaining(entry -> {
+        Entry<K, V> e = new WriteThroughEntry<>(cache, entry.getKey(), entry.getValue());
+        action.accept(e);
+      });
+    }
+
+    @Override
+    public boolean tryAdvance(Consumer<? super Entry<K, V>> action) {
+      requireNonNull(action);
+      return spliterator.tryAdvance(entry -> {
+        Entry<K, V> e = new WriteThroughEntry<>(cache, entry.getKey(), entry.getValue());
+        action.accept(e);
+      });
+    }
+
+    @Override
+    public EntrySpliterator<K, V> trySplit() {
+      Spliterator<Entry<K, V>> split = spliterator.trySplit();
+      return (split == null) ? null : new EntrySpliterator<>(cache, split);
+    }
+
+    @Override
+    public long estimateSize() {
+      return spliterator.estimateSize();
+    }
+
+    @Override
+    public int characteristics() {
+      return spliterator.characteristics();
     }
   }
 
