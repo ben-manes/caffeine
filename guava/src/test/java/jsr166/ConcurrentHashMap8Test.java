@@ -19,10 +19,10 @@ import java.util.Spliterator;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.LongAdder;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+
 import junit.framework.Test;
 import junit.framework.TestSuite;
-
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class ConcurrentHashMap8Test extends JSR166TestCase {
@@ -306,7 +306,7 @@ public class ConcurrentHashMap8Test extends JSR166TestCase {
     /**
      * KeySetView.spliterator returns spliterator over the elements in this set
      */
-    public void disabled_testKeySetSpliterator() {
+    public void testKeySetSpliterator() {
         LongAdder adder = new LongAdder();
         ConcurrentMap map = map5();
         Set set = map.keySet();

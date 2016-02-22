@@ -2549,7 +2549,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         K key = node.getKey();
         V value = node.getValue();
         if ((key != null) && (value != null) && !cache.hasExpired(node, now) && node.isAlive()) {
-          action.accept(new WriteThroughEntry<K, V>(cache, key, value));
+          action.accept(new WriteThroughEntry<>(cache, key, value));
         }
       };
       spliterator.forEachRemaining(consumer);
@@ -2564,7 +2564,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         K key = node.getKey();
         V value = node.getValue();
         if ((key != null) && (value != null) && !cache.hasExpired(node, now) && node.isAlive()) {
-          action.accept(new WriteThroughEntry<K, V>(cache, key, value));
+          action.accept(new WriteThroughEntry<>(cache, key, value));
           advanced[0] = true;
         }
       };

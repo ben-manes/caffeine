@@ -1573,11 +1573,27 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void keySpliterator_forEachRemaining_null(
+      Map<Integer, Integer> map, CacheContext context) {
+    map.keySet().spliterator().forEachRemaining(null);
+  }
+
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySpliterator_forEachRemaining(Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
     map.keySet().spliterator().forEachRemaining(key -> count[0]++);
     assertThat(count[0], is(map.size()));
+  }
+
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void keySpliterator_tryAdvance_null(
+      Map<Integer, Integer> map, CacheContext context) {
+    map.keySet().spliterator().tryAdvance(null);
   }
 
   @CacheSpec
@@ -1593,19 +1609,21 @@ public final class AsMapTest {
     assertThat(count[0], is(map.size()));
   }
 
-  // FIXME: ConcurrentHashMap bug for SINGLETON and PARTIAL resulting in two empty spliterators
+  @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(population = {Population.EMPTY, Population.FULL})
   public void keySpliterator_trySplit(Map<Integer, Integer> map, CacheContext context) {
     Spliterator<Integer> spliterator = map.keySet().spliterator();
     Spliterator<Integer> other = MoreObjects.firstNonNull(
         spliterator.trySplit(), Spliterators.emptySpliterator());
-    int size = (int) (spliterator.estimateSize() + other.estimateSize());
-    assertThat(size, is(map.size()));
+
+    int[] count = new int[1];
+    spliterator.forEachRemaining(key -> count[0]++);
+    other.forEachRemaining(key -> count[0]++);
+    assertThat(count[0], is(map.size()));
   }
 
-  @CacheSpec(population = Population.SINGLETON)
+  @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void keySpliterator_estimateSize(Map<Integer, Integer> map, CacheContext context) {
@@ -1770,11 +1788,27 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void valueSpliterator_forEachRemaining_null(
+      Map<Integer, Integer> map, CacheContext context) {
+    map.values().spliterator().forEachRemaining(null);
+  }
+
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void valueSpliterator_forEachRemaining(Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
     map.values().spliterator().forEachRemaining(value -> count[0]++);
     assertThat(count[0], is(map.size()));
+  }
+
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void valueSpliterator_tryAdvance_null(
+      Map<Integer, Integer> map, CacheContext context) {
+    map.values().spliterator().tryAdvance(null);
   }
 
   @CacheSpec
@@ -1790,19 +1824,21 @@ public final class AsMapTest {
     assertThat(count[0], is(map.size()));
   }
 
-  // FIXME: ConcurrentHashMap bug for SINGLETON and PARTIAL resulting in two empty spliterators
+  @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(population = {Population.EMPTY, Population.FULL})
   public void valueSpliterator_trySplit(Map<Integer, Integer> map, CacheContext context) {
     Spliterator<Integer> spliterator = map.values().spliterator();
     Spliterator<Integer> other = MoreObjects.firstNonNull(
         spliterator.trySplit(), Spliterators.emptySpliterator());
-    int size = (int) (spliterator.estimateSize() + other.estimateSize());
-    assertThat(size, is(map.size()));
+
+    int[] count = new int[1];
+    spliterator.forEachRemaining(value -> count[0]++);
+    other.forEachRemaining(value -> count[0]++);
+    assertThat(count[0], is(map.size()));
   }
 
-  @CacheSpec(population = Population.SINGLETON)
+  @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void valueSpliterator_estimateSize(Map<Integer, Integer> map, CacheContext context) {
@@ -1971,8 +2007,16 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void entrySpliterator_forEachRemaining_null(
+      Map<Integer, Integer> map, CacheContext context) {
+    map.entrySet().spliterator().forEachRemaining(null);
+  }
+
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySetSpliterator_forEachRemaining(
+  public void entrySpliterator_forEachRemaining(
       Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
     map.entrySet().spliterator().forEachRemaining(entry -> {
@@ -1986,8 +2030,16 @@ public final class AsMapTest {
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void entrySpliterator_tryAdvance_null(
+      Map<Integer, Integer> map, CacheContext context) {
+    map.entrySet().spliterator().tryAdvance(null);
+  }
+
+  @CacheSpec
+  @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySetSpliterator_tryAdvance(Map<Integer, Integer> map, CacheContext context) {
+  public void entrySpliterator_tryAdvance(Map<Integer, Integer> map, CacheContext context) {
     Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
     int[] count = new int[1];
     boolean advanced;
@@ -2002,22 +2054,24 @@ public final class AsMapTest {
     assertThat(count[0], is(map.size()));
   }
 
-  // FIXME: ConcurrentHashMap bug for SINGLETON and PARTIAL resulting in two empty spliterators
+  @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(population = {Population.EMPTY, Population.FULL})
-  public void entrySetSpliterator_trySplit(Map<Integer, Integer> map, CacheContext context) {
+  public void entrySpliterator_trySplit(Map<Integer, Integer> map, CacheContext context) {
     Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
     Spliterator<Entry<Integer, Integer>> other = MoreObjects.firstNonNull(
         spliterator.trySplit(), Spliterators.emptySpliterator());
-    int size = (int) (spliterator.estimateSize() + other.estimateSize());
-    assertThat(size, is(map.size()));
+
+    int[] count = new int[1];
+    spliterator.forEachRemaining(entry -> count[0]++);
+    other.forEachRemaining(entry -> count[0]++);
+    assertThat(count[0], is(map.size()));
   }
 
-  @CacheSpec(population = Population.SINGLETON)
+  @CacheSpec
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySetSpliterator_estimateSize(Map<Integer, Integer> map, CacheContext context) {
+  public void entrySpliterator_estimateSize(Map<Integer, Integer> map, CacheContext context) {
     Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
     assertThat((int) spliterator.estimateSize(), is(map.size()));
   }
