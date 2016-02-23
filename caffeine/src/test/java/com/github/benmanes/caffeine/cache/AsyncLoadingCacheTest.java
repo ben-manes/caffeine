@@ -70,32 +70,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 @Test(dataProviderClass = CacheProvider.class)
 public final class AsyncLoadingCacheTest {
 
-  /* ---------------- CacheLoader -------------- */
-
-  @Test
-  public void asyncLoad() throws Exception {
-    CacheLoader<Integer, ?> loader = key -> key;
-    CompletableFuture<?> future = loader.asyncLoad(1, MoreExecutors.directExecutor());
-    assertThat(future.get(), is(1));
-  }
-
-  @Test(expectedExceptions = UnsupportedOperationException.class)
-  public void asyncLoadAll() throws Throwable {
-    CacheLoader<Object, ?> loader = key -> key;
-    try {
-      loader.asyncLoadAll(Collections.<Object>emptyList(), MoreExecutors.directExecutor()).get();
-    } catch (ExecutionException e) {
-      throw e.getCause();
-    }
-  }
-  
-  @Test
-  public void asyncReload() throws Exception {
-    CacheLoader<Integer, Integer> loader = key -> -key;
-    CompletableFuture<?> future = loader.asyncReload(1, 2, MoreExecutors.directExecutor());
-    assertThat(future.get(), is(-1));
-  }
-
   /* ---------------- getIfPresent -------------- */
 
   @CheckNoWriter
@@ -714,5 +688,22 @@ public final class AsyncLoadingCacheTest {
   @CacheSpec(writer = Writer.EXCEPTIONAL)
   public void serialize(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache, is(reserializable()));
+  }
+
+  /* ---------------- AsyncCacheLoader -------------- */
+
+  @Test(expectedExceptions = UnsupportedOperationException.class)
+  public void asyncLoadAll() throws Throwable {
+    AsyncCacheLoader<Integer, Integer> loader =
+        (key, executor) -> CompletableFuture.completedFuture(-key);
+    loader.asyncLoadAll(Collections.emptyList(), Runnable::run).get();
+  }
+
+  @Test
+  public void asyncReload() throws Exception {
+    AsyncCacheLoader<Integer, Integer> loader =
+        (key, executor) -> CompletableFuture.completedFuture(-key);
+    CompletableFuture<?> future = loader.asyncReload(1, 2, Runnable::run);
+    assertThat(future.get(), is(-1));
   }
 }

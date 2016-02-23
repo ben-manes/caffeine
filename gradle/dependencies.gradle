@@ -35,9 +35,9 @@ ext {
     javapoet: '1.5.1',
     jcache: '1.0.0',
     jsr305: '3.0.1',
-    stream: '2.9.0',
+    stream: '2.9.1',
     univocity_parsers: '2.0.0',
-    ycsb: '0.7.0-RC1',
+    ycsb: '0.7.0-RC2',
   ]
   test_versions = [
     awaitility: '1.7.0',
@@ -46,7 +46,7 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '1.1',
     junit: '4.12',
-    mockito: '2.0.42-beta',
+    mockito: '2.0.43-beta',
     pax_exam: '4.8.0',
     testng: '6.9.10',
     truth: '0.24',

@@ -42,6 +42,6 @@ final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
   }
 
   Object writeReplace() {
-    return new SimpleEntry<K, V>(this);
+    return new SimpleEntry<>(this);
   }
 }

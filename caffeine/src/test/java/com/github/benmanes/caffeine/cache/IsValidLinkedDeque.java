@@ -90,6 +90,6 @@ public final class IsValidLinkedDeque<E> extends TypeSafeDiagnosingMatcher<Linke
   }
 
   public static <E> IsValidLinkedDeque<E> validLinkedDeque() {
-    return new IsValidLinkedDeque<E>();
+    return new IsValidLinkedDeque<>();
   }
 }

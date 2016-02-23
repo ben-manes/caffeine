@@ -213,6 +213,6 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   public static <K, V> IsValidBoundedLocalCache<K, V> valid() {
-    return new IsValidBoundedLocalCache<K, V>();
+    return new IsValidBoundedLocalCache<>();
   }
 }

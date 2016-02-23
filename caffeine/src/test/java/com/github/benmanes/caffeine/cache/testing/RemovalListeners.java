@@ -34,12 +34,12 @@ public final class RemovalListeners {
 
   /** A removal listener that stores the notifications for inspection. */
   public static <K, V> RemovalListener<K, V> consuming() {
-    return new ConsumingRemovalListener<K, V>();
+    return new ConsumingRemovalListener<>();
   }
 
   /** A removal listener that throws an exception if a notification arrives. */
   public static <K, V> RemovalListener<K, V> rejecting() {
-    return new RejectingRemovalListener<K, V>();
+    return new RejectingRemovalListener<>();
   }
 
   public static final class RejectingRemovalListener<K, V>

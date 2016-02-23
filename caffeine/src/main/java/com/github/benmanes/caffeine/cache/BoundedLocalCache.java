@@ -2651,7 +2651,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public Policy<K, V> policy() {
       return (policy == null)
-          ? (policy = new BoundedPolicy<K, V>(cache, Function.identity(), isWeighted))
+          ? (policy = new BoundedPolicy<>(cache, Function.identity(), isWeighted))
           : policy;
     }
 
@@ -2935,7 +2935,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
         Function<V, V> castedTransformer = (Function<V, V>) transformer;
-        policy = new BoundedPolicy<K, V>(castedCache, castedTransformer, isWeighted);
+        policy = new BoundedPolicy<>(castedCache, castedTransformer, isWeighted);
       }
       return policy;
     }

@@ -62,6 +62,6 @@ public final class IsValidMapView<K, V> extends TypeSafeDiagnosingMatcher<Map<K,
   }
 
   public static <K, V> IsValidMapView<K, V> validAsMap() {
-    return new IsValidMapView<K, V>();
+    return new IsValidMapView<>();
   }
 }

@@ -79,6 +79,19 @@ public final class StatsCounterTest {
 
   @Test
   public void guarded() {
+    StatsCounter counter = StatsCounter.guardedStatsCounter(new ConcurrentStatsCounter());
+    counter.recordHits(1);
+    counter.recordMisses(1);
+    counter.recordEviction();
+    counter.recordLoadSuccess(1);
+    counter.recordLoadFailure(1);
+    assertThat(counter.snapshot(), is(new CacheStats(1, 1, 1, 1, 2, 1)));
+    assertThat(counter.toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
+    assertThat(counter.snapshot().toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
+  }
+
+  @Test
+  public void guarded_exception() {
     StatsCounter statsCounter = Mockito.mock(StatsCounter.class);
     when(statsCounter.snapshot()).thenThrow(new NullPointerException());
     doThrow(NullPointerException.class).when(statsCounter).recordEviction();

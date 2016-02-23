@@ -59,6 +59,6 @@ public final class IsValidAsyncCache<K, V>
   }
 
   public static <K, V> IsValidAsyncCache<K, V> validAsyncCache() {
-    return new IsValidAsyncCache<K, V>();
+    return new IsValidAsyncCache<>();
   }
 }

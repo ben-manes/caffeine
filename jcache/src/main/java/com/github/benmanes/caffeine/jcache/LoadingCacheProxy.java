@@ -87,7 +87,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
             statistics.recordEvictions(1);
             return null;
           }
-          return expired;
+          return e;
         });
         expirable = null;
       }

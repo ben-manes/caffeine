@@ -90,4 +90,9 @@ final class GuardedStatsCounter implements StatsCounter {
       return DisabledStatsCounter.EMPTY_STATS;
     }
   }
+
+  @Override
+  public String toString() {
+    return delegate.toString();
+  }
 }

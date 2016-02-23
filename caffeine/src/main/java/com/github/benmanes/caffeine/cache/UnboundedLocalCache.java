@@ -65,7 +65,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   StatsCounter statsCounter;
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder, boolean async) {
-    this.data = new ConcurrentHashMap<K, V>(builder.getInitialCapacity());
+    this.data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     this.statsCounter = builder.getStatsCounterSupplier().get();
     this.removalListener = builder.getRemovalListener(async);
     this.isRecordingStats = builder.isRecordingStats();

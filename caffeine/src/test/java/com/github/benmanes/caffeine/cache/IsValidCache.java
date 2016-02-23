@@ -80,6 +80,6 @@ public final class IsValidCache<K, V>
   }
 
   public static <K, V> IsValidCache<K, V> validCache() {
-    return new IsValidCache<K, V>();
+    return new IsValidCache<>();
   }
 }

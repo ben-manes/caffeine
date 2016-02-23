@@ -57,14 +57,14 @@ public enum CacheType {
   },
   ConcurrentHashMap {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new ConcurrentMapCache<>(new ConcurrentHashMap<K, V>(maximumSize));
+      return new ConcurrentMapCache<>(new ConcurrentHashMap<>(maximumSize));
     }
   },
   NonBlockingHashMap {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       // Note that writes that update an entry to the same reference are short circuited
       // and do not mutate the hash table. This makes those writes equal to a read.
-      return new ConcurrentMapCache<>(new NonBlockingHashMap<K, V>(maximumSize));
+      return new ConcurrentMapCache<>(new NonBlockingHashMap<>(maximumSize));
     }
   },
 
@@ -134,7 +134,7 @@ public enum CacheType {
   },
   LinkedHashMap_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new LinkedHashMapCache<K, V>(true, maximumSize);
+      return new LinkedHashMapCache<>(true, maximumSize);
     }
   },
   TCache_Lfu {

@@ -487,7 +487,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     @Override
     public ConcurrentMap<K, V> asMap() {
       if (asMapView == null) {
-        asMapView = new AsMapView<K, V>(cache);
+        asMapView = new AsMapView<>(cache);
       }
       return asMapView;
     }

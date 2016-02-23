@@ -76,7 +76,7 @@ public final class EventDispatcher<K, V> {
 
     CacheEntryEventFilter<K, V> filter = event -> true;
     if (configuration.getCacheEntryEventFilterFactory() != null) {
-      filter = new EventTypeFilter<K, V>(listener,
+      filter = new EventTypeFilter<>(listener,
           configuration.getCacheEntryEventFilterFactory().create());
     }
 
@@ -211,8 +211,8 @@ public final class EventDispatcher<K, V> {
   /** Broadcasts the event to all of the interested listener's dispatch queues. */
   private void publish(JCacheEntryEvent<K, V> event, boolean quiet) {
     for (Registration<K, V> registration : dispatchQueues.keySet()) {
-      if (!registration.getCacheEntryFilter().evaluate(event)
-          || !registration.getCacheEntryListener().isCompatible(event)) {
+      if (!registration.getCacheEntryListener().isCompatible(event)
+          || !registration.getCacheEntryFilter().evaluate(event)) {
         continue;
       }
 

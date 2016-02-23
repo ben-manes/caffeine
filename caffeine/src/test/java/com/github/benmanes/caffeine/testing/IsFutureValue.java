@@ -47,10 +47,10 @@ public final class IsFutureValue<V> extends TypeSafeDiagnosingMatcher<Future<V>>
   }
 
   public static <V> IsFutureValue<V> future(Matcher<V> matcher) {
-    return new IsFutureValue<V>(matcher);
+    return new IsFutureValue<>(matcher);
   }
 
   public static <V> IsFutureValue<V> futureOf(V value) {
-    return new IsFutureValue<V>(Is.is(value));
+    return new IsFutureValue<>(Is.is(value));
   }
 }

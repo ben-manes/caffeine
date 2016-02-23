@@ -70,6 +70,6 @@ public final class IsValidUnboundedLocalCache<K, V>
   }
 
   public static <K, V> IsValidUnboundedLocalCache<K, V> valid() {
-    return new IsValidUnboundedLocalCache<K, V>();
+    return new IsValidUnboundedLocalCache<>();
   }
 }

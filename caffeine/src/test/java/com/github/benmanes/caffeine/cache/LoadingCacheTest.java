@@ -25,11 +25,17 @@ import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
+import org.junit.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -338,5 +344,72 @@ public final class LoadingCacheTest {
   public void reload() throws Exception {
     CacheLoader<Integer, Integer> loader = key -> key;
     assertThat(loader.reload(1, 1), is(1));
+  }
+
+  @Test
+  public void asyncLoad_exception() throws Exception {
+    Exception e = new Exception();
+    CacheLoader<Integer, Integer> loader = key -> { throw e; };
+    try {
+      loader.asyncLoad(1, Runnable::run).join();
+    } catch (CompletionException ex) {
+      assertThat(ex.getCause(), is(sameInstance(e)));
+    }
+  }
+
+  @Test
+  public void asyncLoad() throws Exception {
+    CacheLoader<Integer, ?> loader = key -> key;
+    CompletableFuture<?> future = loader.asyncLoad(1, Runnable::run);
+    assertThat(future.get(), is(1));
+  }
+
+  @Test
+  public void asyncLoadAll_exception() throws Exception {
+    Exception e = new Exception();
+    CacheLoader<Integer, Integer> loader = new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) throws Exception {
+        throw new AssertionError();
+      }
+      @Override public Map<Integer, Integer> loadAll(
+          Iterable<? extends Integer> keys) throws Exception {
+        throw e;
+      }
+    };
+    try {
+      loader.asyncLoadAll(Arrays.asList(1), Runnable::run).join();
+    } catch (CompletionException ex) {
+      assertThat(ex.getCause(), is(sameInstance(e)));
+    }
+  }
+
+  @Test(expectedExceptions = UnsupportedOperationException.class)
+  public void asyncLoadAll() throws Throwable {
+    CacheLoader<Object, ?> loader = key -> key;
+    try {
+      loader.asyncLoadAll(Collections.emptyList(), Runnable::run).get();
+    } catch (ExecutionException e) {
+      throw e.getCause();
+    }
+  }
+
+  @Test
+  public void asyncReload_exception() throws Exception {
+    for (Exception e : Arrays.asList(new Exception(), new RuntimeException())) {
+      CacheLoader<Integer, Integer> loader = key -> { throw e; };
+      try {
+        loader.asyncReload(1, 1, Runnable::run).join();
+        Assert.fail();
+      } catch (CompletionException ex) {
+        assertThat(ex.getCause(), is(sameInstance(e)));
+      }
+    }
+  }
+
+  @Test
+  public void asyncReload() throws Exception {
+    CacheLoader<Integer, Integer> loader = key -> -key;
+    CompletableFuture<?> future = loader.asyncReload(1, 2, Runnable::run);
+    assertThat(future.get(), is(-1));
   }
 }

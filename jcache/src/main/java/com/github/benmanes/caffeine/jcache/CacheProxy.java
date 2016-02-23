@@ -972,19 +972,19 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
     List<Cache.Entry<? extends K, ? extends V>> entries = map.entrySet().stream()
         .map(entry -> new EntryProxy<>(entry.getKey(), entry.getValue()))
-        .collect(Collectors.<Cache.Entry<? extends K, ? extends V>>toList());
+        .collect(Collectors.toList());
     try {
       writer.writeAll(entries);
       return null;
     } catch (CacheWriterException e) {
-      for (Cache.Entry<? extends K, ? extends V> entry : entries) {
+      entries.forEach(entry -> {
         map.remove(entry.getKey());
-      }
+      });
       throw e;
     } catch (RuntimeException e) {
-      for (Cache.Entry<? extends K, ? extends V> entry : entries) {
+      entries.forEach(entry -> {
         map.remove(entry.getKey());
-      }
+      });
       return new CacheWriterException("Exception in CacheWriter", e);
     }
   }

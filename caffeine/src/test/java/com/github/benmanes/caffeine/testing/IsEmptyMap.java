@@ -56,6 +56,6 @@ public final class IsEmptyMap<K, V>
   }
 
   public static <K, V> IsEmptyMap<K, V> emptyMap() {
-    return new IsEmptyMap<K, V>();
+    return new IsEmptyMap<>();
   }
 }
