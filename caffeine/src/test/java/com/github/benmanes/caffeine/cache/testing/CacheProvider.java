@@ -33,6 +33,7 @@ import org.testng.annotations.DataProvider;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
@@ -83,25 +84,30 @@ public final class CacheProvider {
     Parameter[] parameters = testMethod.getParameters();
     CacheContext[] stashed = new CacheContext[1];
     return scenarios.map(entry -> {
+      CacheContext context = entry.getKey();
+      Cache<Integer, Integer> cache = entry.getValue();
+
       // Retain a strong reference to the context throughout the test execution so that the
       // cache entries are not collected due to the test not accepting the context parameter
-      stashed[0] = entry.getKey();
+      stashed[0] = context;
 
       Object[] params = new Object[parameters.length];
       for (int i = 0; i < params.length; i++) {
         Class<?> clazz = parameters[i].getType();
         if (clazz.isAssignableFrom(CacheContext.class)) {
-          params[i] = entry.getKey();
-        } else if (clazz.isAssignableFrom(entry.getValue().getClass())) {
-          params[i] = entry.getValue(); // Cache or LoadingCache
+          params[i] = context;
+        } else if (clazz.isAssignableFrom(Caffeine.class)) {
+          params[i] = context.builder;
+        } else if (clazz.isAssignableFrom(cache.getClass())) {
+          params[i] = cache;
         } else if (clazz.isAssignableFrom(AsyncLoadingCache.class)) {
-          params[i] = entry.getKey().asyncCache;
+          params[i] = context.asyncCache;
         } else if (clazz.isAssignableFrom(Map.class)) {
-          params[i] = entry.getValue().asMap();
+          params[i] = cache.asMap();
         } else if (clazz.isAssignableFrom(Policy.Eviction.class)) {
-          params[i] = entry.getValue().policy().eviction().get();
+          params[i] = cache.policy().eviction().get();
         } else if (clazz.isAssignableFrom(Policy.Expiration.class)) {
-          params[i] = expirationPolicy(parameters[i], entry);
+          params[i] = expirationPolicy(parameters[i], cache);
         }
         if (params[i] == null) {
           checkNotNull(params[i], "Unknown parameter type: %s", clazz);
@@ -113,13 +119,13 @@ public final class CacheProvider {
 
   /** Returns the expiration policy for the given parameter. */
   private static Policy.Expiration<Integer, Integer> expirationPolicy(
-      Parameter parameter, Entry<CacheContext, Cache<Integer, Integer>> entry) {
+      Parameter parameter, Cache<Integer, Integer> cache) {
     if (parameter.isAnnotationPresent(ExpireAfterAccess.class)) {
-      return entry.getValue().policy().expireAfterAccess().get();
+      return cache.policy().expireAfterAccess().get();
     } else if (parameter.isAnnotationPresent(ExpireAfterWrite.class)) {
-      return entry.getValue().policy().expireAfterWrite().get();
+      return cache.policy().expireAfterWrite().get();
     } else if (parameter.isAnnotationPresent(RefreshAfterWrite.class)) {
-      return entry.getValue().policy().refreshAfterWrite().get();
+      return cache.policy().refreshAfterWrite().get();
     }
     throw new AssertionError("Expiration parameter must have a qualifier annotation");
   }

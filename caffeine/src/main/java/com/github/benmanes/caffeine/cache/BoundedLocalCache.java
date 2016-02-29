@@ -74,7 +74,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * for a given configuration are used.
  *
  * @author ben.manes@gmail.com (Ben Manes)
- * @param <K> the type of keys maintained by this map
+ * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
 @ThreadSafe
@@ -727,8 +727,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
     node.setAccessTime(now);
 
-    // fastpath is disabled due to unfavorable benchmarks
-    // boolean delayable = canFastpath(node) || (readBuffer.offer(node) != Buffer.FULL);
     boolean delayable = skipReadBuffer() || (readBuffer.offer(node) != Buffer.FULL);
     if (shouldDrainBuffers(delayable)) {
       scheduleDrainBuffers();
@@ -751,20 +749,34 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (!refreshAfterWrite()) {
       return;
     }
-    long writeTime = node.getWriteTime();
-    if (((now - writeTime) > refreshAfterWriteNanos()) && node.casWriteTime(writeTime, now)) {
+    long oldWriteTime = node.getWriteTime();
+    long refreshWriteTime = isAsync ? Long.MAX_VALUE : now;
+    if (((now - oldWriteTime) > refreshAfterWriteNanos())
+        && node.casWriteTime(oldWriteTime, refreshWriteTime)) {
       try {
         executor().execute(() -> {
           K key = node.getKey();
           if ((key != null) && node.isAlive()) {
             BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, v) -> {
-              if (node.getWriteTime() != now) {
+              if (node.getWriteTime() != refreshWriteTime) {
                 return v;
               }
               try {
+                if (isAsync) {
+                  @SuppressWarnings("unchecked")
+                  V oldValue = ((CompletableFuture<V>) v).join();
+                  CompletableFuture<V> future =
+                      cacheLoader.asyncReload(key, oldValue, Runnable::run);
+                  if (future.join() == null) {
+                    return null;
+                  }
+                  @SuppressWarnings("unchecked")
+                  V castFuture = (V) future;
+                  return castFuture;
+                }
                 return cacheLoader.reload(k, v);
               } catch (Exception e) {
-                node.setWriteTime(writeTime);
+                node.setWriteTime(oldWriteTime);
                 return LocalCache.throwUnchecked(e);
               }
             };
@@ -2916,26 +2928,40 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @SuppressWarnings("unchecked")
     BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, AsyncCacheLoader<? super K, V> loader) {
-      super(LocalCacheFactory.newBoundedLocalCache((Caffeine<K, CompletableFuture<V>>) builder,
-          asyncLoader(loader, builder), true), loader);
+      super((BoundedLocalCache<K, CompletableFuture<V>>) LocalCacheFactory.newBoundedLocalCache(
+          builder, asyncLoader(loader, builder), true), loader);
       isWeighted = builder.isWeighted();
     }
 
-    private static <K, V> CacheLoader<? super K, CompletableFuture<V>> asyncLoader(
+    private static <K, V> CacheLoader<K, V> asyncLoader(
         AsyncCacheLoader<? super K, V> loader, Caffeine<?, ?> builder) {
       Executor executor = builder.getExecutor();
-      return key -> loader.asyncLoad(key, executor);
+      return new CacheLoader<K, V>() {
+        @Override public V load(K key) {
+          @SuppressWarnings("unchecked")
+          V newValue = (V) loader.asyncLoad(key, executor);
+          return newValue;
+        }
+        @Override public V reload(K key, V oldValue) {
+          @SuppressWarnings("unchecked")
+          V newValue = (V) loader.asyncReload(key, oldValue, executor);
+          return newValue;
+        }
+        @Override public CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) {
+          return loader.asyncReload(key, oldValue, executor);
+        }
+      };
     }
 
     @Override
     protected Policy<K, V> policy() {
       if (policy == null) {
         @SuppressWarnings("unchecked")
-        BoundedLocalCache<K, V> castedCache = (BoundedLocalCache<K, V>) cache;
+        BoundedLocalCache<K, V> castCache = (BoundedLocalCache<K, V>) cache;
         Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
         @SuppressWarnings("unchecked")
-        Function<V, V> castedTransformer = (Function<V, V>) transformer;
-        policy = new BoundedPolicy<>(castedCache, castedTransformer, isWeighted);
+        Function<V, V> castTransformer = (Function<V, V>) transformer;
+        policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
       }
       return policy;
     }

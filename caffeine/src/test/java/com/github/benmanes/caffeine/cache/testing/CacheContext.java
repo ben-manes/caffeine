@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CacheWriter;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
@@ -85,6 +86,7 @@ public final class CacheContext {
   final boolean isAsyncLoading;
 
   Cache<?, ?> cache;
+  Caffeine<Object, Object> builder;
   AsyncLoadingCache<?, ?> asyncCache;
 
   @Nullable Integer firstKey;

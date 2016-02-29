@@ -53,6 +53,8 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Nullable final RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> data;
+  final StatsCounter statsCounter;
+  final boolean isRecordingStats;
   final CacheWriter<K, V> writer;
   final Executor executor;
   final Ticker ticker;
@@ -60,9 +62,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   transient Set<K> keySet;
   transient Collection<V> values;
   transient Set<Entry<K, V>> entrySet;
-
-  boolean isRecordingStats;
-  StatsCounter statsCounter;
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder, boolean async) {
     this.data = new ConcurrentHashMap<>(builder.getInitialCapacity());

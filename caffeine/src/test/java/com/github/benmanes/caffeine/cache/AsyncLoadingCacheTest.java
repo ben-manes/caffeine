@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.both;
@@ -30,6 +31,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,10 +51,13 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
@@ -680,6 +685,32 @@ public final class AsyncLoadingCacheTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+  }
+
+  /* ---------------- refresh -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      executor = CacheExecutor.SINGLE, compute = Compute.ASYNC, values = ReferenceType.STRONG)
+  public void refresh(Caffeine<Integer, Integer> builder, CacheContext context) {
+    AtomicBoolean done = new AtomicBoolean();
+    AsyncLoadingCache<Integer, Integer> cache = builder.buildAsync(key -> {
+      await().untilTrue(done);
+      return -key;
+    });
+
+    Integer key = 1;
+    cache.synchronous().put(key, key);
+    CompletableFuture<Integer> original = cache.get(key);
+    for (int i = 0; i < 10; i++) {
+      context.ticker().advance(1, TimeUnit.SECONDS);
+      cache.synchronous().refresh(key);
+
+      CompletableFuture<Integer> next = cache.get(key);
+      assertThat(next, is(sameInstance(original)));
+    }
+    done.set(true);
+    await().until(() -> cache.synchronous().getIfPresent(key), is(-key));
   }
 
   /* ---------------- serialize -------------- */

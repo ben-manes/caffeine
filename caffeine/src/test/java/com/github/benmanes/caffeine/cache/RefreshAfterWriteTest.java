@@ -16,18 +16,23 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
@@ -38,11 +43,14 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
@@ -157,6 +165,38 @@ public final class RefreshAfterWriteTest {
 
     assertThat(cache.getIfPresent(context.absentKey()), is(futureOf(-context.absentKey())));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.SINGLE,
+      compute = Compute.ASYNC, values = ReferenceType.STRONG)
+  public void get_sameFuture(Caffeine<Integer, Integer> builder, CacheContext context) {
+    AtomicBoolean done = new AtomicBoolean();
+    AsyncLoadingCache<Integer, Integer> cache = builder.buildAsync(key -> {
+      await().untilTrue(done);
+      return -key;
+    });
+
+    Integer key = 1;
+    cache.synchronous().put(key, key);
+    CompletableFuture<Integer> original = cache.get(key);
+    for (int i = 0; i < 10; i++) {
+      context.ticker().advance(1, TimeUnit.MINUTES);
+      CompletableFuture<Integer> next = cache.get(key);
+      assertThat(next, is(sameInstance(original)));
+    }
+    done.set(true);
+    await().until(() -> cache.synchronous().getIfPresent(key), is(-key));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE, loader = Loader.NULL)
+  public void get_null(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    Integer key = 1;
+    cache.synchronous().put(key, key);
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    await().until(() -> cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
   @CheckNoWriter
