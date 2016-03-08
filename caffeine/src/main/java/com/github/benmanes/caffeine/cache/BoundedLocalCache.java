@@ -253,16 +253,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** Asynchronously sends a removal notification to the listener. */
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
     requireState(hasRemovalListener(), "Notification should be guarded with a check");
+    Runnable task = () -> {
+      try {
+        removalListener().onRemoval(key, value, cause);
+      } catch (Throwable t) {
+        logger.log(Level.WARNING, "Exception thrown by removal listener", t);
+      }
+    };
     try {
-      executor().execute(() -> {
-        try {
-          removalListener().onRemoval(key, value, cause);
-        } catch (Throwable t) {
-          logger.log(Level.WARNING, "Exception thrown by removal listener", t);
-        }
-      });
+      executor().execute(task);
     } catch (Throwable t) {
       logger.log(Level.SEVERE, "Exception thrown when submitting removal listener", t);
+      task.run();
     }
   }
 

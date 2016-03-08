@@ -98,6 +98,7 @@ public interface StatsCounter {
    * Returns an accumulator that suppresses and logs any exception thrown by the delegate
    * <tt>statsCounter</tt>.
    *
+   * @param statsCounter the accumulator to delegate to
    * @return an accumulator that suppresses and logs any exception thrown by the delegate
    */
   static @Nonnull StatsCounter guardedStatsCounter(@Nonnull StatsCounter statsCounter) {

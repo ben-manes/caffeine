@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Google Inc. All Rights Reserved.
+ * Copyright 2014 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,16 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -39,40 +41,41 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public final class Stresser {
   private static final String[] STATUS = { "Idle", "Required", "Processing" };
   private static final int THREADS = 2 * Runtime.getRuntime().availableProcessors();
-  private static final long STATUS_INTERVAL = 5;
-  private static final int MAX_SIZE = (1 << 12);
-  private static final int LENGTH = (1 << 20);
-  private static final int MASK = LENGTH - 1;
+  private static final int WRITE_MAX_SIZE = (1 << 12);
+  private static final int TOTAL_KEYS = (1 << 20);
+  private static final int MASK = TOTAL_KEYS - 1;
+  private static final int STATUS_INTERVAL = 5;
 
   private final BoundedLocalCache<Integer, Integer> local;
-  private final ScheduledExecutorService statusExecutor;
   private final Cache<Integer, Integer> cache;
   private final LongAdder evictions;
   private final Integer[] ints;
 
-  private final boolean reads = false;
+  private final int maximum;
+  private final Stopwatch stopwatch;
+  private final boolean reads = true;
 
   public Stresser() {
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setPriority(Thread.MAX_PRIORITY)
         .setDaemon(true)
         .build();
-    statusExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
-    statusExecutor.scheduleAtFixedRate(newStatusTask(), THREADS, STATUS_INTERVAL, SECONDS);
+    Executors.newSingleThreadScheduledExecutor(threadFactory)
+        .scheduleAtFixedRate(this::status, STATUS_INTERVAL, STATUS_INTERVAL, SECONDS);
+    maximum = reads ? TOTAL_KEYS : WRITE_MAX_SIZE;
     evictions = new LongAdder();
     cache = Caffeine.newBuilder()
         .removalListener((k, v, c) -> evictions.increment())
-        .maximumSize(reads ? LENGTH : MAX_SIZE)
-        .initialCapacity(MAX_SIZE)
+        .maximumSize(maximum)
         .build();
     local = (BoundedLocalCache<Integer, Integer>) cache.asMap();
-
-    ints = new Integer[LENGTH];
-    Arrays.setAll(ints, i-> {
-      Integer key = i;
+    ints = new Integer[TOTAL_KEYS];
+    Arrays.setAll(ints, key -> {
       cache.put(key, key);
       return key;
     });
+    stopwatch = Stopwatch.createStarted();
+    status();
   }
 
   public void run() throws InterruptedException {
@@ -81,7 +84,7 @@ public final class Stresser {
       for (;;) {
         Integer key = ints[index++ & MASK];
         if (reads) {
-          cache.getIfPresent(ints[index++ & MASK]);
+          cache.getIfPresent(key);
         } else {
           cache.put(key, key);
           Thread.yield();
@@ -90,28 +93,30 @@ public final class Stresser {
     });
   }
 
-  private Runnable newStatusTask() {
-    return new Runnable() {
-      long runningTime;
+  private void status() {
+    local.evictionLock.lock();
+    int pendingWrites = local.writeQueue().size();
+    local.evictionLock.unlock();
 
-      @Override
-      public void run() {
-        local.evictionLock.lock();
-        int pendingWrites = local.writeQueue().size();
-        local.evictionLock.unlock();
+    LocalTime elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(TimeUnit.SECONDS));
+    System.out.printf("---------- %s ----------%n", elapsedTime);
+    System.out.printf("Pending reads: %,d; writes: %,d%n", local.readBuffer.size(), pendingWrites);
+    System.out.printf("Drain status = %s%n", STATUS[local.drainStatus]);
+    System.out.printf("Evictions = %,d%n", evictions.intValue());
+    System.out.printf("Size = %,d (max: %,d)%n", local.data.mappingCount(), maximum);
+    System.out.printf("Lock = [%s%n", StringUtils.substringAfter(
+        local.evictionLock.toString(), "["));
+    System.out.printf("Pending tasks = %,d%n",
+        ForkJoinPool.commonPool().getQueuedSubmissionCount());
 
-        runningTime += STATUS_INTERVAL;
-        String elapsedTime = LocalTime.ofSecondOfDay(runningTime).toString();
-        System.out.printf("---------- %s ----------%n", elapsedTime);
-        System.out.printf("Pending reads = %,d%n", local.readBuffer.size());
-        System.out.printf("Pending write = %,d%n", pendingWrites);
-        System.out.printf("Drain status = %s%n", STATUS[local.drainStatus]);
-        System.out.printf("Evictions = %,d%n", evictions.intValue());
-        System.out.printf("Size = %,d%n", local.data.mappingCount());
-        System.out.printf("Lock = [%s%n", StringUtils.substringAfter(
-            local.evictionLock.toString(), "["));
-      }
-    };
+    long maxMemory = Runtime.getRuntime().maxMemory();
+    long freeMemory = Runtime.getRuntime().freeMemory();
+    long allocatedMemory = Runtime.getRuntime().totalMemory();
+    System.out.printf("Max Memory = %,d bytes%n", maxMemory);
+    System.out.printf("Free Memory = %,d bytes%n", freeMemory);
+    System.out.printf("Allocated Memory = %,d bytes%n", allocatedMemory);
+
+    System.out.println();
   }
 
   public static void main(String[] args) throws Exception {

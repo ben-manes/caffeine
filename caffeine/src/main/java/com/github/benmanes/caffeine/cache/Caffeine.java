@@ -196,6 +196,7 @@ public final class Caffeine<K, V> {
   /**
    * Constructs a new {@code Caffeine} instance with the settings specified in {@code spec}.
    *
+   * @param spec the specification to build from
    * @return a new instance with the specification's settings
    */
   @Nonnull
