@@ -39,7 +39,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Stresser {
-  private static final String[] STATUS = { "Idle", "Required", "Processing" };
+  private static final String[] STATUS =
+    { "Idle", "Required", "Processing -> Idle", "Processing -> Required" };
   private static final int THREADS = 2 * Runtime.getRuntime().availableProcessors();
   private static final int WRITE_MAX_SIZE = (1 << 12);
   private static final int TOTAL_KEYS = (1 << 20);

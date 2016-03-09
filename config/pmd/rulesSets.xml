@@ -13,6 +13,7 @@
   <rule ref="rulesets/java/clone.xml"/>
 
   <rule ref="rulesets/java/codesize.xml">
+    <exclude name="NcssTypeCount"/>
     <exclude name="TooManyMethods"/>
     <exclude name="ExcessivePublicCount"/>
     <exclude name="ExcessiveClassLength"/>

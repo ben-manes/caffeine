@@ -810,8 +810,36 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (buffersWrites()) {
       writeQueue().add(task);
     }
-    lazySetDrainStatus(REQUIRED);
-    scheduleDrainBuffers();
+    scheduleAfterWrite();
+  }
+
+  /**
+   * Conditionally schedules the asynchronous maintenance task after a write operation. If the
+   * task status was IDLE or REQUIRED then the maintenance task is scheduled immediately. If it
+   * is already processing then it is set to transition to REQUIRED upon completion so that a new
+   * execution is triggered by the next operation.
+   */
+  void scheduleAfterWrite() {
+    for (;;) {
+      switch (drainStatus()) {
+        case IDLE:
+          casDrainStatus(IDLE, REQUIRED);
+          scheduleDrainBuffers();
+          return;
+        case REQUIRED:
+          scheduleDrainBuffers();
+          return;
+        case PROCESSING_TO_IDLE:
+          if (casDrainStatus(PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED)) {
+            return;
+          }
+          continue;
+        case PROCESSING_TO_REQUIRED:
+          return;
+        default:
+          throw new IllegalStateException();
+      }
+    }
   }
 
   /**
@@ -819,15 +847,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * replacement policy. If the executor rejects the task then it is run directly.
    */
   void scheduleDrainBuffers() {
-    if (drainStatus() == PROCESSING) {
+    if (drainStatus() >= PROCESSING_TO_IDLE) {
       return;
     }
     if (evictionLock.tryLock()) {
       try {
-        if (drainStatus() == PROCESSING) {
+        int drainStatus = drainStatus();
+        if (drainStatus >= PROCESSING_TO_IDLE) {
           return;
         }
-        lazySetDrainStatus(PROCESSING);
+        lazySetDrainStatus(PROCESSING_TO_IDLE);
         executor().execute(drainBuffersTask);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
@@ -855,10 +884,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   void performCleanUp() {
     evictionLock.lock();
     try {
-      lazySetDrainStatus(PROCESSING);
+      lazySetDrainStatus(PROCESSING_TO_IDLE);
       maintenance();
     } finally {
-      casDrainStatus(PROCESSING, IDLE);
+      if ((drainStatus() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
+        lazySetDrainStatus(REQUIRED);
+      }
       evictionLock.unlock();
     }
   }
@@ -3001,8 +3032,10 @@ final class BLCHeader {
     static final int IDLE = 0;
     /** A drain is required due to a pending write modification. */
     static final int REQUIRED = 1;
-    /** A drain is in progress. */
-    static final int PROCESSING = 2;
+    /** A drain is in progress and will transition to idle. */
+    static final int PROCESSING_TO_IDLE = 2;
+    /** A drain is in progress and will transition to required. */
+    static final int PROCESSING_TO_REQUIRED = 3;
 
     /** The draining status of the buffers. */
     volatile int drainStatus = IDLE;
@@ -3018,7 +3051,8 @@ final class BLCHeader {
           return !delayable;
         case REQUIRED:
           return true;
-        case PROCESSING:
+        case PROCESSING_TO_IDLE:
+        case PROCESSING_TO_REQUIRED:
           return false;
         default:
           throw new IllegalStateException();

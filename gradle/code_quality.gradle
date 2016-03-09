@@ -77,10 +77,9 @@ tasks.withType(Test) {
 tasks.withType(Checkstyle) {
   enabled = System.properties.containsKey('checkstyle')
   group = 'Checkstyle'
-  doLast {
-    ant.xslt(in: "${buildDir}/reports/checkstyle/main.xml",
-             style: "//${rootDir}/config/checkstyle/checkstyle.xsl",
-             out:"${buildDir}/reports/checkstyle/checkstyle.html")
+  reports {
+    xml.enabled = false
+    html.enabled = true
   }
 }
 

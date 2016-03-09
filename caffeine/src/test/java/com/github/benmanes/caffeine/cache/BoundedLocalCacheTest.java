@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
+import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_IDLE;
+import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_REQUIRED;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
@@ -28,6 +31,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -35,6 +39,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.mockito.Matchers;
+import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -58,6 +64,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -74,6 +81,46 @@ public final class BoundedLocalCacheTest {
 
   static BoundedLocalCache<Integer, Integer> asBoundedLocalCache(Cache<Integer, Integer> cache) {
     return (BoundedLocalCache<Integer, Integer>) cache.asMap();
+  }
+
+  @Test
+  public void scheduleAfterWrite() {
+    BoundedLocalCache<?, ?> cache = new BoundedLocalCache<Object, Object>(
+        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {
+      @Override void scheduleDrainBuffers() {}
+    };
+    Map<Integer, Integer> transitions = ImmutableMap.of(
+        IDLE, REQUIRED,
+        REQUIRED, REQUIRED,
+        PROCESSING_TO_IDLE, PROCESSING_TO_REQUIRED,
+        PROCESSING_TO_REQUIRED, PROCESSING_TO_REQUIRED);
+    transitions.forEach((start, end) -> {
+      cache.drainStatus = start;
+      cache.scheduleAfterWrite();
+      assertThat(cache.drainStatus, is(end));
+    });
+  }
+
+  @Test
+  public void scheduleDrainBuffers() {
+    Executor executor = Mockito.mock(Executor.class);
+    BoundedLocalCache<?, ?> cache = new BoundedLocalCache<Object, Object>(
+        Caffeine.newBuilder().executor(executor), /* loader */ null, /* async */ false) {};
+    Map<Integer, Integer> transitions = ImmutableMap.of(
+        IDLE, PROCESSING_TO_IDLE,
+        REQUIRED, PROCESSING_TO_IDLE,
+        PROCESSING_TO_IDLE, PROCESSING_TO_IDLE,
+        PROCESSING_TO_REQUIRED, PROCESSING_TO_REQUIRED);
+    transitions.forEach((start, end) -> {
+      cache.drainStatus = start;
+      cache.scheduleDrainBuffers();
+      assertThat(cache.drainStatus, is(end));
+
+      if (start != end) {
+        Mockito.verify(executor).execute(Matchers.any());
+        Mockito.reset(executor);
+      }
+    });
   }
 
   @Test
