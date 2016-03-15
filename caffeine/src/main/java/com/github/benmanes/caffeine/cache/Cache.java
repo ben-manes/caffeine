@@ -118,7 +118,8 @@ public interface Cache<K, V> {
   void putAll(@Nonnull Map<? extends K,? extends V> map);
 
   /**
-   * Discards any cached value for key {@code key}.
+   * Discards any cached value for key {@code key}. The behavior of this operation is undefined for
+   * an entry that is being loaded and is otherwise not present.
    *
    * @param key key whose mapping is to be removed from the cache
    * @throws NullPointerException if the specified key is null
@@ -126,7 +127,8 @@ public interface Cache<K, V> {
   void invalidate(@Nonnull Object key);
 
   /**
-   * Discards any cached values for keys {@code keys}.
+   * Discards any cached values for keys {@code keys}. The behavior of this operation is undefined
+   * for an entry that is being loaded and is otherwise not present.
    *
    * @param keys the keys whose associated values are to be removed
    * @throws NullPointerException if the specified collection is null or contains a null element
@@ -134,7 +136,8 @@ public interface Cache<K, V> {
   void invalidateAll(@Nonnull Iterable<?> keys);
 
   /**
-   * Discards all entries in the cache.
+   * Discards all entries in the cache. The behavior of this operation is undefined for an entry
+   * that is being loaded and is otherwise not present.
    */
   void invalidateAll();
 
