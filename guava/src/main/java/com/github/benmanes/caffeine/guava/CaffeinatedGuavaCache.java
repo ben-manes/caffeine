@@ -25,6 +25,9 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -136,12 +139,32 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
       @Override public boolean containsKey(Object key) {
         return (key != null) && delegate().containsKey(key);
       }
-      @Override
-      public boolean containsValue(Object value) {
+      @Override public boolean containsValue(Object value) {
         return (value != null) && delegate().containsValue(value);
+      }
+      @Override public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+        delegate().replaceAll(function);
+      }
+      @Override public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+        return delegate().computeIfAbsent(key, mappingFunction);
+      }
+      @Override public V computeIfPresent(K key,
+          BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        return delegate().computeIfPresent(key, remappingFunction);
+      }
+      @Override public V compute(K key,
+          BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        return delegate().compute(key, remappingFunction);
+      }
+      @Override public V merge(K key, V value,
+          BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+        return delegate().merge(key, value, remappingFunction);
       }
       @Override public Set<K> keySet() {
         return new ForwardingSet<K>() {
+          @Override public boolean removeIf(Predicate<? super K> filter) {
+            return delegate().removeIf(filter);
+          }
           @Override public boolean remove(Object o) {
             return (o != null) && delegate().remove(o);
           }
@@ -152,6 +175,9 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
       }
       @Override public Collection<V> values() {
         return new ForwardingCollection<V>() {
+          @Override public boolean removeIf(Predicate<? super V> filter) {
+            return delegate().removeIf(filter);
+          }
           @Override public boolean remove(Object o) {
             return (o != null) && delegate().remove(o);
           }
@@ -167,6 +193,9 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
           }
           @Override public boolean addAll(Collection<? extends Entry<K, V>> entry) {
             throw new UnsupportedOperationException();
+          }
+          @Override public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
+            return delegate().removeIf(filter);
           }
           @Override
           public Iterator<Entry<K, V>> iterator() {

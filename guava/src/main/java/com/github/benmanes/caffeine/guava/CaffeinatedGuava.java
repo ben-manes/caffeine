@@ -44,7 +44,7 @@ public final class CaffeinatedGuava {
   @Nonnull
   public static <K1 extends K, K, V1 extends V, V> Cache<K1, V1> build(
       @Nonnull Caffeine<K, V> builder) {
-    return new CaffeinatedGuavaCache<K1, V1>(builder.build());
+    return new CaffeinatedGuavaCache<>(builder.build());
   }
 
   /**
@@ -75,7 +75,7 @@ public final class CaffeinatedGuava {
   public static <K1 extends K, K, V1 extends V, V> LoadingCache<K1, V1> build(
       @Nonnull Caffeine<K, V> builder,
       @Nonnull com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> loader) {
-    return new CaffeinatedGuavaLoadingCache<K1, V1>(builder.build(loader));
+    return new CaffeinatedGuavaLoadingCache<>(builder.build(loader));
   }
 
   static boolean hasLoadAll(CacheLoader<?, ?> cacheLoader) {
