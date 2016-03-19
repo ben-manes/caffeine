@@ -562,13 +562,24 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         continue;
       }
 
+      // Evict immediately if the candidate's weight exceeds the maximum
+      if (candidate.getPolicyWeight() > maximum()) {
+        candidates--;
+        Node<K, V> evict = candidate;
+        candidate = candidate.getPreviousInAccessOrder();
+        evictEntry(evict, RemovalCause.SIZE, 0L);
+        continue;
+      }
+
       // Evict the entry with the lowest frequency
+      candidates--;
       int victimFreq = frequencySketch().frequency(victimKey);
       int candidateFreq = frequencySketch().frequency(candidateKey);
       if (candidateFreq > victimFreq) {
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
+        candidate = candidate.getPreviousInAccessOrder();
       } else {
         Node<K, V> evict = candidate;
         candidate = candidate.getPreviousInAccessOrder();

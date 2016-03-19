@@ -57,6 +57,7 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
+import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -168,6 +169,27 @@ public final class EvictionTest {
       verify(writer).delete(5, value5, RemovalCause.SIZE);
       verifier.deletions(2);
     });
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, removalListener = Listener.CONSUMING,
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      maximumSize = Maximum.TEN, weigher = CacheWeigher.VALUE)
+  public void evict_weighted_entryTooBig(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.put(1, 1);
+    cache.put(9, 9);
+    assertThat(cache.estimatedSize(), is(2L));
+    cache.policy().eviction().ifPresent(eviction -> {
+      assertThat(eviction.weightedSize().getAsLong(), is(10L));
+    });
+
+    cache.put(20, 20);
+    assertThat(cache.estimatedSize(), is(2L));
+    cache.policy().eviction().ifPresent(eviction -> {
+      assertThat(eviction.weightedSize().getAsLong(), is(10L));
+    });
+    assertThat(context.consumedNotifications(), is(equalTo(ImmutableList.of(
+        new RemovalNotification<>(20, 20, RemovalCause.SIZE)))));
   }
 
   @Test(dataProvider = "caches")

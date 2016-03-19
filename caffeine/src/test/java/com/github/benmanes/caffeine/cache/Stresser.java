@@ -75,6 +75,7 @@ public final class Stresser {
       cache.put(key, key);
       return key;
     });
+    cache.cleanUp();
     stopwatch = Stopwatch.createStarted();
     status();
   }

@@ -18,6 +18,7 @@ import static com.google.common.cache.TestingCacheLoaders.identityLoader;
 import static com.google.common.cache.TestingRemovalListeners.countingRemovalListener;
 import static com.google.common.cache.TestingWeighers.constantWeigher;
 import static com.google.common.cache.TestingWeighers.intKeyWeigher;
+import static com.google.common.cache.TestingWeighers.intValueWeigher;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 
@@ -159,6 +160,55 @@ public class CacheEvictionTest extends TestCase {
     CacheTesting.checkValidState(cache);
   }
 
+  /**
+   * Tests that when a single entry exceeds the segment's max weight, the new entry is
+   * immediately evicted and nothing else.
+   */
+  public void testEviction_maxWeight_entryTooBig() {
+    CountingRemovalListener<Integer, Integer> removalListener = countingRemovalListener();
+    IdentityLoader<Integer> loader = identityLoader();
+
+    LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
+        .maximumWeight(4)
+        .weigher(intValueWeigher())
+        .removalListener(removalListener)
+        .executor(MoreExecutors.directExecutor()),
+        loader);
+
+    // caches 2
+    assertThat(cache.getUnchecked(2)).isEqualTo(2);
+    assertThat(cache.asMap().keySet()).containsExactly(2);
+
+    assertThat(removalListener.getCount()).isEqualTo(0);
+
+    // caches 3, evicts 2
+    assertThat(cache.getUnchecked(3)).isEqualTo(3);
+    assertThat(cache.asMap().keySet()).containsExactly(3);
+
+    assertThat(removalListener.getCount()).isEqualTo(1);
+
+    // doesn't cache 5, doesn't evict
+    assertThat(cache.getUnchecked(5)).isEqualTo(5);
+    assertThat(cache.asMap().keySet()).containsExactly(3);
+
+    assertThat(removalListener.getCount()).isEqualTo(2);
+
+    // caches 1, evicts nothing
+    assertThat(cache.getUnchecked(1)).isEqualTo(1);
+    assertThat(cache.asMap().keySet()).containsExactly(3, 1);
+
+    assertThat(removalListener.getCount()).isEqualTo(2);
+
+    // caches 4, evicts 1 and 3
+    assertThat(cache.getUnchecked(4)).isEqualTo(4);
+    assertThat(cache.asMap().keySet()).containsExactly(4);
+
+    assertThat(removalListener.getCount()).isEqualTo(4);
+
+    // Should we pepper more of these calls throughout the above? Where?
+    CacheTesting.checkValidState(cache);
+  }
+
   public void testEviction_overflow() {
     CountingRemovalListener<Object, Object> removalListener = countingRemovalListener();
     IdentityLoader<Object> loader = identityLoader();
@@ -289,7 +339,7 @@ public class CacheEvictionTest extends TestCase {
     // add an at-the-maximum-weight entry
     getAll(cache, asList(45));
     CacheTesting.drainRecencyQueues(cache);
-    assertThat(keySet).containsExactly(0, 8, 9);
+    assertThat(keySet).containsExactly(0, 45);
 
     // add an over-the-maximum-weight entry
     getAll(cache, asList(46));
