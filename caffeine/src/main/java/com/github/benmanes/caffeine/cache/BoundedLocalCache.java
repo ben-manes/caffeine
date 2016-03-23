@@ -1193,12 +1193,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return data.size();
   }
 
-  /**
-   * Returns the number of mappings. The value returned is an estimate; the actual count may differ
-   * if there are concurrent insertions or removals.
-   *
-   * @return the number of mappings
-   */
   @Override
   public long estimatedSize() {
     return data.mappingCount();

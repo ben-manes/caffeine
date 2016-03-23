@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
-import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
 import com.google.common.collect.Maps;
@@ -94,9 +93,8 @@ public class TestingCacheLoaders {
     checkNotNull(e);
     return new CacheLoader<K, V>() {
       @Override
-      public V load(K key) {
-        UnsafeAccess.UNSAFE.throwException(e);
-        return null; // impossible
+      public V load(K key) throws Exception {
+        throw e;
       }
     };
   }

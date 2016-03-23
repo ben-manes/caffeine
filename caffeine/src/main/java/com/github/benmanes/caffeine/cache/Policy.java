@@ -131,8 +131,8 @@ public interface Policy<K, V> {
      * Note that some implementations may have an internal inherent bound on the maximum total size.
      * If the value specified exceeds that bound, then the value is set to the internal maximum.
      *
-     * @param maximum the maximum, interpreted as weighted or unweighted size depending on the
-     *        whether how this cache was constructed
+     * @param maximum the maximum, interpreted as weighted or unweighted size depending on how this
+     *        cache was constructed
      * @throws IllegalArgumentException if the maximum size specified is negative
      */
     void setMaximum(@Nonnegative long maximum);

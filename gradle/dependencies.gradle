@@ -32,7 +32,7 @@ ext {
     error_prone_annotations: '2.0.8',
     flip_tables: '1.0.2',
     guava: '19.0',
-    javapoet: '1.6.0',
+    javapoet: '1.6.1',
     jcache: '1.0.0',
     jsr305: '3.0.1',
     stream: '2.9.1',

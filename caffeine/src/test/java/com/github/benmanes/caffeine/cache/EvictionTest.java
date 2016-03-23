@@ -214,8 +214,8 @@ public final class EvictionTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    assertThat(eviction.weightedSize().getAsLong(), is(10L));
-    assertThat(cache.synchronous().estimatedSize(), is(2L));
+    Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
+    Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(2L));
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
   }
@@ -240,8 +240,8 @@ public final class EvictionTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    assertThat(eviction.weightedSize().getAsLong(), is(0L));
-    assertThat(cache.synchronous().estimatedSize(), is(0L));
+    Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(0L));
+    Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(0L));
 
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
@@ -349,8 +349,8 @@ public final class EvictionTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    assertThat(eviction.weightedSize().getAsLong(), is(5L));
-    assertThat(cache.synchronous().estimatedSize(), is(1L));
+    Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(5L));
+    Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(1L));
   }
 
   @Test(dataProvider = "caches")
