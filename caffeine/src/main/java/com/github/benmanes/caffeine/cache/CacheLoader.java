@@ -49,7 +49,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
   /**
    * Computes or retrieves the value corresponding to {@code key}.
    * <p>
-   * <b>Warning:</b> loading <b>must not</b> attempt to update any other mappings of this cache.
+   * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly.
    *
    * @param key the non-null key whose value should be loaded
    * @return the value associated with {@code key} or {@code null} if not found
@@ -74,7 +74,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    * individual lookups. Note that {@link LoadingCache#getAll} will defer to individual calls to
    * {@link LoadingCache#get} if this method is not overridden.
    * <p>
-   * <b>Warning:</b> loading <b>must not</b> attempt to update any other mappings of this cache.
+   * <b>Warning:</b> loading <b>must not</b> attempt to update any mappings of this cache directly.
    *
    * @param keys the unique, non-null keys whose values should be loaded
    * @return a map from each key in {@code keys} to the value associated with that key; <b>may not

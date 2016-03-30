@@ -39,25 +39,25 @@ public final class Synthetic {
 
   /** Returns a sequence of events based on the setting's distribution. */
   public static LongStream generate(BasicSettings settings) {
-    int items = settings.synthetic().events();
+    int events = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase()) {
       case "counter":
-        return counter(settings.synthetic().counter().start(), items);
+        return counter(settings.synthetic().counter().start(), events);
       case "exponential":
-        return exponential(settings.synthetic().exponential().mean(), items);
+        return exponential(settings.synthetic().exponential().mean(), events);
       case "hotspot":
         HotspotSettings hotspot = settings.synthetic().hotspot();
         return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
-            hotspot.hotOpnFraction(), hotspot.hotsetFraction(), items);
+            hotspot.hotOpnFraction(), hotspot.hotsetFraction(), events);
       case "zipfian":
-        return zipfian(items);
+        return zipfian(settings.synthetic().zipfian().items(), events);
       case "scrambled-zipfian":
-        return scrambledZipfian(items);
+        return scrambledZipfian(settings.synthetic().zipfian().items(), events);
       case "skewed-zipfian-latest":
-        return skewedZipfianLatest(items);
+        return skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
       case "uniform":
         UniformSettings uniform = settings.synthetic().uniform();
-        return uniform(uniform.lowerBound(), uniform.upperBound(), items);
+        return uniform(uniform.lowerBound(), uniform.upperBound(), events);
       default:
         throw new IllegalStateException("Unknown distribution: "
             + settings.synthetic().distribution());
@@ -68,10 +68,10 @@ public final class Synthetic {
    * Returns a sequence of unique integers.
    *
    * @param start the number that the counter starts from
-   * @param items the number of items in the distribution
+   * @param events the number of events in the distribution
    */
-  public static LongStream counter(int start, int items) {
-    return generate(new CounterGenerator(start), items);
+  public static LongStream counter(int start, int events) {
+    return generate(new CounterGenerator(start), events);
   }
 
   /**
@@ -79,10 +79,10 @@ public final class Synthetic {
    * frequent than larger ones, and there is no bound on the length of an interval.
    *
    * @param mean mean arrival rate of gamma (a half life of 1/gamma)
-   * @param items the number of items in the distribution
+   * @param events the number of events in the distribution
    */
-  public static LongStream exponential(double mean, int items) {
-    return generate(new ExponentialGenerator(mean), items);
+  public static LongStream exponential(double mean, int events) {
+    return generate(new ExponentialGenerator(mean), events);
   }
 
   /**
@@ -96,12 +96,12 @@ public final class Synthetic {
    * @param upperBound upper bound of the distribution
    * @param hotsetFraction percentage of data item
    * @param hotOpnFraction percentage of operations accessing the hot set
-   * @param items the number of items in the distribution
+   * @param events the number of events in the distribution
    */
   public static LongStream hotspot(int lowerBound, int upperBound,
-      double hotsetFraction, double hotOpnFraction, int items) {
+      double hotsetFraction, double hotOpnFraction, int events) {
     return generate(new HotspotIntegerGenerator(lowerBound,
-        upperBound, hotsetFraction, hotOpnFraction), items);
+        upperBound, hotsetFraction, hotOpnFraction), events);
   }
 
   /**
@@ -111,9 +111,10 @@ public final class Synthetic {
    * items) clustered together.
    *
    * @param items the number of items in the distribution
+   * @param events the number of events in the distribution
    */
-  public static LongStream scrambledZipfian(int items) {
-    return generate(new ScrambledZipfianGenerator(items), items);
+  public static LongStream scrambledZipfian(int items, int events) {
+    return generate(new ScrambledZipfianGenerator(items), events);
   }
 
   /**
@@ -121,9 +122,10 @@ public final class Synthetic {
    * items significantly more than older items
    *
    * @param items the number of items in the distribution
+   * @param events the number of events in the distribution
    */
-  public static LongStream skewedZipfianLatest(int items) {
-    return generate(new SkewedLatestGenerator(new CounterGenerator(items)), items);
+  public static LongStream skewedZipfianLatest(int items, int events) {
+    return generate(new SkewedLatestGenerator(new CounterGenerator(items)), events);
   }
 
   /**
@@ -131,9 +133,10 @@ public final class Synthetic {
    * zipfian distribution.
    *
    * @param items the number of items in the distribution
+   * @param events the number of events in the distribution
    */
-  public static LongStream zipfian(int items) {
-    return generate(new ZipfianGenerator(items), items);
+  public static LongStream zipfian(int items, int events) {
+    return generate(new ZipfianGenerator(items), events);
   }
 
   /**
@@ -142,11 +145,11 @@ public final class Synthetic {
    *
    * @param lowerBound lower bound of the distribution
    * @param upperBound upper bound of the distribution
-   * @param items the number of items in the distribution
+   * @param events the number of events in the distribution
    * @return a stream of cache events
    */
-  public static LongStream uniform(int lowerBound, int upperBound, int items) {
-    return generate(new UniformIntegerGenerator(lowerBound, upperBound), items);
+  public static LongStream uniform(int lowerBound, int upperBound, int events) {
+    return generate(new UniformIntegerGenerator(lowerBound, upperBound), events);
   }
 
   /** Returns a sequence of items constructed by the generator. */

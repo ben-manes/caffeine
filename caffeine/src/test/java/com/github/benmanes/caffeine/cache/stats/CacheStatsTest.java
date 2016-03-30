@@ -30,8 +30,8 @@ import org.testng.annotations.Test;
 public final class CacheStatsTest {
 
   @Test(dataProvider = "badArgs", expectedExceptions = IllegalArgumentException.class)
-  public void invalid(long hitCount, long missCount, long loadSuccessCount, long loadFailureCount,
-      long totalLoadTime, long evictionCount) {
+  public void invalid(int hitCount, int missCount, int loadSuccessCount, int loadFailureCount,
+      int totalLoadTime, int evictionCount) {
     new CacheStats(hitCount, missCount, loadSuccessCount,
         loadFailureCount, totalLoadTime, evictionCount);
   }

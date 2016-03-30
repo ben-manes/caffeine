@@ -50,11 +50,16 @@ In addition, Caffeine offers the following extensions:
  * Caffeine is presented as part of a research paper evaluating its novel eviction policy.
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
 
+Integrations,
+* [Spring Cache][spring] (upcoming Spring 4.3 & Boot 1.4 releases)
+* [ScalaCache][scala-cache]: Simple caching in Scala
+* [Scaffeine][scaffeine]: Scala wrapper for Caffeine
+
 On the radar,
- * Spring Cache support is [targeted][spring] for the Spring 4.3 / Boot 1.4 releases
- * Early discussions with Apache Cassandra shows promise towards adoption
+ * Early discussions with [HBase][hbase], [Cassandra][cassandra], [Solr][solr], and [ElasticSearch][elastic-search]
  * Postgres is [evaluating][postgres] whether to port the cache
  * Go [implementation][go-tinylfu] of the W-TinyLfu policy
+ * [Ratpack][ratpack] is considering adoption for v1.3
 
 ### Download
 
@@ -98,6 +103,13 @@ Snapshots of the development version are available in
 [voxxed]: https://www.voxxed.com
 [modern-cache]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
 [highscalability]: http://highscalability.com
-[spring]: https://jira.spring.io/browse/SPR-13690
+[spring]: http://spring.io/blog/2016/03/04/core-container-refinements-in-spring-framework-4-3#cache-abstraction-refinements
+[scala-cache]: https://github.com/cb372/scalacache
+[scaffeine]: https://github.com/blemale/scaffeine
+[hbase]: https://issues.apache.org/jira/browse/HBASE-15560
+[cassandra]: https://issues.apache.org/jira/browse/CASSANDRA-10855
+[solr]: https://issues.apache.org/jira/browse/SOLR-8241
+[elastic-search]: https://github.com/elastic/elasticsearch/issues/16802
 [postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
+[ratpack]: https://github.com/ratpack/ratpack/issues/933

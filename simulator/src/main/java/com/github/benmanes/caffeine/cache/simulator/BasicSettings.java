@@ -166,19 +166,30 @@ public class BasicSettings {
     public CounterSettings counter() {
       return new CounterSettings();
     }
+    public UniformSettings uniform() {
+      return new UniformSettings();
+    }
     public ExponentialSettings exponential() {
       return new ExponentialSettings();
     }
     public HotspotSettings hotspot() {
       return new HotspotSettings();
     }
-    public UniformSettings uniform() {
-      return new UniformSettings();
+    public ZipfianSettings zipfian() {
+      return new ZipfianSettings();
     }
 
     public final class CounterSettings {
       public int start() {
         return config().getInt("synthetic.counter.start");
+      }
+    }
+    public final class UniformSettings {
+      public int lowerBound() {
+        return config().getInt("synthetic.uniform.lower-bound");
+      }
+      public int upperBound() {
+        return config().getInt("synthetic.uniform.upper-bound");
       }
     }
     public final class ExponentialSettings {
@@ -200,12 +211,9 @@ public class BasicSettings {
         return config().getDouble("synthetic.hotspot.hot-opn-fraction");
       }
     }
-    public final class UniformSettings {
-      public int lowerBound() {
-        return config().getInt("synthetic.uniform.lower-bound");
-      }
-      public int upperBound() {
-        return config().getInt("synthetic.uniform.upper-bound");
+    public final class ZipfianSettings {
+      public int items() {
+        return config().getInt("synthetic.zipfian.items");
       }
     }
   }
