@@ -18,13 +18,13 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -105,7 +105,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
   /** Batch loads the missing entries. */
   default Map<K, V> loadInBulk(Iterable<? extends K> keys) {
     Map<K, V> found = cache().getAllPresent(keys);
-    List<K> keysToLoad = new ArrayList<>();
+    Set<K> keysToLoad = new HashSet<>();
     for (K key : keys) {
       if (!found.containsKey(key)) {
         keysToLoad.add(key);
@@ -124,21 +124,18 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
    * Performs a non-blocking bulk load of the missing keys. Any missing entry that materializes
    * during the load are replaced when the loaded entries are inserted into the cache.
    */
-  default void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
+  default void bulkLoad(Set<K> keysToLoad, Map<K, V> result) {
     boolean success = false;
     long startTime = cache().statsTicker().read();
     try {
       @SuppressWarnings("unchecked")
       Map<K, V> loaded = (Map<K, V>) cacheLoader().loadAll(keysToLoad);
       loaded.forEach((key, value) -> {
-        cache().put(key, value, false);
-      });
-      for (K key : keysToLoad) {
-        V value = loaded.get(key);
-        if (value != null) {
+        cache().put(key, value, /* notifyWriter */ false);
+        if (keysToLoad.contains(key)) {
           result.put(key, value);
         }
-      }
+      });
       success = !loaded.isEmpty();
     } catch (RuntimeException e) {
       throw e;
