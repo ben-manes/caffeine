@@ -42,7 +42,7 @@ public final class AddRemovalListener extends LocalCacheRule {
         .returns(REMOVAL_LISTENER)
         .build());
     context.cache.addMethod(MethodSpec.methodBuilder("hasRemovalListener")
-        .addModifiers(protectedFinalModifiers)
+        .addModifiers(publicFinalModifiers)
         .addStatement("return true")
         .returns(boolean.class)
         .build());

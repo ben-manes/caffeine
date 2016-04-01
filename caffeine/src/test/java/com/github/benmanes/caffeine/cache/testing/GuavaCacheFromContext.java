@@ -68,8 +68,9 @@ public final class GuavaCacheFromContext {
     checkState(!context.isAsync(), "Guava caches are synchronous only");
 
     CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
-    builder.concurrencyLevel(1);
+    context.guava = builder;
 
+    builder.concurrencyLevel(1);
     if (context.initialCapacity != InitialCapacity.DEFAULT) {
       builder.initialCapacity(context.initialCapacity.size());
     }

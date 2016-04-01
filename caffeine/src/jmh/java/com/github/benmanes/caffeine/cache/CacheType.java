@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.jackrabbit.oak.cache.CacheLIRS;
-import org.cache2k.impl.ClockProPlusCache;
-import org.cache2k.impl.LruCache;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.infinispan.commons.equivalence.AnyEquivalence;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8;
@@ -70,14 +68,9 @@ public enum CacheType {
 
   /* ---------------- Bounded -------------- */
 
-  Cache2k_ClockProPlus {
+  Cache2k {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new Cache2k<>(ClockProPlusCache.class, maximumSize);
-    }
-  },
-  Cache2k_Lru {
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new Cache2k<>(LruCache.class, maximumSize);
+      return new Cache2k<>(maximumSize);
     }
   },
   Caffeine {

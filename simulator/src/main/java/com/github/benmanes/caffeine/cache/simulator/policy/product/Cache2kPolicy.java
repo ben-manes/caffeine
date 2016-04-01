@@ -22,12 +22,7 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import org.cache2k.Cache;
-import org.cache2k.CacheBuilder;
-import org.cache2k.impl.ArcCache;
-import org.cache2k.impl.ClockCache;
-import org.cache2k.impl.ClockProPlusCache;
-import org.cache2k.impl.LruCache;
-import org.cache2k.impl.RandomCache;
+import org.cache2k.Cache2kBuilder;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -55,9 +50,8 @@ public final class Cache2kPolicy implements Policy {
     System.setErr(new PrintStream(ByteStreams.nullOutputStream()));
     try {
       this.policyStats = new PolicyStats("product.Cache2k");
-      Cache2kSettings settings = new Cache2kSettings(config);
-      cache = CacheBuilder.newCache(Object.class, Object.class)
-          .implementation(settings.implementation())
+      BasicSettings settings = new BasicSettings(config);
+      cache = Cache2kBuilder.of(Object.class, Object.class)
           .entryCapacity(settings.maximumSize())
           .eternal(true)
           .build();
@@ -90,28 +84,5 @@ public final class Cache2kPolicy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
-  }
-
-  static final class Cache2kSettings extends BasicSettings {
-    public Cache2kSettings(Config config) {
-      super(config);
-    }
-    public Class<?> implementation() {
-      String policy = config().getString("cache2k.policy").toLowerCase();
-      switch (policy) {
-        case "arc":
-          return ArcCache.class;
-        case "clock":
-          return ClockCache.class;
-        case "clockpro":
-          return ClockProPlusCache.class;
-        case "lru":
-          return LruCache.class;
-        case "random":
-          return RandomCache.class;
-        default:
-          throw new IllegalArgumentException("Unknown policy type: " + policy);
-      }
-    }
   }
 }

@@ -57,6 +57,7 @@ public enum RemovalCause {
    * <ul>
    *   <li>{@link Cache#put}</li>
    *   <li>{@link Cache#putAll}</li>
+   *   <li>{@link LoadingCache#getAll}</li>
    *   <li>{@link LoadingCache#refresh}</li>
    *   <li>{@link java.util.Map#put}</li>
    *   <li>{@link java.util.Map#putAll}</li>

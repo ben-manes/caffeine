@@ -85,8 +85,10 @@ public final class IsValidBoundedLocalCache<K, V>
   private void checkCache(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
     desc.expectThat("Inconsistent size", cache.data.size(), is(cache.size()));
     if (cache.evicts()) {
-      desc.expectThat("overflow", cache.maximum(),
-          is(greaterThanOrEqualTo(cache.adjustedWeightedSize())));
+      cache.evictionLock.lock();
+      long weightedSize = cache.weightedSize();
+      cache.evictionLock.unlock();
+      desc.expectThat("overflow", cache.maximum(), is(greaterThanOrEqualTo(weightedSize)));
     }
 
     boolean locked = (cache.evictionLock instanceof NonReentrantLock)

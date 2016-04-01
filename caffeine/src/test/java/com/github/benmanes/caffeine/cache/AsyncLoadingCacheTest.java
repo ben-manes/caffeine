@@ -64,7 +64,6 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * The test cases for the {@link AsyncLoadingCache} interface that simulate the most generic usages.
@@ -133,7 +132,7 @@ public final class AsyncLoadingCacheTest {
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.DIRECT)
+  @CacheSpec(loader = Loader.NULL)
   public void getFunc_absent_null(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     Integer key = context.absentKey();
@@ -148,8 +147,8 @@ public final class AsyncLoadingCacheTest {
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.NULL,
-      executor = CacheExecutor.SINGLE, executorFailure = ExecutorFailure.IGNORED)
+  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.THREADED,
+      executorFailure = ExecutorFailure.IGNORED)
   public void getFunc_absent_null_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     Integer key = context.absentKey();
@@ -163,18 +162,17 @@ public final class AsyncLoadingCacheTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> cache.getIfPresent(key) == null);
-    Awaits.await().until(() -> context, both(hasMissCount(2)).and(hasHitCount(0)));
+    Awaits.await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
+    Awaits.await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
     Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-    MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(valueFuture.isDone(), is(true));
     assertThat(cache.synchronous().asMap(), not(hasKey(key)));
   }
 
+  @CacheSpec
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.DIRECT)
   public void getFunc_absent_failure(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     CompletableFuture<Integer> valueFuture = cache.get(context.absentKey(),
@@ -189,7 +187,7 @@ public final class AsyncLoadingCacheTest {
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(executor = CacheExecutor.SINGLE, executorFailure = ExecutorFailure.IGNORED)
+  @CacheSpec(executor = CacheExecutor.THREADED, executorFailure = ExecutorFailure.IGNORED)
   public void getFunc_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean ready = new AtomicBoolean();
@@ -202,10 +200,9 @@ public final class AsyncLoadingCacheTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> cache.getIfPresent(context.absentKey()) == null);
-    Awaits.await().until(() -> context, both(hasMissCount(2)).and(hasHitCount(0)));
+    Awaits.await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
+    Awaits.await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
     Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-    MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
@@ -213,7 +210,7 @@ public final class AsyncLoadingCacheTest {
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.SINGLE)
+  @CacheSpec(loader = Loader.NULL, executor = CacheExecutor.THREADED)
   public void getFunc_absent_cancelled(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
     AtomicBoolean done = new AtomicBoolean();
@@ -225,10 +222,8 @@ public final class AsyncLoadingCacheTest {
     valueFuture.cancel(true);
 
     Awaits.await().untilTrue(done);
-    MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
-
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
+    await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isDone(), is(true));
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
@@ -420,8 +415,8 @@ public final class AsyncLoadingCacheTest {
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(loader = Loader.EXCEPTIONAL,
-      executor = CacheExecutor.SINGLE, executorFailure = ExecutorFailure.IGNORED)
+  @CacheSpec(loader = Loader.EXCEPTIONAL, executor = CacheExecutor.THREADED,
+      executorFailure = ExecutorFailure.IGNORED)
   public void get_absent_failure_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) throws InterruptedException {
     AtomicBoolean done = new AtomicBoolean();
@@ -430,10 +425,9 @@ public final class AsyncLoadingCacheTest {
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> cache.getIfPresent(context.absentKey()) == null);
-    Awaits.await().until(() -> context, both(hasMissCount(2)).and(hasHitCount(0)));
+    Awaits.await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
+    Awaits.await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
     Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-    MoreExecutors.shutdownAndAwaitTermination(context.executor(), 1, TimeUnit.MINUTES);
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.getIfPresent(key), is(nullValue()));
@@ -691,7 +685,7 @@ public final class AsyncLoadingCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      executor = CacheExecutor.SINGLE, compute = Compute.ASYNC, values = ReferenceType.STRONG)
+      executor = CacheExecutor.THREADED, compute = Compute.ASYNC, values = ReferenceType.STRONG)
   public void refresh(Caffeine<Integer, Integer> builder, CacheContext context) {
     AtomicBoolean done = new AtomicBoolean();
     AsyncLoadingCache<Integer, Integer> cache = builder.buildAsync(key -> {

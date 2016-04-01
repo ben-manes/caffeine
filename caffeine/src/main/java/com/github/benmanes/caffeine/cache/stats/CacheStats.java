@@ -119,10 +119,11 @@ public final class CacheStats {
   }
 
   /**
-   * Returns a statistics instance where cache events have been recorded.
+   * Returns a statistics instance where no cache events have been recorded.
    *
    * @return an empty statistics instance
    */
+  @Nonnull
   public static CacheStats empty() {
     return EMPTY_STATS;
   }

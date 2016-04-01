@@ -25,8 +25,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,6 +44,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
   /** Returns the {@link CacheLoader} used by this cache. */
   CacheLoader<? super K, V> cacheLoader();
 
+  /** Returns the {@link CacheLoader} as a mapping function. */
   Function<K, V> mappingFunction();
 
   /** Returns whether the cache loader supports bulk loading. */
@@ -154,23 +155,45 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
   @Override
   default void refresh(K key) {
     requireNonNull(key);
-    cache().executor().execute(() -> {
-      BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) -> {
-        try {
-          return (oldValue == null)
-              ? cacheLoader().load(key)
-              : cacheLoader().reload(key, oldValue);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          return LocalCache.throwUnchecked(e);
-        } catch (Exception e) {
-          return LocalCache.throwUnchecked(e);
+
+    long[] writeTime = new long[1];
+    long startTime = cache().statsTicker().read();
+    V oldValue = cache().getIfPresentQuietly(key, writeTime);
+    CompletableFuture<V> refreshFuture = (oldValue == null)
+        ? cacheLoader().asyncLoad(key, cache().executor())
+        : cacheLoader().asyncReload(key, oldValue, cache().executor());
+    refreshFuture.whenComplete((newValue, error) -> {
+      long loadTime = cache().statsTicker().read() - startTime;
+      if (error != null) {
+        logger.log(Level.WARNING, "Exception thrown during refresh", error);
+        cache().statsCounter().recordLoadFailure(loadTime);
+        return;
+      }
+
+      boolean[] discard = new boolean[1];
+      cache().compute(key, (k, currentValue) -> {
+        if (currentValue == null) {
+          return newValue;
+        } else if (currentValue == oldValue) {
+          long expectedWriteTime = writeTime[0];
+          if (cache().hasWriteTime()) {
+            cache().getIfPresentQuietly(key, writeTime);
+          }
+          if (writeTime[0] == expectedWriteTime) {
+            return newValue;
+          }
         }
-      };
-      try {
-        cache().compute(key, refreshFunction, false, false);
-      } catch (Throwable t) {
-        logger.log(Level.WARNING, "Exception thrown during refresh", t);
+        discard[0] = true;
+        return currentValue;
+      }, /* recordMiss */ false, /* recordLoad */ false);
+
+      if (discard[0] && cache().hasRemovalListener()) {
+        cache().notifyRemoval(key, newValue, RemovalCause.REPLACED);
+      }
+      if (newValue == null) {
+        cache().statsCounter().recordLoadFailure(loadTime);
+      } else {
+        cache().statsCounter().recordLoadSuccess(loadTime);
       }
     });
   }

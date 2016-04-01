@@ -69,6 +69,7 @@
 
   <rule ref="rulesets/java/imports.xml">
     <exclude name="DontImportJavaLang"/>
+    <exclude name="TooManyStaticImports"/>
   </rule>
 
   <rule ref="rulesets/java/naming.xml">

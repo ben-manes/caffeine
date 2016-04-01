@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -61,7 +62,6 @@ import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 
@@ -148,13 +148,13 @@ public final class EvictionTest {
     cache.put(1, value1);
     cache.put(2, value2);
     cache.put(3, value3);
-    assertThat(cache.estimatedSize(), is(4L));
+    await().until(cache::estimatedSize, is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(10L));
 
     // [0 | 1, 2, 3] -> [0, 4 | 2, 3]
     cache.put(4, value4);
+    await().until(cache::estimatedSize, is(4L));
     assertThat(cache.asMap().containsKey(1), is(false));
-    assertThat(cache.estimatedSize(), is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
     verifyWriter(context, (verifier, ignored) -> {
       verify(writer).delete(1, value1, RemovalCause.SIZE);
@@ -163,7 +163,7 @@ public final class EvictionTest {
 
     // [0, 4 | 2, 3] remains (5 exceeds window and has the same usage history, so evicted)
     cache.put(5, value5);
-    assertThat(cache.estimatedSize(), is(4L));
+    await().until(cache::estimatedSize, is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
     verifyWriter(context, (verifier, ignored) -> {
       verify(writer).delete(5, value5, RemovalCause.SIZE);
@@ -597,18 +597,14 @@ public final class EvictionTest {
       weigher = { CacheWeigher.DEFAULT, CacheWeigher.TEN },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void coldest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
-    int size = context.original().size();
-    int main = (int) (BoundedLocalCache.PERCENT_MAIN * context.maximumSize());
-    int eden = size - main;
-    if (eden < context.weigher().weigh(null, null)) {
-      main += eden;
-    }
+    Set<Integer> keys = new LinkedHashSet<>(context.original().keySet());
+    Set<Integer> coldest = new LinkedHashSet<>(eviction.coldest(Integer.MAX_VALUE).keySet());
 
-    Iterable<Integer> keys = Iterables.concat(
-        Iterables.skip(context.original().keySet(), main),
-        Iterables.limit(ImmutableList.copyOf(context.original().keySet()), main));
-    Set<Integer> coldest = eviction.coldest(Integer.MAX_VALUE).keySet();
-    assertThat(coldest, contains(Iterables.toArray(keys, Integer.class)));
+    // Ignore the last key; hard to predict with W-TinyLFU
+    keys.remove(context.lastKey());
+    coldest.remove(context.lastKey());
+
+    assertThat(coldest, contains(keys.toArray()));
   }
 
   @Test(dataProvider = "caches")
@@ -654,9 +650,15 @@ public final class EvictionTest {
       initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.FULL,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void hottest_order(CacheContext context, Eviction<Integer, Integer> eviction) {
-    Map<Integer, Integer> hottest = eviction.hottest(Integer.MAX_VALUE);
-    Set<Integer> keys = new LinkedHashSet<>(ImmutableList.copyOf(hottest.keySet()).reverse());
-    assertThat(keys, contains(context.original().keySet().toArray(new Integer[0])));
+    Set<Integer> keys = new LinkedHashSet<>(context.original().keySet());
+    Set<Integer> hottest = eviction.hottest(Integer.MAX_VALUE).keySet();
+    Set<Integer> coldest = new LinkedHashSet<>(ImmutableList.copyOf(hottest).reverse());
+
+    // Ignore the last key; hard to predict with W-TinyLFU
+    keys.remove(context.lastKey());
+    coldest.remove(context.lastKey());
+
+    assertThat(coldest, contains(keys.toArray()));
   }
 
   @Test(dataProvider = "caches")

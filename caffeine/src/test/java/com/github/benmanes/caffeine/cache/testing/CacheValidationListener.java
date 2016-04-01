@@ -56,21 +56,30 @@ public final class CacheValidationListener implements IInvokedMethodListener {
   public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
     try {
       if (testResult.isSuccess()) {
+        boolean foundCache = false;
         CacheContext context = null;
         for (Object param : testResult.getParameters()) {
           if (param instanceof Cache<?, ?>) {
+            foundCache = true;
             assertThat((Cache<?, ?>) param, is(validCache()));
           } else if (param instanceof AsyncLoadingCache<?, ?>) {
+            foundCache = true;
             assertThat((AsyncLoadingCache<?, ?>) param, is(validAsyncCache()));
           } else if (param instanceof Map<?, ?>) {
+            foundCache = true;
             assertThat((Map<?, ?>) param, is(validAsMap()));
           } else if (param instanceof CacheContext) {
             context = (CacheContext) param;
           }
         }
-        checkWriter(testResult, context);
-        checkNoStats(testResult, context);
-        checkExecutor(testResult, context);
+        if (context != null) {
+          if (!foundCache) {
+            assertThat(context.cache, is(validCache()));
+          }
+          checkWriter(testResult, context);
+          checkNoStats(testResult, context);
+          checkExecutor(testResult, context);
+        }
       } else {
         testResult.setThrowable(new AssertionError(getTestName(method), testResult.getThrowable()));
       }

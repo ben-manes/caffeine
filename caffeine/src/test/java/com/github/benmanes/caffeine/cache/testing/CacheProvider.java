@@ -97,7 +97,7 @@ public final class CacheProvider {
         if (clazz.isAssignableFrom(CacheContext.class)) {
           params[i] = context;
         } else if (clazz.isAssignableFrom(Caffeine.class)) {
-          params[i] = context.builder;
+          params[i] = context.caffeine;
         } else if (clazz.isAssignableFrom(cache.getClass())) {
           params[i] = cache;
         } else if (clazz.isAssignableFrom(AsyncLoadingCache.class)) {

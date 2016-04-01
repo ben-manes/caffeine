@@ -16,11 +16,16 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -54,6 +59,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
+import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -65,6 +71,8 @@ import com.google.common.collect.ImmutableMap;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class RefreshAfterWriteTest {
+
+  /* ---------------- getIfPresent -------------- */
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
@@ -94,6 +102,8 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
+  /* ---------------- getAllPresent -------------- */
+
   @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
@@ -109,11 +119,13 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
+  /* ---------------- getFunc -------------- */
+
   @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
-  public void get_mappingFun(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void getFunc(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Function<Integer, Integer> mappingFunction = context.original()::get;
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.get(context.firstKey(), mappingFunction);
@@ -128,7 +140,7 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
-  public void get_mappingFun(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void getFunc(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Function<Integer, Integer> mappingFunction = context.original()::get;
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.get(context.firstKey(), mappingFunction);
@@ -138,6 +150,8 @@ public final class RefreshAfterWriteTest {
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
+
+  /* ---------------- get -------------- */
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
@@ -169,7 +183,7 @@ public final class RefreshAfterWriteTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
-      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.SINGLE,
+      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
       compute = Compute.ASYNC, values = ReferenceType.STRONG)
   public void get_sameFuture(Caffeine<Integer, Integer> builder, CacheContext context) {
     AtomicBoolean done = new AtomicBoolean();
@@ -198,6 +212,8 @@ public final class RefreshAfterWriteTest {
     context.ticker().advance(2, TimeUnit.MINUTES);
     await().until(() -> cache.synchronous().getIfPresent(key), is(nullValue()));
   }
+
+  /* ---------------- getAll -------------- */
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
@@ -237,6 +253,66 @@ public final class RefreshAfterWriteTest {
     assertThat(cache.getAll(keys), is(futureOf(ImmutableMap.of(context.firstKey(),
         context.firstKey(), context.absentKey(), context.absentKey()))));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+  }
+
+  /* ---------------- put -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
+      executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
+  public void put(CacheContext context) {
+    AtomicBoolean refresh = new AtomicBoolean();
+    Integer key = context.absentKey();
+    Integer original = 1;
+    Integer updated = 2;
+    Integer refreshed = 3;
+    LoadingCache<Integer, Integer> cache = context.build(k -> {
+      await().untilTrue(refresh);
+      return refreshed;
+    });
+
+    cache.put(key, original);
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    assertThat(cache.getIfPresent(key), is(original));
+
+    assertThat(cache.asMap().put(key, updated), is(original));
+    refresh.set(true);
+
+    await().until(() -> context.consumedNotifications().size(), is(2));
+    List<Integer> removed = context.consumedNotifications().stream()
+        .map(RemovalNotification::getValue).collect(toList());
+
+    assertThat(cache.getIfPresent(key), is(updated));
+    assertThat(removed, containsInAnyOrder(original, refreshed));
+    assertThat(cache, hasRemovalNotifications(context, 2, RemovalCause.REPLACED));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+  }
+
+  /* ---------------- invalidate -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
+      executor = CacheExecutor.THREADED, removalListener = Listener.CONSUMING)
+  public void invalidate(CacheContext context) {
+    AtomicBoolean refresh = new AtomicBoolean();
+    Integer key = context.absentKey();
+    Integer original = 1;
+    Integer refreshed = 2;
+    LoadingCache<Integer, Integer> cache = context.build(k -> {
+      await().untilTrue(refresh);
+      return refreshed;
+    });
+
+    cache.put(key, original);
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    assertThat(cache.getIfPresent(key), is(original));
+
+    cache.invalidate(key);
+    refresh.set(true);
+
+    await().until(() -> cache.getIfPresent(key), is(refreshed));
+    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
   /* ---------------- Policy -------------- */

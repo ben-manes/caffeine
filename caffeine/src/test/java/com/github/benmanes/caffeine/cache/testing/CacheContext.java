@@ -32,8 +32,10 @@ import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
@@ -50,8 +52,11 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
+import com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext.GuavaLoadingCache;
+import com.github.benmanes.caffeine.cache.testing.GuavaCacheFromContext.SingleLoader;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.google.common.base.MoreObjects;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -86,7 +91,8 @@ public final class CacheContext {
   final boolean isAsyncLoading;
 
   Cache<?, ?> cache;
-  Caffeine<Object, Object> builder;
+  Caffeine<Object, Object> caffeine;
+  CacheBuilder<Object, Object> guava;
   AsyncLoadingCache<?, ?> asyncCache;
 
   @Nullable Integer firstKey;
@@ -359,6 +365,20 @@ public final class CacheContext {
 
   public FakeTicker ticker() {
     return ticker;
+  }
+
+  public <K, V> LoadingCache<K, V> build(CacheLoader<K, V> loader) {
+    LoadingCache<K, V> cache = null;
+    if (isCaffeine()) {
+      cache = isAsync() ? caffeine.buildAsync(loader).synchronous() : caffeine.build(loader);
+    } else {
+      cache = new GuavaLoadingCache<>(guava.build(
+          com.google.common.cache.CacheLoader.asyncReloading(
+              new SingleLoader<>(loader), executor.delegate())),
+          ticker(), isRecordingStats());
+    }
+    this.cache = cache;
+    return cache;
   }
 
   public Implementation implementation() {

@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -252,6 +253,8 @@ public @interface CacheSpec {
     DISABLED(Long.MIN_VALUE),
     /** A configuration where entries are evicted immediately. */
     IMMEDIATELY(0L),
+    /** A configuration where entries are evicted almost immediately. */
+    ONE_MILLISECOND(TimeUnit.MILLISECONDS.toNanos(1L)),
     /** A configuration that holds a single entry. */
     ONE_MINUTE(TimeUnit.MINUTES.toNanos(1L)),
     /** A configuration that holds the {@link Population#FULL} count. */
@@ -535,6 +538,9 @@ public @interface CacheSpec {
     EXPECTED, DISALLOWED, IGNORED
   }
 
+  ExecutorService cachedExecutorService = Executors.newCachedThreadPool(
+      new ThreadFactoryBuilder().setDaemon(true).build());
+
   /** The executors that the cache can be configured with. */
   enum CacheExecutor implements Supplier<TrackingExecutor> {
     DEFAULT { // fork-join common pool
@@ -549,11 +555,9 @@ public @interface CacheSpec {
         return new TrackingExecutor(MoreExecutors.newDirectExecutorService());
       }
     },
-    SINGLE {
+    THREADED {
       @Override public TrackingExecutor get() {
-        // Isolated to the test execution - may be shutdown by test to assert completion
-        return new TrackingExecutor(Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder().setDaemon(true).build()));
+        return new TrackingExecutor(cachedExecutorService);
       }
     },
     REJECTING {

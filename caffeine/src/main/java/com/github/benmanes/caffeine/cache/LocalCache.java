@@ -42,13 +42,22 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Nonnull
   StatsCounter statsCounter();
 
+  /** Returns whether this cache notifies when an entry is removed. */
+  boolean hasRemovalListener();
+
   /** Returns the {@link RemovalListener} used by this cache or <tt>null</tt> if not used. */
   @Nullable
   RemovalListener<K, V> removalListener();
 
+  /** Asynchronously sends a removal notification to the listener. */
+  void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause);
+
   /** Returns the {@link Executor} used by this cache. */
   @Nonnull
   Executor executor();
+
+  /** Returns whether the cache captures the write time of the entry. */
+  boolean hasWriteTime();
 
   /** Returns the {@link Ticker} used by this cache for expiration. */
   @Nonnull
@@ -69,6 +78,13 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Nullable
   V getIfPresent(@Nonnull Object key, boolean recordStats);
 
+  /**
+   * See {@link Cache#getIfPresent(Object)}. This method differs by not recording the access with
+   * the statistics nor the eviction policy, and populates the write time is known.
+   */
+  @Nullable
+  V getIfPresentQuietly(@Nonnull Object key, @Nonnull long[/* 1 */] writeTime);
+
   /** See {@link Cache#getAllPresent}. */
   @Nonnull
   Map<K, V> getAllPresent(@Nonnull Iterable<?> keys);
@@ -77,31 +93,32 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * See {@link Cache#put(Object, Object)}. This method differs by allowing the operation to not
    * notify the writer when an entry was inserted or updated.
    */
-  V put(K key, V value, boolean notifyWriter);
+  @Nullable
+  V put(@Nonnull K key, @Nonnull V value, boolean notifyWriter);
 
   @Override
   default V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-    return compute(key, remappingFunction, false, false);
+    return compute(key, remappingFunction, /* recordMiss */ false, /* recordLoad */ true);
   }
 
   /**
    * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
-   * whether to record a miss statistic based on the success of this operation, and further
-   * qualified by whether the operation was called by an asynchronous cache.
+   * whether to record miss and load statistics based on the success of this operation.
    */
   V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean recordMiss, boolean isAsync);
+      boolean recordMiss, boolean recordLoad);
 
   @Override
   default V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-    return computeIfAbsent(key, mappingFunction, false);
+    return computeIfAbsent(key, mappingFunction, /* recordMiss */ true, /* recordLoad */ true);
   }
 
   /**
    * See {@link ConcurrentMap#computeIfAbsent}. This method differs by accepting parameters
    * indicating whether the operation was called by an asynchronous cache.
    */
-  V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction, boolean isAsync);
+  V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
+      boolean recordMiss, boolean recordLoad);
 
   /** See {@link Cache#invalidateAll(Iterable)}. */
   default void invalidateAll(Iterable<?> keys) {
@@ -115,7 +132,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   /** Decorates the remapping function to record statistics if enabled. */
   default Function<? super K, ? extends V> statsAware(
-      Function<? super K, ? extends V> mappingFunction, boolean isAsync) {
+      Function<? super K, ? extends V> mappingFunction, boolean recordLoad) {
     if (!isRecordingStats()) {
       return mappingFunction;
     }
@@ -130,7 +147,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
         throw e;
       }
       long loadTime = statsTicker().read() - startTime;
-      if (!isAsync) {
+      if (recordLoad) {
         if (value == null) {
           statsCounter().recordLoadFailure(loadTime);
         } else {
@@ -144,13 +161,13 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Decorates the remapping function to record statistics if enabled. */
   default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
-    return statsAware(remappingFunction, true, false);
+    return statsAware(remappingFunction, /* recordMiss */ true, /* recordLoad */ true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
   default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction,
-      boolean recordMiss, boolean isAsync) {
+      boolean recordMiss, boolean recordLoad) {
     if (!isRecordingStats()) {
       return remappingFunction;
     }
@@ -167,7 +184,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
         throw e;
       }
       long loadTime = statsTicker().read() - startTime;
-      if (!isAsync) {
+      if (recordLoad) {
         if (result == null) {
           statsCounter().recordLoadFailure(loadTime);
         } else {
@@ -176,10 +193,5 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
       }
       return result;
     };
-  }
-
-  @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
-  static <T extends Throwable, V> V throwUnchecked(Throwable t) throws T {
-    throw (T) t;
   }
 }
