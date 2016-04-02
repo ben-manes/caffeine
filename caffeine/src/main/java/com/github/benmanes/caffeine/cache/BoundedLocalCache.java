@@ -1389,10 +1389,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     Node<K, V> node = null;
     long now = expirationTicker().read();
-    Object lookupKey = nodeFactory.newLookupKey(key);
-
     for (;;) {
-      Node<K, V> prior = data.get(lookupKey);
+      Node<K, V> prior = data.get(nodeFactory.newLookupKey(key));
       if (prior == null) {
         if (node == null) {
           node = nodeFactory.newNode(key, keyReferenceQueue(),

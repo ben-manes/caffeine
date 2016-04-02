@@ -82,9 +82,11 @@ final class References {
    * the key is strongly held.
    */
   static final class LookupKeyReference<E> implements InternalReference<E> {
+    private final int hashCode;
     private final E e;
 
     public LookupKeyReference(@Nonnull E e) {
+      this.hashCode = System.identityHashCode(e);
       this.e = requireNonNull(e);
     }
 
@@ -105,7 +107,7 @@ final class References {
 
     @Override
     public int hashCode() {
-      return System.identityHashCode(e);
+      return hashCode;
     }
   }
 
