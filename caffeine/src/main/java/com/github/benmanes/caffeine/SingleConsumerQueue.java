@@ -115,6 +115,9 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   /** The mask value for indexing into the arena. */
   static final int ARENA_MASK = ARENA_LENGTH - 1;
 
+  /** The factory for creating an optimistic node. */
+  static final Function<?, ?> OPTIMISIC = Node<Object>::new;
+
   /**
    * The number of times to spin (doing nothing except polling a memory location) before giving up
    * while waiting to eliminate an operation. Should be zero on uniprocessors. On multiprocessors,
@@ -160,7 +163,9 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
    *         another producing thread's
    */
   public static <E> SingleConsumerQueue<E> optimistic() {
-    return new SingleConsumerQueue<>(Node<E>::new);
+    @SuppressWarnings("unchecked")
+    Function<E, Node<E>> factory = (Function<E, Node<E>>) OPTIMISIC;
+    return new SingleConsumerQueue<>(factory);
   }
 
   /**
@@ -247,6 +252,9 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     E e = next.value;
     next.value = null;
     head = next;
+    if (factory == OPTIMISIC) {
+      h.next = null; // prevent nepotism
+    }
     return e;
   }
 
@@ -285,12 +293,19 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
       Node<E> t = tail;
       if (casTail(t, last)) {
         t.lazySetNext(first);
+        if (factory == OPTIMISIC) {
+          return;
+        }
         for (;;) {
           first.complete();
           if (first == last) {
             return;
           }
-          first = first.getNextRelaxed();
+          Node<E> next = first.getNextRelaxed();
+          if (next.value == null) {
+            first.next = null; // reduce nepotism
+          }
+          first = next;
         }
       }
       Node<E> node = transferOrCombine(first, last);
