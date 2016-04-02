@@ -46,6 +46,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -168,7 +169,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
-    drainBuffersTask = this::performCleanUp;
+    drainBuffersTask = (builder.getExecutor() instanceof ForkJoinPool)
+        ? new PerformCleanupTask()
+        : this::performCleanUp;
 
     if (evicts()) {
       setMaximum(builder.getMaximumWeight());
@@ -2643,6 +2646,30 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public int characteristics() {
       return Spliterator.DISTINCT | Spliterator.CONCURRENT | Spliterator.NONNULL;
+    }
+  }
+
+  /** A reusable task that performs the maintenance work used to avoid wrapping by ForkJoinPool. */
+  final class PerformCleanupTask extends ForkJoinTask<Void> implements Runnable {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public final Void getRawResult() {
+      return null;
+    }
+
+    @Override
+    public final void setRawResult(Void v) {}
+
+    @Override
+    public final boolean exec() {
+      performCleanUp();
+      return true;
+    }
+
+    @Override
+    public void run() {
+      performCleanUp();
     }
   }
 
