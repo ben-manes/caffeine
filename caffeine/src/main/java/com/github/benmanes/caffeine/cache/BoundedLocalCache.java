@@ -131,6 +131,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final double PERCENT_MAIN = 0.99f;
   /** The percent of the maximum weighted capacity dedicated to the main's protected space. */
   static final double PERCENT_MAIN_PROTECTED = 0.80f;
+  /** The maximum time window between updates before the expiration time must be recorded. */
+  static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
   final Consumer<Node<K, V>> accessPolicy;
@@ -1454,10 +1456,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
 
       int weightedDifference = mayUpdate ? (newWeight - oldWeight) : 0;
-      if ((oldValue == null) || (weightedDifference != 0) || expired
-          || (!onlyIfAbsent && (oldValue != null) && expiresAfterWrite())) {
+      if ((oldValue == null) || (weightedDifference != 0) || expired) {
+        afterWrite(prior, new UpdateTask(prior, weightedDifference), now);
+      } else if (!onlyIfAbsent && (oldValue != null) && expiresAfterWrite()
+          && ((now - prior.getWriteTime()) > EXPIRE_WRITE_TOLERANCE)) {
         afterWrite(prior, new UpdateTask(prior, weightedDifference), now);
       } else {
+        if (!onlyIfAbsent) {
+          prior.setWriteTime(now);
+        }
         afterRead(prior, now, false);
       }
 
