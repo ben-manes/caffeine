@@ -2852,8 +2852,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setExpiresAfterAccessNanos(unit.toNanos(duration));
-        cache.drainBuffersTask.reinitialize();
-        cache.executor().execute(cache.drainBuffersTask);
+        cache.scheduleAfterWrite();
       }
       @Override public Map<K, V> oldest(int limit) {
         return cache.expireAfterAcessOrder(limit, transformer, true);
@@ -2881,8 +2880,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setExpiresAfterWriteNanos(unit.toNanos(duration));
-        cache.drainBuffersTask.reinitialize();
-        cache.executor().execute(cache.drainBuffersTask);
+        cache.scheduleAfterWrite();
       }
       @Override public Map<K, V> oldest(int limit) {
         return cache.expireAfterWriteOrder(limit, transformer, true);
@@ -2910,8 +2908,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setRefreshAfterWriteNanos(unit.toNanos(duration));
-        cache.drainBuffersTask.reinitialize();
-        cache.executor().execute(cache.drainBuffersTask);
+        cache.scheduleAfterWrite();
       }
       @SuppressWarnings("PMD.SimplifiedTernary") // false positive (#1424)
       @Override public Map<K, V> oldest(int limit) {
