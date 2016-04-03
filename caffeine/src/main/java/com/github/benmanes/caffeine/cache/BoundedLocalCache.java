@@ -2672,7 +2672,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       } catch (Throwable t) {
         logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", t);
       }
-      return true;
+      return false;
     }
 
     @Override
