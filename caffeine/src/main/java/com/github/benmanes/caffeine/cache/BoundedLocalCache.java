@@ -2668,13 +2668,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public boolean exec() {
-      performCleanUp();
+      run();
       return true;
     }
 
     @Override
     public void run() {
-      performCleanUp();
+      try {
+        performCleanUp();
+      } catch (Throwable t) {
+        logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", t);
+      }
     }
   }
 
