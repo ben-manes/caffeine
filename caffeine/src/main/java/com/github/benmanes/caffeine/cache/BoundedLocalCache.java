@@ -135,10 +135,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
+  final PerformCleanupTask drainBuffersTask;
   final Consumer<Node<K, V>> accessPolicy;
   final CacheLoader<K, V> cacheLoader;
   final Buffer<Node<K, V>> readBuffer;
-  final Runnable drainBuffersTask;
   final CacheWriter<K, V> writer;
   final NodeFactory nodeFactory;
   final Weigher<K, V> weigher;
@@ -171,9 +171,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
-    drainBuffersTask = (builder.getExecutor() instanceof ForkJoinPool)
-        ? new PerformCleanupTask()
-        : this::performCleanUp;
+    drainBuffersTask = new PerformCleanupTask();
 
     if (evicts()) {
       setMaximum(builder.getMaximumWeight());
@@ -873,6 +871,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           return;
         }
         lazySetDrainStatus(PROCESSING_TO_IDLE);
+        drainBuffersTask.reinitialize();
         executor().execute(drainBuffersTask);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
@@ -2668,17 +2667,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public boolean exec() {
-      run();
+      try {
+        run();
+      } catch (Throwable t) {
+        logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", t);
+      }
       return true;
     }
 
     @Override
     public void run() {
-      try {
-        performCleanUp();
-      } catch (Throwable t) {
-        logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", t);
-      }
+      performCleanUp();
     }
   }
 
@@ -2853,6 +2852,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setExpiresAfterAccessNanos(unit.toNanos(duration));
+        cache.drainBuffersTask.reinitialize();
         cache.executor().execute(cache.drainBuffersTask);
       }
       @Override public Map<K, V> oldest(int limit) {
@@ -2881,6 +2881,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setExpiresAfterWriteNanos(unit.toNanos(duration));
+        cache.drainBuffersTask.reinitialize();
         cache.executor().execute(cache.drainBuffersTask);
       }
       @Override public Map<K, V> oldest(int limit) {
@@ -2909,6 +2910,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
         Caffeine.requireArgument(duration >= 0);
         cache.setRefreshAfterWriteNanos(unit.toNanos(duration));
+        cache.drainBuffersTask.reinitialize();
         cache.executor().execute(cache.drainBuffersTask);
       }
       @SuppressWarnings("PMD.SimplifiedTernary") // false positive (#1424)
