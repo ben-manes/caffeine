@@ -96,7 +96,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * buffers are drained at the first opportunity after a write or when a read buffer is full. The
    * reads are offered in a buffer that will reject additions if contented on or if it is full and a
    * draining process is required. Due to the concurrent nature of the read and write operations a
-   * strict policy ordering is not possible, but is observably strict when single threaded.
+   * strict policy ordering is not possible, but is observably strict when single threaded. The
+   * buffers are drained asynchronously to minimize the request latency and uses a state machine to
+   * determine when to scheduling a task on an executor.
    *
    * Due to a lack of a strict ordering guarantee, a task can be executed out-of-order, such as a
    * removal followed by its addition. The state of the entry is encoded using the key field to
@@ -110,7 +112,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * queue and the time-to-live policy uses a write-order queue. This allows peeking at the oldest
    * entry in the queue to see if it has expired and, if it has not, then the younger entries must
    * not have too. If a maximum size is set then expiration will share the queues in order to
-   * minimize the per-entry footprint.
+   * minimize the per-entry footprint. The expiration updates are applied in a best effort fashion.
+   * The reordering of access expiration may be discarded by the read buffer if full or contended
+   * on. Similarly the reordering of write expiration may be ignored for an entry if the last update
+   * was within a short time window in order to avoid overwhelming the write buffer.
    *
    * Maximum size is implemented using the Window TinyLfu policy due to its high hit rate, O(1) time
    * complexity, and small footprint. A new entry starts in the eden space and remains there as long
@@ -131,14 +136,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final double PERCENT_MAIN = 0.99f;
   /** The percent of the maximum weighted capacity dedicated to the main's protected space. */
   static final double PERCENT_MAIN_PROTECTED = 0.80f;
-  /** The maximum time window between updates before the expiration time must be recorded. */
+  /** The maximum time window between entry updates before the expiration must be reordered. */
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
-  final PerformCleanupTask drainBuffersTask;
   final Consumer<Node<K, V>> accessPolicy;
   final CacheLoader<K, V> cacheLoader;
   final Buffer<Node<K, V>> readBuffer;
+  final Runnable drainBuffersTask;
   final CacheWriter<K, V> writer;
   final NodeFactory nodeFactory;
   final Weigher<K, V> weigher;
@@ -171,7 +176,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
-    drainBuffersTask = new PerformCleanupTask();
+    drainBuffersTask = (builder.getExecutor() instanceof ForkJoinPool)
+        ? new PerformCleanupTask()
+        : this::performCleanUp;
 
     if (evicts()) {
       setMaximum(builder.getMaximumWeight());
@@ -871,7 +878,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           return;
         }
         lazySetDrainStatus(PROCESSING_TO_IDLE);
-        drainBuffersTask.reinitialize();
         executor().execute(drainBuffersTask);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
@@ -2672,6 +2678,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       } catch (Throwable t) {
         logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", t);
       }
+
+      // Indicates that the task has not completed to allow subsequent submissions to execute
       return false;
     }
 
