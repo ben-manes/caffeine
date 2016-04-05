@@ -140,10 +140,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
+  final PerformCleanupTask drainBuffersTask;
   final Consumer<Node<K, V>> accessPolicy;
   final CacheLoader<K, V> cacheLoader;
   final Buffer<Node<K, V>> readBuffer;
-  final Runnable drainBuffersTask;
   final CacheWriter<K, V> writer;
   final NodeFactory nodeFactory;
   final Weigher<K, V> weigher;
@@ -164,6 +164,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     executor = builder.getExecutor();
     writer = builder.getCacheWriter();
     weigher = builder.getWeigher(isAsync);
+    drainBuffersTask = new PerformCleanupTask();
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     evictionLock = (builder.getExecutor() instanceof ForkJoinPool)
         ? new NonReentrantLock()
@@ -176,9 +177,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
-    drainBuffersTask = (builder.getExecutor() instanceof ForkJoinPool)
-        ? new PerformCleanupTask()
-        : this::performCleanUp;
 
     if (evicts()) {
       setMaximum(builder.getMaximumWeight());
@@ -2664,14 +2662,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     private static final long serialVersionUID = 1L;
 
     @Override
-    public Void getRawResult() {
-      return null;
-    }
-
-    @Override
-    public void setRawResult(Void v) {}
-
-    @Override
     public boolean exec() {
       try {
         run();
@@ -2687,6 +2677,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     public void run() {
       performCleanUp();
     }
+
+    /**
+     * This method cannot be ignored due to being final, so a hostile user supplied Executor could
+     * forcibly complete the task and halt future executions. There are easier ways to intentionally
+     * harm a system, so this is assumed to not happen in practice.
+     */
+    // public final void quietlyComplete() {}
+
+    @Override public Void getRawResult() { return null; }
+    @Override public void setRawResult(Void v) {}
+    @Override public void complete(Void value) {}
+    @Override public void completeExceptionally(Throwable ex) {}
+    @Override public boolean cancel(boolean mayInterruptIfRunning) { return false; }
   }
 
   /** Creates a serialization proxy based on the common configuration shared by all cache types. */

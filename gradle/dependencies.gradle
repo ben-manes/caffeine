@@ -36,7 +36,7 @@ ext {
     jcache: '1.0.0',
     jsr305: '3.0.1',
     stream: '2.9.1',
-    univocity_parsers: '2.0.1',
+    univocity_parsers: '2.0.2',
     ycsb: '0.8.0-RC1',
   ]
   test_versions = [
@@ -57,12 +57,12 @@ ext {
     ehcache2: '2.10.1-55',
     ehcache3: '3.0.0.rc2',
     high_scale_lib: '1.0.6',
-    infinispan: '8.2.0.Final',
+    infinispan: '8.2.1.Final',
     jackrabbit: '1.5.0',
     jamm: '0.3.1',
     java_object_layout: '0.4',
     koloboke: '0.6.8',
-    slf4j: '1.7.20',
+    slf4j: '1.7.21',
     tcache: '0.9.0',
   ]
   plugin_versions = [
