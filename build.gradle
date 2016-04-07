@@ -82,8 +82,8 @@ subprojects {
     binResultsDir = file("${buildDir}/reports/${name}/results/binary/${name}")
   }
 
-  task testJar(type: Jar, group: "Build") {
-    description = "Assembles a jar archive containing the test classes."
+  task testJar(type: Jar, group: 'Build') {
+    description = 'Assembles a jar archive containing the test classes.'
     baseName = "${archivesBaseName}-test"
     from sourceSets.test.output
   }

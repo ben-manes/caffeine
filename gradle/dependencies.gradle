@@ -26,7 +26,7 @@
 ext {
   versions = [
     akka: '2.3.15',
-    commons_compress: '1.10',
+    commons_compress: '1.11',
     commons_lang3: '3.4',
     config: '1.3.0',
     error_prone_annotations: '2.0.9',
@@ -70,12 +70,13 @@ ext {
     coveralls: '2.6.3',
     extra_conf: '3.0.3',
     error_prone: '0.0.8',
-    jmh: '0.2.0',
+    jmh: '0.3.0',
     nexus: '2.3.1',
-    versions: '0.12.0',
+    pmd: '5.4.1',
     semantic_versioning: '1.1.0',
     shadow: '1.2.3',
     stats: '0.1.5',
+    versions: '0.12.0',
   ]
 
   libraries = [
@@ -118,7 +119,7 @@ ext {
     osgi_runtime: [
       "org.ops4j.pax.exam:pax-exam-container-native:${test_versions.pax_exam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${test_versions.pax_exam}",
-      "org.ops4j.pax.url:pax-url-aether:2.4.6",
+      "org.ops4j.pax.url:pax-url-aether:2.4.7",
     ],
     testng: [
       dependencies.create("org.testng:testng:${test_versions.testng}") {
@@ -155,7 +156,7 @@ ext {
     coveralls: "org.kt3k.gradle.plugin:coveralls-gradle-plugin:${plugin_versions.coveralls}",
     extra_conf: "com.netflix.nebula:gradle-extra-configurations-plugin:${plugin_versions.extra_conf}",
     error_prone: "net.ltgt.gradle:gradle-errorprone-plugin:${plugin_versions.error_prone}",
-    jmh: "me.champeau.gradle:jmh-gradle-plugin:${plugin_versions.jmh}",
+    jmh: "gradle.plugin.me.champeau.gradle:jmh-gradle-plugin:${plugin_versions.jmh}",
     nexus: "com.bmuschko:gradle-nexus-plugin:${plugin_versions.nexus}",
     semantic_versioning: "io.ehdev:gradle-semantic-versioning:${plugin_versions.semantic_versioning}",
     shadow: "com.github.jengelman.gradle.plugins:shadow:${plugin_versions.shadow}",

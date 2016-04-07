@@ -218,11 +218,11 @@ public final class Caffeine<K, V> {
   }
 
   /**
-   * Sets the minimum total size for the internal hash tables. Providing a large enough estimate at
-   * construction time avoids the need for expensive resizing operations later, but setting this
+   * Sets the minimum total size for the internal data structures. Providing a large enough estimate
+   * at construction time avoids the need for expensive resizing operations later, but setting this
    * value unnecessarily high wastes memory.
    *
-   * @param initialCapacity minimum total size for the internal hash tables
+   * @param initialCapacity minimum total size for the internal data structures
    * @return this builder instance
    * @throws IllegalArgumentException if {@code initialCapacity} is negative
    * @throws IllegalStateException if an initial capacity was already set
@@ -236,8 +236,12 @@ public final class Caffeine<K, V> {
     return this;
   }
 
+  boolean hasInitialCapacity() {
+    return (initialCapacity != UNSET_INT);
+  }
+
   int getInitialCapacity() {
-    return (initialCapacity == UNSET_INT) ? DEFAULT_INITIAL_CAPACITY : initialCapacity;
+    return hasInitialCapacity() ? initialCapacity : DEFAULT_INITIAL_CAPACITY;
   }
 
   /**
@@ -379,7 +383,7 @@ public final class Caffeine<K, V> {
   }
 
   boolean evicts() {
-    return getMaximumWeight() != UNSET_INT;
+    return getMaximum() != UNSET_INT;
   }
 
   boolean isWeighted() {
@@ -387,8 +391,8 @@ public final class Caffeine<K, V> {
   }
 
   @Nonnegative
-  long getMaximumWeight() {
-    return (weigher == null) ? maximumSize : maximumWeight;
+  long getMaximum() {
+    return isWeighted() ? maximumWeight : maximumSize;
   }
 
   @Nonnull @SuppressWarnings("unchecked")

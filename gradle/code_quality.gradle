@@ -21,11 +21,14 @@ tasks.withType(JavaCompile) {
   options.compilerArgs << '-Xlint:all'
 }
 
-javadoc.options.links('http://docs.oracle.com/javase/8/docs/api/')
+javadoc.options.links(
+  'http://docs.oracle.com/javase/8/docs/api/',
+  'http://typesafehub.github.com/config/latest/api/',
+  "http://google.github.io/guava/releases/${versions.guava}/api/docs/")
 
 checkstyle {
   showViolations = true
-  toolVersion = "${plugin_versions.checkstyle}"
+  toolVersion = plugin_versions.checkstyle
   config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
 }
 
@@ -35,7 +38,7 @@ findbugs {
 
 pmd {
   ruleSets = []
-  toolVersion = '5.4.1'
+  toolVersion = plugin_versions.pmd
   ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
 }
 
@@ -69,8 +72,8 @@ tasks.withType(Test) {
   }
   jacoco {
     append = true
-    destinationFile = file("${rootDir}/build/jacoco/jacocoTest.exec")
     classDumpFile = file("${rootDir}/build/jacoco/classpathdumps")
+    destinationFile = file("${rootDir}/build/jacoco/jacocoTest.exec")
   }
 }
 

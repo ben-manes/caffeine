@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import com.github.benmanes.caffeine.cache.Feature;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 
@@ -98,7 +99,13 @@ public final class AddMaximum extends LocalCacheRule {
   private void addFrequencySketch() {
     context.cache.addField(FieldSpec.builder(
         FREQUENCY_SKETCH, "sketch", privateFinalModifiers).build());
-    context.constructor.addStatement("this.sketch = new $T()", FREQUENCY_SKETCH);
+    context.constructor.addCode(CodeBlock.builder()
+        .addStatement("this.sketch = new $T()", FREQUENCY_SKETCH)
+        .beginControlFlow("if (builder.hasInitialCapacity())")
+            .addStatement("long capacity = Math.min($L, $L)",
+                "builder.getMaximum()", "builder.getInitialCapacity()")
+            .addStatement("this.sketch.ensureCapacity(capacity)")
+        .endControlFlow().build());
     context.cache.addMethod(MethodSpec.methodBuilder("frequencySketch")
         .addModifiers(protectedFinalModifiers)
         .addStatement("return sketch")

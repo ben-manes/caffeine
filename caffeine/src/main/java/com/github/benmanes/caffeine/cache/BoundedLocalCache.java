@@ -179,7 +179,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
 
     if (evicts()) {
-      setMaximum(builder.getMaximumWeight());
+      setMaximum(builder.getMaximum());
     }
   }
 
@@ -368,7 +368,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return false;
   }
 
-  /** Returns the maximum weighted size of the main space. */
+  /** Returns the maximum weighted size. */
   protected long maximum() {
     throw new UnsupportedOperationException();
   }
@@ -1087,14 +1087,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         lazySetWeightedSize(weightedSize + weight);
         lazySetEdenWeightedSize(edenWeightedSize() + weight);
 
-        if (isWeighted()) {
-          frequencySketch().ensureCapacity(data.mappingCount());
-        } else {
-          long maximumSize = maximum();
-          if (weightedSize >= (maximumSize >>> 1)) {
-            // Lazily initialize when close to the maximum size
-            frequencySketch().ensureCapacity(maximumSize);
-          }
+        long maximum = maximum();
+        if (weightedSize >= (maximum >>> 1)) {
+          // Lazily initialize when close to the maximum
+          long capacity = isWeighted() ? data.mappingCount() : maximum;
+          frequencySketch().ensureCapacity(capacity);
         }
 
         K key = node.getKey();
