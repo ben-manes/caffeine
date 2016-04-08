@@ -52,7 +52,7 @@ ext {
     truth: '0.24',
   ]
   benchmark_versions = [
-    cache2k: '0.23',
+    cache2k: '0.23.1',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.1-55',
     ehcache3: '3.0.0.rc2',
