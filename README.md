@@ -28,7 +28,6 @@ LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
 #### Features at a Glance
 
 Caffeine provides flexible construction to create a cache with a combination of the following features:
-
  * [automatic loading of entries][population] into the cache, optionally asynchronously
  * [size-based eviction][size] when a maximum is exceeded based on [frequency and recency][efficiency]
  * [time-based expiration][time] of entries, measured since last access or last write
@@ -44,6 +43,12 @@ In addition, Caffeine offers the following extensions:
  * [Guava adapters][guava-adapter]
  * [Simulation][simulator]
 
+Use Caffeine in a community provided integration:
+ * [Spring Cache][spring] (upcoming Spring 4.3 & Boot 1.4 releases)
+ * [ScalaCache][scala-cache]: Simple caching in Scala
+ * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
+ * [Ratpack][ratpack] (upcoming 1.3 release)
+
 ### In the News
 
  * A short look at what Caffeine brings to your applications.
@@ -53,16 +58,10 @@ In addition, Caffeine offers the following extensions:
  * Caffeine is presented as part of a research paper evaluating its novel eviction policy.
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
 
-Integrations,
-* [Spring Cache][spring] (upcoming Spring 4.3 & Boot 1.4 releases)
-* [ScalaCache][scala-cache]: Simple caching in Scala
-* [Scaffeine][scaffeine]: Scala wrapper for Caffeine
-
 On the radar,
  * Early discussions with [HBase][hbase], [Cassandra][cassandra], [Solr][solr], and [ElasticSearch][elastic-search]
  * Postgres is [evaluating][postgres] whether to port the cache
  * Go [implementation][go-tinylfu] of the W-TinyLfu policy
- * [Ratpack][ratpack] is considering adoption for v1.3
 
 ### Download
 

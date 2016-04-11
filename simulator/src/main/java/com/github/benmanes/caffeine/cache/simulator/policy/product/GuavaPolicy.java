@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -52,19 +51,12 @@ public final class GuavaPolicy implements Policy {
 
   @Override
   public void record(long key) {
-    boolean[] hit = { true };
-    try {
-      cache.get(key, () -> {
-        hit[0] = false;
-        return key;
-      });
-    } catch (ExecutionException e) {
-      throw new RuntimeException(e);
-    }
-    if (hit[0]) {
-      policyStats.recordHit();
-    } else {
+    Object value = cache.getIfPresent(key);
+    if (value == null) {
+      cache.put(key, key);
       policyStats.recordMiss();
+    } else {
+      policyStats.recordHit();
     }
   }
 

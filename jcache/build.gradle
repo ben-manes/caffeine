@@ -3,6 +3,7 @@
  */
 configurations {
   tck
+  doc
 }
 
 dependencies {
@@ -23,6 +24,8 @@ dependencies {
   tck dependencies.create(test_libraries.jcache_tck_tests) {
     transitive = false
   }
+
+  doc "${libraries.jcache}:javadoc"
 }
 
 jar.manifest {
@@ -42,9 +45,17 @@ jar.manifest {
     'osgi.serviceloader;osgi.serviceloader=com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider'
 }
 
-tasks.withType(Javadoc) {
-  options.addStringOption('Xdoclint:none', '-quiet')
+task unzipJCacheJavaDoc(type: Copy, group: 'Build', description: 'Unzips the JCache JavaDoc') {
+  from configurations.doc.collect { zipTree(it) }
+  into { "${buildDir}/jcache-docs" }
 }
+
+javadoc.dependsOn(unzipJCacheJavaDoc)
+javadoc.options.addStringOption('Xdoclint:none', '-quiet')
+javadoc.options.linksOffline(
+  "http://static.javadoc.io/javax.cache/cache-api/${versions.jcache}/",
+  "${buildDir}/jcache-docs",
+)
 
 test {
   useTestNG()

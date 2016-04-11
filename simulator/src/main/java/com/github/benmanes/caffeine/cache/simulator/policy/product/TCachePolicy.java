@@ -59,9 +59,6 @@ public final class TCachePolicy implements Policy {
     Object value = cache.get(key);
     if (value == null) {
       policyStats.recordMiss();
-      if (cache.size() == maximumSize) {
-        policyStats.recordEviction();
-      }
       cache.put(key, key);
     } else {
       policyStats.recordHit();
@@ -75,6 +72,7 @@ public final class TCachePolicy implements Policy {
 
   @Override
   public void finished() {
+    cache.shutdown();
     policyStats.addEvictions(cache.statistics().getEvictionCount());
   }
 
