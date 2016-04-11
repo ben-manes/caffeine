@@ -33,15 +33,16 @@ import com.typesafe.config.Config;
 public final class CaffeinePolicy implements Policy {
   private final Cache<Object, Object> cache;
   private final PolicyStats policyStats;
+  private final int maximumSize;
 
   public CaffeinePolicy(Config config) {
     policyStats = new PolicyStats("product.Caffeine");
     BasicSettings settings = new BasicSettings(config);
+    maximumSize = settings.maximumSize();
     cache = Caffeine.newBuilder()
+        .initialCapacity(maximumSize)
+        .maximumSize(maximumSize)
         .executor(Runnable::run)
-        .maximumSize(settings.maximumSize())
-        .initialCapacity(settings.maximumSize())
-        .removalListener((k, v, c) -> policyStats.recordEviction())
         .build();
   }
 
@@ -52,15 +53,15 @@ public final class CaffeinePolicy implements Policy {
 
   @Override
   public void record(long key) {
-    boolean[] hit = { true };
-    cache.get(key, k -> {
-      hit[0] = false;
-      return k;
-    });
-    if (hit[0]) {
-      policyStats.recordHit();
-    } else {
+    Object value = cache.getIfPresent(key);
+    if (value == null) {
+      if (cache.estimatedSize() == maximumSize) {
+        policyStats.recordEviction();
+      }
+      cache.put(key, key);
       policyStats.recordMiss();
+    } else {
+      policyStats.recordHit();
     }
   }
 

@@ -46,10 +46,9 @@ public final class Ehcache3Policy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = cacheManager.createCache("ehcache3",
-        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class)
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(settings.maximumSize(), EntryUnit.ENTRIES)
-                .build())
+        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,
+            ResourcePoolsBuilder.newResourcePoolsBuilder()
+                .heap(settings.maximumSize(), EntryUnit.ENTRIES))
             .build());
     maximumSize = settings.maximumSize();
   }

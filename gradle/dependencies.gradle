@@ -37,7 +37,7 @@ ext {
     jsr305: '3.0.1',
     stream: '2.9.1',
     univocity_parsers: '2.0.2',
-    ycsb: '0.8.0-RC1',
+    ycsb: '0.8.0-RC3',
   ]
   test_versions = [
     awaitility: '1.7.0',
@@ -55,7 +55,7 @@ ext {
     cache2k: '0.23.1',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.1-55',
-    ehcache3: '3.0.0.rc2',
+    ehcache3: '3.0.0.rc3',
     high_scale_lib: '1.0.6',
     infinispan: '8.2.1.Final',
     jackrabbit: '1.5.0',

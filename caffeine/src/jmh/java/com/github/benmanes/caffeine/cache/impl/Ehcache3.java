@@ -34,10 +34,9 @@ public final class Ehcache3<K, V> implements BasicCache<K, V> {
   public Ehcache3(int maximumSize) {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = (Cache<K, V>) cacheManager.createCache("benchmark",
-        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class)
-            .withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(maximumSize, EntryUnit.ENTRIES)
-                .build())
+        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,
+            ResourcePoolsBuilder.newResourcePoolsBuilder()
+                .heap(maximumSize, EntryUnit.ENTRIES))
             .build());
   }
 

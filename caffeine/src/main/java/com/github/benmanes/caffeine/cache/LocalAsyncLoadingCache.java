@@ -133,6 +133,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
         }
         long loadTime = cache.statsTicker().read() - startTime;
         if (value == null) {
+          logger.log(Level.WARNING, "Exception thrown during asynchonous load", error);
           cache.statsCounter().recordLoadFailure(loadTime);
           cache.remove(key, result[0]);
         } else {
@@ -238,6 +239,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
         // update the weight and expiration timestamps
         cache.replace(key, valueFuture, valueFuture);
         cache.statsCounter().recordLoadSuccess(loadTime);
+        logger.log(Level.WARNING, "Exception thrown during asynchonous load", error);
       }
     });
   }
@@ -270,6 +272,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
           entry.getValue().obtrudeException(error);
         }
         cache.statsCounter().recordLoadFailure(loadTime);
+        logger.log(Level.WARNING, "Exception thrown during asynchonous load", error);
       } else {
         fillProxies(result);
         addNewEntries(result);
