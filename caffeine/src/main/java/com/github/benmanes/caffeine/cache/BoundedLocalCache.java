@@ -133,9 +133,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** The maximum weighted capacity of the map. */
   static final long MAXIMUM_CAPACITY = Long.MAX_VALUE - Integer.MAX_VALUE;
   /** The percent of the maximum weighted capacity dedicated to the main space. */
-  static final double PERCENT_MAIN = 0.99f;
+  static final double PERCENT_MAIN = 0.99d;
   /** The percent of the maximum weighted capacity dedicated to the main's protected space. */
-  static final double PERCENT_MAIN_PROTECTED = 0.80f;
+  static final double PERCENT_MAIN_PROTECTED = 0.80d;
   /** The maximum time window between entry updates before the expiration must be reordered. */
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
 
@@ -408,7 +408,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     long max = Math.min(maximum, MAXIMUM_CAPACITY);
     long eden = max - (long) (max * PERCENT_MAIN);
-    long mainProtected = (long) (max * PERCENT_MAIN_PROTECTED);
+    long mainProtected = (long) ((max - eden) * PERCENT_MAIN_PROTECTED);
 
     lazySetMaximum(max);
     lazySetEdenMaximum(eden);
@@ -473,9 +473,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @GuardedBy("evictionLock")
   int evictFromEden() {
     int candidates = 0;
-    long mainMaximum = maximum() - edenMaximum();
     Node<K, V> node = accessOrderEdenDeque().peek();
-    while (edenWeightedSize() > edenMaximum() || (weightedSize() < mainMaximum)) {
+    while (edenWeightedSize() > edenMaximum()) {
       // The pending operations will adjust the size to reflect the correct weight
       if (node == null) {
         break;

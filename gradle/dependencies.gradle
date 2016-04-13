@@ -37,7 +37,7 @@ ext {
     jsr305: '3.0.1',
     stream: '2.9.1',
     univocity_parsers: '2.0.2',
-    ycsb: '0.8.0-RC3',
+    ycsb: '0.8.0-RC4',
   ]
   test_versions = [
     awaitility: '1.7.0',
@@ -46,18 +46,18 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '1.2',
     junit: '4.12',
-    mockito: '2.0.44-beta',
+    mockito: '2.0.46-beta',
     pax_exam: '4.8.0',
     testng: '6.9.11',
     truth: '0.24',
   ]
   benchmark_versions = [
-    cache2k: '0.23.1',
+    cache2k: '0.24-BETA',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.1-55',
     ehcache3: '3.0.0.rc3',
     high_scale_lib: '1.0.6',
-    infinispan: '8.2.1.Final',
+    infinispan: '9.0.0.Alpha1',
     jackrabbit: '1.5.0',
     jamm: '0.3.1',
     java_object_layout: '0.4',
@@ -68,7 +68,7 @@ ext {
   plugin_versions = [
     checkstyle: '6.17',
     coveralls: '2.6.3',
-    extra_conf: '3.0.3',
+    extra_conf: '3.1.0',
     error_prone: '0.0.8',
     jmh: '0.3.0',
     nexus: '2.3.1',
