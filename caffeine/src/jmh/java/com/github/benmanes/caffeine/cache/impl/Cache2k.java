@@ -26,11 +26,11 @@ import com.github.benmanes.caffeine.cache.BasicCache;
 public final class Cache2k<K, V> implements BasicCache<K, V> {
   private final Cache<K, V> cache;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   public Cache2k(Class<?> implementation, int maximumSize) {
     cache = (Cache<K, V>) CacheBuilder.newCache(Object.class, Object.class)
         .implementation(implementation)
-        .maxSize(maximumSize)
+        .entryCapacity(maximumSize)
         .eternal(true)
         .build();
   }

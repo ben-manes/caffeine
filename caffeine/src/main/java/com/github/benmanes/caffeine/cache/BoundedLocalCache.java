@@ -359,7 +359,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return (weigher != Weigher.singletonWeigher());
   }
 
-  protected FrequencySketch<K> frequencySketch() {
+  protected FrequencySketch frequencySketch() {
     throw new UnsupportedOperationException();
   }
 
@@ -578,10 +578,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         continue;
       }
 
+      // Evict the victim on a potential hash collision attack
+      int victimHash = victimKey.hashCode();
+      int candidateHash = candidateKey.hashCode();
+      if (victimHash == candidateHash) {
+        candidates--;
+        Node<K, V> evict = victim;
+        victim = victim.getNextInAccessOrder();
+        evictEntry(evict, RemovalCause.SIZE, 0L);
+        continue;
+      }
+
       // Evict the entry with the lowest frequency
       candidates--;
-      int victimFreq = frequencySketch().frequency(victimKey);
-      int candidateFreq = frequencySketch().frequency(candidateKey);
+      int victimFreq = frequencySketch().frequency(victimHash);
+      int candidateFreq = frequencySketch().frequency(candidateHash);
       if (candidateFreq > victimFreq) {
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
@@ -976,7 +987,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (key == null) {
         return;
       }
-      frequencySketch().increment(key);
+      frequencySketch().increment(key.hashCode());
       if (node.inEden()) {
         reorder(accessOrderEdenDeque(), node);
       } else if (node.inMainProbation()) {
@@ -1095,7 +1106,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
         K key = node.getKey();
         if (key != null) {
-          frequencySketch().increment(key);
+          frequencySketch().increment(key.hashCode());
         }
       }
 
@@ -2059,7 +2070,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> evictionOrder(int limit, Function<V, V> transformer, boolean ascending) {
     Comparator<Node<K, V>> comparator = Comparator.comparingInt(node ->
-        frequencySketch().frequency(node.getKey()));
+        frequencySketch().frequency(node.getKey().hashCode()));
     comparator = ascending ? comparator : comparator.reversed();
     PeekingIterator<Node<K, V>> eden;
     PeekingIterator<Node<K, V>> main;

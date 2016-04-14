@@ -46,6 +46,7 @@ public final class Cache2kPolicy implements Policy {
   private final PolicyStats policyStats;
   private final int maximumSize;
 
+  @SuppressWarnings("deprecation")
   public Cache2kPolicy(Config config) {
     Logger logger = LogManager.getLogManager().getLogger("");
     Level level = logger.getLevel();
@@ -57,7 +58,7 @@ public final class Cache2kPolicy implements Policy {
       Cache2kSettings settings = new Cache2kSettings(config);
       cache = CacheBuilder.newCache(Object.class, Object.class)
           .implementation(settings.implementation())
-          .maxSize(settings.maximumSize())
+          .entryCapacity(settings.maximumSize())
           .eternal(true)
           .build();
       maximumSize = settings.maximumSize();

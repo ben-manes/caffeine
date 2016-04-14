@@ -38,12 +38,12 @@ public class FrequencySketchBenchmark {
 
   int index = 0;
   Integer[] ints;
-  FrequencySketch<Integer> sketch;
+  FrequencySketch sketch;
 
   @Setup
   public void setup() {
     ints = new Integer[SIZE];
-    sketch = new FrequencySketch<>();
+    sketch = new FrequencySketch();
     sketch.ensureCapacity(ITEMS);
 
     NumberGenerator generator = new ScrambledZipfianGenerator(ITEMS);

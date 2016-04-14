@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -29,7 +28,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NotThreadSafe
-final class FrequencySketch<E> {
+final class FrequencySketch {
 
   /*
    * This class maintains a 4-bit CountMinSketch [1] with periodic aging to provide the popularity
@@ -115,16 +114,16 @@ final class FrequencySketch<E> {
   /**
    * Returns the estimated number of occurrences of an element, up to the maximum (15).
    *
-   * @param e the element to count occurrences of
+   * @param hashCode the hash code of the element to count occurrences of
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
   @Nonnegative
-  public int frequency(@Nonnull E e) {
+  public int frequency(int hashCode) {
     if (isNotInitialized()) {
       return 0;
     }
 
-    int hash = spread(e.hashCode());
+    int hash = spread(hashCode);
     int start = (hash & 3) << 2;
     int frequency = Integer.MAX_VALUE;
     for (int i = 0; i < 4; i++) {
@@ -140,14 +139,14 @@ final class FrequencySketch<E> {
    * of all elements will be periodically down sampled when the observed events exceeds a threshold.
    * This process provides a frequency aging to allow expired long term entries to fade away.
    *
-   * @param e the element to add
+   * @param hashCode the hash code of the element to count occurrences of
    */
-  public void increment(@Nonnull E e) {
+  public void increment(int hashCode) {
     if (isNotInitialized()) {
       return;
     }
 
-    int hash = spread(e.hashCode());
+    int hash = spread(hashCode);
     int start = (hash & 3) << 2;
 
     // Loop unrolling improves throughput by 5m ops/s
