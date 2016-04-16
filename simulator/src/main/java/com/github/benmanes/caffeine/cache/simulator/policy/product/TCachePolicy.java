@@ -36,15 +36,13 @@ import com.typesafe.config.Config;
 public final class TCachePolicy implements Policy {
   private final Cache<Object, Object> cache;
   private final PolicyStats policyStats;
-  private final int maximumSize;
 
   public TCachePolicy(Config config) {
     TCacheSettings settings = new TCacheSettings(config);
-    maximumSize = settings.maximumSize();
     policyStats = new PolicyStats("product.TCache");
     cache = TCacheFactory.standardFactory().builder()
+        .setExpectedMapSize(settings.maximumSize())
         .setEvictionClass(settings.policy())
-        .setExpectedMapSize(maximumSize)
         .setStatistics(true)
         .build();
   }

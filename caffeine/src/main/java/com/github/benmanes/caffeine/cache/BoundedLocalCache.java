@@ -47,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -359,7 +360,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return (weigher != Weigher.singletonWeigher());
   }
 
-  protected FrequencySketch frequencySketch() {
+  protected FrequencySketch<K> frequencySketch() {
     throw new UnsupportedOperationException();
   }
 
@@ -578,22 +579,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         continue;
       }
 
-      // Evict the victim on a potential hash collision attack
-      int victimHash = victimKey.hashCode();
-      int candidateHash = candidateKey.hashCode();
-      if (victimHash == candidateHash) {
-        candidates--;
-        Node<K, V> evict = victim;
-        victim = victim.getNextInAccessOrder();
-        evictEntry(evict, RemovalCause.SIZE, 0L);
-        continue;
-      }
-
       // Evict the entry with the lowest frequency
       candidates--;
-      int victimFreq = frequencySketch().frequency(victimHash);
-      int candidateFreq = frequencySketch().frequency(candidateHash);
-      if (candidateFreq > victimFreq) {
+      if (admit(candidateKey, victimKey)) {
         Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.SIZE, 0L);
@@ -604,6 +592,31 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         evictEntry(evict, RemovalCause.SIZE, 0L);
       }
     }
+  }
+
+  /**
+   * Determines if the candidate should be accepted into the main space, as determined by its
+   * frequency relative to the victim. A small amount of randomness is used to protect against hash
+   * collision attacks, where the victim's frequency is artificially raised so that no new entries
+   * are admitted.
+   *
+   * @param candidateKey the key for the entry being proposed for long term retention
+   * @param victimKey the key for the entry chosen by the eviction policy for replacement
+   * @return if the candidate should be admitted and the victim ejected
+   */
+  boolean admit(K candidateKey, K victimKey) {
+    int victimFreq = frequencySketch().frequency(victimKey);
+    int candidateFreq = frequencySketch().frequency(candidateKey);
+    if (candidateFreq > victimFreq) {
+      return true;
+    } else if (candidateFreq <= 5) {
+      // The maximum frequency is 15 and halved to 7 after a reset to age the history. An attack
+      // exploits that a hot candidate is rejected in favor of a hot victim. The threshold of a warm
+      // candidate reduces the number of random acceptances to minimize the impact on the hit rate.
+      return false;
+    }
+    int random = ThreadLocalRandom.current().nextInt();
+    return ((random & 127) == 0);
   }
 
   /** Expires entries that have expired in the access and write queues. */
@@ -987,7 +1000,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (key == null) {
         return;
       }
-      frequencySketch().increment(key.hashCode());
+      frequencySketch().increment(key);
       if (node.inEden()) {
         reorder(accessOrderEdenDeque(), node);
       } else if (node.inMainProbation()) {
@@ -1106,7 +1119,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
         K key = node.getKey();
         if (key != null) {
-          frequencySketch().increment(key.hashCode());
+          frequencySketch().increment(key);
         }
       }
 
@@ -2070,7 +2083,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @SuppressWarnings("GuardedByChecker")
   Map<K, V> evictionOrder(int limit, Function<V, V> transformer, boolean ascending) {
     Comparator<Node<K, V>> comparator = Comparator.comparingInt(node ->
-        frequencySketch().frequency(node.getKey().hashCode()));
+        frequencySketch().frequency(node.getKey()));
     comparator = ascending ? comparator : comparator.reversed();
     PeekingIterator<Node<K, V>> eden;
     PeekingIterator<Node<K, V>> main;

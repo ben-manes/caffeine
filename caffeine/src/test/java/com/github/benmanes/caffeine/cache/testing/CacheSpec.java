@@ -144,8 +144,10 @@ public @interface CacheSpec {
     ZERO(0L),
     /** A configuration that holds a single unit. */
     ONE(1L),
-    /** A configuration that holds ten units. */
+    /** A configuration that holds 10 units. */
     TEN(10L),
+    /** A configuration that holds 150 units. */
+    ONE_FIFTY(150L),
     /** A configuration that holds the {@link Population#FULL} unit count. */
     FULL(InitialCapacity.FULL.size()),
     /** A configuration where the threshold is too high for eviction to occur. */

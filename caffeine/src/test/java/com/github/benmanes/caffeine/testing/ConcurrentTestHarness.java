@@ -43,7 +43,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
  */
 public final class ConcurrentTestHarness {
   private static final Executor executor = Executors.newCachedThreadPool(
-      new ThreadFactoryBuilder().setDaemon(true).build());
+      new ThreadFactoryBuilder().setPriority(Thread.MIN_PRIORITY).setDaemon(true).build());
 
   private ConcurrentTestHarness() {}
 

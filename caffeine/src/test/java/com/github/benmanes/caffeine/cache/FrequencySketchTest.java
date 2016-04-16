@@ -30,21 +30,21 @@ import org.testng.annotations.Test;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class FrequencySketchTest {
-  final int item = ThreadLocalRandom.current().nextInt();
+  final Integer item = ThreadLocalRandom.current().nextInt();
 
   @Test
   public void construc() {
-    FrequencySketch sketch = new FrequencySketch();
+    FrequencySketch<Integer> sketch = new FrequencySketch<>();
     assertThat(sketch.table, is(nullValue()));
   }
 
   @Test(dataProvider = "sketch", expectedExceptions = IllegalArgumentException.class)
-  public void ensureCapacity_negative(FrequencySketch sketch) {
+  public void ensureCapacity_negative(FrequencySketch<Integer> sketch) {
     sketch.ensureCapacity(-1);
   }
 
   @Test(dataProvider = "sketch")
-  public void ensureCapacity_smaller(FrequencySketch sketch) {
+  public void ensureCapacity_smaller(FrequencySketch<Integer> sketch) {
     int size = sketch.table.length;
     sketch.ensureCapacity(size / 2);
     assertThat(sketch.table.length, is(size));
@@ -53,7 +53,7 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch")
-  public void ensureCapacity_larger(FrequencySketch sketch) {
+  public void ensureCapacity_larger(FrequencySketch<Integer> sketch) {
     int size = sketch.table.length;
     sketch.ensureCapacity(size * 2);
     assertThat(sketch.table.length, is(size * 2));
@@ -62,13 +62,13 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch")
-  public void increment_once(FrequencySketch sketch) {
+  public void increment_once(FrequencySketch<Integer> sketch) {
     sketch.increment(item);
     assertThat(sketch.frequency(item), is(1));
   }
 
   @Test(dataProvider = "sketch")
-  public void increment_max(FrequencySketch sketch) {
+  public void increment_max(FrequencySketch<Integer> sketch) {
     for (int i = 0; i < 20; i++) {
       sketch.increment(item);
     }
@@ -76,7 +76,7 @@ public final class FrequencySketchTest {
   }
 
   @Test(dataProvider = "sketch")
-  public void increment_distinct(FrequencySketch sketch) {
+  public void increment_distinct(FrequencySketch<Integer> sketch) {
     sketch.increment(item);
     sketch.increment(item + 1);
     assertThat(sketch.frequency(item), is(1));
@@ -87,7 +87,7 @@ public final class FrequencySketchTest {
   @Test
   public void reset() {
     boolean reset = false;
-    FrequencySketch sketch = new FrequencySketch();
+    FrequencySketch<Integer> sketch = new FrequencySketch<>();
     sketch.ensureCapacity(64);
 
     for (int i = 1; i < 20 * sketch.table.length; i++) {
@@ -103,20 +103,20 @@ public final class FrequencySketchTest {
 
   @Test
   public void heavyHitters() {
-    FrequencySketch sketch = makeSketch(512);
+    FrequencySketch<Double> sketch = makeSketch(512);
     for (int i = 100; i < 100_000; i++) {
-      sketch.increment(Double.hashCode(i));
+      sketch.increment((double) i);
     }
     for (int i = 0; i < 10; i += 2) {
       for (int j = 0; j < i; j++) {
-        sketch.increment(Double.hashCode(i));
+        sketch.increment((double) i);
       }
     }
 
     // A perfect popularity count yields an array [0, 0, 2, 0, 4, 0, 6, 0, 8, 0]
     int[] popularity = new int[10];
     for (int i = 0; i < 10; i++) {
-      popularity[i] = sketch.frequency(Double.hashCode(i));
+      popularity[i] = sketch.frequency((double) i);
     }
     for (int i = 0; i < popularity.length; i++) {
       if ((i == 0) || (i == 1) || (i == 3) || (i == 5) || (i == 7) || (i == 9)) {
@@ -136,8 +136,8 @@ public final class FrequencySketchTest {
     return new Object[][] {{ makeSketch(512) }};
   }
 
-  private static FrequencySketch makeSketch(long maximumSize) {
-    FrequencySketch sketch = new FrequencySketch();
+  private static <E> FrequencySketch<E> makeSketch(long maximumSize) {
+    FrequencySketch<E> sketch = new FrequencySketch<>();
     sketch.ensureCapacity(maximumSize);
     ensureRandomSeed(sketch);
     return sketch;

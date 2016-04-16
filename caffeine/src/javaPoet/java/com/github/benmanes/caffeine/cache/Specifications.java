@@ -103,7 +103,8 @@ public final class Specifications {
   public static final TypeName WRITE_QUEUE = ParameterizedTypeName.get(
       WRITE_QUEUE_TYPE, ClassName.get(Runnable.class));
 
-  public static final TypeName FREQUENCY_SKETCH = ClassName.get(PACKAGE_NAME, "FrequencySketch");
+  public static final TypeName FREQUENCY_SKETCH = ParameterizedTypeName.get(
+      ClassName.get("com.github.benmanes.caffeine.cache", "FrequencySketch"), kTypeVar);
 
   private Specifications() {}
 
