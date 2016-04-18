@@ -4,7 +4,7 @@
  * The tests are forked from Guava commit e370dde.
  */
 dependencies {
-  compile project(":caffeine")
+  compile project(':caffeine')
   compile libraries.guava
 
   testCompile test_libraries.junit

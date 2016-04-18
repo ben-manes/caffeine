@@ -91,6 +91,14 @@ subprojects {
   artifacts {
     testArtifacts testJar
   }
+
+  if (project != project(':caffeine')) {
+    javadoc.options.linksOffline(
+      "http://static.javadoc.io/${group}/caffeine/${version}/",
+      "${project(':caffeine').buildDir}/docs/javadoc/",
+    )
+    javadoc.dependsOn(project(':caffeine').javadoc)
+  }
 }
 
 // Only report code coverage for projects that are distributed

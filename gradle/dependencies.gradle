@@ -46,7 +46,7 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '1.2',
     junit: '4.12',
-    mockito: '2.0.47-beta',
+    mockito: '2.0.48-beta',
     pax_exam: '4.8.0',
     testng: '6.9.11',
     truth: '0.24',
