@@ -29,7 +29,6 @@ import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.RemovalCause;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 
 /**
  * A utility for verifying that the {@link CacheWriter} mock was operated on correctly.
@@ -95,7 +94,7 @@ public final class CacheWriterVerifier {
   /** Runs the verification block iff the cache writer is enabled. */
   public static void verifyWriter(CacheContext context,
       BiConsumer<CacheWriterVerifier, CacheWriter<Integer, Integer>> consumer) {
-    boolean mayVerify = (context.implementation() == Implementation.Caffeine)
+    boolean mayVerify = context.isCaffeine()
         && context.isStrongKeys()
         && !context.isAsync();
     if (mayVerify) {

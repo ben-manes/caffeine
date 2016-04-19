@@ -43,7 +43,8 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  *   </ul>
  *   <li>When an entry is computed through the {@linkplain Cache#asMap asMap} the
  *       {@code loadSuccessCount} or {@code loadFailureCount} is incremented.
- *   <li>When an entry is evicted from the cache, {@code evictionCount} is incremented.
+ *   <li>When an entry is evicted from the cache, {@code evictionCount} is incremented and the
+ *       weight added to {@code evictionWeight}.
  *   <li>No stats are modified when a cache entry is invalidated or manually removed.
  *   <li>No stats are modified on a query to {@link Cache#getIfPresent}.
  *   <li>No stats are modified by non-computing operations invoked on the
@@ -58,17 +59,38 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
  */
 @Immutable
 public final class CacheStats {
+  private static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0, 0);
+
   private final long hitCount;
   private final long missCount;
   private final long loadSuccessCount;
   private final long loadFailureCount;
   private final long totalLoadTime;
   private final long evictionCount;
+  private final long evictionWeight;
+
+  /**
+   * Constructs a new {@code CacheStats} instance.
+   *
+   * @param hitCount the number of cache hits
+   * @param missCount the number of cache misses
+   * @param loadSuccessCount the number of successful cache loads
+   * @param loadFailureCount the number of failed cache loads
+   * @param totalLoadTime the total load time (success and failure)
+   * @param evictionCount the number of entries evicted from the cache
+   * @deprecated This constructor is scheduled for removal in version <tt>3.0.0</tt>.
+   */
+  @Deprecated
+  public CacheStats(@Nonnegative long hitCount, @Nonnegative long missCount,
+      @Nonnegative long loadSuccessCount, @Nonnegative long loadFailureCount,
+      @Nonnegative long totalLoadTime, @Nonnegative long evictionCount) {
+    this(hitCount, missCount, loadSuccessCount, loadFailureCount, totalLoadTime, evictionCount, 0L);
+  }
 
   /**
    * Constructs a new {@code CacheStats} instance.
    * <p>
-   * Six parameters of the same type in a row is a bad thing, but this class is not constructed
+   * Many parameters of the same type in a row is a bad thing, but this class is not constructed
    * by end users and is too fine-grained for a builder.
    *
    * @param hitCount the number of cache hits
@@ -77,12 +99,14 @@ public final class CacheStats {
    * @param loadFailureCount the number of failed cache loads
    * @param totalLoadTime the total load time (success and failure)
    * @param evictionCount the number of entries evicted from the cache
+   * @param evictionWeight the sum of weights of entries evicted from the cache
    */
   public CacheStats(@Nonnegative long hitCount, @Nonnegative long missCount,
       @Nonnegative long loadSuccessCount, @Nonnegative long loadFailureCount,
-      @Nonnegative long totalLoadTime, @Nonnegative long evictionCount) {
-    if ((hitCount < 0) || (missCount < 0) || (loadSuccessCount < 0)
-        || (loadFailureCount < 0) || (totalLoadTime < 0) || (evictionCount < 0)) {
+      @Nonnegative long totalLoadTime, @Nonnegative long evictionCount,
+      @Nonnegative long evictionWeight) {
+    if ((hitCount < 0) || (missCount < 0) || (loadSuccessCount < 0) || (loadFailureCount < 0)
+        || (totalLoadTime < 0) || (evictionCount < 0) || (evictionWeight < 0)) {
       throw new IllegalArgumentException();
     }
     this.hitCount = hitCount;
@@ -91,6 +115,16 @@ public final class CacheStats {
     this.loadFailureCount = loadFailureCount;
     this.totalLoadTime = totalLoadTime;
     this.evictionCount = evictionCount;
+    this.evictionWeight = evictionWeight;
+  }
+
+  /**
+   * Returns a statistics instance where cache events have been recorded.
+   *
+   * @return an empty statistics instance
+   */
+  public static CacheStats empty() {
+    return EMPTY_STATS;
   }
 
   /**
@@ -251,6 +285,17 @@ public final class CacheStats {
   }
 
   /**
+   * Returns the sum of weights of evicted entries. This total does not include manual
+   * {@linkplain Cache#invalidate invalidations}.
+   *
+   * @return the sum of weights of evicted entities
+   */
+  @Nonnegative
+  public long evictionWeight() {
+    return evictionWeight;
+  }
+
+  /**
    * Returns a new {@code CacheStats} representing the difference between this {@code CacheStats}
    * and {@code other}. Negative values, which aren't supported by {@code CacheStats} will be
    * rounded up to zero.
@@ -266,7 +311,8 @@ public final class CacheStats {
         Math.max(0L, loadSuccessCount - other.loadSuccessCount),
         Math.max(0L, loadFailureCount - other.loadFailureCount),
         Math.max(0L, totalLoadTime - other.totalLoadTime),
-        Math.max(0L, evictionCount - other.evictionCount));
+        Math.max(0L, evictionCount - other.evictionCount),
+        Math.max(0L, evictionWeight - other.evictionWeight));
   }
 
   /**
@@ -284,13 +330,14 @@ public final class CacheStats {
         loadSuccessCount + other.loadSuccessCount,
         loadFailureCount + other.loadFailureCount,
         totalLoadTime + other.totalLoadTime,
-        evictionCount + other.evictionCount);
+        evictionCount + other.evictionCount,
+        evictionWeight + other.evictionWeight);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(hitCount, missCount, loadSuccessCount,
-        loadFailureCount, totalLoadTime, evictionCount);
+        loadFailureCount, totalLoadTime, evictionCount, evictionWeight);
   }
 
   @Override
@@ -306,18 +353,20 @@ public final class CacheStats {
         && loadSuccessCount == other.loadSuccessCount
         && loadFailureCount == other.loadFailureCount
         && totalLoadTime == other.totalLoadTime
-        && evictionCount == other.evictionCount;
+        && evictionCount == other.evictionCount
+        && evictionWeight == other.evictionWeight;
   }
 
   @Override
   public String toString() {
     return getClass().getSimpleName() + '{'
-        + "hitCount=" + hitCount + ','
-        + "missCount=" + missCount + ','
-        + "loadSuccessCount=" + loadSuccessCount + ','
-        + "loadFailureCount=" + loadFailureCount + ','
-        + "totalLoadTime=" + totalLoadTime + ','
-        + "evictionCount=" + evictionCount
+        + "hitCount=" + hitCount + ", "
+        + "missCount=" + missCount + ", "
+        + "loadSuccessCount=" + loadSuccessCount + ", "
+        + "loadFailureCount=" + loadFailureCount + ", "
+        + "totalLoadTime=" + totalLoadTime + ", "
+        + "evictionCount=" + evictionCount + ", "
+        + "evictionWeight=" + evictionWeight
         + '}';
   }
 }

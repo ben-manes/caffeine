@@ -167,6 +167,7 @@ final class WriteBuffer<E> extends ConsumerRef<E> {
     return result;
   }
 
+  @SuppressWarnings("PMD.ConfusingTernary")
   public E poll() {
     E[] buffer = consumerBuffer;
     long index = consumerIndex;
@@ -257,6 +258,7 @@ final class WriteBuffer<E> extends ConsumerRef<E> {
     return offsetInNew;
   }
 
+  @SuppressWarnings("unchecked")
   public static <E> E lvElement(E[] buffer, long offset) {
     return (E) UnsafeAccess.UNSAFE.getObjectVolatile(buffer, offset);
   }

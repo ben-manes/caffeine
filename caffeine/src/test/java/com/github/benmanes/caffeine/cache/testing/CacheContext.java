@@ -365,6 +365,10 @@ public final class CacheContext {
     return implementation;
   }
 
+  public boolean isCaffeine() {
+    return (implementation == Implementation.Caffeine);
+  }
+
   public boolean isGuava() {
     return (implementation == Implementation.Guava);
   }

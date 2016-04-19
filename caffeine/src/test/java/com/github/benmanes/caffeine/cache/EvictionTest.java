@@ -169,6 +169,9 @@ public final class EvictionTest {
       verify(writer).delete(5, value5, RemovalCause.SIZE);
       verifier.deletions(2);
     });
+    if (cache.policy().isRecordingStats()) {
+      assertThat(cache.stats().evictionWeight(), is(12L));
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -190,6 +193,9 @@ public final class EvictionTest {
     });
     assertThat(context.consumedNotifications(), is(equalTo(ImmutableList.of(
         new RemovalNotification<>(20, 20, RemovalCause.SIZE)))));
+    if (context.isCaffeine() && cache.policy().isRecordingStats()) {
+      assertThat(cache.stats().evictionWeight(), is(20L));
+    }
   }
 
   @Test(dataProvider = "caches")

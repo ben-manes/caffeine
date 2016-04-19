@@ -73,8 +73,24 @@ public interface StatsCounter {
    * Records the eviction of an entry from the cache. This should only been called when an entry is
    * evicted due to the cache's eviction strategy, and not as a result of manual
    * {@link Cache#invalidate invalidations}.
+   *
+   * @deprecated Use {@link StatsCounter#recordEviction(int)} instead. This method is scheduled for
+   *     removal in version <tt>3.0.0</tt>.
    */
+  @Deprecated
   void recordEviction();
+
+  /**
+   * Records the eviction of an entry from the cache. This should only been called when an entry is
+   * evicted due to the cache's eviction strategy, and not as a result of manual
+   * {@link Cache#invalidate invalidations}.
+   *
+   * @param weight the weight of the evicted entry
+   */
+  default void recordEviction(int weight) {
+    // This method will be abstract in version 3.0.0
+    recordEviction();
+  }
 
   /**
    * Returns a snapshot of this counter's values. Note that this may be an inconsistent view, as it

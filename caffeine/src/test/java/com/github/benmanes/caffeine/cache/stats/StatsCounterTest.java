@@ -40,8 +40,8 @@ public final class StatsCounterTest {
     counter.recordMisses(1);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0)));
-    assertThat(counter.toString(), is(new CacheStats(0, 0, 0, 0, 0, 0).toString()));
+    assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0, 0)));
+    assertThat(counter.toString(), is(new CacheStats(0, 0, 0, 0, 0, 0, 0).toString()));
 
     for (DisabledStatsCounter type : DisabledStatsCounter.values()) {
       assertThat(DisabledStatsCounter.valueOf(type.name()), is(counter));
@@ -53,15 +53,16 @@ public final class StatsCounterTest {
     ConcurrentStatsCounter counter = new ConcurrentStatsCounter();
     counter.recordHits(1);
     counter.recordMisses(1);
-    counter.recordEviction();
+    counter.recordEviction(10);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    assertThat(counter.snapshot(), is(new CacheStats(1, 1, 1, 1, 2, 1)));
-    assertThat(counter.toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
-    assertThat(counter.snapshot().toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
+    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 1, 10);
+    assertThat(counter.snapshot(), is(expected));
+    assertThat(counter.toString(), is(expected.toString()));
+    assertThat(counter.snapshot().toString(), is(expected.toString()));
 
     counter.incrementBy(counter);
-    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 2)));
+    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 2, 20)));
   }
 
   @Test
@@ -70,11 +71,11 @@ public final class StatsCounterTest {
     ConcurrentTestHarness.timeTasks(5, () -> {
       counter.recordHits(1);
       counter.recordMisses(1);
-      counter.recordEviction();
+      counter.recordEviction(10);
       counter.recordLoadSuccess(1);
       counter.recordLoadFailure(1);
     });
-    assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 5)));
+    assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 5, 50)));
   }
 
   @Test
@@ -82,35 +83,36 @@ public final class StatsCounterTest {
     StatsCounter counter = StatsCounter.guardedStatsCounter(new ConcurrentStatsCounter());
     counter.recordHits(1);
     counter.recordMisses(1);
-    counter.recordEviction();
+    counter.recordEviction(10);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    assertThat(counter.snapshot(), is(new CacheStats(1, 1, 1, 1, 2, 1)));
-    assertThat(counter.toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
-    assertThat(counter.snapshot().toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
+    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 1, 10);
+    assertThat(counter.snapshot(), is(expected));
+    assertThat(counter.toString(), is(expected.toString()));
+    assertThat(counter.snapshot().toString(), is(expected.toString()));
   }
 
   @Test
   public void guarded_exception() {
     StatsCounter statsCounter = Mockito.mock(StatsCounter.class);
     when(statsCounter.snapshot()).thenThrow(new NullPointerException());
-    doThrow(NullPointerException.class).when(statsCounter).recordEviction();
     doThrow(NullPointerException.class).when(statsCounter).recordHits(anyInt());
     doThrow(NullPointerException.class).when(statsCounter).recordMisses(anyInt());
+    doThrow(NullPointerException.class).when(statsCounter).recordEviction(anyInt());
     doThrow(NullPointerException.class).when(statsCounter).recordLoadSuccess(anyLong());
     doThrow(NullPointerException.class).when(statsCounter).recordLoadFailure(anyLong());
 
     StatsCounter guarded = StatsCounter.guardedStatsCounter(statsCounter);
     guarded.recordHits(1);
     guarded.recordMisses(1);
-    guarded.recordEviction();
+    guarded.recordEviction(10);
     guarded.recordLoadSuccess(1);
     guarded.recordLoadFailure(1);
-    assertThat(guarded.snapshot(), is(DisabledStatsCounter.EMPTY_STATS));
+    assertThat(guarded.snapshot(), is(CacheStats.empty()));
 
     verify(statsCounter).recordHits(1);
     verify(statsCounter).recordMisses(1);
-    verify(statsCounter).recordEviction();
+    verify(statsCounter).recordEviction(10);
     verify(statsCounter).recordLoadSuccess(1);
     verify(statsCounter).recordLoadFailure(1);
   }

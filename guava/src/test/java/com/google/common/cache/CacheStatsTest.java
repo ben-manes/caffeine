@@ -16,9 +16,9 @@
 
 package com.google.common.cache;
 
-import junit.framework.TestCase;
-
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+
+import junit.framework.TestCase;
 
 /**
  * Unit test for {@link CacheStats}.
@@ -28,7 +28,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 public class CacheStatsTest extends TestCase {
 
   public void testEmpty() {
-    CacheStats stats = new CacheStats(0, 0, 0, 0, 0, 0);
+    CacheStats stats = new CacheStats(0, 0, 0, 0, 0, 0, 0);
     assertEquals(0, stats.requestCount());
     assertEquals(0, stats.hitCount());
     assertEquals(1.0, stats.hitRate());
@@ -44,7 +44,7 @@ public class CacheStatsTest extends TestCase {
   }
 
   public void testSingle() {
-    CacheStats stats = new CacheStats(11, 13, 17, 19, 23, 27);
+    CacheStats stats = new CacheStats(11, 13, 17, 19, 23, 27, 54);
     assertEquals(24, stats.requestCount());
     assertEquals(11, stats.hitCount());
     assertEquals(11.0/24, stats.hitRate());
@@ -57,11 +57,12 @@ public class CacheStatsTest extends TestCase {
     assertEquals(23, stats.totalLoadTime());
     assertEquals(23.0/(17 + 19), stats.averageLoadPenalty());
     assertEquals(27, stats.evictionCount());
+    assertEquals(54, stats.evictionWeight());
   }
 
   public void testMinus() {
-    CacheStats one = new CacheStats(11, 13, 17, 19, 23, 27);
-    CacheStats two = new CacheStats(53, 47, 43, 41, 37, 31);
+    CacheStats one = new CacheStats(11, 13, 17, 19, 23, 27, 54);
+    CacheStats two = new CacheStats(53, 47, 43, 41, 37, 31, 62);
 
     CacheStats diff = two.minus(one);
     assertEquals(76, diff.requestCount());
@@ -76,13 +77,14 @@ public class CacheStatsTest extends TestCase {
     assertEquals(14, diff.totalLoadTime());
     assertEquals(14.0/(26 + 22), diff.averageLoadPenalty());
     assertEquals(4, diff.evictionCount());
+    assertEquals(8, diff.evictionWeight());
 
-    assertEquals(new CacheStats(0, 0, 0, 0, 0, 0), one.minus(two));
+    assertEquals(new CacheStats(0, 0, 0, 0, 0, 0, 0), one.minus(two));
   }
 
   public void testPlus() {
-    CacheStats one = new CacheStats(11, 13, 15, 13, 11, 9);
-    CacheStats two = new CacheStats(53, 47, 41, 39, 37, 35);
+    CacheStats one = new CacheStats(11, 13, 15, 13, 11, 9, 18);
+    CacheStats two = new CacheStats(53, 47, 41, 39, 37, 35, 70);
 
     CacheStats sum = two.plus(one);
     assertEquals(124, sum.requestCount());
@@ -97,6 +99,7 @@ public class CacheStatsTest extends TestCase {
     assertEquals(48, sum.totalLoadTime());
     assertEquals(48.0/(56 + 52), sum.averageLoadPenalty());
     assertEquals(44, sum.evictionCount());
+    assertEquals(88, sum.evictionWeight());
 
     assertEquals(sum, one.plus(two));
   }

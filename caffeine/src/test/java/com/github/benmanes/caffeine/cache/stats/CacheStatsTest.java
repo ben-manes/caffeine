@@ -31,58 +31,59 @@ public final class CacheStatsTest {
 
   @Test(dataProvider = "badArgs", expectedExceptions = IllegalArgumentException.class)
   public void invalid(int hitCount, int missCount, int loadSuccessCount, int loadFailureCount,
-      int totalLoadTime, int evictionCount) {
+      int totalLoadTime, int evictionCount, int evictionWeight) {
     new CacheStats(hitCount, missCount, loadSuccessCount,
-        loadFailureCount, totalLoadTime, evictionCount);
+        loadFailureCount, totalLoadTime, evictionCount, evictionWeight);
   }
 
   @Test
   public void empty() {
-    CacheStats stats = new CacheStats(0, 0, 0, 0, 0, 0);
-    checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0);
+    CacheStats stats = new CacheStats(0, 0, 0, 0, 0, 0, 0);
+    checkStats(stats, 0, 0, 1.0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0, 0);
 
-    assertThat(stats, is(equalTo(stats)));
+    assertThat(stats, is(equalTo(CacheStats.empty())));
     assertThat(stats, is(not(equalTo(null))));
     assertThat(stats, is(not(equalTo(new Object()))));
-    assertThat(stats, is(equalTo(new CacheStats(0, 0, 0, 0, 0, 0))));
-    assertThat(stats.hashCode(), is(new CacheStats(0, 0, 0, 0, 0, 0).hashCode()));
-    assertThat(stats, hasToString(new CacheStats(0, 0, 0, 0, 0, 0).toString()));
+    assertThat(stats, is(equalTo(CacheStats.empty())));
+    assertThat(stats.hashCode(), is(CacheStats.empty().hashCode()));
+    assertThat(stats, hasToString(CacheStats.empty().toString()));
   }
 
   @Test
   public void populated() {
-    CacheStats stats = new CacheStats(11, 13, 17, 19, 23, 27);
+    CacheStats stats = new CacheStats(11, 13, 17, 19, 23, 27, 54);
     checkStats(stats, 24, 11, 11.0/24, 13, 13.0/24,
-        17, 19, 19.0/36, 17 + 19, 23, 23.0/(17 + 19), 27);
+        17, 19, 19.0/36, 17 + 19, 23, 23.0/(17 + 19), 27, 54);
 
     assertThat(stats, is(equalTo(stats)));
-    assertThat(stats, is(not(equalTo(new CacheStats(0, 0, 0, 0, 0, 0)))));
-    assertThat(stats.hashCode(), is(not(new CacheStats(0, 0, 0, 0, 0, 0).hashCode())));
-    assertThat(stats, hasToString(not(new CacheStats(0, 0, 0, 0, 0, 0).toString())));
+    assertThat(stats, is(not(equalTo(CacheStats.empty()))));
+    assertThat(stats.hashCode(), is(not(CacheStats.empty().hashCode())));
+    assertThat(stats, hasToString(not(CacheStats.empty().toString())));
 
-    assertThat(stats, is(equalTo(new CacheStats(11, 13, 17, 19, 23, 27))));
-    assertThat(stats.hashCode(), is(new CacheStats(11, 13, 17, 19, 23, 27).hashCode()));
-    assertThat(stats, hasToString(new CacheStats(11, 13, 17, 19, 23, 27).toString()));
+    CacheStats expected = new CacheStats(11, 13, 17, 19, 23, 27, 54);
+    assertThat(stats, is(equalTo(expected)));
+    assertThat(stats.hashCode(), is(expected.hashCode()));
+    assertThat(stats, hasToString(expected.toString()));
   }
 
   @Test
   public void minus() {
-    CacheStats one = new CacheStats(11, 13, 17, 19, 23, 27);
-    CacheStats two = new CacheStats(53, 47, 43, 41, 37, 31);
+    CacheStats one = new CacheStats(11, 13, 17, 19, 23, 27, 54);
+    CacheStats two = new CacheStats(53, 47, 43, 41, 37, 31, 62);
 
     CacheStats diff = two.minus(one);
     checkStats(diff, 76, 42, 42.0 / 76, 34, 34.0 / 76,
-        26, 22, 22.0 / 48, 26 + 22, 14, 14.0 / (26 + 22), 4);
-    assertThat(one.minus(two), is(new CacheStats(0, 0, 0, 0, 0, 0)));
+        26, 22, 22.0 / 48, 26 + 22, 14, 14.0 / (26 + 22), 4, 8);
+    assertThat(one.minus(two), is(CacheStats.empty()));
   }
 
   public void plus() {
-    CacheStats one = new CacheStats(11, 13, 15, 13, 11, 9);
-    CacheStats two = new CacheStats(53, 47, 41, 39, 37, 35);
+    CacheStats one = new CacheStats(11, 13, 15, 13, 11, 9, 18);
+    CacheStats two = new CacheStats(53, 47, 41, 39, 37, 35, 70);
 
     CacheStats sum = two.plus(one);
     checkStats(sum, 124, 64, 64.0 / 124, 60, 60.0 / 124,
-        56, 52, 52.0 / 108, 56 + 52, 48, 48.0 / (56 + 52), 44);
+        56, 52, 52.0 / 108, 56 + 52, 48, 48.0 / (56 + 52), 44, 88);
 
     assertThat(sum, is(one.plus(two)));
   }
@@ -90,7 +91,7 @@ public final class CacheStatsTest {
   private static void checkStats(CacheStats stats, long requestCount, long hitCount,
       double hitRate, long missCount, double missRate, long loadSuccessCount,
       long loadFailureCount, double loadExceptionRate, long loadCount, long totalLoadTime,
-      double averageLoadPenalty, long evictionCount) {
+      double averageLoadPenalty, long evictionCount, long evictionWeight) {
     assertThat(stats.requestCount(), is(requestCount));
     assertThat(stats.hitCount(), is(hitCount));
     assertThat(stats.hitRate(), is(hitRate));
@@ -102,17 +103,19 @@ public final class CacheStatsTest {
     assertThat(stats.totalLoadTime(), is(totalLoadTime));
     assertThat(stats.averageLoadPenalty(), is(averageLoadPenalty));
     assertThat(stats.evictionCount(), is(evictionCount));
+    assertThat(stats.evictionWeight(), is(evictionWeight));
   }
 
   @DataProvider(name = "badArgs")
   public Object[][] providesBadArgs() {
     return new Object[][] {
-        { -1,  0,  0,  0,  0,  0, },
-        {  0, -1,  0,  0,  0,  0, },
-        {  0,  0, -1,  0,  0,  0, },
-        {  0,  0,  0, -1,  0,  0, },
-        {  0,  0,  0,  0, -1,  0, },
-        {  0,  0,  0,  0,  0, -1, },
+        { -1,  0,  0,  0,  0,  0,  0, },
+        {  0, -1,  0,  0,  0,  0,  0, },
+        {  0,  0, -1,  0,  0,  0,  0, },
+        {  0,  0,  0, -1,  0,  0,  0, },
+        {  0,  0,  0,  0, -1,  0,  0, },
+        {  0,  0,  0,  0,  0, -1,  0, },
+        {  0,  0,  0,  0,  0,  0, -1, },
     };
   }
 }

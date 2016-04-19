@@ -218,7 +218,7 @@ public final class GuavaCacheFromContext {
     public CacheStats stats() {
       com.google.common.cache.CacheStats stats = statsCounter.snapshot().plus(cache.stats());
       return new CacheStats(stats.hitCount(), stats.missCount(), stats.loadSuccessCount(),
-          stats.loadExceptionCount(), stats.totalLoadTime(), stats.evictionCount());
+          stats.loadExceptionCount(), stats.totalLoadTime(), stats.evictionCount(), 0L);
     }
 
     @Override

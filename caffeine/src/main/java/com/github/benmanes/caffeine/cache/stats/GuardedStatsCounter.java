@@ -73,9 +73,19 @@ final class GuardedStatsCounter implements StatsCounter {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public void recordEviction() {
     try {
-      delegate.recordEviction();
+      delegate.recordEviction(0);
+    } catch (Throwable t) {
+      logger.log(Level.WARNING, "Exception thrown by stats counter", t);
+    }
+  }
+
+  @Override
+  public void recordEviction(int weight) {
+    try {
+      delegate.recordEviction(weight);
     } catch (Throwable t) {
       logger.log(Level.WARNING, "Exception thrown by stats counter", t);
     }
@@ -87,7 +97,7 @@ final class GuardedStatsCounter implements StatsCounter {
       return delegate.snapshot();
     } catch (Throwable t) {
       logger.log(Level.WARNING, "Exception thrown by stats counter", t);
-      return DisabledStatsCounter.EMPTY_STATS;
+      return CacheStats.empty();
     }
   }
 

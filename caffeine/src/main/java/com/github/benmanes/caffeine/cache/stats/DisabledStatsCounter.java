@@ -23,8 +23,6 @@ package com.github.benmanes.caffeine.cache.stats;
 enum DisabledStatsCounter implements StatsCounter {
   INSTANCE;
 
-  static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0);
-
   @Override
   public void recordHits(int count) {}
 
@@ -42,7 +40,7 @@ enum DisabledStatsCounter implements StatsCounter {
 
   @Override
   public CacheStats snapshot() {
-    return EMPTY_STATS;
+    return CacheStats.empty();
   }
 
   @Override

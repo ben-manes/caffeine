@@ -34,6 +34,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   private final LongAdder loadFailureCount;
   private final LongAdder totalLoadTime;
   private final LongAdder evictionCount;
+  private final LongAdder evictionWeight;
 
   /**
    * Constructs an instance with all counts initialized to zero.
@@ -45,6 +46,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
     loadFailureCount = new LongAdder();
     totalLoadTime = new LongAdder();
     evictionCount = new LongAdder();
+    evictionWeight = new LongAdder();
   }
 
   @Override
@@ -75,6 +77,12 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   }
 
   @Override
+  public void recordEviction(int weight) {
+    evictionCount.increment();
+    evictionWeight.add(weight);
+  }
+
+  @Override
   public CacheStats snapshot() {
     return new CacheStats(
         hitCount.sum(),
@@ -82,7 +90,8 @@ public final class ConcurrentStatsCounter implements StatsCounter {
         loadSuccessCount.sum(),
         loadFailureCount.sum(),
         totalLoadTime.sum(),
-        evictionCount.sum());
+        evictionCount.sum(),
+        evictionWeight.sum());
   }
 
   /**
@@ -98,6 +107,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
     loadFailureCount.add(otherStats.loadFailureCount());
     totalLoadTime.add(otherStats.totalLoadTime());
     evictionCount.add(otherStats.evictionCount());
+    evictionWeight.add(otherStats.evictionWeight());
   }
 
   @Override
