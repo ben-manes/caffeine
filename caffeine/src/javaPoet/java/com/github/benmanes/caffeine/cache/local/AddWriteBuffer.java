@@ -25,7 +25,7 @@ import com.squareup.javapoet.MethodSpec;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddWriteQueue extends LocalCacheRule {
+public final class AddWriteBuffer extends LocalCacheRule {
 
   @Override
   protected boolean applies() {
@@ -38,12 +38,13 @@ public final class AddWriteQueue extends LocalCacheRule {
 
   @Override
   protected void execute() {
-    context.constructor.addStatement("this.writeQueue = $T.optimistic()", WRITE_QUEUE_TYPE);
+    context.constructor.addStatement(
+        "this.writeBuffer = new $T<>(WRITE_BUFFER_MIN, WRITE_BUFFER_MAX)", WRITE_QUEUE_TYPE);
     context.cache.addField(FieldSpec.builder(
-        WRITE_QUEUE, "writeQueue", privateFinalModifiers).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("writeQueue")
+        WRITE_QUEUE, "writeBuffer", privateFinalModifiers).build());
+    context.cache.addMethod(MethodSpec.methodBuilder("writeBuffer")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("return writeQueue")
+        .addStatement("return writeBuffer")
         .returns(WRITE_QUEUE)
         .build());
     context.cache.addMethod(MethodSpec.methodBuilder("buffersWrites")

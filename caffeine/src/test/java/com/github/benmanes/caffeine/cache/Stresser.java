@@ -24,7 +24,6 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -49,12 +48,11 @@ public final class Stresser {
 
   private final BoundedLocalCache<Integer, Integer> local;
   private final Cache<Integer, Integer> cache;
-  private final LongAdder evictions;
   private final Integer[] ints;
 
   private final int maximum;
   private final Stopwatch stopwatch;
-  private final boolean reads = true;
+  private final boolean reads = false;
 
   public Stresser() {
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
@@ -64,10 +62,9 @@ public final class Stresser {
     Executors.newSingleThreadScheduledExecutor(threadFactory)
         .scheduleAtFixedRate(this::status, STATUS_INTERVAL, STATUS_INTERVAL, SECONDS);
     maximum = reads ? TOTAL_KEYS : WRITE_MAX_SIZE;
-    evictions = new LongAdder();
     cache = Caffeine.newBuilder()
-        .removalListener((k, v, c) -> evictions.increment())
         .maximumSize(maximum)
+        .recordStats()
         .build();
     local = (BoundedLocalCache<Integer, Integer>) cache.asMap();
     ints = new Integer[TOTAL_KEYS];
@@ -89,7 +86,7 @@ public final class Stresser {
           cache.getIfPresent(key);
         } else {
           cache.put(key, key);
-          Thread.yield();
+          //Thread.yield();
         }
       }
     });
@@ -97,14 +94,14 @@ public final class Stresser {
 
   private void status() {
     local.evictionLock.lock();
-    int pendingWrites = local.writeQueue().size();
+    int pendingWrites = local.writeBuffer().size();
     local.evictionLock.unlock();
 
     LocalTime elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(TimeUnit.SECONDS));
     System.out.printf("---------- %s ----------%n", elapsedTime);
     System.out.printf("Pending reads: %,d; writes: %,d%n", local.readBuffer.size(), pendingWrites);
     System.out.printf("Drain status = %s%n", STATUS[local.drainStatus]);
-    System.out.printf("Evictions = %,d%n", evictions.intValue());
+    System.out.printf("Evictions = %,d%n", cache.stats().evictionCount());
     System.out.printf("Size = %,d (max: %,d)%n", local.data.mappingCount(), maximum);
     System.out.printf("Lock = [%s%n", StringUtils.substringAfter(
         local.evictionLock.toString(), "["));

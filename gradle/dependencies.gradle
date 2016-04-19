@@ -58,7 +58,7 @@ ext {
     ehcache3: '3.0.0',
     high_scale_lib: '1.0.6',
     infinispan: '9.0.0.Alpha1',
-    jackrabbit: '1.5.0',
+    jackrabbit: '1.5.1',
     jamm: '0.3.1',
     java_object_layout: '0.5',
     koloboke: '0.6.8',

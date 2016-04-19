@@ -83,7 +83,8 @@ public final class Specifications {
   public static final TypeName REMOVAL_LISTENER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "RemovalListener"), kTypeVar, vTypeVar);
 
-  public static final TypeName STATS_COUNTER = ClassName.get(PACKAGE_NAME + ".stats", "StatsCounter");
+  public static final TypeName STATS_COUNTER =
+      ClassName.get(PACKAGE_NAME + ".stats", "StatsCounter");
 
   public static final TypeName TICKER = ClassName.get(PACKAGE_NAME, "Ticker");
 
@@ -98,13 +99,12 @@ public final class Specifications {
   public static final TypeName WRITE_ORDER_DEQUE = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "WriteOrderDeque"), NODE);
 
-  public static final ClassName WRITE_QUEUE_TYPE =
-      ClassName.get("com.github.benmanes.caffeine", "SingleConsumerQueue");
+  public static final ClassName WRITE_QUEUE_TYPE = ClassName.get(PACKAGE_NAME, "WriteBuffer");
   public static final TypeName WRITE_QUEUE = ParameterizedTypeName.get(
       WRITE_QUEUE_TYPE, ClassName.get(Runnable.class));
 
   public static final TypeName FREQUENCY_SKETCH = ParameterizedTypeName.get(
-      ClassName.get("com.github.benmanes.caffeine.cache", "FrequencySketch"), kTypeVar);
+      ClassName.get(PACKAGE_NAME, "FrequencySketch"), kTypeVar);
 
   private Specifications() {}
 

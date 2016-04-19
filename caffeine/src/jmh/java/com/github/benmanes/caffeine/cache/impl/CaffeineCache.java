@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.impl;
 
 import java.util.Map;
-import java.util.concurrent.Executors;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -31,7 +30,6 @@ public final class CaffeineCache<K, V> implements BasicCache<K, V> {
 
   public CaffeineCache(int maximumSize) {
     cache = Caffeine.newBuilder()
-        .executor(Executors.newWorkStealingPool(1))
         .initialCapacity(maximumSize)
         .maximumSize(maximumSize)
         .build();

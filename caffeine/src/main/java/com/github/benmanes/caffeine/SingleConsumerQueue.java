@@ -531,7 +531,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
 final class SCQHeader {
   abstract static class PadHead<E> extends AbstractQueue<E> {
     long p00, p01, p02, p03, p04, p05, p06, p07;
-    long p10, p11, p12, p13, p14, p15, p16, p17;
+    long p10, p11, p12, p13, p14, p15, p16;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the head node. */
@@ -541,7 +541,7 @@ final class SCQHeader {
 
   abstract static class PadHeadAndTail<E> extends HeadRef<E> {
     long p20, p21, p22, p23, p24, p25, p26, p27;
-    long p30, p31, p32, p33, p34, p35, p36, p37;
+    long p30, p31, p32, p33, p34, p35, p36;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the tail node. */

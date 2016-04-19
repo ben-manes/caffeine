@@ -38,7 +38,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.Queue;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.CompletableFuture;
@@ -131,6 +130,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
 
+  /** The number of CPUs */
+  static final int NCPU = Runtime.getRuntime().availableProcessors();
+  /** The initial capacity of the write buffer. */
+  static final int WRITE_BUFFER_MIN = 16;
+  /** The maximum capacity of the write buffer. */
+  static final int WRITE_BUFFER_MAX = 128 * ceilingNextPowerOfTwo(NCPU);
+  /** The number of attempts to insert into the write buffer before yielding. */
+  static final int WRITE_BUFFER_RETRIES = 100;
   /** The maximum weighted capacity of the map. */
   static final long MAXIMUM_CAPACITY = Long.MAX_VALUE - Integer.MAX_VALUE;
   /** The percent of the maximum weighted capacity dedicated to the main space. */
@@ -184,6 +191,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
+  static int ceilingNextPowerOfTwo(int x) {
+    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
+    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
+  }
+
   /* ---------------- Shared -------------- */
 
   /** Returns if the node's value is currently being computed, asynchronously. */
@@ -216,7 +228,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return false;
   }
 
-  protected Queue<Runnable> writeQueue() {
+  protected WriteBuffer<Runnable> writeBuffer() {
     throw new UnsupportedOperationException();
   }
 
@@ -850,7 +862,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       node.setWriteTime(now);
     }
     if (buffersWrites()) {
-      writeQueue().add(task);
+      boolean submitted = false;
+      for (;;) {
+        for (int i = 0; i < WRITE_BUFFER_RETRIES; i++) {
+          submitted = writeBuffer().offer(task);
+          if (submitted) {
+            break;
+          }
+          scheduleDrainBuffers();
+        }
+        if (submitted) {
+          break;
+        } else {
+          Thread.yield();
+        }
+      }
     }
     scheduleAfterWrite();
   }
@@ -1058,8 +1084,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (!buffersWrites()) {
       return;
     }
-    Runnable task;
-    while ((task = writeQueue().poll()) != null) {
+    for (int i = 0; i < WRITE_BUFFER_MAX; i++) {
+      Runnable task = writeBuffer().poll();
+      if (task == null) {
+        break;
+      }
       task.run();
     }
   }
@@ -1234,7 +1263,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     try {
       // Apply all pending writes
       Runnable task;
-      while (buffersWrites() && (task = writeQueue().poll()) != null) {
+      while (buffersWrites() && (task = writeBuffer().poll()) != null) {
         task.run();
       }
 
@@ -3091,7 +3120,7 @@ final class BLCHeader {
 
   static abstract class PadDrainStatus<K, V> extends AbstractMap<K, V> {
     long p00, p01, p02, p03, p04, p05, p06, p07;
-    long p10, p11, p12, p13, p14, p15, p16, p17;
+    long p10, p11, p12, p13, p14, p15, p16;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the drain status. */

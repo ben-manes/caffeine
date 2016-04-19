@@ -25,7 +25,6 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -345,7 +344,7 @@ public final class BoundedLocalCacheTest {
     localCache.afterWrite(dummy, () -> ran[0] = true, 0);
     assertThat(ran[0], is(true));
 
-    assertThat(localCache.writeQueue(), hasSize(0));
+    assertThat(localCache.writeBuffer().size(), is(0));
   }
 
   @Test(dataProvider = "caches")
@@ -399,7 +398,7 @@ public final class BoundedLocalCacheTest {
 
     int size = localCache.accessOrderEdenDeque().size()
         + localCache.accessOrderProbationDeque().size();
-    assertThat(localCache.writeQueue(), hasSize(0));
+    assertThat(localCache.writeBuffer().size(), is(0));
     assertThat(size, is(1));
   }
 
