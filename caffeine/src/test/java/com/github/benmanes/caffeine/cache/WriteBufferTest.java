@@ -32,11 +32,11 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class WriteBufferTest {
-  private static final int PRODUCE = 10_000;
   private static final int NUM_PRODUCERS = 10;
+  private static final int PRODUCE = 100;
 
   private static final int POPULATED_SIZE = 10;
-  private static final int FULL_SIZE = 16;
+  private static final int FULL_SIZE = 32;
 
   /* ---------------- Size -------------- */
 
@@ -157,26 +157,26 @@ public final class WriteBufferTest {
     assertThat(buffer.size(), is(0));
   }
 
-  /* ---------------- buffer providers -------------- */
+  /* ---------------- Providers -------------- */
 
   @DataProvider(name = "empty")
   public Object[][] providesEmpty() {
-    return new Object[][] {{ makePopulated(0, FULL_SIZE) }};
+    return new Object[][] {{ makePopulated(0) }};
   }
 
   @DataProvider(name = "populated")
   public Object[][] providesPopulated() {
-    return new Object[][] {{ makePopulated(POPULATED_SIZE, FULL_SIZE) }};
+    return new Object[][] {{ makePopulated(POPULATED_SIZE) }};
   }
 
   @DataProvider(name = "full")
   public Object[][] providesFull() {
-    return new Object[][] {{ makePopulated(FULL_SIZE, FULL_SIZE) }};
+    return new Object[][] {{ makePopulated(FULL_SIZE) }};
   }
 
-  static WriteBuffer<Integer> makePopulated(int size, int maximumSize) {
-    WriteBuffer<Integer> buffer = new WriteBuffer<>(4, maximumSize);
-    for (int i = 0; i < size; i++) {
+  static WriteBuffer<Integer> makePopulated(int items) {
+    WriteBuffer<Integer> buffer = new WriteBuffer<>(4, FULL_SIZE);
+    for (int i = 0; i < items; i++) {
       buffer.offer(i);
     }
     return buffer;

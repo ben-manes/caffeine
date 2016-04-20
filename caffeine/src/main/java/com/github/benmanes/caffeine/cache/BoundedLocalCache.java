@@ -133,7 +133,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** The number of CPUs */
   static final int NCPU = Runtime.getRuntime().availableProcessors();
   /** The initial capacity of the write buffer. */
-  static final int WRITE_BUFFER_MIN = 16;
+  static final int WRITE_BUFFER_MIN = 4;
   /** The maximum capacity of the write buffer. */
   static final int WRITE_BUFFER_MAX = 128 * ceilingNextPowerOfTwo(NCPU);
   /** The number of attempts to insert into the write buffer before yielding. */
