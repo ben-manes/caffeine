@@ -36,6 +36,7 @@ import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.cache.CacheStats;
 import com.google.common.collect.ForwardingCollection;
 import com.google.common.collect.ForwardingConcurrentMap;
+import com.google.common.collect.ForwardingIterator;
 import com.google.common.collect.ForwardingMapEntry;
 import com.google.common.collect.ForwardingSet;
 import com.google.common.collect.ImmutableMap;
@@ -199,17 +200,23 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
           }
           @Override
           public Iterator<Entry<K, V>> iterator() {
-            return delegate().stream().map(entry -> {
-              Entry<K, V> e = new ForwardingMapEntry<K, V>() {
-                @Override public V setValue(V value) {
-                  throw new UnsupportedOperationException();
-                }
-                @Override protected Entry<K, V> delegate() {
-                  return entry;
-                }
-              };
-              return e;
-            }).iterator();
+            Iterator<Entry<K, V>> iterator = delegate().iterator();
+            return new ForwardingIterator<Entry<K, V>>() {
+              @Override public Entry<K, V> next() {
+                Entry<K, V> entry = delegate().next();
+                return new ForwardingMapEntry<K, V>() {
+                  @Override public V setValue(V value) {
+                    throw new UnsupportedOperationException();
+                  }
+                  @Override protected Entry<K, V> delegate() {
+                    return entry;
+                  }
+                };
+              }
+              @Override protected Iterator<Entry<K, V>> delegate() {
+                return iterator;
+              }
+            };
           }
           @Override protected Set<Entry<K, V>> delegate() {
             return cache.asMap().entrySet();

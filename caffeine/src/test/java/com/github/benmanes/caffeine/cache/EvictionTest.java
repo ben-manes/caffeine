@@ -220,8 +220,8 @@ public final class EvictionTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
     Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(2L));
+    Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
   }

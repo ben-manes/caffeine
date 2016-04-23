@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Supplier;
 
 import com.google.common.collect.testing.MapTestSuiteBuilder;
 import com.google.common.collect.testing.TestStringMapGenerator;
@@ -39,18 +40,15 @@ final class MapTestFactory {
    * Returns a test suite.
    *
    * @param name the name of the cache type under test
-   * @param builder the preconfigured cache builder
-   * @param async if the cache is asynchronous
+   * @param supplier the cache as a map
    * @return a suite of tests
    */
-  protected static Test suite(String name, Caffeine<Object, Object> builder, boolean async)
+  protected static Test suite(String name, Supplier<Map<String, String>> supplier)
       throws NoSuchMethodException, SecurityException {
     return MapTestSuiteBuilder
         .using(new TestStringMapGenerator() {
           @Override protected Map<String, String> create(Entry<String, String>[] entries) {
-            Map<String, String> map = async
-                ? builder.<String, String>buildAsync(key -> null).synchronous().asMap()
-                : builder.<String, String>build().asMap();
+            Map<String, String> map = supplier.get();
             for (Entry<String, String> entry : entries) {
               map.put(entry.getKey(), entry.getValue());
             }
@@ -60,6 +58,7 @@ final class MapTestFactory {
         .named(name)
         .withFeatures(
             MapFeature.GENERAL_PURPOSE,
+            MapFeature.ALLOWS_NULL_ENTRY_QUERIES,
             CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
             CollectionSize.ANY)
         .createTestSuite();
