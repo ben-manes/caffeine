@@ -191,7 +191,6 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   static final class Node {
     final long key;
 
-    int recencyMove;
     Status status;
     Node prev;
     Node next;
