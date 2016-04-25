@@ -686,9 +686,9 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       executor = CacheExecutor.THREADED, compute = Compute.ASYNC, values = ReferenceType.STRONG)
-  public void refresh(Caffeine<Integer, Integer> builder, CacheContext context) {
+  public void refresh(CacheContext context) {
     AtomicBoolean done = new AtomicBoolean();
-    AsyncLoadingCache<Integer, Integer> cache = builder.buildAsync(key -> {
+    AsyncLoadingCache<Integer, Integer> cache = context.buildAsync(key -> {
       await().untilTrue(done);
       return -key;
     });
@@ -705,6 +705,20 @@ public final class AsyncLoadingCacheTest {
     }
     done.set(true);
     await().until(() -> cache.synchronous().getIfPresent(key), is(-key));
+  }
+
+  @Test(dataProvider = "caches", timeOut = 5000) // Issue #69
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      executor = CacheExecutor.THREADED, compute = Compute.ASYNC, values = ReferenceType.STRONG)
+  public void refresh_deadlock(CacheContext context) {
+    CompletableFuture<Integer> future = new CompletableFuture<>();
+    AsyncLoadingCache<Integer, Integer> cache = context.buildAsync((k, e) -> future);
+
+    cache.synchronous().refresh(context.absentKey());
+    CompletableFuture<Integer> get = cache.get(context.absentKey());
+
+    future.complete(context.absentValue());
+    assertThat(get, futureOf(context.absentValue()));
   }
 
   /* ---------------- serialize -------------- */

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -30,6 +31,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
@@ -378,6 +380,20 @@ public final class CacheContext {
           ticker(), isRecordingStats());
     }
     this.cache = cache;
+    return cache;
+  }
+
+  public <K, V> AsyncLoadingCache<K, V> buildAsync(CacheLoader<K, V> loader) {
+    checkState(isCaffeine() && isAsync());
+    AsyncLoadingCache<K, V> cache = caffeine.buildAsync(loader);
+    this.cache = cache.synchronous();
+    return cache;
+  }
+
+  public <K, V> AsyncLoadingCache<K, V> buildAsync(AsyncCacheLoader<K, V> loader) {
+    checkState(isCaffeine() && isAsync());
+    AsyncLoadingCache<K, V> cache = caffeine.buildAsync(loader);
+    this.cache = cache.synchronous();
     return cache;
   }
 

@@ -185,9 +185,9 @@ public final class RefreshAfterWriteTest {
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED,
       compute = Compute.ASYNC, values = ReferenceType.STRONG)
-  public void get_sameFuture(Caffeine<Integer, Integer> builder, CacheContext context) {
+  public void get_sameFuture(CacheContext context) {
     AtomicBoolean done = new AtomicBoolean();
-    AsyncLoadingCache<Integer, Integer> cache = builder.buildAsync(key -> {
+    AsyncLoadingCache<Integer, Integer> cache = context.buildAsync(key -> {
       await().untilTrue(done);
       return -key;
     });
