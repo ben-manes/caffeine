@@ -1471,7 +1471,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
-   * Adds a node to the list and the data store. If an existing node is found, then its value is
+   * Adds a node to the policy and the data store. If an existing node is found, then its value is
    * updated if allowed.
    *
    * This implementation is optimized for writing values with a non-zero weight. A zero weight is
@@ -1483,7 +1483,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param value value to be associated with the specified key
    * @param notifyWriter if the writer should be notified for an inserted or updated entry
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
-   * @return the prior value in the data store or null if no mapping was found
+   * @return the prior value in or null if no mapping was found
    */
   V putFast(K key, V value, int newWeight, boolean notifyWriter, boolean onlyIfAbsent) {
     requireNonNull(key);
@@ -1574,7 +1574,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
-   * Adds a node to the list and the data store. If an existing node is found, then its value is
+   * Adds a node to the policy and the data store. If an existing node is found, then its value is
    * updated if allowed.
    *
    * This implementation is strict by using a compute to block other writers to that entry. This
@@ -1585,7 +1585,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param value value to be associated with the specified key
    * @param notifyWriter if the writer should be notified for an inserted or updated entry
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
-   * @return the prior value in the data store or null if no mapping was found
+   * @return the prior value or null if no mapping was found
    */
   V putSlow(K key, V value, int newWeight, boolean notifyWriter, boolean onlyIfAbsent) {
     requireNonNull(key);
@@ -1669,6 +1669,57 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public V remove(Object key) {
+    return hasWriter()
+        ? removeWithWriter(key)
+        : removeNoWriter(key);
+  }
+
+  /**
+   * Removes the mapping for a key without notifying the writer.
+   *
+   * @param key key whose mapping is to be removed
+   * @return the removed value or null if no mapping was found
+   */
+  V removeNoWriter(Object key) {
+    Node<K, V> node;
+    Object lookupKey = nodeFactory.newLookupKey(key);
+    if (!data.containsKey(lookupKey) || ((node = data.remove(lookupKey)) == null)) {
+      return null;
+    }
+
+    V oldValue;
+    synchronized (node) {
+      oldValue = node.getValue();
+      if (node.isAlive()) {
+        node.retire();
+      }
+    }
+
+    RemovalCause cause;
+    if (oldValue == null) {
+      cause = RemovalCause.COLLECTED;
+    } else if (hasExpired(node, expirationTicker().read())) {
+      cause = RemovalCause.EXPIRED;
+    } else {
+      cause = RemovalCause.EXPLICIT;
+    }
+
+    afterWrite(node, new RemovalTask(node), 0L);
+    if (hasRemovalListener()) {
+      @SuppressWarnings("unchecked")
+      K castKey = (K) key;
+      notifyRemoval(castKey, oldValue, cause);
+    }
+    return (cause == RemovalCause.EXPLICIT) ? oldValue : null;
+  }
+
+  /**
+   * Removes the mapping for a key after notifying the writer.
+   *
+   * @param key key whose mapping is to be removed
+   * @return the removed value or null if no mapping was found
+   */
+  V removeWithWriter(Object key) {
     @SuppressWarnings("unchecked")
     K castKey = (K) key;
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -1709,7 +1760,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     requireNonNull(key);
 
     Object lookupKey = nodeFactory.newLookupKey(key);
-    if ((data.get(lookupKey) == null) || (value == null)) {
+    if ((value == null) || !data.containsKey(lookupKey)) {
       return false;
     }
 

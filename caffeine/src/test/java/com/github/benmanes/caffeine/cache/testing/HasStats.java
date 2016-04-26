@@ -33,7 +33,7 @@ import com.github.benmanes.caffeine.testing.DescriptionBuilder;
  */
 public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
   private enum StatsType {
-    HIT, MISS, EVICTION, LOAD_SUCCESS, LOAD_FAILURE, TOTAL_LOAD_TIME
+    HIT, MISS, EVICTION_COUNT, EVICTION_WEIGHT, LOAD_SUCCESS, LOAD_FAILURE, TOTAL_LOAD_TIME
   }
 
   final long count;
@@ -67,8 +67,10 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
         return desc.expectThat(type.name(), stats.hitCount(), is(count)).matches();
       case MISS:
         return desc.expectThat(type.name(), stats.missCount(), is(count)).matches();
-      case EVICTION:
+      case EVICTION_COUNT:
         return desc.expectThat(type.name(), stats.evictionCount(), is(count)).matches();
+      case EVICTION_WEIGHT:
+        return desc.expectThat(type.name(), stats.evictionWeight(), is(count)).matches();
       case LOAD_SUCCESS:
         return desc.expectThat(type.name(), stats.loadSuccessCount(), is(count)).matches();
       case LOAD_FAILURE:
@@ -87,7 +89,11 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
   }
 
   public static HasStats hasEvictionCount(long count) {
-    return new HasStats(StatsType.EVICTION, count);
+    return new HasStats(StatsType.EVICTION_COUNT, count);
+  }
+
+  public static HasStats hasEvictionWeight(long count) {
+    return new HasStats(StatsType.EVICTION_WEIGHT, count);
   }
 
   public static HasStats hasLoadSuccessCount(long count) {

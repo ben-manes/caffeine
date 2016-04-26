@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionWeight;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static java.util.Arrays.asList;
@@ -169,9 +170,8 @@ public final class EvictionTest {
       verify(writer).delete(5, value5, RemovalCause.SIZE);
       verifier.deletions(2);
     });
-    if (cache.policy().isRecordingStats()) {
-      assertThat(cache.stats().evictionWeight(), is(12L));
-    }
+    assertThat(context, hasEvictionCount(2L));
+    assertThat(context, hasEvictionWeight(12L));
   }
 
   @Test(dataProvider = "caches")
@@ -193,8 +193,8 @@ public final class EvictionTest {
     });
     assertThat(context.consumedNotifications(), is(equalTo(ImmutableList.of(
         new RemovalNotification<>(20, 20, RemovalCause.SIZE)))));
-    if (context.isCaffeine() && cache.policy().isRecordingStats()) {
-      assertThat(cache.stats().evictionWeight(), is(20L));
+    if (context.isCaffeine()) {
+      assertThat(context, hasEvictionWeight(20L));
     }
   }
 
@@ -222,6 +222,8 @@ public final class EvictionTest {
     Awaits.await().untilTrue(done);
     Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(2L));
     Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
+
+    assertThat(context, hasEvictionWeight(5L));
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
   }
