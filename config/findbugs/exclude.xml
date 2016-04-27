@@ -1,0 +1,83 @@
+<FindBugsFilter>
+  <!-- Caffeine -->
+  <Match>
+    <Bug code="Se"/>
+  </Match>
+  <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.SingleConsumerQueue$1"/>
+      <Class name="com.github.benmanes.caffeine.SingleConsumerQueue$LinearizableNode"/>
+    </Or>
+    <Bug code="SP"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.CaffeineSpec"/>
+    <Or>
+      <Method name="parseDuration"/>
+      <Method name="parseTimeUnit"/>
+    </Or>
+    <Bug code="NP"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncLoadingCache$AsyncBulkCompleter"/>
+    <Method name="accept"/>
+    <Bug code="NP"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
+    <Method name="performCleanUp"/>
+    <Bug code="UL"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.WriteThroughEntry"/>
+    <Bug code="Eq"/>
+  </Match>
+  <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.cache.WriteBuffer"/>
+      <Class name="~.*Header.*"/>
+    </Or>
+    <Bug code="UuF"/>
+  </Match>
+
+  <!-- JCache -->
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.event.EventDispatcher"/>
+    <Method name="register"/>
+    <Bug code="NP"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
+    <Method name="postProcess"/>
+    <Bug code="SF"/>
+  </Match>
+
+  <!-- Simulator -->
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader"/>
+    <Method name="lines"/>
+    <Bug code="OS"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader"/>
+    <Method name="openFile"/>
+    <Bug code="UI"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.linked.MultiQueuePolicy"/>
+    <Method name="evict"/>
+    <Bug code="NP"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.product.Cache2kPolicy"/>
+    <Bug code="Dm"/>
+  </Match>
+  <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheWithGhostCache"/>
+      <Class name="com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheSketch"/>
+      <Class name="com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCache"/>
+    </Or>
+    <Bug code="ST"/>
+  </Match>
+</FindBugsFilter>
