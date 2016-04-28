@@ -267,7 +267,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     int[] ignored = { 0 };
     Map<K, V> loaded = cacheLoader.get().loadAll(keys);
     for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
-      putNoCopyOrAwait(entry.getKey(), entry.getValue(), false, ignored);
+      putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false, ignored);
     }
   }
 
@@ -279,7 +279,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
     for (Map.Entry<K, V> entry : result.entrySet()) {
       if ((entry.getKey() != null) && (entry.getValue() != null)) {
-        putIfAbsentNoAwait(entry.getKey(), entry.getValue(), false);
+        putIfAbsentNoAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false);
       }
     }
   }
@@ -386,7 +386,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     int[] puts = { 0 };
     CacheWriterException e = writeAllToCacheWriter(map);
     for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      putNoCopyOrAwait(entry.getKey(), entry.getValue(), false, puts);
+      putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false, puts);
     }
     dispatcher.awaitSynchronous();
 

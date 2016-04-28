@@ -46,7 +46,7 @@ interface LocalManualCache<C extends LocalCache<K, V>, K, V> extends Cache<K, V>
 
   @Override
   default @Nullable V getIfPresent(Object key) {
-    return cache().getIfPresent(key, true);
+    return cache().getIfPresent(key, /* recordStats */ true);
   }
 
   @Override

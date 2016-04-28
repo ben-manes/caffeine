@@ -103,10 +103,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishCreated(Cache<K, V> cache, K key, V value) {
-    if (dispatchQueues.isEmpty()) {
-      return;
-    }
-    publish(new JCacheEntryEvent<>(cache, EventType.CREATED, key, null, value), false);
+    publish(cache, EventType.CREATED, key, /* newValue */ null, value, /* quiet */ false);
   }
 
   /**
@@ -118,10 +115,7 @@ public final class EventDispatcher<K, V> {
    * @param newValue the entry's new value
    */
   public void publishUpdated(Cache<K, V> cache, K key, V oldValue, V newValue) {
-    if (dispatchQueues.isEmpty()) {
-      return;
-    }
-    publish(new JCacheEntryEvent<>(cache, EventType.UPDATED, key, oldValue, newValue), false);
+    publish(cache, EventType.UPDATED, key, oldValue, newValue, /* quiet */ false);
   }
 
   /**
@@ -132,10 +126,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemoved(Cache<K, V> cache, K key, V value) {
-    if (dispatchQueues.isEmpty()) {
-      return;
-    }
-    publish(new JCacheEntryEvent<>(cache, EventType.REMOVED, key, null, value), false);
+    publish(cache, EventType.REMOVED, key, /* oldValue */ null, value, /* quiet */ false);
   }
 
   /**
@@ -147,10 +138,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemovedQuietly(Cache<K, V> cache, K key, V value) {
-    if (dispatchQueues.isEmpty()) {
-      return;
-    }
-    publish(new JCacheEntryEvent<>(cache, EventType.REMOVED, key, null, value), true);
+    publish(cache, EventType.REMOVED, key, /* oldValue */ null, value, /* quiet */ true);
   }
 
   /**
@@ -161,10 +149,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpired(Cache<K, V> cache, K key, V value) {
-    if (dispatchQueues.isEmpty()) {
-      return;
-    }
-    publish(new JCacheEntryEvent<>(cache, EventType.EXPIRED, key, value, null), false);
+    publish(cache, EventType.EXPIRED, key, value, /* newValue */ null, /* quiet */ false);
   }
 
   /**
@@ -176,10 +161,7 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpiredQuietly(Cache<K, V> cache, K key, V value) {
-    if (dispatchQueues.isEmpty()) {
-      return;
-    }
-    publish(new JCacheEntryEvent<>(cache, EventType.EXPIRED, key, value, null), true);
+    publish(cache, EventType.EXPIRED, key, value, /* newValue */ null, /* quiet */ true);
   }
 
   /**
@@ -209,16 +191,28 @@ public final class EventDispatcher<K, V> {
   }
 
   /** Broadcasts the event to all of the interested listener's dispatch queues. */
-  private void publish(JCacheEntryEvent<K, V> event, boolean quiet) {
+  private void publish(Cache<K, V> cache, EventType eventType,
+      K key, V oldValue, V newValue, boolean quiet) {
+    if (dispatchQueues.isEmpty()) {
+      return;
+    }
+
+    JCacheEntryEvent<K, V> event = null;
     for (Registration<K, V> registration : dispatchQueues.keySet()) {
-      if (!registration.getCacheEntryListener().isCompatible(event)
-          || !registration.getCacheEntryFilter().evaluate(event)) {
+      if (!registration.getCacheEntryListener().isCompatible(eventType)) {
+        continue;
+      }
+      if (event == null) {
+        event = new JCacheEntryEvent<>(cache, eventType, key, oldValue, newValue);
+      }
+      if (!registration.getCacheEntryFilter().evaluate(event)) {
         continue;
       }
 
+      JCacheEntryEvent<K, V> e = event;
       CompletableFuture<Void> future =
-          dispatchQueues.computeIfPresent(registration, (key, queue) -> {
-            Runnable action = () -> registration.getCacheEntryListener().dispatch(event);
+          dispatchQueues.computeIfPresent(registration, (k, queue) -> {
+            Runnable action = () -> registration.getCacheEntryListener().dispatch(e);
             return queue.thenRunAsync(action, exectuor);
           });
       if ((future != null) && registration.isSynchronous() && !quiet) {

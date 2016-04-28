@@ -20,12 +20,14 @@ import static java.util.Objects.requireNonNull;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nonnull;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
 import javax.cache.event.CacheEntryListener;
 import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.event.EventType;
 
 /**
  * A decorator that dispatches the event iff the listener supports that action.
@@ -44,8 +46,8 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   }
 
   /** Returns if the backing listener consumes this type of event. */
-  public boolean isCompatible(JCacheEntryEvent<K, V> event) {
-    switch (event.getEventType()) {
+  public boolean isCompatible(@Nonnull EventType eventType) {
+    switch (eventType) {
       case CREATED:
         return (listener instanceof CacheEntryCreatedListener<?, ?>);
       case UPDATED:
@@ -55,12 +57,12 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
       case EXPIRED:
         return (listener instanceof CacheEntryExpiredListener<?, ?>);
       default:
-        throw new IllegalStateException("Unknown event type: " + event.getEventType());
+        throw new IllegalStateException("Unknown event type: " + eventType);
     }
   }
 
   /** Processes the event and logs if an exception is thrown. */
-  public void dispatch(JCacheEntryEvent<K, V> event) {
+  public void dispatch(@Nonnull JCacheEntryEvent<K, V> event) {
     try {
       switch (event.getEventType()) {
         case CREATED:

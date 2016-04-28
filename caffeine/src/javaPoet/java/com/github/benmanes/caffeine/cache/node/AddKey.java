@@ -50,8 +50,8 @@ public final class AddKey extends NodeRule {
         .addField(newKeyField())
         .addMethod(newGetter(keyStrength(), kTypeVar, "key", Visibility.LAZY))
         .addMethod(newGetRef("key"));
-    addKeyConstructorAssignment(context.constructorByKey, false);
-    addKeyConstructorAssignment(context.constructorByKeyRef, true);
+    addKeyConstructorAssignment(context.constructorByKey, /* isReference */ false);
+    addKeyConstructorAssignment(context.constructorByKeyRef, /* isReference */ true);
   }
 
   private FieldSpec newKeyField() {

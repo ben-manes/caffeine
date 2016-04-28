@@ -350,7 +350,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V get(Object key) {
-    return getIfPresent(key, false);
+    return getIfPresent(key, /* recordStats */ false);
   }
 
   @Override
@@ -848,7 +848,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     Policy<K, V> policy;
 
     UnboundedLocalManualCache(Caffeine<K, V> builder) {
-      cache = new UnboundedLocalCache<>(builder, false);
+      cache = new UnboundedLocalCache<>(builder, /* async */ false);
     }
 
     @Override
@@ -966,7 +966,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @SuppressWarnings("unchecked")
     UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, AsyncCacheLoader<? super K, V> loader) {
-      super(new UnboundedLocalCache<>((Caffeine<K, CompletableFuture<V>>) builder, true), loader);
+      super(new UnboundedLocalCache<>(
+          (Caffeine<K, CompletableFuture<V>>) builder, /* async */ true), loader);
     }
 
     @Override

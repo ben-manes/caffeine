@@ -92,7 +92,7 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
     protected Class<?> resolveClass(ObjectStreamClass desc)
         throws IOException, ClassNotFoundException {
       try {
-        return Class.forName(desc.getName(), false, getClassLoader());
+        return Class.forName(desc.getName(), /* initialize */ false, getClassLoader());
       } catch (ClassNotFoundException ex) {
         return super.resolveClass(desc);
       }

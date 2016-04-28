@@ -329,7 +329,7 @@ public final class BoundedLocalCacheTest {
     }
     assertThat(buffer.offer(dummy), is(Buffer.FULL));
 
-    localCache.afterRead(dummy, 0, true);
+    localCache.afterRead(dummy, 0, /* recordHit */ true);
     assertThat(buffer.offer(dummy), is(not(Buffer.FULL)));
   }
 

@@ -100,7 +100,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
   @Override
   public CompletableFuture<V> getIfPresent(@Nonnull Object key) {
-    return cache.getIfPresent(key, true);
+    return cache.getIfPresent(key, /* recordStats */ true);
   }
 
   @Override
@@ -114,7 +114,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   @Override
   public CompletableFuture<V> get(K key,
       BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction) {
-    return get(key, mappingFunction, true);
+    return get(key, mappingFunction, /* recordStats */ true);
   }
 
   CompletableFuture<V> get(K key,
@@ -175,7 +175,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     Map<K, CompletableFuture<V>> futures = new HashMap<>();
     Map<K, CompletableFuture<V>> proxies = new HashMap<>();
     for (K key : keys) {
-      CompletableFuture<V> future = cache.getIfPresent(key, false);
+      CompletableFuture<V> future = cache.getIfPresent(key, /* recordStats */ false);
       if (future == null) {
         CompletableFuture<V> proxy = new CompletableFuture<>();
         future = cache.putIfAbsent(key, proxy);
@@ -326,7 +326,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
     @Override
     public V getIfPresent(Object key) {
-      CompletableFuture<V> future = cache.getIfPresent(key, true);
+      CompletableFuture<V> future = cache.getIfPresent(key, /* recordStats */ true);
       return Async.getIfReady(future);
     }
 
@@ -455,7 +455,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       CompletableFuture<V> oldValueFuture = cache.getIfPresentQuietly(key, writeTime);
       if ((oldValueFuture == null)
           || (oldValueFuture.isDone() && oldValueFuture.isCompletedExceptionally())) {
-        LocalAsyncLoadingCache.this.get(key, loader::asyncLoad, false);
+        LocalAsyncLoadingCache.this.get(key, loader::asyncLoad, /* recordStats */ false);
         return;
       } else if (!oldValueFuture.isDone()) {
         // no-op if load is pending
