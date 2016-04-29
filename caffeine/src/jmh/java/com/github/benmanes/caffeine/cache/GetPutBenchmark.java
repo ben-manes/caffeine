@@ -51,6 +51,7 @@ public class GetPutBenchmark {
     "Caffeine",
     "ConcurrentLinkedHashMap",
     "Guava",
+    "ElasticSearch",
     "Jackrabbit",
     "Cache2k",
     "Ehcache2_Lru",

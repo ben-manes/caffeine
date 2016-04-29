@@ -40,6 +40,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.Cache2kPolicy
 import com.github.benmanes.caffeine.cache.simulator.policy.product.CaffeinePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache2Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache3Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.ElasticSearchPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.InfinispanPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
@@ -144,12 +145,13 @@ public final class Registry {
   }
 
   private static void registerProduct(Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("product.cache2k", Cache2kPolicy::policies);
     factories.put("product.guava", GuavaPolicy::policies);
+    factories.put("product.tcache", TCachePolicy::policies);
+    factories.put("product.cache2k", Cache2kPolicy::policies);
     factories.put("product.ehcache2", Ehcache2Policy::policies);
     factories.put("product.ehcache3", Ehcache3Policy::policies);
     factories.put("product.caffeine", CaffeinePolicy::policies);
     factories.put("product.infinispan", InfinispanPolicy::policies);
-    factories.put("product.tcache", TCachePolicy::policies);
+    factories.put("product.elasticsearch", ElasticSearchPolicy::policies);
   }
 }

@@ -20,6 +20,7 @@ dependencies {
   compile benchmark_libraries.ehcache3
   compile benchmark_libraries.slf4j_nop
   compile benchmark_libraries.infinispan
+  compile benchmark_libraries.elastic_search
 }
 
 test {

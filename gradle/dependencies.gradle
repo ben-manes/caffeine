@@ -56,6 +56,7 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.2.1.7',
     ehcache3: '3.0.0',
+    elastic_search: '5.0.0-alpha1',
     high_scale_lib: '1.0.6',
     infinispan: '9.0.0.Alpha1',
     jackrabbit: '1.5.1',
@@ -135,6 +136,9 @@ ext {
     concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmark_versions.concurrentlinkedhashmap}",
     ehcache2: "net.sf.ehcache:ehcache:${benchmark_versions.ehcache2}",
     ehcache3: "org.ehcache:ehcache:${benchmark_versions.ehcache3}",
+    elastic_search: dependencies.create("org.elasticsearch:elasticsearch:${benchmark_versions.elastic_search}") {
+      exclude group: 'org.apache.lucene'
+    },
     high_scale_lib: "com.boundary:high-scale-lib:${benchmark_versions.high_scale_lib}",
     infinispan: "org.infinispan:infinispan-core:${benchmark_versions.infinispan}",
     jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${benchmark_versions.jackrabbit}") {

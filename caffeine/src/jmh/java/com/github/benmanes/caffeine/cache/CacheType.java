@@ -30,6 +30,7 @@ import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
 import com.github.benmanes.caffeine.cache.impl.Ehcache2;
 import com.github.benmanes.caffeine.cache.impl.Ehcache3;
+import com.github.benmanes.caffeine.cache.impl.ElasticSearchCache;
 import com.github.benmanes.caffeine.cache.impl.GuavaCache;
 import com.github.benmanes.caffeine.cache.impl.LinkedHashMapCache;
 import com.github.benmanes.caffeine.cache.impl.TCache;
@@ -95,6 +96,11 @@ public enum CacheType {
   Ehcache3 {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new Ehcache3<>(maximumSize);
+    }
+  },
+  ElasticSearch {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ElasticSearchCache<>(maximumSize);
     }
   },
   Guava {
