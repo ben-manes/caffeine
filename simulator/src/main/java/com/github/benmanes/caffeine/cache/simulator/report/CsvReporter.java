@@ -48,6 +48,7 @@ public final class CsvReporter extends TextReporter {
           policyStats.missCount(),
           policyStats.requestCount(),
           policyStats.evictionCount(),
+          String.format("%.2f", 100 * policyStats.admissionRate()),
           (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),
           policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS)
       };

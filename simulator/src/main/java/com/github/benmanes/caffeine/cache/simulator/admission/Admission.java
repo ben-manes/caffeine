@@ -15,8 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
 /**
@@ -25,13 +27,14 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum Admission {
-  ALWAYS(config -> Admittor.always(), Function.identity()),
+  ALWAYS((config, policyStats) -> Admittor.always(), Function.identity()),
   TINYLFU(TinyLfu::new, name -> name + "_TinyLfu");
 
-  private final Function<Config, Admittor> factory;
+  private final BiFunction<Config, PolicyStats, Admittor> factory;
   private final Function<String, String> formatter;
 
-  private Admission(Function<Config, Admittor> factory, Function<String, String> formatter) {
+  private Admission(BiFunction<Config, PolicyStats, Admittor> factory,
+      Function<String, String> formatter) {
     this.formatter = formatter;
     this.factory = factory;
   }
@@ -40,10 +43,11 @@ public enum Admission {
    * Returns a configured admittor.
    *
    * @param config the configuration
+   * @param policyStats the stats
    * @return an admission policy
    */
-  public Admittor from(Config config) {
-    return factory.apply(config);
+  public Admittor from(Config config, PolicyStats policyStats) {
+    return factory.apply(config, policyStats);
   }
 
   /** Returns the policy's formatted name. */

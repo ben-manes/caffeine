@@ -54,12 +54,13 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
 
   public SimpleWindowTinyLfuPolicy(double percentMain, SimpleWindowTinyLfuSettings settings) {
     String name = String.format("sketch.SimpleWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+    this.policyStats = new PolicyStats(name);
+
+    this.admittor = new TinyLfu(settings.config(), policyStats);
     this.maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxEden = settings.maximumSize() - maxMain;
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
-    this.admittor = new TinyLfu(settings.config());
     this.data = new Long2ObjectOpenHashMap<>();
-    this.policyStats = new PolicyStats(name);
     this.headEden = new Node();
     this.headMain = new Node();
   }

@@ -32,6 +32,8 @@ public final class PolicyStats {
   private long hitCount;
   private long missCount;
   private long evictionCount;
+  private long admittedCount;
+  private long rejectedCount;
   private long operationCount;
 
   public PolicyStats(String name) {
@@ -99,6 +101,22 @@ public final class PolicyStats {
     return hitCount + missCount;
   }
 
+  public long admissionCount() {
+    return admittedCount;
+  }
+
+  public void recordAdmission() {
+    admittedCount++;
+  }
+
+  public long rejectionCount() {
+    return rejectedCount;
+  }
+
+  public void recordRejection() {
+    rejectedCount++;
+  }
+
   public double hitRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
@@ -107,6 +125,11 @@ public final class PolicyStats {
   public double missRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
+  }
+
+  public double admissionRate() {
+    double candidateCount = admittedCount + rejectedCount;
+    return (candidateCount == 0) ? 1.0 : admittedCount / candidateCount;
   }
 
   public double complexity() {

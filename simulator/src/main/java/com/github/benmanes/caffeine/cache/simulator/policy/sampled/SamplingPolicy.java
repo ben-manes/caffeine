@@ -56,16 +56,16 @@ public final class SamplingPolicy implements Policy {
   private final Node[] table;
 
   public SamplingPolicy(Admission admission, EvictionPolicy policy, Config config) {
-    String name = admission.format("sampled." + policy.label());
+    this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
+    this.admittor = admission.from(config, policyStats);
+
     SamplingSettings settings = new SamplingSettings(config);
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
-    this.policyStats = new PolicyStats(name);
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];
-    this.admittor = admission.from(config);
     this.ticker = new CountTicker();
     this.policy = policy;
   }

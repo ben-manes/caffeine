@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.Periodic
 import com.github.benmanes.caffeine.cache.simulator.admission.perfect.PerfectFrequency;
 import com.github.benmanes.caffeine.cache.simulator.admission.table.RandomRemovalFrequencyTable;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheAdapter;
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
 /**
@@ -30,10 +31,12 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TinyLfu implements Admittor {
+  private final PolicyStats policyStats;
   private final Frequency sketch;
 
-  public TinyLfu(Config config) {
-    sketch = makeSketch(config);
+  public TinyLfu(Config config, PolicyStats policyStats) {
+    this.policyStats = policyStats;
+    this.sketch = makeSketch(config);
   }
 
   private Frequency makeSketch(Config config) {
@@ -67,6 +70,11 @@ public final class TinyLfu implements Admittor {
   public boolean admit(long candidateKey, long victimKey) {
     long candidateFreq = sketch.frequency(candidateKey);
     long victimFreq = sketch.frequency(victimKey);
-    return candidateFreq > victimFreq;
+    if (candidateFreq > victimFreq) {
+      policyStats.recordAdmission();
+      return true;
+    }
+    policyStats.recordRejection();
+    return false;
   }
 }

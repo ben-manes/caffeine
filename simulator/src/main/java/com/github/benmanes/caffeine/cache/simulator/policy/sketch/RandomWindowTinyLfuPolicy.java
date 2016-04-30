@@ -51,11 +51,12 @@ public final class RandomWindowTinyLfuPolicy implements Policy {
 
   public RandomWindowTinyLfuPolicy(double percentMain, RandomWindowTinyLfuSettings settings) {
     String name = String.format("sketch.RandomWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+    policyStats = new PolicyStats(name);
+
+    admittor = new TinyLfu(settings.config(), policyStats);
     random = new Random(settings.randomSeed());
-    admittor = new TinyLfu(settings.config());
     data = new Long2ObjectOpenHashMap<>();
     maximumSize = settings.maximumSize();
-    policyStats = new PolicyStats(name);
 
     int maxMain = (int) (maximumSize * percentMain);
     window = new Node[maximumSize - maxMain + 1];

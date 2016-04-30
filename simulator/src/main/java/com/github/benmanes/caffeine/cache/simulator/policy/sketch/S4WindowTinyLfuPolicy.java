@@ -56,10 +56,11 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   public S4WindowTinyLfuPolicy(double percentMain, S4WindowTinyLfuSettings settings) {
     String name = String.format("sketch.S4WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
     this.policyStats = new PolicyStats(name);
+    this.admittor = new TinyLfu(settings.config(), policyStats);
+
     this.maximumSize = settings.maximumSize();
     this.maxMain = (int) (maximumSize * percentMain);
     this.maxEden = maximumSize - maxMain;
-    this.admittor = new TinyLfu(settings.config());
     this.data = new Long2ObjectOpenHashMap<>();
     this.headEden = Node.sentinel(-1);
     this.levels = settings.levels();

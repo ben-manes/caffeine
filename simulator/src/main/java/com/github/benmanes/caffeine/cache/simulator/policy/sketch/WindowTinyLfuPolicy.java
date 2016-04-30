@@ -69,14 +69,15 @@ public final class WindowTinyLfuPolicy implements Policy {
 
   public WindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
     String name = String.format("sketch.WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+    this.policyStats = new PolicyStats(name);
+    this.admittor = new TinyLfu(settings.config(), policyStats);
+
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxEden = settings.maximumSize() - maxMain;
-    this.admittor = new TinyLfu(settings.config());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
-    this.policyStats = new PolicyStats(name);
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headEden = new Node();

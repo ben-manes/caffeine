@@ -36,7 +36,8 @@ import com.typesafe.config.Config;
  */
 public abstract class TextReporter implements Reporter {
   private static final String[] HEADERS = {
-      "Policy", "Hit rate", "Hits", "Misses", "Requests", "Evictions", "Steps", "Time"};
+      "Policy", "Hit rate", "Hits", "Misses", "Requests",
+      "Evictions", "Admit rate", "Steps", "Time"};
 
   private final List<PolicyStats> results;
   private final BasicSettings settings;
@@ -92,6 +93,8 @@ public abstract class TextReporter implements Reporter {
         return Comparator.comparingLong(PolicyStats::missCount);
       case "evictions":
         return Comparator.comparingLong(PolicyStats::evictionCount);
+      case "admit rate":
+        return Comparator.comparingLong(PolicyStats::admissionCount);
       case "steps":
         return Comparator.comparingLong(PolicyStats::operationCount);
       case "time":

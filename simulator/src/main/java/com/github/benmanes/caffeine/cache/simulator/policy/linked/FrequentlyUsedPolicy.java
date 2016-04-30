@@ -48,12 +48,11 @@ public final class FrequentlyUsedPolicy implements Policy {
   private final int maximumSize;
 
   public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
-    String name = admission.format("linked." + policy.label());
+    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
+    this.admittor = admission.from(config, policyStats);
     BasicSettings settings = new BasicSettings(config);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
-    this.policyStats = new PolicyStats(name);
-    this.admittor = admission.from(config);
     this.policy = requireNonNull(policy);
     this.freq0 = new FrequencyNode(0);
   }

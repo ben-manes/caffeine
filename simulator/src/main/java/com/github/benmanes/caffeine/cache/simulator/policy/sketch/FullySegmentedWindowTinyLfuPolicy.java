@@ -70,7 +70,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxEdenProtected = (int) (maxEden * settings.percentEdenProtected());
     this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
-    this.admittor = new TinyLfu(settings.config());
+    this.admittor = new TinyLfu(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headEdenProbation = new Node();
