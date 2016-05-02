@@ -1704,12 +1704,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       cause = RemovalCause.EXPLICIT;
     }
 
-    afterWrite(node, new RemovalTask(node), 0L);
     if (hasRemovalListener()) {
       @SuppressWarnings("unchecked")
       K castKey = (K) key;
       notifyRemoval(castKey, oldValue, cause);
     }
+    afterWrite(node, new RemovalTask(node), 0L);
     return (cause == RemovalCause.EXPLICIT) ? oldValue : null;
   }
 
