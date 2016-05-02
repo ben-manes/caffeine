@@ -43,6 +43,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.TooManyFields")
 public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -61,14 +62,15 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private int sizeProtected;
   private int mainRecencyCounter;
 
-  private BloomFilter<Long> feedback;
-
   private int pivot;
   private final int maxPivot;
 
   private int sampled;
   private boolean adjusted;
   private final int maxSampled;
+  private BloomFilter<Long> feedback;
+
+  boolean debug;
 
   public AdaptiveWindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
     String name = String.format("sketch.AdaptiveWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
@@ -87,8 +89,8 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
     maxSampled = 3 * maximumSize;
     maxPivot = (int) (maximumSize * 0.5);
-    System.out.printf("maxEden=%d, maxProtected=%d, percentEden=%.1f%n",
-        maxEden, maxProtected, (double) (100 * maxEden) / maximumSize);
+
+    printSegmentSizes();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -161,6 +163,10 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     node.recencyMove = ++mainRecencyCounter;
 
     sizeProtected++;
+    demoteProtected();
+  }
+
+  private void demoteProtected() {
     if (sizeProtected > maxProtected) {
       Node demote = headProtected.next;
       demote.remove();
@@ -226,9 +232,10 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       if (pivot < maxPivot) {
         pivot++;
         maxEden++;
+        sizeEden++;
         maxProtected--;
 
-        sizeEden++;
+        demoteProtected();
         candidate.remove();
         candidate.status = Status.EDEN;
         candidate.appendToTail(headEden);
@@ -241,9 +248,9 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       if (pivot > 0) {
         pivot--;
         maxEden--;
+        sizeEden--;
         maxProtected++;
 
-        sizeEden--;
         candidate = headEden.next;
         candidate.remove();
         candidate.status = Status.PROBATION;
@@ -253,16 +260,22 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     return false;
   }
 
+  void printSegmentSizes() {
+    if (debug) {
+      System.out.printf("maxEden=%d, maxProtected=%d, percentEden=%.1f%n",
+          maxEden, maxProtected, (double) (100 * maxEden) / maximumSize);
+    }
+  }
+
   @Override
   public void finished() {
-    System.out.printf("maxEden=%d, maxProtected=%d, percentEden=%.1f%n",
-        maxEden, maxProtected, (double) (100 * maxEden) / maximumSize);
+    printSegmentSizes();
 
     long edenSize = data.values().stream().filter(n -> n.status == Status.EDEN).count();
     long probationSize = data.values().stream().filter(n -> n.status == Status.PROBATION).count();
     long protectedSize = data.values().stream().filter(n -> n.status == Status.PROTECTED).count();
 
-    //checkState(edenSize == sizeEden, "%s != %s", edenSize, sizeEden);
+    checkState(edenSize == sizeEden, "%s != %s", edenSize, sizeEden);
     checkState(protectedSize == sizeProtected);
     checkState(probationSize == data.size() - edenSize - protectedSize);
 
