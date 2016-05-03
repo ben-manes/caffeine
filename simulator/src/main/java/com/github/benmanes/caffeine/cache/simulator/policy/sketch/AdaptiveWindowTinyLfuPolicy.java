@@ -47,7 +47,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final int recencyMoveDistance;
   private final Admittor admittor;
   private final int maximumSize;
 
@@ -70,15 +69,15 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private final int maxSampled;
   private BloomFilter<Long> feedback;
 
-  boolean debug;
+  boolean debug = false;
 
-  public AdaptiveWindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
-    String name = String.format("sketch.AdaptiveWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+  public AdaptiveWindowTinyLfuPolicy(double percentMain, AdaptiveWindowTinyLfuSettings settings) {
+    String name = String.format("sketch.AdaptiveWindowTinyLfu "
+        + "(%.0f%%)", 100 * (1.0d - percentMain));
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
-    this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxEden = settings.maximumSize() - maxMain;
     this.data = new Long2ObjectOpenHashMap<>();
@@ -88,14 +87,15 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     this.headEden = new Node();
 
     maxSampled = 3 * maximumSize;
-    maxPivot = (int) (maximumSize * 0.5);
+    maxPivot = maximumSize / 2;
+    pivot = (int) (settings.percentPivot() * maxEden);
 
     printSegmentSizes();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    WindowTinyLfuSettings settings = new WindowTinyLfuSettings(config);
+    AdaptiveWindowTinyLfuSettings settings = new AdaptiveWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
         .map(percentMain -> new AdaptiveWindowTinyLfuPolicy(percentMain, settings))
         .collect(toSet());
@@ -176,14 +176,11 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  /** Moves the entry to the MRU position, if it falls outside of the fast-path threshold. */
+  /** Moves the entry to the MRU position. */
   private void onProtectedHit(Node node) {
-    // Fast path skips the hottest entries, useful for concurrent caches
-    if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {
-      admittor.record(node.key);
-      node.moveToTail(headProtected);
-      node.recencyMove = ++mainRecencyCounter;
-    }
+    admittor.record(node.key);
+    node.moveToTail(headProtected);
+    node.recencyMove = ++mainRecencyCounter;
   }
 
   /**
@@ -231,6 +228,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       // Increase admission window
       if (pivot < maxPivot) {
         pivot++;
+
         maxEden++;
         sizeEden++;
         maxProtected--;
@@ -239,6 +237,10 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         candidate.remove();
         candidate.status = Status.EDEN;
         candidate.appendToTail(headEden);
+
+        if (debug) {
+          System.out.println("↑" + maxEden);
+        }
       }
       return true;
     } else if (sampled > (1.5 * maximumSize)) {
@@ -247,6 +249,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       // Decrease admission window
       if (pivot > 0) {
         pivot--;
+
         maxEden--;
         sizeEden--;
         maxProtected++;
@@ -255,6 +258,10 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         candidate.remove();
         candidate.status = Status.PROBATION;
         candidate.appendToHead(headProbation);
+
+        if (debug) {
+          System.out.println("↓" + maxEden);
+        }
       }
     }
     return false;
@@ -348,18 +355,18 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class WindowTinyLfuSettings extends BasicSettings {
-    public WindowTinyLfuSettings(Config config) {
+  static final class AdaptiveWindowTinyLfuSettings extends BasicSettings {
+    public AdaptiveWindowTinyLfuSettings(Config config) {
       super(config);
     }
     public List<Double> percentMain() {
-      return config().getDoubleList("window-tiny-lfu.percent-main");
+      return config().getDoubleList("adaptive-window-tiny-lfu.percent-main");
     }
     public double percentMainProtected() {
-      return config().getDouble("window-tiny-lfu.percent-main-protected");
+      return config().getDouble("adaptive-window-tiny-lfu.percent-main-protected");
     }
-    public double percentFastPath() {
-      return config().getDouble("window-tiny-lfu.percent-fast-path");
+    public double percentPivot() {
+      return config().getDouble("adaptive-window-tiny-lfu.percent-pivot");
     }
   }
 }
