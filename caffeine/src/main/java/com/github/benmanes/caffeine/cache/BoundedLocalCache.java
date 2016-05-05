@@ -2937,7 +2937,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           : Optional.empty();
     }
     @Override public Optional<Expiration<K, V>> expireAfterAccess() {
-      if (!(cache.expiresAfterAccess())) {
+      if (!cache.expiresAfterAccess()) {
         return Optional.empty();
       }
       return (afterAccess == null)
@@ -2945,7 +2945,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           : afterAccess;
     }
     @Override public Optional<Expiration<K, V>> expireAfterWrite() {
-      if (!(cache.expiresAfterWrite())) {
+      if (!cache.expiresAfterWrite()) {
         return Optional.empty();
       }
       return (afterWrite == null)
@@ -2954,7 +2954,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
     @Override
     public Optional<Expiration<K, V>> refreshAfterWrite() {
-      if (!(cache.refreshAfterWrite())) {
+      if (!cache.refreshAfterWrite()) {
         return Optional.empty();
       }
       return (refreshes == null)

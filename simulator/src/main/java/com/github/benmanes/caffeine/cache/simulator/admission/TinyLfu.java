@@ -61,6 +61,10 @@ public final class TinyLfu implements Admittor {
     throw new IllegalStateException("Unknown sketch type: " + type);
   }
 
+  public int frequency(long key) {
+    return sketch.frequency(key);
+  }
+
   @Override
   public void record(long key) {
     sketch.increment(key);

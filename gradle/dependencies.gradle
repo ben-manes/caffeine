@@ -35,7 +35,7 @@ ext {
     javapoet: '1.7.0',
     jcache: '1.0.0',
     jsr305: '3.0.1',
-    stream: '2.9.1',
+    stream: '2.9.2',
     univocity_parsers: '2.1.0',
     ycsb: '0.8.0',
   ]
@@ -56,7 +56,7 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.2.1.7',
     ehcache3: '3.0.0',
-    elastic_search: '5.0.0-alpha1',
+    elastic_search: '5.0.0-alpha2',
     high_scale_lib: '1.0.6',
     infinispan: '9.0.0.Alpha1',
     jackrabbit: '1.5.1',

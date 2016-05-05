@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -47,7 +46,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Admittor admittor;
+  private final TinyLfu admittor;
   private final int maximumSize;
 
   private final Node headEden;
@@ -222,7 +221,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       return false;
     }
 
-    if (feedback.mightContain(candidate.key)) {
+    if (feedback.mightContain(candidate.key) && (admittor.frequency(candidate.key) > 2)) {
       adjusted = true;
 
       // Increase admission window
