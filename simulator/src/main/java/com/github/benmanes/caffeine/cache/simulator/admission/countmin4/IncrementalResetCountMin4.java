@@ -37,7 +37,7 @@ public final class IncrementalResetCountMin4 extends CountMin4 {
   }
 
   @Override
-  void tryReset(boolean added) {
+  protected void tryReset(boolean added) {
     if (!added) {
       return;
     }

@@ -18,16 +18,16 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toSet;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
+import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.CountMin4;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -66,7 +66,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private int sampled;
   private boolean adjusted;
   private final int maxSampled;
-  private BloomFilter<Long> feedback;
+  private FeedbackFilter feedback;
 
   boolean debug = false;
 
@@ -88,6 +88,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     maxSampled = 3 * maximumSize;
     maxPivot = maximumSize / 2;
     pivot = (int) (settings.percentPivot() * maxEden);
+    feedback = new FeedbackFilter(settings.config());
 
     printSegmentSizes();
   }
@@ -108,14 +109,16 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   @Override
   public void record(long key) {
     if ((sampled % maximumSize) == 0) {
-      feedback = BloomFilter.create(Funnels.longFunnel(), maximumSize);
       adjusted = false;
+      feedback.reset();
     }
     if ((sampled % maxSampled) == 0) {
       sampled = 0;
     }
     sampled++;
 
+    admittor.record(key);
+    feedback.record(key);
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -137,8 +140,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    admittor.record(key);
-
     Node node = new Node(key, Status.EDEN);
     node.appendToTail(headEden);
     data.put(key, node);
@@ -148,14 +149,11 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
   /** Moves the entry to the MRU position in the admission window. */
   private void onEdenHit(Node node) {
-    admittor.record(node.key);
     node.moveToTail(headEden);
   }
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onProbationHit(Node node) {
-    admittor.record(node.key);
-
     node.remove();
     node.status = Status.PROTECTED;
     node.appendToTail(headProtected);
@@ -207,7 +205,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         evict = victim;
       } else {
         evict = candidate;
-        feedback.put(candidate.key);
+        feedback.rejected(candidate.key);
       }
       data.remove(evict.key);
       evict.remove();
@@ -221,7 +219,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       return false;
     }
 
-    if (feedback.mightContain(candidate.key) && (admittor.frequency(candidate.key) > 2)) {
+    if (feedback.frequency(candidate.key) > 1) {
       adjusted = true;
 
       // Increase admission window
@@ -351,6 +349,27 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
           .add("status", status)
           .add("move", recencyMove)
           .toString();
+    }
+  }
+
+  static final class FeedbackFilter extends CountMin4 {
+
+    FeedbackFilter(Config config) {
+      super(config);
+    }
+
+    public void rejected(long key) {
+      increment(key);
+    }
+
+    public void record(long key) {
+      if (frequency(key) > 0) {
+        increment(key);
+      }
+    }
+
+    public void reset() {
+      Arrays.fill(table, 0);
     }
   }
 

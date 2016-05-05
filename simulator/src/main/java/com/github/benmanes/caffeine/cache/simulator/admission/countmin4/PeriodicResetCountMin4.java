@@ -48,7 +48,7 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
    * is reduced by the number of counters with an odd value.
    */
   @Override
-  void tryReset(boolean added) {
+  protected void tryReset(boolean added) {
     if (!added) {
       return;
     }
