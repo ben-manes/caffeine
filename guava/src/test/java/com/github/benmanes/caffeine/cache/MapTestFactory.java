@@ -43,8 +43,7 @@ final class MapTestFactory {
    * @param supplier the cache as a map
    * @return a suite of tests
    */
-  protected static Test suite(String name, Supplier<Map<String, String>> supplier)
-      throws NoSuchMethodException, SecurityException {
+  protected static Test suite(String name, Supplier<Map<String, String>> supplier) {
     return MapTestSuiteBuilder
         .using(new TestStringMapGenerator() {
           @Override protected Map<String, String> create(Entry<String, String>[] entries) {

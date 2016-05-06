@@ -722,9 +722,19 @@ public final class LinkedDequeTest {
     assertThat(elementsEqual(deque.iterator(), expected.iterator()), is(true));
   }
 
-  @Test(dataProvider = "full", expectedExceptions = UnsupportedOperationException.class)
+  @Test(dataProvider = "full")
   public void iterator_removal(LinkedDeque<LinkedValue> deque) {
-    deque.iterator().remove();
+    PeekingIterator<LinkedValue> iterator = deque.iterator();
+    LinkedValue value = iterator.next();
+    iterator.remove();
+
+    int remaining = 0;
+    while (iterator.hasNext()) {
+      assertThat(iterator.next(), is(not(value)));
+      remaining++;
+    }
+    assertThat(remaining, is(SIZE - 1));
+    assertThat(deque, hasSize(SIZE - 1));
   }
 
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
@@ -748,9 +758,19 @@ public final class LinkedDequeTest {
     assertThat(elementsEqual(deque.descendingIterator(), expected.iterator()), is(true));
   }
 
-  @Test(dataProvider = "full", expectedExceptions = UnsupportedOperationException.class)
+  @Test(dataProvider = "full")
   public void descendingIterator_removal(LinkedDeque<LinkedValue> deque) {
-    deque.descendingIterator().remove();
+    PeekingIterator<LinkedValue> iterator = deque.descendingIterator();
+    LinkedValue value = iterator.next();
+    iterator.remove();
+
+    int remaining = 0;
+    while (iterator.hasNext()) {
+      assertThat(iterator.next(), is(not(value)));
+      remaining++;
+    }
+    assertThat(remaining, is(SIZE - 1));
+    assertThat(deque, hasSize(SIZE - 1));
   }
 
   @Test(dataProvider = "full")

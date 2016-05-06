@@ -353,6 +353,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   abstract class AbstractLinkedIterator implements PeekingIterator<E> {
+    E previous;
     E cursor;
 
     /**
@@ -379,12 +380,21 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      E e = cursor;
+      previous = cursor;
       cursor = computeNext();
-      return e;
+      return previous;
     }
 
     /** Retrieves the next element to traverse to or <tt>null</tt> if there are no more elements. */
     abstract E computeNext();
+
+    @Override
+    public void remove() {
+      if (previous == null) {
+        throw new IllegalStateException();
+      }
+      AbstractLinkedDeque.this.remove(previous);
+      previous = null;
+    }
   }
 }
