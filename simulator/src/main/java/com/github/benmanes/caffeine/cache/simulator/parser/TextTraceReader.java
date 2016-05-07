@@ -15,28 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.SequenceInputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
-
-import org.apache.commons.compress.archivers.ArchiveException;
-import org.apache.commons.compress.archivers.ArchiveStreamFactory;
-import org.apache.commons.compress.compressors.CompressorException;
-import org.apache.commons.compress.compressors.CompressorStreamFactory;
 
 import com.google.common.io.Closeables;
 
@@ -45,54 +31,17 @@ import com.google.common.io.Closeables;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public abstract class TextTraceReader implements TraceReader {
-  private final List<String> filePaths;
+public abstract class TextTraceReader extends AbstractTraceReader implements TraceReader {
 
   public TextTraceReader(List<String> filePaths) {
-    this.filePaths = requireNonNull(filePaths);
+    super(filePaths);
   }
 
   /** Returns a stream of each line in the trace file. */
   protected Stream<String> lines() throws IOException {
     InputStream input = readFiles();
     Reader reader = new InputStreamReader(input, StandardCharsets.UTF_8);
-    return new BufferedReader(reader, 1 << 16).lines().map(String::trim)
+    return new BufferedReader(reader).lines().map(String::trim)
         .onClose(() -> Closeables.closeQuietly(input));
-  }
-
-  private InputStream readFiles() throws IOException {
-    List<InputStream> inputs = new ArrayList<>(filePaths.size());
-    for (String filePath : filePaths) {
-      inputs.add(readFile(filePath));
-    }
-    return new SequenceInputStream(Collections.enumeration(inputs));
-  }
-
-  /** Returns the input stream, decompressing if required. */
-  private InputStream readFile(String filePath) throws IOException {
-    BufferedInputStream input = new BufferedInputStream(openFile(filePath));
-    input.mark(100);
-    try {
-      return new CompressorStreamFactory().createCompressorInputStream(input);
-    } catch (CompressorException e) {
-      input.reset();
-    }
-    try {
-      return new ArchiveStreamFactory().createArchiveInputStream(input);
-    } catch (ArchiveException e) {
-      input.reset();
-    }
-    return input;
-  }
-
-  /** Returns the input stream for the raw file. */
-  private InputStream openFile(String filePath) throws IOException {
-    File file = new File(filePath);
-    if (file.exists()) {
-      return new FileInputStream(file);
-    }
-    InputStream input = getClass().getResourceAsStream(filePath);
-    checkArgument(input != null, "Could not find file: " + filePath);
-    return input;
   }
 }

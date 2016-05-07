@@ -6,6 +6,7 @@ mainClassName = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
 dependencies {
   compile project(':caffeine')
 
+  compile libraries.xz
   compile libraries.akka
   compile libraries.ycsb
   compile libraries.guava

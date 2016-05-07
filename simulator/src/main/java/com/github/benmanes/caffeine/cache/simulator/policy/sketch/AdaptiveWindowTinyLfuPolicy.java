@@ -69,6 +69,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private FeedbackFilter feedback;
 
   boolean debug = false;
+  boolean trace = false;
 
   public AdaptiveWindowTinyLfuPolicy(double percentMain, AdaptiveWindowTinyLfuSettings settings) {
     String name = String.format("sketch.AdaptiveWindowTinyLfu "
@@ -85,8 +86,8 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     this.headProbation = new Node();
     this.headEden = new Node();
 
+    maxPivot = maxProtected;
     maxSampled = 3 * maximumSize;
-    maxPivot = maximumSize / 2;
     pivot = (int) (settings.percentPivot() * maxEden);
     feedback = new FeedbackFilter(settings.config());
 
@@ -112,7 +113,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       adjusted = false;
       feedback.reset();
     }
-    if ((sampled % maxSampled) == 0) {
+    if (sampled == maxSampled) {
       sampled = 0;
     }
     sampled++;
@@ -235,12 +236,12 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         candidate.status = Status.EDEN;
         candidate.appendToTail(headEden);
 
-        if (debug) {
+        if (trace) {
           System.out.println("↑" + maxEden);
         }
       }
       return true;
-    } else if (sampled > (1.5 * maximumSize)) {
+    } else if (sampled > 2 * maximumSize) {
       adjusted = true;
 
       // Decrease admission window
@@ -256,7 +257,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         candidate.status = Status.PROBATION;
         candidate.appendToHead(headProbation);
 
-        if (debug) {
+        if (trace) {
           System.out.println("↓" + maxEden);
         }
       }

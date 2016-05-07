@@ -37,7 +37,8 @@ ext {
     jsr305: '3.0.1',
     stream: '2.9.2',
     univocity_parsers: '2.1.0',
-    ycsb: '0.8.0',
+    ycsb: '0.9.0-RC1',
+    xz: '1.5',
   ]
   test_versions = [
     awaitility: '1.7.0',
@@ -94,6 +95,7 @@ ext {
     stream: "com.clearspring.analytics:stream:${versions.stream}",
     univocity_parsers: "com.univocity:univocity-parsers:${versions.univocity_parsers}",
     ycsb: "com.github.brianfrankcooper.ycsb:core:${versions.ycsb}",
+    xz: "org.tukaani:xz:${versions.xz}",
   ]
   test_libraries = [
     awaitility: dependencies.create("com.jayway.awaitility:awaitility:${test_versions.awaitility}") {
