@@ -18,16 +18,16 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toSet;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
-import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.CountMin4;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -36,9 +36,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 /**
  * The Window TinyLfu algorithm where the size of the admission window is adjusted based on the
  * workload. If a candidate is rejected multiple times within a sample period then the window is
- * increased. This assumes that the workload favors recency over frequency and a larger window is
- * required to be optimal. If however no rejections were observed then the window is decreased,
- * indicating that frequency should be favored.
+ * increased. The window is decreased on an eviction if no adjustments have been made for at least
+ * two periods. This allows the policy to dynamically decide whether it should favor recency (larger
+ * window) or frequency (smaller window) based on the workload's characteristics. If the workload
+ * changes then the policy will adapt to the new environment.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -63,10 +64,13 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private int pivot;
   private final int maxPivot;
 
+  private int sample;
   private int sampled;
-  private boolean adjusted;
-  private final int maxSampled;
-  private FeedbackFilter feedback;
+  private int adjusted;
+  private final int sampleSize;
+  private final int samplesBeforeDecrease;
+
+  private BloomFilter<Long> feedback;
 
   boolean debug = false;
   boolean trace = false;
@@ -87,9 +91,9 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     this.headEden = new Node();
 
     maxPivot = maxProtected;
-    maxSampled = 3 * maximumSize;
     pivot = (int) (settings.percentPivot() * maxEden);
-    feedback = new FeedbackFilter(settings.config());
+    samplesBeforeDecrease = settings.samplesBeforeDecrease();
+    sampleSize = (int) settings.sampleSizeMultiplier() * maximumSize;
 
     printSegmentSizes();
   }
@@ -109,17 +113,13 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
   @Override
   public void record(long key) {
-    if ((sampled % maximumSize) == 0) {
-      adjusted = false;
-      feedback.reset();
+    if ((sample % sampleSize) == 0) {
+      feedback = BloomFilter.create(Funnels.longFunnel(), maximumSize);
+      sampled++;
     }
-    if (sampled == maxSampled) {
-      sampled = 0;
-    }
-    sampled++;
+    sample++;
 
     admittor.record(key);
-    feedback.record(key);
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -206,7 +206,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         evict = victim;
       } else {
         evict = candidate;
-        feedback.rejected(candidate.key);
+        feedback.put(candidate.key);
       }
       data.remove(evict.key);
       evict.remove();
@@ -216,12 +216,13 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   }
 
   private boolean adapt(Node candidate) {
-    if (adjusted) {
+    if (adjusted == sampled) {
+      // Already adjusted this period
       return false;
     }
 
-    if (feedback.frequency(candidate.key) > 1) {
-      adjusted = true;
+    if (feedback.mightContain(candidate.key)) {
+      adjusted = sampled;
 
       // Increase admission window
       if (pivot < maxPivot) {
@@ -241,8 +242,8 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         }
       }
       return true;
-    } else if (sampled > 2 * maximumSize) {
-      adjusted = true;
+    } else if (sampled > (adjusted + samplesBeforeDecrease)) {
+      adjusted = sampled;
 
       // Decrease admission window
       if (pivot > 0) {
@@ -353,27 +354,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class FeedbackFilter extends CountMin4 {
-
-    FeedbackFilter(Config config) {
-      super(config);
-    }
-
-    public void rejected(long key) {
-      increment(key);
-    }
-
-    public void record(long key) {
-      if (frequency(key) > 0) {
-        increment(key);
-      }
-    }
-
-    public void reset() {
-      Arrays.fill(table, 0);
-    }
-  }
-
   static final class AdaptiveWindowTinyLfuSettings extends BasicSettings {
     public AdaptiveWindowTinyLfuSettings(Config config) {
       super(config);
@@ -386,6 +366,12 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
     public double percentPivot() {
       return config().getDouble("adaptive-window-tiny-lfu.percent-pivot");
+    }
+    public double sampleSizeMultiplier() {
+      return config().getDouble("adaptive-window-tiny-lfu.sample-size-multiplier");
+    }
+    public int samplesBeforeDecrease() {
+      return config().getInt("adaptive-window-tiny-lfu.samples-before-decrease");
     }
   }
 }

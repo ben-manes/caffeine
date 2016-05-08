@@ -174,7 +174,7 @@ public final class BoundedLocalCacheTest {
         }
       });
       checkStatus(node, Status.RETIRED);
-      localCache.maintenance();
+      localCache.cleanUp();
 
       checkStatus(node, Status.DEAD);
       assertThat(localCache.containsKey(newEntry.getKey()), is(true));
