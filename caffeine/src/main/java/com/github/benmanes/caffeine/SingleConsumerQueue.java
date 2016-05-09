@@ -110,7 +110,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   static final int NCPU = Runtime.getRuntime().availableProcessors();
 
   /** The number of slots in the elimination array. */
-  static final int ARENA_LENGTH = ceilingNextPowerOfTwo((NCPU + 1) / 2);
+  static final int ARENA_LENGTH = ceilingPowerOfTwo((NCPU + 1) / 2);
 
   /** The mask value for indexing into the arena. */
   static final int ARENA_MASK = ARENA_LENGTH - 1;
@@ -132,9 +132,9 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   /** The offset to the thread-specific probe field. */
   static final long PROBE = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
 
-  static int ceilingNextPowerOfTwo(int x) {
+  static int ceilingPowerOfTwo(int x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
+    return 1 << -Integer.numberOfLeadingZeros(x - 1);
   }
 
   final AtomicReference<Node<E>>[] arena;

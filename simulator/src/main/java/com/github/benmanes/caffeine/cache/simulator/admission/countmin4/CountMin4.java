@@ -198,6 +198,6 @@ public abstract class CountMin4 implements Frequency {
 
   static int ceilingNextPowerOfTwo(int x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
+    return 1 << -Integer.numberOfLeadingZeros(x - 1);
   }
 }

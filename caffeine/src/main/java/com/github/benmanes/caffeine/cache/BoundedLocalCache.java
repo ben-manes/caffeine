@@ -138,7 +138,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** The initial capacity of the write buffer. */
   static final int WRITE_BUFFER_MIN = 4;
   /** The maximum capacity of the write buffer. */
-  static final int WRITE_BUFFER_MAX = 128 * ceilingNextPowerOfTwo(NCPU);
+  static final int WRITE_BUFFER_MAX = 128 * ceilingPowerOfTwo(NCPU);
   /** The number of attempts to insert into the write buffer before yielding. */
   static final int WRITE_BUFFER_RETRIES = 100;
   /** The maximum weighted capacity of the map. */
@@ -194,9 +194,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  static int ceilingNextPowerOfTwo(int x) {
+  static int ceilingPowerOfTwo(int x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
+    return 1 << -Integer.numberOfLeadingZeros(x - 1);
   }
 
   /* ---------------- Shared -------------- */

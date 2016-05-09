@@ -23,11 +23,10 @@ import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
+import com.github.benmanes.caffeine.cache.simulator.admission.bloom.BloomFilter;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -70,7 +69,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private final int sampleSize;
   private final int samplesBeforeDecrease;
 
-  private BloomFilter<Long> feedback;
+  private BloomFilter feedback;
 
   boolean debug = false;
   boolean trace = false;
@@ -83,6 +82,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
+    this.feedback = new BloomFilter(settings.maximumSize(), settings.randomSeed());
     this.maxEden = settings.maximumSize() - maxMain;
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
@@ -114,7 +114,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   @Override
   public void record(long key) {
     if ((sample % sampleSize) == 0) {
-      feedback = BloomFilter.create(Funnels.longFunnel(), maximumSize);
+      feedback.clear();
       sampled++;
     }
     sample++;

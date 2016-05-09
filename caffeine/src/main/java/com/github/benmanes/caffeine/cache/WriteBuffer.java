@@ -13,7 +13,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ceilingNextPowerOfTwo;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.ceilingPowerOfTwo;
 import static java.util.Objects.requireNonNull;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
@@ -50,12 +50,12 @@ final class WriteBuffer<E> extends ConsumerRef<E> {
   public WriteBuffer(int initialCapacity, int maxCapacity) {
     Caffeine.requireArgument(maxCapacity > 4);
     Caffeine.requireArgument(initialCapacity > 2);
-    if (ceilingNextPowerOfTwo(initialCapacity) >= ceilingNextPowerOfTwo(maxCapacity)) {
+    if (ceilingPowerOfTwo(initialCapacity) >= ceilingPowerOfTwo(maxCapacity)) {
       throw new IllegalArgumentException(
           "Initial capacity cannot exceed maximum capacity(both rounded up to a power of 2)");
     }
 
-    int p2capacity = ceilingNextPowerOfTwo(initialCapacity);
+    int p2capacity = ceilingPowerOfTwo(initialCapacity);
     // leave lower bit of mask clear
     long mask = (p2capacity - 1) << 1;
     // need extra element to point at next array
@@ -65,7 +65,7 @@ final class WriteBuffer<E> extends ConsumerRef<E> {
     producerMask = mask;
     consumerBuffer = buffer;
     consumerMask = mask;
-    maxQueueCapacity = ceilingNextPowerOfTwo(maxCapacity) << 1;
+    maxQueueCapacity = ceilingPowerOfTwo(maxCapacity) << 1;
     soProducerLimit(mask); // we know it's all empty to start with
   }
 
