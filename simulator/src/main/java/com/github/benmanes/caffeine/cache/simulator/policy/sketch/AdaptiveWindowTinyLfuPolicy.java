@@ -58,7 +58,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
   private int sizeEden;
   private int sizeProtected;
-  private int mainRecencyCounter;
 
   private int pivot;
   private final int maxPivot;
@@ -67,7 +66,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private int sampled;
   private int adjusted;
   private final int sampleSize;
-  private final int samplesBeforeDecrease;
 
   private BloomFilter feedback;
 
@@ -82,7 +80,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
-    this.feedback = new BloomFilter(settings.maximumSize(), settings.randomSeed());
     this.maxEden = settings.maximumSize() - maxMain;
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
@@ -92,8 +89,8 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
     maxPivot = maxProtected;
     pivot = (int) (settings.percentPivot() * maxEden);
-    samplesBeforeDecrease = settings.samplesBeforeDecrease();
-    sampleSize = (int) settings.sampleSizeMultiplier() * maximumSize;
+    sampleSize = (int) (settings.sampleSizeMultiplier() * maximumSize);
+    feedback = new BloomFilter(sampleSize, settings.randomSeed());
 
     printSegmentSizes();
   }
@@ -114,8 +111,10 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   @Override
   public void record(long key) {
     if ((sample % sampleSize) == 0) {
-      feedback.clear();
       sampled++;
+    }
+    if (sample % (sampleSize / 2) == 0) {
+      feedback.clear();
     }
     sample++;
 
@@ -158,7 +157,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     node.remove();
     node.status = Status.PROTECTED;
     node.appendToTail(headProtected);
-    node.recencyMove = ++mainRecencyCounter;
 
     sizeProtected++;
     demoteProtected();
@@ -178,7 +176,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private void onProtectedHit(Node node) {
     admittor.record(node.key);
     node.moveToTail(headProtected);
-    node.recencyMove = ++mainRecencyCounter;
   }
 
   /**
@@ -242,7 +239,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         }
       }
       return true;
-    } else if (sampled > (adjusted + samplesBeforeDecrease)) {
+    } else if (sampled > (adjusted + 1)) {
       adjusted = sampled;
 
       // Decrease admission window
@@ -296,7 +293,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   static final class Node {
     final long key;
 
-    int recencyMove;
     Status status;
     Node prev;
     Node next;
@@ -349,7 +345,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       return MoreObjects.toStringHelper(this)
           .add("key", key)
           .add("status", status)
-          .add("move", recencyMove)
           .toString();
     }
   }
@@ -369,9 +364,6 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
     public double sampleSizeMultiplier() {
       return config().getDouble("adaptive-window-tiny-lfu.sample-size-multiplier");
-    }
-    public int samplesBeforeDecrease() {
-      return config().getInt("adaptive-window-tiny-lfu.samples-before-decrease");
     }
   }
 }
