@@ -69,7 +69,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
   private BloomFilter feedback;
 
-  boolean debug = false;
+  boolean debug = true;
   boolean trace = false;
 
   public AdaptiveWindowTinyLfuPolicy(double percentMain, AdaptiveWindowTinyLfuSettings settings) {
@@ -80,16 +80,16 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
-    this.maxEden = settings.maximumSize() - maxMain;
+    this.maxEden = Math.min(settings.maximumWindowSize(), settings.maximumSize() - maxMain);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headEden = new Node();
 
-    maxPivot = maxProtected;
     pivot = (int) (settings.percentPivot() * maxEden);
-    sampleSize = (int) (settings.sampleSizeMultiplier() * maximumSize);
+    maxPivot = Math.min(settings.maximumWindowSize(), maxProtected);
+    sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
     feedback = new BloomFilter(sampleSize, settings.randomSeed());
 
     printSegmentSizes();
@@ -362,8 +362,11 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     public double percentPivot() {
       return config().getDouble("adaptive-window-tiny-lfu.percent-pivot");
     }
-    public double sampleSizeMultiplier() {
-      return config().getDouble("adaptive-window-tiny-lfu.sample-size-multiplier");
+    public int maximumWindowSize() {
+      return config().getInt("adaptive-window-tiny-lfu.maximum-window-size");
+    }
+    public int maximumSampleSize() {
+      return config().getInt("adaptive-window-tiny-lfu.maximum-sample-size");
     }
   }
 }

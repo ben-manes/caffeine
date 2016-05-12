@@ -75,7 +75,7 @@ public final class BloomFilter {
     if ((table != null) && (table.length >= optimalSize)) {
       return;
     } else if (optimalSize == 0) {
-      table = new long[0];
+      table = new long[1];
       tableMask = 0;
     } else {
       table = new long[ceilingPowerOfTwo(optimalSize)];
