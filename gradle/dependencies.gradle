@@ -37,7 +37,7 @@ ext {
     jsr305: '3.0.1',
     stream: '2.9.2',
     univocity_parsers: '2.1.1',
-    ycsb: '0.9.0-RC1',
+    ycsb: '0.9.0',
     xz: '1.5',
   ]
   test_versions = [

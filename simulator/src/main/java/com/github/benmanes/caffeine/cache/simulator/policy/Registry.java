@@ -45,6 +45,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.InfinispanPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.AdaptiveTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.AdaptiveWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.FullySegmentedWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.RandomWindowTinyLfuPolicy;
@@ -128,6 +129,7 @@ public final class Registry {
     factories.put("sketch.randomwindowtinylfu", RandomWindowTinyLfuPolicy::policies);
     factories.put("sketch.fullysegmentedwindowtinylfu",
         FullySegmentedWindowTinyLfuPolicy::policies);
+    factories.put("sketch.adaptivetinylfu", AdaptiveTinyLfuPolicy::policies);
     factories.put("sketch.adaptivewindowtinylfu", AdaptiveWindowTinyLfuPolicy::policies);
 
     factories.put("sketch.tinycache", TinyCachePolicy::policies);

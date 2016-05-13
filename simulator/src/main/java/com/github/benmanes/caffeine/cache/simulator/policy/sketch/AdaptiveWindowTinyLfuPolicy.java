@@ -69,7 +69,7 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
   private BloomFilter feedback;
 
-  boolean debug = true;
+  boolean debug = false;
   boolean trace = false;
 
   public AdaptiveWindowTinyLfuPolicy(double percentMain, AdaptiveWindowTinyLfuSettings settings) {
