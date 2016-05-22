@@ -18,11 +18,11 @@ package com.github.benmanes.caffeine.cache;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.jackrabbit.oak.cache.CacheLIRS;
-import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.infinispan.commons.equivalence.AnyEquivalence;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8;
 import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.Eviction;
 import org.infinispan.util.concurrent.BoundedConcurrentHashMap;
+import org.jctools.maps.NonBlockingHashMap;
 
 import com.github.benmanes.caffeine.cache.impl.Cache2k;
 import com.github.benmanes.caffeine.cache.impl.CaffeineCache;

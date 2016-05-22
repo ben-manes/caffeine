@@ -47,7 +47,7 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '1.2',
     junit: '4.12',
-    mockito: '2.0.52-beta',
+    mockito: '2.0.53-beta',
     pax_exam: '4.9.1',
     testng: '6.9.11',
     truth: '0.24',
@@ -58,9 +58,8 @@ ext {
     ehcache2: '2.10.2.1.7',
     ehcache3: '3.0.1',
     elastic_search: '5.0.0-alpha2',
-    high_scale_lib: '1.0.6',
-    infinispan: '9.0.0.Alpha1',
-    jackrabbit: '1.5.1',
+    infinispan: '9.0.0.Alpha2',
+    jackrabbit: '1.5.2',
     jamm: '0.3.1',
     java_object_layout: '0.5',
     koloboke: '0.6.8',
@@ -141,13 +140,13 @@ ext {
     elastic_search: dependencies.create("org.elasticsearch:elasticsearch:${benchmark_versions.elastic_search}") {
       exclude group: 'org.apache.lucene'
     },
-    high_scale_lib: "com.boundary:high-scale-lib:${benchmark_versions.high_scale_lib}",
     infinispan: "org.infinispan:infinispan-core:${benchmark_versions.infinispan}",
     jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${benchmark_versions.jackrabbit}") {
       exclude group: 'junit'
     },
     jamm: "com.github.jbellis:jamm:${benchmark_versions.jamm}",
     java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
+    jctools_experimental: 'com.github.JCTools.JCTools:jctools-experimental:-SNAPSHOT',
     koloboke: [
       "net.openhft:koloboke-api-jdk8:${benchmark_versions.koloboke}",
       "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",

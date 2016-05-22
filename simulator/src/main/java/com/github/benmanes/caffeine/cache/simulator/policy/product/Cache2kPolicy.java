@@ -68,6 +68,7 @@ public final class Cache2kPolicy implements Policy {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public void record(long key) {
     Object value = cache.peek(key);
     if (value == null) {

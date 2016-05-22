@@ -41,8 +41,8 @@ dependencies {
   jmh benchmark_libraries.slf4j_nop
   jmh benchmark_libraries.infinispan
   jmh benchmark_libraries.jackrabbit
-  jmh benchmark_libraries.high_scale_lib
   jmh benchmark_libraries.elastic_search
+  jmh benchmark_libraries.jctools_experimental
   jmh benchmark_libraries.concurrentlinkedhashmap
   
   javaPoetCompile libraries.guava
