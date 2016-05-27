@@ -61,13 +61,15 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
   private int pivot;
   private final int maxPivot;
+  private final int pivotIncrement;
+  private final int pivotDecrement;
 
   private int sample;
   private int sampled;
   private int adjusted;
   private final int sampleSize;
 
-  private BloomFilter feedback;
+  private final BloomFilter feedback;
 
   boolean debug = false;
   boolean trace = false;
@@ -91,6 +93,11 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     maxPivot = Math.min(settings.maximumWindowSize(), maxProtected);
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
     feedback = new BloomFilter(sampleSize, settings.randomSeed());
+
+    checkState(settings.pivotIncrement() > 0, "Must increase by at least 1");
+    checkState(settings.pivotDecrement() > 0, "Must decrease by at least 1");
+    pivotIncrement = settings.pivotIncrement();
+    pivotDecrement = settings.pivotDecrement();
 
     printSegmentSizes();
   }
@@ -234,6 +241,23 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
         candidate.status = Status.EDEN;
         candidate.appendToTail(headEden);
 
+        int increments = Math.min(pivotIncrement - 1, maxPivot - pivot);
+        for (int i = 0; i < increments; i++) {
+          if (pivot < maxPivot) {
+            pivot++;
+
+            maxEden++;
+            sizeEden++;
+            maxProtected--;
+
+            demoteProtected();
+            candidate = headProbation.next.next;
+            candidate.remove();
+            candidate.status = Status.EDEN;
+            candidate.appendToTail(headEden);
+          }
+        }
+
         if (trace) {
           System.out.println("↑" + maxEden);
         }
@@ -243,21 +267,25 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
       adjusted = sampled;
 
       // Decrease admission window
-      if (pivot > 0) {
-        pivot--;
+      boolean decremented = false;
+      for (int i = 0; i < pivotDecrement; i++) {
+        if (pivot > 0) {
+          pivot--;
 
-        maxEden--;
-        sizeEden--;
-        maxProtected++;
+          maxEden--;
+          sizeEden--;
+          maxProtected++;
+          decremented = true;
 
-        candidate = headEden.next;
-        candidate.remove();
-        candidate.status = Status.PROBATION;
-        candidate.appendToHead(headProbation);
-
-        if (trace) {
-          System.out.println("↓" + maxEden);
+          candidate = headEden.next;
+          candidate.remove();
+          candidate.status = Status.PROBATION;
+          candidate.appendToHead(headProbation);
         }
+      }
+
+      if (trace && decremented) {
+        System.out.println("↓" + maxEden);
       }
     }
     return false;
@@ -361,6 +389,12 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
     public double percentPivot() {
       return config().getDouble("adaptive-window-tiny-lfu.percent-pivot");
+    }
+    public int pivotIncrement() {
+      return config().getInt("adaptive-window-tiny-lfu.pivot-increment");
+    }
+    public int pivotDecrement() {
+      return config().getInt("adaptive-window-tiny-lfu.pivot-decrement");
     }
     public int maximumWindowSize() {
       return config().getInt("adaptive-window-tiny-lfu.maximum-window-size");
