@@ -22,6 +22,8 @@ dependencies {
   compile benchmark_libraries.slf4j_nop
   compile benchmark_libraries.infinispan
   compile benchmark_libraries.elastic_search
+
+  testCompile test_libraries.testng  
 }
 
 test {

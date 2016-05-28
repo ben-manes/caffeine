@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.admission.bloom;
+package com.github.benmanes.caffeine.cache.simulator.membership.bloom;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -21,6 +21,8 @@ import java.util.Arrays;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.concurrent.NotThreadSafe;
+
+import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 
 /**
  * A Bloom filter is a space and time efficient probabilistic data structure that is used to test
@@ -32,15 +34,11 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NotThreadSafe
-public final class BloomFilter {
+public final class BloomFilter implements Membership {
   static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final int BITS_PER_LONG_SHIFT = 6; // 64-bits
-  static final int INDEX_MASK = Long.SIZE - 1;
-
-  static final double FPP = 0.03; // false positive probability
-  static final double LOG_OF_2 = Math.log(2);
-  static final double OPTIMAL_BITS_FACTOR = -Math.log(FPP) / (LOG_OF_2 * LOG_OF_2);
+  static final int BITS_PER_LONG_MASK = Long.SIZE - 1;
 
   final int randomSeed;
 
@@ -52,25 +50,27 @@ public final class BloomFilter {
    * when the expected number of insertions is determined.
    *
    * @param expectedInsertions the number of expected insertions
-   * @param randomSeed the smear to protect against hash flooding
+   * @param randomSeed the smear to protect against hash flooding, adjusted to an odd value
    */
-  public BloomFilter(@Nonnegative long expectedInsertions, int randomSeed) {
-    this.randomSeed = randomSeed;
-    checkArgument(randomSeed != 0);
-    ensureCapacity(expectedInsertions);
+  public BloomFilter(@Nonnegative long expectedInsertions,
+      @Nonnegative double fpp, int randomSeed) {
+    this.randomSeed = ((randomSeed & 1) == 0) ? randomSeed + 1 : randomSeed;
+    ensureCapacity(expectedInsertions, fpp);
   }
 
   /**
    * Initializes and increases the capacity of this <tt>BloomFilter</tt> instance, if necessary,
    * to ensure that it can accurately estimate the membership of elements given the expected
-   * number of insertions.
+   * number of insertions. This operation forgets all previous memberships when resizing.
    *
    * @param expectedInsertions the number of expected insertions
    */
-  public void ensureCapacity(@Nonnegative long expectedInsertions) {
+  void ensureCapacity(@Nonnegative long expectedInsertions, @Nonnegative double fpp) {
     checkArgument(expectedInsertions >= 0);
+    checkArgument(fpp > 0);
 
-    int optimalNumberOfBits = (int) (expectedInsertions * OPTIMAL_BITS_FACTOR);
+    double optimalBitsFactor = -Math.log(fpp) / (Math.log(2) * Math.log(2));
+    int optimalNumberOfBits = (int) (expectedInsertions * optimalBitsFactor);
     int optimalSize = optimalNumberOfBits >>> BITS_PER_LONG_SHIFT;
     if ((table != null) && (table.length >= optimalSize)) {
       return;
@@ -83,13 +83,7 @@ public final class BloomFilter {
     }
   }
 
-  /**
-   * Returns if the element <i>might</i> have been put in this Bloom filter, {@code false} if this
-   * is <i>definitely</i> not the case.
-   *
-   * @param e the element whose presence is to be tested
-   * @return if the element might be present
-   */
+  @Override
   public boolean mightContain(long e) {
     int item = spread(Long.hashCode(e));
     for (int i = 0; i < 4; i++) {
@@ -102,17 +96,12 @@ public final class BloomFilter {
     return true;
   }
 
-  /** Removes all of the elements from this collection. */
+  @Override
   public void clear() {
     Arrays.fill(table, 0L);
   }
 
-  /**
-   * Puts an element into this collection so that subsequent queries with the same element will
-   * return {@code true}.
-   *
-   * @param e the element to add
-   */
+  @Override
   public void put(long e) {
     int item = spread(Long.hashCode(e));
     setAt(item, 0);
@@ -122,7 +111,7 @@ public final class BloomFilter {
   }
 
   /**
-   * Increments the specified counter by 1 if it is not already at the maximum value (15).
+   * Sets the membership flag for the computed bit location.
    *
    * @param item the element's hash
    * @param seedIndex the hash seed index
@@ -163,7 +152,7 @@ public final class BloomFilter {
    * @return the mask to the bit
    */
   static long bitmask(int hash) {
-    return 1L << ((hash >>> 8) & INDEX_MASK);
+    return 1L << ((hash >>> 24) & BITS_PER_LONG_MASK);
   }
 
   static int ceilingPowerOfTwo(int x) {

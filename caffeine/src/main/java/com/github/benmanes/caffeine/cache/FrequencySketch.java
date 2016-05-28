@@ -78,13 +78,13 @@ final class FrequencySketch<E> {
    */
   public FrequencySketch() {
     int seed = ThreadLocalRandom.current().nextInt();
-    randomSeed = (seed == 0) ? ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE) : seed;
+    this.randomSeed = ((seed & 1) == 0) ? seed + 1 : seed;
   }
 
   /**
    * Initializes and increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary,
    * to ensure that it can accurately estimate the popularity of elements given the maximum size of
-   * the cache.
+   * the cache. This operation forgets all previous counts when resizing.
    *
    * @param maximumSize the maximum size of the cache
    */

@@ -23,7 +23,7 @@ import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
-import com.github.benmanes.caffeine.cache.simulator.admission.bloom.BloomFilter;
+import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -69,10 +69,10 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private int adjusted;
   private final int sampleSize;
 
-  private final BloomFilter feedback;
+  private final Membership feedback;
 
-  boolean debug = false;
-  boolean trace = false;
+  boolean debug;
+  boolean trace;
 
   public AdaptiveWindowTinyLfuPolicy(double percentMain, AdaptiveWindowTinyLfuSettings settings) {
     String name = String.format("sketch.AdaptiveWindowTinyLfu "
@@ -92,7 +92,8 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     pivot = (int) (settings.percentPivot() * maxEden);
     maxPivot = Math.min(settings.maximumWindowSize(), maxProtected);
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
-    feedback = new BloomFilter(sampleSize, settings.randomSeed());
+    feedback = settings.membershipFilter().create(sampleSize,
+        settings.adaptiveFpp(), settings.config());
 
     checkState(settings.pivotIncrement() > 0, "Must increase by at least 1");
     checkState(settings.pivotDecrement() > 0, "Must decrease by at least 1");
@@ -401,6 +402,9 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
     public int maximumSampleSize() {
       return config().getInt("adaptive-window-tiny-lfu.maximum-sample-size");
+    }
+    public double adaptiveFpp() {
+      return config().getDouble("adaptive-window-tiny-lfu.adaptive-fpp");
     }
   }
 }

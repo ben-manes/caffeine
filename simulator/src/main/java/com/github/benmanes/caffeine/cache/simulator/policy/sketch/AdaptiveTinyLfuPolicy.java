@@ -21,7 +21,7 @@ import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
-import com.github.benmanes.caffeine.cache.simulator.admission.bloom.BloomFilter;
+import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -55,10 +55,9 @@ public final class AdaptiveTinyLfuPolicy implements Policy {
   private int sampled;
   private int adjusted;
   private final int sampleSize;
+  private final Membership feedback;
 
-  private BloomFilter feedback;
-
-  boolean debug = false;
+  boolean debug;
 
   public AdaptiveTinyLfuPolicy(Config config) {
     AdaptiveTinyLfuSettings settings = new AdaptiveTinyLfuSettings(config);
@@ -70,7 +69,7 @@ public final class AdaptiveTinyLfuPolicy implements Policy {
 
     maxGain = Math.min(15, settings.maximumInsertionGain());
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
-    feedback = new BloomFilter(sampleSize, settings.randomSeed());
+    feedback = settings.membershipFilter().create(sampleSize, settings.adaptiveFpp(), config);
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -246,6 +245,9 @@ public final class AdaptiveTinyLfuPolicy implements Policy {
     }
     public int maximumSampleSize() {
       return config().getInt("adaptive-tiny-lfu.maximum-sample-size");
+    }
+    public double adaptiveFpp() {
+      return config().getDouble("adaptive-tiny-lfu.adaptive-fpp");
     }
   }
 }

@@ -56,11 +56,12 @@ public abstract class CountMin4 implements Frequency {
 
   /**
    * Increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary, to ensure that
-   * it can accurately estimate the popularity of elements given the maximum size of the cache.
+   * it can accurately estimate the popularity of elements given the maximum size of the cache. This
+   * operation forgets all previous counts when resizing.
    *
    * @param maximumSize the maximum size of the cache
    */
-  public void ensureCapacity(@Nonnegative long maximumSize) {
+  protected void ensureCapacity(@Nonnegative long maximumSize) {
     checkArgument(maximumSize >= 0);
     int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {

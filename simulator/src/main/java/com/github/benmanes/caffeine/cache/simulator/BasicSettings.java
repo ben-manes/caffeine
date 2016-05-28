@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
+import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.report.ReportFormat;
 import com.typesafe.config.Config;
@@ -63,6 +64,10 @@ public class BasicSettings {
         .map(String::toUpperCase)
         .map(Admission::valueOf)
         .collect(toSet());
+  }
+
+  public FilterType membershipFilter() {
+    return FilterType.valueOf(config.getString("membership-filter").toUpperCase());
   }
 
   public TinyLfuSettings tinyLfu() {

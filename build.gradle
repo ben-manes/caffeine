@@ -59,6 +59,7 @@ subprojects {
     provided libraries.error_prone_annotations
 
     testCompile libraries.guava
+    testCompile test_libraries.mockito
     testCompile test_libraries.hamcrest
     testCompile test_libraries.awaitility
     testCompile test_libraries.osgi_compile
