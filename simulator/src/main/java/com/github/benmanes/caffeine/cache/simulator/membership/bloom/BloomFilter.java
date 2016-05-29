@@ -42,7 +42,7 @@ public final class BloomFilter implements Membership {
 
   final int randomSeed;
 
-  int tableMask;
+  int tableShift;
   long[] table;
 
   /**
@@ -50,6 +50,7 @@ public final class BloomFilter implements Membership {
    * when the expected number of insertions is determined.
    *
    * @param expectedInsertions the number of expected insertions
+   * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    * @param randomSeed the smear to protect against hash flooding, adjusted to an odd value
    */
   public BloomFilter(@Nonnegative long expectedInsertions,
@@ -64,10 +65,11 @@ public final class BloomFilter implements Membership {
    * number of insertions. This operation forgets all previous memberships when resizing.
    *
    * @param expectedInsertions the number of expected insertions
+   * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    */
   void ensureCapacity(@Nonnegative long expectedInsertions, @Nonnegative double fpp) {
     checkArgument(expectedInsertions >= 0);
-    checkArgument(fpp > 0);
+    checkArgument(fpp > 0 && fpp < 1);
 
     double optimalBitsFactor = -Math.log(fpp) / (Math.log(2) * Math.log(2));
     int optimalNumberOfBits = (int) (expectedInsertions * optimalBitsFactor);
@@ -75,11 +77,12 @@ public final class BloomFilter implements Membership {
     if ((table != null) && (table.length >= optimalSize)) {
       return;
     } else if (optimalSize == 0) {
+      tableShift = Integer.SIZE - 1;
       table = new long[1];
-      tableMask = 0;
     } else {
-      table = new long[ceilingPowerOfTwo(optimalSize)];
-      tableMask = table.length - 1;
+      int powerOfTwoShift = Integer.SIZE - Integer.numberOfLeadingZeros(optimalSize - 1);
+      tableShift = Integer.SIZE - powerOfTwoShift;
+      table = new long[1 << powerOfTwoShift];
     }
   }
 
@@ -88,7 +91,7 @@ public final class BloomFilter implements Membership {
     int item = spread(Long.hashCode(e));
     for (int i = 0; i < 4; i++) {
       int hash = seeded(item, i);
-      int index = hash & tableMask;
+      int index = (hash >>> tableShift);
       if ((table[index] & bitmask(hash)) == 0L) {
         return false;
       }
@@ -118,7 +121,7 @@ public final class BloomFilter implements Membership {
    */
   void setAt(int item, int seedIndex) {
     int hash = seeded(item, seedIndex);
-    int index = hash & tableMask;
+    int index = (hash >>> tableShift);
     table[index] |= bitmask(hash);
   }
 
@@ -152,11 +155,6 @@ public final class BloomFilter implements Membership {
    * @return the mask to the bit
    */
   static long bitmask(int hash) {
-    return 1L << ((hash >>> 24) & BITS_PER_LONG_MASK);
-  }
-
-  static int ceilingPowerOfTwo(int x) {
-    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1 << -Integer.numberOfLeadingZeros(x - 1);
+    return 1L << (hash & BITS_PER_LONG_MASK);
   }
 }
