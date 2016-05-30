@@ -33,7 +33,7 @@ public final class IncrementalResetCountMin4 extends CountMin4 {
     super(config);
     cursor = randomSeed;
     BasicSettings settings = new BasicSettings(config);
-    interval = settings.tinyLfu().countMin4().increment();
+    interval = settings.tinyLfu().countMin4().incremental().interval();
   }
 
   @Override

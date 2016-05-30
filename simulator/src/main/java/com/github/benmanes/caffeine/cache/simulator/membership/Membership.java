@@ -39,6 +39,29 @@ public interface Membership {
    * return {@code true}.
    *
    * @param e the element to add
+   * @return if the membership changed as a result of this operation
    */
-  void put(long e);
+  boolean put(long e);
+
+  /** Returns an instance that contains nothing. */
+  static Membership disabled() {
+    return DisabledMembership.INSTANCE;
+  }
+}
+
+enum DisabledMembership implements Membership {
+  INSTANCE;
+
+  @Override
+  public boolean mightContain(long e) {
+    return false;
+  }
+
+  @Override
+  public void clear() {}
+
+  @Override
+  public boolean put(long e) {
+    return false;
+  }
 }

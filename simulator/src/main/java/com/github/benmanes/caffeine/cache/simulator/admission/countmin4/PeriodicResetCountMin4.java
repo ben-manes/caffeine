@@ -17,6 +17,10 @@ package com.github.benmanes.caffeine.cache.simulator.admission.countmin4;
 
 import javax.annotation.Nonnegative;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.TinyLfuSettings.DoorkeeperSettings;
+import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
+import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.typesafe.config.Config;
 
 /**
@@ -27,11 +31,24 @@ import com.typesafe.config.Config;
 public final class PeriodicResetCountMin4 extends CountMin4 {
   static final long ONE_MASK = 0x1111111111111111L;
 
+  final Membership doorkeeper;
+
   int additions;
   int period;
 
   public PeriodicResetCountMin4(Config config) {
     super(config);
+
+    BasicSettings settings = new BasicSettings(config);
+    DoorkeeperSettings doorkeeperSettings = settings.tinyLfu().countMin4().periodic().doorkeeper();
+    if (doorkeeperSettings.enabled()) {
+      FilterType filterType = settings.membershipFilter();
+      double expectedInsertionsMultiplier = doorkeeperSettings.expectedInsertionsMultiplier();
+      long expectedInsertions = (long) expectedInsertionsMultiplier * settings.maximumSize();
+      doorkeeper = filterType.create(expectedInsertions, doorkeeperSettings.fpp(), config);
+    } else {
+      doorkeeper = Membership.disabled();
+    }
   }
 
   @Override
@@ -40,6 +57,22 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
     period = (maximumSize == 0) ? 10 : (10 * table.length);
     if (period <= 0) {
       period = Integer.MAX_VALUE;
+    }
+  }
+
+  @Override
+  public int frequency(long e) {
+    int count = super.frequency(e);
+    if (doorkeeper.mightContain(e)) {
+      count++;
+    }
+    return count;
+  }
+
+  @Override
+  public void increment(long e) {
+    if (!doorkeeper.put(e)) {
+      super.increment(e);
     }
   }
 
@@ -64,5 +97,6 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
       table[i] = (table[i] >>> 1) & RESET_MASK;
     }
     additions = (additions >>> 1) - (count >>> 2);
+    doorkeeper.clear();
   }
 }

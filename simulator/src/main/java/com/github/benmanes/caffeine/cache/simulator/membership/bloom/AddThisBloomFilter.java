@@ -40,7 +40,12 @@ public final class AddThisBloomFilter implements Membership {
   }
 
   @Override
-  public void put(long e) {
-    bloomFilter.add(Longs.toByteArray(e));
+  public boolean put(long e) {
+    byte[] bytes = Longs.toByteArray(e);
+    if (bloomFilter.isPresent(bytes)) {
+      return false;
+    }
+    bloomFilter.add(bytes);
+    return true;
   }
 }

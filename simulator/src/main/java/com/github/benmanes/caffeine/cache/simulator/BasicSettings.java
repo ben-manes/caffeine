@@ -134,8 +134,24 @@ public class BasicSettings {
       public String reset() {
         return config().getString("tiny-lfu.count-min-4.reset");
       }
-      public int increment() {
-        return config().getInt("tiny-lfu.count-min-4.increment");
+      public double countersMultiplier() {
+        return config().getDouble("tiny-lfu.count-min-4.counters-multiplier");
+      }
+      public IncrementalSettings incremental() {
+        return new IncrementalSettings();
+      }
+      public PeriodicSettings periodic() {
+        return new PeriodicSettings();
+      }
+      public final class IncrementalSettings {
+        public int interval() {
+          return config().getInt("tiny-lfu.count-min-4.incremental.interval");
+        }
+      }
+      public final class PeriodicSettings {
+        public DoorkeeperSettings doorkeeper() {
+          return new DoorkeeperSettings("tiny-lfu.count-min-4.periodic");
+        }
       }
     }
     public final class CountMin64Settings {
@@ -147,6 +163,22 @@ public class BasicSettings {
       }
       public int sampleSize() {
         return config().getInt("tiny-lfu.count-min-64.sample_size");
+      }
+    }
+    public final class DoorkeeperSettings {
+      private final String basePath;
+
+      private DoorkeeperSettings(String basePath) {
+        this.basePath = basePath;
+      }
+      public boolean enabled() {
+        return config().getBoolean(basePath + ".doorkeeper.enabled");
+      }
+      public double fpp() {
+        return config().getDouble(basePath + ".doorkeeper.fpp");
+      }
+      public double expectedInsertionsMultiplier() {
+        return config().getDouble(basePath + ".doorkeeper.expected-insertions-multiplier");
       }
     }
   }

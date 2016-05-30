@@ -46,8 +46,8 @@ public final class GuavaBloomFilter implements Membership {
   }
 
   @Override
-  public void put(long e) {
-    bloomFilter.put(e);
+  public boolean put(long e) {
+    return bloomFilter.put(e);
   }
 
   private BloomFilter<Long> makeBloomFilter() {

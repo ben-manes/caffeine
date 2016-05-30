@@ -46,8 +46,8 @@ public final class BloomFilter implements Membership {
   long[] table;
 
   /**
-   * Creates a lazily initialized frequency sketch, requiring {@link #ensureCapacity} be called
-   * when the expected number of insertions is determined.
+   * Creates a membership sketch based on the expected number of insertions and the false positive
+   * probability.
    *
    * @param expectedInsertions the number of expected insertions
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0
@@ -105,12 +105,9 @@ public final class BloomFilter implements Membership {
   }
 
   @Override
-  public void put(long e) {
+  public boolean put(long e) {
     int item = spread(Long.hashCode(e));
-    setAt(item, 0);
-    setAt(item, 1);
-    setAt(item, 2);
-    setAt(item, 3);
+    return setAt(item, 0) | setAt(item, 1) | setAt(item, 2) | setAt(item, 3);
   }
 
   /**
@@ -118,11 +115,14 @@ public final class BloomFilter implements Membership {
    *
    * @param item the element's hash
    * @param seedIndex the hash seed index
+   * @return if the membership changed as a result of this operation
    */
-  void setAt(int item, int seedIndex) {
+  boolean setAt(int item, int seedIndex) {
     int hash = seeded(item, seedIndex);
     int index = hash >>> tableShift;
+    long previous = table[index];
     table[index] |= bitmask(hash);
+    return (table[index] != previous);
   }
 
   /**
