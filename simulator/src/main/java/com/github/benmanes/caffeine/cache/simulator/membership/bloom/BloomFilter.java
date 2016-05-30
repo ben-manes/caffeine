@@ -91,7 +91,7 @@ public final class BloomFilter implements Membership {
     int item = spread(Long.hashCode(e));
     for (int i = 0; i < 4; i++) {
       int hash = seeded(item, i);
-      int index = (hash >>> tableShift);
+      int index = hash >>> tableShift;
       if ((table[index] & bitmask(hash)) == 0L) {
         return false;
       }
@@ -121,7 +121,7 @@ public final class BloomFilter implements Membership {
    */
   void setAt(int item, int seedIndex) {
     int hash = seeded(item, seedIndex);
-    int index = (hash >>> tableShift);
+    int index = hash >>> tableShift;
     table[index] |= bitmask(hash);
   }
 

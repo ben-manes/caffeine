@@ -59,7 +59,7 @@
     <Bug code="OS"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader"/>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.parser.AbstractTraceReader"/>
     <Method name="openFile"/>
     <Bug code="UI"/>
   </Match>

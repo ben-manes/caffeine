@@ -67,7 +67,7 @@ ext {
     tcache: '0.9.0',
   ]
   plugin_versions = [
-    checkstyle: '6.18',
+    checkstyle: '6.19',
     coveralls: '2.6.3',
     extra_conf: '3.1.0',
     error_prone: '0.0.8',
