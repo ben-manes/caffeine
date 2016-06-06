@@ -55,9 +55,9 @@ ext {
   benchmark_versions = [
     cache2k: '0.26-BETA',
     concurrentlinkedhashmap: '1.4.2',
-    ehcache2: '2.10.2.1.7',
-    ehcache3: '3.0.1',
-    elastic_search: '5.0.0-alpha2',
+    ehcache2: '2.10.2.2.21',
+    ehcache3: '3.0.2',
+    elastic_search: '5.0.0-alpha3',
     infinispan: '9.0.0.Alpha2',
     jackrabbit: '1.5.2',
     jamm: '0.3.1',
