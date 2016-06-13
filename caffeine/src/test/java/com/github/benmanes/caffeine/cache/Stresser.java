@@ -32,8 +32,8 @@ import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * A stress test to observe if the cache is able to able to drain the buffers fast enough under a
- * synthetic load.
+ * A stress test to observe if the cache is able to drain the buffers fast enough under a synthetic
+ * load.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

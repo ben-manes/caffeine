@@ -168,7 +168,7 @@ public class BasicSettings {
     public final class DoorkeeperSettings {
       private final String basePath;
 
-      private DoorkeeperSettings(String basePath) {
+      DoorkeeperSettings(String basePath) {
         this.basePath = basePath;
       }
       public boolean enabled() {

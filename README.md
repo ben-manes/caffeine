@@ -44,7 +44,7 @@ In addition, Caffeine offers the following extensions:
  * [Simulation][simulator]
 
 Use Caffeine in a community provided integration:
- * [Spring Cache][spring] (upcoming Spring 4.3 & Boot 1.4 releases)
+ * [Spring Cache][spring] (Spring 4.3 & upcoming Boot 1.4 release)
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
  * [Ratpack][ratpack] (upcoming 1.3 release)
@@ -68,11 +68,11 @@ On the radar,
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:2.3.0'
+compile 'com.github.ben-manes.caffeine:caffeine:2.3.1'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:2.3.0'
-compile 'com.github.ben-manes.caffeine:jcache:2.3.0'
+compile 'com.github.ben-manes.caffeine:guava:2.3.1'
+compile 'com.github.ben-manes.caffeine:jcache:2.3.1'
 ```
 
 See the [release notes][releases] for details of the changes.
@@ -105,7 +105,7 @@ Snapshots of the development version are available in
 [voxxed]: https://www.voxxed.com
 [modern-cache]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
 [highscalability]: http://highscalability.com
-[spring]: http://spring.io/blog/2016/03/04/core-container-refinements-in-spring-framework-4-3#cache-abstraction-refinements
+[spring]: http://docs.spring.io/spring/docs/current/spring-framework-reference/html/cache.html#cache-store-configuration-caffeine
 [scala-cache]: https://github.com/cb372/scalacache
 [scaffeine]: https://github.com/blemale/scaffeine
 [hbase]: https://issues.apache.org/jira/browse/HBASE-15560
