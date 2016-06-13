@@ -899,23 +899,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       node.setWriteTime(now);
     }
     if (buffersWrites()) {
-      boolean submitted = false;
-      for (;;) {
-        for (int i = 0; i < WRITE_BUFFER_RETRIES; i++) {
-          submitted = writeBuffer().offer(task);
-          if (submitted) {
-            break;
-          }
-          scheduleDrainBuffers();
+      for (int i = 0; i < WRITE_BUFFER_RETRIES; i++) {
+        if (writeBuffer().offer(task)) {
+          scheduleAfterWrite();
+          return;
         }
-        if (submitted) {
-          break;
-        } else {
-          Thread.yield();
-        }
+        scheduleDrainBuffers();
+      }
+
+      // The maintenance task may be scheduled but not running due to all of the executor's threads
+      // being busy. If all of the threads are writing into the cache then no progress can be made
+      // without assistance.
+      try {
+        performCleanUp(task);
+      } catch (RuntimeException e) {
+        logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", e);
       }
     }
-    scheduleAfterWrite();
   }
 
   /**
@@ -965,7 +965,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         executor().execute(drainBuffersTask);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
-        performCleanUp();
+        performCleanUp(/* ignored */ null);
       } finally {
         evictionLock.unlock();
       }
@@ -975,7 +975,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @Override
   public void cleanUp() {
     try {
-      performCleanUp();
+      performCleanUp(/* ignored */ null);
     } catch (RuntimeException e) {
       logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", e);
     }
@@ -985,11 +985,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * Performs the maintenance work, blocking until the lock is acquired, and sets the state flags
    * to avoid excess scheduling attempts. Any exception thrown, such as by
    * {@link CacheWriter#delete()}, is propagated to the caller.
+   *
+   * @param task an additional pending task to run, or {@code null} if not present
    */
-  void performCleanUp() {
+  void performCleanUp(@Nullable Runnable task) {
     evictionLock.lock();
     try {
       lazySetDrainStatus(PROCESSING_TO_IDLE);
+      if (task != null) {
+        task.run();
+      }
       maintenance();
     } finally {
       if ((drainStatus() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
@@ -2827,7 +2832,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public void run() {
-      performCleanUp();
+      performCleanUp(/* ignored */ null);
     }
 
     /**

@@ -32,27 +32,40 @@ import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * A stress test to observe if the cache has a memory leak by not being able to drain the buffers
- * fast enough.
+ * A stress test to observe if the cache is able to able to drain the buffers fast enough under a
+ * synthetic load.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Stresser {
   private static final String[] STATUS =
     { "Idle", "Required", "Processing -> Idle", "Processing -> Required" };
-  private static final int THREADS = 2 * Runtime.getRuntime().availableProcessors();
+  private static final int MAX_THREADS = 2 * Runtime.getRuntime().availableProcessors();
   private static final int WRITE_MAX_SIZE = (1 << 12);
   private static final int TOTAL_KEYS = (1 << 20);
   private static final int MASK = TOTAL_KEYS - 1;
   private static final int STATUS_INTERVAL = 5;
 
   private final BoundedLocalCache<Integer, Integer> local;
-  private final Cache<Integer, Integer> cache;
+  private final LoadingCache<Integer, Integer> cache;
+  private final Stopwatch stopwatch;
   private final Integer[] ints;
 
-  private final int maximum;
-  private final Stopwatch stopwatch;
-  private final boolean reads = false;
+  private enum Operation {
+    READ(MAX_THREADS, TOTAL_KEYS),
+    WRITE(MAX_THREADS, WRITE_MAX_SIZE),
+    REFRESH(1, WRITE_MAX_SIZE);
+
+    private final int maxThreads;
+    private final int maxEntries;
+
+    private Operation(int maxThreads, int maxEntries) {
+      this.maxThreads = maxThreads;
+      this.maxEntries = maxEntries;
+    }
+  }
+
+  private static final Operation operation = Operation.REFRESH;
 
   public Stresser() {
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
@@ -61,11 +74,10 @@ public final class Stresser {
         .build();
     Executors.newSingleThreadScheduledExecutor(threadFactory)
         .scheduleAtFixedRate(this::status, STATUS_INTERVAL, STATUS_INTERVAL, SECONDS);
-    maximum = reads ? TOTAL_KEYS : WRITE_MAX_SIZE;
     cache = Caffeine.newBuilder()
-        .maximumSize(maximum)
+        .maximumSize(operation.maxEntries)
         .recordStats()
-        .build();
+        .build(key -> key);
     local = (BoundedLocalCache<Integer, Integer>) cache.asMap();
     ints = new Integer[TOTAL_KEYS];
     Arrays.setAll(ints, key -> {
@@ -78,15 +90,20 @@ public final class Stresser {
   }
 
   public void run() throws InterruptedException {
-    ConcurrentTestHarness.timeTasks(THREADS, () -> {
+    ConcurrentTestHarness.timeTasks(operation.maxThreads, () -> {
       int index = ThreadLocalRandom.current().nextInt();
       for (;;) {
         Integer key = ints[index++ & MASK];
-        if (reads) {
-          cache.getIfPresent(key);
-        } else {
-          cache.put(key, key);
-          //Thread.yield();
+        switch (operation) {
+          case READ:
+            cache.getIfPresent(key);
+            break;
+          case WRITE:
+            cache.put(key, key);
+            break;
+          case REFRESH:
+            cache.refresh(key);
+            break;
         }
       }
     });
@@ -95,14 +112,15 @@ public final class Stresser {
   private void status() {
     local.evictionLock.lock();
     int pendingWrites = local.writeBuffer().size();
+    int drainStatus = local.drainStatus();
     local.evictionLock.unlock();
 
     LocalTime elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(TimeUnit.SECONDS));
     System.out.printf("---------- %s ----------%n", elapsedTime);
     System.out.printf("Pending reads: %,d; writes: %,d%n", local.readBuffer.size(), pendingWrites);
-    System.out.printf("Drain status = %s%n", STATUS[local.drainStatus]);
+    System.out.printf("Drain status = %s (%s)%n", STATUS[drainStatus], drainStatus);
     System.out.printf("Evictions = %,d%n", cache.stats().evictionCount());
-    System.out.printf("Size = %,d (max: %,d)%n", local.data.mappingCount(), maximum);
+    System.out.printf("Size = %,d (max: %,d)%n", local.data.mappingCount(), operation.maxEntries);
     System.out.printf("Lock = [%s%n", StringUtils.substringAfter(
         local.evictionLock.toString(), "["));
     System.out.printf("Pending tasks = %,d%n",

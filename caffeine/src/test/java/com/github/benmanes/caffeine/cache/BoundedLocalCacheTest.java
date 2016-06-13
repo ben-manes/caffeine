@@ -28,6 +28,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.util.List;
 import java.util.Map;
@@ -368,6 +370,23 @@ public final class BoundedLocalCacheTest {
 
     cache.cleanUp();
     assertThat(localCache.readBuffer.reads(), is(1));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = Maximum.FULL)
+  public void afterWrite_drainFullWriteBuffer(Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    Runnable task = Mockito.mock(Runnable.class);
+    localCache.drainStatus = PROCESSING_TO_IDLE;
+    int expectedCount = 1;
+
+    while (localCache.writeBuffer().offer(task)) {
+      expectedCount++;
+    }
+
+    localCache.afterWrite(null, task, 0L);
+    verify(task, times(expectedCount)).run();
   }
 
   @Test(dataProvider = "caches")
