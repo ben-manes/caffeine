@@ -62,6 +62,7 @@ On the radar,
  * Early discussions with [HBase][hbase], [Cassandra][cassandra], [Solr][solr], and [ElasticSearch][elastic-search]
  * Postgres is [evaluating][postgres] whether to port the cache
  * Go [implementation][go-tinylfu] of the W-TinyLfu policy
+ * [Druid][druid] has a caffeine powered extension
 
 ### Download
 
@@ -115,3 +116,4 @@ Snapshots of the development version are available in
 [postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
 [ratpack]: https://github.com/ratpack/ratpack/issues/933
+[druid]: https://github.com/druid-io/druid/pull/3028
