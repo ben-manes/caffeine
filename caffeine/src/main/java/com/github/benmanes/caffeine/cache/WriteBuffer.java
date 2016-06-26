@@ -65,7 +65,7 @@ final class WriteBuffer<E> extends ConsumerRef<E> {
     producerMask = mask;
     consumerBuffer = buffer;
     consumerMask = mask;
-    maxQueueCapacity = ceilingPowerOfTwo(maxCapacity) << 1;
+    maxQueueCapacity = ((long) ceilingPowerOfTwo(maxCapacity)) << 1;
     soProducerLimit(mask); // we know it's all empty to start with
   }
 

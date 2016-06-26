@@ -17,8 +17,8 @@ package com.github.benmanes.caffeine.testing;
 
 import java.util.concurrent.TimeUnit;
 
-import com.jayway.awaitility.Awaitility;
-import com.jayway.awaitility.core.ConditionFactory;
+import org.awaitility.Awaitility;
+import org.awaitility.core.ConditionFactory;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

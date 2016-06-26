@@ -26,7 +26,7 @@
 ext {
   versions = [
     akka: '2.3.15',
-    commons_compress: '1.11',
+    commons_compress: '1.12',
     commons_lang3: '3.4',
     config: '1.3.0',
     error_prone_annotations: '2.0.9',
@@ -35,21 +35,21 @@ ext {
     javapoet: '1.7.0',
     jcache: '1.0.0',
     jsr305: '3.0.1',
-    stream: '2.9.2',
+    stream: '2.9.3',
     univocity_parsers: '2.1.2',
-    ycsb: '0.9.0',
+    ycsb: '0.10.0-RC1',
     xz: '1.5',
   ]
   test_versions = [
-    awaitility: '1.7.0',
+    awaitility: '2.0.0',
     easymock: '3.4',
     hamcrest: '2.0.0.0',
     jcache_tck: '1.0.1',
-    jctools: '1.2',
+    jctools: '1.2.1',
     junit: '4.12',
-    mockito: '2.0.55-beta',
+    mockito: '2.0.71-beta',
     pax_exam: '4.9.1',
-    testng: '6.9.11',
+    testng: '6.9.12',
     truth: '0.24',
   ]
   benchmark_versions = [
@@ -97,7 +97,7 @@ ext {
     xz: "org.tukaani:xz:${versions.xz}",
   ]
   test_libraries = [
-    awaitility: dependencies.create("com.jayway.awaitility:awaitility:${test_versions.awaitility}") {
+    awaitility: dependencies.create("org.awaitility:awaitility:${test_versions.awaitility}") {
       exclude group: 'org.hamcrest'
     },
     easymock: "org.easymock:easymock:${test_versions.easymock}",
@@ -128,7 +128,7 @@ ext {
         exclude group: 'junit'
         exclude group: 'guice'
       },
-      'com.google.inject:guice:4.0'
+      'com.google.inject:guice:4.1.0'
     ],
     truth: "com.google.truth:truth:${test_versions.truth}",
   ]
@@ -146,7 +146,7 @@ ext {
     },
     jamm: "com.github.jbellis:jamm:${benchmark_versions.jamm}",
     java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
-    jctools_experimental: 'com.github.JCTools.JCTools:jctools-experimental:-SNAPSHOT',
+    jctools_experimental: "com.github.JCTools.JCTools:jctools-experimental:v${test_versions.jctools}",
     koloboke: [
       "net.openhft:koloboke-api-jdk8:${benchmark_versions.koloboke}",
       "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",

@@ -20,7 +20,7 @@ experience designing [Guava's cache][guava-cache] and [ConcurrentLinkedHashMap][
 ```java
 LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
     .maximumSize(10_000)
-    .expireAfterAccess(5, TimeUnit.MINUTES)
+    .expireAfterWrite(5, TimeUnit.MINUTES)
     .refreshAfterWrite(1, TimeUnit.MINUTES)
     .build(key -> createExpensiveGraph(key));
 ```
@@ -47,7 +47,7 @@ Use Caffeine in a community provided integration:
  * [Spring Cache][spring] (Spring 4.3 & upcoming Boot 1.4 release)
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
- * [Ratpack][ratpack] (upcoming 1.3 release)
+ * [Ratpack][ratpack]: Lean & powerful HTTP apps
 
 ### In the News
 
@@ -115,5 +115,5 @@ Snapshots of the development version are available in
 [elastic-search]: https://github.com/elastic/elasticsearch/issues/16802
 [postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
-[ratpack]: https://github.com/ratpack/ratpack/issues/933
+[ratpack]: https://github.com/ratpack/ratpack
 [druid]: https://github.com/druid-io/druid/pull/3028
