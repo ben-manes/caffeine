@@ -81,7 +81,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
         .returns(varType);
     String type;
     if (varType.isPrimitive()) {
-      type = (varType == TypeName.INT) ? "Int" : "Long";
+      type = varType.equals(TypeName.INT) ? "Int" : "Long";
     } else {
       type = "Object";
     }
@@ -113,7 +113,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
     String type;
     if (varType.isPrimitive()) {
-      type = (varType == TypeName.INT) ? "Int" : "Long";
+      type = varType.equals(TypeName.INT) ? "Int" : "Long";
     } else {
       type = "Object";
     }

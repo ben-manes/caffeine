@@ -25,6 +25,7 @@ import junit.framework.TestCase;
  *
  * @author Charles Fry
  */
+@SuppressWarnings("JUnit3FloatingPointComparisonWithoutDelta")
 public class CacheStatsTest extends TestCase {
 
   public void testEmpty() {

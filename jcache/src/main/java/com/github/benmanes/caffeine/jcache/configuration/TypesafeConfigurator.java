@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
@@ -172,9 +173,9 @@ public final class TypesafeConfigurator {
       Duration update = getDurationFor("policy.lazy-expiration.update");
       Duration access = getDurationFor("policy.lazy-expiration.access");
 
-      boolean eternal = (creation == Duration.ETERNAL)
-          && (update == Duration.ETERNAL)
-          && (access == Duration.ETERNAL);
+      boolean eternal = Objects.equals(creation, Duration.ETERNAL)
+          && Objects.equals(update, Duration.ETERNAL)
+          && Objects.equals(access, Duration.ETERNAL);
       Factory<? extends ExpiryPolicy> factory = eternal
           ? EternalExpiryPolicy.factoryOf()
           : FactoryBuilder.factoryOf(new JCacheExpiryPolicy(creation, update, access));

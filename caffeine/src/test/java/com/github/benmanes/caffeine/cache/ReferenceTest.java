@@ -61,6 +61,7 @@ import com.google.common.testing.GcFinalization;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Listeners(CacheValidationListener.class)
+@SuppressWarnings("BoxedPrimitiveConstructor")
 @Test(groups = "slow", dataProviderClass = CacheProvider.class)
 public final class ReferenceTest {
   // These tests require that the JVM uses -XX:SoftRefLRUPolicyMSPerMB=0 so that soft references

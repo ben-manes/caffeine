@@ -56,7 +56,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     CaffeineConfiguration<Integer, Integer> configuration = new CaffeineConfiguration<>();
     configuration.setExpiryPolicyFactory(() -> new CreatedExpiryPolicy(
         new Duration(TimeUnit.MILLISECONDS, EXPIRY_DURATION)));
-    configuration.setTickerFactory(() -> ticker);
+    configuration.setTickerFactory(() -> ticker::read);
     return configuration;
   }
 

@@ -94,7 +94,7 @@ public final class MultiThreadedTest {
     Threads.runTest(cache, asyncOperations);
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes", "SizeGreaterThanOrEqualsZero"})
+  @SuppressWarnings({"unchecked", "rawtypes", "SizeGreaterThanOrEqualsZero", "SelfEquals"})
   List<BiConsumer<LoadingCache<Integer, Integer>, Integer>> operations = ImmutableList.of(
       // LoadingCache
       (cache, key) -> cache.get(key),
@@ -142,7 +142,7 @@ public final class MultiThreadedTest {
       (cache, key) -> cache.asMap().values().toArray(new Object[cache.asMap().size()]),
       (cache, key) -> cache.asMap().entrySet().toArray(new Entry[cache.asMap().size()]),
       (cache, key) -> cache.hashCode(),
-      (cache, key) -> cache.equals(cache),
+      (cache, key) -> { cache.equals(cache); },
       (cache, key) -> cache.toString(),
       (cache, key) -> { // expensive so do it less frequently
         int random = ThreadLocalRandom.current().nextInt();

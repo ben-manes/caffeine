@@ -92,7 +92,7 @@ public final class LocalCacheFactoryGenerator {
     factory = TypeSpec.classBuilder("LocalCacheFactory")
         .addModifiers(Modifier.FINAL)
         .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-        .addMember("value", "{$S, $S, $S}", "unchecked", "unused", "PMD")
+        .addMember("value", "{$S, $S, $S, $S}", "unchecked", "unused", "PMD", "MissingOverride")
         .build());
     addClassJavaDoc();
     generateLocalCaches();

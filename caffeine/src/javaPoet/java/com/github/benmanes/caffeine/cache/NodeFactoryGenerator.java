@@ -105,7 +105,8 @@ public final class NodeFactoryGenerator {
   void generate() throws IOException {
     nodeFactory = TypeSpec.enumBuilder("NodeFactory")
         .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-            .addMember("value", "{$S, $S, $S}", "unchecked", "GuardedByChecker", "PMD")
+            .addMember("value", "{$S, $S, $S, $S}", "unchecked", "PMD",
+                "GuardedByChecker", "MissingOverride")
             .build());
     addClassJavaDoc();
     addNodeStateStatics();

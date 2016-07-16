@@ -40,6 +40,7 @@ import junit.framework.TestCase;
 /**
  * @author Charles Fry
  */
+@SuppressWarnings("JUnit3FloatingPointComparisonWithoutDelta")
 public class LocalLoadingCacheTest extends TestCase {
 
   private static <K, V> LoadingCache<K, V> makeCache(

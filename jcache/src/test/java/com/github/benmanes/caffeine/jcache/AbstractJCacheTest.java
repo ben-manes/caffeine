@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.jcache;
 
-import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -32,13 +31,13 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.testing.FakeTicker;
 
 /**
  * A testing harness for simplifying the unit tests.
@@ -60,7 +59,7 @@ public abstract class AbstractJCacheTest {
   protected LoadingCacheProxy<Integer, Integer> jcacheLoading;
   protected CacheProxy<Integer, Integer> jcache;
   protected CacheManager cacheManager;
-  protected JFakeTicker ticker;
+  protected FakeTicker ticker;
 
   @BeforeClass(alwaysRun = true)
   public void beforeClass() {
@@ -71,7 +70,7 @@ public abstract class AbstractJCacheTest {
 
   @BeforeMethod(alwaysRun = true)
   public void before() {
-    ticker = new JFakeTicker();
+    ticker = new FakeTicker();
     jcache = (CacheProxy<Integer, Integer>) cacheManager.createCache("jcache", getConfiguration());
     jcacheLoading = (LoadingCacheProxy<Integer, Integer>) cacheManager.createCache(
         "jcacheLoading", getLoadingConfiguration());
@@ -119,10 +118,5 @@ public abstract class AbstractJCacheTest {
     });
     configuration.setReadThrough(true);
     return configuration;
-  }
-
-  protected final class JFakeTicker extends com.google.common.testing.FakeTicker
-      implements Ticker, Serializable {
-    private static final long serialVersionUID = 1L;
   }
 }

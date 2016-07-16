@@ -377,7 +377,7 @@ public final class CacheContext {
       cache = new GuavaLoadingCache<>(guava.build(
           com.google.common.cache.CacheLoader.asyncReloading(
               new SingleLoader<>(loader), executor.delegate())),
-          ticker(), isRecordingStats());
+          ticker, isRecordingStats());
     }
     this.cache = cache;
     return cache;

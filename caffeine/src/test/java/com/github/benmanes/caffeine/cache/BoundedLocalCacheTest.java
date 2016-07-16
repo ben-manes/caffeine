@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -40,7 +41,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -117,8 +117,8 @@ public final class BoundedLocalCacheTest {
       cache.scheduleDrainBuffers();
       assertThat(cache.drainStatus, is(end));
 
-      if (start != end) {
-        Mockito.verify(executor).execute(Matchers.any());
+      if (!start.equals(end)) {
+        Mockito.verify(executor).execute(any());
         Mockito.reset(executor);
       }
     });

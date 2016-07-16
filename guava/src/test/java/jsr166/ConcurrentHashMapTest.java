@@ -17,10 +17,10 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+
 import junit.framework.Test;
 import junit.framework.TestSuite;
-
-import com.github.benmanes.caffeine.cache.Caffeine;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class ConcurrentHashMapTest extends JSR166TestCase {
@@ -674,7 +674,7 @@ public class ConcurrentHashMapTest extends JSR166TestCase {
         ConcurrentMap map = map();
         assertTrue(map.isEmpty());
         for (int i = 0; i < 20; i++) {
-          map.put(new Integer(i), new Integer(i));
+          map.put(i, i);
         }
         assertFalse(map.isEmpty());
         Map.Entry entry1 = (Map.Entry)map.entrySet().iterator().next();
@@ -682,8 +682,8 @@ public class ConcurrentHashMapTest extends JSR166TestCase {
         // test is skipped), remove a possibly-colliding key from map
         // which, under some implementations, may cause entry1 to be
         // cloned in map
-        if (!entry1.getKey().equals(new Integer(16))) {
-            map.remove(new Integer(16));
+        if (!entry1.getKey().equals(16)) {
+            map.remove(16);
             entry1.setValue("XYZ");
             assertTrue(map.containsValue("XYZ")); // fails if write-through broken
         }
