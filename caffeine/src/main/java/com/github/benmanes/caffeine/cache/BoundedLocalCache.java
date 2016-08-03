@@ -1210,13 +1210,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       // Ensure that in-flight async computation cannot expire
       if (isComputingAsync(node)) {
-        node.setAccessTime(Long.MAX_VALUE);
-        node.setWriteTime(Long.MAX_VALUE);
-        ((CompletableFuture<?>) node.getValue()).thenRun(() -> {
-          long now = expirationTicker().read();
-          node.setAccessTime(now);
-          node.setWriteTime(now);
-        });
+        CompletableFuture<?> future = (CompletableFuture<?>) node.getValue();
+        if (future != null) {
+          node.setAccessTime(Long.MAX_VALUE);
+          node.setWriteTime(Long.MAX_VALUE);
+          future.thenRun(() -> {
+            long now = expirationTicker().read();
+            node.setAccessTime(now);
+            node.setWriteTime(now);
+          });
+        }
       }
     }
   }

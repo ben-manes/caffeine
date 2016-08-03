@@ -58,11 +58,11 @@ public final class AddHealth extends NodeRule {
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(boolean.class)
         .build());
-    addState("isRetired", "retire", retiredArg);
-    addState("isDead", "die", deadArg);
+    addState("isRetired", "retire", retiredArg, false);
+    addState("isDead", "die", deadArg, true);
   }
 
-  private void addState(String checkName, String actionName, String arg) {
+  private void addState(String checkName, String actionName, String arg, boolean finalized) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder(checkName)
         .addStatement("return (getKeyReference() == $L)", arg)
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
@@ -74,7 +74,14 @@ public final class AddHealth extends NodeRule {
     if (keyStrength() != Strength.STRONG) {
       action.addStatement("(($T<K>) getKeyReference()).clear()", Reference.class);
     }
-    if (valueStrength() != Strength.STRONG) {
+    if (valueStrength() == Strength.STRONG) {
+      // Set the value to null only when dead, as otherwise the explicit removal of an expired async
+      // value will be notified as explicit rather than expired due to the isComputingAsync() check
+      if (finalized) {
+        action.addStatement("$T.UNSAFE.putObject(this, $N, null)",
+            UNSAFE_ACCESS, offsetName("value"));
+      }
+    } else {
       action.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
     }
     action.addStatement("$T.UNSAFE.putObject(this, $N, $N)", UNSAFE_ACCESS, offsetName("key"), arg);

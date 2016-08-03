@@ -25,6 +25,7 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.verify;
 
@@ -201,7 +202,8 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.TEN,
       weigher = CacheWeigher.VALUE, population = Population.EMPTY,
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      removalListener = Listener.CONSUMING)
   public void evict_weighted_async(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context, Eviction<?, ?> eviction) {
     AtomicBoolean ready = new AtomicBoolean();
@@ -220,6 +222,7 @@ public final class EvictionTest {
 
     ready.set(true);
     Awaits.await().untilTrue(done);
+    Awaits.await().until(context::consumedNotifications, hasSize(1));
     Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(2L));
     Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
 
