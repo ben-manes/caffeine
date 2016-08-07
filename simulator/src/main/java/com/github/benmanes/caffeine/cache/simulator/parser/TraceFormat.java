@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceR
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
 
@@ -36,7 +37,8 @@ public enum TraceFormat {
   LIRS(LirsTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new),
-  CACHE2K(Cache2kTraceReader::new);
+  CACHE2K(Cache2kTraceReader::new),
+  SCARAB(ScarabTraceReader::new);
 
   private final Function<List<String>, TraceReader> factory;
 
