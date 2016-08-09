@@ -1,14 +1,12 @@
 language: java
 sudo: false
 
-jdk:
-  - oraclejdk8
-
-env:
- - TERM=dumb
-
 before_install:
+ - if [[ "x$JDK" == *'x9'* ]]; then remove_dir_from_path $JAVA_HOME/bin; export JAVA_HOME=/usr/lib/jvm/java-9-oracle; export PATH=$JAVA_HOME/bin:$PATH; java -Xmx32m -version; fi
  - cp gradle.properties.ci gradle.properties
+
+install:
+ - ./gradlew assemble --stacktrace
 
 script:
  - JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify" ./gradlew check
@@ -19,12 +17,25 @@ after_success:
 
 matrix:
   fast_finish: true
+  include:
+    - jdk: oraclejdk8 # this will be overwritten by before_install above
+      addons:
+        apt:
+          packages:
+            - oracle-java9-installer
+      env:
+        JDK=9
+        TERM=dumb
+    - jdk: oraclejdk8
+      env:
+        TERM=dumb
 
-addons:
-  apt:
-    packages:
-      - oracle-java8-installer
+# https://docs.travis-ci.com/user/languages/java/#Projects-Using-Gradle
 
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 cache:
   directories:
-    - $HOME/.gradle
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
