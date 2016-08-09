@@ -44,7 +44,7 @@ In addition, Caffeine offers the following extensions:
  * [Simulation][simulator]
 
 Use Caffeine in a community provided integration:
- * [Spring Cache][spring] (Spring 4.3 & upcoming Boot 1.4 release)
+ * [Spring Cache][spring] (Spring 4.3 & Boot 1.4)
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
  * [Ratpack][ratpack]: Lean & powerful HTTP apps
