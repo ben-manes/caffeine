@@ -26,9 +26,10 @@ matrix:
       env:
         JDK=9
         TERM=dumb
-    - jdk: oraclejdk8
-      env:
-        TERM=dumb
+# Temporary disable JDK8
+#    - jdk: oraclejdk8
+#      env:
+#        TERM=dumb
 
 # https://docs.travis-ci.com/user/languages/java/#Projects-Using-Gradle
 
