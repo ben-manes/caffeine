@@ -32,6 +32,10 @@ test {
 
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
+  if (!JavaVersion.current().isJava9Compatible()) {
+    // https://github.com/akka/akka/issues/21165
+    enabled = false
+  }
 }
 
 run {
