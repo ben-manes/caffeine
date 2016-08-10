@@ -28,6 +28,23 @@ tasks.withType(Javadoc) {
 }
 
 test {
+  useJUnit {
+    excludeCategories 'com.github.benmanes.caffeine.guava.OSGiTests'
+  }
+}
+
+task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tests') {
+  enabled = !JavaVersion.current().isJava9Compatible()
+  tasks.test.dependsOn(it)
+
+  useJUnit {
+    includeCategories 'com.github.benmanes.caffeine.guava.OSGiTests'
+  }
+}
+
+tasks.withType(Test) {
+  enabled = !JavaVersion.current().isJava9Compatible()
+
   systemProperty 'guava.osgi.version', versions.guava
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
   systemProperty 'caffeine-guava.osgi.jar', project(':guava').jar.archivePath.path

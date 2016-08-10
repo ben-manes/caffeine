@@ -25,6 +25,7 @@ allprojects {
   apply from: "${rootDir}/gradle/eclipse.gradle"
 
   repositories {
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
     maven { url 'https://jitpack.io' }
     mavenCentral()
     jcenter()
@@ -34,10 +35,6 @@ allprojects {
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'nebula.provided-base'
-  if (!JavaVersion.current().isJava9Compatible()) {
-    // TODO: figure out which errorprone version supports JDK 9+
-    apply plugin: 'net.ltgt.errorprone'
-  }
   apply plugin: 'java'
   apply plugin: 'osgi'
 
@@ -45,6 +42,12 @@ subprojects {
   apply from: "${rootDir}/gradle/code_quality.gradle"
   apply from: "${rootDir}/gradle/dependencies.gradle"
   apply from: "${rootDir}/gradle/object_layout.gradle"
+
+  if (JavaVersion.current().isJava9Compatible()) {
+    tasks.uploadArchives.enabled = false
+  } else {
+    apply plugin: 'net.ltgt.errorprone'  
+  }
 
   sourceCompatibility = JavaVersion.VERSION_1_8
 
@@ -137,5 +140,5 @@ tasks.coveralls {
   description = 'Uploads the aggregated coverage report to Coveralls'
 
   dependsOn jacocoRootReport
-  onlyIf { System.env.'CI' }
+  onlyIf { System.env.'CI' && !JavaVersion.current().isJava9Compatible() }
 }

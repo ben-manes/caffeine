@@ -26,8 +26,6 @@ import javax.management.Notification;
 import javax.management.NotificationFilter;
 import javax.management.NotificationListener;
 
-import com.sun.jmx.mbeanserver.JmxMBeanServer;
-
 /**
  * An MBeanServer for the TCK that sets the mbean server id to the value of the
  * <code>org.jsr107.tck.management.agentId</code> system property.
@@ -40,7 +38,7 @@ public final class JCacheMBeanServerBuilder extends MBeanServerBuilder {
   public MBeanServer newMBeanServer(String defaultDomain,
       MBeanServer outer, MBeanServerDelegate delegate) {
     MBeanServerDelegate jcacheDelegate = new JCacheMBeanServerDelegate(delegate);
-    return JmxMBeanServer.newMBeanServer(defaultDomain, outer, jcacheDelegate, false);
+    return new MBeanServerBuilder().newMBeanServer(defaultDomain, outer, jcacheDelegate);
   }
 
   private static final class JCacheMBeanServerDelegate extends MBeanServerDelegate {

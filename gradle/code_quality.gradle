@@ -43,6 +43,10 @@ pmd {
   ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
 }
 
+jacoco {
+  toolVersion = '0.7.8-SNAPSHOT'
+}
+
 jacocoTestReport {
   group = 'Coverage reports'
   description = 'Generates a test coverage report for a project'

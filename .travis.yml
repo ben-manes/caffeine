@@ -1,42 +1,37 @@
 language: java
-sudo: false
+
+dist: trusty
+group: edge
+
+jdk:
+  - oraclejdk8
+  - oraclejdk9
 
 before_install:
- - if [[ "x$JDK" == *'x9'* ]]; then remove_dir_from_path $JAVA_HOME/bin; export JAVA_HOME=/usr/lib/jvm/java-9-oracle; export PATH=$JAVA_HOME/bin:$PATH; java -Xmx32m -version; fi
  - cp gradle.properties.ci gradle.properties
+ - export JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify"
 
 install:
  - ./gradlew assemble --stacktrace
 
+before_script:
+  - export MAVEN_SKIP_RC=true
 script:
- - JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify" ./gradlew check
+ - ./gradlew check
  - sh -c 'cd examples/write-behind-rxjava && mvn test'
 
 after_success:
 - ./gradlew coveralls uploadArchives
 
 matrix:
-  fast_finish: true
-  include:
-    - jdk: oraclejdk8 # this will be overwritten by before_install above
-      addons:
-        apt:
-          packages:
-            - oracle-java9-installer
-      env:
-        JDK=9
-        TERM=dumb
-# Temporary disable JDK8
-#    - jdk: oraclejdk8
-#      env:
-#        TERM=dumb
-
-# https://docs.travis-ci.com/user/languages/java/#Projects-Using-Gradle
+  allow_failures:
+    - jdk: oraclejdk9
 
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
   - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 cache:
   directories:
+    - $HOME/.m2
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/

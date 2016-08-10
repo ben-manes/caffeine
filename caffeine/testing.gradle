@@ -57,6 +57,8 @@ task isolatedTests(type: Test, group: 'Cache tests') {
 }
 
 task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tests') {
+  enabled = !JavaVersion.current().isJava9Compatible()
+
   useJUnit()
   tasks.test.dependsOn(it)
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path

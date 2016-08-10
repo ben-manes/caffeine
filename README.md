@@ -48,6 +48,8 @@ Use Caffeine in a community provided integration:
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
  * [Ratpack][ratpack]: Lean & powerful HTTP apps
+ * [Finagle][finagle]: Extensible RPC system
+ * [Druid][druid]: Real-time Analytics
 
 ### In the News
 
@@ -62,7 +64,6 @@ On the radar,
  * Early discussions with [HBase][hbase], [Cassandra][cassandra], [Solr][solr], and [ElasticSearch][elastic-search]
  * Postgres is [evaluating][postgres] whether to port the cache
  * Go [implementation][go-tinylfu] of the W-TinyLfu policy
- * [Druid][druid] has a caffeine powered extension
 
 ### Download
 
@@ -116,4 +117,5 @@ Snapshots of the development version are available in
 [postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
 [ratpack]: https://github.com/ratpack/ratpack
-[druid]: https://github.com/druid-io/druid/pull/3028
+[finagle]: https://github.com/twitter/finagle
+[druid]: https://github.com/druid-io/druid

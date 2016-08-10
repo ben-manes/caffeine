@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.google.common.base.Predicates.equalTo;
+import static com.google.common.base.Predicates.not;
 import static org.mockito.Mockito.reset;
 
 import java.util.Arrays;
@@ -85,6 +87,10 @@ final class CacheGenerator {
     Set<Compute> computations = filterTypes(options.compute(), cacheSpec.compute());
     Set<Implementation> implementations = filterTypes(
         options.implementation(), cacheSpec.implementation());
+
+    if (System.getProperty("java.version").contains("9")) {
+      values = Sets.filter(values, not(equalTo(ReferenceType.SOFT)));
+    }
 
     if (isAsyncLoadingOnly) {
       values = values.contains(ReferenceType.STRONG)
