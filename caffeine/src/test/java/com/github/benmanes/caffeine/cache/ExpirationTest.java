@@ -150,6 +150,10 @@ public final class ExpirationTest {
     assertThat(cache.getIfPresent(context.middleKey()), is(nullValue()));
     assertThat(cache.estimatedSize(), is(2L));
 
+    if (context.isGuava()) {
+      cache.cleanUp();
+    }
+
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
@@ -204,6 +208,10 @@ public final class ExpirationTest {
     assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
     assertThat(cache.getIfPresent(context.middleKey()), is(nullValue()));
     assertThat(cache.estimatedSize(), is(2L));
+
+    if (context.isGuava()) {
+      cache.cleanUp();
+    }
 
     long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
@@ -295,9 +303,12 @@ public final class ExpirationTest {
     context.ticker().advance(1, TimeUnit.MINUTES);
     cache.invalidateAll();
 
-    long count = context.initialSize();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+    if (!context.isGuava()) {
+      // https://github.com/google/guava/issues/2101
+      long count = context.initialSize();
+      assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+      verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+    }
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -428,7 +439,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
   public void get(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
-    context.ticker().advance(1, TimeUnit.SECONDS);
+    context.ticker().advance(2, TimeUnit.MINUTES);
 
     cache.get(context.firstKey());
     cache.get(context.middleKey(), k -> context.absentValue());
@@ -560,9 +571,12 @@ public final class ExpirationTest {
     context.ticker().advance(1, TimeUnit.MINUTES);
     map.clear();
 
-    long count = context.initialSize();
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+    if (!context.isGuava()) {
+      // https://github.com/google/guava/issues/2101
+      long count = context.initialSize();
+      assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+      verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+    }
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -629,6 +643,10 @@ public final class ExpirationTest {
     assertThat(map.get(context.absentKey()), is(context.absentValue()));
     assertThat(map.get(context.middleKey()), is(nullValue()));
     assertThat(map.size(), is(2));
+
+    if (context.isGuava()) {
+      context.cleanUp();
+    }
 
     long count = context.initialSize() - 1;
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
@@ -828,6 +846,10 @@ public final class ExpirationTest {
     assertThat(map.computeIfPresent(key, (k, v) -> value), is(nullValue()));
 
     assertThat(map.size(), is(0));
+    if (context.isGuava()) {
+      context.cleanUp();
+    }
+
     long count = context.initialSize();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));

@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -32,6 +31,7 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 
@@ -61,14 +61,18 @@ public final class HasRemovalNotifications<K, V> extends TypeSafeDiagnosingMatch
   protected boolean matchesSafely(Object ignored, Description description) {
     DescriptionBuilder desc = new DescriptionBuilder(description);
 
-    List<RemovalNotification<Integer, Integer>> notifications = context.consumedNotifications();
-    if (!notifications.isEmpty()) {
+    if (context.removalListenerType == Listener.CONSUMING) {
+      List<RemovalNotification<Integer, Integer>> notifications = context.consumedNotifications();
       ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
-      desc.expectThat("notification size", notifications, hasSize(count));
 
+      int size = 0;
       for (RemovalNotification<?, ?> notification : notifications) {
-        checkNotification(notification);
+        if (notification.getCause() == cause) {
+          checkNotification(notification);
+          size++;
+        }
       }
+      desc.expectThat("notification count", size, is(count));
     }
 
     return desc.matches();

@@ -915,6 +915,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       } catch (RuntimeException e) {
         logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", e);
       }
+    } else {
+      scheduleAfterWrite();
     }
   }
 
@@ -2187,6 +2189,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         afterWrite(node, new UpdateTask(node, weightedDifference), now);
       } else {
         afterRead(node, now, /* recordHit */ false);
+        if (cause[0] == RemovalCause.COLLECTED) {
+          scheduleDrainBuffers();
+        }
       }
     }
 

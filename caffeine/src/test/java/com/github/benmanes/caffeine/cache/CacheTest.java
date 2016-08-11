@@ -273,7 +273,10 @@ public final class CacheTest {
     assertThat(cache.estimatedSize(), is(context.initialSize()));
 
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+
+    if (context.isGuava() || context.isAsync()) {
+      assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    }
   }
 
   @Test(dataProvider = "caches")
@@ -374,20 +377,23 @@ public final class CacheTest {
   @CacheSpec(population = { Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_mixed(Cache<Integer, Integer> cache, CacheContext context) {
-    Map<Integer, Integer> expect = new HashMap<>(context.original());
     Map<Integer, Integer> entries = new HashMap<>();
-    for (int i = 0; i < 2 * context.initialSize(); i++) {
-      int value = ((i % 2) == 0) ? i : (i + 1);
-      entries.put(i, value);
-    }
-    expect.putAll(entries);
+    Map<Integer, Integer> replaced = new HashMap<>();
+    context.original().forEach((key, value) -> {
+      if ((key % 2) == 0) {
+        value++;
+        replaced.put(key, value);
+      }
+      entries.put(key, value);
+    });
 
     cache.putAll(entries);
-    assertThat(cache.asMap(), is(equalTo(expect)));
-    assertThat(cache, hasRemovalNotifications(context, entries.size() / 2, RemovalCause.REPLACED));
+    assertThat(cache.asMap(), is(equalTo(entries)));
+    Map<Integer, Integer> expect = (context.isGuava() || context.isAsync()) ? entries : replaced;
+    assertThat(cache, hasRemovalNotifications(context, expect.size(), RemovalCause.REPLACED));
 
     verifyWriter(context, (verifier, writer) -> {
-      verifier.wroteAll(entries);
+      verifier.wroteAll(replaced);
     });
   }
 

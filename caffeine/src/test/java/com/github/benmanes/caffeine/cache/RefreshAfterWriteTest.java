@@ -163,7 +163,7 @@ public final class RefreshAfterWriteTest {
     cache.get(context.absentKey());
     context.ticker().advance(45, TimeUnit.SECONDS);
 
-    assertThat(cache.getIfPresent(context.absentKey()), is(-context.absentKey()));
+    assertThat(cache.getIfPresent(context.firstKey()), is(-context.firstKey()));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
@@ -177,7 +177,7 @@ public final class RefreshAfterWriteTest {
     cache.get(context.absentKey());
     context.ticker().advance(45, TimeUnit.SECONDS);
 
-    assertThat(cache.getIfPresent(context.absentKey()), is(futureOf(-context.absentKey())));
+    assertThat(cache.getIfPresent(context.firstKey()), is(futureOf(-context.firstKey())));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
@@ -311,8 +311,8 @@ public final class RefreshAfterWriteTest {
     refresh.set(true);
 
     await().until(() -> cache.getIfPresent(key), is(refreshed));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+    await().until(() -> context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
   /* ---------------- Policy -------------- */

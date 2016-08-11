@@ -522,7 +522,8 @@ public final class EvictionTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL,
+  @CacheSpec(implementation = Implementation.Caffeine,
+      maximumSize = Maximum.FULL, weigher = { CacheWeigher.DEFAULT, CacheWeigher.TEN },
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void maximumSize_decrease_min(Cache<Integer, Integer> cache,
       CacheContext context, Eviction<Integer, Integer> eviction) {
