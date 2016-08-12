@@ -39,10 +39,6 @@ jar.manifest {
     'com.github.benmanes.caffeine.jcache.spi',
     'com.github.benmanes.caffeine.jcache.copy',
     'com.github.benmanes.caffeine.jcache.configuration'
-  instruction 'Require-Capability',
-    'osgi.extender;filter:="(osgi.extender=osgi.serviceloader.registrar)"'
-  instruction 'Provide-Capability',
-    'osgi.serviceloader;osgi.serviceloader=com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider'
 }
 
 task unzipJCacheJavaDoc(type: Copy, group: 'Build', description: 'Unzips the JCache JavaDoc') {
