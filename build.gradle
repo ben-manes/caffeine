@@ -34,7 +34,10 @@ allprojects {
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'nebula.provided-base'
-  apply plugin: 'net.ltgt.errorprone'
+  if (!JavaVersion.current().isJava9Compatible()) {
+    // TODO: figure out which errorprone version supports JDK 9+
+    apply plugin: 'net.ltgt.errorprone'
+  }
   apply plugin: 'java'
   apply plugin: 'osgi'
 
