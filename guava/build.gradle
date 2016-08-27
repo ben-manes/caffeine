@@ -43,8 +43,6 @@ task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tes
 }
 
 tasks.withType(Test) {
-  enabled = !JavaVersion.current().isJava9Compatible()
-
   systemProperty 'guava.osgi.version', versions.guava
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
   systemProperty 'caffeine-guava.osgi.jar', project(':guava').jar.archivePath.path

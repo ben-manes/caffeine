@@ -33,6 +33,7 @@ import javax.cache.event.CacheEntryListener;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.inject.Inject;
 
 import com.github.benmanes.caffeine.jcache.expiry.JCacheExpiryPolicy;
 import com.typesafe.config.Config;
@@ -47,6 +48,8 @@ import com.typesafe.config.ConfigException;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class TypesafeConfigurator {
   static final Logger logger = Logger.getLogger(TypesafeConfigurator.class.getName());
+
+  static FactoryCreator factoryCreator = FactoryBuilder::factoryOf;
 
   private TypesafeConfigurator() {}
 
@@ -83,6 +86,17 @@ public final class TypesafeConfigurator {
     return Optional.ofNullable(configuration);
   }
 
+  /**
+   * Specifies how {@link Factory} instances are created for a given class name. The default
+   * strategy uses {@link Class#newInstance()} and requires the class has a no-args constructor.
+   *
+   * @param factoryCreator the strategy for creating a factory
+   */
+  @Inject
+  public static void setFactoryBuilder(FactoryCreator factoryCreator) {
+    TypesafeConfigurator.factoryCreator = requireNonNull(factoryCreator);
+  }
+
   /** A one-shot builder for creating a configuration instance. */
   private static final class Configurator<K, V> {
     final CaffeineConfiguration<K, V> configuration;
@@ -116,7 +130,7 @@ public final class TypesafeConfigurator {
       boolean enabled = config.getBoolean("store-by-value.enabled");
       configuration.setStoreByValue(enabled);
       if (config.hasPath("store-by-value.strategy")) {
-        configuration.setCopierFactory(FactoryBuilder.factoryOf(
+        configuration.setCopierFactory(factoryCreator.factoryOf(
             config.getString("store-by-value.strategy")));
       }
     }
@@ -127,10 +141,10 @@ public final class TypesafeConfigurator {
         Config listener = rootConfig.getConfig(path);
 
         Factory<? extends CacheEntryListener<? super K, ? super V>> listenerFactory =
-            FactoryBuilder.factoryOf(listener.getString("class"));
+            factoryCreator.factoryOf(listener.getString("class"));
         Factory<? extends CacheEntryEventFilter<? super K, ? super V>> filterFactory = null;
         if (listener.hasPath("filter")) {
-          filterFactory = FactoryBuilder.factoryOf(listener.getString("filter"));
+          filterFactory = factoryCreator.factoryOf(listener.getString("filter"));
         }
         boolean oldValueRequired = listener.getBoolean("old-value-required");
         boolean synchronous = listener.getBoolean("synchronous");
@@ -147,7 +161,7 @@ public final class TypesafeConfigurator {
       configuration.setReadThrough(isReadThrough);
       if (config.hasPath("read-through.loader")) {
         String loaderClass = config.getString("read-through.loader");
-        configuration.setCacheLoaderFactory(FactoryBuilder.factoryOf(loaderClass));
+        configuration.setCacheLoaderFactory(factoryCreator.factoryOf(loaderClass));
       }
     }
 
@@ -157,7 +171,7 @@ public final class TypesafeConfigurator {
       configuration.setWriteThrough(isWriteThrough);
       if (config.hasPath("write-through.writer")) {
         String writerClass = config.getString("write-through.writer");
-        configuration.setCacheWriterFactory(FactoryBuilder.factoryOf(writerClass));
+        configuration.setCacheWriterFactory(factoryCreator.factoryOf(writerClass));
       }
     }
 
