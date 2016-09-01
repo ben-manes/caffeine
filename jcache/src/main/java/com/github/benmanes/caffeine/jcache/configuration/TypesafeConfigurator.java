@@ -93,7 +93,7 @@ public final class TypesafeConfigurator {
    * @param factoryCreator the strategy for creating a factory
    */
   @Inject
-  public static void setFactoryBuilder(FactoryCreator factoryCreator) {
+  public static void setFactoryCreator(FactoryCreator factoryCreator) {
     TypesafeConfigurator.factoryCreator = requireNonNull(factoryCreator);
   }
 

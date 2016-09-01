@@ -72,6 +72,10 @@ public final class JCacheLoaderAdapter<K, V>
       long start = statsEnabled ? ticker.read() : 0L;
 
       V value = delegate.load(key);
+      if (value == null) {
+        return null;
+      }
+
       dispatcher.publishCreated(cache, key, value);
 
       if (statsEnabled) {

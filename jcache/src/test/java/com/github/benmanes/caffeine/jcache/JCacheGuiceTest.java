@@ -64,7 +64,7 @@ public final class JCacheGuiceTest {
 
   @AfterClass
   public void afterClass() {
-    TypesafeConfigurator.setFactoryBuilder(FactoryBuilder::factoryOf);
+    TypesafeConfigurator.setFactoryCreator(FactoryBuilder::factoryOf);
   }
 
   @Test

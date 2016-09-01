@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.integration.CacheLoader;
-import javax.cache.integration.CacheLoaderException;
 import javax.cache.spi.CachingProvider;
 
 import org.testng.annotations.AfterMethod;
@@ -33,7 +32,6 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
-import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -108,15 +106,20 @@ public abstract class AbstractJCacheTest {
   /** The loading configuration used by the test. */
   protected CaffeineConfiguration<Integer, Integer> getLoadingConfiguration() {
     CaffeineConfiguration<Integer, Integer> configuration = getConfiguration();
-    configuration.setCacheLoaderFactory(() -> new CacheLoader<Integer, Integer>() {
-      @Override public Integer load(Integer key) throws CacheLoaderException {
+    configuration.setCacheLoaderFactory(this::getCacheLoader);
+    configuration.setReadThrough(true);
+    return configuration;
+  }
+
+  /** The cache loader used by the test. */
+  protected CacheLoader<Integer, Integer> getCacheLoader() {
+    return new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
         return key;
       }
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-        return Maps.asMap(ImmutableSet.copyOf(keys), Functions.identity());
+        return Maps.asMap(ImmutableSet.copyOf(keys), this::load);
       }
-    });
-    configuration.setReadThrough(true);
-    return configuration;
+    };
   }
 }
