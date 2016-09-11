@@ -215,6 +215,10 @@ public final class IsValidBoundedLocalCache<K, V>
       }
     }
 
+    if (cache.refreshAfterWrite()) {
+      desc.expectThat("infinite timestamp", node.getWriteTime(), is(not(Long.MAX_VALUE)));
+    }
+
     if (value instanceof CompletableFuture<?>) {
       CompletableFuture<?> future = (CompletableFuture<?>) value;
       boolean success = future.isDone() && !future.isCompletedExceptionally();

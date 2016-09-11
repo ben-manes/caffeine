@@ -16,6 +16,7 @@ script:
  - travis_wait ./gradlew :caffeine:slowCaffeineTest
  - travis_wait ./gradlew :caffeine:slowGuavaTest
  - sh -c 'cd examples/write-behind-rxjava && mvn test'
+ - sh -c 'cd examples/stats-metrics && ./gradlew test'
 
 after_success:
 - ./gradlew coveralls uploadArchives

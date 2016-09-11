@@ -1,0 +1,17 @@
+apply plugin: 'java'
+
+repositories {
+  jcenter()
+}
+
+dependencies {
+  compile 'com.github.ben-manes.caffeine:caffeine:2.3.3'
+  compile 'io.dropwizard.metrics:metrics-core:3.1.2'
+
+  testCompile 'org.testng:testng:6.9.12'
+  testCompile 'org.hamcrest:java-hamcrest:2.0.0.0'
+}
+
+test {
+  useTestNG()
+}
