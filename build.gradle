@@ -12,7 +12,7 @@ buildscript {
   }
 
   dependencies {
-    gradle_plugins.each { name, dependency -> classpath dependency }
+    classpath gradle_plugins.values()
   }
 }
 

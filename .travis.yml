@@ -12,11 +12,12 @@ before_install:
  - export JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify"
 
 script:
+ - ./gradlew findbugsMain pmdMain -Dfindbugs -Dpmd
  - ./gradlew check -x :caffeine:slowCaffeineTest -x :caffeine:slowGuavaTest
  - travis_wait ./gradlew :caffeine:slowCaffeineTest
  - travis_wait ./gradlew :caffeine:slowGuavaTest
- - sh -c 'cd examples/write-behind-rxjava && mvn test'
  - sh -c 'cd examples/stats-metrics && ./gradlew test'
+ - sh -c 'cd examples/write-behind-rxjava && mvn test'
 
 after_success:
 - ./gradlew coveralls uploadArchives

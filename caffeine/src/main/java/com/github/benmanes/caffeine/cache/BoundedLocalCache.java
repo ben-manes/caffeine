@@ -101,7 +101,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * draining process is required. Due to the concurrent nature of the read and write operations a
    * strict policy ordering is not possible, but is observably strict when single threaded. The
    * buffers are drained asynchronously to minimize the request latency and uses a state machine to
-   * determine when to scheduling a task on an executor.
+   * determine when to schedule a task on an executor.
    *
    * Due to a lack of a strict ordering guarantee, a task can be executed out-of-order, such as a
    * removal followed by its addition. The state of the entry is encoded using the key field to
@@ -528,7 +528,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * when there are no more candidates the victim is evicted.
    *
    * @param candidates the number of candidate entries evicted from the eden space
-   * @return if an eviction occurred
    */
   @GuardedBy("evictionLock")
   void evictFromMain(int candidates) {
