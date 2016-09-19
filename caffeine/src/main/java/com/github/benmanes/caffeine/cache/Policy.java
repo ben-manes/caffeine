@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
@@ -106,8 +107,21 @@ public interface Policy<K, V> {
     boolean isWeighted();
 
     /**
+     * Returns the weight of the entry. If this cache does not use a weighted size bound or does not
+     * support querying for the entry's weight, then the {@link OptionalInt} will be empty.
+     *
+     * @param key the key for the entry being queried
+     * @return the weight if the entry is present in the cache
+     */
+    @Nonnull
+    default OptionalInt weightOf(@Nonnull K key) {
+      // This method will be abstract in version 3.0.0
+      return OptionalInt.empty();
+    }
+
+    /**
      * Returns the approximate accumulated weight of entries in this cache. If this cache does not
-     * use a weighted size bound, then the {@link Optional} will be empty.
+     * use a weighted size bound, then the {@link OptionalLong} will be empty.
      *
      * @return the combined weight of the values in this cache
      */
@@ -183,7 +197,7 @@ public interface Policy<K, V> {
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
      * where {@code freshnessLifetime = expires - currentTime}.
      *
-     * @param key key with which the specified value is to be associated
+     * @param key the key for the entry being queried
      * @param unit the unit that {@code age} is expressed in
      * @return the age if the entry is present in the cache
      */

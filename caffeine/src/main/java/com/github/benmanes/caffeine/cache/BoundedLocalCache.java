@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.Spliterator;
@@ -60,6 +61,7 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
@@ -2978,6 +2980,19 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public boolean isWeighted() {
         return isWeighted;
       }
+      @Override public OptionalInt weightOf(@Nonnull K key) {
+        requireNonNull(key);
+        if (!isWeighted) {
+          return OptionalInt.empty();
+        }
+        Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
+        if (node == null) {
+          return OptionalInt.empty();
+        }
+        synchronized (node) {
+          return OptionalInt.of(node.getWeight());
+        }
+      }
       @Override public OptionalLong weightedSize() {
         if (cache.evicts() && isWeighted()) {
           cache.evictionLock.lock();
@@ -3011,6 +3026,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     final class BoundedExpireAfterAccess implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
+        requireNonNull(key);
+        requireNonNull(unit);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<?, ?> node = cache.data.get(lookupKey);
         if (node == null) {
@@ -3039,6 +3056,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     final class BoundedExpireAfterWrite implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
+        requireNonNull(key);
+        requireNonNull(unit);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<?, ?> node = cache.data.get(lookupKey);
         if (node == null) {
@@ -3067,6 +3086,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     final class BoundedRefreshAfterWrite implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
+        requireNonNull(key);
+        requireNonNull(unit);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<?, ?> node = cache.data.get(lookupKey);
         if (node == null) {

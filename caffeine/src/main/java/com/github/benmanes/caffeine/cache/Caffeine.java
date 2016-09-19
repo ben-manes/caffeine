@@ -482,7 +482,7 @@ public final class Caffeine<K, V> {
    * <p>
    * <b>Warning:</b> in most circumstances it is better to set a per-cache
    * {@linkplain #maximumSize(long) maximum size} instead of using soft references. You should only
-   * use this method if you are well familiar with the practical consequences of soft references.
+   * use this method if you are very familiar with the practical consequences of soft references.
    * <p>
    * <b>Note:</b> when this method is used, the resulting cache will use identity ({@code ==})
    * comparison to determine equality of values.

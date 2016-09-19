@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -490,6 +491,28 @@ public final class EvictionTest {
     assertThat(eviction.isWeighted(), is(context.isWeighted()));
   }
 
+  /* ---------------- Policy: WeightOf -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.VALUE)
+  public void weightOf(Cache<Integer, Integer> cache, CacheContext context,
+      Eviction<Integer, Integer> eviction) {
+    Integer key = 1;
+    cache.put(key, 1);
+    assertThat(eviction.weightOf(key).getAsInt(), is(1));
+
+    cache.put(key, 2);
+    assertThat(eviction.weightOf(key).getAsInt(), is(2));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
+  public void weightOf_absent(Cache<Integer, Integer> cache, CacheContext context,
+      Eviction<Integer, Integer> eviction) {
+    assertThat(eviction.weightOf(context.absentKey()), is(OptionalInt.empty()));
+  }
+
   /* ---------------- Policy: WeightedSize -------------- */
 
   @Test(dataProvider = "caches")
@@ -497,6 +520,11 @@ public final class EvictionTest {
       maximumSize = Maximum.FULL, weigher = CacheWeigher.TEN)
   public void weightedSize(Cache<Integer, Integer> cache, CacheContext context,
       Eviction<Integer, Integer> eviction) {
+    long weightedSize = 0;
+    for (Integer key : cache.asMap().keySet()) {
+      weightedSize += eviction.weightOf(key).getAsInt();
+    }
+    assertThat(weightedSize, is(eviction.weightedSize().getAsLong()));
     assertThat(eviction.weightedSize().getAsLong(), is(10 * cache.estimatedSize()));
   }
 

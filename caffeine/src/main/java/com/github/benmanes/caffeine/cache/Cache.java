@@ -42,10 +42,10 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 public interface Cache<K, V> {
 
   /**
-   * Returns the value associated with {@code key} in this cache, or {@code null} if there is no
-   * cached value for {@code key}.
+   * Returns the value associated with the {@code key} in this cache, or {@code null} if there is no
+   * cached value for the {@code key}.
    *
-   * @param key key whose associated value is to be returned
+   * @param key the key whose associated value is to be returned
    * @return the value to which the specified key is mapped, or {@code null} if this map contains no
    *         mapping for the key
    * @throws NullPointerException if the specified key is null
@@ -54,7 +54,7 @@ public interface Cache<K, V> {
   V getIfPresent(@Nonnull Object key);
 
   /**
-   * Returns the value associated with {@code key} in this cache, obtaining that value from
+   * Returns the value associated with the {@code key} in this cache, obtaining that value from the
    * {@code mappingFunction} if necessary. This method provides a simple substitute for the
    * conventional "if cached, return; otherwise create, cache and return" pattern.
    * <p>
@@ -68,7 +68,7 @@ public interface Cache<K, V> {
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
    *
-   * @param key key with which the specified value is to be associated
+   * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to compute a value
    * @return the current (existing or computed) value associated with the specified key, or null if
    *         the computed value is null
@@ -82,8 +82,8 @@ public interface Cache<K, V> {
   V get(@Nonnull K key, @Nonnull Function<? super K, ? extends V> mappingFunction);
 
   /**
-   * Returns a map of the values associated with {@code keys} in this cache. The returned map will
-   * only contain entries which are already present in the cache.
+   * Returns a map of the values associated with the {@code keys} in this cache. The returned map
+   * will only contain entries which are already present in the cache.
    *
    * @param keys the keys whose associated values are to be returned
    * @return the unmodifiable mapping of keys to values for the specified keys found in this cache
@@ -93,13 +93,14 @@ public interface Cache<K, V> {
   Map<K, V> getAllPresent(@Nonnull Iterable<?> keys);
 
   /**
-   * Associates {@code value} with {@code key} in this cache. If the cache previously contained a
-   * value associated with {@code key}, the old value is replaced by {@code value}.
+   * Associates the {@code value} with the {@code key} in this cache. If the cache previously
+   * contained a value associated with the {@code key}, the old value is replaced by the new
+   * {@code value}.
    * <p>
    * Prefer {@link #get(Object, Function)} when using the conventional "if cached, return; otherwise
    * create, cache and return" pattern.
    *
-   * @param key key with which the specified value is to be associated
+   * @param key the key with which the specified value is to be associated
    * @param value value to be associated with the specified key
    * @throws NullPointerException if the specified key or value is null
    */
@@ -111,23 +112,23 @@ public interface Cache<K, V> {
    * {@code k} to value {@code v} in the specified map. The behavior of this operation is undefined
    * if the specified map is modified while the operation is in progress.
    *
-   * @param map mappings to be stored in this cache
+   * @param map the mappings to be stored in this cache
    * @throws NullPointerException if the specified map is null or the specified map contains null
    *         keys or values
    */
   void putAll(@Nonnull Map<? extends K,? extends V> map);
 
   /**
-   * Discards any cached value for key {@code key}. The behavior of this operation is undefined for
+   * Discards any cached value for the {@code key}. The behavior of this operation is undefined for
    * an entry that is being loaded and is otherwise not present.
    *
-   * @param key key whose mapping is to be removed from the cache
+   * @param key the key whose mapping is to be removed from the cache
    * @throws NullPointerException if the specified key is null
    */
   void invalidate(@Nonnull Object key);
 
   /**
-   * Discards any cached values for keys {@code keys}. The behavior of this operation is undefined
+   * Discards any cached values for the {@code keys}. The behavior of this operation is undefined
    * for an entry that is being loaded and is otherwise not present.
    *
    * @param keys the keys whose associated values are to be removed

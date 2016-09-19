@@ -37,10 +37,10 @@ import javax.annotation.concurrent.ThreadSafe;
 public interface LoadingCache<K, V> extends Cache<K, V> {
 
   /**
-   * Returns the value associated with {@code key} in this cache, obtaining that value from
+   * Returns the value associated with the {@code key} in this cache, obtaining that value from
    * {@link CacheLoader#load(Object)} if necessary.
    * <p>
-   * If another call to {@link #get} is currently loading the value for {@code key}, this thread
+   * If another call to {@link #get} is currently loading the value for the {@code key}, this thread
    * simply waits for that thread to finish and returns its loaded value. Note that multiple threads
    * can concurrently load values for distinct keys.
    * <p>
@@ -65,9 +65,9 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
   V get(@Nonnull K key);
 
   /**
-   * Returns a map of the values associated with {@code keys}, creating or retrieving those values
-   * if necessary. The returned map contains entries that were already cached, combined with newly
-   * loaded entries; it will never contain null keys or values.
+   * Returns a map of the values associated with the {@code keys}, creating or retrieving those
+   * values if necessary. The returned map contains entries that were already cached, combined with
+   * newly loaded entries; it will never contain null keys or values.
    * <p>
    * Caches loaded by a {@link CacheLoader} will issue a single request to
    * {@link CacheLoader#loadAll} for all keys which are not already present in the cache. All
@@ -101,8 +101,8 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * be logged (using {@link java.util.logging.Logger}) and swallowed</i>.
    * <p>
    * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
-   * currently contains a value for {@code key}, and {@link CacheLoader#load} otherwise. Loading is
-   * asynchronous by delegating to the default executor.
+   * currently contains a value for the {@code key}, and {@link CacheLoader#load} otherwise. Loading
+   * is asynchronous by delegating to the default executor.
    *
    * @param key key with which a value may be associated
    * @throws NullPointerException if the specified key is null
