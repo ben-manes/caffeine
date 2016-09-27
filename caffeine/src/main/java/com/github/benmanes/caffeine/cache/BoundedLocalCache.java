@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Node.EDEN;
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
@@ -427,7 +428,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @GuardedBy("evictionLock")
   void setMaximum(long maximum) {
-    Caffeine.requireArgument(maximum >= 0);
+    requireArgument(maximum >= 0);
 
     long max = Math.min(maximum, MAXIMUM_CAPACITY);
     long eden = max - (long) (max * PERCENT_MAIN);
@@ -2310,7 +2311,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @return an unmodifiable snapshot in the iterator's order
    */
   Map<K, V> snapshot(Iterator<Node<K, V>> iterator, Function<V, V> transformer, int limit) {
-    Caffeine.requireArgument(limit >= 0);
+    requireArgument(limit >= 0);
     evictionLock.lock();
     try {
       maintenance();
@@ -3042,7 +3043,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return unit.convert(cache.expiresAfterAccessNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
-        Caffeine.requireArgument(duration >= 0);
+        requireArgument(duration >= 0);
         cache.setExpiresAfterAccessNanos(unit.toNanos(duration));
         cache.scheduleAfterWrite();
       }
@@ -3072,7 +3073,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return unit.convert(cache.expiresAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
-        Caffeine.requireArgument(duration >= 0);
+        requireArgument(duration >= 0);
         cache.setExpiresAfterWriteNanos(unit.toNanos(duration));
         cache.scheduleAfterWrite();
       }
@@ -3102,7 +3103,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return unit.convert(cache.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
       @Override public void setExpiresAfter(long duration, TimeUnit unit) {
-        Caffeine.requireArgument(duration >= 0);
+        requireArgument(duration >= 0);
         cache.setRefreshAfterWriteNanos(unit.toNanos(duration));
         cache.scheduleAfterWrite();
       }

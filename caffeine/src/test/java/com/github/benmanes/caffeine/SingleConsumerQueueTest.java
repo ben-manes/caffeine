@@ -119,6 +119,7 @@ public class SingleConsumerQueueTest {
   }
 
   @Test(dataProvider = "populated")
+  @SuppressWarnings("ModifyingCollectionWithItself")
   public void containsAll_whenFound(Queue<Integer> queue) {
     assertThat(queue.containsAll(
         ImmutableList.of(0, POPULATED_SIZE / 2, POPULATED_SIZE - 1)), is(true));

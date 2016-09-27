@@ -82,7 +82,7 @@ final class SerializationProxy<K, V> implements Serializable {
       builder.removalListener((RemovalListener<Object, Object>) removalListener);
     }
     if (writer != CacheWriter.disabledWriter()) {
-      builder.writer(writer);
+      builder.writer((CacheWriter<Object, Object>) writer);
     }
     return builder;
   }
@@ -90,7 +90,9 @@ final class SerializationProxy<K, V> implements Serializable {
   Object readResolve() {
     Caffeine<Object, Object> builder = recreateCaffeine();
     if (async) {
-      return builder.buildAsync(loader);
+      @SuppressWarnings("unchecked")
+      AsyncCacheLoader<K, V> cacheLoader = (AsyncCacheLoader<K, V>) loader;
+      return builder.buildAsync(cacheLoader);
     } else if (loader != null) {
       @SuppressWarnings("unchecked")
       CacheLoader<K, V> cacheLoader = (CacheLoader<K, V>) loader;

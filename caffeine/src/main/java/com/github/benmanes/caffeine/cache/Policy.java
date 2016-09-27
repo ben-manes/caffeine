@@ -134,6 +134,7 @@ public interface Policy<K, V> {
      *
      * @return the maximum size bounding, which may be either weighted or unweighted
      */
+    @Nonnegative
     long getMaximum();
 
     /**

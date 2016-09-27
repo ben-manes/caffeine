@@ -118,12 +118,12 @@ public final class CaffeineTest {
   @Test
   public void async_nullLoader() {
     try {
-      Caffeine.newBuilder().buildAsync((CacheLoader<?, ?>) null);
+      Caffeine.newBuilder().buildAsync((CacheLoader<Object, Object>) null);
       Assert.fail();
     } catch (NullPointerException expected) {}
 
     try {
-      Caffeine.newBuilder().buildAsync((AsyncCacheLoader<?, ?>) null);
+      Caffeine.newBuilder().buildAsync((AsyncCacheLoader<Object, Object>) null);
       Assert.fail();
     } catch (NullPointerException expected) {}
   }

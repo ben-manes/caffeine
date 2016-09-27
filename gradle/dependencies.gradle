@@ -28,8 +28,8 @@ ext {
     akka: '2.4.10',
     commons_compress: '1.12',
     commons_lang3: '3.4',
-    config: '1.3.0',
-    error_prone_annotations: '2.0.12',
+    config: '1.3.1',
+    error_prone_annotations: '2.0.13',
     flip_tables: '1.0.2',
     guava: '19.0',
     javapoet: '1.7.0',
@@ -37,8 +37,8 @@ ext {
     jsr305: '3.0.1',
     jsr330: '1',
     stream: '2.9.5',
-    univocity_parsers: '2.2.1',
-    ycsb: '0.11.0-RC1',
+    univocity_parsers: '2.2.2',
+    ycsb: '0.11.0',
     xz: '1.5',
   ]
   test_versions = [
@@ -58,11 +58,11 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.2.2.21',
     ehcache3: '3.1.2',
-    elastic_search: '5.0.0-alpha5',
+    elastic_search: '5.0.0-beta1',
     infinispan: '9.0.0.Alpha4',
-    jackrabbit: '1.5.9',
+    jackrabbit: '1.5.10',
     jamm: '0.3.1',
-    java_object_layout: '0.5',
+    java_object_layout: '0.6',
     koloboke: '0.6.8',
     slf4j: '1.7.21',
     tcache: '0.9.5',
@@ -117,7 +117,7 @@ ext {
       exclude group: 'org.hamcrest'
     },
     osgi_compile: [
-      "org.apache.felix:org.apache.felix.framework:5.4.0",
+      'org.apache.felix:org.apache.felix.framework:5.6.0',
       "org.ops4j.pax.exam:pax-exam-junit4:${test_versions.pax_exam}",
     ],
     osgi_runtime: [

@@ -424,6 +424,7 @@ public final class LinkedDequeTest {
   }
 
   @Test(dataProvider = "full")
+  @SuppressWarnings("ModifyingCollectionWithItself")
   public void addAll_withSelf(LinkedDeque<LinkedValue> deque) {
     assertThat(deque.addAll(deque), is(false));
   }
