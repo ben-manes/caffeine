@@ -996,10 +996,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     evictionLock.lock();
     try {
       lazySetDrainStatus(PROCESSING_TO_IDLE);
-      if (task != null) {
-        task.run();
-      }
-      maintenance();
+      maintenance(task);
     } finally {
       if ((drainStatus() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
         lazySetDrainStatus(REQUIRED);
@@ -1011,12 +1008,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /**
    * Performs the pending maintenance work. The read buffer, write buffer, and reference queues are
    * drained, followed by expiration, and size-based eviction.
+   *
+   * @param task an additional pending task to run, or {@code null} if not present
    */
   @GuardedBy("evictionLock")
-  void maintenance() {
+  void maintenance(@Nullable Runnable task) {
     drainReadBuffer();
 
     drainWriteBuffer();
+    if (task != null) {
+      task.run();
+    }
+
     drainKeyReferences();
     drainValueReferences();
 
@@ -2314,7 +2317,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     requireArgument(limit >= 0);
     evictionLock.lock();
     try {
-      maintenance();
+      maintenance(/* ignored */ null);
 
       int initialCapacity =
           isWeighted() ? 16 : Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size());
@@ -3012,7 +3015,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         cache.evictionLock.lock();
         try {
           cache.setMaximum(maximum);
-          cache.maintenance();
+          cache.maintenance(/* ignored */ null);
         } finally {
           cache.evictionLock.unlock();
         }

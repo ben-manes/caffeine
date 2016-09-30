@@ -29,8 +29,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import java.util.List;
 import java.util.Map;
@@ -305,7 +303,7 @@ public final class BoundedLocalCacheTest {
     Node<Integer, Integer> first = firstBeforeAccess(cache, context);
 
     operation.run();
-    cache.maintenance();
+    cache.maintenance(/* ignored */ null);
 
     if (context.isZeroWeighted()) {
       assertThat(cache.accessOrderEdenDeque().peekFirst(), is(not(first)));
@@ -377,16 +375,22 @@ public final class BoundedLocalCacheTest {
       population = Population.FULL, maximumSize = Maximum.FULL)
   public void afterWrite_drainFullWriteBuffer(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Runnable task = Mockito.mock(Runnable.class);
     localCache.drainStatus = PROCESSING_TO_IDLE;
-    int expectedCount = 1;
 
-    while (localCache.writeBuffer().offer(task)) {
-      expectedCount++;
+    int[] processed = { 0 };
+    Runnable pendingTask = () -> processed[0]++;
+
+    int[] expectedCount = { 0 };
+    while (localCache.writeBuffer().offer(pendingTask)) {
+      expectedCount[0]++;
     }
 
-    localCache.afterWrite(null, task, 0L);
-    verify(task, times(expectedCount)).run();
+    int[] triggered = { 0 };
+    Runnable triggerTask = () -> triggered[0] = 1 + expectedCount[0];
+    localCache.afterWrite(null, triggerTask, 0L);
+
+    assertThat(processed[0], is(expectedCount[0]));
+    assertThat(triggered[0], is(expectedCount[0] + 1));
   }
 
   @Test(dataProvider = "caches")
