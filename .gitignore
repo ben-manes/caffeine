@@ -2,6 +2,7 @@ bin
 build
 test-output
 jitwatch.out
+.java-version
 .DS_Store
 .classpath
 .settings

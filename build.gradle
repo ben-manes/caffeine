@@ -26,6 +26,7 @@ allprojects {
 
   repositories {
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+    maven { url 'http://dl.bintray.com/jamespedwards42/libs' }
     maven { url 'https://jitpack.io' }
     mavenCentral()
     jcenter()
