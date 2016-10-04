@@ -21,7 +21,6 @@ import org.openjdk.jmh.annotations.AuxCounters;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.GroupThreads;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -48,11 +47,6 @@ public class SingleConsumerQueueBenchmark {
   public static class PollCounters {
     public int pollsFailed;
     public int pollsMade;
-
-    @Setup(Level.Iteration)
-    public void clean() {
-      pollsFailed = pollsMade = 0;
-    }
   }
 
   @AuxCounters
@@ -60,11 +54,6 @@ public class SingleConsumerQueueBenchmark {
   public static class OfferCounters {
     public int offersFailed;
     public int offersMade;
-
-    @Setup(Level.Iteration)
-    public void clean() {
-      offersFailed = offersMade = 0;
-    }
   }
 
   @Setup

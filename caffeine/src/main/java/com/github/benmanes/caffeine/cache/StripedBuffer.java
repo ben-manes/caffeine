@@ -13,8 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
+ * Written by Doug Lea with assistance from members of JCP JSR-166
+ * Expert Group and released to the public domain, as explained at
+ * http://creativecommons.org/publicdomain/zero/1.0/
+ */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -245,10 +251,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
         } else if (tableBusy == 0 && casTableBusy()) {
           try {
             if (table == buffers) { // Expand table unless stale
-              @SuppressWarnings({"unchecked", "rawtypes"})
-              Buffer<E>[] rs = new Buffer[n << 1];
-              System.arraycopy(buffers, 0, rs, 0, n);
-              table = rs;
+              table = Arrays.copyOf(buffers, n << 1);
             }
           } finally {
             tableBusy = 0;

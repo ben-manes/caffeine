@@ -34,7 +34,7 @@ jmhJar {
 }
 
 jmh {
-  jmhVersion = '1.12'
+  jmhVersion = '1.15'
 
   if (project.hasProperty('includePattern')) {
     include = project.includePattern

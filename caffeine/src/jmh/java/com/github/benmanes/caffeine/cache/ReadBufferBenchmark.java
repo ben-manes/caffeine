@@ -19,7 +19,6 @@ import org.openjdk.jmh.annotations.AuxCounters;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.GroupThreads;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -55,11 +54,6 @@ public class ReadBufferBenchmark {
     public int recordFailed;
     public int recordSuccess;
     public int recordFull;
-
-    @Setup(Level.Iteration)
-    public void clean() {
-      recordFailed = recordSuccess = recordFull = 0;
-    }
   }
 
   @Setup
