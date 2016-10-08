@@ -137,7 +137,9 @@ interface LinkedDeque<E> extends Deque<E> {
           } else if (!second.hasNext()) {
             return first.next();
           }
-          boolean greaterOrEqual = (comparator.compare(first.peek(), second.peek()) >= 0);
+          E o1 = first.peek();
+          E o2 = second.peek();
+          boolean greaterOrEqual = (comparator.compare(o1, o2) >= 0);
           return greaterOrEqual ? first.next() : second.next();
         }
         @Override public E peek() {
@@ -146,7 +148,9 @@ interface LinkedDeque<E> extends Deque<E> {
           } else if (!second.hasNext()) {
             return first.peek();
           }
-          boolean greaterOrEqual = (comparator.compare(first.peek(), second.peek()) >= 0);
+          E o1 = first.peek();
+          E o2 = second.peek();
+          boolean greaterOrEqual = (comparator.compare(o1, o2) >= 0);
           return greaterOrEqual ? first.peek() : second.peek();
         }
       };
