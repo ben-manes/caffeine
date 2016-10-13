@@ -15,20 +15,21 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
-import static java.util.stream.Collectors.toList;
-
-import java.util.List;
-import java.util.Set;
-
-import org.apache.commons.lang3.text.WordUtils;
+import com.google.common.collect.ImmutableSet;
 
 import com.fabahaba.collision.cache.CollisionBuilder;
 import com.fabahaba.collision.cache.CollisionCache;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
+
+import org.apache.commons.lang3.text.WordUtils;
+
+import java.util.List;
+import java.util.Set;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Collision cache implementation.
@@ -50,10 +51,14 @@ public final class CollisionPolicy implements Policy {
     CollisionBuilder<Object> builder = CollisionCache
         .withCapacity(maximumSize)
         .setInitCount(settings.initCount())
-        .setBucketSize(settings.bucketSize());
+        .setStrictCapacity(settings.strictCapacity());
+
+    if(settings.bucketSize() > 0) {
+      builder.setBucketSize(settings.bucketSize());
+    }
 
     if (density == Density.SPARSE) {
-      cache = builder.buildSparse();
+      cache = builder.buildSparse(settings.sparseFactor());
     } else if (density == Density.PACKED) {
       cache = builder.buildPacked();
     } else {
@@ -101,6 +106,12 @@ public final class CollisionPolicy implements Policy {
     }
     public int bucketSize() {
       return config().getInt("collision.bucket-size");
+    }
+    public double sparseFactor() {
+      return config().getDouble("collision.sparse-factor");
+    }
+    public boolean strictCapacity() {
+      return config().getBoolean("collision.strict-capacity");
     }
     public List<Density> density() {
       return config().getStringList("collision.density").stream()
