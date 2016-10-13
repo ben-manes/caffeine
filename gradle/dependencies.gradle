@@ -48,13 +48,14 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '1.2.1',
     junit: '4.12',
-    mockito: '2.2.0',
+    mockito: '2.2.1',
     pax_exam: '4.9.1',
     testng: '6.9.12',
     truth: '0.24',
   ]
   benchmark_versions = [
     cache2k: '0.28-BETA',
+    collision: '0.2.4',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.2.2.21',
     ehcache3: '3.1.3',
@@ -136,6 +137,7 @@ ext {
   ]
   benchmark_libraries = [
     cache2k: "org.cache2k:cache2k-core:${benchmark_versions.cache2k}",
+    collision: "com.fabahaba:collision:${benchmark_versions.collision}",
     concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmark_versions.concurrentlinkedhashmap}",
     ehcache2: "net.sf.ehcache:ehcache:${benchmark_versions.ehcache2}",
     ehcache3: "org.ehcache:ehcache:${benchmark_versions.ehcache3}",

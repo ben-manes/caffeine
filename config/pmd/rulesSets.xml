@@ -48,6 +48,7 @@
     <exclude name="AvoidReassigningParameters"/>
     <exclude name="UncommentedEmptyConstructor"/>
     <exclude name="UnnecessaryLocalBeforeReturn"/>
+    <exclude name="UseLocaleWithCaseConversions"/>
     <exclude name="AvoidSynchronizedAtMethodLevel"/>
     <exclude name="ConstructorCallsOverridableMethod"/>
     <exclude name="PositionLiteralsFirstInComparisons"/>

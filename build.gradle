@@ -46,7 +46,7 @@ subprojects {
   if (JavaVersion.current().isJava9Compatible()) {
     tasks.uploadArchives.enabled = false
   } else {
-    apply plugin: 'net.ltgt.errorprone'  
+    apply plugin: 'net.ltgt.errorprone'
   }
 
   sourceCompatibility = JavaVersion.VERSION_1_8
