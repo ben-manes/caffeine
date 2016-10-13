@@ -55,7 +55,7 @@ ext {
   ]
   benchmark_versions = [
     cache2k: '0.28-BETA',
-    collision: '0.1.0',
+    collision: '0.2.4',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.2.2.21',
     ehcache3: '3.1.2',

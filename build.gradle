@@ -26,7 +26,6 @@ allprojects {
 
   repositories {
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-    maven { url 'http://dl.bintray.com/jamespedwards42/libs' }
     maven { url 'https://jitpack.io' }
     mavenCentral()
     jcenter()
@@ -47,10 +46,10 @@ subprojects {
   if (JavaVersion.current().isJava9Compatible()) {
     tasks.uploadArchives.enabled = false
   } else {
-    apply plugin: 'net.ltgt.errorprone'  
+    apply plugin: 'net.ltgt.errorprone'
   }
 
-  sourceCompatibility = JavaVersion.VERSION_1_8
+  sourceCompatibility = JavaVersion.VERSION_1_9
 
   group = 'com.github.ben-manes.caffeine'
   version.with {
