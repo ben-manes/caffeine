@@ -235,7 +235,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return false;
   }
 
-  protected WriteBuffer<Runnable> writeBuffer() {
+  protected MpscGrowableArrayQueue<Runnable> writeBuffer() {
     throw new UnsupportedOperationException();
   }
 
@@ -634,6 +634,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param victimKey the key for the entry chosen by the eviction policy for replacement
    * @return if the candidate should be admitted and the victim ejected
    */
+  @GuardedBy("evictionLock")
   boolean admit(K candidateKey, K victimKey) {
     int victimFreq = frequencySketch().frequency(victimKey);
     int candidateFreq = frequencySketch().frequency(candidateKey);

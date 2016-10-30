@@ -34,7 +34,7 @@
   </Match>
   <Match>
     <Or>
-      <Class name="com.github.benmanes.caffeine.cache.WriteBuffer"/>
+      <Class name="~.*Mpsc.*"/>
       <Class name="~.*Header.*"/>
     </Or>
     <Bug code="UuF"/>

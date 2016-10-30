@@ -29,6 +29,7 @@ import sun.misc.Unsafe;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("restriction")
 public final class UnsafeAccess {
   static final String ANDROID = "THE_ONE";
   static final String OPEN_JDK = "theUnsafe";

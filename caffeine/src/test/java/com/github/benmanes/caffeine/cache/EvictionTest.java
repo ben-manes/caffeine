@@ -656,7 +656,7 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void hottest_unmodifiable(CacheContext context, Eviction<Integer, Integer> eviction) {
-    eviction.hottest(Integer.MAX_VALUE).clear();;
+    eviction.hottest(Integer.MAX_VALUE).clear();
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)

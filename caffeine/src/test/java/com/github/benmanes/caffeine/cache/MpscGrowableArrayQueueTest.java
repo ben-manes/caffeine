@@ -31,7 +31,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class WriteBufferTest {
+public final class MpscGrowableArrayQueueTest {
   private static final int NUM_PRODUCERS = 10;
   private static final int PRODUCE = 100;
 
@@ -41,31 +41,31 @@ public final class WriteBufferTest {
   /* ---------------- Size -------------- */
 
   @Test(dataProvider = "empty")
-  public void size_whenEmpty(WriteBuffer<Integer> buffer) {
+  public void size_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.size(), is(0));
   }
 
   @Test(dataProvider = "populated")
-  public void size_whenPopulated(WriteBuffer<Integer> buffer) {
+  public void size_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.size(), is(POPULATED_SIZE));
   }
 
   /* ---------------- Offer -------------- */
 
   @Test(dataProvider = "empty")
-  public void offer_whenEmpty(WriteBuffer<Integer> buffer) {
+  public void offer_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.offer(1), is(true));
     assertThat(buffer.size(), is(1));
   }
 
   @Test(dataProvider = "populated")
-  public void offer_whenPopulated(WriteBuffer<Integer> buffer) {
+  public void offer_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.offer(1), is(true));
     assertThat(buffer.size(), is(POPULATED_SIZE + 1));
   }
 
   @Test(dataProvider = "full")
-  public void offer_whenFull(WriteBuffer<Integer> buffer) {
+  public void offer_whenFull(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.offer(1), is(false));
     assertThat(buffer.size(), is(FULL_SIZE));
   }
@@ -73,18 +73,18 @@ public final class WriteBufferTest {
   /* ---------------- Poll -------------- */
 
   @Test(dataProvider = "empty")
-  public void poll_whenEmpty(WriteBuffer<Integer> buffer) {
+  public void poll_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.poll(), is(nullValue()));
   }
 
   @Test(dataProvider = "populated")
-  public void poll_whenPopulated(WriteBuffer<Integer> buffer) {
+  public void poll_whenPopulated(MpscGrowableArrayQueue<Integer> buffer) {
     assertThat(buffer.poll(), is(not(nullValue())));
     assertThat(buffer.size(), is(POPULATED_SIZE - 1));
   }
 
   @Test(dataProvider = "full")
-  public void poll_toEmpty(WriteBuffer<Integer> buffer) {
+  public void poll_toEmpty(MpscGrowableArrayQueue<Integer> buffer) {
     while (buffer.poll() != null) {}
     assertThat(buffer.size(), is(0));
   }
@@ -92,7 +92,7 @@ public final class WriteBufferTest {
   /* ---------------- Concurrency -------------- */
 
   @Test(dataProvider = "empty")
-  public void oneProducer_oneConsumer(WriteBuffer<Integer> buffer) {
+  public void oneProducer_oneConsumer(MpscGrowableArrayQueue<Integer> buffer) {
     AtomicInteger started = new AtomicInteger();
     AtomicInteger finished = new AtomicInteger();
 
@@ -118,7 +118,7 @@ public final class WriteBufferTest {
   }
 
   @Test(dataProvider = "empty")
-  public void manyProducers_noConsumer(WriteBuffer<Integer> buffer) {
+  public void manyProducers_noConsumer(MpscGrowableArrayQueue<Integer> buffer) {
     AtomicInteger count = new AtomicInteger();
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       for (int i = 0; i < PRODUCE; i++) {
@@ -131,7 +131,7 @@ public final class WriteBufferTest {
   }
 
   @Test(dataProvider = "empty")
-  public void manyProducers_oneConsumer(WriteBuffer<Integer> buffer) {
+  public void manyProducers_oneConsumer(MpscGrowableArrayQueue<Integer> buffer) {
     AtomicInteger started = new AtomicInteger();
     AtomicInteger finished = new AtomicInteger();
 
@@ -174,8 +174,8 @@ public final class WriteBufferTest {
     return new Object[][] {{ makePopulated(FULL_SIZE) }};
   }
 
-  static WriteBuffer<Integer> makePopulated(int items) {
-    WriteBuffer<Integer> buffer = new WriteBuffer<>(4, FULL_SIZE);
+  static MpscGrowableArrayQueue<Integer> makePopulated(int items) {
+    MpscGrowableArrayQueue<Integer> buffer = new MpscGrowableArrayQueue<>(4, FULL_SIZE);
     for (int i = 0; i < items; i++) {
       buffer.offer(i);
     }
