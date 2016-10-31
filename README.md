@@ -61,7 +61,7 @@ Use Caffeine in a community provided integration:
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
 
 On the radar,
- * Early discussions with [HBase][hbase], [Cassandra][cassandra], [Solr][solr], and [ElasticSearch][elastic-search]
+ * Early discussions with [HBase][hbase], [Cassandra][cassandra], [Solr][solr], and [Infinispan][infinispan]
  * Postgres is [evaluating][postgres] whether to port the cache
  * Go [implementation][go-tinylfu] of the W-TinyLfu policy
 
@@ -70,11 +70,11 @@ On the radar,
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:2.3.3'
+compile 'com.github.ben-manes.caffeine:caffeine:2.3.4'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:2.3.3'
-compile 'com.github.ben-manes.caffeine:jcache:2.3.3'
+compile 'com.github.ben-manes.caffeine:guava:2.3.4'
+compile 'com.github.ben-manes.caffeine:jcache:2.3.4'
 ```
 
 See the [release notes][releases] for details of the changes.
@@ -113,7 +113,7 @@ Snapshots of the development version are available in
 [hbase]: https://issues.apache.org/jira/browse/HBASE-15560
 [cassandra]: https://issues.apache.org/jira/browse/CASSANDRA-10855
 [solr]: https://issues.apache.org/jira/browse/SOLR-8241
-[elastic-search]: https://github.com/elastic/elasticsearch/issues/16802
+[infinispan]: https://issues.jboss.org/browse/ISPN-6998
 [postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
 [ratpack]: https://github.com/ratpack/ratpack
