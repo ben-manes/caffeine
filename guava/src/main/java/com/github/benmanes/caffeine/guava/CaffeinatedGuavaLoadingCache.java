@@ -159,7 +159,8 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
         Thread.currentThread().interrupt();
         throw new CacheLoaderException(e);
       } catch (Exception e) {
-        throw Throwables.propagate(e);
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
       }
     }
   }

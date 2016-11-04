@@ -43,7 +43,7 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 @FunctionalInterface
-@SuppressWarnings("PMD.SignatureDeclareThrowsException")
+@SuppressWarnings({"PMD.SignatureDeclareThrowsException", "FunctionalInterfaceMethodChanged"})
 public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
 
   /**

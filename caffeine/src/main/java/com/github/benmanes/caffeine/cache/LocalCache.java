@@ -110,15 +110,15 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   @Override
   default V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-    return computeIfAbsent(key, mappingFunction, /* recordMiss */ true, /* recordLoad */ true);
+    return computeIfAbsent(key, mappingFunction, /* recordStats */ true, /* recordLoad */ true);
   }
 
   /**
    * See {@link ConcurrentMap#computeIfAbsent}. This method differs by accepting parameters
-   * indicating whether the operation was called by an asynchronous cache.
+   * indicating how to record statistics.
    */
   V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
-      boolean recordMiss, boolean recordLoad);
+      boolean recordStats, boolean recordLoad);
 
   /** See {@link Cache#invalidateAll(Iterable)}. */
   default void invalidateAll(Iterable<?> keys) {

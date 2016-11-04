@@ -1,3 +1,6 @@
+apply plugin: 'com.gradle.build-scan'
+apply plugin: me.champeau.gradle.buildscans.RecipesPlugin
+
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'jacoco'
@@ -14,6 +17,14 @@ buildscript {
   dependencies {
     classpath gradle_plugins.values()
   }
+}
+
+buildScan {
+  licenseAgree = 'yes'
+  licenseAgreementUrl = 'https://gradle.com/terms-of-service'
+
+  recipes 'git-status', 'travis-ci', 'disk-usage', 'gc-stats'
+  recipe 'git-commit', baseUrl: 'https://github.com/ben-manes/caffeine/tree'
 }
 
 task testReport(type: TestReport, group: 'Build') {
