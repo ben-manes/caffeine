@@ -48,7 +48,7 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '2.0',
     junit: '4.12',
-    mockito: '2.2.10',
+    mockito: '2.2.11',
     pax_exam: '4.9.2',
     testng: '6.9.12',
     truth: '0.24',
@@ -85,7 +85,7 @@ ext {
   ]
 
   libraries = [
-    akka: "com.typesafe.akka:akka-actor_2.11:${versions.akka}",
+    akka: "com.typesafe.akka:akka-actor_2.12:${versions.akka}",
     commons_compress: "org.apache.commons:commons-compress:${versions.commons_compress}",
     commons_lang3: "org.apache.commons:commons-lang3:${versions.commons_lang3}",
     config: "com.typesafe:config:${versions.config}",
