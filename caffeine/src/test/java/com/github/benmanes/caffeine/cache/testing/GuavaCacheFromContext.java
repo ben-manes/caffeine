@@ -35,7 +35,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
 import com.github.benmanes.caffeine.cache.RemovalCause;
-import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
@@ -43,6 +42,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
+import com.google.common.base.Ticker;
 import com.google.common.cache.AbstractCache.SimpleStatsCounter;
 import com.google.common.cache.AbstractCache.StatsCounter;
 import com.google.common.cache.CacheBuilder;
@@ -113,7 +113,7 @@ public final class GuavaCacheFromContext {
       builder.removalListener(new GuavaRemovalListener<>(
           translateZeroExpire, context.removalListener));
     }
-    Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker;
+    Ticker ticker = (context.ticker == null) ? Ticker.systemTicker() : context.ticker();
     if (context.loader == null) {
       context.cache = new GuavaCache<>(builder.<Integer, Integer>build(),
           ticker, context.isRecordingStats());

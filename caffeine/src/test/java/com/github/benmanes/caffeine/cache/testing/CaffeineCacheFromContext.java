@@ -15,11 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RandomSeedEnforcer;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
@@ -34,6 +36,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineCacheFromContext {
+  interface SerializableTicker extends Ticker, Serializable {}
 
   private CaffeineCacheFromContext() {}
 
@@ -65,7 +68,8 @@ public final class CaffeineCacheFromContext {
       builder.refreshAfterWrite(context.refresh.timeNanos(), TimeUnit.NANOSECONDS);
     }
     if (context.expires() || context.refreshes()) {
-      builder.ticker(context.ticker());
+      SerializableTicker ticker = context.ticker()::read;
+      builder.ticker(ticker);
     }
     if (context.keyStrength == ReferenceType.WEAK) {
       builder.weakKeys();

@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import junit.framework.TestCase;
@@ -148,7 +149,7 @@ public class CacheBuilderGwtTest extends TestCase {
     final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(0, 10);
     cache.put(2, 30);
@@ -165,7 +166,7 @@ public class CacheBuilderGwtTest extends TestCase {
     final Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(10, 100);
     cache.put(20, 200);
@@ -193,7 +194,7 @@ public class CacheBuilderGwtTest extends TestCase {
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .expireAfterAccess(500, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(10, 100);
     cache.put(20, 200);
@@ -291,7 +292,7 @@ public class CacheBuilderGwtTest extends TestCase {
         .executor(MoreExecutors.directExecutor())
         .removalListener(countingListener)
         .initialCapacity(100)
-        .ticker(fakeTicker)
+        .ticker(fakeTicker::read)
         .maximumSize(2));
 
     // Enforce full initialization of internal structures
@@ -390,7 +391,7 @@ public class CacheBuilderGwtTest extends TestCase {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(20000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(654, 2675);
     fakeTicker.advance(10000, TimeUnit.MILLISECONDS);
@@ -408,7 +409,7 @@ public class CacheBuilderGwtTest extends TestCase {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(20000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(654, 2675);
     fakeTicker.advance(10000, TimeUnit.MILLISECONDS);
@@ -426,7 +427,7 @@ public class CacheBuilderGwtTest extends TestCase {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(10, 20);
     fakeTicker.advance(500, TimeUnit.MILLISECONDS);
@@ -444,7 +445,7 @@ public class CacheBuilderGwtTest extends TestCase {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(10, 20);
     fakeTicker.advance(500, TimeUnit.MILLISECONDS);
@@ -466,7 +467,7 @@ public class CacheBuilderGwtTest extends TestCase {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(10, 20);
     fakeTicker.advance(500, TimeUnit.MILLISECONDS);
@@ -484,7 +485,7 @@ public class CacheBuilderGwtTest extends TestCase {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(10, 20);
     fakeTicker.advance(500, TimeUnit.MILLISECONDS);
@@ -504,7 +505,7 @@ public class CacheBuilderGwtTest extends TestCase {
     Cache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1000, TimeUnit.MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(fakeTicker));
+        .ticker(fakeTicker::read));
 
     cache.put(10, 20);
     Iterator<Integer> iterator = cache.asMap().values().iterator();

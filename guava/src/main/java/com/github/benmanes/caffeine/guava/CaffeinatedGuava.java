@@ -42,7 +42,7 @@ public final class CaffeinatedGuava {
    * @return a cache exposed under the Guava APIs
    */
   @Nonnull
-  public static <K1 extends K, K, V1 extends V, V> Cache<K1, V1> build(
+  public static <K, V, K1 extends K, V1 extends V> Cache<K1, V1> build(
       @Nonnull Caffeine<K, V> builder) {
     return new CaffeinatedGuavaCache<>(builder.build());
   }
@@ -55,7 +55,7 @@ public final class CaffeinatedGuava {
    * @return a cache exposed under the Guava APIs
    */
   @Nonnull
-  public static <K1 extends K, K, V1 extends V, V> LoadingCache<K1, V1> build(
+  public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       @Nonnull Caffeine<K, V> builder, @Nonnull CacheLoader<? super K1, V1> loader) {
     @SuppressWarnings("unchecked")
     CacheLoader<K1, V1> castedLoader = (CacheLoader<K1, V1>) loader;
@@ -72,7 +72,7 @@ public final class CaffeinatedGuava {
    * @return a cache exposed under the Guava APIs
    */
   @Nonnull
-  public static <K1 extends K, K, V1 extends V, V> LoadingCache<K1, V1> build(
+  public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       @Nonnull Caffeine<K, V> builder,
       @Nonnull com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> loader) {
     return new CaffeinatedGuavaLoadingCache<>(builder.build(loader));

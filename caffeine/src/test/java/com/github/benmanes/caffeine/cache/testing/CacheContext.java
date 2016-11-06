@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,6 +62,7 @@ import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemo
 import com.google.common.base.MoreObjects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.testing.FakeTicker;
 
 /**
  * The cache configuration context for a test case.
@@ -134,7 +136,7 @@ public final class CacheContext {
     this.isAsyncLoading = isAsyncLoading;
     this.writer = requireNonNull(writer);
     this.cacheWriter = writer.get();
-    this.ticker = new FakeTicker();
+    this.ticker = new SerializableFakeTicker();
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
     this.initialSize = -1;
@@ -371,14 +373,13 @@ public final class CacheContext {
   }
 
   public <K, V> LoadingCache<K, V> build(CacheLoader<K, V> loader) {
-    LoadingCache<K, V> cache = null;
+    LoadingCache<K, V> cache;
     if (isCaffeine()) {
       cache = isAsync() ? caffeine.buildAsync(loader).synchronous() : caffeine.build(loader);
     } else {
       cache = new GuavaLoadingCache<>(guava.build(
           com.google.common.cache.CacheLoader.asyncReloading(
-              new SingleLoader<>(loader), executor)),
-          ticker, isRecordingStats());
+              new SingleLoader<>(loader), executor)), ticker, isRecordingStats());
     }
     this.cache = cache;
     return cache;
@@ -440,4 +441,7 @@ public final class CacheContext {
         .add("implementation", implementation)
         .toString();
   }
+
+  @SuppressWarnings("serial")
+  static final class SerializableFakeTicker extends FakeTicker implements Serializable {}
 }

@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.collect.Iterators;
+import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.Callables;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -57,7 +58,7 @@ public class CacheExpirationTest extends TestCase {
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     checkExpiration(cache, loader, ticker, removalListener);
   }
@@ -70,7 +71,7 @@ public class CacheExpirationTest extends TestCase {
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     checkExpiration(cache, loader, ticker, removalListener);
   }
@@ -108,7 +109,7 @@ public class CacheExpirationTest extends TestCase {
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     runExpirationTest(cache, loader, ticker, removalListener);
   }
@@ -121,7 +122,7 @@ public class CacheExpirationTest extends TestCase {
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     runExpirationTest(cache, loader, ticker, removalListener);
   }
@@ -203,7 +204,7 @@ public class CacheExpirationTest extends TestCase {
         .removalListener(removalListener)
         .expireAfterWrite(10, MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
 
     // Increment 100 times
@@ -225,7 +226,7 @@ public class CacheExpirationTest extends TestCase {
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     runRemovalScheduler(cache, removalListener, loader, ticker, KEY_PREFIX, EXPIRING_TIME);
   }
@@ -238,7 +239,7 @@ public class CacheExpirationTest extends TestCase {
         .expireAfterAccess(EXPIRING_TIME, MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     runRemovalScheduler(cache, removalListener, loader, ticker, KEY_PREFIX, EXPIRING_TIME);
   }
@@ -252,7 +253,7 @@ public class CacheExpirationTest extends TestCase {
         .expireAfterWrite(EXPIRING_TIME, MILLISECONDS)
         .executor(MoreExecutors.directExecutor())
         .removalListener(removalListener)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     runRemovalScheduler(cache, removalListener, loader, ticker, KEY_PREFIX, EXPIRING_TIME);
   }
@@ -263,7 +264,7 @@ public class CacheExpirationTest extends TestCase {
     IdentityLoader<Integer> loader = identityLoader();
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(11, MILLISECONDS)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     for (int i = 0; i < 10; i++) {
       cache.getUnchecked(i);
@@ -314,7 +315,7 @@ public class CacheExpirationTest extends TestCase {
     IdentityLoader<Integer> loader = identityLoader();
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(11, MILLISECONDS)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     for (int i = 0; i < 10; i++) {
       cache.getUnchecked(i);
@@ -361,7 +362,7 @@ public class CacheExpirationTest extends TestCase {
     LoadingCache<Integer, Integer> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(5, MILLISECONDS)
         .expireAfterAccess(3, MILLISECONDS)
-        .ticker(ticker),
+        .ticker(ticker::read),
         loader);
     for (int i = 0; i < 5; i++) {
       cache.getUnchecked(i);

@@ -71,6 +71,7 @@ ext {
   plugin_versions = [
     checkstyle: '7.2',
     coveralls: '2.6.3',
+    coverity: '1.0.10',
     extra_conf: '3.1.0',
     error_prone: '0.0.8',
     huntbugs_core: '0.0.11',
@@ -164,6 +165,7 @@ ext {
       transitive = false
     },
     coveralls: "org.kt3k.gradle.plugin:coveralls-gradle-plugin:${plugin_versions.coveralls}",
+    coverity: "gradle.plugin.com.github.mjdetullio.gradle:coverity-plugin:${plugin_versions.coverity}",
     extra_conf: "com.netflix.nebula:gradle-extra-configurations-plugin:${plugin_versions.extra_conf}",
     error_prone: "net.ltgt.gradle:gradle-errorprone-plugin:${plugin_versions.error_prone}",
     huntbugs: [

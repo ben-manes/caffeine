@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.testing.FakeTicker;
 import com.google.common.testing.TestLogHandler;
 import com.google.common.util.concurrent.Callables;
 import com.google.common.util.concurrent.ExecutionError;
@@ -218,7 +219,7 @@ public class CacheLoadingTest extends TestCase {
 
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
-        .ticker(ticker)
+        .ticker(ticker::read)
         .refreshAfterWrite(1, MILLISECONDS)
         .executor(MoreExecutors.directExecutor()),
         loader);
@@ -280,7 +281,7 @@ public class CacheLoadingTest extends TestCase {
 
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
-        .ticker(ticker)
+        .ticker(ticker::read)
         .refreshAfterWrite(1, MILLISECONDS)
         .executor(MoreExecutors.directExecutor()),
         loader);
@@ -757,7 +758,7 @@ public class CacheLoadingTest extends TestCase {
 
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
-        .ticker(ticker)
+        .ticker(ticker::read)
         .refreshAfterWrite(1, MILLISECONDS)
         .executor(MoreExecutors.directExecutor()), loader);
     Object key = new Object();
@@ -1037,7 +1038,7 @@ public class CacheLoadingTest extends TestCase {
 
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
-        .ticker(ticker)
+        .ticker(ticker::read)
         .refreshAfterWrite(1, MILLISECONDS)
         .executor(MoreExecutors.directExecutor()),
         loader);
@@ -1363,7 +1364,7 @@ public class CacheLoadingTest extends TestCase {
 
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
-        .ticker(ticker)
+        .ticker(ticker::read)
         .refreshAfterWrite(1, MILLISECONDS)
         .executor(MoreExecutors.directExecutor()),
         loader);
@@ -1637,7 +1638,7 @@ public class CacheLoadingTest extends TestCase {
 
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats()
-        .ticker(ticker)
+        .ticker(ticker::read)
         .refreshAfterWrite(1, MILLISECONDS)
         .executor(MoreExecutors.directExecutor()),
         loader);

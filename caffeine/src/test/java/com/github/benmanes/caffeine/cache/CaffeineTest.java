@@ -34,7 +34,7 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.Expiration;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.cache.testing.FakeTicker;
+import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.MoreExecutors;
 
 /**
@@ -449,7 +449,7 @@ public final class CaffeineTest {
 
   @Test
   public void ticker() {
-    Ticker ticker = new FakeTicker();
+    Ticker ticker = new FakeTicker()::read;
     Caffeine<?, ?> builder = Caffeine.newBuilder().ticker(ticker);
     assertThat(builder.ticker, is(ticker));
     builder.build();

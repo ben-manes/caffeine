@@ -63,7 +63,7 @@ public final class UnsafeAccess {
   static Unsafe load(String openJdk, String android) throws NoSuchMethodException,
       SecurityException, InstantiationException, IllegalAccessException,
       IllegalArgumentException, InvocationTargetException {
-    Field field = null;
+    Field field;
     try {
       // try OpenJDK field name
       field = Unsafe.class.getDeclaredField(openJdk);
