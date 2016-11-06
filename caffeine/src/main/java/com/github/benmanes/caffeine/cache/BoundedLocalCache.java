@@ -1634,7 +1634,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         nodeKey[0] = n.getKey();
         oldValue[0] = n.getValue();
         oldWeight[0] = n.getWeight();
-        if ((nodeKey == null) || (oldValue[0] == null)) {
+        if ((nodeKey[0] == null) || (oldValue[0] == null)) {
           cause[0] = RemovalCause.COLLECTED;
         } else if (hasExpired(n, now)) {
           cause[0] = RemovalCause.EXPIRED;
@@ -1994,7 +1994,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         nodeKey[0] = n.getKey();
         weight[0] = n.getWeight();
         oldValue[0] = n.getValue();
-        if ((nodeKey == null) || (oldValue[0] == null)) {
+        if ((nodeKey[0] == null) || (oldValue[0] == null)) {
           cause[0] = RemovalCause.COLLECTED;
         } else if (hasExpired(n, now)) {
           cause[0] = RemovalCause.EXPIRED;
@@ -2141,7 +2141,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       synchronized (n) {
         nodeKey[0] = n.getKey();
         oldValue[0] = n.getValue();
-        if ((nodeKey == null) || (oldValue[0] == null)) {
+        if ((nodeKey[0] == null) || (oldValue[0] == null)) {
           cause[0] = RemovalCause.COLLECTED;
         } else if (hasExpired(n, now)) {
           cause[0] = RemovalCause.EXPIRED;

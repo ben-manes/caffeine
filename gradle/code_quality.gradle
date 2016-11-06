@@ -2,6 +2,7 @@
  * Configurations for code quality analysis
  */
 apply plugin: 'org.kordamp.gradle.stats'
+apply plugin: 'one.util.huntbugs'
 apply plugin: 'checkstyle'
 apply plugin: 'findbugs'
 apply plugin: 'jacoco'
@@ -30,6 +31,12 @@ checkstyle {
   showViolations = true
   toolVersion = plugin_versions.checkstyle
   config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
+}
+
+huntbugs {
+  classSimpleFilter { classname ->
+    !classname.contains('Header') && !classname.contains('Mpsc') && !classname.contains('Factory')
+  }
 }
 
 findbugs {

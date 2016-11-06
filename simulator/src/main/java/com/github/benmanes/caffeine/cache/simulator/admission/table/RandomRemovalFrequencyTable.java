@@ -81,7 +81,7 @@ public final class RandomRemovalFrequencyTable implements Frequency {
     // just a model.
     if (currSum == maxSum) {
       List<Long> array = new ArrayList<>(table.keySet());
-      long itemToRemove = array.get(random.nextInt(array.size()));
+      Long itemToRemove = array.get(random.nextInt(array.size()));
       value = table.remove(itemToRemove);
 
       if (value > 1) {

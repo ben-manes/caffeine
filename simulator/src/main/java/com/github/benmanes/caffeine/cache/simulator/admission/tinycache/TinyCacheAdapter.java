@@ -27,8 +27,6 @@ import com.typesafe.config.Config;
 public final class TinyCacheAdapter implements Frequency {
   // the actual data structure.
   TinyCacheSketch tcs;
-  // number of (independent sets)
-  int nrSets;
   // size between cache and sample.
   static final int sampleFactor = 10;
   // max frequency estimation of an item.
@@ -39,7 +37,7 @@ public final class TinyCacheAdapter implements Frequency {
    */
   public TinyCacheAdapter(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    nrSets = sampleFactor * settings.maximumSize() / 64;
+    int nrSets = sampleFactor * settings.maximumSize() / 64; // number of (independent sets)
     tcs = new TinyCacheSketch(nrSets, 64,settings.randomSeed());
   }
 

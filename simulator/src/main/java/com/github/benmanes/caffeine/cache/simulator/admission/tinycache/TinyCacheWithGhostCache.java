@@ -26,13 +26,14 @@ import java.util.Random;
  */
 @SuppressWarnings("PMD.AvoidDollarSigns")
 public final class TinyCacheWithGhostCache {
+  private static final int sampleSize = 10;
+
   public final long[] chainIndex;
   public final long[] isLastIndex;
   private final HashFunctionParser hashFunc;
   private final int itemsPerSet;
   private final long[] cache;
   private final Random rnd;
-  private final int sampleSize;
   private final TinyCacheSketch ghostCache;
 
   public TinyCacheWithGhostCache(int nrSets, int itemsPerSet, int randomSeed) {
@@ -41,7 +42,6 @@ public final class TinyCacheWithGhostCache {
     hashFunc = new HashFunctionParser(nrSets);
     this.itemsPerSet = itemsPerSet;
     cache = new long[nrSets * itemsPerSet];
-    sampleSize = 10;
     ghostCache = new TinyCacheSketch(nrSets * sampleSize, itemsPerSet, randomSeed + 1);
     rnd = new Random(randomSeed);
   }

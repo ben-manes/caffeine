@@ -182,7 +182,7 @@ public final class CaffeineSpec {
         maximumWeight(key, value);
         return;
       case "weakKeys":
-        weakKeys(key, value);
+        weakKeys(value);
         return;
       case "weakValues":
         valueStrength(key, value, Strength.WEAK);
@@ -200,7 +200,7 @@ public final class CaffeineSpec {
         refreshAfterWrite(key, value);
         return;
       case "recordStats":
-        recordStats(key, value);
+        recordStats(value);
         return;
       default:
         throw new IllegalArgumentException("Unknown key " + key);
@@ -233,7 +233,7 @@ public final class CaffeineSpec {
   }
 
   /** Configures the keys as weak references. */
-  void weakKeys(String key, @Nullable String value) {
+  void weakKeys(@Nullable String value) {
     requireArgument(value == null, "weak keys does not take a value");
     requireArgument(keyStrength == null, "weak keys was already set");
     keyStrength = Strength.WEAK;
@@ -268,7 +268,7 @@ public final class CaffeineSpec {
   }
 
   /** Configures the value as weak or soft references. */
-  void recordStats(String key, @Nullable String value) {
+  void recordStats(@Nullable String value) {
     requireArgument(value == null, "record stats does not take a value");
     requireArgument(!recordStats, "record stats was already set");
     recordStats = true;

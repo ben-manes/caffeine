@@ -138,6 +138,10 @@ public final class MultiQueuePolicy implements Policy {
         break;
       }
     }
+    if (victim == null) {
+      return;
+    }
+
     victim.remove();
     data.remove(victim.key);
     out.put(victim.key, victim);

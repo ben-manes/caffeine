@@ -50,7 +50,7 @@ public final class HashFunctionParser {
     h ^= item;
     h *= m;
 
-    fpaux.fingerprint = (byte) (h & fpMask);
+    fpaux.fingerprint = (byte) h;
     // the next line is a dirty fix as I do not want the value of 0 as a fingerprint.
     // It can be eliminated if we want very short fingerprints.
     fpaux.fingerprint = (fpaux.fingerprint == 0L) ? 1 : fpaux.fingerprint;
