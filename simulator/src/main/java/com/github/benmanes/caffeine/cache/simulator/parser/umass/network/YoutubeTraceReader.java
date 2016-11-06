@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.umass.network;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.LongStream;
@@ -41,6 +39,6 @@ public final class YoutubeTraceReader extends TextTraceReader {
     return lines()
         .map(line -> line.split(" "))
         .filter(array -> array[3].equals("GETVIDEO"))
-        .mapToLong(array -> Hashing.murmur3_128().hashString(array[4], UTF_8).asLong());
+        .mapToLong(array -> Hashing.murmur3_128().hashUnencodedChars(array[4]).asLong());
   }
 }

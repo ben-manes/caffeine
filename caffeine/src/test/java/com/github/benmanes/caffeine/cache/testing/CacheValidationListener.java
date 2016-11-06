@@ -106,7 +106,11 @@ public final class CacheValidationListener implements IInvokedMethodListener {
     }
 
     assertThat("CacheContext required", context, is(not(nullValue())));
-    TrackingExecutor executor = context.executor();
+    if (!(context.executor() instanceof TrackingExecutor)) {
+      return;
+    }
+
+    TrackingExecutor executor = (TrackingExecutor) context.executor();
     if (cacheSpec.executorFailure() == ExecutorFailure.EXPECTED) {
       assertThat(executor.failureCount(), is(greaterThan(0)));
     } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {

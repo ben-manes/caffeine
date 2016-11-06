@@ -971,7 +971,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         executor().execute(drainBuffersTask);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
-        performCleanUp(/* ignored */ null);
+        maintenance(/* ignored */ null);
       } finally {
         evictionLock.unlock();
       }
@@ -988,45 +988,49 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /**
-   * Performs the maintenance work, blocking until the lock is acquired, and sets the state flags
-   * to avoid excess scheduling attempts. Any exception thrown, such as by
-   * {@link CacheWriter#delete()}, is propagated to the caller.
+   * Performs the maintenance work, blocking until the lock is acquired. Any exception thrown, such
+   * as by {@link CacheWriter#delete()}, is propagated to the caller.
    *
    * @param task an additional pending task to run, or {@code null} if not present
    */
   void performCleanUp(@Nullable Runnable task) {
     evictionLock.lock();
     try {
-      lazySetDrainStatus(PROCESSING_TO_IDLE);
       maintenance(task);
     } finally {
-      if ((drainStatus() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
-        lazySetDrainStatus(REQUIRED);
-      }
       evictionLock.unlock();
     }
   }
 
   /**
-   * Performs the pending maintenance work. The read buffer, write buffer, and reference queues are
+   * Performs the pending maintenance work and sets the state flags during processing to avoid
+   * excess scheduling attempts. The read buffer, write buffer, and reference queues are
    * drained, followed by expiration, and size-based eviction.
    *
    * @param task an additional pending task to run, or {@code null} if not present
    */
   @GuardedBy("evictionLock")
   void maintenance(@Nullable Runnable task) {
-    drainReadBuffer();
+    lazySetDrainStatus(PROCESSING_TO_IDLE);
 
-    drainWriteBuffer();
-    if (task != null) {
-      task.run();
+    try {
+      drainReadBuffer();
+
+      drainWriteBuffer();
+      if (task != null) {
+        task.run();
+      }
+
+      drainKeyReferences();
+      drainValueReferences();
+
+      expireEntries();
+      evictEntries();
+    } finally {
+      if ((drainStatus() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
+        lazySetDrainStatus(REQUIRED);
+      }
     }
-
-    drainKeyReferences();
-    drainValueReferences();
-
-    expireEntries();
-    evictEntries();
   }
 
   /** Drains the weak key references queue. */

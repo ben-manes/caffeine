@@ -20,6 +20,7 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -29,7 +30,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
-import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.yahoo.ycsb.generator.NumberGenerator;
 import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
@@ -106,8 +106,8 @@ public class ComputeBenchmark {
     benchmarkFunction = key -> {
       try {
         return cache.get(key, valueLoader);
-      } catch (Exception e) {
-        throw Throwables.propagate(e);
+      } catch (ExecutionException e) {
+        throw new RuntimeException(e);
       }
     };
   }

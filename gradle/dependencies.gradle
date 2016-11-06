@@ -69,8 +69,6 @@ ext {
     tcache: '0.9.8',
   ]
   plugin_versions = [
-    buildscan: '1.2',
-    buildscan_recipes: '0.1.3',
     checkstyle: '7.2',
     coveralls: '2.6.3',
     extra_conf: '3.1.0',
@@ -160,8 +158,6 @@ ext {
     tcache: "com.trivago:triava:${benchmark_versions.tcache}",
   ]
   gradle_plugins = [
-    buildscan: "com.gradle:build-scan-plugin:${plugin_versions.buildscan}",
-    buildscan_recipes: "me.champeau.gradle:buildscan-recipes-plugin:${plugin_versions.buildscan_recipes}",
     checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${plugin_versions.checkstyle}") {
       transitive = false
     },

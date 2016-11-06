@@ -122,6 +122,15 @@ public final class BoundedLocalCacheTest {
     });
   }
 
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = Maximum.FULL,
+      executorFailure = ExecutorFailure.EXPECTED, executor = CacheExecutor.REJECTING,
+      removalListener = Listener.CONSUMING)
+  public void scheduleDrainBuffers_rejected(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.put(context.absentKey(), context.absentValue());
+  }
+
   @Test
   public void putWeighted_noOverflow() {
     Cache<Integer, Integer> cache = Caffeine.newBuilder()
@@ -138,15 +147,6 @@ public final class BoundedLocalCacheTest {
 
     assertThat(map.size(), is(1));
     assertThat(map.adjustedWeightedSize(), is(BoundedLocalCache.MAXIMUM_CAPACITY));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
-      population = Population.FULL, maximumSize = Maximum.FULL,
-      executorFailure = ExecutorFailure.EXPECTED, executor = CacheExecutor.REJECTING,
-      removalListener = Listener.CONSUMING)
-  public void evict_rejected(Cache<Integer, Integer> cache, CacheContext context) {
-    cache.put(context.absentKey(), context.absentValue());
   }
 
   @Test(dataProvider = "caches")

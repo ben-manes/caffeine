@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
@@ -76,12 +77,12 @@ public final class CacheContext {
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
   final ReferenceType keyStrength;
-  final TrackingExecutor executor;
   final Population population;
   final CacheWeigher weigher;
   final Maximum maximumSize;
   final Expire afterAccess;
   final Expire afterWrite;
+  final Executor executor;
   final FakeTicker ticker;
   final Compute compute;
   final Advance advance;
@@ -376,7 +377,7 @@ public final class CacheContext {
     } else {
       cache = new GuavaLoadingCache<>(guava.build(
           com.google.common.cache.CacheLoader.asyncReloading(
-              new SingleLoader<>(loader), executor.delegate())),
+              new SingleLoader<>(loader), executor)),
           ticker, isRecordingStats());
     }
     this.cache = cache;
@@ -413,7 +414,7 @@ public final class CacheContext {
     return cacheExecutor;
   }
 
-  public TrackingExecutor executor() {
+  public Executor executor() {
     return executor;
   }
 

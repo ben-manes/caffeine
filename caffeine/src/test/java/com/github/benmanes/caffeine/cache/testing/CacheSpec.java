@@ -31,6 +31,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -542,35 +544,37 @@ public @interface CacheSpec {
       new ThreadFactoryBuilder().setDaemon(true).build());
 
   /** The executors that the cache can be configured with. */
-  enum CacheExecutor implements Supplier<TrackingExecutor> {
+  enum CacheExecutor implements Supplier<Executor> {
     DEFAULT { // fork-join common pool
-      @Override public TrackingExecutor get() {
+      @Override public Executor get() {
         // Use with caution as may be unpredictable during tests if awaiting completion
         return null;
       }
     },
     DIRECT {
-      @Override public TrackingExecutor get() {
+      @Override public Executor get() {
         // Cache implementations must avoid deadlocks by incorrectly assuming async execution
         return new TrackingExecutor(MoreExecutors.newDirectExecutorService());
       }
     },
     THREADED {
-      @Override public TrackingExecutor get() {
+      @Override public Executor get() {
         return new TrackingExecutor(cachedExecutorService);
       }
     },
     REJECTING {
-      @Override public TrackingExecutor get() {
+      @Override public Executor get() {
         // Cache implementations must avoid corrupting internal state due to rejections
-        TrackingExecutor executor = CacheExecutor.DIRECT.get();
-        executor.shutdown();
-        return executor;
+        return new ForkJoinPool() {
+          @Override public void execute(Runnable task) {
+            throw new RejectedExecutionException();
+          }
+        };
       }
     };
 
     @Override
-    public abstract TrackingExecutor get();
+    public abstract Executor get();
   }
 
   /* ---------------- Populated -------------- */
