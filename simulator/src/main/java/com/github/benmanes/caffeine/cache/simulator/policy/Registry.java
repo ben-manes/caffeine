@@ -44,6 +44,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache3Polic
 import com.github.benmanes.caffeine.cache.simulator.policy.product.ElasticSearchPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.InfinispanPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.OhcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.AdaptiveTinyLfuPolicy;
@@ -150,6 +151,7 @@ public final class Registry {
   }
 
   private static void registerProduct(Map<String, Function<Config, Set<Policy>>> factories) {
+    factories.put("product.ohc", OhcPolicy::policies);
     factories.put("product.guava", GuavaPolicy::policies);
     factories.put("product.tcache", TCachePolicy::policies);
     factories.put("product.cache2k", Cache2kPolicy::policies);
