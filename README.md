@@ -61,9 +61,9 @@ Use Caffeine in a community provided integration:
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
 
 On the radar,
- * Early discussions with [HBase][hbase], [Cassandra][cassandra], [Solr][solr], and [Infinispan][infinispan]
- * Postgres is [evaluating][postgres] whether to port the cache
- * Go [implementation][go-tinylfu] of the W-TinyLfu policy
+ * Early discussions with [HBase][hbase], [Cassandra][cassandra], and [Solr][solr]
+ * Being adopted in the [Neo4j][neo4j] 3.1 and [Infinispan][infinispan] 9.0 releases
+ * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], and [ohc][ohc]
 
 ### Download
 
@@ -114,8 +114,10 @@ Snapshots of the development version are available in
 [cassandra]: https://issues.apache.org/jira/browse/CASSANDRA-10855
 [solr]: https://issues.apache.org/jira/browse/SOLR-8241
 [infinispan]: https://issues.jboss.org/browse/ISPN-6998
-[postgres]: https://www.mail-archive.com/pgsql-hackers@postgresql.org/msg274326.html
+[neo4j]: https://github.com/neo4j/neo4j
+[ohc]: https://github.com/snazy/ohc/issues/34
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
+[mango-cache]: https://github.com/goburrow/cache
 [ratpack]: https://github.com/ratpack/ratpack
 [finagle]: https://github.com/twitter/finagle
 [druid]: https://github.com/druid-io/druid

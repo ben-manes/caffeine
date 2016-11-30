@@ -50,7 +50,7 @@ ext {
     junit: '4.12',
     mockito: '2.2.26',
     pax_exam: '4.9.2',
-    testng: '6.9.12',
+    testng: '6.10',
     truth: '0.24',
   ]
   benchmark_versions = [
@@ -59,7 +59,7 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.3',
     ehcache3: '3.2.0.beta1',
-    elastic_search: '5.0.1',
+    elastic_search: '5.0.2',
     infinispan: '9.0.0.Alpha4',
     jackrabbit: '1.5.13',
     jamm: '0.3.1',
