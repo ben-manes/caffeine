@@ -5,10 +5,10 @@ repositories {
 }
 
 dependencies {
-  compile 'com.github.ben-manes.caffeine:caffeine:2.3.4'
+  compile 'com.github.ben-manes.caffeine:caffeine:2.3.5'
   compile 'io.dropwizard.metrics:metrics-core:3.1.2'
 
-  testCompile 'org.testng:testng:6.9.12'
+  testCompile 'org.testng:testng:6.10'
   testCompile 'org.hamcrest:java-hamcrest:2.0.0.0'
 }
 

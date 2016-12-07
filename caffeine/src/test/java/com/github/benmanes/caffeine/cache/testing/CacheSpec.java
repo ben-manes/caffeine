@@ -58,6 +58,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ImmutableEnumChecker")
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
 
@@ -206,7 +207,7 @@ public @interface CacheSpec {
       }
     };
 
-    private int units;
+    private final int units;
 
     private CacheWeigher(int multiplier) {
       this.units = multiplier;

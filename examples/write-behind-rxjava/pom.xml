@@ -10,8 +10,8 @@
 
   <properties>
     <java.version>1.8</java.version>
-    <caffeine.version>2.3.4</caffeine.version>
-    <rxjava.version>1.1.6</rxjava.version>
+    <caffeine.version>2.3.5</caffeine.version>
+    <rxjava.version>2.0.2</rxjava.version>
     <junit.version>4.12</junit.version>
     <awaitility.version>2.0.0</awaitility.version>
   </properties>
@@ -23,7 +23,7 @@
       <version>${caffeine.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.reactivex</groupId>
+      <groupId>io.reactivex.rxjava2</groupId>
       <artifactId>rxjava</artifactId>
       <version>${rxjava.version}</version>
     </dependency>

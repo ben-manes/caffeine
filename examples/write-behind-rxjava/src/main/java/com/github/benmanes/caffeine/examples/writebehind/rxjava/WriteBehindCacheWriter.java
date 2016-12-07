@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 
-import rx.subjects.PublishSubject;
+import io.reactivex.subjects.PublishSubject;
 
 /**
  * This class implements the {@link CacheWriter} interface to allow a cache to have "write-behind"
@@ -47,7 +47,7 @@ import rx.subjects.PublishSubject;
  * @author wim.deblauwe@gmail.com (Wim Deblauwe)
  */
 public final class WriteBehindCacheWriter<K, V> implements CacheWriter<K, V> {
-  private final PublishSubject<SimpleImmutableEntry<K, V>> subject;
+  private final PublishSubject<Entry<K, V>> subject;
 
   private WriteBehindCacheWriter(Builder<K, V> builder) {
     subject = PublishSubject.create();

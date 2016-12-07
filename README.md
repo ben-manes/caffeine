@@ -113,7 +113,7 @@ Snapshots of the development version are available in
 [hbase]: https://issues.apache.org/jira/browse/HBASE-15560
 [cassandra]: https://issues.apache.org/jira/browse/CASSANDRA-10855
 [solr]: https://issues.apache.org/jira/browse/SOLR-8241
-[infinispan]: https://issues.jboss.org/browse/ISPN-6998
+[infinispan]: http://blog.infinispan.org/2016/12/infinispan-900beta1-ruppaner.html
 [neo4j]: https://github.com/neo4j/neo4j
 [ohc]: https://github.com/snazy/ohc/issues/34
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu

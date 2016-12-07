@@ -144,7 +144,7 @@ public abstract class QueueSanityTest {
     assertThat(queue, emptyAndZeroSize());
 
     // Act
-    final Integer e = new Integer(1876876);
+    final Integer e = 1876876;
     queue.offer(e);
     assertFalse(queue.isEmpty());
     assertEquals(1, queue.size());

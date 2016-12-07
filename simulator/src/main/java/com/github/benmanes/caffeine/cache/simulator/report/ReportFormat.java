@@ -26,6 +26,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ImmutableEnumChecker")
 public enum ReportFormat {
   TABLE(TableReporter::new),
   CSV(CsvReporter::new);

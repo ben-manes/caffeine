@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTr
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ImmutableEnumChecker")
 public enum TraceFormat {
   ADDRESS(AddressTraceReader::new),
   ARC(ArcTraceReader::new),

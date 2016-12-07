@@ -31,6 +31,7 @@ import com.google.common.collect.Queues;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ImmutableEnumChecker")
 public enum QueueType {
   MpscLinkedQueue(MpscLinkedQueue8::new),
   SingleConsumerQueue_optimistic(SingleConsumerQueue::optimistic),
