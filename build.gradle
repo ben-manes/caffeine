@@ -26,7 +26,6 @@ allprojects {
   apply from: "${rootDir}/gradle/eclipse.gradle"
 
   repositories {
-    maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
     maven { url 'https://jitpack.io' }
     mavenCentral()
     jcenter()

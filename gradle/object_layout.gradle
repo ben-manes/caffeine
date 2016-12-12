@@ -9,7 +9,7 @@ dependencies {
   objectLayout benchmark_libraries.java_object_layout
 }
 
-task footprint(type: JavaExec, 
+task footprint(type: JavaExec,
   description: 'Estimate the footprint of all objects reachable from a given instance')
 task externals(type: JavaExec, description: 'Shows objects reachable from a given instance')
 task estimates(type: JavaExec, description: 'Simulate the class layout in different VM modes')
@@ -30,7 +30,7 @@ task packing(type: JavaExec, group: 'Object Layout',
   classpath configurations.objectLayout, sourceSets.main.runtimeClasspath
   doFirst {
     if (!project.hasProperty('className')) {
-      throw new GradleException("Usage: $it.name " + 
+      throw new GradleException("Usage: $it.name " +
         "-PclassName=com.github.benmanes.caffeine.[CLASS_NAME]")
     }
     args it.name, 'com.github.benmanes.caffeine.' + className

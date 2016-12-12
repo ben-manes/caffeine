@@ -59,6 +59,7 @@ import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.WriteExce
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 /**
@@ -248,6 +249,29 @@ public final class CacheTest {
     Map<Integer, Integer> result = cache.getAllPresent(context.original().keySet());
     assertThat(result, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_duplicates(Cache<Integer, Integer> cache, CacheContext context) {
+    Iterable<Integer> keys = Iterables.concat(
+        context.absentKeys(), context.absentKeys(),
+        context.original().keySet(), context.original().keySet());
+    Map<Integer, Integer> result = cache.getAllPresent(keys);
+
+    int misses = context.absentKeys().size();
+    int hits = context.original().keySet().size();
+    if (context.isGuava()) {
+      // does not filter duplicate queries
+      misses += misses;
+      hits += hits;
+    }
+
+    assertThat(result, is(equalTo(context.original())));
+    assertThat(context, both(hasMissCount(misses)).and(hasHitCount(hits)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 

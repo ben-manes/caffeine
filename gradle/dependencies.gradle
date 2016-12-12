@@ -48,20 +48,20 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '2.0',
     junit: '4.12',
-    mockito: '2.2.28',
+    mockito: '2.3.0',
     pax_exam: '4.9.2',
     testng: '6.10',
     truth: '0.24',
   ]
   benchmark_versions = [
-    cache2k: '0.28-BETA',
+    cache2k: '1.0.0.CR1',
     collision: '0.2.4',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.3',
     ehcache3: '3.2.0.beta1',
-    elastic_search: '5.0.2',
+    elastic_search: '5.1.1',
     infinispan: '9.0.0.Alpha4',
-    jackrabbit: '1.5.14',
+    jackrabbit: '1.5.15',
     jamm: '0.3.1',
     java_object_layout: '0.6',
     koloboke: '0.6.8',
@@ -77,6 +77,7 @@ ext {
     error_prone: '0.0.8',
     huntbugs_core: '0.0.11',
     huntbugs_plugin: '0.3.5',
+    jacoco: '0.7.8',
     jmh: '0.3.0',
     nexus: '2.3.1',
     pmd: '5.5.1',
@@ -128,7 +129,7 @@ ext {
     osgi_runtime: [
       "org.ops4j.pax.exam:pax-exam-container-native:${test_versions.pax_exam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${test_versions.pax_exam}",
-      "org.ops4j.pax.url:pax-url-aether:2.5.1",
+      "org.ops4j.pax.url:pax-url-aether:2.5.2",
     ],
     testng: [
       dependencies.create("org.testng:testng:${test_versions.testng}") {

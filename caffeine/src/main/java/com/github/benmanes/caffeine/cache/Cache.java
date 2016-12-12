@@ -84,6 +84,9 @@ public interface Cache<K, V> {
   /**
    * Returns a map of the values associated with the {@code keys} in this cache. The returned map
    * will only contain entries which are already present in the cache.
+   * <p>
+   * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
+   * ignored.
    *
    * @param keys the keys whose associated values are to be returned
    * @return the unmodifiable mapping of keys to values for the specified keys found in this cache

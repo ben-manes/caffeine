@@ -15,7 +15,7 @@ _gradle()
 
   # TODO: include the gradle version in the checksum?  It's kinda slow
   #local gradle_version=$($gradle_cmd --version --quiet --no-color | grep '^Gradle ' | sed 's/Gradle //g')
-  
+
   local gradle_files_checksum='';
   if [[ -f build.gradle ]]; then # top-level gradle file
     if [[ -x `which md5 2 > /dev/null` ]]; then # mac

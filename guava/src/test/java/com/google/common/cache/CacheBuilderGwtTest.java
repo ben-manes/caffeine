@@ -31,7 +31,6 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.annotations.GwtCompatible;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -133,14 +132,13 @@ public class CacheBuilderGwtTest extends TestCase {
 
     cache.put(10, 20);
 
-    Map<Integer, Integer> map = cache.getAll(ImmutableList.of(10, 20, 30, 54, 443, 1));
+    ImmutableSet<Integer> keys = ImmutableSet.of(10, 20, 30, 54, 443, 1);
+    Map<Integer, Integer> map = cache.getAll(keys);
 
-    assertEquals(Integer.valueOf(20), map.get(10));
-    assertEquals(Integer.valueOf(0), map.get(20));
-    assertEquals(Integer.valueOf(1), map.get(30));
-    assertEquals(Integer.valueOf(2), map.get(54));
-    assertEquals(Integer.valueOf(3), map.get(443));
-    assertEquals(Integer.valueOf(4), map.get(1));
+    // Original test depended on order, but that was only expected for the emulated implementation
+    assertEquals(keys, map.keySet());
+    assertEquals(ImmutableSet.of(0, 1, 2, 3, 4, 20), ImmutableSet.copyOf(map.values()));
+
     assertEquals(Integer.valueOf(5), cache.get(6));
     assertEquals(Integer.valueOf(6), cache.apply(7));
   }

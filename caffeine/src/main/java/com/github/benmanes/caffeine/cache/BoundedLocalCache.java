@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1444,27 +1445,32 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
+    Map<Object, Object> result = new HashMap<>();
+    for (Object key : keys) {
+      result.put(key, null);
+    }
+
     int misses = 0;
     long now = expirationTicker().read();
-    Map<K, V> result = new LinkedHashMap<>();
-    for (Object key : keys) {
-      Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
-      if ((node == null) || hasExpired(node, now)) {
-        misses++;
-        continue;
-      }
-      @SuppressWarnings("unchecked")
-      K castKey = (K) key;
-      V value = node.getValue();
+    for (Iterator<Entry<Object, Object>> iter = result.entrySet().iterator(); iter.hasNext();) {
+      Entry<Object, Object> entry = iter.next();
 
-      if (value != null) {
-        result.put(castKey, value);
+      Object value;
+      Node<K, V> node = data.get(nodeFactory.newLookupKey(entry.getKey()));
+      if ((node == null) || ((value = node.getValue()) == null) || hasExpired(node, now)) {
+        iter.remove();
+        misses++;
+      } else {
+        entry.setValue(value);
         afterRead(node, now, /* recordHit */ false);
       }
     }
     statsCounter().recordMisses(misses);
     statsCounter().recordHits(result.size());
-    return Collections.unmodifiableMap(result);
+
+    @SuppressWarnings("unchecked")
+    Map<K, V> castResult = (Map<K, V>) result;
+    return Collections.unmodifiableMap(castResult);
   }
 
   @Override

@@ -25,7 +25,7 @@ dependencies {
   compile benchmark_libraries.infinispan
   compile benchmark_libraries.elastic_search
 
-  testCompile test_libraries.testng  
+  testCompile test_libraries.testng
 }
 
 test {
@@ -43,7 +43,7 @@ tasks.withType(Javadoc) {
 }
 
 run {
-  systemProperties System.properties.findAll { 
+  systemProperties System.properties.findAll {
     it.getKey().startsWith('akka') || it.getKey().startsWith('caffeine')
   }
 }

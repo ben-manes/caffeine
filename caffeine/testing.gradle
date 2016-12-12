@@ -26,7 +26,7 @@ testNames.each { testName ->
   task "${testName}"(type: Test) {
     it.useTestNG()
     group = 'Cache tests'
-    description = 'Runs ' + labels.join(' with ') + 
+    description = 'Runs ' + labels.join(' with ') +
       implementation + ' and ' + (hasStats ? 'stats ' : 'no stats ') +
       (isAsync ? 'asynchronous' : 'synchronous') + ' tests.'
     include 'com/github/benmanes/caffeine/cache/**'

@@ -36,6 +36,7 @@ import static org.hamcrest.Matchers.sameInstance;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -64,6 +65,9 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.primitives.Ints;
 
 /**
  * The test cases for the {@link AsyncLoadingCache} interface that simulate the most generic usages.
@@ -552,9 +556,8 @@ public final class AsyncLoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.BULK_NEGATIVE_EXCEEDS },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAll_exceeds(AsyncLoadingCache<Integer, Integer> cache,
-      CacheContext context) throws Exception {
-    Map<Integer, Integer> result = cache.getAll(context.absentKeys()).get();
+  public void getAll_exceeds(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> result = cache.getAll(context.absentKeys()).join();
 
     assertThat(result.keySet(), equalTo(context.absentKeys()));
     assertThat(cache.synchronous().estimatedSize(),
@@ -562,6 +565,26 @@ public final class AsyncLoadingCacheTest {
 
     assertThat(context, both(hasMissCount(result.size())).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_duplicates(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    Set<Integer> absentKeys = ImmutableSet.copyOf(Iterables.limit(context.absentKeys(),
+        Ints.saturatedCast(context.maximum().max() - context.initialSize())));
+    Iterable<Integer> keys = Iterables.concat(absentKeys, absentKeys,
+        context.original().keySet(), context.original().keySet());
+    Map<Integer, Integer> result = cache.getAll(keys).join();
+
+    assertThat(context, hasMissCount(absentKeys.size()));
+    assertThat(context, hasHitCount(context.initialSize()));
+    assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
+
+    int loads = context.loader().isBulk() ? 1 : absentKeys.size();
+    assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
   }
 
   /* ---------------- put -------------- */

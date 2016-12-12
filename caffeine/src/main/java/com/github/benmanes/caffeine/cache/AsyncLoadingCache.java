@@ -59,7 +59,7 @@ public interface AsyncLoadingCache<K, V> {
    * If the specified key is not already associated with a value, attempts to compute its value
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
    * is performed atomically, so the function is applied at most once per key. If the asynchronous
-   * computation fails, the entry will be automatically removed.
+   * computation fails, the entry will be automatically removed from this cache.
    * <p>
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
@@ -81,7 +81,7 @@ public interface AsyncLoadingCache<K, V> {
    * If the specified key is not already associated with a value, attempts to compute its value
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
    * is performed atomically, so the function is applied at most once per key. If the asynchronous
-   * computation fails, the entry will be automatically removed.
+   * computation fails, the entry will be automatically removed from this cache.
    * <p>
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
@@ -100,7 +100,7 @@ public interface AsyncLoadingCache<K, V> {
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
    * {@link CacheLoader#asyncLoad} if necessary. If the asynchronous computation fails, the entry
-   * will be automatically removed.
+   * will be automatically removed from this cache.
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
@@ -119,7 +119,7 @@ public interface AsyncLoadingCache<K, V> {
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
    * those values if necessary. The returned map contains entries that were already cached, combined
    * with newly loaded entries; it will never contain null keys or values. If the any of the
-   * asynchronous computations fail, those entries will be automatically removed.
+   * asynchronous computations fail, those entries will be automatically removed from this cache.
    * <p>
    * Caches loaded by a {@link CacheLoader} supporting bulk loading will issue a single request to
    * {@link CacheLoader#asyncLoadAll} for all keys which are not already present in the cache. If

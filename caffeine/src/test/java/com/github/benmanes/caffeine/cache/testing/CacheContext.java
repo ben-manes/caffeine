@@ -226,7 +226,6 @@ public final class CacheContext {
   }
 
   public long maximumSize() {
-    assertThat("Invalid usage of context", maximumSize, is(not(nullValue())));
     return maximumSize.max();
   }
 

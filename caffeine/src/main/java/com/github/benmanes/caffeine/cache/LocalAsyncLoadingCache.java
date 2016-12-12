@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
@@ -166,8 +165,9 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     }
 
     Map<K, CompletableFuture<V>> result = new HashMap<>();
+    Function<K, CompletableFuture<V>> mappingFunction = this::get;
     for (K key : keys) {
-      result.put(key, get(key));
+      result.computeIfAbsent(key, mappingFunction);
     }
     return composeResult(result);
   }
@@ -176,7 +176,11 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   private CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
     Map<K, CompletableFuture<V>> futures = new HashMap<>();
     Map<K, CompletableFuture<V>> proxies = new HashMap<>();
+
     for (K key : keys) {
+      if (futures.containsKey(key)) {
+        continue;
+      }
       CompletableFuture<V> future = cache.getIfPresent(key, /* recordStats */ false);
       if (future == null) {
         CompletableFuture<V> proxy = new CompletableFuture<>();
@@ -336,24 +340,30 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
     @Override
     public Map<K, V> getAllPresent(Iterable<?> keys) {
-      int hits = 0;
-      int misses = 0;
-      Map<K, V> result = new LinkedHashMap<>();
+      Map<Object, Object> result = new HashMap<>();
       for (Object key : keys) {
-        CompletableFuture<V> future = cache.get(key);
-        V value = Async.getIfReady(future);
+        result.put(key, null);
+      }
+
+      int misses = 0;
+      for (Iterator<Entry<Object, Object>> iter = result.entrySet().iterator(); iter.hasNext();) {
+        Entry<Object, Object> entry = iter.next();
+
+        CompletableFuture<V> future = cache.get(entry.getKey());
+        Object value = Async.getIfReady(future);
         if (value == null) {
+          iter.remove();
           misses++;
         } else {
-          hits++;
-          @SuppressWarnings("unchecked")
-          K castKey = (K) key;
-          result.put(castKey, value);
+          entry.setValue(value);
         }
       }
-      cache.statsCounter().recordHits(hits);
       cache.statsCounter().recordMisses(misses);
-      return Collections.unmodifiableMap(result);
+      cache.statsCounter().recordHits(result.size());
+
+      @SuppressWarnings("unchecked")
+      Map<K, V> castResult = (Map<K, V>) result;
+      return Collections.unmodifiableMap(castResult);
     }
 
     @Override

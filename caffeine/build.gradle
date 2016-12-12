@@ -1,6 +1,6 @@
 apply from: "${rootDir}/gradle/jmh.gradle"
 apply from: "${projectDir}/testing.gradle"
-  
+
 sourceSets {
   javaPoet {
     java.srcDir 'src/javaPoet/java'
@@ -42,7 +42,7 @@ dependencies {
   jmh benchmark_libraries.jackrabbit
   jmh benchmark_libraries.elastic_search
   jmh benchmark_libraries.concurrentlinkedhashmap
-  
+
   javaPoetCompile libraries.guava
   javaPoetCompile libraries.jsr305
   javaPoetCompile libraries.javapoet
