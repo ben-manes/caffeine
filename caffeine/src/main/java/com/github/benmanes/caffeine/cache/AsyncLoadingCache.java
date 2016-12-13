@@ -89,7 +89,8 @@ public interface AsyncLoadingCache<K, V> {
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
    * @return the current (existing or computed) future value associated with the specified key
-   * @throws NullPointerException if the specified key or mappingFunction is null
+   * @throws NullPointerException if the specified key or mappingFunction is null, or if the
+   *         future returned by the mappingFunction is null
    * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
    *         in which case the mapping is left unestablished
    */
@@ -108,7 +109,8 @@ public interface AsyncLoadingCache<K, V> {
    *
    * @param key key with which the specified value is to be associated
    * @return the current (existing or computed) future value associated with the specified key
-   * @throws NullPointerException if the specified key is null
+   * @throws NullPointerException if the specified key is null or if the future returned by the
+   *         {@link AsyncCacheLoader} is null
    * @throws RuntimeException or Error if the {@link CacheLoader} does when constructing the future,
    *         in which case the mapping is left unestablished
    */
@@ -135,7 +137,8 @@ public interface AsyncLoadingCache<K, V> {
    * @param keys the keys whose associated values are to be returned
    * @return the future containing an unmodifiable mapping of keys to values for the specified keys
    *         in this cache
-   * @throws NullPointerException if the specified collection is null or contains a null element
+   * @throws NullPointerException if the specified collection is null or contains a null element, or
+   *         if the future returned by the {@link AsyncCacheLoader} is null
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
    *         {@link CacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing the
    *         future, in which case the mapping is left unestablished

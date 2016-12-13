@@ -123,10 +123,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     CompletableFuture<V>[] result = new CompletableFuture[1];
     CompletableFuture<V> future = cache.computeIfAbsent(key, k -> {
       result[0] = mappingFunction.apply(key, cache.executor());
-      if (result[0] == null) {
-        cache.statsCounter().recordLoadFailure(cache.statsTicker().read() - startTime);
-      }
-      return result[0];
+      return requireNonNull(result[0]);
     }, recordStats, /* recordLoad */ false);
     if (result[0] != null) {
       AtomicBoolean completed = new AtomicBoolean();
@@ -167,7 +164,8 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     Map<K, CompletableFuture<V>> result = new HashMap<>();
     Function<K, CompletableFuture<V>> mappingFunction = this::get;
     for (K key : keys) {
-      result.computeIfAbsent(key, mappingFunction);
+      CompletableFuture<V> future = result.computeIfAbsent(key, mappingFunction);
+      requireNonNull(future);
     }
     return composeResult(result);
   }

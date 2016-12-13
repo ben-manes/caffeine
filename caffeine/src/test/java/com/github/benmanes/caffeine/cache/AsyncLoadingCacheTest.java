@@ -302,15 +302,11 @@ public final class AsyncLoadingCacheTest {
   }
 
   @CheckNoWriter
-  @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.NULL)
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void getBiFunc_absent_null(AsyncLoadingCache<Integer, Integer> cache,
       CacheContext context) {
-    Integer key = context.absentKey();
-    assertThat(cache.get(key, (k, executor) -> null), is(nullValue()));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
-    assertThat(cache.getIfPresent(key), is(nullValue()));
+    cache.get(context.absentKey(), (k, executor) -> null);
   }
 
   @CacheSpec

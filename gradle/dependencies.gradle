@@ -58,7 +58,7 @@ ext {
     collision: '0.2.4',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.3',
-    ehcache3: '3.2.0.beta1',
+    ehcache3: '3.2.0',
     elastic_search: '5.1.1',
     infinispan: '9.0.0.Alpha4',
     jackrabbit: '1.5.15',
