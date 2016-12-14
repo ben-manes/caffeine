@@ -176,6 +176,7 @@ public final class TwoQueuePolicy implements Policy {
       data.remove(victim.key);
       victim.remove();
       sizeMain--;
+      data.put(node.key, node);
     }
   }
 
