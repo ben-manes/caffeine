@@ -32,7 +32,6 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Ticker;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -43,7 +42,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class SamplingPolicy implements Policy {
+public final class SampledPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final EvictionPolicy policy;
@@ -51,22 +50,22 @@ public final class SamplingPolicy implements Policy {
   private final Admittor admittor;
   private final int maximumSize;
   private final int sampleSize;
-  private final Ticker ticker;
   private final Random random;
   private final Node[] table;
 
-  public SamplingPolicy(Admission admission, EvictionPolicy policy, Config config) {
+  private long tick;
+
+  public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
     this.admittor = admission.from(config, policyStats);
 
-    SamplingSettings settings = new SamplingSettings(config);
+    SampledSettings settings = new SampledSettings(config);
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.sampleSize = settings.sampleSize();
     this.table = new Node[maximumSize + 1];
-    this.ticker = new CountTicker();
     this.policy = policy;
   }
 
@@ -74,7 +73,7 @@ public final class SamplingPolicy implements Policy {
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
-      new SamplingPolicy(admission, policy, config)
+      new SampledPolicy(admission, policy, config)
     ).collect(toSet());
   }
 
@@ -86,8 +85,8 @@ public final class SamplingPolicy implements Policy {
   @Override
   public void record(long key) {
     Node node = data.get(key);
-    long now = ticker.read();
     admittor.record(key);
+    long now = ++tick;
     if (node == null) {
       node = new Node(key, data.size(), now);
       policyStats.recordOperation();
@@ -274,29 +273,15 @@ public final class SamplingPolicy implements Policy {
     }
   }
 
-  /**
-   * An incrementing time source. This is used because calling {@link System#nanoTime()} and
-   * {@link System#currentTimeMillis()} are expensive operations. For sampling purposes the
-   * access time relative to other entries is needed, which a counter serves equally well as
-   * a true time source.
-   */
-  static final class CountTicker extends Ticker {
-    private long tick;
-
-    @Override public long read() {
-      return ++tick;
-    }
-  }
-
-  static final class SamplingSettings extends BasicSettings {
-    public SamplingSettings(Config config) {
+  static final class SampledSettings extends BasicSettings {
+    public SampledSettings(Config config) {
       super(config);
     }
     public int sampleSize() {
-      return config().getInt("sampling.size");
+      return config().getInt("sampled.size");
     }
     public Sample sampleStrategy() {
-      return Sample.valueOf(config().getString("sampling.strategy").toUpperCase());
+      return Sample.valueOf(config().getString("sampled.strategy").toUpperCase());
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Ben Manes. All Rights Reserved.
+ * Copyright 2015 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
+package com.github.benmanes.caffeine.cache.simulator.policy.sketch.sliding;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toSet;
@@ -22,11 +22,12 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
-import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.math.DoubleMath;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -34,19 +35,19 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * The Window TinyLfu algorithm where the size of the admission window is adjusted based on the
- * workload. If a candidate is rejected multiple times within a sample period then the window is
- * increased. The window is decreased on an eviction if no adjustments have been made for at least
- * two periods. This allows the policy to dynamically decide whether it should favor recency (larger
- * window) or frequency (smaller window) based on the workload's characteristics. If the workload
- * changes then the policy will adapt to the new environment.
+ * workload. The window size is adjusted using a hill climbing algorithm by sampling the hit rate.
+ * If the impact was an improvement then it keeps moving forward, else it reverses direction.
+ * This allows the policy to dynamically decide whether it should favor recency (larger window) or
+ * frequency (smaller window) based on the workload's characteristics. If the workload changes then
+ * the policy will adapt to the new environment.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("PMD.TooManyFields")
-public final class AdaptiveWindowTinyLfuPolicy implements Policy {
+public final class SlidingWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final TinyLfu admittor;
+  private final Admittor admittor;
   private final int maximumSize;
 
   private final Node headEden;
@@ -60,54 +61,45 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
   private int sizeProtected;
 
   private int pivot;
-  private final int maxPivot;
-  private final int pivotIncrement;
-  private final int pivotDecrement;
+  private final int initialPivot;
 
   private int sample;
-  private int sampled;
-  private int adjusted;
   private final int sampleSize;
 
-  private final Membership feedback;
+  private int hitsInSample;
+  private int missesInSample;
+  private double previousHitRate;
+  private boolean increaseWindow;
 
-  boolean debug;
-  boolean trace;
+  static final boolean debug = false;
+  static final boolean trace = false;
 
-  public AdaptiveWindowTinyLfuPolicy(double percentMain, AdaptiveWindowTinyLfuSettings settings) {
-    String name = String.format("sketch.AdaptiveWindowTinyLfu "
-        + "(%.0f%%)", 100 * (1.0d - percentMain));
+  public SlidingWindowTinyLfuPolicy(double percentMain, SlidingWindowTinyLfuSettings settings) {
+    String name = String.format("sketch.SlidingWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
-    this.maxEden = Math.min(settings.maximumWindowSize(), settings.maximumSize() - maxMain);
+    this.maxEden = settings.maximumSize() - maxMain;
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headEden = new Node();
 
-    pivot = (int) (settings.percentPivot() * maxEden);
-    maxPivot = Math.min(settings.maximumWindowSize(), maxProtected);
-    sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
-    feedback = settings.membershipFilter().create(sampleSize,
-        settings.adaptiveFpp(), settings.config());
-
-    checkState(settings.pivotIncrement() > 0, "Must increase by at least 1");
-    checkState(settings.pivotDecrement() > 0, "Must decrease by at least 1");
-    pivotIncrement = settings.pivotIncrement();
-    pivotDecrement = settings.pivotDecrement();
+    this.initialPivot = Math.max(1, (int) (settings.pivot() * maximumSize));
+    this.sampleSize = maximumSize;
+    this.pivot = initialPivot;
 
     printSegmentSizes();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    AdaptiveWindowTinyLfuSettings settings = new AdaptiveWindowTinyLfuSettings(config);
+    SlidingWindowTinyLfuSettings settings = new SlidingWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
-        .map(percentMain -> new AdaptiveWindowTinyLfuPolicy(percentMain, settings))
+        .map(percentMain -> new SlidingWindowTinyLfuPolicy(percentMain, settings))
         .collect(toSet());
   }
 
@@ -118,32 +110,72 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
 
   @Override
   public void record(long key) {
-    if ((sample % sampleSize) == 0) {
-      sampled++;
-    }
-    if (sample % (sampleSize / 2) == 0) {
-      feedback.clear();
-    }
-    sample++;
-
-    admittor.record(key);
     policyStats.recordOperation();
     Node node = data.get(key);
+    admittor.record(key);
+    adjustSample();
+
     if (node == null) {
       onMiss(key);
+      missesInSample++;
       policyStats.recordMiss();
     } else if (node.status == Status.EDEN) {
+      hitsInSample++;
       onEdenHit(node);
       policyStats.recordHit();
     } else if (node.status == Status.PROBATION) {
+      hitsInSample++;
       onProbationHit(node);
       policyStats.recordHit();
     } else if (node.status == Status.PROTECTED) {
+      hitsInSample++;
       onProtectedHit(node);
       policyStats.recordHit();
     } else {
       throw new IllegalStateException();
     }
+  }
+
+  @SuppressWarnings("PMD.EmptyIfStmt")
+  private void adjustSample() {
+    boolean reset = false;
+
+    if (data.size() < maximumSize) {
+      reset = true;
+    } else if (sample == sampleSize) {
+      reset = true;
+      boolean adjust = false;
+      double tolerance = 0.025;
+      double hitRate = (100d * hitsInSample) / (hitsInSample + missesInSample);
+      if (previousHitRate == 0.0) {
+        // do nothing (initializing)
+      } else if (DoubleMath.fuzzyEquals(hitRate, previousHitRate, tolerance)) {
+        // do nothing (change is within tolerance)
+      } else if (hitRate < previousHitRate) {
+        increaseWindow = !increaseWindow;
+        pivot = initialPivot;
+        adjust = true;
+      } else if (hitRate > previousHitRate) {
+        pivot = Math.min(2 * pivot, 5 * initialPivot);
+        adjust = true;
+      }
+      previousHitRate = hitRate;
+
+      if (adjust) {
+        if (increaseWindow) {
+          increaseWindow();
+        } else {
+          decreaseWindow();
+        }
+      }
+    }
+
+    if (reset) {
+      missesInSample = 0;
+      hitsInSample = 0;
+      sample = 0;
+    }
+    sample++;
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
@@ -180,9 +212,8 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  /** Moves the entry to the MRU position. */
+  /** Moves the entry to the MRU position, if it falls outside of the fast-path threshold. */
   private void onProtectedHit(Node node) {
-    admittor.record(node.key);
     node.moveToTail(headProtected);
   }
 
@@ -203,16 +234,8 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     candidate.appendToTail(headProbation);
 
     if (data.size() > maximumSize) {
-      Node evict;
       Node victim = headProbation.next;
-      if (admittor.admit(candidate.key, victim.key)) {
-        evict = victim;
-      } else if (adapt(candidate)) {
-        evict = victim;
-      } else {
-        evict = candidate;
-        feedback.put(candidate.key);
-      }
+      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
 
@@ -220,82 +243,57 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  private boolean adapt(Node candidate) {
-    if (adjusted == sampled) {
-      // Already adjusted this period
-      return false;
+  private void increaseWindow() {
+    if (maxProtected == 0) {
+      return;
     }
 
-    if (feedback.mightContain(candidate.key)) {
-      adjusted = sampled;
+    int steps = Math.min(pivot, maxProtected);
+    for (int i = 0; i < steps; i++) {
+      maxEden++;
+      sizeEden++;
+      maxProtected--;
 
-      // Increase admission window
-      if (pivot < maxPivot) {
-        pivot++;
-
-        maxEden++;
-        sizeEden++;
-        maxProtected--;
-
-        demoteProtected();
-        candidate.remove();
-        candidate.status = Status.EDEN;
-        candidate.appendToTail(headEden);
-
-        int increments = Math.min(pivotIncrement - 1, maxPivot - pivot);
-        for (int i = 0; i < increments; i++) {
-          if (pivot < maxPivot) {
-            pivot++;
-
-            maxEden++;
-            sizeEden++;
-            maxProtected--;
-
-            demoteProtected();
-            candidate = headProbation.next.next;
-            candidate.remove();
-            candidate.status = Status.EDEN;
-            candidate.appendToTail(headEden);
-          }
-        }
-
-        if (trace) {
-          System.out.println("↑" + maxEden);
-        }
-      }
-      return true;
-    } else if (sampled > (adjusted + 1)) {
-      adjusted = sampled;
-
-      // Decrease admission window
-      boolean decremented = false;
-      for (int i = 0; i < pivotDecrement; i++) {
-        if (pivot > 0) {
-          pivot--;
-
-          maxEden--;
-          sizeEden--;
-          maxProtected++;
-          decremented = true;
-
-          candidate = headEden.next;
-          candidate.remove();
-          candidate.status = Status.PROBATION;
-          candidate.appendToHead(headProbation);
-        }
-      }
-
-      if (trace && decremented) {
-        System.out.println("↓" + maxEden);
-      }
+      demoteProtected();
+      Node candidate = headProbation.next.next;
+      candidate.remove();
+      candidate.status = Status.EDEN;
+      candidate.appendToTail(headEden);
     }
-    return false;
+
+    if (trace) {
+      System.out.printf("+%,d (%,d -> %,d)%n", steps, maxEden - steps, maxEden);
+    }
   }
 
-  void printSegmentSizes() {
+  private void decreaseWindow() {
+    if (maxEden == 0) {
+      return;
+    }
+
+    int steps = Math.min(pivot, maxEden);
+    for (int i = 0; i < steps; i++) {
+      if (pivot > 0) {
+        maxEden--;
+        sizeEden--;
+        maxProtected++;
+
+        Node candidate = headEden.next;
+        candidate.remove();
+        candidate.status = Status.PROBATION;
+        candidate.appendToHead(headProbation);
+      }
+    }
+
+    if (trace) {
+      System.out.printf("-%,d (%,d -> %,d)%n", steps, maxEden + steps, maxEden);
+    }
+  }
+
+  private void printSegmentSizes() {
     if (debug) {
-      System.out.printf("maxEden=%d, maxProtected=%d, percentEden=%.1f%n",
-          maxEden, maxProtected, (double) (100 * maxEden) / maximumSize);
+      System.out.printf("maxEden=%d, maxProtected=%d, percentEden=%.1f, pivot=%,d%n",
+          maxEden, maxProtected, (double) (100 * maxEden) / maximumSize, pivot);
     }
   }
 
@@ -307,11 +305,11 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     long probationSize = data.values().stream().filter(n -> n.status == Status.PROBATION).count();
     long protectedSize = data.values().stream().filter(n -> n.status == Status.PROTECTED).count();
 
-    checkState(edenSize == sizeEden, "%s != %s", edenSize, sizeEden);
+    checkState(edenSize == sizeEden);
     checkState(protectedSize == sizeProtected);
     checkState(probationSize == data.size() - edenSize - protectedSize);
 
-    checkState(data.size() <= maximumSize, data.size());
+    checkState(data.size() <= maximumSize);
   }
 
   enum Status {
@@ -378,33 +376,18 @@ public final class AdaptiveWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class AdaptiveWindowTinyLfuSettings extends BasicSettings {
-    public AdaptiveWindowTinyLfuSettings(Config config) {
+  static final class SlidingWindowTinyLfuSettings extends BasicSettings {
+    public SlidingWindowTinyLfuSettings(Config config) {
       super(config);
     }
     public List<Double> percentMain() {
-      return config().getDoubleList("adaptive-window-tiny-lfu.percent-main");
+      return config().getDoubleList("sliding-window-tiny-lfu.percent-main");
     }
     public double percentMainProtected() {
-      return config().getDouble("adaptive-window-tiny-lfu.percent-main-protected");
+      return config().getDouble("sliding-window-tiny-lfu.percent-main-protected");
     }
-    public double percentPivot() {
-      return config().getDouble("adaptive-window-tiny-lfu.percent-pivot");
-    }
-    public int pivotIncrement() {
-      return config().getInt("adaptive-window-tiny-lfu.pivot-increment");
-    }
-    public int pivotDecrement() {
-      return config().getInt("adaptive-window-tiny-lfu.pivot-decrement");
-    }
-    public int maximumWindowSize() {
-      return config().getInt("adaptive-window-tiny-lfu.maximum-window-size");
-    }
-    public int maximumSampleSize() {
-      return config().getInt("adaptive-window-tiny-lfu.maximum-sample-size");
-    }
-    public double adaptiveFpp() {
-      return config().getDouble("adaptive-window-tiny-lfu.adaptive-fpp");
+    public double pivot() {
+      return config().getDouble("sliding-window-tiny-lfu.percent-pivot");
     }
   }
 }

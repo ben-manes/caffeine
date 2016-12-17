@@ -63,7 +63,6 @@ public final class LirsPolicy implements Policy {
   private final Node headQ;
 
   private final int maximumNonResidentSize;
-  private final int stackMoveDistance;
   private final int maximumHotSize;
   private final int maximumSize;
 
@@ -72,7 +71,6 @@ public final class LirsPolicy implements Policy {
   private int sizeNR;
   private int sizeHot;
   private int residentSize;
-  private int stackCounter;
 
   // Enable to print out the internal state
   private static final boolean debug = false;
@@ -80,7 +78,6 @@ public final class LirsPolicy implements Policy {
   public LirsPolicy(Config config) {
     LirsSettings settings = new LirsSettings(config);
     this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
-    this.stackMoveDistance = (int) (settings.maximumSize() * settings.percentFastPath());
     this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
     this.policyStats = new PolicyStats("irr.Lirs");
     this.data = new Long2ObjectOpenHashMap<>();
@@ -122,11 +119,6 @@ public final class LirsPolicy implements Policy {
     // stack, we conduct a stack pruning. This case is illustrated in the transition from state
     // (a) to state (b) in Fig. 2.
     policyStats.recordHit();
-
-    if (node.stackMove > (stackCounter - stackMoveDistance)) {
-      // Fast path to skip the hottest entries, useful for concurrent caches
-      return;
-    }
 
     boolean wasBottom = (headS.prevS == node);
     node.moveToTop(StackType.S);
@@ -374,7 +366,6 @@ public final class LirsPolicy implements Policy {
     final long key;
 
     Status status;
-    int stackMove;
 
     Node prevS;
     Node nextS;
@@ -430,7 +421,6 @@ public final class LirsPolicy implements Policy {
       }
 
       if (stackType == StackType.S) {
-        stackMove = ++stackCounter;
         Node next = headS.nextS;
         headS.nextS = this;
         next.prevS = this;
@@ -503,9 +493,6 @@ public final class LirsPolicy implements Policy {
     }
     public double nonResidentMultiplier() {
       return config().getDouble("lirs.non-resident-multiplier");
-    }
-    public double percentFastPath() {
-      return config().getDouble("lirs.percent-fast-path");
     }
   }
 }

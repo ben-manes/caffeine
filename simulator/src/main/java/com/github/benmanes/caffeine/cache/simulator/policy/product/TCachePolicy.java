@@ -70,7 +70,7 @@ public final class TCachePolicy implements Policy {
 
   @Override
   public void finished() {
-    cache.shutdown();
+    cache.close();
     policyStats.addEvictions(cache.statistics().getEvictionCount());
   }
 

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
+package com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -41,7 +41,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AdaptiveTinyLfuPolicy implements Policy {
+public final class FeedbackTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final TinyLfu admittor;
@@ -59,9 +59,9 @@ public final class AdaptiveTinyLfuPolicy implements Policy {
 
   boolean debug;
 
-  public AdaptiveTinyLfuPolicy(Config config) {
-    AdaptiveTinyLfuSettings settings = new AdaptiveTinyLfuSettings(config);
-    this.policyStats = new PolicyStats("sketch.AdaptiveTinyLfu");
+  public FeedbackTinyLfuPolicy(Config config) {
+    FeedbackTinyLfuSettings settings = new FeedbackTinyLfuSettings(config);
+    this.policyStats = new PolicyStats("sketch.FeedbackTinyLfu");
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
@@ -74,7 +74,7 @@ public final class AdaptiveTinyLfuPolicy implements Policy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new AdaptiveTinyLfuPolicy(config));
+    return ImmutableSet.of(new FeedbackTinyLfuPolicy(config));
   }
 
   @Override
@@ -236,18 +236,18 @@ public final class AdaptiveTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class AdaptiveTinyLfuSettings extends BasicSettings {
-    public AdaptiveTinyLfuSettings(Config config) {
+  static final class FeedbackTinyLfuSettings extends BasicSettings {
+    public FeedbackTinyLfuSettings(Config config) {
       super(config);
     }
     public int maximumInsertionGain() {
-      return config().getInt("adaptive-tiny-lfu.maximum-insertion-gain");
+      return config().getInt("feedback-tiny-lfu.maximum-insertion-gain");
     }
     public int maximumSampleSize() {
-      return config().getInt("adaptive-tiny-lfu.maximum-sample-size");
+      return config().getInt("feedback-tiny-lfu.maximum-sample-size");
     }
     public double adaptiveFpp() {
-      return config().getDouble("adaptive-tiny-lfu.adaptive-fpp");
+      return config().getDouble("feedback-tiny-lfu.adaptive-fpp");
     }
   }
 }

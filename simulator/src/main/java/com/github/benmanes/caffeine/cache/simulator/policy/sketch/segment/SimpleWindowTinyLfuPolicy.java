@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
+package com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toSet;
@@ -41,7 +41,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class SimpleWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final int recencyMoveDistance;
   private final Admittor admittor;
   private final Node headEden;
   private final Node headMain;
@@ -50,7 +49,6 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
 
   private int sizeEden;
   private int sizeMain;
-  private int mainRecencyCounter;
 
   public SimpleWindowTinyLfuPolicy(double percentMain, SimpleWindowTinyLfuSettings settings) {
     String name = String.format("sketch.SimpleWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
@@ -59,7 +57,6 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxEden = settings.maximumSize() - maxMain;
-    this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
     this.data = new Long2ObjectOpenHashMap<>();
     this.headEden = new Node();
     this.headMain = new Node();
@@ -82,9 +79,9 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
   public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
-    if (node == null) {
-      admittor.record(key);
+    admittor.record(key);
 
+    if (node == null) {
       node = new Node(key, Status.EDEN);
       node.appendToTail(headEden);
       data.put(key, node);
@@ -93,16 +90,10 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
 
       policyStats.recordMiss();
     } else if (node.status == Status.EDEN) {
-      admittor.record(key);
       node.moveToTail(headEden);
       policyStats.recordHit();
     } else if (node.status == Status.MAIN) {
-      // Fast path skips the hottest entries, useful for concurrent caches
-      if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {
-        node.recencyMove = ++mainRecencyCounter;
-        node.moveToTail(headMain);
-        admittor.record(key);
-      }
+      node.moveToTail(headMain);
       policyStats.recordHit();
     } else {
       throw new IllegalStateException();
@@ -132,10 +123,6 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
 
       policyStats.recordEviction();
     }
-
-    if (candidate.isInQueue()) {
-      candidate.recencyMove = ++mainRecencyCounter;
-    }
   }
 
   @Override
@@ -153,7 +140,6 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
   static final class Node {
     final long key;
 
-    int recencyMove;
     Status status;
     Node prev;
     Node next;
@@ -210,9 +196,6 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
     }
     public List<Double> percentMain() {
       return config().getDoubleList("simple-window-tiny-lfu.percent-main");
-    }
-    public double percentFastPath() {
-      return config().getDouble("simple-window-tiny-lfu.percent-fast-path");
     }
   }
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
+package com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toSet;
@@ -42,7 +42,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final int recencyMoveDistance;
   private final Admittor admittor;
   private final int maximumSize;
 
@@ -58,7 +57,6 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
   private int sizeEden;
   private int sizeEdenProtected;
   private int sizeMainProtected;
-  private int mainRecencyCounter;
 
   public FullySegmentedWindowTinyLfuPolicy(
       double percentMain, FullySegmentedWindowTinyLfuSettings settings) {
@@ -69,7 +67,6 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     this.maxEden = settings.maximumSize() - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxEdenProtected = (int) (maxEden * settings.percentEdenProtected());
-    this.recencyMoveDistance = (int) (maxMain * settings.percentFastPath());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
@@ -96,6 +93,8 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
   public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
+    admittor.record(key);
+
     if (node == null) {
       onMiss(key);
       policyStats.recordMiss();
@@ -118,8 +117,6 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    admittor.record(key);
-
     Node node = new Node(key, Status.EDEN_PROBATION);
     node.appendToTail(headEdenProbation);
     data.put(key, node);
@@ -129,8 +126,6 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onEdenProbationHit(Node node) {
-    admittor.record(node.key);
-
     node.remove();
     node.status = Status.EDEN_PROTECTED;
     node.appendToTail(headEdenProtected);
@@ -147,18 +142,14 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
   /** Moves the entry to the MRU position in the admission window. */
   private void onEdenProtectedHit(Node node) {
-    admittor.record(node.key);
     node.moveToTail(headEdenProtected);
   }
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onMainProbationHit(Node node) {
-    admittor.record(node.key);
-
     node.remove();
     node.status = Status.MAIN_PROTECTED;
     node.appendToTail(headMainProtected);
-    node.recencyMove = ++mainRecencyCounter;
 
     sizeMainProtected++;
     if (sizeMainProtected > maxMainProtected) {
@@ -172,12 +163,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
   /** Moves the entry to the MRU position, if it falls outside of the fast-path threshold. */
   private void onMainProtectedHit(Node node) {
-    // Fast path skips the hottest entries, useful for concurrent caches
-    if (node.recencyMove <= (mainRecencyCounter - recencyMoveDistance)) {
-      admittor.record(node.key);
-      node.moveToTail(headMainProtected);
-      node.recencyMove = ++mainRecencyCounter;
-    }
+    node.moveToTail(headMainProtected);
   }
 
   /**
@@ -232,7 +218,6 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
   static final class Node {
     final long key;
 
-    int recencyMove;
     Status status;
     Node prev;
     Node next;
@@ -276,7 +261,6 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
       return MoreObjects.toStringHelper(this)
           .add("key", key)
           .add("status", status)
-          .add("move", recencyMove)
           .toString();
     }
   }
@@ -293,9 +277,6 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     }
     public double percentEdenProtected() {
       return config().getDouble("fully-segmented-window-tiny-lfu.percent-eden-protected");
-    }
-    public double percentFastPath() {
-      return config().getDouble("fully-segmented-window-tiny-lfu.percent-fast-path");
     }
   }
 }

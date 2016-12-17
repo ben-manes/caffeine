@@ -15,10 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -46,20 +49,20 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.InfinispanPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.OhcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SamplingPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.AdaptiveTinyLfuPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.AdaptiveWindowTinyLfuPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.FullySegmentedWindowTinyLfuPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.RandomWindowTinyLfuPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.S4WindowTinyLfuPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.SimpleWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback.FeedbackTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback.FeedbackWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.FullySegmentedWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.RandomWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.S4WindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.SimpleWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.sliding.SlidingWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCacheWithGhostCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.WindowTinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
-import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 
 /**
@@ -82,84 +85,86 @@ public final class Registry {
     registerProduct(factories);
     registerTwoQueue(factories);
     registerAdaptive(factories);
-    return ImmutableMap.copyOf(factories);
+    return factories.entrySet().stream().collect(
+        toMap(entry -> entry.getKey().toLowerCase(), Entry::getValue));
   }
 
   /** Returns all of the policies that have been configured for simulation. */
   public static Set<Policy> policies(BasicSettings settings) {
     return settings.policies().stream()
-        .map(FACTORIES::get)
+        .map(name -> requireNonNull(FACTORIES.get(name), name + " not found"))
         .flatMap(factory -> factory.apply(settings.config()).stream())
         .collect(toSet());
   }
 
   private static void registerOptimal(Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("opt.clairvoyant", ClairvoyantPolicy::policies);
-    factories.put("opt.unbounded", UnboundedPolicy::policies);
+    factories.put("opt.Clairvoyant", ClairvoyantPolicy::policies);
+    factories.put("opt.Unbounded", UnboundedPolicy::policies);
   }
 
   private static void registerLinked(Map<String, Function<Config, Set<Policy>>> factories) {
     Stream.of(LinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "linked." + priority.name().toLowerCase();
+      String id = "linked." + priority.name();
       factories.put(id, config -> LinkedPolicy.policies(config, priority));
     });
     Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "linked." + priority.name().toLowerCase();
+      String id = "linked." + priority.name();
       factories.put(id, config -> FrequentlyUsedPolicy.policies(config, priority));
     });
-    factories.put("linked.segmentedlru", SegmentedLruPolicy::policies);
-    factories.put("linked.multiqueue", MultiQueuePolicy::policies);
-    factories.put("linked.s4lru", S4LruPolicy::policies);
+    factories.put("linked.SegmentedLru", SegmentedLruPolicy::policies);
+    factories.put("linked.Multiqueue", MultiQueuePolicy::policies);
+    factories.put("linked.S4Lru", S4LruPolicy::policies);
   }
 
   private static void registerSampled(Map<String, Function<Config, Set<Policy>>> factories) {
-    Stream.of(SamplingPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "sampled." + priority.name().toLowerCase();
-      factories.put(id, config -> SamplingPolicy.policies(config, priority));
+    Stream.of(SampledPolicy.EvictionPolicy.values()).forEach(priority -> {
+      String id = "sampled." + priority.name();
+      factories.put(id, config -> SampledPolicy.policies(config, priority));
     });
   }
 
   private static void registerTwoQueue(Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("two-queue.tuqueue", TuQueuePolicy::policies);
-    factories.put("two-queue.twoqueue", TwoQueuePolicy::policies);
+    factories.put("two-queue.TuQueue", TuQueuePolicy::policies);
+    factories.put("two-queue.TwoQueue", TwoQueuePolicy::policies);
   }
 
   private static void registerSketch(Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("sketch.windowtinylfu", WindowTinyLfuPolicy::policies);
-    factories.put("sketch.s4windowtinylfu", S4WindowTinyLfuPolicy::policies);
-    factories.put("sketch.simplewindowtinylfu", SimpleWindowTinyLfuPolicy::policies);
-    factories.put("sketch.randomwindowtinylfu", RandomWindowTinyLfuPolicy::policies);
-    factories.put("sketch.fullysegmentedwindowtinylfu",
+    factories.put("sketch.WindowTinyLfu", WindowTinyLfuPolicy::policies);
+    factories.put("sketch.S4WindowTinyLfu", S4WindowTinyLfuPolicy::policies);
+    factories.put("sketch.SimpleWindowTinyLfu", SimpleWindowTinyLfuPolicy::policies);
+    factories.put("sketch.RandomWindowtinyLfu", RandomWindowTinyLfuPolicy::policies);
+    factories.put("sketch.FullySegmentedWindowTinylfu",
         FullySegmentedWindowTinyLfuPolicy::policies);
-    factories.put("sketch.adaptivetinylfu", AdaptiveTinyLfuPolicy::policies);
-    factories.put("sketch.adaptivewindowtinylfu", AdaptiveWindowTinyLfuPolicy::policies);
+    factories.put("sketch.FeedbackTinyLfu", FeedbackTinyLfuPolicy::policies);
+    factories.put("sketch.FeedbackWindowTinyLfu", FeedbackWindowTinyLfuPolicy::policies);
+    factories.put("sketch.SlidingWindowTinyLfu", SlidingWindowTinyLfuPolicy::policies);
 
-    factories.put("sketch.tinycache", TinyCachePolicy::policies);
-    factories.put("sketch.windowtinycache", WindowTinyCachePolicy::policies);
-    factories.put("sketch.tinycache_ghostcache", TinyCacheWithGhostCachePolicy::policies);
+    factories.put("sketch.TinyCache", TinyCachePolicy::policies);
+    factories.put("sketch.WindowTinyCache", WindowTinyCachePolicy::policies);
+    factories.put("sketch.TinyCache_GhostCache", TinyCacheWithGhostCachePolicy::policies);
   }
 
   private static void registerIRR(Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("irr.lirs", LirsPolicy::policies);
-    factories.put("irr.clockpro", ClockProPolicy::policies);
+    factories.put("irr.Lirs", LirsPolicy::policies);
+    factories.put("irr.ClockPro", ClockProPolicy::policies);
   }
 
   private static void registerAdaptive(Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("adaptive.arc", ArcPolicy::policies);
-    factories.put("adaptive.car", CarPolicy::policies);
-    factories.put("adaptive.cart", CartPolicy::policies);
+    factories.put("adaptive.Arc", ArcPolicy::policies);
+    factories.put("adaptive.Car", CarPolicy::policies);
+    factories.put("adaptive.Cart", CartPolicy::policies);
   }
 
   private static void registerProduct(Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("product.ohc", OhcPolicy::policies);
-    factories.put("product.guava", GuavaPolicy::policies);
-    factories.put("product.tcache", TCachePolicy::policies);
-    factories.put("product.cache2k", Cache2kPolicy::policies);
-    factories.put("product.ehcache2", Ehcache2Policy::policies);
-    factories.put("product.ehcache3", Ehcache3Policy::policies);
-    factories.put("product.caffeine", CaffeinePolicy::policies);
-    factories.put("product.collision", CollisionPolicy::policies);
-    factories.put("product.infinispan", InfinispanPolicy::policies);
-    factories.put("product.elasticsearch", ElasticSearchPolicy::policies);
+    factories.put("product.OHC", OhcPolicy::policies);
+    factories.put("product.Guava", GuavaPolicy::policies);
+    factories.put("product.Tcache", TCachePolicy::policies);
+    factories.put("product.Cache2k", Cache2kPolicy::policies);
+    factories.put("product.Ehcache2", Ehcache2Policy::policies);
+    factories.put("product.Ehcache3", Ehcache3Policy::policies);
+    factories.put("product.Caffeine", CaffeinePolicy::policies);
+    factories.put("product.Collision", CollisionPolicy::policies);
+    factories.put("product.Infinispan", InfinispanPolicy::policies);
+    factories.put("product.Elasticsearch", ElasticSearchPolicy::policies);
   }
 }
