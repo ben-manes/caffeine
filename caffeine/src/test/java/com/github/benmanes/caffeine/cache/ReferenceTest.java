@@ -311,12 +311,8 @@ public final class ReferenceTest {
     long count = context.initialSize() - cache.estimatedSize();
 
     assertThat(count, is(greaterThan(0L)));
-
-    if (!context.isGuava()) {
-      // https://github.com/google/guava/issues/2101
-      assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-      verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
-    }
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -616,11 +612,8 @@ public final class ReferenceTest {
     long count = context.initialSize() - map.size();
 
     assertThat(count, is(greaterThan(0L)));
-    if (!context.isGuava()) {
-      // https://github.com/google/guava/issues/2101
-      assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-      verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
-    }
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)

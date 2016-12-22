@@ -68,12 +68,11 @@ public final class Cache2kPolicy implements Policy {
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public void record(long key) {
     Object value = cache.peek(key);
     if (value == null) {
       policyStats.recordMiss();
-      if (cache.getTotalEntryCount() == maximumSize) {
+      if (cache.asMap().size() == maximumSize) {
         policyStats.recordEviction();
       }
       cache.put(key, key);

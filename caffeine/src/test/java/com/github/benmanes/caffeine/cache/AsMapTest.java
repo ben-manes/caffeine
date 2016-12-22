@@ -2050,7 +2050,7 @@ public final class AsMapTest {
       Map<Integer, Integer> map, CacheContext context) {
     int[] count = new int[1];
     map.entrySet().spliterator().forEachRemaining(entry -> {
-      if (!context.isGuava()) {
+      if (context.isCaffeine()) {
         assertThat(entry, is(instanceOf(WriteThroughEntry.class)));
       }
       count[0]++;
@@ -2075,7 +2075,7 @@ public final class AsMapTest {
     boolean advanced;
     do {
       advanced = spliterator.tryAdvance(entry -> {
-        if (!context.isGuava()) {
+        if (context.isCaffeine()) {
           assertThat(entry, is(instanceOf(WriteThroughEntry.class)));
         }
         count[0]++;
