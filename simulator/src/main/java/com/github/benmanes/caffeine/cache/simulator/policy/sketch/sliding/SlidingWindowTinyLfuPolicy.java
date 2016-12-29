@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Ben Manes. All Rights Reserved.
+ * Copyright 2016 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.math.DoubleMath;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -60,8 +59,7 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
   private int sizeEden;
   private int sizeProtected;
 
-  private int pivot;
-  private final int initialPivot;
+  private final int pivot;
 
   private int sample;
   private final int sampleSize;
@@ -69,6 +67,8 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
   private int hitsInSample;
   private int missesInSample;
   private double previousHitRate;
+
+  private final double tolerance;
   private boolean increaseWindow;
 
   static final boolean debug = false;
@@ -88,9 +88,10 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
     this.headProbation = new Node();
     this.headEden = new Node();
 
-    this.initialPivot = Math.max(1, (int) (settings.pivot() * maximumSize));
-    this.sampleSize = maximumSize;
-    this.pivot = initialPivot;
+    this.pivot = Math.min(settings.maximumPivot(),
+        Math.max(1, (int) (settings.percentPivot() * maximumSize)));
+    this.sampleSize = settings.sampleSize();
+    this.tolerance = settings.tolerance();
 
     printSegmentSizes();
   }
@@ -142,32 +143,14 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
 
     if (data.size() < maximumSize) {
       reset = true;
-    } else if (sample == sampleSize) {
+    } else if (sample >= sampleSize) {
       reset = true;
-      boolean adjust = false;
-      double tolerance = 0.025;
       double hitRate = (100d * hitsInSample) / (hitsInSample + missesInSample);
-      if (previousHitRate == 0.0) {
-        // do nothing (initializing)
-      } else if (DoubleMath.fuzzyEquals(hitRate, previousHitRate, tolerance)) {
-        // do nothing (change is within tolerance)
-      } else if (hitRate < previousHitRate) {
-        increaseWindow = !increaseWindow;
-        pivot = initialPivot;
-        adjust = true;
-      } else if (hitRate > previousHitRate) {
-        pivot = Math.min(2 * pivot, 5 * initialPivot);
-        adjust = true;
+
+      if (!Double.isNaN(hitRate) && !Double.isInfinite(hitRate) && (previousHitRate != 0.0)) {
+        adapt(hitRate);
       }
       previousHitRate = hitRate;
-
-      if (adjust) {
-        if (increaseWindow) {
-          increaseWindow();
-        } else {
-          decreaseWindow();
-        }
-      }
     }
 
     if (reset) {
@@ -176,6 +159,18 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
       sample = 0;
     }
     sample++;
+  }
+
+  private void adapt(double hitRate) {
+    if (hitRate < (previousHitRate + tolerance)) {
+      increaseWindow = !increaseWindow;
+    }
+
+    if (increaseWindow) {
+      increaseWindow();
+    } else {
+      decreaseWindow();
+    }
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
@@ -386,8 +381,17 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
     public double percentMainProtected() {
       return config().getDouble("sliding-window-tiny-lfu.percent-main-protected");
     }
-    public double pivot() {
+    public double percentPivot() {
       return config().getDouble("sliding-window-tiny-lfu.percent-pivot");
+    }
+    public int maximumPivot() {
+      return config().getInt("sliding-window-tiny-lfu.maximum-pivot-size");
+    }
+    public int sampleSize() {
+      return config().getInt("sliding-window-tiny-lfu.sample-size");
+    }
+    public double tolerance() {
+      return config().getInt("sliding-window-tiny-lfu.tolerance");
     }
   }
 }

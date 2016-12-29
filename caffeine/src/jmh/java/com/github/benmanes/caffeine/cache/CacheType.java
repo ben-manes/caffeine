@@ -18,10 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.jackrabbit.oak.cache.CacheLIRS;
-import org.infinispan.commons.equivalence.AnyEquivalence;
-import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8;
-import org.infinispan.commons.util.concurrent.jdk8backported.BoundedEquivalentConcurrentHashMapV8.Eviction;
-import org.infinispan.util.concurrent.BoundedConcurrentHashMap;
 import org.jctools.maps.NonBlockingHashMap;
 
 import com.github.benmanes.caffeine.cache.impl.Cache2k;
@@ -112,21 +108,6 @@ public enum CacheType {
   Guava {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new GuavaCache<>(maximumSize);
-    }
-  },
-  Infinispan_Old_Lru {
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new ConcurrentMapCache<>(new BoundedConcurrentHashMap<>(
-          maximumSize, CONCURRENCY_LEVEL, BoundedConcurrentHashMap.Eviction.LRU,
-          AnyEquivalence.getInstance(), AnyEquivalence.getInstance()));
-    }
-  },
-  Infinispan_New_Lru {
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new ConcurrentMapCache<>(
-          new BoundedEquivalentConcurrentHashMapV8<>(maximumSize, Eviction.LRU,
-              BoundedEquivalentConcurrentHashMapV8.getNullEvictionListener(),
-              AnyEquivalence.getInstance(), AnyEquivalence.getInstance()));
     }
   },
   Jackrabbit {

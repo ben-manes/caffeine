@@ -48,7 +48,7 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '2.0',
     junit: '4.12',
-    mockito: '2.4.0',
+    mockito: '2.5.0',
     pax_exam: '4.9.2',
     testng: '6.10',
     truth: '0.24',
@@ -60,8 +60,7 @@ ext {
     ehcache2: '2.10.3',
     ehcache3: '3.2.0',
     elastic_search: '5.1.1',
-    infinispan: '9.0.0.Alpha4',
-    jackrabbit: '1.5.15',
+    jackrabbit: '1.5.16',
     jamm: '0.3.1',
     java_object_layout: '0.6',
     koloboke: '0.6.8',
@@ -151,7 +150,6 @@ ext {
     elastic_search: dependencies.create("org.elasticsearch:elasticsearch:${benchmark_versions.elastic_search}") {
       exclude group: 'org.apache.lucene'
     },
-    infinispan: "org.infinispan:infinispan-core:${benchmark_versions.infinispan}",
     jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${benchmark_versions.jackrabbit}") {
       exclude group: 'junit'
     },
