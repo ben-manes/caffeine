@@ -50,13 +50,14 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.OhcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AnnealingWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback.FeedbackTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback.FeedbackWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.FullySegmentedWindowTinyLfuPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.LruWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.RandomWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.S4WindowTinyLfuPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.segment.SimpleWindowTinyLfuPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.sliding.SlidingWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.TinyCacheWithGhostCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.WindowTinyCachePolicy;
@@ -130,13 +131,16 @@ public final class Registry {
   private static void registerSketch(Map<String, Function<Config, Set<Policy>>> factories) {
     factories.put("sketch.WindowTinyLfu", WindowTinyLfuPolicy::policies);
     factories.put("sketch.S4WindowTinyLfu", S4WindowTinyLfuPolicy::policies);
-    factories.put("sketch.SimpleWindowTinyLfu", SimpleWindowTinyLfuPolicy::policies);
+    factories.put("sketch.LruWindowTinyLfu", LruWindowTinyLfuPolicy::policies);
     factories.put("sketch.RandomWindowtinyLfu", RandomWindowTinyLfuPolicy::policies);
     factories.put("sketch.FullySegmentedWindowTinylfu",
         FullySegmentedWindowTinyLfuPolicy::policies);
+
     factories.put("sketch.FeedbackTinyLfu", FeedbackTinyLfuPolicy::policies);
     factories.put("sketch.FeedbackWindowTinyLfu", FeedbackWindowTinyLfuPolicy::policies);
-    factories.put("sketch.SlidingWindowTinyLfu", SlidingWindowTinyLfuPolicy::policies);
+
+    factories.put("sketch.HillClimberWindowTinyLfu", HillClimberWindowTinyLfuPolicy::policies);
+    factories.put("sketch.AnnealingWindowTinyLfu", AnnealingWindowTinyLfuPolicy::policies);
 
     factories.put("sketch.TinyCache", TinyCachePolicy::policies);
     factories.put("sketch.WindowTinyCache", WindowTinyCachePolicy::policies);

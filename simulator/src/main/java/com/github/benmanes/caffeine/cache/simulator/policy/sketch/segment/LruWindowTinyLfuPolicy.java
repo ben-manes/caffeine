@@ -38,7 +38,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class SimpleWindowTinyLfuPolicy implements Policy {
+public final class LruWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final Admittor admittor;
@@ -50,8 +50,8 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
   private int sizeEden;
   private int sizeMain;
 
-  public SimpleWindowTinyLfuPolicy(double percentMain, SimpleWindowTinyLfuSettings settings) {
-    String name = String.format("sketch.SimpleWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+  public LruWindowTinyLfuPolicy(double percentMain, LruWindowTinyLfuSettings settings) {
+    String name = String.format("sketch.LruWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
     this.policyStats = new PolicyStats(name);
 
     this.admittor = new TinyLfu(settings.config(), policyStats);
@@ -64,9 +64,9 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    SimpleWindowTinyLfuSettings settings = new SimpleWindowTinyLfuSettings(config);
+    LruWindowTinyLfuSettings settings = new LruWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
-        .map(percentMain -> new SimpleWindowTinyLfuPolicy(percentMain, settings))
+        .map(percentMain -> new LruWindowTinyLfuPolicy(percentMain, settings))
         .collect(toSet());
   }
 
@@ -190,12 +190,12 @@ public final class SimpleWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class SimpleWindowTinyLfuSettings extends BasicSettings {
-    public SimpleWindowTinyLfuSettings(Config config) {
+  static final class LruWindowTinyLfuSettings extends BasicSettings {
+    public LruWindowTinyLfuSettings(Config config) {
       super(config);
     }
     public List<Double> percentMain() {
-      return config().getDoubleList("simple-window-tiny-lfu.percent-main");
+      return config().getDoubleList("lru-window-tiny-lfu.percent-main");
     }
   }
 }

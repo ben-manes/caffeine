@@ -26,7 +26,7 @@
 ext {
   versions = [
     akka: '2.4.16',
-    commons_compress: '1.12',
+    commons_compress: '1.13',
     commons_lang3: '3.5',
     config: '1.3.1',
     error_prone_annotations: '2.0.15',

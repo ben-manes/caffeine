@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sketch.sliding;
+package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -27,6 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.math.DoubleMath;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -43,11 +45,12 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("PMD.TooManyFields")
-public final class SlidingWindowTinyLfuPolicy implements Policy {
+public final class AnnealingWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final Admittor admittor;
   private final int maximumSize;
+  private final Random random;
 
   private final Node headEden;
   private final Node headProbation;
@@ -59,7 +62,8 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
   private int sizeEden;
   private int sizeProtected;
 
-  private final int pivot;
+  private int pivot;
+  private final int initialPivot;
 
   private int sample;
   private final int sampleSize;
@@ -68,39 +72,51 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
   private int missesInSample;
   private double previousHitRate;
 
-  private final double tolerance;
+  private double temperature = 1.0;
+  private final double coolDownRate;
+  private final double minTemperature;
+  private final double restartTolerance;
+  private final double coolDownTolerance;
+
   private boolean increaseWindow;
 
   static final boolean debug = false;
   static final boolean trace = false;
 
-  public SlidingWindowTinyLfuPolicy(double percentMain, SlidingWindowTinyLfuSettings settings) {
-    String name = String.format("sketch.SlidingWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+  public AnnealingWindowTinyLfuPolicy(double percentMain, AnnealingWindowTinyLfuSettings settings) {
+    String name = String.format("sketch.AnnealingWindowTinyLfu (%.0f%%)",
+        100 * (1.0d - percentMain));
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
     this.maxEden = settings.maximumSize() - maxMain;
+    this.random = new Random(settings.randomSeed());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headEden = new Node();
 
-    this.pivot = Math.min(settings.maximumPivot(),
+    this.initialPivot = Math.min(50,
         Math.max(1, (int) (settings.percentPivot() * maximumSize)));
     this.sampleSize = settings.sampleSize();
-    this.tolerance = settings.tolerance();
+    this.pivot = initialPivot;
+
+    this.coolDownRate = settings.coolDownRate();
+    this.minTemperature = settings.minTemperature();
+    this.restartTolerance = 100 * settings.restartTolerance();
+    this.coolDownTolerance = 100 * settings.coolDownTolerance();
 
     printSegmentSizes();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    SlidingWindowTinyLfuSettings settings = new SlidingWindowTinyLfuSettings(config);
+    AnnealingWindowTinyLfuSettings settings = new AnnealingWindowTinyLfuSettings(config);
     return settings.percentMain().stream()
-        .map(percentMain -> new SlidingWindowTinyLfuPolicy(percentMain, settings))
+        .map(percentMain -> new AnnealingWindowTinyLfuPolicy(percentMain, settings))
         .collect(toSet());
   }
 
@@ -162,8 +178,23 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
   }
 
   private void adapt(double hitRate) {
-    if (hitRate < (previousHitRate + tolerance)) {
-      increaseWindow = !increaseWindow;
+    if (!DoubleMath.fuzzyEquals(hitRate, previousHitRate, restartTolerance)) {
+      pivot = initialPivot;
+      temperature = 1.0;
+    }
+
+    if (temperature > minTemperature) {
+      double acceptanceProbability = Math.exp((previousHitRate - hitRate) / (100 * temperature));
+      double criteria = random.nextDouble();
+
+      if (acceptanceProbability <= criteria) {
+        increaseWindow = !increaseWindow;
+      }
+
+      if ((previousHitRate - hitRate) > coolDownTolerance) {
+        temperature = coolDownRate * temperature;
+        pivot = 1 + (int) (initialPivot * temperature);
+      }
     }
 
     if (increaseWindow) {
@@ -371,27 +402,36 @@ public final class SlidingWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class SlidingWindowTinyLfuSettings extends BasicSettings {
-    public SlidingWindowTinyLfuSettings(Config config) {
+  static final class AnnealingWindowTinyLfuSettings extends BasicSettings {
+    public AnnealingWindowTinyLfuSettings(Config config) {
       super(config);
     }
     public List<Double> percentMain() {
-      return config().getDoubleList("sliding-window-tiny-lfu.percent-main");
+      return config().getDoubleList("annealing-window-tiny-lfu.percent-main");
     }
     public double percentMainProtected() {
-      return config().getDouble("sliding-window-tiny-lfu.percent-main-protected");
+      return config().getDouble("annealing-window-tiny-lfu.percent-main-protected");
     }
     public double percentPivot() {
-      return config().getDouble("sliding-window-tiny-lfu.percent-pivot");
+      return config().getDouble("annealing-window-tiny-lfu.percent-pivot");
     }
     public int maximumPivot() {
-      return config().getInt("sliding-window-tiny-lfu.maximum-pivot-size");
+      return config().getInt("annealing-window-tiny-lfu.maximum-pivot-size");
     }
     public int sampleSize() {
-      return config().getInt("sliding-window-tiny-lfu.sample-size");
+      return config().getInt("annealing-window-tiny-lfu.sample-size");
     }
-    public double tolerance() {
-      return config().getInt("sliding-window-tiny-lfu.tolerance");
+    public double coolDownRate() {
+      return config().getDouble("annealing-window-tiny-lfu.cool-down-rate");
+    }
+    public double minTemperature() {
+      return config().getDouble("annealing-window-tiny-lfu.min-temperature");
+    }
+    public double restartTolerance() {
+      return config().getDouble("annealing-window-tiny-lfu.restart-tolerance");
+    }
+    public double coolDownTolerance() {
+      return config().getDouble("annealing-window-tiny-lfu.cool-down-tolerance");
     }
   }
 }
