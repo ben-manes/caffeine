@@ -28,19 +28,14 @@ import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
-import com.google.common.math.DoubleMath;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * The Window TinyLfu algorithm where the size of the admission window is adjusted based on the
- * workload. The window size is adjusted using a hill climbing algorithm by sampling the hit rate.
- * If the impact was an improvement then it keeps moving forward, else it reverses direction.
- * This allows the policy to dynamically decide whether it should favor recency (larger window) or
- * frequency (smaller window) based on the workload's characteristics. If the workload changes then
- * the policy will adapt to the new environment.
+ * The Window TinyLfu algorithm where the size of the admission window is adjusted using the
+ * simulated annealing hill climbing algorithm.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -99,7 +94,7 @@ public final class AnnealingWindowTinyLfuPolicy implements Policy {
     this.headProbation = new Node();
     this.headEden = new Node();
 
-    this.initialPivot = Math.min(50,
+    this.initialPivot = Math.min(settings.maximumPivot(),
         Math.max(1, (int) (settings.percentPivot() * maximumSize)));
     this.sampleSize = settings.sampleSize();
     this.pivot = initialPivot;
@@ -178,29 +173,30 @@ public final class AnnealingWindowTinyLfuPolicy implements Policy {
   }
 
   private void adapt(double hitRate) {
-    if (!DoubleMath.fuzzyEquals(hitRate, previousHitRate, restartTolerance)) {
+    if ((previousHitRate - hitRate) >= restartTolerance) {
       pivot = initialPivot;
       temperature = 1.0;
     }
 
     if (temperature > minTemperature) {
-      double acceptanceProbability = Math.exp((previousHitRate - hitRate) / (100 * temperature));
-      double criteria = random.nextDouble();
+      double acceptanceProbability = Math.exp((hitRate - previousHitRate) / (100 * temperature));
+      double criteria = random.nextGaussian();
 
-      if (acceptanceProbability <= criteria) {
+      if ((hitRate < previousHitRate) && acceptanceProbability <= criteria) {
         increaseWindow = !increaseWindow;
+        pivot--;
       }
 
       if ((previousHitRate - hitRate) > coolDownTolerance) {
         temperature = coolDownRate * temperature;
-        pivot = 1 + (int) (initialPivot * temperature);
+        pivot = 1 + (int) (pivot * temperature);
       }
-    }
 
-    if (increaseWindow) {
-      increaseWindow();
-    } else {
-      decreaseWindow();
+      if (increaseWindow) {
+        increaseWindow();
+      } else {
+        decreaseWindow();
+      }
     }
   }
 

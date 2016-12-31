@@ -71,7 +71,7 @@ ext {
   plugin_versions = [
     buildscan: '1.4',
     buildscan_recipes: '0.1.7',
-    checkstyle: '7.3',
+    checkstyle: '7.4',
     coveralls: '2.7.1',
     coverity: '1.0.10',
     extra_conf: '3.1.0',

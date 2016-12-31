@@ -33,12 +33,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * The Window TinyLfu algorithm where the size of the admission window is adjusted based on the
- * workload. The window size is adjusted using a hill climbing algorithm by sampling the hit rate.
- * If the impact was an improvement then it keeps moving forward, else it reverses direction.
- * This allows the policy to dynamically decide whether it should favor recency (larger window) or
- * frequency (smaller window) based on the workload's characteristics. If the workload changes then
- * the policy will adapt to the new environment.
+ * The Window TinyLfu algorithm where the size of the admission window is adjusted using a simple
+ * hill climbing algorithm.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
