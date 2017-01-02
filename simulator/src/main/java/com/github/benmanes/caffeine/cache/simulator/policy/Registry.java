@@ -50,7 +50,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.OhcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AnnealingWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback.FeedbackTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback.FeedbackWindowTinyLfuPolicy;
@@ -140,7 +139,6 @@ public final class Registry {
     factories.put("sketch.FeedbackWindowTinyLfu", FeedbackWindowTinyLfuPolicy::policies);
 
     factories.put("sketch.HillClimberWindowTinyLfu", HillClimberWindowTinyLfuPolicy::policies);
-    factories.put("sketch.AnnealingWindowTinyLfu", AnnealingWindowTinyLfuPolicy::policies);
 
     factories.put("sketch.TinyCache", TinyCachePolicy::policies);
     factories.put("sketch.WindowTinyCache", WindowTinyCachePolicy::policies);

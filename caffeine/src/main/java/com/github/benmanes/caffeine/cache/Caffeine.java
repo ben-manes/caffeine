@@ -341,8 +341,8 @@ public final class Caffeine<K, V> {
    * Specifies the weigher to use in determining the weight of entries. Entry weight is taken into
    * consideration by {@link #maximumWeight(long)} when determining which entries to evict, and use
    * of this method requires a corresponding call to {@link #maximumWeight(long)} prior to calling
-   * {@link #build}. Weights are measured and recorded when entries are inserted into the cache, and
-   * are thus effectively static during the lifetime of a cache entry.
+   * {@link #build}. Weights are measured and recorded when entries are inserted into or updated in
+   * the cache, and are thus effectively static during the lifetime of a cache entry.
    * <p>
    * When the weight of an entry is zero it will not be considered for size-based eviction (though
    * it still may be evicted by other means).
