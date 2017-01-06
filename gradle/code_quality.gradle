@@ -82,11 +82,6 @@ tasks.withType(Test) {
     showExceptions = true
     showStackTraces = true
   }
-  jacoco {
-    append = true
-    classDumpFile = file("${rootDir}/build/jacoco/classpathdumps")
-    destinationFile = file("${rootDir}/build/jacoco/jacocoTest.exec")
-  }
 }
 
 tasks.withType(Checkstyle) {

@@ -17,9 +17,9 @@ package com.github.benmanes.caffeine.cache.impl;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.CacheType;
+import com.trivago.triava.tcache.Cache;
 import com.trivago.triava.tcache.EvictionPolicy;
 import com.trivago.triava.tcache.TCacheFactory;
-import com.trivago.triava.tcache.eviction.Cache;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

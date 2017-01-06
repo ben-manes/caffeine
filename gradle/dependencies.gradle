@@ -46,9 +46,9 @@ ext {
     easymock: '3.4',
     hamcrest: '2.0.0.0',
     jcache_tck: '1.0.1',
-    jctools: '2.0',
+    jctools: '2.0.1',
     junit: '4.12',
-    mockito: '2.5.3',
+    mockito: '2.5.4',
     pax_exam: '4.9.2',
     testng: '6.10',
     truth: '0.24',
@@ -66,7 +66,7 @@ ext {
     koloboke: '0.6.8',
     ohc: 'window-tinylfu-SNAPSHOT',
     slf4j: '1.7.22',
-    tcache: '0.9.14',
+    tcache: '0.9.15',
   ]
   plugin_versions = [
     buildscan: '1.4',

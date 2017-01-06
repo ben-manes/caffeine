@@ -122,14 +122,20 @@ subprojects {
 // Only report code coverage for projects that are distributed
 def publishedProjects = subprojects.findAll { it.path != ':simulator' }
 
+task jacocoMerge(type: JacocoMerge) {
+  publishedProjects.each { subproject ->
+    executionData subproject.tasks.withType(Test)
+  } 
+}
+
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
   description = 'Generates an aggregate report from all subprojects'
-  dependsOn(publishedProjects.test)
+  dependsOn publishedProjects.test, jacocoMerge
 
   additionalSourceDirs = files(publishedProjects.sourceSets.main.allSource.srcDirs)
   sourceDirectories = files(publishedProjects.sourceSets.main.allSource.srcDirs)
   classDirectories = files(publishedProjects.sourceSets.main.output)
-  executionData = files(publishedProjects.jacocoTestReport.executionData)
+  executionData jacocoMerge.destinationFile
 
   reports {
     html.enabled = true // human readable
