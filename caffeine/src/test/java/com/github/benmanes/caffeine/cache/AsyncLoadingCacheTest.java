@@ -45,6 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -581,6 +582,33 @@ public final class AsyncLoadingCacheTest {
 
     int loads = context.loader().isBulk() ? 1 : absentKeys.size();
     assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, compute = Compute.ASYNC,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_badLoader(CacheContext context) {
+    @SuppressWarnings("serial")
+    final class LoadAllException extends RuntimeException {};
+
+    AsyncCacheLoader<Integer, Integer> loader = new AsyncCacheLoader<Integer, Integer>() {
+      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+        throw new IllegalStateException();
+      }
+      @Override public CompletableFuture<Map<Integer, Integer>> asyncLoadAll(
+          Iterable<? extends Integer> keys, Executor executor) {
+        throw new LoadAllException();
+      }
+    };
+    AsyncLoadingCache<Integer, Integer> cache = context.buildAsync(loader);
+
+    try {
+      cache.getAll(context.absentKeys());
+      Assert.fail();
+    } catch (LoadAllException e) {
+      assertThat(cache.synchronous().estimatedSize(), is(0L));
+    }
   }
 
   /* ---------------- put -------------- */

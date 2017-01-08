@@ -196,9 +196,14 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       return composeResult(futures);
     }
 
-    loader.asyncLoadAll(proxies.keySet(), cache.executor())
-        .whenComplete(new AsyncBulkCompleter(proxies));
-    return composeResult(futures);
+    AsyncBulkCompleter completer = new AsyncBulkCompleter(proxies);
+    try {
+      loader.asyncLoadAll(proxies.keySet(), cache.executor()).whenComplete(completer);
+      return composeResult(futures);
+    } catch (Throwable t) {
+      completer.accept(/* result */ null, t);
+      throw t;
+    }
   }
 
   /**

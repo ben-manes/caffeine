@@ -6,10 +6,6 @@ apply plugin: 'me.champeau.gradle.jmh'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 
-sourceSets {
-  jmh.java.srcDirs += sourceSets.test.java.srcDirs
-}
-
 idea.module {
   scopes.PROVIDED.plus += [ configurations.jmh ]
 }
@@ -34,7 +30,7 @@ jmhJar {
 }
 
 jmh {
-  jmhVersion = '1.16'
+  jmhVersion = '1.17.3'
 
   if (project.hasProperty('includePattern')) {
     include = project.includePattern
@@ -49,7 +45,7 @@ jmh {
   }
 
   // Benchmark mode: Throughput/thrpt, AverageTime/avgt, SampleTime/sample, SingleShotTime/ss, All/all
-  benchmarkMode = 'thrpt'
+  benchmarkMode = ['thrpt']
   // Available time units are: [m, s, ms, us, ns]
   timeUnit = 's'
 
