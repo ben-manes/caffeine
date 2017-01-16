@@ -55,7 +55,7 @@ Use Caffeine in a community provided integration:
 
  * A short look at what Caffeine brings to your applications.
    * [Add a Boost of Caffeine to Your Java][add-a-boost] at [VOXXED][voxxed]
- * A in-depth description of Caffeine's architecture.
+ * An in-depth description of Caffeine's architecture.
    * [Design of a Modern Cache][modern-cache] at [HighScalability][HighScalability]
  * Caffeine is presented as part of a research paper evaluating its novel eviction policy.
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
