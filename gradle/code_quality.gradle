@@ -103,7 +103,7 @@ tasks.withType(FindBugs) {
 }
 
 tasks.withType(Pmd) {
-  enabled = name.endsWith('Main') && System.properties.containsKey('pmd')
+  enabled = System.properties.containsKey('pmd')
   group = 'PMD'
   reports {
     xml.enabled = false
