@@ -1,0 +1,140 @@
+/*
+ * Copyright 2017 Yonik Seeley. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.github.benmanes.caffeine.cache.issues;
+
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.testng.annotations.Test;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
+
+/**
+ * SOLR-10141: Removal listener notified with stale value
+ * <p>
+ * When an entry is chosen for eviction and concurrently updated, the value notified should be the
+ * updated one if the <tt>put</tt> was successful.
+ *
+ * @author yseeley@gmail.com (Yonik Seeley)
+ * @author ben.manes@gmail.com (Ben Manes)
+ */
+public final class Solr10141Test {
+  static final int blocksInTest = 400;
+  static final int maxEntries = blocksInTest / 2;
+
+  static final int nThreads = 64;
+  static final int nReads = 10000000;
+  static final int readsPerThread = nReads / nThreads;
+
+  // odds (1 in N) of the next block operation being on the same block as the previous operation...
+  // helps flush concurrency issues
+  static final int readLastBlockOdds = 10;
+  // sometimes insert a new entry for the key even if one was found
+  static final boolean updateAnyway = true;
+
+  final Random rnd = new Random();
+
+  @Test
+  public void concurrent() throws Exception {
+    AtomicLong hits = new AtomicLong();
+    AtomicLong inserts = new AtomicLong();
+    AtomicLong removals = new AtomicLong();
+
+    RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
+      assertThat(v.key, is(k));
+      if (!v.live.compareAndSet(true, false)) {
+        throw new RuntimeException(String.format(
+            "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
+      }
+      removals.incrementAndGet();
+    };
+
+    Cache<Long, Val> cache = Caffeine.newBuilder()
+        .removalListener(listener)
+        .maximumSize(maxEntries)
+        .build();
+
+    AtomicLong lastBlock = new AtomicLong();
+    AtomicBoolean failed = new AtomicBoolean();
+    AtomicLong maxObservedSize = new AtomicLong();
+
+    ConcurrentTestHarness.timeTasks(nThreads, new Runnable() {
+
+      @Override public void run() {
+        try {
+          Random r = new Random(rnd.nextLong());
+          for (int i = 0; i < readsPerThread; i++) {
+            test(r);
+          }
+        } catch (Throwable e) {
+          failed.set(true);
+          e.printStackTrace();
+        }
+      }
+
+      void test(Random r) {
+        long block = r.nextInt(blocksInTest);
+        if (readLastBlockOdds > 0 && r.nextInt(readLastBlockOdds) == 0) {
+          // some percent of the time, try to read the last block another
+          block = lastBlock.get();
+        }
+        // thread was just reading/writing
+        lastBlock.set(block);
+
+        Long k = block;
+        Val v = cache.getIfPresent(k);
+        if (v != null) {
+          hits.incrementAndGet();
+          assertThat(k, is(v.key));
+        }
+
+        if ((v == null) || (updateAnyway && r.nextBoolean())) {
+          v = new Val();
+          v.key = k;
+          cache.put(k, v);
+          inserts.incrementAndGet();
+        }
+
+        long sz = cache.estimatedSize();
+        if (sz > maxObservedSize.get()) {
+          // race condition here, but an estimate is OK
+          maxObservedSize.set(sz);
+        }
+      }
+    });
+
+    await().until(() -> inserts.get() - removals.get() == cache.estimatedSize());
+
+    System.out.printf("Done!%n"
+        + "entries=%,d inserts=%,d removals=%,d hits=%,d maxEntries=%,d maxObservedSize=%,d%n",
+        cache.estimatedSize(), inserts.get(), removals.get(),
+        hits.get(), maxEntries, maxObservedSize.get());
+    assertThat(failed.get(), is(false));
+  }
+
+  static class Val {
+    long key;
+    AtomicBoolean live = new AtomicBoolean(true);
+  }
+}

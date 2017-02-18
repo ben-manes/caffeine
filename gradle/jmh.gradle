@@ -3,6 +3,7 @@
  */
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'me.champeau.gradle.jmh'
+apply plugin: 'io.morethan.jmhreport'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 
@@ -49,7 +50,6 @@ jmh {
   // Available time units are: [m, s, ms, us, ns]
   timeUnit = 's'
 
-  // Charts: http://nilskp.github.io/jmh-charts
   resultFormat = 'json'
   resultsFile = file("${buildDir}/reports/jmh/results.json")
 
@@ -60,3 +60,9 @@ jmh {
   forceGC = true
   fork = 1
 }
+
+jmhReport {
+  jmhResultPath = jmh.resultsFile
+  jmhReportOutput = file('build/reports/jmh')
+}
+tasks.jmh.finalizedBy tasks.jmhReport 

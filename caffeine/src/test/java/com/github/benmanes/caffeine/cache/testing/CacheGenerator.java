@@ -193,9 +193,8 @@ final class CacheGenerator {
         return CaffeineCacheFromContext.newCaffeineCache(context);
       case Guava:
         return GuavaCacheFromContext.newGuavaCache(context);
-      default:
-        throw new IllegalStateException();
     }
+    throw new IllegalStateException();
   }
 
   /** Fills the cache up to the population size. */

@@ -721,43 +721,47 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param now the current time, used only if expiring
    */
   @GuardedBy("evictionLock")
-  @SuppressWarnings("PMD.CollapsibleIfStatements")
+  @SuppressWarnings({"PMD.CollapsibleIfStatements", "GuardedByChecker"})
   void evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
-    V value = node.getValue();
+    @SuppressWarnings("unchecked")
+    V[] value = (V[]) new Object[1];
     boolean[] removed = new boolean[1];
     boolean[] resurrect = new boolean[1];
-    RemovalCause actualCause = (key == null) || (value == null) ? RemovalCause.COLLECTED : cause;
+    RemovalCause[] actualCause = new RemovalCause[1];
 
     data.computeIfPresent(node.getKeyReference(), (k, n) -> {
       if (n != node) {
         return n;
       }
-      if (actualCause == RemovalCause.EXPIRED) {
-        boolean expired = false;
-        if (expiresAfterAccess()) {
-          long expirationTime = now - expiresAfterAccessNanos();
-          expired |= n.getAccessTime() <= expirationTime;
+      synchronized (n) {
+        value[0] = n.getValue();
+
+        actualCause[0] = (key == null) || (value[0] == null) ? RemovalCause.COLLECTED : cause;
+        if (actualCause[0] == RemovalCause.EXPIRED) {
+          boolean expired = false;
+          if (expiresAfterAccess()) {
+            long expirationTime = now - expiresAfterAccessNanos();
+            expired |= n.getAccessTime() <= expirationTime;
+          }
+          if (expiresAfterWrite()) {
+            long expirationTime = now - expiresAfterWriteNanos();
+            expired |= n.getWriteTime() <= expirationTime;
+          }
+          if (!expired) {
+            resurrect[0] = true;
+            return n;
+          }
+        } else if (actualCause[0] == RemovalCause.SIZE) {
+          int weight = node.getWeight();
+          if (weight == 0) {
+            resurrect[0] = true;
+            return n;
+          }
         }
-        if (expiresAfterWrite()) {
-          long expirationTime = now - expiresAfterWriteNanos();
-          expired |= n.getWriteTime() <= expirationTime;
-        }
-        if (!expired) {
-          resurrect[0] = true;
-          return n;
-        }
-      } else if (actualCause == RemovalCause.SIZE) {
-        int weight;
-        synchronized (node) {
-          weight = node.getWeight();
-        }
-        if (weight == 0) {
-          resurrect[0] = true;
-          return n;
-        }
+        writer.delete(key, value[0], actualCause[0]);
+        makeDead(n);
       }
-      writer.delete(key, value, actualCause);
       removed[0] = true;
       return null;
     });
@@ -770,7 +774,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     // If the eviction fails due to a concurrent removal of the victim, that removal may cancel out
     // the addition that triggered this eviction. The victim is eagerly unlinked before the removal
     // task so that if an eviction is still required then a new victim will be chosen for removal.
-    makeDead(node);
     if (node.inEden() && (evicts() || expiresAfterAccess())) {
       accessOrderEdenDeque().remove(node);
     } else if (evicts()) {
@@ -789,7 +792,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (hasRemovalListener()) {
         // Notify the listener only if the entry was evicted. This must be performed as the last
         // step during eviction to safe guard against the executor rejecting the notification task.
-        notifyRemoval(key, value, actualCause);
+        notifyRemoval(key, value[0], actualCause[0]);
       }
     }
   }
@@ -1481,36 +1484,22 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public V put(K key, V value) {
-    int weight = weigher.weigh(key, value);
-    return (weight > 0)
-        ? putFast(key, value, weight, /* notifyWriter */ true, /* onlyIfAbsent */ false)
-        : putSlow(key, value, weight, /* notifyWriter */ true, /* onlyIfAbsent */ false);
+    return put(key, value, /* notifyWriter */ true, /* onlyIfAbsent */ false);
   }
 
   @Override
   public V put(K key, V value, boolean notifyWriter) {
-    int weight = weigher.weigh(key, value);
-    return (weight > 0)
-        ? putFast(key, value, weight, notifyWriter, /* onlyIfAbsent */ false)
-        : putSlow(key, value, weight, notifyWriter, /* onlyIfAbsent */ false);
+    return put(key, value, notifyWriter, /* onlyIfAbsent */ false);
   }
 
   @Override
   public V putIfAbsent(K key, V value) {
-    int weight = weigher.weigh(key, value);
-    return (weight > 0)
-        ? putFast(key, value, weight, /* notifyWriter */ true, /* onlyIfAbsent */ true)
-        : putSlow(key, value, weight, /* notifyWriter */ true, /* onlyIfAbsent */ true);
+    return put(key, value, /* notifyWriter */ true, /* onlyIfAbsent */ true);
   }
 
   /**
    * Adds a node to the policy and the data store. If an existing node is found, then its value is
    * updated if allowed.
-   *
-   * This implementation is optimized for writing values with a non-zero weight. A zero weight is
-   * incompatible due to the potential for the update to race with eviction, where the entry should
-   * no longer be eligible if the update was successful. This implementation is ~50% faster than
-   * {@link #putSlow} due to not incurring the penalty of a compute and lambda in the common case.
    *
    * @param key key with which the specified value is to be associated
    * @param value value to be associated with the specified key
@@ -1518,13 +1507,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
    * @return the prior value in or null if no mapping was found
    */
-  V putFast(K key, V value, int newWeight, boolean notifyWriter, boolean onlyIfAbsent) {
+  V put(K key, V value, boolean notifyWriter, boolean onlyIfAbsent) {
     requireNonNull(key);
     requireNonNull(value);
-    requireState(newWeight != 0);
 
     Node<K, V> node = null;
     long now = expirationTicker().read();
+    int newWeight = weigher.weigh(key, value);
     for (;;) {
       Node<K, V> prior = data.get(nodeFactory.newLookupKey(key));
       if (prior == null) {
@@ -1604,100 +1593,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       return expired ? null : oldValue;
     }
-  }
-
-  /**
-   * Adds a node to the policy and the data store. If an existing node is found, then its value is
-   * updated if allowed.
-   *
-   * This implementation is strict by using a compute to block other writers to that entry. This
-   * guards against an eviction trying to discard an entry concurrently (and successfully) updated
-   * to have a zero weight. The penalty is 50% of the throughput when compared to {@link #putFast}.
-   *
-   * @param key key with which the specified value is to be associated
-   * @param value value to be associated with the specified key
-   * @param notifyWriter if the writer should be notified for an inserted or updated entry
-   * @param onlyIfAbsent a write is performed only if the key is not already associated with a value
-   * @return the prior value or null if no mapping was found
-   */
-  V putSlow(K key, V value, int newWeight, boolean notifyWriter, boolean onlyIfAbsent) {
-    requireNonNull(key);
-    requireNonNull(value);
-
-    @SuppressWarnings("unchecked")
-    K[] nodeKey = (K[]) new Object[1];
-    @SuppressWarnings("unchecked")
-    V[] oldValue = (V[]) new Object[1];
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalCause[] cause = new RemovalCause[1];
-    long now = expirationTicker().read();
-
-    int[] oldWeight = new int[1];
-    Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    Node<K, V> node = data.compute(keyRef, (kr, n) -> {
-      if (n == null) {
-        if (notifyWriter) {
-          writer.write(key, value);
-        }
-        return nodeFactory.newNode(kr, value, valueReferenceQueue(), newWeight, now);
-      }
-
-      synchronized (n) {
-        nodeKey[0] = n.getKey();
-        oldValue[0] = n.getValue();
-        oldWeight[0] = n.getWeight();
-        if ((nodeKey[0] == null) || (oldValue[0] == null)) {
-          cause[0] = RemovalCause.COLLECTED;
-        } else if (hasExpired(n, now)) {
-          cause[0] = RemovalCause.EXPIRED;
-        }
-        if (cause[0] != null) {
-          writer.delete(nodeKey[0], oldValue[0], cause[0]);
-        } else if (onlyIfAbsent && (oldValue[0] != null)) {
-          return n;
-        }
-
-        if (value != oldValue[0]) {
-          if (cause[0] == null) {
-            cause[0] = RemovalCause.REPLACED;
-          }
-          if (notifyWriter) {
-            writer.write(key, value);
-          }
-        }
-
-        n.setValue(value, valueReferenceQueue());
-        n.setWeight(newWeight);
-        n.setAccessTime(now);
-        n.setWriteTime(now);
-        return n;
-      }
-    });
-
-    if (cause[0] != null) {
-      if (cause[0].wasEvicted()) {
-        statsCounter().recordEviction(oldWeight[0]);
-      }
-      if (hasRemovalListener()) {
-        notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
-      }
-    }
-
-    if ((oldValue[0] == null) && (cause[0] == null)) {
-      afterWrite(node, new AddTask(node, newWeight), now);
-    } else if (onlyIfAbsent && (oldValue[0] != null) && (cause[0] == null)) {
-      afterRead(node, now, /* recordHit */ false);
-    } else {
-      int weightedDifference = newWeight - oldWeight[0];
-      if (expiresAfterWrite() || (oldValue[0] == null) || (weightedDifference != 0)
-          || ((cause[0] != null) && (cause[0] != RemovalCause.REPLACED))) {
-        afterWrite(node, new UpdateTask(node, weightedDifference), now);
-      } else {
-        afterRead(node, now, /* recordHit */ false);
-      }
-    }
-
-    return (cause[0] == null) || (cause[0] == RemovalCause.REPLACED) ? oldValue[0] : null;
   }
 
   @Override

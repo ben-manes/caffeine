@@ -17,10 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Arrays;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -31,6 +29,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 import com.yahoo.ycsb.generator.NumberGenerator;
 import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 
@@ -43,8 +42,8 @@ public class ComputeBenchmark {
   static final int MASK = SIZE - 1;
   static final int ITEMS = SIZE / 3;
   static final Integer COMPUTE_KEY = SIZE / 2;
-  static final Callable<Boolean> valueLoader = () -> Boolean.TRUE;
   static final Function<Integer, Boolean> mappingFunction = any -> Boolean.TRUE;
+  static final CacheLoader<Integer, Boolean> cacheLoader = CacheLoader.from(key -> Boolean.TRUE);
 
   @Param({"ConcurrentHashMap", "Caffeine", "Guava"})
   String computeType;
@@ -101,14 +100,8 @@ public class ComputeBenchmark {
   }
 
   private void setupGuava() {
-    com.google.common.cache.Cache<Integer, Boolean> cache =
-        CacheBuilder.newBuilder().concurrencyLevel(64).build();
-    benchmarkFunction = key -> {
-      try {
-        return cache.get(key, valueLoader);
-      } catch (ExecutionException e) {
-        throw new RuntimeException(e);
-      }
-    };
+    com.google.common.cache.LoadingCache<Integer, Boolean> cache =
+        CacheBuilder.newBuilder().concurrencyLevel(64).build(cacheLoader);
+    benchmarkFunction = cache::getUnchecked;
   }
 }

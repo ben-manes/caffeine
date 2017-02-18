@@ -347,6 +347,7 @@ public final class EvictionTest {
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL,
       weigher = CacheWeigher.COLLECTION, population = Population.EMPTY,
       keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void put_asyncWeight(AsyncLoadingCache<Integer, List<Integer>> cache,
       CacheContext context, Eviction<?, ?> eviction) {
     AtomicBoolean ready = new AtomicBoolean();
