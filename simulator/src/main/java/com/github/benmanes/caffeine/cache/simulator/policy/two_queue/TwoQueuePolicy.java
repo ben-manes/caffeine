@@ -118,8 +118,6 @@ public final class TwoQueuePolicy implements Policy {
           // do nothing
           policyStats.recordHit();
           return;
-        default:
-          throw new IllegalStateException();
       }
     } else {
       node = new Node(key);

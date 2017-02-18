@@ -435,6 +435,7 @@ public final class ExpirationTest {
       removalListener = Listener.CONSUMING, requiresExpiration = true,
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void get(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(2, TimeUnit.MINUTES);
 
@@ -451,6 +452,7 @@ public final class ExpirationTest {
   @CacheSpec(population = Population.EMPTY, removalListener = Listener.CONSUMING,
       requiresExpiration = true, expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void get_async(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> future = new CompletableFuture<Integer>();
     cache.get(context.absentKey(), (k, e) -> future);
@@ -476,6 +478,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE},
       loader = {Loader.IDENTITY, Loader.BULK_IDENTITY})
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void getAll(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
     context.ticker().advance(1, TimeUnit.MINUTES);

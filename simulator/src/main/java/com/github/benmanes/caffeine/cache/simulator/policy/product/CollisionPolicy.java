@@ -22,12 +22,13 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.fabahaba.collision.cache.CollisionBuilder;
-import com.fabahaba.collision.cache.CollisionCache;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
+
+import systems.comodal.collision.cache.CollisionBuilder;
+import systems.comodal.collision.cache.CollisionCache;
 
 /**
  * Collision cache implementation.

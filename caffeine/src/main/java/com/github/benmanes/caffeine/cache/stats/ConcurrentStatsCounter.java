@@ -72,6 +72,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public void recordEviction() {
     evictionCount.increment();
   }

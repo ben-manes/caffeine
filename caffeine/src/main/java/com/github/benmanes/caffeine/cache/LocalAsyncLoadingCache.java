@@ -116,6 +116,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     return get(key, mappingFunction, /* recordStats */ true);
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   CompletableFuture<V> get(K key,
       BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction, boolean recordStats) {
     long startTime = cache.statsTicker().read();
@@ -171,6 +172,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   }
 
   /** Computes all of the missing entries in a single {@link CacheLoader#asyncLoadAll} call. */
+  @SuppressWarnings("FutureReturnValueIgnored")
   private CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
     Map<K, CompletableFuture<V>> futures = new HashMap<>();
     Map<K, CompletableFuture<V>> proxies = new HashMap<>();
@@ -230,6 +232,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void put(K key, CompletableFuture<V> valueFuture) {
     if (valueFuture.isCompletedExceptionally()
         || (valueFuture.isDone() && (valueFuture.join() == null))) {
@@ -465,6 +468,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void refresh(K key) {
       requireNonNull(key);
 

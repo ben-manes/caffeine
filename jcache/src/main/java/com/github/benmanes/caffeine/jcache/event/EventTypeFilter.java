@@ -59,9 +59,8 @@ final class EventTypeFilter<K, V> implements CacheEntryEventFilter<K, V> {
         return (listener instanceof CacheEntryRemovedListener<?, ?>);
       case EXPIRED:
         return (listener instanceof CacheEntryExpiredListener<?, ?>);
-      default:
-        throw new CacheEntryListenerException("Unknown event type: " + event.getEventType());
     }
+    throw new CacheEntryListenerException("Unknown event type: " + event.getEventType());
   }
 
   @Override

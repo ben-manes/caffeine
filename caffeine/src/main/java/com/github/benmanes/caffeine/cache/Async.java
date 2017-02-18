@@ -74,6 +74,7 @@ final class Async {
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void onRemoval(K key, @Nonnull CompletableFuture<V> future, RemovalCause cause) {
       future.thenAcceptAsync(value -> {
         delegate.onRemoval(key, value, cause);

@@ -149,6 +149,7 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   default void refresh(K key) {
     requireNonNull(key);
 

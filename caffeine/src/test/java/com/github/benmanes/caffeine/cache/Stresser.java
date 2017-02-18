@@ -67,6 +67,7 @@ public final class Stresser {
 
   private static final Operation operation = Operation.REFRESH;
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   public Stresser() {
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setPriority(Thread.MAX_PRIORITY)

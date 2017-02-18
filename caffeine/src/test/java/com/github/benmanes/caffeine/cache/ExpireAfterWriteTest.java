@@ -157,6 +157,7 @@ public final class ExpireAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(expireAfterWrite = Expire.ONE_MINUTE,
       population = { Population.PARTIAL, Population.FULL })
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void getIfPresent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(30, TimeUnit.SECONDS);
     cache.getIfPresent(context.firstKey());

@@ -36,6 +36,7 @@ enum DisabledStatsCounter implements StatsCounter {
   public void recordLoadFailure(long loadTime) {}
 
   @Override
+  @SuppressWarnings("deprecation")
   public void recordEviction() {}
 
   @Override

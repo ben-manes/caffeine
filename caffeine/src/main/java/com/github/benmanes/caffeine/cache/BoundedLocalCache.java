@@ -825,6 +825,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param node the entry in the cache to refresh
    * @param now the current time, in nanoseconds
    */
+  @SuppressWarnings("FutureReturnValueIgnored")
   void refreshIfNeeded(Node<K, V> node, long now) {
     if (!refreshAfterWrite()) {
       return;
@@ -1188,6 +1189,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     @GuardedBy("evictionLock")
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void run() {
       if (evicts()) {
         node.setPolicyWeight(weight);
@@ -1315,6 +1317,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void clear() {
     long now = expirationTicker().read();
 
@@ -1337,7 +1340,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (expiresAfterWrite()) {
         removeNodes(writeOrderDeque(), now);
       }
-      data.values().forEach(node -> removeNode(node, now));
+
+      for (Node<K, V> node : data.values()) {
+        removeNode(node, now);
+      }
 
       // Discard all pending reads
       readBuffer.drainTo(e -> {});

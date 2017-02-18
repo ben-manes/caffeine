@@ -29,7 +29,7 @@ ext {
     commons_compress: '1.13',
     commons_lang3: '3.5',
     config: '1.3.1',
-    error_prone_annotations: '2.0.15',
+    error_prone_annotations: '2.0.17',
     flip_tables: '1.0.2',
     guava: '21.0',
     javapoet: '1.8.0',
@@ -48,24 +48,24 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '2.0.1',
     junit: '4.12',
-    mockito: '2.7.5',
+    mockito: '2.7.9',
     pax_exam: '4.10.0',
     testng: '6.10',
     truth: '0.24',
   ]
   benchmark_versions = [
     cache2k: '1.0.0.CR3',
-    collision: '0.2.4',
+    collision: '0.2.5',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.3',
     ehcache3: '3.2.0',
-    elastic_search: '5.2.0',
+    elastic_search: '5.2.1',
     jackrabbit: '1.6.0',
     jamm: '0.3.1',
     java_object_layout: '0.7.1',
     koloboke: '0.6.8',
     ohc: 'window-tinylfu-SNAPSHOT',
-    slf4j: '1.7.22',
+    slf4j: '1.7.23',
     tcache: '1.0.0',
   ]
   plugin_versions = [
@@ -143,7 +143,7 @@ ext {
   ]
   benchmark_libraries = [
     cache2k: "org.cache2k:cache2k-core:${benchmark_versions.cache2k}",
-    collision: "com.fabahaba:collision:${benchmark_versions.collision}",
+    collision: "systems.comodal:collision:${benchmark_versions.collision}",
     concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmark_versions.concurrentlinkedhashmap}",
     ehcache2: "net.sf.ehcache:ehcache:${benchmark_versions.ehcache2}",
     ehcache3: "org.ehcache:ehcache:${benchmark_versions.ehcache3}",

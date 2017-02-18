@@ -15,8 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.impl;
 
-import com.fabahaba.collision.cache.CollisionCache;
 import com.github.benmanes.caffeine.cache.BasicCache;
+
+import systems.comodal.collision.cache.CollisionCache;
 
 /**
  * Requires JDK9.

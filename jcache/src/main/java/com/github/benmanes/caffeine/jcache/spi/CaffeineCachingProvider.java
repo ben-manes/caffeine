@@ -136,9 +136,8 @@ public final class CaffeineCachingProvider implements CachingProvider {
     switch (optionalFeature) {
       case STORE_BY_REFERENCE:
         return true;
-      default:
-        return false;
     }
+    return false;
   }
 
   private URI getManagerUri(URI uri) {

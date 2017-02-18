@@ -49,6 +49,7 @@
     <exclude name="UncommentedEmptyConstructor"/>
     <exclude name="UnnecessaryLocalBeforeReturn"/>
     <exclude name="UseLocaleWithCaseConversions"/>
+    <exclude name="SwitchStmtsShouldHaveDefault"/>
     <exclude name="AvoidSynchronizedAtMethodLevel"/>
     <exclude name="ConstructorCallsOverridableMethod"/>
     <exclude name="PositionLiteralsFirstInComparisons"/>

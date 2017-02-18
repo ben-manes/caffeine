@@ -30,7 +30,7 @@ public final class TCache<K, V> implements BasicCache<K, V> {
   public TCache(int maximumSize, EvictionPolicy policy) {
     cache = TCacheFactory.standardFactory().<K, V>builder()
         .setConcurrencyLevel(CacheType.CONCURRENCY_LEVEL)
-        .setExpectedMapSize(maximumSize)
+        .setMaxElements(maximumSize)
         .setEvictionPolicy(policy)
         .build();
   }

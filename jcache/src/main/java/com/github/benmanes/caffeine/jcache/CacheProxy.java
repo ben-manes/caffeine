@@ -838,9 +838,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         publishToCacheWriter(writer::delete, entry::getKey);
         dispatcher.publishRemoved(this, entry.getKey(), entry.getValue());
         return null;
-      default:
-        throw new IllegalStateException("Unknown state: " + entry.getAction());
     }
+    throw new IllegalStateException("Unknown state: " + entry.getAction());
   }
 
   @Override
@@ -1044,8 +1043,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final Map<K, V> copyMap(Map<K, Expirable<V>> map) {
     ClassLoader classLoader = cacheManager.getClassLoader();
     return map.entrySet().stream().collect(Collectors.toMap(
-        entry -> (K) copier.copy(entry.getKey(), classLoader),
-        entry -> (V) copier.copy(entry.getValue().get(), classLoader)));
+        entry -> copier.copy(entry.getKey(), classLoader),
+        entry -> copier.copy(entry.getValue().get(), classLoader)));
   }
 
   /** @return the current time in milliseconds */
