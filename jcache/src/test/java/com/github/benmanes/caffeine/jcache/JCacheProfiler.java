@@ -77,6 +77,7 @@ public final class JCacheProfiler {
     }
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void scheduleStatusTask() {
     Stopwatch stopwatch = Stopwatch.createStarted();
     Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
