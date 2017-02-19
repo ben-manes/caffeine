@@ -66,7 +66,7 @@ subprojects {
   version.with {
     major = 2 // incompatible API changes
     minor = 4 // backwards-compatible additions
-    patch = 0 // backwards-compatible bug fixes
+    patch = 1 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
@@ -125,7 +125,7 @@ def publishedProjects = subprojects.findAll { it.path != ':simulator' }
 task jacocoMerge(type: JacocoMerge) {
   publishedProjects.each { subproject ->
     executionData subproject.tasks.withType(Test)
-  } 
+  }
 }
 
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
