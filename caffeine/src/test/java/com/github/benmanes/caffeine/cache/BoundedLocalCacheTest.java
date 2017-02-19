@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCES
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -36,6 +37,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -241,6 +243,97 @@ public final class BoundedLocalCacheTest {
     assertThat(cache.asMap().size(), is(equalTo(expect.length)));
     assertThat(cache.asMap().keySet(), containsInAnyOrder(expect));
     assertThat(evictionList, is(equalTo(asList(expect))));
+  }
+
+  @Test
+  public void evict_update() {
+    Integer key = 0;
+    Integer oldValue = 1;
+    Integer newValue = 2;
+
+    Thread evictor = Thread.currentThread();
+    AtomicBoolean started = new AtomicBoolean();
+    AtomicBoolean writing = new AtomicBoolean();
+    AtomicInteger evictedValue = new AtomicInteger();
+    AtomicInteger removedValues = new AtomicInteger();
+    AtomicInteger previousValue = new AtomicInteger();
+
+    CacheWriter<Integer, Integer> writer = new CacheWriter<Integer, Integer>() {
+      @Override public void write(Integer key, Integer value) {
+        if (started.get()) {
+          writing.set(true);
+          await().until(evictor::getState, is(Thread.State.BLOCKED));
+        }
+      }
+      @Override public void delete(Integer key, Integer value, RemovalCause cause) {
+        evictedValue.set(value);
+      }
+    };
+    RemovalListener<Integer, Integer> listener = (k, v, cause) -> removedValues.addAndGet(v);
+
+    Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .maximumSize(100)
+        .writer(writer)
+        .build();
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    cache.put(key, oldValue);
+    started.set(true);
+
+    ConcurrentTestHarness.execute(() -> previousValue.set(localCache.put(key, newValue)));
+    await().untilTrue(writing);
+
+    Node<Integer, Integer> node = localCache.data.values().iterator().next();
+    localCache.evictEntry(node, RemovalCause.SIZE, 0L);
+
+    await().untilAtomic(evictedValue, is(newValue));
+    await().untilAtomic(previousValue, is(oldValue));
+    await().untilAtomic(removedValues, is(oldValue + newValue));
+  }
+
+  @Test
+  public void clear_update() {
+    Integer key = 0;
+    Integer oldValue = 1;
+    Integer newValue = 2;
+
+    Thread invalidator = Thread.currentThread();
+    AtomicBoolean started = new AtomicBoolean();
+    AtomicBoolean writing = new AtomicBoolean();
+    AtomicInteger clearedValue = new AtomicInteger();
+    AtomicInteger removedValues = new AtomicInteger();
+    AtomicInteger previousValue = new AtomicInteger();
+
+    CacheWriter<Integer, Integer> writer = new CacheWriter<Integer, Integer>() {
+      @Override public void write(Integer key, Integer value) {
+        if (started.get()) {
+          writing.set(true);
+          await().until(invalidator::getState, is(Thread.State.BLOCKED));
+        }
+      }
+      @Override public void delete(Integer key, Integer value, RemovalCause cause) {
+        clearedValue.set(value);
+      }
+    };
+    RemovalListener<Integer, Integer> listener = (k, v, cause) -> removedValues.addAndGet(v);
+
+    Cache<Integer, Integer> cache = Caffeine.newBuilder()
+        .removalListener(listener)
+        .executor(Runnable::run)
+        .maximumSize(100)
+        .writer(writer)
+        .build();
+    cache.put(key, oldValue);
+    started.set(true);
+
+    ConcurrentTestHarness.execute(() -> previousValue.set(cache.asMap().put(key, newValue)));
+    await().untilTrue(writing);
+    cache.asMap().clear();
+
+    await().untilAtomic(clearedValue, is(newValue));
+    await().untilAtomic(previousValue, is(oldValue));
+    await().untilAtomic(removedValues, is(oldValue + newValue));
   }
 
   @Test(dataProvider = "caches")

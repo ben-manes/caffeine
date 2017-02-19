@@ -56,7 +56,7 @@ public final class Solr10141Test {
   final Random rnd = new Random();
 
   @Test
-  public void concurrent() throws Exception {
+  public void eviction() throws Exception {
     AtomicLong hits = new AtomicLong();
     AtomicLong inserts = new AtomicLong();
     AtomicLong removals = new AtomicLong();
@@ -130,6 +130,65 @@ public final class Solr10141Test {
         + "entries=%,d inserts=%,d removals=%,d hits=%,d maxEntries=%,d maxObservedSize=%,d%n",
         cache.estimatedSize(), inserts.get(), removals.get(),
         hits.get(), maxEntries, maxObservedSize.get());
+    assertThat(failed.get(), is(false));
+  }
+
+  @Test
+  public void clear() throws Exception {
+    AtomicLong inserts = new AtomicLong();
+    AtomicLong removals = new AtomicLong();
+    AtomicBoolean failed = new AtomicBoolean();
+
+    RemovalListener<Long, Val> listener = (k, v, removalCause) -> {
+      assertThat(v.key, is(k));
+      if (!v.live.compareAndSet(true, false)) {
+        throw new RuntimeException(String.format(
+            "listener called more than once! k=%s, v=%s, removalCause=%s", k, v, removalCause));
+      }
+      removals.incrementAndGet();
+    };
+
+    Cache<Long, Val> cache = Caffeine.newBuilder()
+        .maximumSize(Integer.MAX_VALUE)
+        .removalListener(listener)
+        .build();
+
+    ConcurrentTestHarness.timeTasks(nThreads, new Runnable() {
+
+      @Override public void run() {
+        try {
+          Random r = new Random(rnd.nextLong());
+          for (int i = 0; i < readsPerThread; i++) {
+            test(r);
+          }
+        } catch (Throwable e) {
+          failed.set(true);
+          e.printStackTrace();
+        }
+      }
+
+      void test(Random r) {
+        Long k = (long) r.nextInt(blocksInTest);
+        Val v = cache.getIfPresent(k);
+        if (v != null) {
+          assertThat(k, is(v.key));
+        }
+
+        if ((v == null) || (updateAnyway && r.nextBoolean())) {
+          v = new Val();
+          v.key = k;
+          cache.put(k, v);
+          inserts.incrementAndGet();
+        }
+
+        if (r.nextInt(10) == 0) {
+          cache.asMap().clear();
+        }
+      }
+    });
+
+    cache.asMap().clear();
+    await().until(() -> inserts.get() == removals.get());
     assertThat(failed.get(), is(false));
   }
 

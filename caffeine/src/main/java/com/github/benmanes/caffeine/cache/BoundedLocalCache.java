@@ -1365,33 +1365,37 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @GuardedBy("evictionLock")
+  @SuppressWarnings("GuardedByChecker")
   void removeNode(Node<K, V> node, long now) {
     K key = node.getKey();
-    V value = node.getValue();
-    boolean[] removed = new boolean[1];
-    RemovalCause cause;
-    if ((key == null) || (value == null)) {
-      cause = RemovalCause.COLLECTED;
-    } else if (hasExpired(node, now)) {
-      cause = RemovalCause.EXPIRED;
-    } else {
-      cause = RemovalCause.EXPLICIT;
-    }
+    @SuppressWarnings("unchecked")
+    V[] value = (V[]) new Object[1];
+    RemovalCause[] cause = new RemovalCause[1];
 
     data.computeIfPresent(node.getKeyReference(), (k, n) -> {
-      if (n == node) {
-        writer.delete(key, value, cause);
-        removed[0] = true;
+      if (n != node) {
+        return n;
+      }
+      synchronized (n) {
+        value[0] = n.getValue();
+
+        if ((key == null) || (value[0] == null)) {
+          cause[0] = RemovalCause.COLLECTED;
+        } else if (hasExpired(n, now)) {
+          cause[0] = RemovalCause.EXPIRED;
+        } else {
+          cause[0] = RemovalCause.EXPLICIT;
+        }
+
+        writer.delete(key, value[0], cause[0]);
+        makeDead(n);
         return null;
       }
-      return n;
     });
 
-    if (removed[0] && hasRemovalListener()) {
-      notifyRemoval(key, value, cause);
+    if ((cause[0] != null) && hasRemovalListener()) {
+      notifyRemoval(key, value[0], cause[0]);
     }
-
-    makeDead(node);
   }
 
   @Override

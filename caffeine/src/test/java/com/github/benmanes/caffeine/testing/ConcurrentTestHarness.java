@@ -21,7 +21,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -50,22 +49,6 @@ public final class ConcurrentTestHarness {
   /** Executes the task using the shared thread pool. */
   public static void execute(Runnable task) {
     executor.execute(task);
-  }
-
-  /**
-   * Executes a task, on N threads, all starting at the same time.
-   *
-   * @param nThreads the number of threads to execute
-   * @param task the task to execute in each thread
-   */
-  public static void execute(int nThreads, Runnable task) {
-    Phaser startGate = new Phaser(nThreads);
-    for (int i = 0; i < nThreads; i++) {
-      executor.execute(() -> {
-        startGate.arriveAndAwaitAdvance();
-        task.run();
-      });
-    }
   }
 
   /**

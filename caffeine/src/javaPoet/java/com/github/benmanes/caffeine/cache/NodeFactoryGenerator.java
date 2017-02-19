@@ -31,6 +31,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -62,6 +63,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.io.Resources;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
@@ -117,8 +119,9 @@ public final class NodeFactoryGenerator {
   }
 
   private void writeJavaFile() throws IOException {
+    String header = Resources.toString(Resources.getResource("license.txt"), UTF_8).trim();
     JavaFile.builder(getClass().getPackage().getName(), nodeFactory.build())
-        .addFileComment("Copyright $L Ben Manes. All Rights Reserved.", Year.now())
+        .addFileComment(header, Year.now())
         .indent("  ")
         .build()
         .writeTo(directory);
