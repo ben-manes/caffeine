@@ -131,7 +131,10 @@ public final class MultiThreadedTest {
       (cache, key) -> cache.asMap().remove(key),
       (cache, key) -> cache.asMap().remove(key, key),
       (cache, key) -> cache.asMap().replace(key, key),
-      (cache, key) -> cache.asMap().replace(key, key, key),
+      (cache, key) -> cache.asMap().computeIfAbsent(key, k -> k),
+      (cache, key) -> cache.asMap().computeIfPresent(key, (k, v) -> v),
+      (cache, key) -> cache.asMap().compute(key, (k, v) -> v),
+      (cache, key) -> cache.asMap().merge(key, key, (k, v) -> v),
       (cache, key) -> { // expensive so do it less frequently
         int random = ThreadLocalRandom.current().nextInt();
         if ((random & 255) == 0) {

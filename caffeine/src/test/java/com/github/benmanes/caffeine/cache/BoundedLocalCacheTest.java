@@ -245,7 +245,7 @@ public final class BoundedLocalCacheTest {
     assertThat(evictionList, is(equalTo(asList(expect))));
   }
 
-  @Test
+  @Test(groups = "slow")
   public void evict_update() {
     Integer key = 0;
     Integer oldValue = 1;
@@ -292,7 +292,7 @@ public final class BoundedLocalCacheTest {
     await().untilAtomic(removedValues, is(oldValue + newValue));
   }
 
-  @Test
+  @Test(groups = "slow")
   public void clear_update() {
     Integer key = 0;
     Integer oldValue = 1;

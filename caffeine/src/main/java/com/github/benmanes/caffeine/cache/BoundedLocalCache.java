@@ -794,6 +794,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         // step during eviction to safe guard against the executor rejecting the notification task.
         notifyRemoval(key, value[0], actualCause[0]);
       }
+    } else {
+      // Eagerly decrement the size to potentially avoid an additional eviction, rather than wait
+      // for the removal task to do it on the next maintenance cycle.
+      makeDead(node);
     }
   }
 

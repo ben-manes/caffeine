@@ -48,7 +48,7 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '2.0.1',
     junit: '4.12',
-    mockito: '2.7.9',
+    mockito: '2.7.11',
     pax_exam: '4.10.0',
     testng: '6.10',
     truth: '0.24',
@@ -125,7 +125,7 @@ ext {
       exclude group: 'org.hamcrest'
     },
     osgi_compile: [
-      'org.apache.felix:org.apache.felix.framework:5.6.1',
+      'org.apache.felix:org.apache.felix.framework:5.6.2',
       "org.ops4j.pax.exam:pax-exam-junit4:${test_versions.pax_exam}",
     ],
     osgi_runtime: [
