@@ -47,11 +47,11 @@ import com.typesafe.config.Config;
 final class CacheFactory {
   // Avoid asynchronous executions due to the TCK's poor test practices
   // https://github.com/jsr107/jsr107tck/issues/78
-  private static final boolean USE_DIRECT_EXECUTOR =
+  static final boolean USE_DIRECT_EXECUTOR =
       System.getProperties().containsKey("org.jsr107.tck.management.agentId");
 
-  private final Config rootConfig;
-  private final CacheManager cacheManager;
+  final Config rootConfig;
+  final CacheManager cacheManager;
 
   public CacheFactory(CacheManager cacheManager, Config rootConfig) {
     this.cacheManager = requireNonNull(cacheManager);

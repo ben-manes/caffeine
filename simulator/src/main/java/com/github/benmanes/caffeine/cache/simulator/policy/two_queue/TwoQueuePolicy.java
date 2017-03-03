@@ -43,22 +43,22 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TwoQueuePolicy implements Policy {
-  private static final Node UNLINKED = new Node();
+  static final Node UNLINKED = new Node();
 
-  private final Long2ObjectMap<Node> data;
-  private final PolicyStats policyStats;
-  private final int maximumSize;
+  final Long2ObjectMap<Node> data;
+  final PolicyStats policyStats;
+  final int maximumSize;
 
-  private int sizeIn;
-  private final int maxIn;
-  private final Node headIn;
+  int sizeIn;
+  final int maxIn;
+  final Node headIn;
 
-  private int sizeOut;
-  private final int maxOut;
-  private final Node headOut;
+  int sizeOut;
+  final int maxOut;
+  final Node headOut;
 
-  private int sizeMain;
-  private final Node headMain;
+  int sizeMain;
+  final Node headMain;
 
   public TwoQueuePolicy(Config config) {
     TwoQueueSettings settings = new TwoQueueSettings(config);

@@ -43,17 +43,17 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SampledPolicy implements Policy {
-  private final Long2ObjectMap<Node> data;
-  private final PolicyStats policyStats;
-  private final EvictionPolicy policy;
-  private final Sample sampleStrategy;
-  private final Admittor admittor;
-  private final int maximumSize;
-  private final int sampleSize;
-  private final Random random;
-  private final Node[] table;
+  final Long2ObjectMap<Node> data;
+  final PolicyStats policyStats;
+  final EvictionPolicy policy;
+  final Sample sampleStrategy;
+  final Admittor admittor;
+  final int maximumSize;
+  final int sampleSize;
+  final Random random;
+  final Node[] table;
 
-  private long tick;
+  long tick;
 
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
@@ -249,12 +249,12 @@ public final class SampledPolicy implements Policy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    private final long key;
-    private final long insertionTime;
+    final long key;
+    final long insertionTime;
 
-    private long accessTime;
-    private int frequency;
-    private int index;
+    long accessTime;
+    int frequency;
+    int index;
 
     /** Creates a new node. */
     public Node(long key, int index, long tick) {

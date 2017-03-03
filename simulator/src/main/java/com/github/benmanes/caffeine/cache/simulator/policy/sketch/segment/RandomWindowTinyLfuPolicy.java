@@ -38,16 +38,16 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class RandomWindowTinyLfuPolicy implements Policy {
-  private final Long2ObjectMap<Node> data;
-  private final PolicyStats policyStats;
-  private final Admittor admittor;
-  private final int maximumSize;
-  private final Random random;
-  private final Node[] window;
-  private final Node[] main;
+  final Long2ObjectMap<Node> data;
+  final PolicyStats policyStats;
+  final Admittor admittor;
+  final int maximumSize;
+  final Random random;
+  final Node[] window;
+  final Node[] main;
 
-  private int windowSize;
-  private int mainSize;
+  int windowSize;
+  int mainSize;
 
   public RandomWindowTinyLfuPolicy(double percentMain, RandomWindowTinyLfuSettings settings) {
     String name = String.format("sketch.RandomWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
@@ -129,8 +129,8 @@ public final class RandomWindowTinyLfuPolicy implements Policy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    private final long key;
-    private int index;
+    final long key;
+    int index;
 
     /** Creates a new node. */
     public Node(long key, int index) {

@@ -41,12 +41,12 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LinkedPolicy implements Policy {
-  private final Long2ObjectMap<Node> data;
-  private final PolicyStats policyStats;
-  private final EvictionPolicy policy;
-  private final Admittor admittor;
-  private final int maximumSize;
-  private final Node sentinel;
+  final Long2ObjectMap<Node> data;
+  final PolicyStats policyStats;
+  final EvictionPolicy policy;
+  final Admittor admittor;
+  final int maximumSize;
+  final Node sentinel;
 
   public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
@@ -185,12 +185,12 @@ public final class LinkedPolicy implements Policy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    private final Node sentinel;
+    final Node sentinel;
 
-    private boolean marked;
-    private Node prev;
-    private Node next;
-    private long key;
+    boolean marked;
+    Node prev;
+    Node next;
+    long key;
 
     /** Creates a new sentinel node. */
     public Node() {

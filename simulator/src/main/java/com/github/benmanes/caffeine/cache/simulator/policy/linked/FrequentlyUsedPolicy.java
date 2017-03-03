@@ -40,12 +40,12 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class FrequentlyUsedPolicy implements Policy {
-  private final PolicyStats policyStats;
-  private final Long2ObjectMap<Node> data;
-  private final EvictionPolicy policy;
-  private final FrequencyNode freq0;
-  private final Admittor admittor;
-  private final int maximumSize;
+  final PolicyStats policyStats;
+  final Long2ObjectMap<Node> data;
+  final EvictionPolicy policy;
+  final FrequencyNode freq0;
+  final Admittor admittor;
+  final int maximumSize;
 
   public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
@@ -164,11 +164,11 @@ public final class FrequentlyUsedPolicy implements Policy {
 
   /** A frequency count and associated chain of cache entries. */
   static final class FrequencyNode {
-    private final int count;
-    private final Node nextNode;
+    final int count;
+    final Node nextNode;
 
-    private FrequencyNode prev;
-    private FrequencyNode next;
+    FrequencyNode prev;
+    FrequencyNode next;
 
     public FrequencyNode(int count) {
       nextNode = new Node(this);
@@ -207,11 +207,11 @@ public final class FrequentlyUsedPolicy implements Policy {
 
   /** A cache entry on the frequency node's chain. */
   static final class Node {
-    private final long key;
+    final long key;
 
-    private FrequencyNode freq;
-    private Node prev;
-    private Node next;
+    FrequencyNode freq;
+    Node prev;
+    Node next;
 
     public Node(FrequencyNode freq) {
       this.key = Long.MIN_VALUE;

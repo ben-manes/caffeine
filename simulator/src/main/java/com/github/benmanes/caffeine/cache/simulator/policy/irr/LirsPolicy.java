@@ -55,25 +55,25 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 @SuppressWarnings("PMD.TooManyFields")
 public final class LirsPolicy implements Policy {
-  private final Long2ObjectMap<Node> data;
-  private final PolicyStats policyStats;
-  private final List<Object> evicted;
-  private final Node headNR;
-  private final Node headS;
-  private final Node headQ;
+  final Long2ObjectMap<Node> data;
+  final PolicyStats policyStats;
+  final List<Object> evicted;
+  final Node headNR;
+  final Node headS;
+  final Node headQ;
 
-  private final int maximumNonResidentSize;
-  private final int maximumHotSize;
-  private final int maximumSize;
+  final int maximumNonResidentSize;
+  final int maximumHotSize;
+  final int maximumSize;
 
-  private int sizeS;
-  private int sizeQ;
-  private int sizeNR;
-  private int sizeHot;
-  private int residentSize;
+  int sizeS;
+  int sizeQ;
+  int sizeNR;
+  int sizeHot;
+  int residentSize;
 
   // Enable to print out the internal state
-  private static final boolean debug = false;
+  static final boolean debug = false;
 
   public LirsPolicy(Config config) {
     LirsSettings settings = new LirsSettings(config);

@@ -50,17 +50,17 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SegmentedLruPolicy implements Policy {
-  private static final Node UNLINKED = new Node();
+  static final Node UNLINKED = new Node();
 
-  private final Long2ObjectMap<Node> data;
-  private final PolicyStats policyStats;
-  private final Node headProtected;
-  private final Node headProbation;
-  private final Admittor admittor;
-  private final int maxProtected;
-  private final int maximumSize;
+  final Long2ObjectMap<Node> data;
+  final PolicyStats policyStats;
+  final Node headProtected;
+  final Node headProbation;
+  final Admittor admittor;
+  final int maxProtected;
+  final int maximumSize;
 
-  private int sizeProtected;
+  int sizeProtected;
 
   public SegmentedLruPolicy(Admission admission, Config config) {
     this.policyStats = new PolicyStats(admission.format("linked.SegmentedLru"));
