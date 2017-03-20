@@ -49,9 +49,8 @@ public final class TinyLfu implements Admittor {
         return new PeriodicResetCountMin4(config);
       } else if (reset.equalsIgnoreCase("incremental")) {
         return new IncrementalResetCountMin4(config);
-      }
-        else if (reset.equalsIgnoreCase("adaptive")) {
-            return new AdaptiveResetCountMin4(config);
+      } else if (reset.equalsIgnoreCase("adaptive")) {
+        return new AdaptiveResetCountMin4(config);
       }
     } else if (type.equalsIgnoreCase("count-min-64")) {
       return new CountMin64TinyLfu(config);
@@ -76,7 +75,7 @@ public final class TinyLfu implements Admittor {
 
   @Override
   public boolean admit(long candidateKey, long victimKey) {
-	  sketch.reportMiss();
+    sketch.reportMiss();
     long candidateFreq = sketch.frequency(candidateKey);
     long victimFreq = sketch.frequency(victimKey);
     if (candidateFreq > victimFreq) {

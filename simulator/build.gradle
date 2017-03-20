@@ -12,6 +12,7 @@ dependencies {
   compile libraries.guava
   compile libraries.stream
   compile libraries.flip_tables
+  compile benchmark_libraries.ohc
   compile libraries.commons_lang3
   compile libraries.commons_compress
   compile benchmark_libraries.tcache
@@ -19,23 +20,30 @@ dependencies {
   compile benchmark_libraries.cache2k
   compile benchmark_libraries.ehcache2
   compile benchmark_libraries.ehcache3
+  compile benchmark_libraries.collision
   compile benchmark_libraries.slf4j_nop
-  compile benchmark_libraries.infinispan
+  compile benchmark_libraries.expiring_map
   compile benchmark_libraries.elastic_search
 
-  testCompile test_libraries.testng  
+  testCompile test_libraries.testng
 }
 
 test {
   useTestNG()
 }
 
+coverity {
+  skip = true
+}
+
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
+  // https://github.com/akka/akka/issues/21165
+  enabled = !JavaVersion.current().isJava9Compatible()
 }
 
 run {
-  systemProperties System.properties.findAll { 
+  systemProperties System.properties.findAll {
     it.getKey().startsWith('akka') || it.getKey().startsWith('caffeine')
   }
 }

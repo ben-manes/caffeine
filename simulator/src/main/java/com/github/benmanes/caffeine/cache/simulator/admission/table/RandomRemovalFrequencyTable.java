@@ -89,10 +89,4 @@ public final class RandomRemovalFrequencyTable implements Frequency {
       }
     }
   }
-
-@Override
-public void reportMiss() {
-	// TODO Auto-generated method stub
-	
-}
 }

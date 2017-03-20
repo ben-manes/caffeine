@@ -54,10 +54,4 @@ public final class IncrementalResetCountMin4 extends CountMin4 {
     cursor++;
     additions = 0;
   }
-
-@Override
-public void reportMiss() {
-	// TODO Auto-generated method stub
-	
-}
 }

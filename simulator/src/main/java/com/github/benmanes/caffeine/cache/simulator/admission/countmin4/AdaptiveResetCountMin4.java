@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Ben Manes. All Rights Reserved.
+ * Copyright 2017 Gilga Einziger. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,118 +24,114 @@ import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.typesafe.config.Config;
 
 /**
- * A sketch where the aging process is a dynamic process 
- * and adjusts to the recency/frequency bias of the actual workload.
+ * A sketch where the aging process is a dynamic process and adjusts to the recency / frequency bias
+ * of the actual workload.
  *
- * @author ben.manes@gmail.com (Ben Manes) and Gil Einziger
+ * @author gilga1983@gmail.com (Gil Einziger)
+ * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class AdaptiveResetCountMin4 extends CountMin4 {
-	static final long ONE_MASK = 0x1111111111111111L;
+  static final long ONE_MASK = 0x1111111111111111L;
 
-	final Membership doorkeeper;
+  final Membership doorkeeper;
 
-	int additions;
-	int period;
-	int prevMisses ;      // misses in previous interval
-	int misses =0;       // misses in this interval
-	int direction =1;   // are we increasing the 'step size' or decreasing it
-	int eventsToCount; // events yet to count before we make a decision. 
-	public AdaptiveResetCountMin4(Config config) {
-		super(config);
-		this.prevMisses = period;
-		BasicSettings settings = new BasicSettings(config);
-		DoorkeeperSettings doorkeeperSettings = settings.tinyLfu().countMin4().periodic().doorkeeper();
-		if (doorkeeperSettings.enabled()) {
-			FilterType filterType = settings.membershipFilter();
-			double expectedInsertionsMultiplier = doorkeeperSettings.expectedInsertionsMultiplier();
-			long expectedInsertions = (long) expectedInsertionsMultiplier * settings.maximumSize();
-			doorkeeper = filterType.create(expectedInsertions, doorkeeperSettings.fpp(), config);
-		} else {
-			doorkeeper = Membership.disabled();
-		}
-	}
+  int additions;
+  int period;
+  int prevMisses; // misses in previous interval
+  int misses;     // misses in this interval
+  int direction = 1; // are we increasing the 'step size' or decreasing it
+  int eventsToCount; // events yet to count before we make a decision.
 
-	@Override
-	protected void ensureCapacity(@Nonnegative long maximumSize) {
-		super.ensureCapacity(maximumSize);
-		period = (maximumSize == 0) ? 10 : (10 * table.length);
-		if (period <= 0) {
-			period = Integer.MAX_VALUE;
-		}
-		eventsToCount = this.period;
+  public AdaptiveResetCountMin4(Config config) {
+    super(config);
+    prevMisses = period;
+    BasicSettings settings = new BasicSettings(config);
+    DoorkeeperSettings doorkeeperSettings = settings.tinyLfu().countMin4().periodic().doorkeeper();
+    if (doorkeeperSettings.enabled()) {
+      FilterType filterType = settings.membershipFilter();
+      double expectedInsertionsMultiplier = doorkeeperSettings.expectedInsertionsMultiplier();
+      long expectedInsertions = (long) expectedInsertionsMultiplier * settings.maximumSize();
+      doorkeeper = filterType.create(expectedInsertions, doorkeeperSettings.fpp(), config);
+    } else {
+      doorkeeper = Membership.disabled();
+    }
+  }
 
-	}
+  @Override
+  protected void ensureCapacity(@Nonnegative long maximumSize) {
+    super.ensureCapacity(maximumSize);
+    period = (maximumSize == 0) ? 10 : (10 * table.length);
+    if (period <= 0) {
+      period = Integer.MAX_VALUE;
+    }
+    eventsToCount = period;
 
-	@Override
-	public int frequency(long e) {
-		int count = super.frequency(e);
-		if (doorkeeper.mightContain(e)) {
-			count++;
-		}
-		return count;
-	}
+  }
 
-	@Override
-	public void increment(long e) {
-		eventsToCount--;
-		if (!doorkeeper.put(e)) {
-			super.increment(e);
-		}
-	}
+  @Override
+  public int frequency(long e) {
+    int count = super.frequency(e);
+    if (doorkeeper.mightContain(e)) {
+      count++;
+    }
+    return count;
+  }
 
-	/**
-	 * Reduces every counter by half of its original value. To reduce the truncation error, the sample
-	 * is reduced by the number of counters with an odd value.
-	 */
-	@Override
-	protected void tryReset(boolean added) {
-		additions+=this.step;
+  @Override
+  public void increment(long e) {
+    eventsToCount--;
+    if (!doorkeeper.put(e)) {
+      super.increment(e);
+    }
+  }
 
-		if (!added) {
-			return;
-		}
+  /**
+   * Reduces every counter by half of its original value. To reduce the truncation error, the sample
+   * is reduced by the number of counters with an odd value.
+   */
+  @Override
+  protected void tryReset(boolean added) {
+    additions += step;
 
-		if (additions < period) {
-			return;
-		}
+    if (!added) {
+      return;
+    }
 
-		int count = 0;
-		for (int i = 0; i < table.length; i++) {
-			count += Long.bitCount(table[i] & ONE_MASK);
-			table[i] = (table[i] >>> 1) & RESET_MASK;
-		}
-		additions = (additions >>> 1) - (count >>> 2);
-		doorkeeper.clear();
-	}
-	
-	// this is where the new functionality is implemented. 
-	// each time there is a miss - TinyLFU invokes the reportMiss function  
-	// and we can make decisions. 
-	@Override
-	public void reportMiss() {
+    if (additions < period) {
+      return;
+    }
 
-		this.misses++;
-		if(eventsToCount <=0){
-			eventsToCount = this.period; 
+    int count = 0;
+    for (int i = 0; i < table.length; i++) {
+      count += Long.bitCount(table[i] & ONE_MASK);
+      table[i] = (table[i] >>> 1) & RESET_MASK;
+    }
+    additions = (additions >>> 1) - (count >>> 2);
+    doorkeeper.clear();
+  }
 
-			/** 
-			 * If this configuration is worse than the previous one, 
-			 * switch directions. 
-			 */
-			if(this.misses > (this.prevMisses))
-			{
-				direction = -1*direction;
+  @Override
+  public void reportMiss() {
+    // Each time there is a miss TinyLFU invokes the reportMiss function  and we can make decisions
 
-			}
-			this.step -= direction;
-			this.prevMisses = this.misses;
-			this.misses = 0;
-			if(this.step<1)
-				this.step =1;
-			if(this.step>15)
-				this.step = 15;
-		}	
-	}
+    misses++;
+    if (eventsToCount <= 0) {
+      eventsToCount = period;
 
+      // If this configuration is worse than the previous one, switch directions.
+      if (misses > prevMisses) {
+        direction = -1 * direction;
+
+      }
+      step -= direction;
+      prevMisses = misses;
+      misses = 0;
+      if (step < 1) {
+        step = 1;
+      }
+      if (step > 15) {
+        step = 15;
+      }
+    }
+  }
 }
-
