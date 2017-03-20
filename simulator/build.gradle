@@ -22,6 +22,7 @@ dependencies {
   compile benchmark_libraries.ehcache3
   compile benchmark_libraries.collision
   compile benchmark_libraries.slf4j_nop
+  compile benchmark_libraries.expiring_map
   compile benchmark_libraries.elastic_search
 
   testCompile test_libraries.testng

@@ -30,7 +30,7 @@ import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 public final class Ehcache2<K, V> implements BasicCache<K, V> {
   private final Ehcache cache;
 
-  public Ehcache2(MemoryStoreEvictionPolicy evictionPolicy, int maximumSize) {
+  public Ehcache2(int maximumSize, MemoryStoreEvictionPolicy evictionPolicy) {
     CacheConfiguration config = new CacheConfiguration("benchmark", maximumSize);
     config.setMemoryStoreEvictionPolicyFromObject(evictionPolicy);
     cache = new Cache(config);

@@ -39,6 +39,7 @@ dependencies {
   jmh benchmark_libraries.slf4j_nop
   jmh benchmark_libraries.collision
   jmh benchmark_libraries.jackrabbit
+  jmh benchmark_libraries.expiring_map
   jmh benchmark_libraries.elastic_search
   jmh benchmark_libraries.concurrentlinkedhashmap
 

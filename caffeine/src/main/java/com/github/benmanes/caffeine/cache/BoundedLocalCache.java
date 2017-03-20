@@ -1969,16 +1969,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Object lookupKey = nodeFactory.newLookupKey(key);
     Node<K, V> node = data.get(lookupKey);
     long now;
-    if ((node == null) || (node.getValue() == null)
-        || hasExpired(node, (now = expirationTicker().read()))) {
+    if (node == null) {
+      return null;
+    } else if ((node.getValue() == null) || hasExpired(node, (now = expirationTicker().read()))) {
       scheduleDrainBuffers();
       return null;
     }
 
-    boolean computeIfAbsent = false;
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
         statsAware(remappingFunction, /* recordMiss */ false, /* recordLoad */ true);
-    return remap(key, lookupKey, statsAwareRemappingFunction, now, computeIfAbsent);
+    return remap(key, lookupKey, statsAwareRemappingFunction, now, /* computeIfAbsent */ false);
   }
 
   @Override
@@ -1988,11 +1988,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     requireNonNull(remappingFunction);
 
     long now = expirationTicker().read();
-    boolean computeIfAbsent = true;
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
         statsAware(remappingFunction, recordMiss, recordLoad);
-    return remap(key, keyRef, statsAwareRemappingFunction, now, computeIfAbsent);
+    return remap(key, keyRef, statsAwareRemappingFunction, now, /* computeIfAbsent */ true);
   }
 
   @Override
@@ -2001,12 +2000,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     requireNonNull(value);
     requireNonNull(remappingFunction);
 
-    boolean computeIfAbsent = true;
     long now = expirationTicker().read();
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super V, ? extends V> mergeFunction = (k, oldValue) ->
         (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value);
-    return remap(key, keyRef, mergeFunction, now, computeIfAbsent);
+    return remap(key, keyRef, mergeFunction, now, /* computeIfAbsent */ true);
   }
 
   /**

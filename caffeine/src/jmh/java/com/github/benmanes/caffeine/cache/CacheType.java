@@ -28,12 +28,14 @@ import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
 import com.github.benmanes.caffeine.cache.impl.Ehcache2;
 import com.github.benmanes.caffeine.cache.impl.Ehcache3;
 import com.github.benmanes.caffeine.cache.impl.ElasticSearchCache;
+import com.github.benmanes.caffeine.cache.impl.ExpiringMapCache;
 import com.github.benmanes.caffeine.cache.impl.GuavaCache;
 import com.github.benmanes.caffeine.cache.impl.LinkedHashMapCache;
 import com.github.benmanes.caffeine.cache.impl.TCache;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 import com.trivago.triava.tcache.EvictionPolicy;
 
+import net.jodah.expiringmap.ExpirationPolicy;
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 
 /**
@@ -92,7 +94,7 @@ public enum CacheType {
   },
   Ehcache2_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new Ehcache2<>(MemoryStoreEvictionPolicy.LRU, maximumSize);
+      return new Ehcache2<>(maximumSize, MemoryStoreEvictionPolicy.LRU);
     }
   },
   Ehcache3 {
@@ -103,6 +105,16 @@ public enum CacheType {
   ElasticSearch {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new ElasticSearchCache<>(maximumSize);
+    }
+  },
+  ExpiringMap_Fifo {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ExpiringMapCache<>(maximumSize, ExpirationPolicy.CREATED);
+    }
+  },
+  ExpiringMap_Lru {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new ExpiringMapCache<>(maximumSize, ExpirationPolicy.ACCESSED);
     }
   },
   Guava {

@@ -29,7 +29,7 @@ ext {
     commons_compress: '1.13',
     commons_lang3: '3.5',
     config: '1.3.1',
-    error_prone_annotations: '2.0.18',
+    error_prone_annotations: '2.0.19',
     flip_tables: '1.0.2',
     guava: '21.0',
     javapoet: '1.8.0',
@@ -37,7 +37,7 @@ ext {
     jsr305: '3.0.1',
     jsr330: '1',
     stream: '2.9.5',
-    univocity_parsers: '2.3.1',
+    univocity_parsers: '2.4.0',
     ycsb: '0.12.0',
     xz: '1.6',
   ]
@@ -48,24 +48,25 @@ ext {
     jcache_tck: '1.0.1',
     jctools: '2.0.1',
     junit: '4.12',
-    mockito: '2.7.13',
+    mockito: '2.7.19',
     pax_exam: '4.10.0',
     testng: '6.11',
     truth: '0.24',
   ]
   benchmark_versions = [
     cache2k: '1.0.0.CR3',
-    collision: '0.2.5',
+    collision: '0.2.6',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.3',
     ehcache3: '3.3.0',
     elastic_search: '5.2.2',
-    jackrabbit: '1.6.0',
+    expiring_map: '0.5.8',
+    jackrabbit: '1.6.1',
     jamm: '0.3.1',
     java_object_layout: '0.7.1',
     koloboke: '0.6.8',
     ohc: 'window-tinylfu-SNAPSHOT',
-    slf4j: '1.7.24',
+    slf4j: '1.7.25',
     tcache: '1.0.0',
   ]
   plugin_versions = [
@@ -151,6 +152,7 @@ ext {
     elastic_search: dependencies.create("org.elasticsearch:elasticsearch:${benchmark_versions.elastic_search}") {
       exclude group: 'org.apache.lucene'
     },
+    expiring_map: "net.jodah:expiringmap:${benchmark_versions.expiring_map}",
     jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${benchmark_versions.jackrabbit}") {
       exclude group: 'junit'
     },
