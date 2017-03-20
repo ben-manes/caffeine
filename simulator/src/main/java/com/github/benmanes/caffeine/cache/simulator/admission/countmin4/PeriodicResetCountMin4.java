@@ -99,4 +99,10 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
     additions = (additions >>> 1) - (count >>> 2);
     doorkeeper.clear();
   }
+
+@Override
+public void reportMiss() {
+	// TODO Auto-generated method stub
+	
+}
 }

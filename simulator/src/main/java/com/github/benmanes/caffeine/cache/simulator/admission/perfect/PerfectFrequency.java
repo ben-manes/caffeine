@@ -59,4 +59,10 @@ public final class PerfectFrequency implements Frequency {
     }
     size = (size / 2);
   }
+
+@Override
+public void reportMiss() {
+	// TODO Auto-generated method stub
+	
+}
 }
