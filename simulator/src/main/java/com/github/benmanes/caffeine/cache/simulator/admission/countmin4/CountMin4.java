@@ -40,6 +40,7 @@ public abstract class CountMin4 implements Frequency {
   protected boolean conservative;
   protected int tableMask;
   protected long[] table;
+  int step =1;
 
   /**
    * Creates a frequency sketch that can accurately estimate the popularity of elements given
@@ -122,10 +123,10 @@ public abstract class CountMin4 implements Frequency {
     int index2 = indexOf(hash, 2);
     int index3 = indexOf(hash, 3);
 
-    boolean added = incrementAt(index0, start);
-    added |= incrementAt(index1, start + 1);
-    added |= incrementAt(index2, start + 2);
-    added |= incrementAt(index3, start + 3);
+    boolean added = incrementAt(index0, start,step);
+    added |= incrementAt(index1, start + 1,step);
+    added |= incrementAt(index2, start + 2,step);
+    added |= incrementAt(index3, start + 3,step);
 
     tryReset(added);
   }
@@ -151,7 +152,7 @@ public abstract class CountMin4 implements Frequency {
 
     for (int i = 0; i < 4; i++) {
       if (count[i] == min) {
-        incrementAt(index[i], start + i);
+        incrementAt(index[i], start + i,1);
       }
     }
     tryReset(true);
@@ -167,11 +168,11 @@ public abstract class CountMin4 implements Frequency {
    * @param j the counter to increment
    * @return if incremented
    */
-  boolean incrementAt(int i, int j) {
+  boolean incrementAt(int i, int j, long step) {
     int offset = j << 2;
     long mask = (0xfL << offset);
     if ((table[i] & mask) != mask) {
-      table[i] += (1L << offset);
+      table[i] += (step << offset);
       return true;
     }
     return false;
