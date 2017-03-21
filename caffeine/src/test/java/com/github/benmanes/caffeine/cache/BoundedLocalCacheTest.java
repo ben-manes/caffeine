@@ -180,7 +180,7 @@ public final class BoundedLocalCacheTest {
 
       checkStatus(node, Status.DEAD);
       assertThat(localCache.containsKey(newEntry.getKey()), is(true));
-      assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+      Awaits.await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
     } finally {
       localCache.evictionLock.unlock();
     }

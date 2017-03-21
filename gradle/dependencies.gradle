@@ -37,7 +37,7 @@ ext {
     jsr305: '3.0.1',
     jsr330: '1',
     stream: '2.9.5',
-    univocity_parsers: '2.4.0',
+    univocity_parsers: '2.4.1',
     ycsb: '0.12.0',
     xz: '1.6',
   ]
@@ -55,7 +55,7 @@ ext {
   ]
   benchmark_versions = [
     cache2k: '1.0.0.CR3',
-    collision: '0.2.6',
+    collision: '0.2.7',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.3',
     ehcache3: '3.3.0',
@@ -63,7 +63,7 @@ ext {
     expiring_map: '0.5.8',
     jackrabbit: '1.6.1',
     jamm: '0.3.1',
-    java_object_layout: '0.7.1',
+    java_object_layout: '0.8',
     koloboke: '0.6.8',
     ohc: 'window-tinylfu-SNAPSHOT',
     slf4j: '1.7.25',

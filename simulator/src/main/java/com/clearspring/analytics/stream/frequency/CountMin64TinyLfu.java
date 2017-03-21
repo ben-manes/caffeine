@@ -79,10 +79,4 @@ public final class CountMin64TinyLfu implements Frequency {
       }
     }
   }
-
-@Override
-public void reportMiss() {
-	// TODO Auto-generated method stub
-	
-}
 }
