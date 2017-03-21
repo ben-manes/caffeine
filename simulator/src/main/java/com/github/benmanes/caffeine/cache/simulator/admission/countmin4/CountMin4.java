@@ -169,14 +169,16 @@ public abstract class CountMin4 implements Frequency {
    * @return if incremented
    */
   boolean incrementAt(int i, int j, long step) {
-    int offset = j << 2;
-    long mask = (0xfL << offset);
-    if ((table[i] & mask) != mask) {
-      table[i] += (step << offset);
-      return true;
-    }
-    return false;
-  }
+	  int offset = j << 2;
+	  long mask = (0xfL << offset);
+	  if ((table[i] & mask) != mask) {
+	    long current = (table[i] & mask) >>> offset;
+	    long update = Math.min(current + step, 15);
+	    table[i] = (table[i] & ~mask) | (update << offset);
+	    return true;
+	  }
+	  return false;
+	}
 
   /**
    * Returns the table index for the counter at the specified depth.
