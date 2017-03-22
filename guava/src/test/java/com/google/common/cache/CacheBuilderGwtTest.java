@@ -33,6 +33,7 @@ import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -299,27 +300,31 @@ public class CacheBuilderGwtTest extends TestCase {
     Arrays.fill(stats, 0);
 
     // Add more than two elements to increment size removals.
-    cache.put(3, 20);
-    cache.put(6, 2);
-    cache.put(98, 45);
-    cache.put(56, 76);
-    cache.put(23, 84);
+    cache.put(1, 10);
+    cache.put(2, 20);
+    cache.put(3, 30);
+    cache.put(4, 40);
+    cache.put(5, 50);
 
     // Replace the two present elements.
-    cache.put(23, 20);
-    cache.put(3, 49);
-    cache.put(23, 2);
-    cache.put(3, 4);
+    Integer key1 = Iterables.get(cache.asMap().keySet(), 0);
+    Integer key2 = Iterables.get(cache.asMap().keySet(), 1);
+    cache.put(key1, 60);
+    cache.put(key2, 70);
+    cache.put(key1, 80);
+    cache.put(key2, 90);
 
     // Expire the two present elements.
+    key1 = Iterables.get(cache.asMap().keySet(), 0);
+    key2 = Iterables.get(cache.asMap().keySet(), 1);
     fakeTicker.advance(1001, TimeUnit.MILLISECONDS);
 
-    cache.getIfPresent(23);
-    cache.getIfPresent(56);
+    cache.getIfPresent(key1);
+    cache.getIfPresent(key2);
 
     // Add two elements and invalidate them.
-    cache.put(1, 4);
-    cache.put(2, 8);
+    cache.put(6, 100);
+    cache.put(7, 200);
 
     cache.invalidateAll();
 
