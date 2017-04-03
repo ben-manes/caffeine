@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.cache.impl.ElasticSearchCache;
 import com.github.benmanes.caffeine.cache.impl.ExpiringMapCache;
 import com.github.benmanes.caffeine.cache.impl.GuavaCache;
 import com.github.benmanes.caffeine.cache.impl.LinkedHashMapCache;
+import com.github.benmanes.caffeine.cache.impl.RapidoidCache;
 import com.github.benmanes.caffeine.cache.impl.TCache;
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 import com.trivago.triava.tcache.EvictionPolicy;
@@ -133,6 +134,11 @@ public enum CacheType {
   LinkedHashMap_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
       return new LinkedHashMapCache<>(true, maximumSize);
+    }
+  },
+  Rapidoid {
+    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
+      return new RapidoidCache<>(maximumSize);
     }
   },
   TCache_Lfu {
