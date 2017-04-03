@@ -36,6 +36,7 @@ dependencies {
   jmh benchmark_libraries.ehcache2
   jmh benchmark_libraries.ehcache3
   jmh benchmark_libraries.koloboke
+  jmh benchmark_libraries.rapidoid
   jmh benchmark_libraries.slf4j_nop
   jmh benchmark_libraries.collision
   jmh benchmark_libraries.jackrabbit

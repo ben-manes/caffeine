@@ -66,6 +66,7 @@ ext {
     java_object_layout: '0.8',
     koloboke: '0.6.8',
     ohc: 'window-tinylfu-SNAPSHOT',
+    rapidoid: '5.3.4',
     slf4j: '1.7.25',
     tcache: '1.0.0',
   ]
@@ -163,6 +164,7 @@ ext {
       "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",
     ],
     ohc: "com.github.snazy.ohc:ohc-core-j8:${benchmark_versions.ohc}",
+    rapidoid: "org.rapidoid:rapidoid-commons:${benchmark_versions.rapidoid}",
     slf4j_nop: "org.slf4j:slf4j-nop:${benchmark_versions.slf4j}",
     tcache: "com.trivago:triava:${benchmark_versions.tcache}",
   ]

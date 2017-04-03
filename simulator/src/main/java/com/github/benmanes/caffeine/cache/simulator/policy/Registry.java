@@ -48,6 +48,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.product.ElasticSearch
 import com.github.benmanes.caffeine.cache.simulator.policy.product.ExpiringMapPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.GuavaPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.OhcPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.RapidoidPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.TCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sampled.SampledPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
@@ -165,6 +166,7 @@ public final class Registry {
     factories.put("product.Ehcache2", Ehcache2Policy::policies);
     factories.put("product.Ehcache3", Ehcache3Policy::policies);
     factories.put("product.Caffeine", CaffeinePolicy::policies);
+    factories.put("product.Rapidoid", RapidoidPolicy::policies);
     factories.put("product.Collision", CollisionPolicy::policies);
     factories.put("product.ExpiringMap", ExpiringMapPolicy::policies);
     factories.put("product.Elasticsearch", ElasticSearchPolicy::policies);
