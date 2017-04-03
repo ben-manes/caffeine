@@ -44,12 +44,20 @@ In addition, Caffeine offers the following extensions:
  * [Simulation][simulator]
 
 Use Caffeine in a community provided integration:
- * [Spring Cache][spring] (Spring 4.3 & Boot 1.4)
- * [ScalaCache][scala-cache]: Simple caching in Scala
+ * [Spring Cache][spring]: As of Spring 4.3 & Boot 1.4
  * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
+ * [ScalaCache][scala-cache]: Simple caching in Scala
+ * [jooby][jooby]: Modular micro framework
+ * [Druid][druid]: Real-time analytics
+
+Powering infrastructure near you:
+ * [Cassandra][cassandra]:  Manage massive amounts of data, fast
+ * [Infinispan][infinispan]: Distributed in-memory data grid
  * [Ratpack][ratpack]: Lean & powerful HTTP apps
+ * [Corfu][corfu]: A cluster consistency platform
+ * [Orbit][orbit]: Virtual actors on the JVM
  * [Finagle][finagle]: Extensible RPC system
- * [Druid][druid]: Real-time Analytics
+ * [Neo4j][neo4j]: Graphs for Everyone
 
 ### In the News
 
@@ -61,8 +69,7 @@ Use Caffeine in a community provided integration:
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
 
 On the radar,
- * Early discussions with [HBase][hbase], [Cassandra][cassandra], and [Solr][solr]
- * Being adopted in the [Neo4j][neo4j] 3.1 and [Infinispan][infinispan] 9.0 releases
+ * Early discussions with [HBase][hbase] and [Solr][solr]
  * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], and [ohc][ohc]
 
 ### Download
@@ -112,13 +119,16 @@ Snapshots of the development version are available in
 [scala-cache]: https://github.com/cb372/scalacache
 [scaffeine]: https://github.com/blemale/scaffeine
 [hbase]: https://issues.apache.org/jira/browse/HBASE-15560
-[cassandra]: https://issues.apache.org/jira/browse/CASSANDRA-10855
+[cassandra]: http://cassandra.apache.org
 [solr]: https://issues.apache.org/jira/browse/SOLR-8241
-[infinispan]: http://blog.infinispan.org/2016/12/data-container-changes-part-1.html
+[infinispan]: http://infinispan.org/docs/stable/user_guide/user_guide.html#eviction_strategy
 [neo4j]: https://github.com/neo4j/neo4j
 [ohc]: https://github.com/snazy/ohc/issues/34
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
 [mango-cache]: https://github.com/goburrow/cache
 [ratpack]: https://github.com/ratpack/ratpack
 [finagle]: https://github.com/twitter/finagle
-[druid]: https://github.com/druid-io/druid
+[druid]: http://druid.io/docs/latest/development/extensions-core/caffeine-cache.html
+[jooby]: http://jooby.org/doc/caffeine
+[orbit]: https://github.com/orbit/orbit
+[corfu]: https://github.com/CorfuDB/CorfuDB
