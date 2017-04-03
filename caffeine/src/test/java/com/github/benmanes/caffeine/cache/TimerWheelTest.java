@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
@@ -27,6 +28,7 @@ import java.lang.ref.ReferenceQueue;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
@@ -42,8 +44,6 @@ import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-
-import com.google.common.collect.Sets;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -85,6 +85,8 @@ public final class TimerWheelTest {
 
   @Test(enabled = false, singleThreaded = true)
   public void cascade() {
+    when(evictor.test(captor.capture())).thenReturn(true);
+
     List<Long> timers = generateTimers();
     for (long time : timers) {
       timerWheel.schedule(new Timer(time));
@@ -96,6 +98,7 @@ public final class TimerWheelTest {
 
   private void checkTimerWheel(List<Long> timers, long currentTimeNanos) {
     TimerWheel<Integer, Integer> expected = new TimerWheel<>(evictor);
+    System.out.println("Initial\n" + timerWheel);
 
     timerWheel.advance(currentTimeNanos);
     expected.advance(currentTimeNanos);
@@ -106,15 +109,21 @@ public final class TimerWheelTest {
       }
     }
 
-    Set<Long> actualTimers = new TreeSet<>();
-    Set<Long> expectedTimers = new TreeSet<>();
+    NavigableSet<Long> actualTimers = new TreeSet<>();
+    NavigableSet<Long> expectedTimers = new TreeSet<>();
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         expectedTimers.addAll(timers(expected.wheel[i][j]));
         actualTimers.addAll(timers(timerWheel.wheel[i][j]));
       }
     }
-    assertThat(Sets.symmetricDifference(actualTimers, expectedTimers).size(), is(0));
+
+    System.out.println("Actual\n" + timerWheel);
+    System.out.println("Expected\n" + expected);
+    System.out.println("Not Expired\n" + actualTimers.headSet(currentTimeNanos, true).stream()
+        .map(TimeUnit.NANOSECONDS::toMinutes).collect(toList()));
+
+    assertThat(actualTimers.size(), is(expectedTimers.size()));
   }
 
   private Set<Long> timers(Node<?, ?> setinel) {

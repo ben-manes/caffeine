@@ -48,13 +48,13 @@ final class TimerWheel<K, V> {
    * http://www.cs.columbia.edu/~nahum/w6998/papers/ton97-timing-wheels.pdf
    */
 
-  static final int[] SPOKES = { 64, 64, 32, 4 };
+  static final int[] BUCKETS = { 64, 64, 32, 4 };
   static final long[] SPANS = {
       ceilingPowerOfTwo(TimeUnit.SECONDS.toNanos(1)),
       ceilingPowerOfTwo(TimeUnit.MINUTES.toNanos(1)),
       ceilingPowerOfTwo(TimeUnit.HOURS.toNanos(1)),
       ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)),
-      SPOKES[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)),
+      BUCKETS[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)),
   };
   static final long[] SHIFT = {
       Long.SIZE - Long.numberOfLeadingZeros(SPANS[0] - 1),
@@ -72,9 +72,9 @@ final class TimerWheel<K, V> {
   TimerWheel(Predicate<Node<K, V>> evictor) {
     this.evictor = requireNonNull(evictor);
 
-    wheel = new Node[SPOKES.length][1];
+    wheel = new Node[BUCKETS.length][1];
     for (int i = 0; i < wheel.length; i++) {
-      wheel[i] = new Node[SPOKES[i]];
+      wheel[i] = new Node[BUCKETS[i]];
       for (int j = 0; j < wheel[i].length; j++) {
         wheel[i][j] = new Sentinel<>();
       }
@@ -108,26 +108,31 @@ final class TimerWheel<K, V> {
    * @param currentTimeNanos the current time, in nanoseconds
    */
   void expire(int index, long previousTimeNanos, long currentTimeNanos) {
+    Node<K, V>[] timerWheel = wheel[index];
+
     int start, end;
     if ((currentTimeNanos - previousTimeNanos) > SPANS[index + 1]) {
-      end = SPOKES[index] - 1;
+      end = timerWheel.length - 1;
       start = 0;
     } else {
-      long mask = SPANS[index] - 1;
       long previousTicks = (previousTimeNanos >>> SHIFT[index]);
-      long currentTicks = (currentTimeNanos >>> SHIFT[index]);
+      long currentTicks = (currentTimeNanos >>> SHIFT[index]) + SPANS[index];
+      long mask = SPANS[index] - 1;
 
       end = (int) (currentTicks & mask);
       start = (int) (previousTicks & mask);
     }
 
-    Node<K, V>[] timerWheel = wheel[index];
-    for (int i = start; i <= end; i++) {
-      Node<K, V> node = timerWheel[i].getNextInAccessOrder();
-      timerWheel[i].setPreviousInAccessOrder(timerWheel[i]);
-      timerWheel[i].setNextInAccessOrder(timerWheel[i]);
+    int mask = timerWheel.length - 1;
+    int range = 1 + Math.abs(end - start);
+    for (int i = 0; i < range; i++) {
+      int bucket = (i + start) & mask;
+      Node<K, V> sentinel = timerWheel[bucket];
+      Node<K, V> node = sentinel.getNextInAccessOrder();
+      sentinel.setPreviousInAccessOrder(sentinel);
+      sentinel.setNextInAccessOrder(sentinel);
 
-      while (node != timerWheel[i]) {
+      while (node != sentinel) {
         Node<K, V> next = node.getNextInAccessOrder();
         if ((node.getAccessTime() > currentTimeNanos) || !evictor.test(node)) {
           schedule(node);
@@ -172,7 +177,7 @@ final class TimerWheel<K, V> {
     for (int i = 0; i < wheel.length; i++) {
       if (duration < SPANS[i + 1]) {
         int ticks = (int) (time >>> SHIFT[i]);
-        int index = ticks & (SPOKES[i] - 1);
+        int index = ticks & (wheel[i].length - 1);
         return wheel[i][index];
       }
     }
