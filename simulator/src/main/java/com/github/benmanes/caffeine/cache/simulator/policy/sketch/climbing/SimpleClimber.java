@@ -42,10 +42,9 @@ final class SimpleClimber implements HillClimber {
   public SimpleClimber(Config config) {
     SimpleClimberSettings settings = new SimpleClimberSettings(config);
 
-    this.pivot = Math.min(settings.maximumPivot(),
-        Math.max(1, (int) (settings.percentPivot() * settings.maximumSize())));
+    this.sampleSize = (int) (settings.percentSample() * settings.maximumSize());
+    this.pivot = (int) (settings.percentPivot() * settings.maximumSize());
     this.tolerance = 100d * settings.tolerance();
-    this.sampleSize = settings.sampleSize();
   }
 
   @Override
@@ -97,11 +96,8 @@ final class SimpleClimber implements HillClimber {
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");
     }
-    public int maximumPivot() {
-      return config().getInt(BASE_PATH + "maximum-pivot-size");
-    }
-    public int sampleSize() {
-      return config().getInt(BASE_PATH + "sample-size");
+    public double percentSample() {
+      return config().getDouble(BASE_PATH + "percent-sample");
     }
     public double tolerance() {
       return config().getInt(BASE_PATH + "tolerance");

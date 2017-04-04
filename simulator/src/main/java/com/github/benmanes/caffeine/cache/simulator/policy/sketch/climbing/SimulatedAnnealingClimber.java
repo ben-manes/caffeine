@@ -51,11 +51,10 @@ final class SimulatedAnnealingClimber implements HillClimber {
 
   public SimulatedAnnealingClimber(Config config) {
     SimulatedAnnealingSettings settings = new SimulatedAnnealingSettings(config);
-
     this.random = new Random(settings.randomSeed());
-    this.initialPivot = Math.min(settings.maximumPivot(),
-        Math.max(1, (int) (settings.percentPivot() * settings.maximumSize())));
-    this.sampleSize = settings.sampleSize();
+
+    this.initialPivot = (int) (settings.percentPivot() * settings.maximumSize());
+    this.sampleSize = (int) (settings.percentSample() * settings.maximumSize());
     this.pivot = initialPivot;
 
     this.coolDownRate = settings.coolDownRate();
@@ -131,11 +130,8 @@ final class SimulatedAnnealingClimber implements HillClimber {
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");
     }
-    public int maximumPivot() {
-      return config().getInt(BASE_PATH + "maximum-pivot-size");
-    }
-    public int sampleSize() {
-      return config().getInt(BASE_PATH + "sample-size");
+    public double percentSample() {
+      return config().getDouble(BASE_PATH + "percent-sample");
     }
     public double coolDownRate() {
       return config().getDouble(BASE_PATH + "cool-down-rate");
