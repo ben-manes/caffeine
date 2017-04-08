@@ -21,6 +21,7 @@ plugins.withType(EclipsePlugin) {
 dependencies {
   testCompile libraries.ycsb
   testCompile libraries.guava
+  testCompile libraries.fastutil
   testCompile test_libraries.junit
   testCompile test_libraries.testng
   testCompile test_libraries.jctools

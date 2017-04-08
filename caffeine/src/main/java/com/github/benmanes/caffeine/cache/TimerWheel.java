@@ -50,11 +50,11 @@ final class TimerWheel<K, V> {
 
   static final int[] BUCKETS = { 64, 64, 32, 4 };
   static final long[] SPANS = {
-      ceilingPowerOfTwo(TimeUnit.SECONDS.toNanos(1)),
-      ceilingPowerOfTwo(TimeUnit.MINUTES.toNanos(1)),
-      ceilingPowerOfTwo(TimeUnit.HOURS.toNanos(1)),
-      ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)),
-      BUCKETS[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)),
+      ceilingPowerOfTwo(TimeUnit.SECONDS.toNanos(1)), // 1.07s
+      ceilingPowerOfTwo(TimeUnit.MINUTES.toNanos(1)), // 1.14m
+      ceilingPowerOfTwo(TimeUnit.HOURS.toNanos(1)),   // 1.22h
+      ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)),    // 1.63d
+      BUCKETS[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)), // 6.5d
   };
   static final long[] SHIFT = {
       Long.SIZE - Long.numberOfLeadingZeros(SPANS[0] - 1),
@@ -93,7 +93,7 @@ final class TimerWheel<K, V> {
     for (int i = 0; i < SHIFT.length; i++) {
       int prevTicks = (int) (previousTimeNanos >>> SHIFT[i]);
       int currentTicks = (int) (currentTimeNanos >>> SHIFT[i]);
-      if (prevTicks >= currentTicks) {
+      if ((currentTicks - prevTicks) <= 0) {
         break;
       }
       expire(i, previousTimeNanos, currentTimeNanos);
@@ -134,8 +134,12 @@ final class TimerWheel<K, V> {
 
       while (node != sentinel) {
         Node<K, V> next = node.getNextInAccessOrder();
+        node.setPreviousInAccessOrder(null);
+        node.setNextInAccessOrder(null);
+
         if ((node.getAccessTime() > currentTimeNanos) || !evictor.test(node)) {
-          schedule(node);
+          Node<K, V> newSentinel = findBucket(node.getAccessTime());
+          link(newSentinel, node);
         }
         node = next;
       }
@@ -184,8 +188,9 @@ final class TimerWheel<K, V> {
 
     // Add to the last timer bucket
     int lastWheel = wheel.length - 1;
-    int ticks = (int) (nanos >>> SHIFT[lastWheel]) + wheel[lastWheel].length - 1;
-    int index = (int) (ticks & (SPANS[lastWheel] - 1));
+    int buckets = wheel[lastWheel].length - 1;
+    int ticks = (int) (nanos >>> SHIFT[lastWheel]) - 1;
+    int index = (ticks & buckets);
     return wheel[lastWheel][index];
   }
 

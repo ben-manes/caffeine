@@ -11,6 +11,7 @@ dependencies {
   compile libraries.ycsb
   compile libraries.guava
   compile libraries.stream
+  compile libraries.fastutil
   compile libraries.flip_tables
   compile benchmark_libraries.ohc
   compile libraries.commons_lang3

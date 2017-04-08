@@ -15,10 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -26,11 +27,8 @@ import static org.mockito.Mockito.when;
 
 import java.lang.ref.ReferenceQueue;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
-import java.util.NavigableSet;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -45,9 +43,13 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Test(singleThreaded = true)
 public final class TimerWheelTest {
   TimerWheel<Integer, Integer> timerWheel;
   @Mock Predicate<Node<Integer, Integer>> evictor;
@@ -59,7 +61,7 @@ public final class TimerWheelTest {
     timerWheel = new TimerWheel<>(evictor);
   }
 
-  @Test(singleThreaded = true, dataProvider = "schedule")
+  @Test(dataProvider = "schedule")
   public void schedule(long nanos, int expired) {
     when(evictor.test(captor.capture())).thenReturn(true);
 
@@ -83,51 +85,54 @@ public final class TimerWheelTest {
     };
   }
 
-  @Test(enabled = false, singleThreaded = true)
-  public void cascade() {
+  @Test(dataProvider = "fuzzySchedule")
+  public void schedule_fuzzy(long clock, long nanos, long[] times) {
     when(evictor.test(captor.capture())).thenReturn(true);
+    timerWheel.nanos = clock;
 
-    List<Long> timers = generateTimers();
-    for (long time : timers) {
-      timerWheel.schedule(new Timer(time));
+    int expired = 0;
+    for (long timeout : times) {
+      if (timeout <= nanos) {
+        expired++;
+      }
+      timerWheel.schedule(new Timer(timeout));
     }
+    timerWheel.advance(nanos);
+    verify(evictor, times(expired)).test(any());
 
-    long currentTimeNanos = TimeUnit.HOURS.toNanos(3);
-    checkTimerWheel(timers, currentTimeNanos);
+    for (Node<?, ?> node : captor.getAllValues()) {
+      assertThat(node.getAccessTime(), is(lessThan(nanos)));
+    }
+    checkTimerWheel(nanos);
   }
 
-  private void checkTimerWheel(List<Long> timers, long currentTimeNanos) {
-    TimerWheel<Integer, Integer> expected = new TimerWheel<>(evictor);
-    System.out.println("Initial\n" + timerWheel);
-
-    timerWheel.advance(currentTimeNanos);
-    expected.advance(currentTimeNanos);
-
-    for (long time : timers) {
-      if (time > currentTimeNanos) {
-        expected.schedule(new Timer(time));
-      }
+  @DataProvider(name = "fuzzySchedule")
+  public Object[][] providesFuzzySchedule() {
+    long[] times = new long[5_000];
+    long clock = ThreadLocalRandom.current().nextLong();
+    long bound = clock + TimeUnit.DAYS.toNanos(10);
+    for (int i = 0; i < times.length; i++) {
+      times[i] = ThreadLocalRandom.current().nextLong(clock + 1, bound);
     }
+    long nanos = ThreadLocalRandom.current().nextLong(clock + 1, bound);
+    return new Object[][] {{ clock, nanos, times }};
+  }
 
-    NavigableSet<Long> actualTimers = new TreeSet<>();
-    NavigableSet<Long> expectedTimers = new TreeSet<>();
+  private void checkTimerWheel(long nanos) {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
-        expectedTimers.addAll(timers(expected.wheel[i][j]));
-        actualTimers.addAll(timers(timerWheel.wheel[i][j]));
+        for (long timer : getTimers(timerWheel.wheel[i][j])) {
+          if (timer <= nanos) {
+            throw new AssertionError(String.format("wheel[%s][%d] by %ss", i, j,
+                TimeUnit.NANOSECONDS.toSeconds(nanos - timer)));
+          }
+        }
       }
     }
-
-    System.out.println("Actual\n" + timerWheel);
-    System.out.println("Expected\n" + expected);
-    System.out.println("Not Expired\n" + actualTimers.headSet(currentTimeNanos, true).stream()
-        .map(TimeUnit.NANOSECONDS::toMinutes).collect(toList()));
-
-    assertThat(actualTimers.size(), is(expectedTimers.size()));
   }
 
-  private Set<Long> timers(Node<?, ?> setinel) {
-    Set<Long> timers = new HashSet<>();
+  private LongList getTimers(Node<?, ?> setinel) {
+    LongList timers = new LongArrayList();
     for (Node<?, ?> node = setinel.getNextInAccessOrder();
         node != setinel; node = node.getNextInAccessOrder()) {
       timers.add(node.getAccessTime());
@@ -135,44 +140,79 @@ public final class TimerWheelTest {
     return timers;
   }
 
-  private List<Long> generateTimers() {
-    List<Long> timers = new ArrayList<>();
-    for (int i = 0; i < TimerWheel.SPANS.length; i++) {
-      for (int j = 0; j < (i + 1) * 5_000; j++) {
-        timers.add(1 + ThreadLocalRandom.current().nextLong(TimerWheel.SPANS[i] - 1));
-      }
-    }
-    for (int i = 0; i < 500; i++) {
-      timers.add(1 + 3 * TimerWheel.SPANS[TimerWheel.SPANS.length - 1]);
-    }
-    return timers;
+  @Test
+  public void deschedule() {
+    Timer timer = new Timer(100);
+    timerWheel.schedule(timer);
+    timerWheel.deschedule(timer);
+    assertThat(timer.getNextInAccessOrder(), is(nullValue()));
+    assertThat(timer.getPreviousInAccessOrder(), is(nullValue()));
   }
 
-  // TODO(ben): Shows cascading effect. Convert into a test case.
-  public static void main(String[] args) {
-    TimerWheel<Integer, Integer> timerWheel = new TimerWheel<>(timer -> true);
-
-    for (int i = 0; i < TimerWheel.SPANS.length; i++) {
-      for (int j = 0; j < (i + 1) * 5000; j++) {
-        long expirationTime = 1 + ThreadLocalRandom.current().nextLong(TimerWheel.SPANS[i] - 1);
-        timerWheel.schedule(new Timer(expirationTime));
-      }
-    }
-    for (int i = 0; i < 500; i++) {
-      timerWheel.schedule(new Timer(1 + 3 * TimerWheel.SPANS[TimerWheel.SPANS.length - 1]));
-    }
-    System.out.println(timerWheel);
-
-    timerWheel.advance(TimeUnit.HOURS.toNanos(3));
-    System.out.println("\nAfter 3 hours:");
-    System.out.println(timerWheel);
-
-    timerWheel.advance(TimeUnit.DAYS.toNanos(2));
-    System.out.println("\nAfter 2 days:");
-    System.out.println(timerWheel);
+  @Test
+  public void deschedule_notScheduled() {
+    timerWheel.deschedule(new Timer(100));
   }
 
-  static final class Timer implements Node<Integer, Integer> {
+  @Test(dataProvider = "fuzzySchedule")
+  public void deschedule_fuzzy(long clock, long nanos, long[] times) {
+    List<Timer> timers = new ArrayList<>();
+    timerWheel.nanos = clock;
+
+    for (long timeout : times) {
+      Timer timer = new Timer(timeout);
+      timerWheel.schedule(timer);
+      timers.add(timer);
+    }
+    for (Timer timer : timers) {
+      timerWheel.deschedule(timer);
+    }
+    checkTimerWheel(nanos);
+  }
+
+  @Test
+  public void reschedule() {
+    when(evictor.test(captor.capture())).thenAnswer(invocation -> {
+      Timer timer = (Timer) invocation.getArgument(0);
+      timer.setAccessTime(timerWheel.nanos + 100);
+      return false;
+    });
+
+    timerWheel.schedule(new Timer(100));
+    timerWheel.advance(TimerWheel.SPANS[0]);
+
+    verify(evictor).test(any());
+    assertThat(captor.getValue().getNextInAccessOrder(), is(not(nullValue())));
+    assertThat(captor.getValue().getPreviousInAccessOrder(), is(not(nullValue())));
+  }
+
+  @Test(dataProvider = "cascade")
+  public void cascade(long nanos, long timeout, int span) {
+    timerWheel.schedule(new Timer(timeout));
+    timerWheel.advance(nanos);
+
+    int count = 0;
+    for (int i = 0; i < span; i++) {
+      for (int j = 0; j < timerWheel.wheel[i].length; j++) {
+        count += getTimers(timerWheel.wheel[i][j]).size();
+      }
+    }
+    assertThat("\n" + timerWheel.toString(), count, is(1));
+  }
+
+  @DataProvider(name = "cascade")
+  public Iterator<Object[]> providesCascade() {
+    List<Object[]> args = new ArrayList<>();
+    for (int i = 1; i < TimerWheel.SPANS.length - 1; i++) {
+      long duration = TimerWheel.SPANS[i];
+      long timeout = ThreadLocalRandom.current().nextLong(duration + 1, 2 * duration);
+      long nanos = ThreadLocalRandom.current().nextLong(duration + 1, timeout - 1);
+      args.add(new Object[] { nanos, timeout, i});
+    }
+    return args.iterator();
+  }
+
+  private static final class Timer implements Node<Integer, Integer> {
     Node<Integer, Integer> prev;
     Node<Integer, Integer> next;
     long accessTime;
