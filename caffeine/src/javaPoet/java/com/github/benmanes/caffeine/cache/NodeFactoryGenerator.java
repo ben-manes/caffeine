@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
@@ -31,6 +32,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
+import static com.google.common.base.Preconditions.checkState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -58,7 +60,6 @@ import com.github.benmanes.caffeine.cache.node.AddValue;
 import com.github.benmanes.caffeine.cache.node.Finalize;
 import com.github.benmanes.caffeine.cache.node.NodeContext;
 import com.github.benmanes.caffeine.cache.node.NodeRule;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -194,17 +195,18 @@ public final class NodeFactoryGenerator {
   }
 
   private void addGetFactoryMethods() {
-    MethodSpec.Builder getFactory = MethodSpec.methodBuilder("getFactory")
+    checkState(!classNameToFeatures.isEmpty(), "Must generate all cache types first");
+
+    nodeFactory.addMethod(MethodSpec.methodBuilder("getFactory")
         .addJavadoc("Returns a factory optimized for the specified features.\n")
-        .returns(ClassName.bestGuess("NodeFactory"));
-
-    List<String> params = ImmutableList.of("strongKeys", "weakKeys", "strongValues", "weakValues",
-        "softValues", "expiresAfterAccess", "expiresAfterWrite", "refreshAfterWrite",
-        "maximumSize", "weighed");
-    for (String param : params) {
-      getFactory.addParameter(boolean.class, param);
-    }
-
+        .addModifiers(Modifier.STATIC)
+        .addTypeVariable(kTypeVar)
+        .addTypeVariable(vTypeVar)
+        .addParameter(BUILDER_PARAM)
+        .addParameter(boolean.class, "isAsync")
+        .addCode(NodeSelectorCode.get())
+        .returns(ClassName.bestGuess("NodeFactory"))
+        .build());
     nodeFactory.addMethod(MethodSpec.methodBuilder("weakValues")
         .addJavadoc("Returns whether this factory supports the weak values.\n")
         .addStatement("return name().matches($S)", ".W.*")
@@ -215,13 +217,6 @@ public final class NodeFactoryGenerator {
         .addStatement("return name().matches($S)", ".So.*")
         .returns(boolean.class)
         .build());
-
-    Preconditions.checkState(!classNameToFeatures.isEmpty(), "Must generate all cache types first");
-    getFactory
-        .addCode(NodeSelectorCode.get())
-        .addModifiers(Modifier.STATIC)
-        .build();
-    nodeFactory.addMethod(getFactory.build());
   }
 
   private void generatedNodes() throws IOException {

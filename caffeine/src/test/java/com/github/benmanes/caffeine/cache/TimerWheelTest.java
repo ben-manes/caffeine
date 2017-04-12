@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,7 +32,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -52,24 +52,24 @@ import it.unimi.dsi.fastutil.longs.LongList;
 @Test(singleThreaded = true)
 public final class TimerWheelTest {
   TimerWheel<Integer, Integer> timerWheel;
-  @Mock Predicate<Node<Integer, Integer>> evictor;
+  @Mock BoundedLocalCache<Integer, Integer> cache;
   @Captor ArgumentCaptor<Node<Integer, Integer>> captor;
 
   @BeforeMethod
   public void beforeMethod() {
     MockitoAnnotations.initMocks(this);
-    timerWheel = new TimerWheel<>(evictor);
+    timerWheel = new TimerWheel<>(cache);
   }
 
   @Test(dataProvider = "schedule")
   public void schedule(long nanos, int expired) {
-    when(evictor.test(captor.capture())).thenReturn(true);
+    when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
 
     for (int timeout : new int[] { 25, 90, 240 }) {
       timerWheel.schedule(new Timer(TimeUnit.SECONDS.toNanos(timeout)));
     }
     timerWheel.advance(nanos);
-    verify(evictor, times(expired)).test(any());
+    verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
 
     for (Node<?, ?> node : captor.getAllValues()) {
       assertThat(node.getAccessTime(), is(lessThan(nanos)));
@@ -87,7 +87,7 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "fuzzySchedule")
   public void schedule_fuzzy(long clock, long nanos, long[] times) {
-    when(evictor.test(captor.capture())).thenReturn(true);
+    when(cache.evictEntry(captor.capture(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
 
     int expired = 0;
@@ -98,7 +98,7 @@ public final class TimerWheelTest {
       timerWheel.schedule(new Timer(timeout));
     }
     timerWheel.advance(nanos);
-    verify(evictor, times(expired)).test(any());
+    verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
 
     for (Node<?, ?> node : captor.getAllValues()) {
       assertThat(node.getAccessTime(), is(lessThan(nanos)));
@@ -172,7 +172,7 @@ public final class TimerWheelTest {
 
   @Test
   public void reschedule() {
-    when(evictor.test(captor.capture())).thenAnswer(invocation -> {
+    when(cache.evictEntry(captor.capture(), any(), anyLong())).thenAnswer(invocation -> {
       Timer timer = (Timer) invocation.getArgument(0);
       timer.setAccessTime(timerWheel.nanos + 100);
       return false;
@@ -181,7 +181,7 @@ public final class TimerWheelTest {
     timerWheel.schedule(new Timer(100));
     timerWheel.advance(TimerWheel.SPANS[0]);
 
-    verify(evictor).test(any());
+    verify(cache).evictEntry(any(), any(), anyLong());
     assertThat(captor.getValue().getNextInAccessOrder(), is(not(nullValue())));
     assertThat(captor.getValue().getPreviousInAccessOrder(), is(not(nullValue())));
   }

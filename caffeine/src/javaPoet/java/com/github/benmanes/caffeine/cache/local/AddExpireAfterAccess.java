@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
+import static com.github.benmanes.caffeine.cache.Specifications.EXPIRY;
+import static com.github.benmanes.caffeine.cache.Specifications.TIMER_WHEEL;
+
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -31,13 +34,18 @@ public final class AddExpireAfterAccess extends LocalCacheRule {
 
   @Override
   protected void execute() {
+    variableExpiration();
+    fixedExpiration();
+  }
+
+  private void fixedExpiration() {
     context.constructor.addStatement(
         "this.expiresAfterAccessNanos = builder.getExpiresAfterAccessNanos()");
     context.cache.addField(FieldSpec.builder(long.class, "expiresAfterAccessNanos",
         privateVolatileModifiers).build());
     context.cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccess")
         .addModifiers(protectedFinalModifiers)
-        .addStatement("return true")
+        .addStatement("return (timerWheel == null)")
         .returns(boolean.class)
         .build());
     context.cache.addMethod(MethodSpec.methodBuilder("expiresAfterAccessNanos")
@@ -49,6 +57,32 @@ public final class AddExpireAfterAccess extends LocalCacheRule {
         .addStatement("this.expiresAfterAccessNanos = expiresAfterAccessNanos")
         .addParameter(long.class, "expiresAfterAccessNanos")
         .addModifiers(protectedFinalModifiers)
+        .build());
+  }
+
+  private void variableExpiration() {
+    context.cache.addMethod(MethodSpec.methodBuilder("expiresVariable")
+        .addModifiers(protectedFinalModifiers)
+        .addStatement("return (timerWheel != null)")
+        .returns(boolean.class)
+        .build());
+
+    context.constructor.addStatement("this.expiry = builder.getExpiry()");
+    context.cache.addField(FieldSpec.builder(EXPIRY, "expiry", privateFinalModifiers).build());
+    context.cache.addMethod(MethodSpec.methodBuilder("expiry")
+        .addModifiers(protectedFinalModifiers)
+        .addStatement("return expiry")
+        .returns(EXPIRY)
+        .build());
+
+    context.constructor.addStatement(
+        "this.timerWheel = builder.expiresVariable() ? new $T(this) : null", TIMER_WHEEL);
+    context.cache.addField(FieldSpec.builder(TIMER_WHEEL,
+        "timerWheel", privateFinalModifiers).build());
+    context.cache.addMethod(MethodSpec.methodBuilder("timerWheel")
+        .addModifiers(protectedFinalModifiers)
+        .addStatement("return timerWheel")
+        .returns(TIMER_WHEEL)
         .build());
   }
 }

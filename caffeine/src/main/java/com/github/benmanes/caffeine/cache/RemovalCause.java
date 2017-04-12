@@ -86,7 +86,8 @@ public enum RemovalCause {
 
   /**
    * The entry's expiration timestamp has passed. This can occur when using
-   * {@link Caffeine#expireAfterWrite} or {@link Caffeine#expireAfterAccess}.
+   * {@link Caffeine#expireAfterWrite}, {@link Caffeine#expireAfterAccess},
+   * or {@link Caffeine#expireAfter(Expiry)}.
    */
   EXPIRED {
     @Override public boolean wasEvicted() {

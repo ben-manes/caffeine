@@ -44,6 +44,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  */
 public final class CaffeineTest {
   @Mock StatsCounter statsCounter;
+  @Mock Expiry<Object, Object> expiry;
   @Mock CacheLoader<Object, Object> loader;
   @Mock CacheWriter<Object, Object> writer;
 
@@ -346,6 +347,26 @@ public final class CaffeineTest {
     assertThat(builder.expireAfterWriteNanos, is((long) Integer.MAX_VALUE));
     Expiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
+  }
+
+
+  /* ---------------- expiry -------------- */
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void expireAfter_null() {
+    Caffeine.newBuilder().expireAfter(null);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void expireAfter_twice() {
+    Caffeine.newBuilder().expireAfter(expiry).expireAfter(expiry);
+  }
+
+  @Test
+  public void expireAfter() {
+    Caffeine<?, ?> builder = Caffeine.newBuilder().expireAfter(expiry);
+    assertThat(builder.expiry, is(expiry));
+    builder.build();
   }
 
   /* ---------------- refreshAfterWrite -------------- */

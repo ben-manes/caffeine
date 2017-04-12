@@ -75,7 +75,7 @@ public final class LocalCacheSelectorCode {
   }
 
   private LocalCacheSelectorCode expires() {
-    block.beginControlFlow("if (builder.expiresAfterAccess())")
+    block.beginControlFlow("if (builder.expiresAfterAccess() || builder.expiresVariable())")
             .addStatement("sb.append('A')")
         .endControlFlow()
         .beginControlFlow("if (builder.expiresAfterWrite())")

@@ -55,7 +55,7 @@ public final class PerfectFrequency implements Frequency {
 
   private void reset() {
     for (Long2IntMap.Entry entry : counts.long2IntEntrySet()) {
-      entry.setValue(entry.getValue() / 2);
+      entry.setValue(entry.getIntValue() / 2);
     }
     size = (size / 2);
   }

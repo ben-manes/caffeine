@@ -29,7 +29,7 @@ public final class NodeSelectorCode {
   }
 
   private NodeSelectorCode keys() {
-    block.beginControlFlow("if (strongKeys)")
+    block.beginControlFlow("if (builder.isStrongKeys())")
             .addStatement("sb.append('S')")
         .nextControlFlow("else")
             .addStatement("sb.append('W')")
@@ -38,9 +38,9 @@ public final class NodeSelectorCode {
   }
 
   private NodeSelectorCode values() {
-    block.beginControlFlow("if (strongValues)")
+    block.beginControlFlow("if (builder.isStrongValues())")
             .addStatement("sb.append(\"St\")")
-        .nextControlFlow("else if (weakValues)")
+        .nextControlFlow("else if (builder.isWeakValues())")
             .addStatement("sb.append('W')")
         .nextControlFlow("else")
             .addStatement("sb.append(\"So\")")
@@ -49,22 +49,22 @@ public final class NodeSelectorCode {
   }
 
   private NodeSelectorCode expires() {
-    block.beginControlFlow("if (expiresAfterAccess)")
+    block.beginControlFlow("if (builder.expiresAfterAccess() || builder.expiresVariable())")
             .addStatement("sb.append('A')")
         .endControlFlow()
-        .beginControlFlow("if (expiresAfterWrite)")
+        .beginControlFlow("if (builder.expiresAfterWrite())")
             .addStatement("sb.append('W')")
         .endControlFlow()
-        .beginControlFlow("if (refreshAfterWrite)")
+        .beginControlFlow("if (builder.refreshes())")
             .addStatement("sb.append('R')")
         .endControlFlow();
     return this;
   }
 
   private NodeSelectorCode maximum() {
-    block.beginControlFlow("if (maximumSize)")
+    block.beginControlFlow("if (builder.evicts())")
             .addStatement("sb.append('M')")
-            .beginControlFlow("if (weighed)")
+            .beginControlFlow("if ((isAsync && builder.evicts()) || builder.isWeighted())")
                 .addStatement("sb.append('W')")
             .nextControlFlow("else")
                 .addStatement("sb.append('S')")

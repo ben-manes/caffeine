@@ -45,7 +45,11 @@ public final class AddDeques extends LocalCacheRule {
         || !Feature.usesAccessOrderEdenDeque(context.generateFeatures)) {
       return;
     }
-    addDeque(ACCESS_ORDER_DEQUE, "accessOrderEdenDeque");
+
+    context.constructor.addStatement(
+        "this.$L = builder.evicts() || builder.expiresAfterAccess()\n? new $T()\n: null",
+        "accessOrderEdenDeque", ACCESS_ORDER_DEQUE);
+    addFieldAndMethod(ACCESS_ORDER_DEQUE, "accessOrderEdenDeque");
   }
 
   private void addAccessOrderMainDeque() {
@@ -66,7 +70,15 @@ public final class AddDeques extends LocalCacheRule {
   }
 
   private void addDeque(TypeName type, String name) {
+    addConstructor(type, name);
+    addFieldAndMethod(type, name);
+  }
+
+  private void addConstructor(TypeName type, String name) {
     context.constructor.addStatement("this.$L = new $T()", name, type);
+  }
+
+  private void addFieldAndMethod(TypeName type, String name) {
     context.cache.addField(FieldSpec.builder(type, name, privateFinalModifiers).build());
     context.cache.addMethod(MethodSpec.methodBuilder(name)
         .addModifiers(protectedFinalModifiers)

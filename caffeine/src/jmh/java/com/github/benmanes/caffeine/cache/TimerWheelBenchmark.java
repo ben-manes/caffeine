@@ -53,7 +53,7 @@ public class TimerWheelBenchmark {
   public void setup() {
     timer = new Timer(0);
     times = new long[SIZE];
-    timerWheel = new TimerWheel<>(entry -> true);
+    timerWheel = new TimerWheel<>(new MockCache());
     for (int i = 0; i < SIZE; i++) {
       times[i] = ThreadLocalRandom.current().nextLong(UPPERBOUND);
     }
@@ -118,5 +118,18 @@ public class TimerWheelBenchmark {
     @Override public boolean isDead() { return false; }
     @Override public void retire() {}
     @Override public void die() {}
+  }
+
+  private static final class MockCache extends BoundedLocalCache<Integer, Integer> {
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    protected MockCache() {
+      super((Caffeine) Caffeine.newBuilder(), /* cacheLoader */ null, /* isAsync */ false);
+    }
+
+    @Override
+    boolean evictEntry(Node<Integer, Integer> node, RemovalCause cause, long now) {
+      return true;
+    }
   }
 }

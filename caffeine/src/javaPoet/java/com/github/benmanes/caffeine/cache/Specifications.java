@@ -68,10 +68,8 @@ public final class Specifications {
   public static final TypeName UNSAFE_ACCESS =
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
 
-  public static final TypeName BUILDER = ParameterizedTypeName.get(
-      ClassName.get(PACKAGE_NAME, "Caffeine"), kTypeVar, vTypeVar);
-  public static final ParameterSpec BUILDER_PARAM =
-      ParameterSpec.builder(BUILDER, "builder").build();
+  public static final ParameterSpec BUILDER_PARAM = ParameterSpec.builder(ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "Caffeine"), kTypeVar, vTypeVar), "builder").build();
   public static final TypeName BOUNDED_LOCAL_CACHE = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "BoundedLocalCache"), kTypeVar, vTypeVar);
 
@@ -103,6 +101,11 @@ public final class Specifications {
       ClassName.get(PACKAGE_NAME, "MpscGrowableArrayQueue");
   public static final TypeName WRITE_QUEUE = ParameterizedTypeName.get(
       WRITE_QUEUE_TYPE, ClassName.get(Runnable.class));
+
+  public static final TypeName EXPIRY = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "Expiry"), kTypeVar, vTypeVar);
+  public static final TypeName TIMER_WHEEL = ParameterizedTypeName.get(
+      ClassName.get(PACKAGE_NAME, "TimerWheel"), kTypeVar, vTypeVar);
 
   public static final TypeName FREQUENCY_SKETCH = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "FrequencySketch"), kTypeVar);

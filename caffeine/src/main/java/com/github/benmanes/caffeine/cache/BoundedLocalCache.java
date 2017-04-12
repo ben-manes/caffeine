@@ -117,13 +117,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * represented by a sentinel key that should not be used for map lookups.
    *
    * Expiration is implemented in O(1) time complexity. The time-to-idle policy uses an access-order
-   * queue and the time-to-live policy uses a write-order queue. This allows peeking at the oldest
-   * entry in the queue to see if it has expired and, if it has not, then the younger entries must
-   * not have too. If a maximum size is set then expiration will share the queues in order to
-   * minimize the per-entry footprint. The expiration updates are applied in a best effort fashion.
-   * The reordering of access expiration may be discarded by the read buffer if full or contended
-   * on. Similarly the reordering of write expiration may be ignored for an entry if the last update
-   * was within a short time window in order to avoid overwhelming the write buffer.
+   * queue, the time-to-live policy uses a write-order queue, and variable expiration uses a timer
+   * wheel. This allows peeking at the oldest entry in the queue to see if it has expired and, if it
+   * has not, then the younger entries must have not too. If a maximum size is set then expiration
+   * will share the queues in order to minimize the per-entry footprint. The expiration updates are
+   * applied in a best effort fashion. The reordering of variable or access-order expiration may be
+   * discarded by the read buffer if full or contended on. Similarly the reordering of write
+   * expiration may be ignored for an entry if the last update was within a short time window in
+   * order to avoid overwhelming the write buffer.
    *
    * Maximum size is implemented using the Window TinyLfu policy due to its high hit rate, O(1) time
    * complexity, and small footprint. A new entry starts in the eden space and remains there as long
@@ -181,14 +182,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     writer = builder.getCacheWriter();
     weigher = builder.getWeigher(isAsync);
     drainBuffersTask = new PerformCleanupTask();
+    nodeFactory = NodeFactory.getFactory(builder, isAsync);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     evictionLock = (builder.getExecutor() instanceof ForkJoinPool)
         ? new NonReentrantLock()
         : new ReentrantLock();
-    nodeFactory = NodeFactory.getFactory(builder.isStrongKeys(), builder.isWeakKeys(),
-        builder.isStrongValues(), builder.isWeakValues(), builder.isSoftValues(),
-        builder.expiresAfterAccess(), builder.expiresAfterWrite(), builder.refreshes(),
-        builder.evicts(), (isAsync && builder.evicts()) || builder.isWeighted());
     readBuffer = evicts() || collectKeys() || collectValues() || expiresAfterAccess()
         ? new BoundedBuffer<>()
         : Buffer.disabled();
@@ -321,12 +319,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /* ---------------- Expiration Support -------------- */
 
+  /** Returns if the cache expires entries after a variable time threshold. */
+  protected boolean expiresVariable() {
+    return false;
+  }
+
   /** Returns if the cache expires entries after an access time threshold. */
   protected boolean expiresAfterAccess() {
     return false;
   }
 
-  /** How long after the last access to an entry the map will retain that entry. */
+  /** Returns how long after the last access to an entry the map will retain that entry. */
   protected long expiresAfterAccessNanos() {
     throw new UnsupportedOperationException();
   }
@@ -340,7 +343,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return false;
   }
 
-  /** How long after the last write to an entry the map will retain that entry. */
+  /** Returns how long after the last write to an entry the map will retain that entry. */
   protected long expiresAfterWriteNanos() {
     throw new UnsupportedOperationException();
   }
@@ -354,7 +357,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return false;
   }
 
-  /** How long after the last write an entry becomes a candidate for refresh. */
+  /** Returns how long after the last write an entry becomes a candidate for refresh. */
   protected long refreshAfterWriteNanos() {
     throw new UnsupportedOperationException();
   }
@@ -368,9 +371,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return expiresAfterWrite() || refreshAfterWrite();
   }
 
+  protected Expiry<K, V> expiry() {
+    return Expiry.eternal();
+  }
+
   @Override
   public Ticker expirationTicker() {
     return Ticker.disabledTicker();
+  }
+
+  protected TimerWheel<K, V> timerWheel() {
+    throw new UnsupportedOperationException();
   }
 
   /* ---------------- Eviction Support -------------- */
@@ -722,7 +733,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @GuardedBy("evictionLock")
   @SuppressWarnings({"PMD.CollapsibleIfStatements", "GuardedByChecker"})
-  void evictEntry(Node<K, V> node, RemovalCause cause, long now) {
+  boolean evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
     @SuppressWarnings("unchecked")
     V[] value = (V[]) new Object[1];
@@ -768,7 +779,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     // The entry is no longer eligible for eviction
     if (resurrect[0]) {
-      return;
+      return false;
     }
 
     // If the eviction fails due to a concurrent removal of the victim, that removal may cancel out
@@ -799,6 +810,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       // for the removal task to do it on the next maintenance cycle.
       makeDead(node);
     }
+
+    return true;
   }
 
   /**

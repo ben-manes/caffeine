@@ -78,7 +78,7 @@ ext {
     coveralls: '2.8.1',
     coverity: '1.0.10',
     extra_conf: '3.1.0',
-    error_prone: '0.0.9',
+    error_prone: '0.0.10',
     huntbugs_core: '0.0.11',
     huntbugs_plugin: '0.3.5',
     jacoco: '0.7.9',

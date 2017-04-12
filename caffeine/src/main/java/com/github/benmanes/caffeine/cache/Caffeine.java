@@ -121,6 +121,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @param <K> the base key type for all caches created by this builder
  * @param <V> the base value type for all caches created by this builder
  */
+@SuppressWarnings("PMD.TooManyFields")
 public final class Caffeine<K, V> {
   static final Logger logger = Logger.getLogger(Caffeine.class.getName());
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
@@ -146,6 +147,7 @@ public final class Caffeine<K, V> {
   Supplier<StatsCounter> statsCounterSupplier;
   CacheWriter<? super K, ? super V> writer;
   Weigher<? super K, ? super V> weigher;
+  Expiry<? super K, ? super V> expiry;
   Executor executor;
   Ticker ticker;
 
@@ -365,8 +367,7 @@ public final class Caffeine<K, V> {
    * @param <V1> value type of the weigher
    * @return the cache builder reference that should be used instead of {@code this} for any
    *         remaining configuration and cache building
-   * @throws IllegalArgumentException if {@code size} is negative
-   * @throws IllegalStateException if a maximum size was already set
+   * @throws IllegalStateException if a weigher was already set
    */
   @Nonnull
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> weigher(
@@ -570,6 +571,46 @@ public final class Caffeine<K, V> {
 
   boolean expiresAfterAccess() {
     return (expireAfterAccessNanos != UNSET_INT);
+  }
+
+  /**
+   * Specifies that each entry should be automatically removed from the cache once a duration has
+   * elapsed after the entry's creation, the most recent replacement of its value, or its last
+   * read. The expiration time is reset by all cache read and write operations (including
+   * {@code Cache.asMap().get(Object)} and {@code Cache.asMap().put(K, V)}), but not by operations
+   * on the collection-views of {@link Cache#asMap}.
+   * <p>
+   * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
+   * read or write operations. Expired entries are cleaned up as part of the routine maintenance
+   * described in the class javadoc.
+   *
+   * @param expiry the expiry to use in calculating the expiration time of cache entries
+   * @return this builder instance
+   * @throws IllegalStateException if expiration was already set
+   */
+  @Nonnull
+  /* public */ <K1 extends K, V1 extends V> Caffeine<K1, V1> expireAfter(
+      @Nonnull Expiry<? super K1, ? super V1> expiry) {
+    requireNonNull(expiry);
+    requireState(this.expiry == null, "Expiry was already set to %s", this.expiry);
+    requireState(this.expireAfterAccessNanos == UNSET_INT,
+        "Expiry may not be used with expiresAfterAccess");
+    requireState(this.expireAfterWriteNanos == UNSET_INT,
+        "Expiry may not be used with expiresAfterWrite");
+
+    @SuppressWarnings("unchecked")
+    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    self.expiry = expiry;
+    return self;
+  }
+
+  boolean expiresVariable() {
+    return expiry != null;
+  }
+
+  @SuppressWarnings("unchecked")
+  Expiry<K, V> getExpiry() {
+    return (expiry == null) ? Expiry.eternal() : (Expiry<K, V>) expiry;
   }
 
   /**

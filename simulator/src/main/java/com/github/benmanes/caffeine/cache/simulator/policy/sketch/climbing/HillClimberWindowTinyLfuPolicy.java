@@ -230,7 +230,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
       maxProtected--;
 
       demoteProtected();
-      Node candidate = headProbation.next.next;
+      Node candidate = headProbation.next;
       candidate.remove();
       candidate.queue = WINDOW;
       candidate.appendToTail(headWindow);

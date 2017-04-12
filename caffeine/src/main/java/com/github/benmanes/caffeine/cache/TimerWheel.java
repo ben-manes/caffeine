@@ -21,7 +21,6 @@ import java.lang.ref.ReferenceQueue;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -63,14 +62,14 @@ final class TimerWheel<K, V> {
       Long.SIZE - Long.numberOfLeadingZeros(SPANS[3] - 1),
   };
 
-  final Predicate<Node<K, V>> evictor;
+  final BoundedLocalCache<K, V> cache;
   final Node<K, V>[][] wheel;
 
   long nanos;
 
   @SuppressWarnings({"rawtypes", "unchecked"})
-  TimerWheel(Predicate<Node<K, V>> evictor) {
-    this.evictor = requireNonNull(evictor);
+  TimerWheel(BoundedLocalCache<K, V> cache) {
+    this.cache = requireNonNull(cache);
 
     wheel = new Node[BUCKETS.length][1];
     for (int i = 0; i < wheel.length; i++) {
@@ -112,22 +111,20 @@ final class TimerWheel<K, V> {
 
     int start, end;
     if ((currentTimeNanos - previousTimeNanos) > SPANS[index + 1]) {
-      end = timerWheel.length - 1;
+      end = timerWheel.length;
       start = 0;
     } else {
       long previousTicks = (previousTimeNanos >>> SHIFT[index]);
       long currentTicks = (currentTimeNanos >>> SHIFT[index]) + SPANS[index];
       long mask = SPANS[index] - 1;
 
-      end = (int) (currentTicks & mask);
       start = (int) (previousTicks & mask);
+      end = start + 1 + (int) (currentTicks & mask);
     }
 
     int mask = timerWheel.length - 1;
-    int range = 1 + Math.abs(end - start);
-    for (int i = 0; i < range; i++) {
-      int bucket = (i + start) & mask;
-      Node<K, V> sentinel = timerWheel[bucket];
+    for (int i = start; i < end; i++) {
+      Node<K, V> sentinel = timerWheel[(i & mask)];
       Node<K, V> node = sentinel.getNextInAccessOrder();
       sentinel.setPreviousInAccessOrder(sentinel);
       sentinel.setNextInAccessOrder(sentinel);
@@ -137,7 +134,8 @@ final class TimerWheel<K, V> {
         node.setPreviousInAccessOrder(null);
         node.setNextInAccessOrder(null);
 
-        if ((node.getAccessTime() > currentTimeNanos) || !evictor.test(node)) {
+        if ((node.getAccessTime() > currentTimeNanos)
+            || !cache.evictEntry(node, RemovalCause.EXPIRED, nanos)) {
           Node<K, V> newSentinel = findBucket(node.getAccessTime());
           link(newSentinel, node);
         }
