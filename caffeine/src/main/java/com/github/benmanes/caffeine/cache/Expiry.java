@@ -15,6 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
+import java.io.Serializable;
+
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -34,8 +39,7 @@ interface Expiry<K, V> {
    * @param key the key represented by this entry
    * @param value the value represented by this entry
    * @param currentTime the current time, in nanoseconds
-   * @return the length of time before the entry expires, in nanoseconds; may not be zero or
-   *         negative.
+   * @return the length of time before the entry expires, in nanoseconds
    */
   long expireAfterCreate(K key, V value, long currentTime);
 
@@ -49,8 +53,7 @@ interface Expiry<K, V> {
    * @param value the value represented by this entry
    * @param currentTime the current time, in nanoseconds
    * @param currentDuration the current duration, in nanoseconds
-   * @return the length of time before the entry expires, in nanoseconds; may not be zero or
-   *         negative.
+   * @return the length of time before the entry expires, in nanoseconds
    */
   long expireAfterUpdate(K key, V value, long currentTime, long currentDuration);
 
@@ -64,8 +67,7 @@ interface Expiry<K, V> {
    * @param value the value represented by this entry
    * @param currentTime the current time, in nanoseconds
    * @param currentDuration the current duration, in nanoseconds
-   * @return the length of time before the entry expires, in nanoseconds; may not be zero or
-   *         negative.
+   * @return the length of time before the entry expires, in nanoseconds
    */
   long expireAfterRead(K key, V value, long currentTime, long currentDuration);
 
@@ -77,8 +79,21 @@ interface Expiry<K, V> {
    * @return an expiry where entries never expire
    */
   @SuppressWarnings("unchecked")
-  static <K, V> Expiry<K, V> eternal() {
+  static <K, V> Expiry<K, V> eternalExpiry() {
     return (Expiry<K, V>) EternalExpiry.INSTANCE;
+  }
+
+  /**
+   * Returns an expiry where the minimum duration is non-negative.
+   *
+   * @param delegate the expiry to calculating the expiration time with
+   * @param <K> the type of keys
+   * @param <V> the type of values
+   * @return a weigher that enforces that the weight is non-negative
+   */
+  @Nonnull
+  static <K, V> Expiry<K, V> boundedExpiry(@Nonnull Expiry<K, V> delegate) {
+    return new BoundedExpiry<>(delegate);
   }
 }
 
@@ -100,3 +115,35 @@ enum EternalExpiry implements Expiry<Object, Object> {
     return Long.MAX_VALUE;
   }
 }
+
+final class BoundedExpiry<K, V> implements Expiry<K, V>, Serializable {
+  static final long serialVersionUID = 1;
+  final Expiry<? super K, ? super V> delegate;
+
+  BoundedExpiry(Expiry<? super K, ? super V> delegate) {
+    this.delegate = requireNonNull(delegate);
+  }
+
+  @Override
+  public long expireAfterCreate(K key, V value, long currentTime) {
+    long duration = delegate.expireAfterCreate(key, value, currentTime);
+    return (duration < 0) ? 0 : duration;
+  }
+
+  @Override
+  public long expireAfterUpdate(K key, V value, long currentTime, long currentDuration) {
+    long duration = delegate.expireAfterUpdate(key, value, currentTime, currentDuration);
+    return (duration < 0) ? 0 : duration;
+  }
+
+  @Override
+  public long expireAfterRead(K key, V value, long currentTime, long currentDuration) {
+    long duration = delegate.expireAfterUpdate(key, value, currentTime, currentDuration);
+    return (duration < 0) ? 0 : duration;
+  }
+
+  Object writeReplace() {
+    return delegate;
+  }
+}
+

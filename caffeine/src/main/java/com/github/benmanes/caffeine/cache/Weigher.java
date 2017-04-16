@@ -63,7 +63,7 @@ public interface Weigher<K, V> {
   /**
    * Returns a weigher that enforces that the weight is non-negative.
    *
-   * @param delegate the weigher to that weighs the entry
+   * @param delegate the weigher to weighs the entry
    * @param <K> the type of keys
    * @param <V> the type of values
    * @return a weigher that enforces that the weight is non-negative
@@ -87,8 +87,7 @@ final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
   final Weigher<? super K, ? super V> delegate;
 
   BoundedWeigher(Weigher<? super K, ? super V> delegate) {
-    requireNonNull(delegate);
-    this.delegate = delegate;
+    this.delegate = requireNonNull(delegate);
   }
 
   @Override

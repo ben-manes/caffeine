@@ -517,12 +517,13 @@ public final class Caffeine<K, V> {
    * @param unit the unit that {@code duration} is expressed in
    * @return this builder instance
    * @throws IllegalArgumentException if {@code duration} is negative
-   * @throws IllegalStateException if the time to live or time to idle was already set
+   * @throws IllegalStateException if the time to live or variable expiration was already set
    */
   @Nonnull
   public Caffeine<K, V> expireAfterWrite(@Nonnegative long duration, @Nonnull TimeUnit unit) {
     requireState(expireAfterWriteNanos == UNSET_INT,
         "expireAfterWrite was already set to %s ns", expireAfterWriteNanos);
+    requireState(expiry == null, "expireAfterAccess may not be used with variable expiration");
     requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
     this.expireAfterWriteNanos = unit.toNanos(duration);
     return this;
@@ -553,12 +554,13 @@ public final class Caffeine<K, V> {
    * @param unit the unit that {@code duration} is expressed in
    * @return this builder instance
    * @throws IllegalArgumentException if {@code duration} is negative
-   * @throws IllegalStateException if the time to idle or time to live was already set
+   * @throws IllegalStateException if the time to idle or variable expiration was already set
    */
   @Nonnull
   public Caffeine<K, V> expireAfterAccess(@Nonnegative long duration, @Nonnull TimeUnit unit) {
     requireState(expireAfterAccessNanos == UNSET_INT,
         "expireAfterAccess was already set to %s ns", expireAfterAccessNanos);
+    requireState(expiry == null, "expireAfterAccess may not be used with variable expiration");
     requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
     this.expireAfterAccessNanos = unit.toNanos(duration);
     return this;
@@ -610,7 +612,7 @@ public final class Caffeine<K, V> {
 
   @SuppressWarnings("unchecked")
   Expiry<K, V> getExpiry() {
-    return (expiry == null) ? Expiry.eternal() : (Expiry<K, V>) expiry;
+    return (expiry == null) ? Expiry.eternalExpiry() : Expiry.boundedExpiry((Expiry<K, V>) expiry);
   }
 
   /**
@@ -968,6 +970,9 @@ public final class Caffeine<K, V> {
     }
     if (expireAfterAccessNanos != UNSET_INT) {
       s.append("expireAfterAccess=").append(expireAfterAccessNanos).append("ns, ");
+    }
+    if (expiry != null) {
+      s.append("expiry, ");
     }
     if (refreshNanos != UNSET_INT) {
       s.append("refreshNanos=").append(refreshNanos).append("ns, ");

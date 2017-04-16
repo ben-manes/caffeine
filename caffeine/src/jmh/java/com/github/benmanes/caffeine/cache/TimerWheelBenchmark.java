@@ -65,9 +65,9 @@ public class TimerWheelBenchmark {
   }
 
   @Benchmark
-  public void schedule(ThreadState threadState) {
+  public void reschedule(ThreadState threadState) {
     timer.setAccessTime(times[threadState.index++ & MASK]);
-    timerWheel.schedule(timer);
+    timerWheel.reschedule(timer);
   }
 
   @Benchmark

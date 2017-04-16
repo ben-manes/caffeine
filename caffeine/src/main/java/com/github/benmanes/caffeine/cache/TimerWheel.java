@@ -145,16 +145,25 @@ final class TimerWheel<K, V> {
   }
 
   /**
-   * Schedules a timer event for the node. If the entry was previously scheduled that event is
-   * removed.
+   * Schedules a timer event for the node.
    *
    * @param node the entry in the cache
    */
   public void schedule(Node<K, V> node) {
     Node<K, V> sentinel = findBucket(node.getAccessTime());
-
-    unlink(node);
     link(sentinel, node);
+  }
+
+  /**
+   * Reschedules an active timer event for the node.
+   *
+   * @param node the entry in the cache
+   */
+  public void reschedule(Node<K, V> node) {
+    if (node.getNextInAccessOrder() != null) {
+      unlink(node);
+      schedule(node);
+    }
   }
 
   /**

@@ -297,6 +297,11 @@ public final class CaffeineTest {
   }
 
   @Test(expectedExceptions = IllegalStateException.class)
+  public void expireAfterAccess_expiry() {
+    Caffeine.newBuilder().expireAfter(expiry).expireAfterAccess(1, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
   public void expireAfterAccess_twice() {
     Caffeine.newBuilder().expireAfterAccess(1, TimeUnit.MILLISECONDS)
         .expireAfterAccess(1, TimeUnit.MILLISECONDS);
@@ -324,6 +329,11 @@ public final class CaffeineTest {
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void expireAfterWrite_negative() {
     Caffeine.newBuilder().expireAfterWrite(-1, TimeUnit.MILLISECONDS);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void expireAfterWrite_expiry() {
+    Caffeine.newBuilder().expireAfter(expiry).expireAfterWrite(1, TimeUnit.MILLISECONDS);
   }
 
   @Test(expectedExceptions = IllegalStateException.class)
@@ -360,6 +370,16 @@ public final class CaffeineTest {
   @Test(expectedExceptions = IllegalStateException.class)
   public void expireAfter_twice() {
     Caffeine.newBuilder().expireAfter(expiry).expireAfter(expiry);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void expireAfter_access() {
+    Caffeine.newBuilder().expireAfterAccess(1, TimeUnit.MILLISECONDS).expireAfter(expiry);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void expireAfter_write() {
+    Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MILLISECONDS).expireAfter(expiry);
   }
 
   @Test
