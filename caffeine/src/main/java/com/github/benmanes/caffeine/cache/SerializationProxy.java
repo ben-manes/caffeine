@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.TooManyFields")
 final class SerializationProxy<K, V> implements Serializable {
   private static final long serialVersionUID = 1;
 
@@ -33,6 +34,7 @@ final class SerializationProxy<K, V> implements Serializable {
   boolean weakKeys;
   boolean weakValues;
   boolean softValues;
+  Expiry<?, ?> expiry;
   Weigher<?, ?> weigher;
   CacheWriter<?, ?> writer;
   boolean isRecordingStats;
@@ -59,6 +61,9 @@ final class SerializationProxy<K, V> implements Serializable {
     if (maximumWeight != Caffeine.UNSET_INT) {
       builder.maximumWeight(maximumWeight);
       builder.weigher((Weigher<Object, Object>) weigher);
+    }
+    if (expiry != null) {
+      builder.expireAfter(expiry);
     }
     if (expiresAfterWriteNanos > 0) {
       builder.expireAfterWrite(expiresAfterWriteNanos, TimeUnit.NANOSECONDS);

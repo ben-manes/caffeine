@@ -308,7 +308,7 @@ public class CacheLoadingTest extends TestCase {
     assertEquals(1, stats.hitCount());
 
     ticker.advance(1, MILLISECONDS);
-    assertSame(two, cache.getIfPresent(key));
+    assertSame(one, cache.getIfPresent(key));
     stats = cache.stats();
     assertEquals(1, stats.missCount());
     assertEquals(2, stats.loadSuccessCount());

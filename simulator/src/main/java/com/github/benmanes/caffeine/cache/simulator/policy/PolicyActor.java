@@ -15,12 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.ERROR;
+import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.FINISH;
 import static java.util.Objects.requireNonNull;
 
-import com.github.benmanes.caffeine.cache.simulator.Simulator.Message;
-
-import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
+import akka.actor.AbstractActor;
 import akka.dispatch.BoundedMessageQueueSemantics;
 import akka.dispatch.RequiresMessageQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -30,7 +29,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class PolicyActor extends UntypedActor
+public final class PolicyActor extends AbstractActor
     implements RequiresMessageQueue<BoundedMessageQueueSemantics> {
   private final Policy policy;
 
@@ -39,32 +38,29 @@ public final class PolicyActor extends UntypedActor
   }
 
   @Override
-  public void onReceive(Object msg) {
-    if (msg instanceof LongArrayList) {
-      LongArrayList events = (LongArrayList) msg;
-      process(events);
-    } else if (msg == Message.FINISH) {
-      policy.finished();
-      getSender().tell(policy.stats(), ActorRef.noSender());
-      getContext().stop(getSelf());
-    } else if (msg == Message.ERROR) {
-      getContext().stop(getSelf());
-    } else {
-      context().system().log().error("Invalid message: " + msg);
-    }
+  public Receive createReceive() {
+    return receiveBuilder()
+        .match(LongArrayList.class, this::process)
+        .matchEquals(FINISH, msg -> finish())
+        .build();
   }
 
   private void process(LongArrayList events) {
-    policy.stats().stopwatch().start();
     try {
+      policy.stats().stopwatch().start();
       for (int i = 0; i < events.size(); i++) {
         policy.record(events.getLong(i));
       }
     } catch (Exception e) {
+      sender().tell(ERROR, self());
       context().system().log().error(e, "");
-      getSender().tell(Message.ERROR, ActorRef.noSender());
     } finally {
       policy.stats().stopwatch().stop();
     }
+  }
+
+  private void finish() {
+    policy.finished();
+    sender().tell(policy.stats(), self());
   }
 }

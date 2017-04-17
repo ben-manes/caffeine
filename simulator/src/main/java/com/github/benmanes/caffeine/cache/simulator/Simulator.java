@@ -15,10 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
+import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.ERROR;
+import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.FINISH;
+import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.START;
+import static java.util.stream.Collectors.toList;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.PrimitiveIterator;
-import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
@@ -29,9 +33,9 @@ import com.github.benmanes.caffeine.cache.simulator.report.Reporter;
 import com.google.common.base.Stopwatch;
 import com.typesafe.config.Config;
 
+import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.actor.UntypedActor;
 import akka.routing.ActorRefRoutee;
 import akka.routing.BroadcastRoutingLogic;
 import akka.routing.Routee;
@@ -57,18 +61,18 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Simulator extends UntypedActor {
+public final class Simulator extends AbstractActor {
   public enum Message { START, FINISH, ERROR }
 
   private final BasicSettings settings;
   private final Stopwatch stopwatch;
-  private final Reporter report;
+  private final Reporter reporter;
   private final Router router;
   private final int batchSize;
   private int remaining;
 
   public Simulator() {
-    Config config = getContext().system().settings().config().getConfig("caffeine.simulator");
+    Config config = context().system().settings().config().getConfig("caffeine.simulator");
     settings = new BasicSettings(config);
 
     List<Routee> routes = makeRoutes();
@@ -77,24 +81,21 @@ public final class Simulator extends UntypedActor {
 
     batchSize = settings.batchSize();
     stopwatch = Stopwatch.createStarted();
-    report = settings.report().format().create(config);
-    getSelf().tell(Message.START, ActorRef.noSender());
+    reporter = settings.report().format().create(config);
   }
 
   @Override
-  public void onReceive(Object msg) throws IOException {
-    if (msg == Message.START) {
-      broadcast();
-    } else if (msg == Message.ERROR) {
-      getContext().stop(getSelf());
-    } else if (msg instanceof PolicyStats) {
-      report.add((PolicyStats) msg);
-      if (--remaining == 0) {
-        report.print();
-        getContext().stop(getSelf());
-        System.out.println("Executed in " + stopwatch);
-      }
-    }
+  public void preStart() {
+    self().tell(START, self());
+  }
+
+  @Override
+  public Receive createReceive() {
+    return receiveBuilder()
+        .matchEquals(START, msg -> broadcast())
+        .matchEquals(ERROR, msg -> context().stop(self()))
+        .match(PolicyStats.class, this::reportStats)
+        .build();
   }
 
   /** Broadcast the trace events to all of the policy actors. */
@@ -104,16 +105,15 @@ public final class Simulator extends UntypedActor {
       for (PrimitiveIterator.OfLong i = events.iterator(); i.hasNext();) {
         batch.add(i.nextLong());
         if (batch.size() == batchSize) {
-          router.route(batch, getSelf());
+          router.route(batch, self());
           batch = new LongArrayList(batchSize);
         }
       }
-      router.route(batch, getSelf());
-      router.route(Message.FINISH, getSelf());
+      router.route(batch, self());
+      router.route(FINISH, self());
     } catch (Exception e) {
-      router.route(Message.ERROR, getSelf());
       context().system().log().error(e, "");
-      getContext().stop(getSelf());
+      context().stop(self());
     }
   }
 
@@ -130,10 +130,20 @@ public final class Simulator extends UntypedActor {
   /** Returns the actors to broadcast trace events to. */
   private List<Routee> makeRoutes() {
     return Registry.policies(settings).stream().map(policy -> {
-      ActorRef actorRef = getContext().actorOf(Props.create(PolicyActor.class, policy));
-      getContext().watch(actorRef);
+      ActorRef actorRef = context().actorOf(Props.create(PolicyActor.class, policy));
+      context().watch(actorRef);
       return new ActorRefRoutee(actorRef);
-    }).collect(Collectors.toList());
+    }).collect(toList());
+  }
+
+  /** Add the stats to the reporter, print if completed, and stop the simulator. */
+  private void reportStats(PolicyStats stats) throws IOException {
+    reporter.add(stats);
+    if (--remaining == 0) {
+      reporter.print();
+      context().stop(self());
+      System.out.println("Executed in " + stopwatch);
+    }
   }
 
   public static void main(String[] args) {
