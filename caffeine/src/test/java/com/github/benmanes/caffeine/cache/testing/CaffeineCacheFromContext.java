@@ -23,6 +23,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RandomSeedEnforcer;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
@@ -57,6 +58,9 @@ public final class CaffeineCacheFromContext {
         builder.weigher(context.weigher);
         builder.maximumWeight(context.maximumWeight());
       }
+    }
+    if (context.expiryType() != CacheExpiry.DISABLED) {
+      builder.expireAfter(context.expiry);
     }
     if (context.afterAccess != Expire.DISABLED) {
       builder.expireAfterAccess(context.afterAccess.timeNanos(), TimeUnit.NANOSECONDS);

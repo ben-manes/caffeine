@@ -123,7 +123,7 @@ Snapshots of the development version are available in
 [solr]: https://issues.apache.org/jira/browse/SOLR-8241
 [infinispan]: http://infinispan.org/docs/stable/user_guide/user_guide.html#eviction_strategy
 [neo4j]: https://github.com/neo4j/neo4j
-[ohc]: https://github.com/snazy/ohc/issues/34
+[ohc]: https://github.com/snazy/ohc
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
 [mango-cache]: https://github.com/goburrow/cache
 [ratpack]: https://github.com/ratpack/ratpack

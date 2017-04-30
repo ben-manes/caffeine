@@ -61,10 +61,9 @@ public final class AddValue extends NodeRule {
   }
 
   private FieldSpec newValueField() {
-    Modifier[] modifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
     FieldSpec.Builder fieldSpec = isStrongValues()
-        ? FieldSpec.builder(vTypeVar, "value", modifiers)
-        : FieldSpec.builder(valueReferenceType(), "value", modifiers);
+        ? FieldSpec.builder(vTypeVar, "value", Modifier.VOLATILE)
+        : FieldSpec.builder(valueReferenceType(), "value", Modifier.VOLATILE);
     return fieldSpec.build();
   }
 

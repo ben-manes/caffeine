@@ -35,13 +35,13 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.CacheWriter;
+import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -225,8 +225,12 @@ public @interface CacheSpec {
 
   /* ---------------- Expiration -------------- */
 
-  /** Indicates that the combination must have an expiration setting. */
-  boolean requiresExpiration() default false;
+  /** Indicates that the combination must have any of the expiration settings. */
+  Expiration[] mustExpiresWithAnyOf() default {};
+
+  enum Expiration {
+    AFTER_WRITE, AFTER_ACCESS, VARIABLE
+  }
 
   /** The expiration time-to-idle setting, each resulting in a new combination. */
   Expire[] expireAfterAccess() default {
@@ -246,10 +250,53 @@ public @interface CacheSpec {
     Expire.FOREVER
   };
 
+  /** The variable expiration setting, each resulting in a new combination. */
+  CacheExpiry[] expiry() default {
+    CacheExpiry.DISABLED,
+    CacheExpiry.ACCESS
+  };
+
+  /** The fixed duration for the expiry. */
+  Expire expiryTime() default Expire.FOREVER;
+
   /** Indicates if the amount of time that should be auto-advance for each entry when populating. */
   Advance[] advanceOnPopulation() default {
     Advance.ZERO
   };
+
+  enum CacheExpiry {
+    DISABLED {
+      @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
+        return null;
+      }
+    },
+    MOCKITO {
+      @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
+        @SuppressWarnings("unchecked")
+        Expiry<K, V> mock = Mockito.mock(Expiry.class);
+        return mock;
+      }
+    },
+    ACCESS {
+      @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
+        return ExpiryBuilder
+            .expiringAfterCreate(expiryTime.timeNanos())
+            .expiringAfterUpdate(expiryTime.timeNanos())
+            .expiringAfterRead(expiryTime.timeNanos())
+            .build();
+      }
+    },
+    WRITE {
+      @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
+        return ExpiryBuilder
+            .expiringAfterCreate(expiryTime.timeNanos())
+            .expiringAfterUpdate(expiryTime.timeNanos())
+            .build();
+      }
+    };
+
+    public abstract <K, V> Expiry<K, V> createExpiry(Expire expiryTime);
+  }
 
   enum Expire {
     /** A flag indicating that entries are not evicted due to expiration. */
@@ -504,27 +551,29 @@ public @interface CacheSpec {
   };
 
   /** The {@link CacheWriter} for the external resource. */
-  enum Writer implements Supplier<CacheWriter<Integer, Integer>> {
+  enum Writer {
     /** A writer that does nothing. */
     DISABLED {
-      @Override public CacheWriter<Integer, Integer> get() {
+      @Override public <K, V> CacheWriter<K, V> create() {
         return CacheWriter.disabledWriter();
       }
     },
     /** A writer that records interactions. */
     MOCKITO {
-      @Override public CacheWriter<Integer, Integer> get() {
+      @Override public <K, V> CacheWriter<K, V> create() {
         @SuppressWarnings("unchecked")
-        CacheWriter<Integer, Integer> mock = Mockito.mock(CacheWriter.class);
+        CacheWriter<K, V> mock = Mockito.mock(CacheWriter.class);
         return mock;
       }
     },
     /** A writer that always throws an exception. */
     EXCEPTIONAL {
-      @Override public CacheWriter<Integer, Integer> get() {
-        return new RejectingCacheWriter<Integer, Integer>();
+      @Override public <K, V> CacheWriter<K, V> create() {
+        return new RejectingCacheWriter<K, V>();
       }
     };
+
+    public abstract <K, V> CacheWriter<K, V> create();
   }
 
   /* ---------------- Executor -------------- */
@@ -545,26 +594,26 @@ public @interface CacheSpec {
       new ThreadFactoryBuilder().setDaemon(true).build());
 
   /** The executors that the cache can be configured with. */
-  enum CacheExecutor implements Supplier<Executor> {
+  enum CacheExecutor {
     DEFAULT { // fork-join common pool
-      @Override public Executor get() {
+      @Override public Executor create() {
         // Use with caution as may be unpredictable during tests if awaiting completion
         return null;
       }
     },
     DIRECT {
-      @Override public Executor get() {
+      @Override public Executor create() {
         // Cache implementations must avoid deadlocks by incorrectly assuming async execution
         return new TrackingExecutor(MoreExecutors.newDirectExecutorService());
       }
     },
     THREADED {
-      @Override public Executor get() {
+      @Override public Executor create() {
         return new TrackingExecutor(cachedExecutorService);
       }
     },
     REJECTING {
-      @Override public Executor get() {
+      @Override public Executor create() {
         // Cache implementations must avoid corrupting internal state due to rejections
         return new ForkJoinPool() {
           @Override public void execute(Runnable task) {
@@ -574,8 +623,7 @@ public @interface CacheSpec {
       }
     };
 
-    @Override
-    public abstract Executor get();
+    public abstract Executor create();
   }
 
   /* ---------------- Populated -------------- */

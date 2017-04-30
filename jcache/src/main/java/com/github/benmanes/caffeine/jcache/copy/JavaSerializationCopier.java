@@ -57,7 +57,7 @@ public class JavaSerializationCopier extends AbstractCopier<byte[]> {
     try (ObjectOutputStream output = new ObjectOutputStream(bytes)) {
       output.writeObject(object);
     } catch (IOException e) {
-      throw new UncheckedIOException("Failed to serialize " + e.getClass(), e);
+      throw new UncheckedIOException("Failed to serialize " + object.getClass(), e);
     }
     return bytes.toByteArray();
   }

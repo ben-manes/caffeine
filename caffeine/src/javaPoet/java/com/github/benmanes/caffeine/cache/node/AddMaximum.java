@@ -40,7 +40,7 @@ public final class AddMaximum extends NodeRule {
   }
 
   private void addQueueFlag() {
-    context.nodeSubtype.addField(int.class, "queueType", Modifier.PRIVATE);
+    context.nodeSubtype.addField(int.class, "queueType");
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("getQueueType")
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
         .returns(int.class)
@@ -57,13 +57,13 @@ public final class AddMaximum extends NodeRule {
     if (!context.generateFeatures.contains(Feature.MAXIMUM_WEIGHT)) {
       return;
     }
-    context.nodeSubtype.addField(int.class, "weight", Modifier.PRIVATE)
+    context.nodeSubtype.addField(int.class, "weight")
         .addMethod(newGetter(Strength.STRONG, TypeName.INT, "weight", Visibility.IMMEDIATE))
         .addMethod(newSetter(TypeName.INT, "weight", Visibility.IMMEDIATE));
     context.constructorByKey.addStatement("this.$N = $N", "weight", "weight");
     context.constructorByKeyRef.addStatement("this.$N = $N", "weight", "weight");
 
-    context.nodeSubtype.addField(int.class, "policyWeight", Modifier.PRIVATE)
+    context.nodeSubtype.addField(int.class, "policyWeight")
         .addMethod(newGetter(Strength.STRONG, TypeName.INT, "policyWeight", Visibility.IMMEDIATE))
         .addMethod(newSetter(TypeName.INT, "policyWeight", Visibility.IMMEDIATE));
   }

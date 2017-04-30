@@ -55,10 +55,9 @@ public final class AddKey extends NodeRule {
   }
 
   private FieldSpec newKeyField() {
-    Modifier[] modifiers = { Modifier.PRIVATE, Modifier.VOLATILE };
     FieldSpec.Builder fieldSpec = isStrongKeys()
-        ? FieldSpec.builder(kTypeVar, "key", modifiers)
-        : FieldSpec.builder(keyReferenceType(), "key", modifiers);
+        ? FieldSpec.builder(kTypeVar, "key", Modifier.VOLATILE)
+        : FieldSpec.builder(keyReferenceType(), "key", Modifier.VOLATILE);
     return fieldSpec.build();
   }
 

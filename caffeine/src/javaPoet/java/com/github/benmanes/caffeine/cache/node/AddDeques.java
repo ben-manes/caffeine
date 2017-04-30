@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache.node;
 
 import static com.github.benmanes.caffeine.cache.Specifications.NODE;
 
-import javax.lang.model.element.Modifier;
-
 import com.github.benmanes.caffeine.cache.Feature;
 
 /**
@@ -49,7 +47,7 @@ public final class AddDeques extends NodeRule {
 
   /** Adds a simple field, accessor, and mutator for the variable. */
   private void addFieldAndGetter(String varName) {
-    context.nodeSubtype.addField(NODE, varName, Modifier.PRIVATE)
+    context.nodeSubtype.addField(NODE, varName)
         .addMethod(newGetter(Strength.STRONG, NODE, varName, Visibility.IMMEDIATE))
         .addMethod(newSetter(NODE, varName, Visibility.IMMEDIATE));
   }

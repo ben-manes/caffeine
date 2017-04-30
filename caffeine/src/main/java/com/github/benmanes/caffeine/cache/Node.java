@@ -118,6 +118,39 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
   @GuardedBy("this")
   void die();
 
+  /* ---------------- Variable order -------------- */
+
+  /** Returns the time that this entry was last accessed, in ns. */
+  default long getVariableTime() {
+    return 0L;
+  }
+
+  /**
+   * Sets the variable expiration time in nanoseconds. This update may be set lazily and rely on the
+   * memory fence when the lock is released.
+   */
+  default void setVariableTime(long time) {}
+
+  @GuardedBy("evictionLock")
+  default @Nullable Node<K, V> getPreviousInVariableOrder() {
+    return null;
+  }
+
+  @GuardedBy("evictionLock")
+  default void setPreviousInVariableOrder(@Nullable Node<K, V> prev) {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  default @Nullable Node<K, V> getNextInVariableOrder() {
+    return null;
+  }
+
+  @GuardedBy("evictionLock")
+  default void setNextInVariableOrder(@Nullable Node<K, V> prev) {
+    throw new UnsupportedOperationException();
+  }
+
   /* ---------------- Access order -------------- */
 
   int EDEN = 0;
@@ -172,7 +205,7 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   @Override
   @GuardedBy("evictionLock")
-  default Node<K, V> getPreviousInAccessOrder() {
+  default @Nullable Node<K, V> getPreviousInAccessOrder() {
     return null;
   }
 
@@ -184,7 +217,7 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   @Override
   @GuardedBy("evictionLock")
-  default Node<K, V> getNextInAccessOrder() {
+  default @Nullable Node<K, V> getNextInAccessOrder() {
     return null;
   }
 
@@ -217,7 +250,7 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   @Override
   @GuardedBy("evictionLock")
-  default Node<K, V> getPreviousInWriteOrder() {
+  default @Nullable Node<K, V> getPreviousInWriteOrder() {
     return null;
   }
 
@@ -229,7 +262,7 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   @Override
   @GuardedBy("evictionLock")
-  default Node<K, V> getNextInWriteOrder() {
+  default @Nullable Node<K, V> getNextInWriteOrder() {
     return null;
   }
 

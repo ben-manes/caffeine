@@ -15,9 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.Specifications.NODE;
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
 import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
+import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import javax.lang.model.element.Modifier;
 
@@ -39,9 +41,61 @@ public final class AddExpiration extends NodeRule {
 
   @Override
   protected void execute() {
+    addVariableExpiration();
     addAccessExpiration();
     addWriteExpiration();
     addRefreshExpiration();
+  }
+
+  private void addVariableExpiration() {
+    if (context.generateFeatures.contains(Feature.EXPIRE_ACCESS)) {
+      addLink("previousInVariableOrder", "previousInAccessOrder");
+      addLink("nextInVariableOrder", "nextInAccessOrder");
+      addVariableTime("accessTime");
+    } else if (context.generateFeatures.contains(Feature.EXPIRE_WRITE)) {
+      addLink("previousInVariableOrder", "previousInWriteOrder");
+      addLink("nextInVariableOrder", "nextInWriteOrder");
+      addVariableTime("writeTime");
+    }
+    if (context.parentFeatures.contains(Feature.EXPIRE_ACCESS)
+        && context.parentFeatures.contains(Feature.EXPIRE_WRITE)
+        && context.generateFeatures.contains(Feature.REFRESH_WRITE)) {
+      addLink("previousInVariableOrder", "previousInWriteOrder");
+      addLink("nextInVariableOrder", "nextInWriteOrder");
+      addVariableTime("accessTime");
+    }
+  }
+
+  private void addLink(String method, String varName) {
+    MethodSpec getter = MethodSpec.methodBuilder("get" + capitalize(method))
+        .addModifiers(Modifier.PUBLIC)
+        .addStatement("return $N", varName)
+        .returns(NODE)
+        .build();
+    MethodSpec setter = MethodSpec.methodBuilder("set" + capitalize(method))
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(NODE, varName)
+        .addStatement("this.$N = $N", varName, varName)
+        .build();
+    context.nodeSubtype
+        .addMethod(getter)
+        .addMethod(setter);
+  }
+
+  private void addVariableTime(String varName) {
+    MethodSpec getter = MethodSpec.methodBuilder("getVariableTime")
+        .addModifiers(Modifier.PUBLIC)
+        .addStatement("return $N", varName)
+        .returns(long.class)
+        .build();
+    MethodSpec setter = MethodSpec.methodBuilder("setVariableTime")
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(long.class, varName)
+        .addStatement("this.$N = $N", varName, varName)
+        .build();
+    context.nodeSubtype
+        .addMethod(getter)
+        .addMethod(setter);
   }
 
   private void addAccessExpiration() {
@@ -49,9 +103,8 @@ public final class AddExpiration extends NodeRule {
       return;
     }
     context.nodeSubtype.addField(newFieldOffset(context.className, "accessTime"))
-        .addField(long.class, "accessTime", Modifier.PRIVATE, Modifier.VOLATILE)
-        .addMethod(newGetter(Strength.STRONG, TypeName.LONG,
-            "accessTime", Visibility.LAZY))
+        .addField(long.class, "accessTime", Modifier.VOLATILE)
+        .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.LAZY))
         .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.LAZY));
     addTimeConstructorAssignment(context.constructorByKey, "accessTime");
     addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime");
@@ -61,7 +114,7 @@ public final class AddExpiration extends NodeRule {
     if (!Feature.useWriteTime(context.parentFeatures)
         && Feature.useWriteTime(context.generateFeatures)) {
       context.nodeSubtype.addField(newFieldOffset(context.className, "writeTime"))
-          .addField(long.class, "writeTime", Modifier.PRIVATE, Modifier.VOLATILE)
+          .addField(long.class, "writeTime", Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
       addTimeConstructorAssignment(context.constructorByKey, "writeTime");

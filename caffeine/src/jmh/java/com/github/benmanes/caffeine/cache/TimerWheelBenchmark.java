@@ -56,7 +56,9 @@ public class TimerWheelBenchmark {
     timerWheel = new TimerWheel<>(new MockCache());
     for (int i = 0; i < SIZE; i++) {
       times[i] = ThreadLocalRandom.current().nextLong(UPPERBOUND);
+      timerWheel.schedule(new Timer(times[i]));
     }
+    timerWheel.schedule(timer);
   }
 
   @Benchmark
@@ -66,44 +68,44 @@ public class TimerWheelBenchmark {
 
   @Benchmark
   public void reschedule(ThreadState threadState) {
-    timer.setAccessTime(times[threadState.index++ & MASK]);
+    timer.setVariableTime(times[threadState.index++ & MASK]);
     timerWheel.reschedule(timer);
   }
 
   @Benchmark
   public void expire(ThreadState threadState) {
-    long accessTime = times[threadState.index++ & MASK];
-    timer.setAccessTime(accessTime);
-    timerWheel.nanos = accessTime - DELTA;
+    long time = times[threadState.index++ & MASK];
+    timer.setVariableTime(time);
+    timerWheel.nanos = (time - DELTA);
+    timerWheel.advance(time);
     timerWheel.schedule(timer);
-    timerWheel.advance(accessTime);
   }
 
-  private static final class Timer implements Node<Integer, Integer> {
+  static final class Timer implements Node<Integer, Integer> {
     Node<Integer, Integer> prev;
     Node<Integer, Integer> next;
-    long accessTime;
+    long time;
 
-    Timer(long accessTime) {
-      setAccessTime(accessTime);
+    Timer(long time) {
+      setVariableTime(time);
     }
 
-    @Override public long getAccessTime() {
-      return accessTime;
+    @Override public long getVariableTime() {
+      return time;
     }
-    @Override public void setAccessTime(long accessTime) {
-      this.accessTime = accessTime;
+    @Override public void setVariableTime(long time) {
+      this.time = time;
     }
-    @Override public Node<Integer, Integer> getPreviousInAccessOrder() {
+    @Override public Node<Integer, Integer> getPreviousInVariableOrder() {
       return prev;
     }
-    @Override public void setPreviousInAccessOrder(@Nullable Node<Integer, Integer> prev) {
+    @Override public void setPreviousInVariableOrder(@Nullable Node<Integer, Integer> prev) {
       this.prev = prev;
     }
-    @Override public Node<Integer, Integer> getNextInAccessOrder() {
+    @Override public Node<Integer, Integer> getNextInVariableOrder() {
       return next;
     }
-    @Override public void setNextInAccessOrder(@Nullable Node<Integer, Integer> next) {
+    @Override public void setNextInVariableOrder(@Nullable Node<Integer, Integer> next) {
       this.next = next;
     }
 
@@ -120,7 +122,7 @@ public class TimerWheelBenchmark {
     @Override public void die() {}
   }
 
-  private static final class MockCache extends BoundedLocalCache<Integer, Integer> {
+  static final class MockCache extends BoundedLocalCache<Integer, Integer> {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected MockCache() {

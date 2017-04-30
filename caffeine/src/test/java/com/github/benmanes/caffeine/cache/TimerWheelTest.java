@@ -72,7 +72,7 @@ public final class TimerWheelTest {
     verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
 
     for (Node<?, ?> node : captor.getAllValues()) {
-      assertThat(node.getAccessTime(), is(lessThan(nanos)));
+      assertThat(node.getVariableTime(), is(lessThan(nanos)));
     }
   }
 
@@ -101,7 +101,7 @@ public final class TimerWheelTest {
     verify(cache, times(expired)).evictEntry(any(), any(), anyLong());
 
     for (Node<?, ?> node : captor.getAllValues()) {
-      assertThat(node.getAccessTime(), is(lessThan(nanos)));
+      assertThat(node.getVariableTime(), is(lessThan(nanos)));
     }
     checkTimerWheel(nanos);
   }
@@ -133,9 +133,9 @@ public final class TimerWheelTest {
 
   private LongList getTimers(Node<?, ?> sentinel) {
     LongList timers = new LongArrayList();
-    for (Node<?, ?> node = sentinel.getNextInAccessOrder();
-        node != sentinel; node = node.getNextInAccessOrder()) {
-      timers.add(node.getAccessTime());
+    for (Node<?, ?> node = sentinel.getNextInVariableOrder();
+        node != sentinel; node = node.getNextInVariableOrder()) {
+      timers.add(node.getVariableTime());
     }
     return timers;
   }
@@ -146,11 +146,11 @@ public final class TimerWheelTest {
 
     Timer timer = new Timer(TimeUnit.MINUTES.toNanos(15));
     timerWheel.schedule(timer);
-    Node<?, ?> startBucket = timer.getNextInAccessOrder();
+    Node<?, ?> startBucket = timer.getNextInVariableOrder();
 
-    timer.setAccessTime(TimeUnit.HOURS.toNanos(2));
+    timer.setVariableTime(TimeUnit.HOURS.toNanos(2));
     timerWheel.reschedule(timer);
-    assertThat(timer.getNextInAccessOrder(), is(not(startBucket)));
+    assertThat(timer.getNextInVariableOrder(), is(not(startBucket)));
 
     timerWheel.advance(TimeUnit.DAYS.toNanos(1));
     checkEmpty();
@@ -160,8 +160,8 @@ public final class TimerWheelTest {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         Node<Integer, Integer> sentinel = timerWheel.wheel[i][j];
-        assertThat(sentinel.getNextInAccessOrder(), is(sentinel));
-        assertThat(sentinel.getPreviousInAccessOrder(), is(sentinel));
+        assertThat(sentinel.getNextInVariableOrder(), is(sentinel));
+        assertThat(sentinel.getPreviousInVariableOrder(), is(sentinel));
       }
     }
   }
@@ -171,8 +171,8 @@ public final class TimerWheelTest {
     Timer timer = new Timer(100);
     timerWheel.schedule(timer);
     timerWheel.deschedule(timer);
-    assertThat(timer.getNextInAccessOrder(), is(nullValue()));
-    assertThat(timer.getPreviousInAccessOrder(), is(nullValue()));
+    assertThat(timer.getNextInVariableOrder(), is(nullValue()));
+    assertThat(timer.getPreviousInVariableOrder(), is(nullValue()));
   }
 
   @Test
@@ -200,7 +200,7 @@ public final class TimerWheelTest {
   public void expire_reschedule() {
     when(cache.evictEntry(captor.capture(), any(), anyLong())).thenAnswer(invocation -> {
       Timer timer = (Timer) invocation.getArgument(0);
-      timer.setAccessTime(timerWheel.nanos + 100);
+      timer.setVariableTime(timerWheel.nanos + 100);
       return false;
     });
 
@@ -208,8 +208,8 @@ public final class TimerWheelTest {
     timerWheel.advance(TimerWheel.SPANS[0]);
 
     verify(cache).evictEntry(any(), any(), anyLong());
-    assertThat(captor.getValue().getNextInAccessOrder(), is(not(nullValue())));
-    assertThat(captor.getValue().getPreviousInAccessOrder(), is(not(nullValue())));
+    assertThat(captor.getValue().getNextInVariableOrder(), is(not(nullValue())));
+    assertThat(captor.getValue().getPreviousInVariableOrder(), is(not(nullValue())));
   }
 
   @Test(dataProvider = "cascade")
@@ -241,28 +241,28 @@ public final class TimerWheelTest {
   private static final class Timer implements Node<Integer, Integer> {
     Node<Integer, Integer> prev;
     Node<Integer, Integer> next;
-    long accessTime;
+    long variableTime;
 
     Timer(long accessTime) {
-      setAccessTime(accessTime);
+      setVariableTime(accessTime);
     }
 
-    @Override public long getAccessTime() {
-      return accessTime;
+    @Override public long getVariableTime() {
+      return variableTime;
     }
-    @Override public void setAccessTime(long accessTime) {
-      this.accessTime = accessTime;
+    @Override public void setVariableTime(long variableTime) {
+      this.variableTime = variableTime;
     }
-    @Override public Node<Integer, Integer> getPreviousInAccessOrder() {
+    @Override public Node<Integer, Integer> getPreviousInVariableOrder() {
       return prev;
     }
-    @Override public void setPreviousInAccessOrder(@Nullable Node<Integer, Integer> prev) {
+    @Override public void setPreviousInVariableOrder(@Nullable Node<Integer, Integer> prev) {
       this.prev = prev;
     }
-    @Override public Node<Integer, Integer> getNextInAccessOrder() {
+    @Override public Node<Integer, Integer> getNextInVariableOrder() {
       return next;
     }
-    @Override public void setNextInAccessOrder(@Nullable Node<Integer, Integer> next) {
+    @Override public void setNextInVariableOrder(@Nullable Node<Integer, Integer> next) {
       this.next = next;
     }
 

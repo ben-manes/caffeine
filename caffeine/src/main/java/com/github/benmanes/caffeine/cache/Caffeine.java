@@ -33,6 +33,7 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
+import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.cache.Async.AsyncRemovalListener;
 import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -401,7 +402,7 @@ public final class Caffeine<K, V> {
     Weigher<K1, V1> delegate = isWeighted() && (weigher != Weigher.singletonWeigher())
         ? Weigher.boundedWeigher((Weigher<K1, V1>) weigher)
         : Weigher.singletonWeigher();
-    return (Weigher<K1, V1>) (isAsync ? new AsyncWeigher<>(delegate) : delegate);
+    return isAsync ? (Weigher<K1, V1>) new AsyncWeigher<>(delegate) : delegate;
   }
 
   /**
@@ -591,7 +592,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if expiration was already set
    */
   @Nonnull
-  /* public */ <K1 extends K, V1 extends V> Caffeine<K1, V1> expireAfter(
+  public <K1 extends K, V1 extends V> Caffeine<K1, V1> expireAfter(
       @Nonnull Expiry<? super K1, ? super V1> expiry) {
     requireNonNull(expiry);
     requireState(this.expiry == null, "Expiry was already set to %s", this.expiry);
@@ -611,8 +612,9 @@ public final class Caffeine<K, V> {
   }
 
   @SuppressWarnings("unchecked")
-  Expiry<K, V> getExpiry() {
-    return (expiry == null) ? Expiry.eternalExpiry() : Expiry.boundedExpiry((Expiry<K, V>) expiry);
+  Expiry<K, V> getExpiry(boolean isAsync) {
+    Expiry<K, V> delegate = (expiry == null) ? Expiry.eternalExpiry() : (Expiry<K, V>) expiry;
+    return isAsync ? (Expiry<K, V>) new AsyncExpiry<>(delegate) : delegate;
   }
 
   /**
@@ -673,7 +675,9 @@ public final class Caffeine<K, V> {
 
   @Nonnull
   Ticker getTicker() {
-    return expiresAfterAccess() || expiresAfterWrite() || refreshes() || isRecordingStats()
+    boolean useTicker = expiresVariable() || expiresAfterAccess()
+        || expiresAfterWrite() || refreshes() || isRecordingStats();
+    return useTicker
         ? (ticker == null) ? Ticker.systemTicker() : ticker
         : Ticker.disabledTicker();
   }
@@ -822,6 +826,7 @@ public final class Caffeine<K, V> {
         || (maximumWeight != UNSET_INT)
         || (expireAfterAccessNanos != UNSET_INT)
         || (expireAfterWriteNanos != UNSET_INT)
+        || (expiry != null)
         || (keyStrength != null)
         || (valueStrength != null);
   }

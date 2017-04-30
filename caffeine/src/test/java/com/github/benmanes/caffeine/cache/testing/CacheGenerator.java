@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
@@ -115,6 +116,7 @@ final class CacheGenerator {
         ImmutableSet.copyOf(statistics),
         ImmutableSet.copyOf(cacheSpec.weigher()),
         ImmutableSet.copyOf(cacheSpec.maximumSize()),
+        ImmutableSet.copyOf(cacheSpec.expiry()),
         ImmutableSet.copyOf(cacheSpec.expireAfterAccess()),
         ImmutableSet.copyOf(cacheSpec.expireAfterWrite()),
         ImmutableSet.copyOf(cacheSpec.refreshAfterWrite()),
@@ -150,6 +152,7 @@ final class CacheGenerator {
         (Stats) combination.get(index++),
         (CacheWeigher) combination.get(index++),
         (Maximum) combination.get(index++),
+        (CacheExpiry) combination.get(index++),
         (Expire) combination.get(index++),
         (Expire) combination.get(index++),
         (Expire) combination.get(index++),
@@ -164,7 +167,8 @@ final class CacheGenerator {
         (Compute) combination.get(index++),
         (Loader) combination.get(index++),
         (Writer) combination.get(index++),
-        (Implementation) combination.get(index++));
+        (Implementation) combination.get(index++),
+        cacheSpec);
   }
 
   /** Returns if the context is a viable configuration. */
@@ -176,13 +180,19 @@ final class CacheGenerator {
         && (!context.isAsync() || !context.isLoading());
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
     boolean weigherIncompatible = context.isUnbounded() && context.isWeighted();
-    boolean expirationIncompatible = cacheSpec.requiresExpiration() && !context.expires();
     boolean referenceIncompatible = cacheSpec.requiresWeakOrSoft()
         && (context.isWeakKeys() || context.isWeakValues() || context.isSoftValues());
+    boolean expiryIncompatible = (context.expiryType() != CacheExpiry.DISABLED)
+        && ((context.implementation() != Implementation.Caffeine)
+            || (context.expireAfterAccess() != Expire.DISABLED)
+            || (context.expireAfterWrite() != Expire.DISABLED));
+    boolean expirationIncompatible = (cacheSpec.mustExpiresWithAnyOf().length > 0)
+        && !Arrays.stream(cacheSpec.mustExpiresWithAnyOf()).anyMatch(context::expires);
 
     boolean skip = asyncIncompatible || asyncLoaderIncompatible
         || refreshIncompatible || weigherIncompatible
-        || expirationIncompatible || referenceIncompatible;
+        || expiryIncompatible || expirationIncompatible
+        || referenceIncompatible;
     return !skip;
   }
 

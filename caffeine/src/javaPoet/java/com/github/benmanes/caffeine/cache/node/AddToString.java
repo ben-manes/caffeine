@@ -34,11 +34,12 @@ public final class AddToString extends NodeRule {
   @Override
   protected void execute() {
     String statement = "return String.format(\"%s=[key=%s, value=%s, weight=%d, queueType=%,d, "
-        + "accessTimeNS=%,d, \"\n+ \"writeTimeNS=%,d, prevInAccess=%s, nextInAccess=%s, "
-        + "prevInWrite=%s, nextInWrite=%s]\",\ngetClass().getSimpleName(), getKey(), getValue(), "
-        + "getWeight(), getQueueType(), \ngetAccessTime(), getWriteTime(), "
-        + "getPreviousInAccessOrder() != null,\ngetNextInAccessOrder() != null, "
-        + "getPreviousInWriteOrder() != null,\ngetNextInWriteOrder() != null)";
+        + "accessTimeNS=%,d, \"\n+ \"writeTimeNS=%,d, varTimeNs=%,d, prevInAccess=%s, "
+        + "nextInAccess=%s, prevInWrite=%s, \"\n+ \"nextInWrite=%s]\", getClass().getSimpleName(), "
+        + "getKey(), getValue(), getWeight(), \ngetQueueType(), getAccessTime(), getWriteTime(), "
+        + "getVariableTime(), \ngetPreviousInAccessOrder() != null, "
+        + "getNextInAccessOrder() != null, \ngetPreviousInWriteOrder() != null, "
+        + "getNextInWriteOrder() != null)";
 
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("toString")
         .addModifiers(Modifier.PUBLIC, Modifier.FINAL)

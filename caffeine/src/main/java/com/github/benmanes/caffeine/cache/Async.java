@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class Async {
+  static final long MAXIMUM_EXPIRY = (Long.MAX_VALUE >> 1); // 150 years
 
   private Async() {}
 
@@ -105,6 +106,58 @@ final class Async {
     @Override
     public int weigh(K key, CompletableFuture<V> future) {
       return isReady(future) ? delegate.weigh(key, future.join()) : 0;
+    }
+
+    Object writeReplace() {
+      return delegate;
+    }
+  }
+
+  /**
+   * An expiry for asynchronous computations. When the value is being loaded this expiry returns
+   * {@code Long.MAX_VALUE} to indicate that the entry should not be evicted due to an expiry
+   * constraint. If the value is computed successfully the entry must be reinserted so that the
+   * expiration is updated and the expiration timeouts reflect the value once present. The value
+   * maximum range is reserved to coordinate the asynchronous life cycle.
+   */
+  static final class AsyncExpiry<K, V> implements Expiry<K, CompletableFuture<V>>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    final Expiry<K, V> delegate;
+
+    AsyncExpiry(Expiry<K, V> delegate) {
+      this.delegate = requireNonNull(delegate);
+    }
+
+    @Override
+    public long expireAfterCreate(K key, CompletableFuture<V> future, long currentTime) {
+      if (isReady(future)) {
+        long duration = delegate.expireAfterCreate(key, future.join(), currentTime);
+        return Math.min(duration, MAXIMUM_EXPIRY);
+      }
+      return Long.MAX_VALUE;
+    }
+
+    @Override
+    public long expireAfterUpdate(K key, CompletableFuture<V> future,
+        long currentTime, long currentDuration) {
+      if (isReady(future)) {
+        long duration = (currentDuration > MAXIMUM_EXPIRY)
+            ? delegate.expireAfterCreate(key, future.join(), currentTime)
+            : delegate.expireAfterUpdate(key, future.join(), currentDuration, currentTime);
+        return Math.min(duration, MAXIMUM_EXPIRY);
+      }
+      return currentDuration;
+    }
+
+    @Override
+    public long expireAfterRead(K key, CompletableFuture<V> future,
+        long currentTime, long currentDuration) {
+      if (isReady(future) && (currentDuration > MAXIMUM_EXPIRY)) {
+        long duration = delegate.expireAfterRead(key, future.join(), currentDuration, currentTime);
+        return Math.min(duration, MAXIMUM_EXPIRY);
+      }
+      return currentDuration;
     }
 
     Object writeReplace() {

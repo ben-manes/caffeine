@@ -49,11 +49,23 @@ public final class NodeSelectorCode {
   }
 
   private NodeSelectorCode expires() {
-    block.beginControlFlow("if (builder.expiresAfterAccess() || builder.expiresVariable())")
-            .addStatement("sb.append('A')")
-        .endControlFlow()
-        .beginControlFlow("if (builder.expiresAfterWrite())")
-            .addStatement("sb.append('W')")
+    block
+        .beginControlFlow("if (builder.expiresVariable())")
+            .beginControlFlow("if (builder.refreshes())")
+                .addStatement("sb.append('A')")
+                .beginControlFlow("if (builder.evicts())")
+                    .addStatement("sb.append('W')")
+                .endControlFlow()
+            .nextControlFlow("else")
+                .addStatement("sb.append('W')")
+            .endControlFlow()
+        .nextControlFlow("else")
+            .beginControlFlow("if (builder.expiresAfterAccess())")
+                .addStatement("sb.append('A')")
+            .endControlFlow()
+            .beginControlFlow("if (builder.expiresAfterWrite())")
+                .addStatement("sb.append('W')")
+            .endControlFlow()
         .endControlFlow()
         .beginControlFlow("if (builder.refreshes())")
             .addStatement("sb.append('R')")
