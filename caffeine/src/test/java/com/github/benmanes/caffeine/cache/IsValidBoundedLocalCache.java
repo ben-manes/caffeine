@@ -16,11 +16,14 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -32,6 +35,7 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
+import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
@@ -63,8 +67,10 @@ public final class IsValidBoundedLocalCache<K, V>
 
     drain(cache);
     checkReadBuffer(cache);
-    checkCache(cache, desc);
-    checkEvictionDeque(cache, desc);
+
+    checkCache(cache);
+    checkTimerWheel(cache);
+    checkEvictionDeque(cache);
 
     if (!desc.matches()) {
       throw new AssertionError(desc.getDescription().toString());
@@ -86,7 +92,7 @@ public final class IsValidBoundedLocalCache<K, V>
     });
   }
 
-  private void checkCache(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
+  private void checkCache(BoundedLocalCache<K, V> cache) {
     try {
       if (cache.evictionLock.tryLock(5, TimeUnit.SECONDS)) {
         cache.evictionLock.unlock();
@@ -114,7 +120,37 @@ public final class IsValidBoundedLocalCache<K, V>
     }
   }
 
-  private void checkEvictionDeque(BoundedLocalCache<K, V> cache, DescriptionBuilder desc) {
+  private void checkTimerWheel(BoundedLocalCache<K, V> cache) {
+    if (!cache.expiresVariable()) {
+      return;
+    }
+
+    Set<Node<K, V>> seen = Sets.newIdentityHashSet();
+    for (int i = 0; i < cache.timerWheel().wheel.length; i++) {
+      for (int j = 0; j < cache.timerWheel().wheel[i].length; j++) {
+        Node<K, V> sentinel = cache.timerWheel().wheel[i][j];
+        desc.expectThat("Wrong sentinel prev",
+            sentinel.getPreviousInVariableOrder().getNextInVariableOrder(), sameInstance(sentinel));
+        desc.expectThat("Wrong sentinel next",
+            sentinel.getNextInVariableOrder().getPreviousInVariableOrder(), sameInstance(sentinel));
+        desc.expectThat("Sentinel must be first element", sentinel, instanceOf(Sentinel.class));
+
+        for (Node<K, V> node = sentinel.getNextInVariableOrder();
+            node != sentinel; node = node.getNextInVariableOrder()) {
+          Node<K, V> next = node.getNextInVariableOrder();
+          Node<K, V> prev = node.getPreviousInVariableOrder();
+          long duration = node.getVariableTime() - cache.timerWheel().nanos;
+          desc.expectThat("Expired", duration, greaterThan(0L));
+          desc.expectThat("Loop detected", seen.add(node), is(true));
+          desc.expectThat("Wrong prev", prev.getNextInVariableOrder(), is(sameInstance(node)));
+          desc.expectThat("Wrong next", next.getPreviousInVariableOrder(), is(sameInstance(node)));
+        }
+      }
+    }
+    desc.expectThat("Timers != Entries", seen, hasSize(cache.size()));
+  }
+
+  private void checkEvictionDeque(BoundedLocalCache<K, V> cache) {
     if (cache.evicts()) {
       ImmutableList<LinkedDeque<Node<K, V>>> deques = ImmutableList.of(
           cache.accessOrderEdenDeque(),
