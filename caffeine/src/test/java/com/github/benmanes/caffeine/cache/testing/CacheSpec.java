@@ -17,6 +17,9 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 
 import java.io.ObjectStreamException;
 import java.io.Serializable;
@@ -274,6 +277,12 @@ public @interface CacheSpec {
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
         @SuppressWarnings("unchecked")
         Expiry<K, V> mock = Mockito.mock(Expiry.class);
+        when(mock.expireAfterCreate(any(), any(), anyLong()))
+            .thenReturn(expiryTime.timeNanos());
+        when(mock.expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+            .thenReturn(expiryTime.timeNanos());
+        when(mock.expireAfterRead(any(), any(), anyLong(), anyLong()))
+            .thenReturn(expiryTime.timeNanos());
         return mock;
       }
     },

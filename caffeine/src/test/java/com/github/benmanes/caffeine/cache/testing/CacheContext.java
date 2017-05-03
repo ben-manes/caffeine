@@ -386,6 +386,10 @@ public final class CacheContext {
     return (expiryType != CacheExpiry.DISABLED);
   }
 
+  public Expiry<Integer, Integer> expiry() {
+    return expiry;
+  }
+
   public CacheExpiry expiryType() {
     return expiryType;
   }

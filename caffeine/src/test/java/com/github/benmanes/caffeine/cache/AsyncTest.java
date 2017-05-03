@@ -15,25 +15,35 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Async.MAXIMUM_EXPIRY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.testing.Awaits;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class AsyncTest {
+  private static final long ONE_MINUTE = TimeUnit.MINUTES.toNanos(1);
 
   @Test
   public void reflectivelyConstruct() throws Exception {
@@ -97,6 +107,48 @@ public final class AsyncTest {
     assertThat(Async.getWhenSuccessful(future), is(nullValue()));
   }
 
+  @Test
+  public void asyncExpiry_pending() {
+    AsyncExpiry<Integer, Integer> expiry = makeAsyncExpiry(ONE_MINUTE, ONE_MINUTE, ONE_MINUTE);
+    CompletableFuture<Integer> future = new CompletableFuture<Integer>();
+
+    assertThat(expiry.expireAfterCreate(0, future, 1L), is(Long.MAX_VALUE));
+    verify(expiry.delegate, never()).expireAfterCreate(any(), any(), anyLong());
+
+    assertThat(expiry.expireAfterUpdate(0, future, 1L, 2L), is(Long.MAX_VALUE));
+    verify(expiry.delegate, never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+
+    assertThat(expiry.expireAfterRead(0, future, 1L, 2L), is(Long.MAX_VALUE));
+    verify(expiry.delegate, never()).expireAfterRead(any(), any(), anyLong(), anyLong());
+  }
+
+  @Test
+  public void asyncExpiry_completed() {
+    AsyncExpiry<Integer, Integer> expiry = makeAsyncExpiry(
+        ONE_MINUTE, 2 * ONE_MINUTE, 3 * ONE_MINUTE);
+    CompletableFuture<Integer> future = CompletableFuture.completedFuture(100);
+
+    assertThat(expiry.expireAfterCreate(0, future, 1L), is(ONE_MINUTE));
+    verify(expiry.delegate).expireAfterCreate(0, 100, 1L);
+
+    assertThat(expiry.expireAfterUpdate(0, future, 1L, 2L), is(2 * ONE_MINUTE));
+    verify(expiry.delegate).expireAfterUpdate(0, 100, 1L, 2L);
+
+    assertThat(expiry.expireAfterRead(0, future, 1L, 2L), is(3 * ONE_MINUTE));
+    verify(expiry.delegate).expireAfterRead(0, 100, 1L, 2L);
+  }
+
+  @Test
+  public void asyncExpiry_bounded() {
+    AsyncExpiry<Integer, Integer> expiry = makeAsyncExpiry(
+        Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
+    CompletableFuture<Integer> future = CompletableFuture.completedFuture(100);
+
+    assertThat(expiry.expireAfterCreate(0, future, 1L), is(MAXIMUM_EXPIRY));
+    assertThat(expiry.expireAfterUpdate(0, future, 1L, 2L), is(MAXIMUM_EXPIRY));
+    assertThat(expiry.expireAfterRead(0, future, 1L, 2L), is(MAXIMUM_EXPIRY));
+  }
+
   @DataProvider(name = "successful")
   public Object[][] providesSuccessful() {
     return new Object[][] {{ CompletableFuture.completedFuture(1) }};
@@ -110,6 +162,15 @@ public final class AsyncTest {
         { newFailedFuture(new InterruptedException()) },
         { newFailedFuture(new IllegalStateException()) },
     };
+  }
+
+  private static <K, V> AsyncExpiry<K, V> makeAsyncExpiry(long create, long update, long read) {
+    @SuppressWarnings("unchecked")
+    Expiry<K, V> mock = Mockito.mock(Expiry.class);
+    when(mock.expireAfterCreate(any(), any(), anyLong())).thenReturn(create);
+    when(mock.expireAfterUpdate(any(), any(), anyLong(), anyLong())).thenReturn(update);
+    when(mock.expireAfterRead(any(), any(), anyLong(), anyLong())).thenReturn(read);
+    return new AsyncExpiry<>(mock);
   }
 
   private static CompletableFuture<Integer> newFailedFuture(Exception e) {

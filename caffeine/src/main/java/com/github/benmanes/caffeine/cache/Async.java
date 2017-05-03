@@ -144,20 +144,20 @@ final class Async {
       if (isReady(future)) {
         long duration = (currentDuration > MAXIMUM_EXPIRY)
             ? delegate.expireAfterCreate(key, future.join(), currentTime)
-            : delegate.expireAfterUpdate(key, future.join(), currentDuration, currentTime);
+            : delegate.expireAfterUpdate(key, future.join(), currentTime, currentDuration);
         return Math.min(duration, MAXIMUM_EXPIRY);
       }
-      return currentDuration;
+      return Long.MAX_VALUE;
     }
 
     @Override
     public long expireAfterRead(K key, CompletableFuture<V> future,
         long currentTime, long currentDuration) {
-      if (isReady(future) && (currentDuration > MAXIMUM_EXPIRY)) {
-        long duration = delegate.expireAfterRead(key, future.join(), currentDuration, currentTime);
+      if (isReady(future)) {
+        long duration = delegate.expireAfterRead(key, future.join(), currentTime, currentDuration);
         return Math.min(duration, MAXIMUM_EXPIRY);
       }
-      return currentDuration;
+      return Long.MAX_VALUE;
     }
 
     Object writeReplace() {

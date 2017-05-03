@@ -84,6 +84,22 @@ public interface Policy<K, V> {
   Optional<Expiration<K, V>> expireAfterWrite();
 
   /**
+   * Returns access to perform operations based on the variable expiration policy. This policy
+   * determines that an entry should be automatically removed from the cache once a per-entry
+   * duration has elapsed.
+   * <p>
+   * If the cache was not constructed with variable expiration or the implementation does not
+   * support these operations, an empty {@link Optional} is returned.
+   *
+   * @return access to low-level operations for this cache if a variable expiration policy is used
+   */
+  @Nonnull
+  default Optional<VarExpiration<K, V>> expireVariably() {
+    // This method will be abstract in version 3.0.0
+    return Optional.empty();
+  }
+
+  /**
    * Returns access to perform operations based on the time-to-live refresh policy. This policy
    * determines that an entry should be automatically reloaded once a fixed duration has elapsed
    * after the entry's creation, or the most recent replacement of its value.
@@ -187,8 +203,8 @@ public interface Policy<K, V> {
     Map<K, V> hottest(@Nonnegative int limit);
   }
 
-  /** The low-level operations for a cache with a expiration policy. */
-  interface Expiration<K, V> {
+  /** The low-level operations for a cache with a fixed expiration policy. */
+  interface Expiration<K, V> { // To be renamed FixedExpiration in version 3.0.0
 
     /**
      * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
@@ -219,13 +235,74 @@ public interface Policy<K, V> {
 
     /**
      * Specifies that each entry should be automatically removed from the cache once a fixed
-     * duration has elapsed based. The expiration policy determines when the entry's age is reset.
+     * duration has elapsed. The expiration policy determines when the entry's age is reset.
      *
      * @param duration the length of time after which an entry should be automatically removed
      * @param unit the unit that {@code duration} is expressed in
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     void setExpiresAfter(@Nonnegative long duration, @Nonnull TimeUnit unit);
+
+    /**
+     * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
+     * order of iteration is from the entries most likely to expire (oldest) to the entries least
+     * likely to expire (youngest). This order is determined by the expiration policy's best guess
+     * at the time of creating this snapshot view.
+     * <p>
+     * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation. Because of the
+     * asynchronous nature of the page replacement policy, determining the retention ordering
+     * requires a traversal of the entries.
+     *
+     * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
+     *        the limit)
+     * @return a snapshot view of the cache from oldest entry to the youngest
+     */
+    @Nonnull
+    Map<K, V> oldest(@Nonnegative int limit);
+
+    /**
+     * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
+     * order of iteration is from the entries least likely to expire (youngest) to the entries most
+     * likely to expire (oldest). This order is determined by the expiration policy's best guess at
+     * the time of creating this snapshot view.
+     * <p>
+     * Beware that obtaining the mappings is <em>NOT</em> a constant-time operation. Because of the
+     * asynchronous nature of the page replacement policy, determining the retention ordering
+     * requires a traversal of the entries.
+     *
+     * @param limit the maximum size of the returned map (use {@link Integer#MAX_VALUE} to disregard
+     *        the limit)
+     * @return a snapshot view of the cache from youngest entry to the oldest
+     */
+    @Nonnull
+    Map<K, V> youngest(@Nonnegative int limit);
+  }
+
+  /** The low-level operations for a cache with a variable expiration policy. */
+  interface VarExpiration<K, V> {
+
+    /**
+     * Returns the duration until the entry should be automatically removed. The expiration policy
+     * determines when the entry's duration is reset.
+     *
+     * @param key the key for the entry being queried
+     * @param unit the unit that {@code age} is expressed in
+     * @return the duration if the entry is present in the cache
+     */
+    @Nonnull
+    OptionalLong getExpiresAfter(@Nonnull K key, @Nonnull TimeUnit unit);
+
+    /**
+     * Specifies that the entry should be automatically removed from the cache once the duration has
+     * elapsed. The expiration policy determines when the entry's age is reset.
+     *
+     * @param key the key for the entry being set
+     * @param duration the length of time from now when the entry should be automatically removed
+     * @param unit the unit that {@code duration} is expressed in
+     * @throws IllegalArgumentException if {@code duration} is negative
+     * @throws NullPointerException if the unit is null
+     */
+    void setExpiresAfter(@Nonnull K key, @Nonnegative long duration, @Nonnull TimeUnit unit);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The

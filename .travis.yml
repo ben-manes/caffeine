@@ -20,7 +20,7 @@ script:
  - sh -c 'cd examples/write-behind-rxjava && mvn test'
 
 after_success:
-- ./gradlew coveralls uploadArchives
+- ./gradlew coveralls uploadArchives -x test
 
 matrix:
   fast_finish: true
