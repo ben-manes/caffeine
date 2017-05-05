@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
@@ -28,20 +29,27 @@ import static org.mockito.Mockito.when;
 
 import java.lang.ref.ReferenceQueue;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import javax.annotation.Nullable;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
@@ -51,9 +59,9 @@ import it.unimi.dsi.fastutil.longs.LongList;
  */
 @Test(singleThreaded = true)
 public final class TimerWheelTest {
-  TimerWheel<Integer, Integer> timerWheel;
-  @Mock BoundedLocalCache<Integer, Integer> cache;
-  @Captor ArgumentCaptor<Node<Integer, Integer>> captor;
+  TimerWheel<Long, Long> timerWheel;
+  @Mock BoundedLocalCache<Long, Long> cache;
+  @Captor ArgumentCaptor<Node<Long, Long>> captor;
 
   @BeforeMethod
   public void beforeMethod() {
@@ -159,7 +167,7 @@ public final class TimerWheelTest {
   private void checkEmpty() {
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
-        Node<Integer, Integer> sentinel = timerWheel.wheel[i][j];
+        Node<Long, Long> sentinel = timerWheel.wheel[i][j];
         assertThat(sentinel.getNextInVariableOrder(), is(sentinel));
         assertThat(sentinel.getPreviousInVariableOrder(), is(sentinel));
       }
@@ -238,9 +246,43 @@ public final class TimerWheelTest {
     return args.iterator();
   }
 
-  private static final class Timer implements Node<Integer, Integer> {
-    Node<Integer, Integer> prev;
-    Node<Integer, Integer> next;
+  @Test(dataProvider = "snapshot")
+  public void snapshot(boolean ascending, int limit, long nanos, Function<Long, Long> transformer) {
+    int count = 21;
+    timerWheel.nanos = nanos;
+    int expected = Math.min(limit, count);
+    Comparator<Long> order = ascending ? Comparator.naturalOrder() : Comparator.reverseOrder();
+    List<Long> times = IntStream.range(0, count).mapToLong(i -> {
+      long time = nanos + TimeUnit.SECONDS.toNanos(2 << i);
+      timerWheel.schedule(new Timer(time));
+      return time;
+    }).boxed().sorted(order).collect(toList()).subList(0, expected);
+
+    when(transformer.apply(anyLong())).thenAnswer(invocation -> invocation.getArgument(0));
+    assertThat(snapshot(ascending, limit, transformer), is(times));
+    verify(transformer, times(expected)).apply(anyLong());
+  }
+
+  private List<Long> snapshot(boolean ascending, int limit, Function<Long, Long> transformer) {
+    return ImmutableList.copyOf(timerWheel.snapshot(ascending, limit, transformer).keySet());
+  }
+
+  @DataProvider(name="snapshot")
+  public Iterator<Object[]> providesSnaphot() {
+    List<Object[]> scenarios = new ArrayList<>();
+    for (long nanos : new long[] {0L, System.nanoTime() }) {
+      for (int limit : new int[] { 10, 100 }) {
+        scenarios.addAll(Arrays.asList(
+            new Object[] { /* ascending */ true, limit, nanos, Mockito.mock(Function.class) },
+            new Object[] { /* ascending */ false, limit, nanos, Mockito.mock(Function.class) }));
+      }
+    }
+    return scenarios.iterator();
+  }
+
+  private static final class Timer implements Node<Long, Long> {
+    Node<Long, Long> prev;
+    Node<Long, Long> next;
     long variableTime;
 
     Timer(long accessTime) {
@@ -253,26 +295,26 @@ public final class TimerWheelTest {
     @Override public void setVariableTime(long variableTime) {
       this.variableTime = variableTime;
     }
-    @Override public Node<Integer, Integer> getPreviousInVariableOrder() {
+    @Override public Node<Long, Long> getPreviousInVariableOrder() {
       return prev;
     }
-    @Override public void setPreviousInVariableOrder(@Nullable Node<Integer, Integer> prev) {
+    @Override public void setPreviousInVariableOrder(@Nullable Node<Long, Long> prev) {
       this.prev = prev;
     }
-    @Override public Node<Integer, Integer> getNextInVariableOrder() {
+    @Override public Node<Long, Long> getNextInVariableOrder() {
       return next;
     }
-    @Override public void setNextInVariableOrder(@Nullable Node<Integer, Integer> next) {
+    @Override public void setNextInVariableOrder(@Nullable Node<Long, Long> next) {
       this.next = next;
     }
 
-    @Override public Integer getKey() { return null; }
+    @Override public Long getKey() { return variableTime; }
     @Override public Object getKeyReference() { return null; }
-    @Override public Integer getValue() { return null; }
+    @Override public Long getValue() { return variableTime; }
     @Override public Object getValueReference() { return null; }
-    @Override public void setValue(Integer value, ReferenceQueue<Integer> referenceQueue) {}
+    @Override public void setValue(Long value, ReferenceQueue<Long> referenceQueue) {}
     @Override public boolean containsValue(Object value) { return false; }
-    @Override public boolean isAlive() { return false; }
+    @Override public boolean isAlive() { return true; }
     @Override public boolean isRetired() { return false; }
     @Override public boolean isDead() { return false; }
     @Override public void retire() {}

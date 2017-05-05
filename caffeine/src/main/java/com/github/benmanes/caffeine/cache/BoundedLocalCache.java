@@ -867,7 +867,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     K key;
     V oldValue;
     long oldWriteTime = node.getWriteTime();
-    long refreshWriteTime = isAsync ? Long.MAX_VALUE : now;
+    long refreshWriteTime = isAsync ? (now + Async.MAXIMUM_EXPIRY) : now;
     if (((now - oldWriteTime) > refreshAfterWriteNanos())
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
         && node.casWriteTime(oldWriteTime, refreshWriteTime)) {
@@ -1331,18 +1331,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         }
       }
 
-      // Ensure that in-flight async computation cannot expire
+      // Ensure that in-flight async computation cannot expire (reset on a completion callback)
       if (isComputingAsync(node)) {
-        CompletableFuture<?> future = (CompletableFuture<?>) node.getValue();
-        if (future != null) {
-          node.setVariableTime(Long.MAX_VALUE);
-          setAccessTime(node, Long.MAX_VALUE);
-          setWriteTime(node, Long.MAX_VALUE);
-          future.thenRun(() -> {
-            long now = expirationTicker().read();
-            setAccessTime(node, now);
-            setWriteTime(node, now);
-          });
+        synchronized (node) {
+          if (!Async.isReady((CompletableFuture<?>) node.getValue())) {
+            long expirationTime = expirationTicker().read() + Async.MAXIMUM_EXPIRY;
+            setWriteTime(node, expirationTime);
+            setAccessTime(node, expirationTime);
+            setVariableTime(node, expirationTime);
+          }
         }
       }
     }
@@ -1548,9 +1545,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @SuppressWarnings("unchecked")
     K castedKey = (K) key;
     V value = node.getValue();
-    setVariableTime(node, expireAfterRead(node, castedKey, value, now));
-    setAccessTime(node, now);
 
+    if (!isComputingAsync(node)) {
+      setVariableTime(node, expireAfterRead(node, castedKey, value, now));
+      setAccessTime(node, now);
+    }
     afterRead(node, now, recordStats);
     return value;
   }
@@ -1590,8 +1589,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         K castedKey = (K) entry.getKey();
         @SuppressWarnings("unchecked")
         V castedValue = (V) entry.getValue();
-        setVariableTime(node, expireAfterRead(node, castedKey, castedValue, now));
-        setAccessTime(node, now);
+        if (!isComputingAsync(node)) {
+          setVariableTime(node, expireAfterRead(node, castedKey, castedValue, now));
+          setAccessTime(node, now);
+        }
 
         afterRead(node, now, /* recordHit */ false);
       }
@@ -2006,8 +2007,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (node != null) {
       V value = node.getValue();
       if ((value != null) && !hasExpired(node, now)) {
-        setVariableTime(node, expireAfterRead(node, key, value, now));
-        setAccessTime(node, now);
+        if (!isComputingAsync(node)) {
+          setVariableTime(node, expireAfterRead(node, key, value, now));
+          setAccessTime(node, now);
+        }
 
         afterRead(node, now, /* recordHit */ true);
         return value;
@@ -2092,8 +2095,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       statsCounter().recordEviction(weight[0]);
     }
     if (newValue[0] == null) {
-      setVariableTime(node, expireAfterRead(node, key, oldValue[0], now));
-      setAccessTime(node, now);
+      if (!isComputingAsync(node)) {
+        setVariableTime(node, expireAfterRead(node, key, oldValue[0], now));
+        setAccessTime(node, now);
+      }
 
       afterRead(node, now, /* recordHit */ true);
       return oldValue[0];
@@ -2269,8 +2274,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         afterWrite(node, new UpdateTask(node, weightedDifference), now);
       } else {
         if (cause[0] == null) {
-          setVariableTime(node, expireAfterRead(node, key, newValue[0], now));
-          setAccessTime(node, now);
+          if (!isComputingAsync(node)) {
+            setVariableTime(node, expireAfterRead(node, key, newValue[0], now));
+            setAccessTime(node, now);
+          }
         } else if (cause[0] == RemovalCause.COLLECTED) {
           scheduleDrainBuffers();
         }
@@ -2327,7 +2334,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return PeekingIterator.concat(primary, accessOrderProtectedDeque().iterator());
       }
     };
-    return snapshot(iteratorSupplier, transformer, limit);
+    return fixedSnapshot(iteratorSupplier, limit, transformer);
   }
 
   /**
@@ -2345,7 +2352,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> oldest
           ? accessOrderEdenDeque().iterator()
           : accessOrderEdenDeque().descendingIterator();
-      return snapshot(iteratorSupplier, transformer, limit);
+      return fixedSnapshot(iteratorSupplier, limit, transformer);
     }
 
     Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> {
@@ -2364,7 +2371,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return PeekingIterator.comparing(
             PeekingIterator.comparing(first, second, comparator), third, comparator);
     };
-    return snapshot(iteratorSupplier, transformer, limit);
+    return fixedSnapshot(iteratorSupplier, limit, transformer);
   }
 
   /**
@@ -2381,7 +2388,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> oldest
         ? writeOrderDeque().iterator()
         : writeOrderDeque().descendingIterator();
-    return snapshot(iteratorSupplier, transformer, limit);
+    return fixedSnapshot(iteratorSupplier, limit, transformer);
   }
 
   /**
@@ -2393,26 +2400,45 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param transformer a function that unwraps the value
    * @return an unmodifiable snapshot in the iterator's order
    */
-  Map<K, V> snapshot(Supplier<Iterator<Node<K, V>>> iteratorSupplier,
-      Function<V, V> transformer, int limit) {
+  Map<K, V> fixedSnapshot(Supplier<Iterator<Node<K, V>>> iteratorSupplier,
+      int limit, Function<V, V> transformer) {
     requireArgument(limit >= 0);
     evictionLock.lock();
     try {
       maintenance(/* ignored */ null);
 
-      int initialCapacity =
-          isWeighted() ? 16 : Math.min(limit, evicts() ? (int) adjustedWeightedSize() : size());
+      int initialCapacity = Math.min(limit, size());
       Iterator<Node<K, V>> iterator = iteratorSupplier.get();
       Map<K, V> map = new LinkedHashMap<>(initialCapacity);
       while ((map.size() < limit) && iterator.hasNext()) {
         Node<K, V> node = iterator.next();
         K key = node.getKey();
-        V value = node.getValue();
+        V value = transformer.apply(node.getValue());
         if ((key != null) && (value != null) && node.isAlive()) {
-          map.put(key, transformer.apply(value));
+          map.put(key, value);
         }
       }
       return Collections.unmodifiableMap(map);
+    } finally {
+      evictionLock.unlock();
+    }
+  }
+
+  /**
+   * Returns an unmodifiable snapshot map roughly ordered by the expiration time. The wheels are
+   * evaluated in order, but the timers that fall within the bucket's range are not sorted. Beware
+   * that obtaining the mappings is <em>NOT</em> a constant-time operation.
+   *
+   * @param ascending the direction
+   * @param limit the maximum number of entries
+   * @param transformer a function that unwraps the value
+   * @return an unmodifiable snapshot in the desired order
+   */
+  Map<K, V> variableSnapshot(boolean ascending, int limit, Function<V, V> transformer) {
+    evictionLock.lock();
+    try {
+      maintenance(/* ignored */ null);
+      return timerWheel().snapshot(ascending, limit, transformer);
     } finally {
       evictionLock.unlock();
     }
@@ -3040,6 +3066,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Optional<Expiration<K, V>> refreshes;
     Optional<Expiration<K, V>> afterWrite;
     Optional<Expiration<K, V>> afterAccess;
+    Optional<VarExpiration<K, V>> variable;
 
     BoundedPolicy(BoundedLocalCache<K, V> cache, Function<V, V> transformer, boolean isWeighted) {
       this.transformer = transformer;
@@ -3071,8 +3098,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           ? (afterWrite = Optional.of(new BoundedExpireAfterWrite()))
           : afterWrite;
     }
-    @Override
-    public Optional<Expiration<K, V>> refreshAfterWrite() {
+    @Override public Optional<VarExpiration<K, V>> expireVariably() {
+      if (!cache.expiresVariable()) {
+        return Optional.empty();
+      }
+      return (variable == null)
+          ? (variable = Optional.of(new BoundedVarExpiration()))
+          : variable;
+    }
+    @Override public Optional<Expiration<K, V>> refreshAfterWrite() {
       if (!cache.refreshAfterWrite()) {
         return Optional.empty();
       }
@@ -3189,7 +3223,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
     }
 
-    final class BoundedExpireVariably implements VarExpiration<K, V> {
+    final class BoundedVarExpiration implements VarExpiration<K, V> {
       @Override public OptionalLong getExpiresAfter(K key, TimeUnit unit) {
         requireNonNull(key);
         requireNonNull(unit);
@@ -3212,11 +3246,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           node.setVariableTime(unit.convert(duration, TimeUnit.NANOSECONDS));
         }
       }
-      @Override public Map<K, V> oldest(int limit) {
-        throw new UnsupportedOperationException();
-      }
       @Override public Map<K, V> youngest(int limit) {
-        throw new UnsupportedOperationException();
+        return cache.variableSnapshot(/* ascending */ true, limit, transformer);
+      }
+      @Override public Map<K, V> oldest(int limit) {
+        return cache.variableSnapshot(/* ascending */ false, limit, transformer);
       }
     }
 
@@ -3258,7 +3292,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getWriteTime);
         Iterator<Node<K, V>> iterator = cache.data.values().stream().parallel().sorted(
             ascending ? comparator : comparator.reversed()).limit(limit).iterator();
-        return cache.snapshot(() -> iterator, transformer, limit);
+        return cache.fixedSnapshot(() -> iterator, limit, transformer);
       }
     }
   }

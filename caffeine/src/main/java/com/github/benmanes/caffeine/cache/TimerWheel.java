@@ -15,12 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.ReferenceQueue;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -47,12 +53,13 @@ final class TimerWheel<K, V> {
    * http://www.cs.columbia.edu/~nahum/w6998/papers/ton97-timing-wheels.pdf
    */
 
-  static final int[] BUCKETS = { 64, 64, 32, 4 };
+  static final int[] BUCKETS = { 64, 64, 32, 4, 1 };
   static final long[] SPANS = {
       ceilingPowerOfTwo(TimeUnit.SECONDS.toNanos(1)), // 1.07s
       ceilingPowerOfTwo(TimeUnit.MINUTES.toNanos(1)), // 1.14m
       ceilingPowerOfTwo(TimeUnit.HOURS.toNanos(1)),   // 1.22h
       ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)),    // 1.63d
+      BUCKETS[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)), // 6.5d
       BUCKETS[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)), // 6.5d
   };
   static final long[] SHIFT = {
@@ -60,6 +67,7 @@ final class TimerWheel<K, V> {
       Long.SIZE - Long.numberOfLeadingZeros(SPANS[1] - 1),
       Long.SIZE - Long.numberOfLeadingZeros(SPANS[2] - 1),
       Long.SIZE - Long.numberOfLeadingZeros(SPANS[3] - 1),
+      Long.SIZE - Long.numberOfLeadingZeros(SPANS[4] - 1),
   };
 
   final BoundedLocalCache<K, V> cache;
@@ -198,20 +206,15 @@ final class TimerWheel<K, V> {
    */
   Node<K, V> findBucket(long time) {
     long duration = time - nanos;
-    for (int i = 0; i < wheel.length; i++) {
+    int length = wheel.length - 1;
+    for (int i = 0; i < length; i++) {
       if (duration < SPANS[i + 1]) {
         int ticks = (int) (time >> SHIFT[i]);
         int index = ticks & (wheel[i].length - 1);
         return wheel[i][index];
       }
     }
-
-    // Add to the last timer bucket
-    int lastWheel = wheel.length - 1;
-    int buckets = wheel[lastWheel].length - 1;
-    int ticks = (int) (nanos >> SHIFT[lastWheel]) - 1;
-    int index = (ticks & buckets);
-    return wheel[lastWheel][index];
+    return wheel[length][0];
   }
 
   /** Adds the entry at the tail of the bucket's list. */
@@ -233,18 +236,65 @@ final class TimerWheel<K, V> {
     }
   }
 
+  /**
+   * Returns an unmodifiable snapshot map roughly ordered by the expiration time. The wheels are
+   * evaluated in order, but the timers that fall within the bucket's range are not sorted. Beware
+   * that obtaining the mappings is <em>NOT</em> a constant-time operation.
+   *
+   * @param ascending the direction
+   * @param limit the maximum number of entries
+   * @param transformer a function that unwraps the value
+   * @return an unmodifiable snapshot in the desired order
+   */
+  public Map<K, V> snapshot(boolean ascending, int limit, Function<V, V> transformer) {
+    requireArgument(limit >= 0);
+
+    Map<K, V> map = new LinkedHashMap<>(Math.min(limit, cache.size()));
+    int startLevel = ascending ? 0 : wheel.length - 1;
+    for (int i = 0; i < wheel.length; i++) {
+      int indexOffset = ascending ? i : -i;
+      int index = startLevel + indexOffset;
+
+      int ticks = (int) (nanos >> SHIFT[index]);
+      int bucketMask = (wheel[index].length - 1);
+      int startBucket = (ticks & bucketMask) + (ascending ? 1 : 0);
+      for (int j = 0; j < wheel[index].length; j++) {
+        int bucketOffset = ascending ? j : -j;
+        Node<K, V> sentinel = wheel[index][(startBucket + bucketOffset) & bucketMask];
+
+        for (Node<K, V> node = traverse(ascending, sentinel);
+            node != sentinel; node = traverse(ascending, node)) {
+          if (map.size() >= limit) {
+            break;
+          }
+
+          K key = node.getKey();
+          V value = transformer.apply(node.getValue());
+          if ((key != null) && (value != null) && node.isAlive()) {
+            map.put(key, value);
+          }
+        }
+      }
+    }
+    return Collections.unmodifiableMap(map);
+  }
+
+  static <K, V> Node<K, V> traverse(boolean ascending, Node<K, V> node) {
+    return ascending ? node.getNextInVariableOrder() : node.getPreviousInVariableOrder();
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
     for (int i = 0; i < wheel.length; i++) {
-      Map<Integer, Integer> buckets = new TreeMap<>();
+      Map<Integer, List<K>> buckets = new TreeMap<>();
       for (int j = 0; j < wheel[i].length; j++) {
-        int events = 0;
+        List<K> events = new ArrayList<>();
         for (Node<K, V> node = wheel[i][j].getNextInVariableOrder();
             node != wheel[i][j]; node = node.getNextInVariableOrder()) {
-          events++;
+          events.add(node.getKey());
         }
-        if (events > 0) {
+        if (!events.isEmpty()) {
           buckets.put(j, events);
         }
       }
