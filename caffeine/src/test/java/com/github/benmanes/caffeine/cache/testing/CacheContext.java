@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -74,8 +73,6 @@ import com.google.common.testing.FakeTicker;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheContext {
-  private static final long START_TIME = System.nanoTime() - TimeUnit.DAYS.toNanos(1);
-
   final RemovalListener<Integer, Integer> removalListener;
   final CacheWriter<Integer, Integer> cacheWriter;
   final InitialCapacity initialCapacity;
@@ -145,7 +142,7 @@ public final class CacheContext {
     this.isAsyncLoading = isAsyncLoading;
     this.writer = requireNonNull(writer);
     this.cacheWriter = writer.create();
-    this.ticker = new SerializableFakeTicker().advance(START_TIME);
+    this.ticker = new SerializableFakeTicker();
     this.implementation = requireNonNull(implementation);
     this.original = new LinkedHashMap<>();
     this.initialSize = -1;

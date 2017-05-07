@@ -65,35 +65,4 @@ public interface Expiry<K, V> {
    * @return the length of time before the entry expires, in nanoseconds
    */
   long expireAfterRead(K key, V value, long currentTime, long currentDuration);
-
-  /**
-   * Returns an expiry where entries never expire.
-   *
-   * @param <K> the type of keys
-   * @param <V> the type of values
-   * @return an expiry where entries never expire
-   */
-  @SuppressWarnings("unchecked")
-  static <K, V> Expiry<K, V> eternalExpiry() {
-    return (Expiry<K, V>) EternalExpiry.INSTANCE;
-  }
-}
-
-enum EternalExpiry implements Expiry<Object, Object> {
-  INSTANCE;
-
-  @Override
-  public long expireAfterCreate(Object key, Object value, long currentTime) {
-    return Long.MAX_VALUE;
-  }
-
-  @Override
-  public long expireAfterUpdate(Object key, Object value, long currentTime, long currentDuration) {
-    return Long.MAX_VALUE;
-  }
-
-  @Override
-  public long expireAfterRead(Object key, Object value, long currentTime, long currentDuration) {
-    return Long.MAX_VALUE;
-  }
 }

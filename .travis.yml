@@ -13,9 +13,9 @@ before_install:
 
 script:
  - ./gradlew findbugsMain pmdMain -Dfindbugs -Dpmd
- - ./gradlew -Dscan check -x :caffeine:slowCaffeineTest -x :caffeine:slowGuavaTest
- - travis_wait ./gradlew -Dscan :caffeine:slowCaffeineTest
- - travis_wait ./gradlew -Dscan :caffeine:slowGuavaTest
+ - ./gradlew --scan check -x :caffeine:slowCaffeineTest -x :caffeine:slowGuavaTest
+ - travis_wait ./gradlew --scan :caffeine:slowCaffeineTest
+ - travis_wait ./gradlew --scan :caffeine:slowGuavaTest
  - sh -c 'cd examples/stats-metrics && ./gradlew test'
  - sh -c 'cd examples/write-behind-rxjava && mvn test'
 

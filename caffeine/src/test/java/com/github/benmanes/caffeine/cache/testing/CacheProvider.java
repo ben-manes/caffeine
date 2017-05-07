@@ -108,6 +108,8 @@ public final class CacheProvider {
           params[i] = cache.policy().eviction().get();
         } else if (clazz.isAssignableFrom(Policy.Expiration.class)) {
           params[i] = expirationPolicy(parameters[i], cache);
+        } else if (clazz.isAssignableFrom(Policy.VarExpiration.class)) {
+          params[i] = cache.policy().expireVariably().get();
         }
         if (params[i] == null) {
           checkNotNull(params[i], "Unknown parameter type: %s", clazz);
@@ -117,7 +119,7 @@ public final class CacheProvider {
     }).filter(Objects::nonNull).iterator();
   }
 
-  /** Returns the expiration policy for the given parameter. */
+  /** Returns the fixed expiration policy for the given parameter. */
   private static Policy.Expiration<Integer, Integer> expirationPolicy(
       Parameter parameter, Cache<Integer, Integer> cache) {
     if (parameter.isAnnotationPresent(ExpireAfterAccess.class)) {

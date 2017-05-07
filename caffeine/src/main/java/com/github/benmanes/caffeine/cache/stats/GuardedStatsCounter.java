@@ -76,7 +76,7 @@ final class GuardedStatsCounter implements StatsCounter {
   @SuppressWarnings("deprecation")
   public void recordEviction() {
     try {
-      delegate.recordEviction(0);
+      delegate.recordEviction();
     } catch (Throwable t) {
       logger.log(Level.WARNING, "Exception thrown by stats counter", t);
     }

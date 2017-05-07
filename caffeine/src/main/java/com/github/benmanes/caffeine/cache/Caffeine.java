@@ -588,6 +588,8 @@ public final class Caffeine<K, V> {
    * described in the class javadoc.
    *
    * @param expiry the expiry to use in calculating the expiration time of cache entries
+   * @param <K1> key type of the weigher
+   * @param <V1> value type of the weigher
    * @return this builder instance
    * @throws IllegalStateException if expiration was already set
    */
@@ -613,8 +615,9 @@ public final class Caffeine<K, V> {
 
   @SuppressWarnings("unchecked")
   Expiry<K, V> getExpiry(boolean isAsync) {
-    Expiry<K, V> delegate = (expiry == null) ? Expiry.eternalExpiry() : (Expiry<K, V>) expiry;
-    return isAsync ? (Expiry<K, V>) new AsyncExpiry<>(delegate) : delegate;
+    return isAsync && (expiry != null)
+        ? (Expiry<K, V>) new AsyncExpiry<>(expiry)
+        : (Expiry<K, V>) expiry;
   }
 
   /**

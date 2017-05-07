@@ -218,8 +218,12 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
       desc.expectThat("same maximumEdenWeight", copy.edenMaximum(), is(original.edenMaximum()));
     }
 
-    desc.expectThat("same expiry", unwrapExpiry(copy.expiry()).getClass(),
-        is(equalTo(unwrapExpiry(original.expiry()).getClass())));
+    if (original.expiresVariable()) {
+      desc.expectThat("same expiry", unwrapExpiry(copy.expiry()).getClass(),
+          is(equalTo(unwrapExpiry(original.expiry()).getClass())));
+    } else {
+      desc.expectThat("", copy.expiresVariable(), is(false));
+    }
 
     if (original.expiresAfterAccess()) {
       desc.expectThat("same expiresAfterAccessNanos",

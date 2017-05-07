@@ -53,11 +53,6 @@ final class Registration<K, V> {
     return filter;
   }
 
-  /** See {@link CacheEntryListenerConfiguration#isOldValueRequired()}. */
-  public boolean isOldValueRequired() {
-    return configuration.isOldValueRequired();
-  }
-
   /** See {@link CacheEntryListenerConfiguration#isSynchronous()}. */
   public boolean isSynchronous() {
     return configuration.isSynchronous();

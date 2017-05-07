@@ -372,7 +372,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   protected Expiry<K, V> expiry() {
-    return Expiry.eternalExpiry();
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -3243,13 +3243,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<?, ?> node = cache.data.get(lookupKey);
         if (node != null) {
-          node.setVariableTime(unit.convert(duration, TimeUnit.NANOSECONDS));
+          long durationNanos = TimeUnit.NANOSECONDS.convert(duration, unit);
+          long now = cache.expirationTicker().read();
+          node.setVariableTime(now + durationNanos);
         }
       }
-      @Override public Map<K, V> youngest(int limit) {
+      @Override public Map<K, V> oldest(int limit) {
         return cache.variableSnapshot(/* ascending */ true, limit, transformer);
       }
-      @Override public Map<K, V> oldest(int limit) {
+      @Override public Map<K, V> youngest(int limit) {
         return cache.variableSnapshot(/* ascending */ false, limit, transformer);
       }
     }

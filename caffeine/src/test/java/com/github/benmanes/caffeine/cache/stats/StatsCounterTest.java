@@ -31,6 +31,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("deprecation")
 public final class StatsCounterTest {
 
   @Test
@@ -53,16 +54,17 @@ public final class StatsCounterTest {
     ConcurrentStatsCounter counter = new ConcurrentStatsCounter();
     counter.recordHits(1);
     counter.recordMisses(1);
+    counter.recordEviction();
     counter.recordEviction(10);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 1, 10);
+    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 2, 10);
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));
 
     counter.incrementBy(counter);
-    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 2, 20)));
+    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 4, 20)));
   }
 
   @Test
@@ -71,11 +73,12 @@ public final class StatsCounterTest {
     ConcurrentTestHarness.timeTasks(5, () -> {
       counter.recordHits(1);
       counter.recordMisses(1);
+      counter.recordEviction();
       counter.recordEviction(10);
       counter.recordLoadSuccess(1);
       counter.recordLoadFailure(1);
     });
-    assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 5, 50)));
+    assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 10, 50)));
   }
 
   @Test
@@ -83,10 +86,11 @@ public final class StatsCounterTest {
     StatsCounter counter = StatsCounter.guardedStatsCounter(new ConcurrentStatsCounter());
     counter.recordHits(1);
     counter.recordMisses(1);
+    counter.recordEviction();
     counter.recordEviction(10);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 1, 10);
+    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 2, 10);
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));
@@ -96,6 +100,7 @@ public final class StatsCounterTest {
   public void guarded_exception() {
     StatsCounter statsCounter = Mockito.mock(StatsCounter.class);
     when(statsCounter.snapshot()).thenThrow(new NullPointerException());
+    doThrow(NullPointerException.class).when(statsCounter).recordEviction();
     doThrow(NullPointerException.class).when(statsCounter).recordHits(anyInt());
     doThrow(NullPointerException.class).when(statsCounter).recordMisses(anyInt());
     doThrow(NullPointerException.class).when(statsCounter).recordEviction(anyInt());
@@ -105,6 +110,7 @@ public final class StatsCounterTest {
     StatsCounter guarded = StatsCounter.guardedStatsCounter(statsCounter);
     guarded.recordHits(1);
     guarded.recordMisses(1);
+    guarded.recordEviction();
     guarded.recordEviction(10);
     guarded.recordLoadSuccess(1);
     guarded.recordLoadFailure(1);
@@ -112,6 +118,7 @@ public final class StatsCounterTest {
 
     verify(statsCounter).recordHits(1);
     verify(statsCounter).recordMisses(1);
+    verify(statsCounter).recordEviction();
     verify(statsCounter).recordEviction(10);
     verify(statsCounter).recordLoadSuccess(1);
     verify(statsCounter).recordLoadFailure(1);
