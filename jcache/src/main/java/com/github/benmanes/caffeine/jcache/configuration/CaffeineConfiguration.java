@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.jcache.configuration;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalLong;
 
 import javax.annotation.Nullable;
@@ -29,6 +30,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 
+import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
@@ -52,6 +54,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private final MutableConfiguration<K, V> delegate;
 
   private Factory<Weigher<K, V>> weigherFactory;
+  private Factory<Expiry<K, V>> expiryFactory;
   private Factory<Copier> copierFactory;
   private Factory<Ticker> tickerFactory;
 
@@ -75,6 +78,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       refreshAfterWriteNanos = config.refreshAfterWriteNanos;
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
+      expiryFactory = config.expiryFactory;
       copierFactory = config.copierFactory;
       tickerFactory = config.tickerFactory;
       weigherFactory = config.weigherFactory;
@@ -251,17 +255,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
-   * Set the refresh after write in nanoseconds.
-   *
-   * @param refreshAfterWriteNanos the duration in nanoseconds
-   */
-  public void setRefreshAfterWrite(OptionalLong refreshAfterWriteNanos) {
-    this.refreshAfterWriteNanos = refreshAfterWriteNanos.isPresent()
-        ? refreshAfterWriteNanos.getAsLong()
-        : null;
-  }
-
-  /**
    * Returns the refresh after write in nanoseconds.
    *
    * @return the duration in nanoseconds
@@ -273,13 +266,13 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
-   * Set the expire after write in nanoseconds.
+   * Set the refresh after write in nanoseconds.
    *
-   * @param expireAfterWriteNanos the duration in nanoseconds
+   * @param refreshAfterWriteNanos the duration in nanoseconds
    */
-  public void setExpireAfterWrite(OptionalLong expireAfterWriteNanos) {
-    this.expireAfterWriteNanos = expireAfterWriteNanos.isPresent()
-        ? expireAfterWriteNanos.getAsLong()
+  public void setRefreshAfterWrite(OptionalLong refreshAfterWriteNanos) {
+    this.refreshAfterWriteNanos = refreshAfterWriteNanos.isPresent()
+        ? refreshAfterWriteNanos.getAsLong()
         : null;
   }
 
@@ -297,11 +290,11 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   /**
    * Set the expire after write in nanoseconds.
    *
-   * @param expireAfterAccessNanos the duration in nanoseconds
+   * @param expireAfterWriteNanos the duration in nanoseconds
    */
-  public void setExpireAfterAccess(OptionalLong expireAfterAccessNanos) {
-    this.expireAfterAccessNanos = expireAfterAccessNanos.isPresent()
-        ? expireAfterAccessNanos.getAsLong()
+  public void setExpireAfterWrite(OptionalLong expireAfterWriteNanos) {
+    this.expireAfterWriteNanos = expireAfterWriteNanos.isPresent()
+        ? expireAfterWriteNanos.getAsLong()
         : null;
   }
 
@@ -314,6 +307,36 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     return (expireAfterAccessNanos == null)
         ? OptionalLong.empty()
         : OptionalLong.of(expireAfterAccessNanos);
+  }
+
+  /**
+   * Set the expire after write in nanoseconds.
+   *
+   * @param expireAfterAccessNanos the duration in nanoseconds
+   */
+  public void setExpireAfterAccess(OptionalLong expireAfterAccessNanos) {
+    this.expireAfterAccessNanos = expireAfterAccessNanos.isPresent()
+        ? expireAfterAccessNanos.getAsLong()
+        : null;
+  }
+
+  /**
+   * Returns the {@link Factory} for the {@link Expiry} to be used for the cache.
+   *
+   * @return the {@link Factory} for the {@link Expiry}
+   */
+  public Optional<Factory<Expiry<K, V>>> getExpiryFactory() {
+    return Optional.ofNullable(expiryFactory);
+  }
+
+  /**
+   * Set the {@link Factory} for the {@link Expiry}.
+   *
+   * @param factory the {@link Expiry} {@link Factory}
+   */
+  @SuppressWarnings("unchecked")
+  public void setExpiryFactory(Optional<Factory<? extends Expiry<K, V>>> factory) {
+    expiryFactory = (Factory<Expiry<K, V>>) factory.orElse(null);
   }
 
   /**

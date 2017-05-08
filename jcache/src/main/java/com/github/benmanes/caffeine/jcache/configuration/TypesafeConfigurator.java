@@ -219,6 +219,10 @@ public final class TypesafeConfigurator {
         long nanos = expiration.getDuration("after-access", TimeUnit.NANOSECONDS);
         configuration.setExpireAfterAccess(OptionalLong.of(nanos));
       }
+      if (expiration.hasPath("variable")) {
+        configuration.setExpiryFactory(Optional.of(
+            FactoryBuilder.factoryOf(expiration.getString("variable"))));
+      }
     }
 
     /** Adds the Caffeine refresh settings. */

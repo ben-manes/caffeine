@@ -136,7 +136,8 @@ final class CacheFactory {
     /** Creates a configured cache. */
     public CacheProxy<K, V> build() {
       boolean evicts = configureMaximumSize() || configureMaximumWeight()
-          || configureExpireAfterWrite() || configureExpireAfterAccess();
+          || configureExpireAfterWrite() || configureExpireAfterAccess()
+          || configureExpireVariably();
       if (evicts) {
         configureEvictionListener();
       }
@@ -207,6 +208,12 @@ final class CacheFactory {
         caffeine.expireAfterAccess(config.getExpireAfterAccess().getAsLong(), TimeUnit.NANOSECONDS);
       }
       return config.getExpireAfterAccess().isPresent();
+    }
+
+    /** Configures the write expiration and returns if set. */
+    private boolean configureExpireVariably() {
+      config.getExpiryFactory().ifPresent(factory -> caffeine.expireAfter(factory.create()));
+      return config.getExpireAfterWrite().isPresent();
     }
 
     private boolean configureRefreshAfterWrite() {

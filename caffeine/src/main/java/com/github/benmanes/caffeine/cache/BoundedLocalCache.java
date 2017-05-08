@@ -2239,9 +2239,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
         weight[0] = n.getWeight();
         weight[1] = weigher.weigh(key, newValue[0]);
-        if ((cause[0] == null) && (newValue[0] != oldValue[0])) {
+        if (cause[0] == null) {
+          if (newValue[0] != oldValue[0]) {
+            cause[0] = RemovalCause.REPLACED;
+          }
           setVariableTime(n, expireAfterUpdate(n, key, newValue[0], now));
-          cause[0] = RemovalCause.REPLACED;
         } else {
           setVariableTime(n, expireAfterCreate(key, newValue[0], now));
         }
