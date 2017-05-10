@@ -85,7 +85,7 @@ ext {
     jmh: '0.3.1',
     jmh_report: '0.1.0',
     nexus: '2.3.1',
-    pmd: '5.5.5',
+    pmd: '5.6.1',
     semantic_versioning: '1.1.0',
     shadow: '1.2.4',
     stats: '0.2.0',

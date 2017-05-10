@@ -125,7 +125,7 @@ final class TimerWheel<K, V> {
     Node<K, V>[] timerWheel = wheel[index];
 
     int start, end;
-    if ((currentTimeNanos - previousTimeNanos) > SPANS[index + 1]) {
+    if ((currentTimeNanos - previousTimeNanos) >= SPANS[index + 1]) {
       end = timerWheel.length;
       start = 0;
     } else {

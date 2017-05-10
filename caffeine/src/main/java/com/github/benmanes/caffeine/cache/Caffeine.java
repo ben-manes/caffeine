@@ -84,14 +84,15 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * <p>
  * Entries are automatically evicted from the cache when any of
  * {@linkplain #maximumSize(long) maximumSize}, {@linkplain #maximumWeight(long) maximumWeight},
- * {@linkplain #expireAfterWrite expireAfterWrite},
+ * {@linkplain #expireAfter(Expiry) expireAfter}, {@linkplain #expireAfterWrite expireAfterWrite},
  * {@linkplain #expireAfterAccess expireAfterAccess}, {@linkplain #weakKeys weakKeys},
  * {@linkplain #weakValues weakValues}, or {@linkplain #softValues softValues} are requested.
  * <p>
  * If {@linkplain #maximumSize(long) maximumSize} or {@linkplain #maximumWeight(long) maximumWeight}
  * is requested entries may be evicted on each cache modification.
  * <p>
- * If {@linkplain #expireAfterWrite expireAfterWrite} or
+ * If {@linkplain #expireAfter(Expiry) expireAfter},
+ * {@linkplain #expireAfterWrite expireAfterWrite}, or
  * {@linkplain #expireAfterAccess expireAfterAccess} is requested entries may be evicted on each
  * cache modification, on occasional cache accesses, or on calls to {@link Cache#cleanUp}. Expired
  * entries may be counted by {@link Cache#estimatedSize()}, but will never be visible to read or
@@ -109,7 +110,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * writes. The {@link Cache#cleanUp} method of the returned cache will also perform maintenance, but
  * calling it should not be necessary with a high throughput cache. Only caches built with
  * {@linkplain #maximumSize maximumSize}, {@linkplain #maximumWeight maximumWeight},
- * {@linkplain #expireAfterWrite expireAfterWrite},
+ * {@linkplain #expireAfter(Expiry) expireAfter}, {@linkplain #expireAfterWrite expireAfterWrite},
  * {@linkplain #expireAfterAccess expireAfterAccess}, {@linkplain #weakKeys weakKeys},
  * {@linkplain #weakValues weakValues}, or {@linkplain #softValues softValues} perform periodic
  * maintenance.
