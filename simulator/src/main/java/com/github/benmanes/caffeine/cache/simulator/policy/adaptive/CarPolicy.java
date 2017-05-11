@@ -253,7 +253,7 @@ public final class CarPolicy implements Policy {
 
   private enum QueueType {
     T1, B1,
-    T2, B2;
+    T2, B2,
   }
 
   static final class Node {

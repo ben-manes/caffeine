@@ -70,11 +70,6 @@ public final class TinyCache {
   /**
    * Implementing add and remove together in one function, means that less items are shifted.
    * (reduction of 3 times from trivial implementation).
-   *
-   * @param fpaux
-   * @param victim
-   * @param bucketStart
-   * @return
    */
   private int replace(HashedItem fpaux, byte victim, int bucketStart, int removedOffset) {
     byte chainId = fpaux.chainId;
@@ -87,8 +82,6 @@ public final class TinyCache {
     replaceItems(idxToAdd, fpaux.value, bucketStart, delta);
     return removedOffset;
   }
-
-  public void recordItem(long item) {}
 
   public boolean addItem(long item) {
     hashFunc.createHash(item);
@@ -111,7 +104,6 @@ public final class TinyCache {
     if (TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], victimChain)) {
       replace(hashFunc.fpaux, (byte) victimChain, bucketStart, victimOffset);
       return true;
-
     } else {
       throw new RuntimeException("Failed to replace");
     }

@@ -113,7 +113,7 @@ public final class ClairvoyantPolicy implements Policy {
 
   /** Removes the entry whose next access is farthest away into the future. */
   private void evict() {
-    data.rem(data.lastInt());
+    data.remove(data.lastInt());
     policyStats.recordEviction();
   }
 }

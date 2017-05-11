@@ -432,10 +432,9 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = Maximum.FULL)
   public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Node<Integer, Integer> dummy = localCache.nodeFactory.newNode(null, null, null, 1, 0);
 
     boolean[] ran = new boolean[1];
-    localCache.afterWrite(dummy, () -> ran[0] = true, 0);
+    localCache.afterWrite(() -> ran[0] = true, 0);
     assertThat(ran[0], is(true));
 
     assertThat(localCache.writeBuffer().size(), is(0));
@@ -481,7 +480,7 @@ public final class BoundedLocalCacheTest {
 
     int[] triggered = { 0 };
     Runnable triggerTask = () -> triggered[0] = 1 + expectedCount[0];
-    localCache.afterWrite(null, triggerTask, 0L);
+    localCache.afterWrite(triggerTask, 0L);
 
     assertThat(processed[0], is(expectedCount[0]));
     assertThat(triggered[0], is(expectedCount[0] + 1));

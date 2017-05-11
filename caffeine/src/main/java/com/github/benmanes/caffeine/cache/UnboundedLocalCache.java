@@ -576,7 +576,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Iterator<K> iterator() {
-      return new KeyIterator<K>(cache);
+      return new KeyIterator<>(cache);
     }
 
     @Override

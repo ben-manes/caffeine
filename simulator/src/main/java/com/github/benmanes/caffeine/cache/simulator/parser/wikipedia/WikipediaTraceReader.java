@@ -102,10 +102,9 @@ public final class WikipediaTraceReader extends TextTraceReader {
     if (index == -1) {
       return url;
     }
-    String path = url.substring(index + 1);
 
     // Replace the html entities that we want to search for inside paths
-    String cleansed = path;
+    String cleansed = url.substring(index + 1);
     for (int i = 0; i < SEARCH_LIST.length; i++) {
       cleansed = StringUtils.replace(cleansed, SEARCH_LIST[i], REPLACEMENT_LIST[i]);
     }

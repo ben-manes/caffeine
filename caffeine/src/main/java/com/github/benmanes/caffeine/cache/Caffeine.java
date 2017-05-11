@@ -128,7 +128,7 @@ public final class Caffeine<K, V> {
   static final Logger logger = Logger.getLogger(Caffeine.class.getName());
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
 
-  enum Strength { STRONG, WEAK, SOFT }
+  enum Strength { WEAK, SOFT }
   static final int UNSET_INT = -1;
 
   static final int DEFAULT_INITIAL_CAPACITY = 0;
@@ -194,7 +194,7 @@ public final class Caffeine<K, V> {
    */
   @Nonnull
   public static Caffeine<Object, Object> newBuilder() {
-    return new Caffeine<Object, Object>();
+    return new Caffeine<>();
   }
 
   /**
@@ -398,12 +398,12 @@ public final class Caffeine<K, V> {
     return isWeighted() ? maximumWeight : maximumSize;
   }
 
-  @Nonnull @SuppressWarnings("unchecked")
+  @Nonnull @SuppressWarnings({"unchecked", "rawtypes"})
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
     Weigher<K1, V1> delegate = isWeighted() && (weigher != Weigher.singletonWeigher())
         ? Weigher.boundedWeigher((Weigher<K1, V1>) weigher)
         : Weigher.singletonWeigher();
-    return isAsync ? (Weigher<K1, V1>) new AsyncWeigher<>(delegate) : delegate;
+    return isAsync ? (Weigher<K1, V1>) new AsyncWeigher(delegate) : delegate;
   }
 
   /**
@@ -433,10 +433,6 @@ public final class Caffeine<K, V> {
 
   boolean isStrongKeys() {
     return (keyStrength == null);
-  }
-
-  boolean isWeakKeys() {
-    return (keyStrength == Strength.WEAK);
   }
 
   /**
@@ -471,10 +467,6 @@ public final class Caffeine<K, V> {
 
   boolean isWeakValues() {
     return (valueStrength == Strength.WEAK);
-  }
-
-  boolean isSoftValues() {
-    return (valueStrength == Strength.SOFT);
   }
 
   /**
@@ -722,16 +714,12 @@ public final class Caffeine<K, V> {
     return self;
   }
 
+  @SuppressWarnings({"unchecked", "rawtypes"})
   <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
-    @SuppressWarnings("unchecked")
     RemovalListener<K1, V1> castedListener = (RemovalListener<K1, V1>) removalListener;
-    if (async && (castedListener != null)) {
-      @SuppressWarnings("unchecked")
-      RemovalListener<K1, V1> asyncListener = (RemovalListener<K1, V1>)
-          new AsyncRemovalListener<K1, V1>(castedListener, getExecutor());
-      return asyncListener;
-    }
-    return castedListener;
+    return async && (castedListener != null)
+        ? new AsyncRemovalListener(castedListener, getExecutor())
+        : castedListener;
   }
 
   /**
@@ -856,8 +844,8 @@ public final class Caffeine<K, V> {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
     return isBounded() || refreshes()
-        ? new BoundedLocalCache.BoundedLocalManualCache<K1, V1>(self)
-        : new UnboundedLocalCache.UnboundedLocalManualCache<K1, V1>(self);
+        ? new BoundedLocalCache.BoundedLocalManualCache<>(self)
+        : new UnboundedLocalCache.UnboundedLocalManualCache<>(self);
   }
 
   /**
@@ -883,8 +871,8 @@ public final class Caffeine<K, V> {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
     return isBounded() || refreshes()
-        ? new BoundedLocalCache.BoundedLocalLoadingCache<K1, V1>(self, loader)
-        : new UnboundedLocalCache.UnboundedLocalLoadingCache<K1, V1>(self, loader);
+        ? new BoundedLocalCache.BoundedLocalLoadingCache<>(self, loader)
+        : new UnboundedLocalCache.UnboundedLocalLoadingCache<>(self, loader);
   }
 
   /**
@@ -938,8 +926,8 @@ public final class Caffeine<K, V> {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
     return isBounded() || refreshes()
-        ? new BoundedLocalCache.BoundedLocalAsyncLoadingCache<K1, V1>(self, loader)
-        : new UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K1, V1>(self, loader);
+        ? new BoundedLocalCache.BoundedLocalAsyncLoadingCache<>(self, loader)
+        : new UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<>(self, loader);
   }
 
   void requireNonLoadingCache() {

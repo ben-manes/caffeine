@@ -33,7 +33,7 @@ public enum ReportFormat {
 
   private final Function<Config, Reporter> factory;
 
-  private ReportFormat(Function<Config, Reporter> factory) {
+  ReportFormat(Function<Config, Reporter> factory) {
     this.factory = requireNonNull(factory);
   }
 

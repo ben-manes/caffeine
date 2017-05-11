@@ -99,10 +99,6 @@ public enum Feature {
         || features.contains(Feature.REFRESH_WRITE);
   }
 
-  public static boolean usesStatsTicker(Set<Feature> features) {
-    return features.contains(Feature.STATS);
-  }
-
   public static boolean usesMaximum(Set<Feature> features) {
     return features.contains(Feature.MAXIMUM_SIZE)
         || features.contains(Feature.MAXIMUM_WEIGHT);
@@ -111,9 +107,6 @@ public enum Feature {
   public static boolean usesFastPath(Set<Feature> features) {
     Set<Feature> incompatible = Sets.immutableEnumSet(Feature.EXPIRE_ACCESS,
         Feature.WEAK_KEYS, Feature.INFIRM_VALUES, Feature.WEAK_VALUES, Feature.SOFT_VALUES);
-    if (features.stream().anyMatch(incompatible::contains)) {
-      return false;
-    }
-    return usesMaximum(features);
+    return !features.stream().anyMatch(incompatible::contains) && usesMaximum(features);
   }
 }

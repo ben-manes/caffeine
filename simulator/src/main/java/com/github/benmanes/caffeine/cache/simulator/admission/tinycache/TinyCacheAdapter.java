@@ -26,7 +26,7 @@ import com.typesafe.config.Config;
  */
 public final class TinyCacheAdapter implements Frequency {
   // the actual data structure.
-  TinyCacheSketch tcs;
+  final TinyCacheSketch tcs;
   // size between cache and sample.
   static final int sampleFactor = 10;
   // max frequency estimation of an item.

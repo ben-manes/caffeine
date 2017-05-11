@@ -150,7 +150,7 @@ public final class SegmentedLruPolicy implements Policy {
 
   enum QueueType {
     PROTECTED,
-    PROBATION;
+    PROBATION,
   }
 
   static final class Node {

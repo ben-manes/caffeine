@@ -35,9 +35,9 @@ public abstract class CountMin4 implements Frequency {
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final long RESET_MASK = 0x7777777777777777L;
 
+  protected final boolean conservative;
   protected final int randomSeed;
 
-  protected boolean conservative;
   protected int tableMask;
   protected long[] table;
   protected int step = 1;

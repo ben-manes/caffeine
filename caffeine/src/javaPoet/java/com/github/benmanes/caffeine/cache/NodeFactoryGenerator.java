@@ -219,7 +219,7 @@ public final class NodeFactoryGenerator {
         .build());
   }
 
-  private void generatedNodes() throws IOException {
+  private void generatedNodes() {
     fillClassNameToFeatures();
     classNameToFeatures.forEach((className, features) -> {
       String higherKey = classNameToFeatures.higherKey(className);

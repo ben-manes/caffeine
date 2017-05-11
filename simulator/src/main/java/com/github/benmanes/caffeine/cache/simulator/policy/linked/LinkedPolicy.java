@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
@@ -221,21 +220,6 @@ public final class LinkedPolicy implements Policy {
       next.prev = prev;
       prev = next = null;
       key = Long.MIN_VALUE;
-    }
-
-    /** Moves the node to the head. */
-    public void moveToHead() {
-      checkState(key != Long.MIN_VALUE);
-
-      // unlink
-      prev.next = next;
-      next.prev = prev;
-
-      // link
-      next = sentinel.next;
-      prev = sentinel;
-      sentinel.next = this;
-      next.prev = this;
     }
 
     /** Moves the node to the tail. */

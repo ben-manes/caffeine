@@ -342,7 +342,7 @@ public final class LirsPolicy implements Policy {
   enum Status {
     LIR,
     HIR_RESIDENT,
-    HIR_NON_RESIDENT;
+    HIR_NON_RESIDENT,
   }
 
   // S holds three types of blocks, LIR blocks, resident HIR blocks, non-resident HIR blocks
@@ -357,7 +357,7 @@ public final class LirsPolicy implements Policy {
     // stack, Q, with its size of Lhirs.
     Q,
     // Adaption to facilitate the search of the non-resident HIR blocks
-    NR;
+    NR,
   }
 
   // Each entry in the stack records the LIR/HIR status of a block and its residence status,

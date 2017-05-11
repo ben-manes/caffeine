@@ -157,10 +157,6 @@ public final class LruWindowTinyLfuPolicy implements Policy {
       this.key = key;
     }
 
-    public boolean isInQueue() {
-      return next != null;
-    }
-
     public void moveToTail(Node head) {
       remove();
       appendToTail(head);

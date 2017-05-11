@@ -28,11 +28,8 @@ public final class AddExpirationTicker extends LocalCacheRule {
 
   @Override
   protected boolean applies() {
-    if (Feature.usesExpirationTicker(context.parentFeatures)
-        || !Feature.usesExpirationTicker(context.generateFeatures)) {
-      return false;
-    }
-    return true;
+    return !(Feature.usesExpirationTicker(context.parentFeatures)
+        || !Feature.usesExpirationTicker(context.generateFeatures));
   }
 
   @Override

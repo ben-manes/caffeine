@@ -99,7 +99,7 @@ public final class Simulator extends AbstractActor {
   }
 
   /** Broadcast the trace events to all of the policy actors. */
-  private void broadcast() throws IOException {
+  private void broadcast() {
     try (LongStream events = eventStream()) {
       LongArrayList batch = new LongArrayList(batchSize);
       for (PrimitiveIterator.OfLong i = events.iterator(); i.hasNext();) {

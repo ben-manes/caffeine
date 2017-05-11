@@ -47,7 +47,7 @@ public enum TraceFormat {
 
   private final Function<List<String>, TraceReader> factory;
 
-  private TraceFormat(Function<List<String>, TraceReader> factory) {
+  TraceFormat(Function<List<String>, TraceReader> factory) {
     this.factory = factory;
   }
 

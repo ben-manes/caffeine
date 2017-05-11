@@ -307,7 +307,7 @@ public final class ClockProPolicy implements Policy {
   }
 
   enum Status {
-    HOT, COLD, TEST;
+    HOT, COLD, TEST,
   }
 
   private static final class Node {

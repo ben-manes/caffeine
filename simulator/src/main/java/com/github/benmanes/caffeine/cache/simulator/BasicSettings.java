@@ -150,7 +150,7 @@ public class BasicSettings {
       }
       public final class PeriodicSettings {
         public DoorkeeperSettings doorkeeper() {
-          return new DoorkeeperSettings("tiny-lfu.count-min-4.periodic");
+          return new DoorkeeperSettings();
         }
       }
     }
@@ -161,16 +161,10 @@ public class BasicSettings {
       public double confidence() {
         return config().getDouble("tiny-lfu.count-min-64.confidence");
       }
-      public int sampleSize() {
-        return config().getInt("tiny-lfu.count-min-64.sample_size");
-      }
     }
     public final class DoorkeeperSettings {
-      private final String basePath;
+      private static final String basePath = "tiny-lfu.count-min-4.periodic";
 
-      DoorkeeperSettings(String basePath) {
-        this.basePath = basePath;
-      }
       public boolean enabled() {
         return config().getBoolean(basePath + ".doorkeeper.enabled");
       }

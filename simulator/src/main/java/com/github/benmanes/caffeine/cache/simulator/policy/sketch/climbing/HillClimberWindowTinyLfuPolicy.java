@@ -360,7 +360,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     public Set<HillClimberType> strategy() {
       return config().getStringList("hill-climber-window-tiny-lfu.strategy").stream()
           .map(strategy -> strategy.replace('-', '_').toUpperCase())
-          .map(strategy -> HillClimberType.valueOf(strategy))
+          .map(HillClimberType::valueOf)
           .collect(toSet());
     }
   }

@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.BoundedBuffer.OFFSET;
+
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Consumer;
 
@@ -64,7 +66,6 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
 
     @SuppressWarnings({"unchecked", "cast", "rawtypes"})
     public RingBuffer(E e) {
-      super(OFFSET);
       buffer = new AtomicReferenceArray<>(SPACED_SIZE);
       buffer.lazySet(0, e);
     }
@@ -152,8 +153,8 @@ final class BBHeader {
 
     volatile long writeCounter;
 
-    ReadAndWriteCounterRef(int writes) {
-      UnsafeAccess.UNSAFE.putOrderedLong(this, WRITE_OFFSET, writes);
+    ReadAndWriteCounterRef() {
+      UnsafeAccess.UNSAFE.putOrderedLong(this, WRITE_OFFSET, OFFSET);
     }
 
     long relaxedWriteCounter() {

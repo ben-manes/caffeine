@@ -37,5 +37,5 @@ public enum Action {
   LOADED,
 
   /** The entry existed and was deleted. */
-  DELETED;
+  DELETED,
 }

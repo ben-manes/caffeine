@@ -134,7 +134,7 @@ public final class SampledPolicy implements Policy {
     GUESS {
       @Override public <E> List<E> sample(E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
-        List<E> sample = new ArrayList<E>(sampleSize);
+        List<E> sample = new ArrayList<>(sampleSize);
         policyStats.addOperations(sampleSize);
         for (int i = 0; i < sampleSize; i++) {
           int index = random.nextInt(elements.length);

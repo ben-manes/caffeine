@@ -27,7 +27,7 @@ public final class HashFunctionParser {
   private static final byte fpMask = (byte) 255; // (all bits in byte are 1, (logical value of -1));
   private static final long chainMask = 63L; // (6 first bit are set to 1).
   private final int nrSets;
-  public HashedItem fpaux; // used just to avoid allocating new memory as a return value.
+  public final HashedItem fpaux; // used just to avoid allocating new memory as a return value.
   private final static long Seed64 = 0xe17a1465;
   private final static long m = 0xc6a4a7935bd1e995L;
   private final static int r = 47;
@@ -35,10 +35,6 @@ public final class HashFunctionParser {
   public HashFunctionParser(int nrsets) {
     this.nrSets = nrsets;
     fpaux = new HashedItem(fpMask, fpMask, fpMask, 0L);
-  }
-
-  public HashedItem createHash(Object item) {
-    return createHash(item.hashCode());
   }
 
   public HashedItem createHash(long item) {

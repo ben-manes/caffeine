@@ -63,7 +63,6 @@ public final class Specifications {
   public static final ParameterSpec valueRefQueueSpec =
       ParameterSpec.builder(vRefQueueType, "valueReferenceQueue").build();
 
-  public static final ParameterSpec weightSpec = ParameterSpec.builder(int.class, "weight").build();
   public static final TypeName NODE = ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar);
   public static final TypeName UNSAFE_ACCESS =
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
@@ -85,11 +84,6 @@ public final class Specifications {
       ClassName.get(PACKAGE_NAME + ".stats", "StatsCounter");
 
   public static final TypeName TICKER = ClassName.get(PACKAGE_NAME, "Ticker");
-
-  public static final TypeName WEIGHER = ParameterizedTypeName.get(
-      ClassName.get(PACKAGE_NAME, "Weigher"),
-      TypeVariableName.get("? super K"),
-      TypeVariableName.get("? super V"));
 
   public static final TypeName ACCESS_ORDER_DEQUE = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "AccessOrderDeque"), NODE);

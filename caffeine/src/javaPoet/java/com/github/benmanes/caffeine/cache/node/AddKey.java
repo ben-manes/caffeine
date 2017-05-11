@@ -75,11 +75,8 @@ public final class AddKey extends NodeRule {
   /** Adds a constructor assignment. */
   private void addKeyConstructorAssignment(MethodSpec.Builder constructor, boolean isReference) {
     if (isReference || isStrongKeys()) {
-      String refAssignment = isStrongKeys()
-          ? "(K) keyReference"
-          : "(WeakKeyReference<K>) keyReference";
       constructor.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
-          UNSAFE_ACCESS, offsetName("key"), isReference ? refAssignment : "key");
+          UNSAFE_ACCESS, offsetName("key"), isReference ? "keyReference" : "key");
     } else {
       constructor.addStatement("$T.UNSAFE.putObject(this, $N, new $T($N, $N))",
           UNSAFE_ACCESS, offsetName("key"), keyReferenceType(), "key", "keyReferenceQueue");

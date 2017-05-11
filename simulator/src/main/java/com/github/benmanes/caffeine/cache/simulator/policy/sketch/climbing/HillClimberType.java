@@ -33,7 +33,7 @@ enum HillClimberType {
 
   private final Function<Config, HillClimber> factory;
 
-  private HillClimberType(Function<Config, HillClimber> factory) {
+  HillClimberType(Function<Config, HillClimber> factory) {
     this.factory = requireNonNull(factory);
   }
 

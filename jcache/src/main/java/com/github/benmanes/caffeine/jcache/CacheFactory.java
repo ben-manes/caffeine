@@ -216,11 +216,10 @@ final class CacheFactory {
       return config.getExpireAfterWrite().isPresent();
     }
 
-    private boolean configureRefreshAfterWrite() {
+    private void configureRefreshAfterWrite() {
       if (config.getRefreshAfterWrite().isPresent()) {
         caffeine.refreshAfterWrite(config.getRefreshAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
       }
-      return config.getRefreshAfterWrite().isPresent();
     }
 
     /** Configures the removal listener. */

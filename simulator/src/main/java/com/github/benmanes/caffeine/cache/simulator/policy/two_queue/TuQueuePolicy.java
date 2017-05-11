@@ -171,7 +171,7 @@ public class TuQueuePolicy implements Policy {
   enum QueueType {
     HOT,
     WARM,
-    COLD;
+    COLD,
   }
 
   static final class Node {

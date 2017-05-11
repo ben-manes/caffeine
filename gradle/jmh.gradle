@@ -4,8 +4,6 @@
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'me.champeau.gradle.jmh'
 apply plugin: 'io.morethan.jmhreport'
-apply plugin: 'eclipse'
-apply plugin: 'idea'
 
 idea.module {
   scopes.PROVIDED.plus += [ configurations.jmh ]

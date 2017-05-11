@@ -41,10 +41,10 @@ public enum DisabledCacheWriter implements CacheWriter<Object, Object> {
   }
 
   @Override
-  public void write(Entry<? extends Object, ? extends Object> entry) {}
+  public void write(Entry<?, ?> entry) {}
 
   @Override
-  public void writeAll(Collection<Entry<? extends Object, ? extends Object>> entries) {}
+  public void writeAll(Collection<Entry<?, ?>> entries) {}
 
   @Override
   public void delete(Object key) {}

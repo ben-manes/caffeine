@@ -29,11 +29,8 @@ public final class AddWriteBuffer extends LocalCacheRule {
 
   @Override
   protected boolean applies() {
-    if (Feature.usesWriteQueue(context.parentFeatures)
-        || !Feature.usesWriteQueue(context.generateFeatures)) {
-      return false;
-    }
-    return true;
+    return !(Feature.usesWriteQueue(context.parentFeatures)
+        || !Feature.usesWriteQueue(context.generateFeatures));
   }
 
   @Override

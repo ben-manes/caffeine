@@ -204,15 +204,6 @@ public final class FeedbackTinyLfuPolicy implements Policy {
     }
 
     /** Appends the node to the tail of the list. */
-    public void appendToHead(Node head) {
-      Node first = head.next;
-      head.next = this;
-      first.prev = this;
-      prev = head;
-      next = first;
-    }
-
-    /** Appends the node to the tail of the list. */
     public void appendToTail(Node head) {
       Node tail = head.prev;
       head.prev = this;

@@ -54,7 +54,7 @@ public final class FrequentlyUsedPolicy implements Policy {
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policy = requireNonNull(policy);
-    this.freq0 = new FrequencyNode(0);
+    this.freq0 = new FrequencyNode();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -170,11 +170,11 @@ public final class FrequentlyUsedPolicy implements Policy {
     FrequencyNode prev;
     FrequencyNode next;
 
-    public FrequencyNode(int count) {
+    public FrequencyNode() {
       nextNode = new Node(this);
-      this.count = count;
       this.prev = this;
       this.next = this;
+      this.count = 0;
     }
 
     public FrequencyNode(int count, FrequencyNode prev) {

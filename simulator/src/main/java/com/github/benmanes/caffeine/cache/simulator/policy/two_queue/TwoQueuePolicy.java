@@ -186,7 +186,7 @@ public final class TwoQueuePolicy implements Policy {
   enum QueueType {
     MAIN,
     IN,
-    OUT;
+    OUT,
   }
 
   static final class Node {

@@ -45,13 +45,13 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   private final Admittor admittor;
   private final Node[] headMainQ;
   private final int maximumSize;
+  private final int[] sizeMainQ;
   private final Node headEden;
   private final int maxMain;
   private final int maxEden;
   private final int levels;
 
   private int sizeEden;
-  private int[] sizeMainQ;
 
   public S4WindowTinyLfuPolicy(double percentMain, S4WindowTinyLfuSettings settings) {
     String name = String.format("sketch.S4WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
@@ -210,10 +210,6 @@ public final class S4WindowTinyLfuPolicy implements Policy {
       node.prev = node;
       node.next = node;
       return node;
-    }
-
-    public boolean isInQueue() {
-      return next != null;
     }
 
     public void moveToTail(Node head) {

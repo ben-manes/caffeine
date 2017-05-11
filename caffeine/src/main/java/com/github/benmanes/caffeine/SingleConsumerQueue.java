@@ -146,7 +146,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     for (int i = 0; i < ARENA_LENGTH; i++) {
       arena[i] = new AtomicReference<>();
     }
-    Node<E> node = new Node<E>(null);
+    Node<E> node = new Node<>(null);
     this.factory = factory;
     lazySetTail(node);
     head = node;
@@ -275,7 +275,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
         first = factory.apply(e);
         last = first;
       } else {
-        Node<E> newLast = new Node<E>(e);
+        Node<E> newLast = new Node<>(e);
         last.lazySetNext(newLast);
         last = newLast;
       }
@@ -438,7 +438,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   static final long serialVersionUID = 1;
 
   Object writeReplace() {
-    return new SerializationProxy<E>(this);
+    return new SerializationProxy<>(this);
   }
 
   private void readObject(ObjectInputStream stream) throws InvalidObjectException {

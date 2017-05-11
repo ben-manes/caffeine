@@ -48,7 +48,9 @@ allprojects {
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'nebula.provided-base'
+  apply plugin: 'eclipse'
   apply plugin: 'java'
+  apply plugin: 'idea'
   apply plugin: 'osgi'
 
   apply from: "${rootDir}/gradle/publish.gradle"
@@ -72,6 +74,10 @@ subprojects {
     releaseBuild = rootProject.hasProperty('release')
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
+
+  idea.module {
+    scopes.PROVIDED.plus += [ configurations.provided ]
+  }
 
   dependencies {
     provided libraries.jsr305
@@ -128,6 +134,9 @@ task jacocoMerge(type: JacocoMerge) {
   publishedProjects.each { subproject ->
     executionData subproject.tasks.withType(Test)
   }
+  doFirst {
+    executionData = files(executionData.findAll { it.exists() })
+  }
 }
 
 task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
@@ -142,10 +151,6 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
   reports {
     html.enabled = true // human readable
     xml.enabled = true // required by coveralls
-  }
-
-  doFirst {
-    executionData = files(executionData.findAll { it.exists() })
   }
 }
 

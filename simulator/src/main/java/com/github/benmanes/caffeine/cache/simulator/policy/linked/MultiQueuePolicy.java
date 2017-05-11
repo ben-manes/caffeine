@@ -186,19 +186,6 @@ public final class MultiQueuePolicy implements Policy {
       prev = tail;
     }
 
-    /** Moves the node to the tail. */
-    public void moveToTail(Node head) {
-      // unlink
-      prev.next = next;
-      next.prev = prev;
-
-      // link
-      next = head;
-      prev = head.prev;
-      head.prev = this;
-      prev.next = this;
-    }
-
     /** Removes the node from the list. */
     public void remove() {
       checkState(key != Long.MIN_VALUE);

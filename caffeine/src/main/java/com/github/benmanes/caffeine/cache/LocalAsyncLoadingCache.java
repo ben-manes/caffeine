@@ -106,7 +106,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   public CompletableFuture<V> get(@Nonnull K key,
       @Nonnull Function<? super K, ? extends V> mappingFunction) {
     requireNonNull(mappingFunction);
-    return get(key, (k1, executor) -> CompletableFuture.<V>supplyAsync(
+    return get(key, (k1, executor) -> CompletableFuture.supplyAsync(
         () -> mappingFunction.apply(key), executor));
   }
 

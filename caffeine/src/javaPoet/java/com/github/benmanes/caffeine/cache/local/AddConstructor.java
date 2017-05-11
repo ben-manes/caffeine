@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
+import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
 
@@ -32,10 +33,13 @@ public final class AddConstructor extends LocalCacheRule {
 
   @Override
   protected void execute() {
+    String cacheLoader = context.superClass.equals(BOUNDED_LOCAL_CACHE)
+        ? "(CacheLoader<K, V>) cacheLoader"
+        : "cacheLoader";
     context.constructor
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
-        .addStatement("super(builder, (CacheLoader<K, V>) cacheLoader, async)");
+        .addStatement("super(builder, $L, async)", cacheLoader);
   }
 }

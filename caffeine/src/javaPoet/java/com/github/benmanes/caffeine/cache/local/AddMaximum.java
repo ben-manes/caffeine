@@ -33,11 +33,8 @@ public final class AddMaximum extends LocalCacheRule {
 
   @Override
   protected boolean applies() {
-    if (Feature.usesMaximum(context.parentFeatures)
-        || !Feature.usesMaximum(context.generateFeatures)) {
-      return false;
-    }
-    return true;
+    return !(Feature.usesMaximum(context.parentFeatures)
+        || !Feature.usesMaximum(context.generateFeatures));
   }
 
   @Override

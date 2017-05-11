@@ -931,7 +931,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    *
    * @param key the key of the entry that was created
    * @param value the value of the entry that was created
-   * @param node the entry in the page replacement policy
    * @param now the current time, in nanoseconds
    * @return the expiration time
    */
@@ -1000,11 +999,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /**
    * Performs the post-processing work required after a write.
    *
-   * @param node the node that was written to
    * @param task the pending operation to be applied
    * @param now the current time, in nanoseconds
    */
-  void afterWrite(@Nullable Node<K, V> node, Runnable task, long now) {
+  void afterWrite(Runnable task, long now) {
     if (buffersWrites()) {
       for (int i = 0; i < WRITE_BUFFER_RETRIES; i++) {
         if (writeBuffer().offer(task)) {
@@ -1092,7 +1090,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /**
    * Performs the maintenance work, blocking until the lock is acquired. Any exception thrown, such
-   * as by {@link CacheWriter#delete()}, is propagated to the caller.
+   * as by {@link CacheWriter#delete}, is propagated to the caller.
    *
    * @param task an additional pending task to run, or {@code null} if not present
    */
@@ -1654,13 +1652,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             return computed;
           });
           if (prior == node) {
-            afterWrite(node, new AddTask(node, newWeight), now);
+            afterWrite(new AddTask(node, newWeight), now);
             return null;
           }
         } else {
           prior = data.putIfAbsent(node.getKeyReference(), node);
           if (prior == null) {
-            afterWrite(node, new AddTask(node, newWeight), now);
+            afterWrite(new AddTask(node, newWeight), now);
             return null;
           }
         }
@@ -1711,7 +1709,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (expired) {
           notifyRemoval(key, oldValue, RemovalCause.EXPIRED);
         } else if (oldValue == null) {
-          notifyRemoval(key, oldValue, RemovalCause.COLLECTED);
+          notifyRemoval(key, /* oldValue */ null, RemovalCause.COLLECTED);
         } else if (mayUpdate && (value != oldValue)) {
           notifyRemoval(key, oldValue, RemovalCause.REPLACED);
         }
@@ -1719,9 +1717,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       int weightedDifference = mayUpdate ? (newWeight - oldWeight) : 0;
       if ((oldValue == null) || (weightedDifference != 0) || expired) {
-        afterWrite(prior, new UpdateTask(prior, weightedDifference), now);
+        afterWrite(new UpdateTask(prior, weightedDifference), now);
       } else if (!onlyIfAbsent && expiresAfterWrite() && withinTolerance) {
-        afterWrite(prior, new UpdateTask(prior, weightedDifference), now);
+        afterWrite(new UpdateTask(prior, weightedDifference), now);
       } else {
         if (mayUpdate) {
           setWriteTime(prior, now);
@@ -1775,7 +1773,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       K castKey = (K) key;
       notifyRemoval(castKey, oldValue, cause);
     }
-    afterWrite(node, new RemovalTask(node), 0L);
+    afterWrite(new RemovalTask(node), 0L);
     return (cause == RemovalCause.EXPLICIT) ? oldValue : null;
   }
 
@@ -1813,7 +1811,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     });
 
     if (cause[0] != null) {
-      afterWrite(node[0], new RemovalTask(node[0]), now);
+      afterWrite(new RemovalTask(node[0]), now);
       if (hasRemovalListener()) {
         notifyRemoval(castKey, oldValue[0], cause[0]);
       }
@@ -1864,7 +1862,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     } else if (hasRemovalListener()) {
       notifyRemoval(oldKey[0], oldValue[0], cause[0]);
     }
-    afterWrite(removed[0], new RemovalTask(removed[0]), now);
+    afterWrite(new RemovalTask(removed[0]), now);
     return (cause[0] == RemovalCause.EXPLICIT);
   }
 
@@ -1910,7 +1908,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     int weightedDifference = (weight - oldWeight[0]);
     if (expiresAfterWrite() || (weightedDifference != 0)) {
-      afterWrite(node, new UpdateTask(node, weightedDifference), now);
+      afterWrite(new UpdateTask(node, weightedDifference), now);
     } else {
       afterRead(node, now, /* recordHit */ false);
     }
@@ -1966,7 +1964,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     int weightedDifference = (weight - oldWeight[0]);
     if (expiresAfterWrite() || (weightedDifference != 0)) {
-      afterWrite(node, new UpdateTask(node, weightedDifference), now);
+      afterWrite(new UpdateTask(node, weightedDifference), now);
     } else {
       afterRead(node, now, /* recordHit */ false);
     }
@@ -2084,7 +2082,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     if (node == null) {
       if (removed[0] != null) {
-        afterWrite(null, new RemovalTask(removed[0]), now);
+        afterWrite(new RemovalTask(removed[0]), now);
       }
       return null;
     }
@@ -2104,10 +2102,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return oldValue[0];
     }
     if ((oldValue[0] == null) && (cause[0] == null)) {
-      afterWrite(node, new AddTask(node, weight[1]), now);
+      afterWrite(new AddTask(node, weight[1]), now);
     } else {
       int weightedDifference = (weight[1] - weight[0]);
-      afterWrite(node, new UpdateTask(node, weightedDifference), now);
+      afterWrite(new UpdateTask(node, weightedDifference), now);
     }
 
     return newValue[0];
@@ -2265,15 +2263,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     if (removed[0] != null) {
-      afterWrite(removed[0], new RemovalTask(removed[0]), now);
+      afterWrite(new RemovalTask(removed[0]), now);
     } else if (node == null) {
       // absent and not computable
     } else if ((oldValue[0] == null) && (cause[0] == null)) {
-      afterWrite(node, new AddTask(node, weight[1]), now);
+      afterWrite(new AddTask(node, weight[1]), now);
     } else {
       int weightedDifference = weight[1] - weight[0];
       if (expiresAfterWrite() || (weightedDifference != 0)) {
-        afterWrite(node, new UpdateTask(node, weightedDifference), now);
+        afterWrite(new UpdateTask(node, weightedDifference), now);
       } else {
         if (cause[0] == null) {
           if (!isComputingAsync(node)) {

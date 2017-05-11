@@ -34,8 +34,7 @@ public enum Admission {
   private final BiFunction<Config, PolicyStats, Admittor> factory;
   private final Function<String, String> formatter;
 
-  private Admission(BiFunction<Config, PolicyStats, Admittor> factory,
-      Function<String, String> formatter) {
+  Admission(BiFunction<Config, PolicyStats, Admittor> factory, Function<String, String> formatter) {
     this.formatter = formatter;
     this.factory = factory;
   }
