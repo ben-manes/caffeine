@@ -129,7 +129,7 @@ public final class JCacheUpdateExpiryTest extends AbstractJCacheTest {
 
     assertThat(jcache.replace(KEY_1, VALUE_2, VALUE_3), is(false));
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
   @Test

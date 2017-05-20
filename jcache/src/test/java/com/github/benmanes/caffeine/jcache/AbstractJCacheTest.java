@@ -44,6 +44,7 @@ import com.google.common.testing.FakeTicker;
  */
 @Test(singleThreaded = true)
 public abstract class AbstractJCacheTest {
+  protected static final long START_TIME_MS = System.currentTimeMillis();
   protected static final long EXPIRY_DURATION = TimeUnit.MINUTES.toMillis(1);
 
   protected static final Integer KEY_1 = 1, VALUE_1 = -1;
@@ -68,7 +69,7 @@ public abstract class AbstractJCacheTest {
 
   @BeforeMethod(alwaysRun = true)
   public void before() {
-    ticker = new FakeTicker();
+    ticker = new FakeTicker().advance(START_TIME_MS, TimeUnit.MILLISECONDS);
     jcache = (CacheProxy<Integer, Integer>) cacheManager.createCache("jcache", getConfiguration());
     jcacheLoading = (LoadingCacheProxy<Integer, Integer>) cacheManager.createCache(
         "jcacheLoading", getLoadingConfiguration());
@@ -86,7 +87,8 @@ public abstract class AbstractJCacheTest {
   /* ---------------- Utility methods ------------- */
 
   @Nullable
-  protected static Expirable<Integer> getExpirable(CacheProxy<Integer, Integer> cache, Integer key) {
+  protected static Expirable<Integer> getExpirable(
+      CacheProxy<Integer, Integer> cache, Integer key) {
     return cache.cache.getIfPresent(key);
   }
 

@@ -53,6 +53,6 @@ public final class EventTypeFilterTest {
 
   @Test
   public void hash() {
-    filter.hashCode();
+    assertThat(filter.hashCode(), is(filter.hashCode()));
   }
 }

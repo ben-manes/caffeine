@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.TimerWheel.SPANS;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -118,7 +119,7 @@ public final class TimerWheelTest {
   public Object[][] providesFuzzySchedule() {
     long[] times = new long[5_000];
     long clock = ThreadLocalRandom.current().nextLong();
-    long bound = clock + TimeUnit.DAYS.toNanos(10);
+    long bound = clock + TimeUnit.DAYS.toNanos(1) + SPANS[SPANS.length - 1];
     for (int i = 0; i < times.length; i++) {
       times[i] = ThreadLocalRandom.current().nextLong(clock + 1, bound);
     }

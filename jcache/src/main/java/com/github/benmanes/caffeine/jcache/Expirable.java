@@ -49,7 +49,7 @@ public final class Expirable<V> {
 
   /** Returns if the value has expired and is eligible for eviction. */
   public boolean hasExpired(long currentTimeMS) {
-    return (expireTimeMS <= currentTimeMS);
+    return (currentTimeMS - expireTimeMS) >= 0;
   }
 
   /** Returns if the value will never expire. */

@@ -66,7 +66,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
   public void get_loading_absent() {
     assertThat(jcacheLoading.get(KEY_1), is(KEY_1));
     Expirable<Integer> expirable = getExpirable(jcacheLoading, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
   @Test
@@ -86,7 +86,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
     assertThat(jcacheLoading.get(KEY_1), is(VALUE_1));
     Expirable<Integer> expirable = getExpirable(jcacheLoading, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
   /* ---------------- getAndPut -------------- */
@@ -96,7 +96,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     assertThat(jcache.getAndPut(KEY_1, VALUE_1), is(nullValue()));
 
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
   @Test
@@ -116,7 +116,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
     assertThat(jcache.getAndPut(KEY_1, VALUE_2), is(VALUE_1));
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
   /* ---------------- put -------------- */
@@ -126,7 +126,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     jcache.put(KEY_1, VALUE_1);
 
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
   @Test
@@ -146,7 +146,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
     jcache.put(KEY_1, VALUE_2);
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
   /* ---------------- putAll -------------- */
@@ -157,7 +157,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
     for (Integer key : keys) {
       Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+      assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
     }
   }
 
@@ -181,7 +181,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     jcache.putAll(entries);
     for (Integer key : keys) {
       Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+      assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
     }
   }
 
@@ -192,7 +192,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     jcache.putIfAbsent(KEY_1, VALUE_1);
 
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
   @Test
@@ -212,7 +212,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
     jcache.putIfAbsent(KEY_1, VALUE_2);
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
   /* ---------------- invoke -------------- */
@@ -225,7 +225,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     }), is(nullValue()));
 
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
   @Test
@@ -253,7 +253,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     }), is(nullValue()));
 
     Expirable<Integer> expirable = getExpirable(jcache, KEY_1);
-    assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+    assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
   /* ---------------- invokeAll -------------- */
@@ -267,7 +267,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
     for (Integer key : keys) {
       Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+      assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
     }
   }
 
@@ -299,7 +299,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
 
     for (Integer key : keys) {
       Expirable<Integer> expirable = getExpirable(jcache, key);
-      assertThat(expirable.getExpireTimeMS(), is(EXPIRY_DURATION));
+      assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
     }
   }
 }
