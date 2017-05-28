@@ -25,14 +25,14 @@
  */
 ext {
   versions = [
-    akka: '2.5.1',
+    akka: '2.5.2',
     commons_compress: '1.14',
     commons_lang3: '3.5',
     config: '1.3.1',
     error_prone_annotations: '2.0.19',
     fastutil: '7.2.0',
     flip_tables: '1.0.2',
-    guava: '21.0',
+    guava: '22.0',
     javapoet: '1.9.0',
     jcache: '1.0.0',
     jsr305: '3.0.2',
@@ -69,10 +69,10 @@ ext {
     ohc: '0.6.1',
     rapidoid: '5.3.4',
     slf4j: '1.7.25',
-    tcache: '1.0.1',
+    tcache: '1.0.3',
   ]
   plugin_versions = [
-    buildscan: '1.7.1',
+    buildscan: '1.7.3',
     buildscan_recipes: '0.2.0',
     checkstyle: '7.7',
     coveralls: '2.8.1',
@@ -129,7 +129,7 @@ ext {
       exclude group: 'org.hamcrest'
     },
     osgi_compile: [
-      'org.apache.felix:org.apache.felix.framework:5.6.2',
+      'org.apache.felix:org.apache.felix.framework:5.6.4',
       "org.ops4j.pax.exam:pax-exam-junit4:${test_versions.pax_exam}",
     ],
     osgi_runtime: [

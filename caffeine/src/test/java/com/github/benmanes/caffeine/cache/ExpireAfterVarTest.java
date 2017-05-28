@@ -15,13 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
+import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
+import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.function.Function.identity;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -34,6 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.testng.annotations.Listeners;
@@ -51,6 +57,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
 /**
@@ -61,6 +68,123 @@ import com.google.common.collect.Iterables;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterVarTest {
+
+  /* ---------------- Create -------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+  public void put_replace(Cache<Integer, Integer> cache, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+
+    cache.put(context.firstKey(), context.absentValue());
+    cache.put(context.absentKey(), context.absentValue());
+    context.consumedNotifications().clear(); // Ignore replacement notification
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.middleKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
+    assertThat(cache.estimatedSize(), is(1L));
+
+    long count = context.initialSize();
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+  public void put_replace(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    CompletableFuture<Integer> future = CompletableFuture.completedFuture(context.absentValue());
+    context.ticker().advance(30, TimeUnit.SECONDS);
+
+    cache.put(context.firstKey(), future);
+    cache.put(context.absentKey(), future);
+    context.consumedNotifications().clear(); // Ignore replacement notification
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.middleKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(futureOf(context.absentValue())));
+    assertThat(cache.synchronous().estimatedSize(), is(1L));
+
+    long count = context.initialSize();
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+  public void put_replace(Map<Integer, Integer> map, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+
+    assertThat(map.put(context.firstKey(), context.absentValue()), is(not(nullValue())));
+    assertThat(map.put(context.absentKey(), context.absentValue()), is(nullValue()));
+    context.consumedNotifications().clear(); // Ignore replacement notification
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(map.get(context.firstKey()), is(nullValue()));
+    assertThat(map.get(context.middleKey()), is(nullValue()));
+    assertThat(map.get(context.absentKey()), is(context.absentValue()));
+    assertThat(map.size(), is(1));
+
+    long count = context.initialSize();
+    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+  public void putAll_replace(Cache<Integer, Integer> cache, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+
+    cache.putAll(ImmutableMap.of(
+        context.firstKey(), context.absentValue(),
+        context.absentKey(), context.absentValue()));
+    context.consumedNotifications().clear(); // Ignore replacement notification
+
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.middleKey()), is(nullValue()));
+    assertThat(cache.getIfPresent(context.absentKey()), is(context.absentValue()));
+    assertThat(cache.estimatedSize(), is(1L));
+
+    long count = context.initialSize();
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+  public void replace_updated(Map<Integer, Integer> map, CacheContext context) {
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    assertThat(map.replace(context.firstKey(), context.absentValue()), is(not(nullValue())));
+    context.ticker().advance(30, TimeUnit.SECONDS);
+
+    context.cleanUp();
+    assertThat(map.size(), is(0));
+    long count = context.initialSize();
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.FULL,
+      expiryTime = Expire.ONE_MINUTE, expiry = CacheExpiry.CREATE)
+  public void replaceConditionally_updated(Map<Integer, Integer> map, CacheContext context) {
+    Integer key = context.firstKey();
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    assertThat(map.replace(key, context.original().get(key), context.absentValue()), is(true));
+    context.ticker().advance(30, TimeUnit.SECONDS);
+
+    context.cleanUp();
+    assertThat(map, is(emptyMap()));
+    long count = context.initialSize();
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
+  }
 
   /* ---------------- Exceptional -------------- */
 

@@ -328,6 +328,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   }
 
   @Override
+  public int size() {
+    return data.size();
+  }
+
+  @Override
   public void clear() {
     if (!hasRemovalListener() && (writer == CacheWriter.disabledWriter())) {
       data.clear();
@@ -336,11 +341,6 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     for (K key : data.keySet()) {
       remove(key);
     }
-  }
-
-  @Override
-  public int size() {
-    return data.size();
   }
 
   @Override

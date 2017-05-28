@@ -560,6 +560,11 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     }
 
     @Override
+    public void clear() {
+      delegate.clear();
+    }
+
+    @Override
     public boolean containsKey(Object key) {
       return delegate.containsKey(key);
     }
@@ -604,6 +609,28 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     }
 
     @Override
+    public boolean remove(Object key, Object value) {
+      requireNonNull(key);
+      if (value == null) {
+        return false;
+      }
+      CompletableFuture<V> oldValueFuture = delegate.get(key);
+      if ((oldValueFuture != null) && !value.equals(Async.getWhenSuccessful(oldValueFuture))) {
+        // Optimistically check if the current value is equal, but don't skip if it may be loading
+        return false;
+      }
+
+      @SuppressWarnings("unchecked")
+      K castedKey = (K) key;
+      boolean[] removed = { false };
+      delegate.compute(castedKey, (k, oldValue) -> {
+        removed[0] = value.equals(Async.getWhenSuccessful(oldValue));
+        return removed[0] ? null : oldValue;
+      }, /* recordStats */ false, /* recordLoad */ false);
+      return removed[0];
+    }
+
+    @Override
     public V replace(K key, V value) {
       requireNonNull(value);
       CompletableFuture<V> oldValueFuture =
@@ -616,24 +643,19 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       requireNonNull(oldValue);
       requireNonNull(newValue);
       CompletableFuture<V> oldValueFuture = delegate.get(key);
-      return oldValue.equals(Async.getIfReady(oldValueFuture))
-          && delegate.replace(key, oldValueFuture, CompletableFuture.completedFuture(newValue));
-    }
-
-    @Override
-    public boolean remove(Object key, Object value) {
-      requireNonNull(key);
-      if (value == null) {
+      if ((oldValueFuture != null) && !oldValue.equals(Async.getWhenSuccessful(oldValueFuture))) {
+        // Optimistically check if the current value is equal, but don't skip if it may be loading
         return false;
       }
-      CompletableFuture<V> oldValueFuture = delegate.get(key);
-      return value.equals(Async.getIfReady(oldValueFuture))
-          && delegate.remove(key, oldValueFuture);
-    }
 
-    @Override
-    public void clear() {
-      delegate.clear();
+      @SuppressWarnings("unchecked")
+      K castedKey = key;
+      boolean[] replaced = { false };
+      delegate.compute(castedKey, (k, value) -> {
+        replaced[0] = oldValue.equals(Async.getWhenSuccessful(value));
+        return replaced[0] ? CompletableFuture.completedFuture(newValue) : value;
+      }, /* recordStats */ false, /* recordLoad */ false);
+      return replaced[0];
     }
 
     @Override

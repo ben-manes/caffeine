@@ -286,12 +286,10 @@ public @interface CacheSpec {
         return mock;
       }
     },
-    ACCESS {
+    CREATE {
       @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
         return ExpiryBuilder
             .expiringAfterCreate(expiryTime.timeNanos())
-            .expiringAfterUpdate(expiryTime.timeNanos())
-            .expiringAfterRead(expiryTime.timeNanos())
             .build();
       }
     },
@@ -300,6 +298,15 @@ public @interface CacheSpec {
         return ExpiryBuilder
             .expiringAfterCreate(expiryTime.timeNanos())
             .expiringAfterUpdate(expiryTime.timeNanos())
+            .build();
+      }
+    },
+    ACCESS {
+      @Override public <K, V> Expiry<K, V> createExpiry(Expire expiryTime) {
+        return ExpiryBuilder
+            .expiringAfterCreate(expiryTime.timeNanos())
+            .expiringAfterUpdate(expiryTime.timeNanos())
+            .expiringAfterRead(expiryTime.timeNanos())
             .build();
       }
     };

@@ -678,21 +678,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return;
     }
 
-    long expirationTime = (now - expiresAfterAccessNanos());
-    expireAfterAccessEntries(accessOrderEdenDeque(), expirationTime, now);
+    expireAfterAccessEntries(accessOrderEdenDeque(), now);
     if (evicts()) {
-      expireAfterAccessEntries(accessOrderProbationDeque(), expirationTime, now);
-      expireAfterAccessEntries(accessOrderProtectedDeque(), expirationTime, now);
+      expireAfterAccessEntries(accessOrderProbationDeque(), now);
+      expireAfterAccessEntries(accessOrderProtectedDeque(), now);
     }
   }
 
   /** Expires entries in an access-order queue. */
   @GuardedBy("evictionLock")
-  void expireAfterAccessEntries(AccessOrderDeque<Node<K, V>> accessOrderDeque,
-      long expirationTime, long now) {
+  void expireAfterAccessEntries(AccessOrderDeque<Node<K, V>> accessOrderDeque, long now) {
+    long duration = expiresAfterAccessNanos();
     for (;;) {
       Node<K, V> node = accessOrderDeque.peekFirst();
-      if ((node == null) || (node.getAccessTime() > expirationTime)) {
+      if ((node == null) || ((now - node.getAccessTime()) < duration)) {
         return;
       }
       evictEntry(node, RemovalCause.EXPIRED, now);
@@ -705,10 +704,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (!expiresAfterWrite()) {
       return;
     }
-    long expirationTime = now - expiresAfterWriteNanos();
+    long duration = expiresAfterWriteNanos();
     for (;;) {
       final Node<K, V> node = writeOrderDeque().peekFirst();
-      if ((node == null) || (node.getWriteTime() > expirationTime)) {
+      if ((node == null) || ((now - node.getWriteTime()) < duration)) {
         break;
       }
       evictEntry(node, RemovalCause.EXPIRED, now);
@@ -762,12 +761,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (actualCause[0] == RemovalCause.EXPIRED) {
           boolean expired = false;
           if (expiresAfterAccess()) {
-            long expirationTime = now - expiresAfterAccessNanos();
-            expired |= (n.getAccessTime() <= expirationTime);
+            expired |= ((now - n.getAccessTime()) >= expiresAfterAccessNanos());
           }
           if (expiresAfterWrite()) {
-            long expirationTime = now - expiresAfterWriteNanos();
-            expired |= (n.getWriteTime() <= expirationTime);
+            expired |= ((now - n.getWriteTime()) >= expiresAfterWriteNanos());
           }
           if (expiresVariable()) {
             expired |= (n.getVariableTime() <= now);
@@ -1333,10 +1330,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (isComputingAsync(node)) {
         synchronized (node) {
           if (!Async.isReady((CompletableFuture<?>) node.getValue())) {
-            long expirationTime = expirationTicker().read() + Async.MAXIMUM_EXPIRY;
-            setWriteTime(node, expirationTime);
-            setAccessTime(node, expirationTime);
+            long expirationTime = expirationTicker().read() + Long.MAX_VALUE;
             setVariableTime(node, expirationTime);
+            setAccessTime(node, expirationTime);
+            setWriteTime(node, expirationTime);
           }
         }
       }
@@ -1745,9 +1742,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @return the removed value or null if no mapping was found
    */
   V removeNoWriter(Object key) {
-    Node<K, V> node;
-    Object lookupKey = nodeFactory.newLookupKey(key);
-    if (!data.containsKey(lookupKey) || ((node = data.remove(lookupKey)) == null)) {
+    Node<K, V> node = data.remove(nodeFactory.newLookupKey(key));
+    if (node == null) {
       return null;
     }
 
@@ -1822,9 +1818,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @Override
   public boolean remove(Object key, Object value) {
     requireNonNull(key);
-
-    Object lookupKey = nodeFactory.newLookupKey(key);
-    if ((value == null) || !data.containsKey(lookupKey)) {
+    if (value == null) {
       return false;
     }
 
@@ -1837,7 +1831,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     RemovalCause[] cause = new RemovalCause[1];
 
     long now = expirationTicker().read();
-    data.computeIfPresent(lookupKey, (kR, node) -> {
+    data.computeIfPresent(nodeFactory.newLookupKey(key), (kR, node) -> {
       synchronized (node) {
         oldKey[0] = node.getKey();
         oldValue[0] = node.getValue();
