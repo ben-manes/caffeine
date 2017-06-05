@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
@@ -209,69 +210,136 @@ public final class CaffeineSpec {
 
   /** Configures the initial capacity. */
   void initialCapacity(String key, String value) {
+    initialCapacity(parseInt(key, value));
+  }
+
+  /** Configures the initial capacity. */
+  @Nonnull
+  public CaffeineSpec initialCapacity(int capacity) {
     requireArgument(initialCapacity == UNSET_INT,
         "initial capacity was already set to %,d", initialCapacity);
-    initialCapacity = parseInt(key, value);
+    this.initialCapacity = capacity;
+    return this;
   }
 
   /** Configures the maximum size. */
   void maximumSize(String key, String value) {
+    maximumSize(parseLong(key, value));
+  }
+
+  /** Configures the maximum size. */
+  @Nonnull
+  public CaffeineSpec maximumSize(long size) {
     requireArgument(maximumSize == UNSET_INT,
         "maximum size was already set to %,d", maximumSize);
     requireArgument(maximumWeight == UNSET_INT,
         "maximum weight was already set to %,d", maximumWeight);
-    maximumSize = parseLong(key, value);
+    this.maximumSize = size;
+    return this;
   }
 
   /** Configures the maximum size. */
   void maximumWeight(String key, String value) {
+    maximumWeight(parseLong(key, value));
+  }
+
+  /** Configures the maximum size. */
+  @Nonnull
+  public CaffeineSpec maximumWeight(long weight) {
     requireArgument(maximumWeight == UNSET_INT,
         "maximum weight was already set to %,d", maximumWeight);
     requireArgument(maximumSize == UNSET_INT,
         "maximum size was already set to %,d", maximumSize);
-    maximumWeight = parseLong(key, value);
+    this.maximumWeight = weight;
+    return this;
   }
 
   /** Configures the keys as weak references. */
   void weakKeys(@Nullable String value) {
     requireArgument(value == null, "weak keys does not take a value");
     requireArgument(keyStrength == null, "weak keys was already set");
+    weakKeys();
+  }
+
+  /** Configures the key strength. */
+  @Nonnull
+  public CaffeineSpec weakKeys() {
+    requireArgument(keyStrength == null, "key strength was already set");
     keyStrength = Strength.WEAK;
+    return this;
   }
 
   /** Configures the value as weak or soft references. */
   void valueStrength(String key, @Nullable String value, Strength strength) {
     requireArgument(value == null, "%s does not take a value", key);
-    requireArgument(valueStrength == null, "%s was already set to %s", key, valueStrength);
-    valueStrength = strength;
+    valueStrength(strength);
+  }
+
+  /** Configures the valueStrength as weak or soft references. */
+  @Nonnull
+  public CaffeineSpec valueStrength(Strength valueStrength) {
+    requireNonNull(valueStrength, "valueStrength strength required");
+    requireArgument(this.valueStrength == null, "valueStrength was already set to %s", this.valueStrength);
+    this.valueStrength = valueStrength;
+    return this;
   }
 
   /** Configures expire after access. */
   void expireAfterAccess(String key, String value) {
+    expireAfterAccess(parseTimeUnit(key, value), parseDuration(key, value));
+  }
+
+  /** Configures expire after access. */
+  @Nonnull
+  public CaffeineSpec expireAfterAccess(TimeUnit timeUnit, long duration) {
+    requireNonNull(timeUnit, "timeUnit required");
     requireArgument(expireAfterAccessDuration == UNSET_INT, "expireAfterAccess was already set");
-    expireAfterAccessTimeUnit = parseTimeUnit(key, value);
-    expireAfterAccessDuration = parseDuration(key, value);
+    expireAfterAccessTimeUnit = timeUnit;
+    expireAfterAccessDuration = duration;
+    return this;
   }
 
   /** Configures expire after write. */
   void expireAfterWrite(String key, String value) {
+    expireAfterWrite(parseTimeUnit(key, value), parseDuration(key, value));
+  }
+
+  /** Configures expire after write. */
+  @Nonnull
+  public CaffeineSpec expireAfterWrite(TimeUnit timeUnit, long duration) {
+    requireNonNull(timeUnit, "timeUnit required");
     requireArgument(expireAfterWriteDuration == UNSET_INT, "expireAfterWrite was already set");
-    expireAfterWriteTimeUnit = parseTimeUnit(key, value);
-    expireAfterWriteDuration = parseDuration(key, value);
+    expireAfterWriteTimeUnit = timeUnit;
+    expireAfterWriteDuration = duration;
+    return this;
   }
 
   /** Configures refresh after write. */
   void refreshAfterWrite(String key, String value) {
+    refreshAfterWrite(parseTimeUnit(key, value), parseDuration(key, value));
+  }
+
+  /** Configures refresh after write. */
+  @Nonnull
+  public CaffeineSpec refreshAfterWrite(TimeUnit timeUnit, long duration) {
     requireArgument(refreshAfterWriteDuration == UNSET_INT, "refreshAfterWrite was already set");
-    refreshAfterWriteTimeUnit = parseTimeUnit(key, value);
-    refreshAfterWriteDuration = parseDuration(key, value);
+    refreshAfterWriteTimeUnit = timeUnit;
+    refreshAfterWriteDuration = duration;
+    return this;
   }
 
   /** Configures the value as weak or soft references. */
   void recordStats(@Nullable String value) {
     requireArgument(value == null, "record stats does not take a value");
+    recordStats();
+  }
+
+  /** Configures the value as weak or soft references. */
+  @Nonnull
+  public CaffeineSpec recordStats() {
     requireArgument(!recordStats, "record stats was already set");
     recordStats = true;
+    return this;
   }
 
   /** Returns a parsed int value. */
