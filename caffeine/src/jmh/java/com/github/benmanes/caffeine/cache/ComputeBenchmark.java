@@ -20,6 +20,7 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.function.IntPredicate;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
@@ -51,7 +52,7 @@ public class ComputeBenchmark {
   @Param({"ConcurrentHashMap", "Caffeine", "Guava", "Rapidoid"})
   String computeType;
 
-  Function<Integer, Boolean> benchmarkFunction;
+  IntPredicate benchmarkFunction;
   Integer[] ints;
 
   @State(Scope.Thread)
@@ -81,17 +82,17 @@ public class ComputeBenchmark {
     } else {
       throw new AssertionError("Unknown computingType: " + computeType);
     }
-    Arrays.stream(ints).forEach(benchmarkFunction::apply);
+    Arrays.stream(ints).forEach(benchmarkFunction::test);
   }
 
   @Benchmark @Threads(32)
   public Boolean compute_sameKey(ThreadState threadState) {
-    return benchmarkFunction.apply(COMPUTE_KEY);
+    return benchmarkFunction.test(COMPUTE_KEY);
   }
 
   @Benchmark @Threads(32)
   public Boolean compute_spread(ThreadState threadState) {
-    return benchmarkFunction.apply(ints[threadState.index++ & MASK]);
+    return benchmarkFunction.test(ints[threadState.index++ & MASK]);
   }
 
   private void setupConcurrentHashMap() {
