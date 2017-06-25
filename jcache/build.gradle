@@ -13,16 +13,16 @@ dependencies {
   compile libraries.jsr330
 
   testCompile libraries.guava
-  testCompile test_libraries.junit
-  testCompile test_libraries.testng
-  testCompile test_libraries.mockito
-  testCompile test_libraries.hamcrest
-  testCompile test_libraries.jcache_tck
-  testCompile test_libraries.jcache_tck_tests
-  testCompile test_libraries.jcache_guice
-  testCompile test_libraries.guava_testlib
+  testCompile testLibraries.junit
+  testCompile testLibraries.testng
+  testCompile testLibraries.mockito
+  testCompile testLibraries.hamcrest
+  testCompile testLibraries.jcacheTck
+  testCompile testLibraries.jcacheTckTests
+  testCompile testLibraries.jcacheGuice
+  testCompile testLibraries.guavaTestLib
 
-  tck dependencies.create(test_libraries.jcache_tck_tests) {
+  tck dependencies.create(testLibraries.jcacheTckTests) {
     transitive = false
   }
 
@@ -68,7 +68,7 @@ task testCompatibilityKit(type: Test, group: 'Build', description: 'Runs the JCa
   onlyIf { compileTestJava.didWork || unzipTestKit.didWork }
 
   useJUnit()
-  testClassesDir = file("${buildDir}/tck")
+  testClassesDirs = files("${buildDir}/tck")
 
   def pkg = 'com.github.benmanes.caffeine.jcache'
   systemProperty 'java.net.preferIPv4Stack', 'true'

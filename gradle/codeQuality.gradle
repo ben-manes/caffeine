@@ -2,9 +2,8 @@
  * Configurations for code quality analysis
  */
 apply plugin: 'org.kordamp.gradle.stats'
-apply plugin: 'one.util.huntbugs'
+apply plugin: 'com.github.spotbugs'
 apply plugin: 'checkstyle'
-apply plugin: 'findbugs'
 apply plugin: 'jacoco'
 apply plugin: 'java'
 apply plugin: 'pmd'
@@ -14,7 +13,7 @@ configurations {
 }
 
 dependencies {
-  checkstyleConfig gradle_plugins.checkstyle
+  checkstyleConfig gradlePlugins.checkstyle
 }
 
 tasks.withType(JavaCompile) {
@@ -29,29 +28,23 @@ javadoc.options.links(
 
 checkstyle {
   showViolations = true
-  toolVersion = plugin_versions.checkstyle
+  toolVersion = pluginVersions.checkstyle
   config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
 }
 
-huntbugs {
-  classSimpleFilter { classname ->
-    !classname.contains('Header') && !classname.contains('Mpsc') && !classname.contains('Factory')
-  }
-}
-
-findbugs {
+spotbugs {
   effort = 'max'
   excludeFilter = file("${rootDir}/config/findbugs/exclude.xml")
 }
 
 pmd {
   ruleSets = []
-  toolVersion = plugin_versions.pmd
+  toolVersion = pluginVersions.pmd
   ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
 }
 
 jacoco {
-  toolVersion = plugin_versions.jacoco
+  toolVersion = pluginVersions.jacoco
 }
 
 jacocoTestReport {
@@ -93,12 +86,14 @@ tasks.withType(Checkstyle) {
   }
 }
 
-tasks.withType(FindBugs) {
-  enabled = System.properties.containsKey('findbugs')
-  group = 'Findbugs'
-  reports {
-    xml.enabled = false
-    html.enabled = true
+afterEvaluate {
+  tasks.findAll { it.name.startsWith('findbugs') }.each {
+    it.enabled = System.properties.containsKey('findbugs')
+    it.group = 'FindBugs'
+    it.reports {
+      xml.enabled = false
+      html.enabled = true
+    }
   }
 }
 

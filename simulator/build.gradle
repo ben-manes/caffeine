@@ -12,22 +12,22 @@ dependencies {
   compile libraries.guava
   compile libraries.stream
   compile libraries.fastutil
-  compile libraries.flip_tables
-  compile benchmark_libraries.ohc
-  compile libraries.commons_lang3
-  compile libraries.commons_compress
-  compile benchmark_libraries.tcache
-  compile libraries.univocity_parsers
-  compile benchmark_libraries.cache2k
-  compile benchmark_libraries.ehcache2
-  compile benchmark_libraries.ehcache3
-  compile benchmark_libraries.rapidoid
-  compile benchmark_libraries.collision
-  compile benchmark_libraries.slf4j_nop
-  compile benchmark_libraries.expiring_map
-  compile benchmark_libraries.elastic_search
+  compile libraries.flipTables
+  compile benchmarkLibraries.ohc
+  compile libraries.commonsLang3
+  compile libraries.commonsCompress
+  compile benchmarkLibraries.tcache
+  compile libraries.univocityParsers
+  compile benchmarkLibraries.cache2k
+  compile benchmarkLibraries.ehcache2
+  compile benchmarkLibraries.ehcache3
+  compile benchmarkLibraries.rapidoid
+  compile benchmarkLibraries.collision
+  compile benchmarkLibraries.slf4jNop
+  compile benchmarkLibraries.expiringMap
+  compile benchmarkLibraries.elasticSearch
 
-  testCompile test_libraries.testng
+  testCompile testLibraries.testng
 }
 
 test {

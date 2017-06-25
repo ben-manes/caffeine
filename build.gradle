@@ -10,13 +10,14 @@ buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
 
   repositories {
+    maven { url "http://repo.spring.io/plugins-release" }
     maven { url 'https://plugins.gradle.org/m2' }
     mavenCentral()
     jcenter()
   }
 
   dependencies {
-    classpath gradle_plugins.values()
+    classpath gradlePlugins.values()
   }
 }
 
@@ -47,16 +48,16 @@ allprojects {
 
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
-  apply plugin: 'nebula.provided-base'
+  apply plugin: 'propdeps-maven'
   apply plugin: 'eclipse'
   apply plugin: 'java'
   apply plugin: 'idea'
   apply plugin: 'osgi'
 
   apply from: "${rootDir}/gradle/publish.gradle"
-  apply from: "${rootDir}/gradle/code_quality.gradle"
+  apply from: "${rootDir}/gradle/codeQuality.gradle"
   apply from: "${rootDir}/gradle/dependencies.gradle"
-  apply from: "${rootDir}/gradle/object_layout.gradle"
+  apply from: "${rootDir}/gradle/objectLayout.gradle"
 
   if (JavaVersion.current().isJava9Compatible()) {
     tasks.uploadArchives.enabled = false
@@ -81,15 +82,15 @@ subprojects {
 
   dependencies {
     provided libraries.jsr305
-    provided libraries.error_prone_annotations
+    provided libraries.errorProneAnnotations
 
     testCompile libraries.guava
-    testCompile test_libraries.mockito
-    testCompile test_libraries.hamcrest
-    testCompile test_libraries.awaitility
-    testCompile test_libraries.osgi_compile
+    testCompile testLibraries.mockito
+    testCompile testLibraries.hamcrest
+    testCompile testLibraries.awaitility
+    testCompile testLibraries.osgiCompile
 
-    testRuntime test_libraries.osgi_runtime
+    testRuntime testLibraries.osgiRuntime
   }
 
   configurations {
@@ -103,8 +104,8 @@ subprojects {
     it.dependsOn('jar')
 
     // ensure tasks don't overwrite the default report directories used by the 'test' task
-    reports.html.destination = "${buildDir}/reports/${name}"
-    reports.junitXml.destination = "${buildDir}/reports/${name}/results"
+    reports.html.destination = file("${buildDir}/reports/${name}")
+    reports.junitXml.destination = file("${buildDir}/reports/${name}/results")
     binResultsDir = file("${buildDir}/reports/${name}/results/binary/${name}")
   }
 

@@ -26,33 +26,33 @@ dependencies {
   testCompile libraries.ycsb
   testCompile libraries.guava
   testCompile libraries.fastutil
-  testCompile test_libraries.junit
-  testCompile test_libraries.testng
-  testCompile test_libraries.jctools
-  testCompile libraries.commons_lang3
-  testCompile test_libraries.guava_testlib
+  testCompile testLibraries.junit
+  testCompile testLibraries.testng
+  testCompile testLibraries.jctools
+  testCompile libraries.commonsLang3
+  testCompile testLibraries.guavaTestLib
 
-  javaAgent benchmark_libraries.jamm
+  javaAgent benchmarkLibraries.jamm
 
-  jmh libraries.flip_tables
-  jmh benchmark_libraries.jamm
-  jmh benchmark_libraries.tcache
-  jmh benchmark_libraries.cache2k
-  jmh benchmark_libraries.ehcache2
-  jmh benchmark_libraries.ehcache3
-  jmh benchmark_libraries.koloboke
-  jmh benchmark_libraries.rapidoid
-  jmh benchmark_libraries.slf4j_nop
-  jmh benchmark_libraries.collision
-  jmh benchmark_libraries.jackrabbit
-  jmh benchmark_libraries.expiring_map
-  jmh benchmark_libraries.elastic_search
-  jmh benchmark_libraries.concurrentlinkedhashmap
+  jmh libraries.flipTables
+  jmh benchmarkLibraries.jamm
+  jmh benchmarkLibraries.tcache
+  jmh benchmarkLibraries.cache2k
+  jmh benchmarkLibraries.ehcache2
+  jmh benchmarkLibraries.ehcache3
+  jmh benchmarkLibraries.koloboke
+  jmh benchmarkLibraries.rapidoid
+  jmh benchmarkLibraries.slf4jNop
+  jmh benchmarkLibraries.collision
+  jmh benchmarkLibraries.jackrabbit
+  jmh benchmarkLibraries.expiringMap
+  jmh benchmarkLibraries.elasticSearch
+  jmh benchmarkLibraries.concurrentlinkedhashmap
 
   javaPoetCompile libraries.guava
   javaPoetCompile libraries.jsr305
   javaPoetCompile libraries.javapoet
-  javaPoetCompile libraries.commons_lang3
+  javaPoetCompile libraries.commonsLang3
 }
 
 jar.manifest {

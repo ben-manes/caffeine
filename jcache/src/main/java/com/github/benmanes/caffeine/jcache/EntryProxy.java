@@ -20,7 +20,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import javax.cache.Cache;
 
 /**
- * An implementation of JSR-107 {@link Cache.Entry}.
+ * An implementation of JSR-107 {@link javax.cache.Cache.Entry}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

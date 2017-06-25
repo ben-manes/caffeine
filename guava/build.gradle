@@ -7,11 +7,11 @@ dependencies {
   compile project(':caffeine')
   compile libraries.guava
 
-  testCompile test_libraries.junit
-  testCompile test_libraries.truth
-  testCompile test_libraries.jctools
-  testCompile test_libraries.easymock
-  testCompile test_libraries.guava_testlib
+  testCompile testLibraries.junit
+  testCompile testLibraries.truth
+  testCompile testLibraries.jctools
+  testCompile testLibraries.easymock
+  testCompile testLibraries.guavaTestLib
 }
 
 jar.manifest {

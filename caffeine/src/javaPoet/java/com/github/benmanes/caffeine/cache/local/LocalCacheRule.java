@@ -23,13 +23,13 @@ import javax.lang.model.element.Modifier;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public abstract class LocalCacheRule implements Consumer<LocalCacheContext> {
-  protected static final Modifier[] publicFinalModifiers =
+  static final Modifier[] publicFinalModifiers =
     { Modifier.PUBLIC, Modifier.FINAL };
-  protected static final Modifier[] protectedFinalModifiers =
+  static final Modifier[] protectedFinalModifiers =
     { Modifier.PROTECTED, Modifier.FINAL };
-  protected static final Modifier[] privateFinalModifiers =
+  static final Modifier[] privateFinalModifiers =
     { Modifier.PRIVATE, Modifier.FINAL };
-  protected static final Modifier[] privateVolatileModifiers =
+  static final Modifier[] privateVolatileModifiers =
     { Modifier.PRIVATE, Modifier.VOLATILE };
 
   protected LocalCacheContext context;

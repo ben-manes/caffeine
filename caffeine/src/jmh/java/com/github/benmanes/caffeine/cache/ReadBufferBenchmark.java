@@ -73,6 +73,8 @@ public class ReadBufferBenchmark {
       case ReadBuffer.FULL:
         counters.recordFull++;
         break;
+      default:
+        throw new IllegalStateException();
     }
   }
 

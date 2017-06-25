@@ -12,15 +12,15 @@ before_install:
  - export JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify"
 
 script:
- - ./gradlew findbugsMain pmdMain -Dfindbugs -Dpmd
- - ./gradlew --scan check -x :caffeine:slowCaffeineTest -x :caffeine:slowGuavaTest
+ - ./gradlew findbugsMain pmdMain -Dfindbugs -Dpmd --console plain
+ - ./gradlew --scan check -x :caffeine:slowCaffeineTest -x :caffeine:slowGuavaTest --console plain
  - travis_wait ./gradlew --scan :caffeine:slowCaffeineTest
  - travis_wait ./gradlew --scan :caffeine:slowGuavaTest
- - sh -c 'cd examples/stats-metrics && ./gradlew test'
+ - sh -c 'cd examples/stats-metrics && ./gradlew test --console plain'
  - sh -c 'cd examples/write-behind-rxjava && mvn test'
 
 after_success:
-- ./gradlew coveralls uploadArchives -x test -x isolatedTests
+- ./gradlew coveralls uploadArchives -x test -x isolatedTests --console plain
 
 matrix:
   fast_finish: true

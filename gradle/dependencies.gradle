@@ -25,171 +25,171 @@
  */
 ext {
   versions = [
-    akka: '2.5.2',
-    commons_compress: '1.14',
-    commons_lang3: '3.5',
+    akka: '2.5.3',
+    commonsCompress: '1.14',
+    commonsLang3: '3.6',
     config: '1.3.1',
-    error_prone_annotations: '2.0.19',
-    fastutil: '7.2.0',
-    flip_tables: '1.0.2',
+    errorProneAnnotations: '2.0.19',
+    fastutil: '8.1.0',
+    flipTables: '1.0.2',
     guava: '22.0',
     javapoet: '1.9.0',
     jcache: '1.0.0',
     jsr305: '3.0.2',
     jsr330: '1',
     stream: '2.9.5',
-    univocity_parsers: '2.4.1',
+    univocityParsers: '2.4.1',
     ycsb: '0.12.0',
     xz: '1.6',
   ]
-  test_versions = [
+  testVersions = [
     awaitility: '3.0.0',
     easymock: '3.4',
     hamcrest: '2.0.0.0',
-    jcache_tck: '1.0.1',
-    jctools: '2.0.1',
+    jcacheTck: '1.0.1',
+    jctools: '2.0.2',
     junit: '4.12',
-    mockito: '2.8.9',
-    pax_exam: '4.11.0',
+    mockito: '2.8.47',
+    paxExam: '4.11.0',
     testng: '6.11',
     truth: '0.24',
   ]
-  benchmark_versions = [
+  benchmarkVersions = [
     cache2k: '1.0.0.CR4',
     collision: '0.3.2',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.4',
     ehcache3: '3.3.1',
-    elastic_search: '5.4.0',
-    expiring_map: '0.5.8',
-    jackrabbit: '1.6.1',
+    elasticSearch: '5.4.0',
+    expiringMap: '0.5.8',
+    jackrabbit: '1.7.2',
     jamm: '0.3.1',
-    java_object_layout: '0.8',
+    javaObjectLayout: '0.8',
+    jmh: 1.19,
     koloboke: '0.6.8',
     ohc: '0.6.1',
-    rapidoid: '5.3.4',
+    rapidoid: '5.3.5',
     slf4j: '1.7.25',
     tcache: '1.0.3',
   ]
-  plugin_versions = [
-    buildscan: '1.7.3',
-    buildscan_recipes: '0.2.0',
-    checkstyle: '7.7',
+  pluginVersions = [
+    buildscan: '1.7.4',
+    buildscanRecipes: '0.2.0',
+    checkstyle: '7.8.2',
     coveralls: '2.8.1',
     coverity: '1.0.10',
-    extra_conf: '3.1.0',
-    error_prone: '0.0.10',
-    huntbugs_core: '0.0.11',
-    huntbugs_plugin: '0.3.5',
+    errorProne: '0.0.10',
     jacoco: '0.7.9',
-    jmh: '0.3.1',
-    jmh_report: '0.2.0',
+    jmh: '0.4.1',
+    jmhReport: '0.2.0',
     nexus: '2.3.1',
-    pmd: '5.6.1',
-    semantic_versioning: '1.1.0',
-    shadow: '1.2.4',
+    pmd: '5.8.0',
+    propdeps: '0.0.10.RELEASE',
+    semanticVersioning: '1.1.0',
+    shadow: '2.0.1',
+    spotbugs: '1.0',
     stats: '0.2.0',
-    versions: '0.14.0',
+    versions: '0.15.0',
   ]
 
   libraries = [
     akka: "com.typesafe.akka:akka-actor_2.12:${versions.akka}",
-    commons_compress: "org.apache.commons:commons-compress:${versions.commons_compress}",
-    commons_lang3: "org.apache.commons:commons-lang3:${versions.commons_lang3}",
+    commonsCompress: "org.apache.commons:commons-compress:${versions.commonsCompress}",
+    commonsLang3: "org.apache.commons:commons-lang3:${versions.commonsLang3}",
     config: "com.typesafe:config:${versions.config}",
-    error_prone_annotations: "com.google.errorprone:error_prone_annotations:${versions.error_prone_annotations}",
+    errorProneAnnotations: "com.google.errorprone:error_prone_annotations:${versions.errorProneAnnotations}",
     fastutil: "it.unimi.dsi:fastutil:${versions.fastutil}",
-    flip_tables: "com.jakewharton.fliptables:fliptables:${versions.flip_tables}",
+    flipTables: "com.jakewharton.fliptables:fliptables:${versions.flipTables}",
     guava: "com.google.guava:guava:${versions.guava}",
     javapoet: "com.squareup:javapoet:${versions.javapoet}",
     jcache: "javax.cache:cache-api:${versions.jcache}",
     jsr305: "com.google.code.findbugs:jsr305:${versions.jsr305}",
     jsr330: "javax.inject:javax.inject:${versions.jsr330}",
     stream: "com.clearspring.analytics:stream:${versions.stream}",
-    univocity_parsers: "com.univocity:univocity-parsers:${versions.univocity_parsers}",
+    univocityParsers: "com.univocity:univocity-parsers:${versions.univocityParsers}",
     ycsb: "com.github.brianfrankcooper.ycsb:core:${versions.ycsb}",
     xz: "org.tukaani:xz:${versions.xz}",
   ]
-  test_libraries = [
-    awaitility: dependencies.create("org.awaitility:awaitility:${test_versions.awaitility}") {
+  testLibraries = [
+    awaitility: dependencies.create("org.awaitility:awaitility:${testVersions.awaitility}") {
       exclude group: 'org.hamcrest'
     },
-    easymock: "org.easymock:easymock:${test_versions.easymock}",
-    guava_testlib: dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
+    easymock: "org.easymock:easymock:${testVersions.easymock}",
+    guavaTestLib: dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
       exclude group: 'com.google.truth'
       exclude group: 'junit'
     },
-    hamcrest: "org.hamcrest:java-hamcrest:${test_versions.hamcrest}",
-    jcache_guice: "org.jsr107.ri:cache-annotations-ri-guice:${versions.jcache}",
-    jcache_tck: "javax.cache:cache-tests:${test_versions.jcache_tck}",
-    jcache_tck_tests: "javax.cache:cache-tests:${test_versions.jcache_tck}:tests",
-    jctools: "org.jctools:jctools-core:${test_versions.jctools}",
-    junit: "junit:junit:${test_versions.junit}",
-    mockito: dependencies.create("org.mockito:mockito-core:${test_versions.mockito}") {
+    hamcrest: "org.hamcrest:java-hamcrest:${testVersions.hamcrest}",
+    jcacheGuice: "org.jsr107.ri:cache-annotations-ri-guice:${versions.jcache}",
+    jcacheTck: "javax.cache:cache-tests:${testVersions.jcacheTck}",
+    jcacheTckTests: "javax.cache:cache-tests:${testVersions.jcacheTck}:tests",
+    jctools: "org.jctools:jctools-core:${testVersions.jctools}",
+    junit: "junit:junit:${testVersions.junit}",
+    mockito: dependencies.create("org.mockito:mockito-core:${testVersions.mockito}") {
       exclude group: 'org.hamcrest'
     },
-    osgi_compile: [
+    osgiCompile: [
       'org.apache.felix:org.apache.felix.framework:5.6.4',
-      "org.ops4j.pax.exam:pax-exam-junit4:${test_versions.pax_exam}",
+      "org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}",
     ],
-    osgi_runtime: [
-      "org.ops4j.pax.exam:pax-exam-container-native:${test_versions.pax_exam}",
-      "org.ops4j.pax.exam:pax-exam-link-mvn:${test_versions.pax_exam}",
+    osgiRuntime: [
+      "org.ops4j.pax.exam:pax-exam-container-native:${testVersions.paxExam}",
+      "org.ops4j.pax.exam:pax-exam-link-mvn:${testVersions.paxExam}",
       "org.ops4j.pax.url:pax-url-aether:2.5.2",
     ],
     testng: [
-      dependencies.create("org.testng:testng:${test_versions.testng}") {
+      dependencies.create("org.testng:testng:${testVersions.testng}") {
         exclude group: 'junit'
         exclude group: 'guice'
       },
       'com.google.inject:guice:4.1.0'
     ],
-    truth: "com.google.truth:truth:${test_versions.truth}",
+    truth: "com.google.truth:truth:${testVersions.truth}",
   ]
-  benchmark_libraries = [
-    cache2k: "org.cache2k:cache2k-core:${benchmark_versions.cache2k}",
-    collision: "systems.comodal:collision:${benchmark_versions.collision}",
-    concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmark_versions.concurrentlinkedhashmap}",
-    ehcache2: "net.sf.ehcache:ehcache:${benchmark_versions.ehcache2}",
-    ehcache3: "org.ehcache:ehcache:${benchmark_versions.ehcache3}",
-    elastic_search: dependencies.create("org.elasticsearch:elasticsearch:${benchmark_versions.elastic_search}") {
+  benchmarkLibraries = [
+    cache2k: "org.cache2k:cache2k-core:${benchmarkVersions.cache2k}",
+    collision: "systems.comodal:collision:${benchmarkVersions.collision}",
+    concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmarkVersions.concurrentlinkedhashmap}",
+    ehcache2: "net.sf.ehcache:ehcache:${benchmarkVersions.ehcache2}",
+    ehcache3: "org.ehcache:ehcache:${benchmarkVersions.ehcache3}",
+    elasticSearch: dependencies.create("org.elasticsearch:elasticsearch:${benchmarkVersions.elasticSearch}") {
       exclude group: 'org.apache.lucene'
     },
-    expiring_map: "net.jodah:expiringmap:${benchmark_versions.expiring_map}",
-    jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${benchmark_versions.jackrabbit}") {
+    expiringMap: "net.jodah:expiringmap:${benchmarkVersions.expiringMap}",
+    jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${benchmarkVersions.jackrabbit}") {
       exclude group: 'junit'
     },
-    jamm: "com.github.jbellis:jamm:${benchmark_versions.jamm}",
-    java_object_layout: "org.openjdk.jol:jol-cli:${benchmark_versions.java_object_layout}",
+    jamm: "com.github.jbellis:jamm:${benchmarkVersions.jamm}",
+    javaObjectLayout: "org.openjdk.jol:jol-cli:${benchmarkVersions.javaObjectLayout}",
     koloboke: [
-      "net.openhft:koloboke-api-jdk8:${benchmark_versions.koloboke}",
-      "net.openhft:koloboke-impl-jdk8:${benchmark_versions.koloboke}",
+      "net.openhft:koloboke-api-jdk8:${benchmarkVersions.koloboke}",
+      "net.openhft:koloboke-impl-jdk8:${benchmarkVersions.koloboke}",
     ],
-    ohc: "org.caffinitas.ohc:ohc-core-j8:${benchmark_versions.ohc}",
-    rapidoid: "org.rapidoid:rapidoid-commons:${benchmark_versions.rapidoid}",
-    slf4j_nop: "org.slf4j:slf4j-nop:${benchmark_versions.slf4j}",
-    tcache: "com.trivago:triava:${benchmark_versions.tcache}",
+    ohc: "org.caffinitas.ohc:ohc-core-j8:${benchmarkVersions.ohc}",
+    rapidoid: "org.rapidoid:rapidoid-commons:${benchmarkVersions.rapidoid}",
+    slf4jNop: "org.slf4j:slf4j-nop:${benchmarkVersions.slf4j}",
+    tcache: "com.trivago:triava:${benchmarkVersions.tcache}",
   ]
-  gradle_plugins = [
-    buildscan: "com.gradle:build-scan-plugin:${plugin_versions.buildscan}",
-    buildscan_recipes: "me.champeau.gradle:buildscan-recipes-plugin:${plugin_versions.buildscan_recipes}",
-    checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${plugin_versions.checkstyle}") {
+  gradlePlugins = [
+    buildscan: "com.gradle:build-scan-plugin:${pluginVersions.buildscan}",
+    buildscanRecipes: "me.champeau.gradle:buildscan-recipes-plugin:${pluginVersions.buildscanRecipes}",
+    checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${pluginVersions.checkstyle}") {
       transitive = false
     },
-    coveralls: "org.kt3k.gradle.plugin:coveralls-gradle-plugin:${plugin_versions.coveralls}",
-    coverity: "gradle.plugin.com.github.mjdetullio.gradle:coverity-plugin:${plugin_versions.coverity}",
-    extra_conf: "com.netflix.nebula:gradle-extra-configurations-plugin:${plugin_versions.extra_conf}",
-    error_prone: "net.ltgt.gradle:gradle-errorprone-plugin:${plugin_versions.error_prone}",
-    huntbugs: [
-      "one.util:huntbugs:${plugin_versions.huntbugs_core}",
-      "gradle.plugin.one.util.huntbugs:huntbugs-gradle-plugin:${plugin_versions.huntbugs_plugin}",
+    coveralls: "org.kt3k.gradle.plugin:coveralls-gradle-plugin:${pluginVersions.coveralls}",
+    coverity: "gradle.plugin.com.github.mjdetullio.gradle:coverity-plugin:${pluginVersions.coverity}",
+    errorProne: "net.ltgt.gradle:gradle-errorprone-plugin:${pluginVersions.errorProne}",
+    jmh: [
+      "me.champeau.gradle:jmh-gradle-plugin:${pluginVersions.jmh}",
+      "org.openjdk.jmh:jmh-core:${benchmarkVersions.jmh}",
     ],
-    jmh: "me.champeau.gradle:jmh-gradle-plugin:${plugin_versions.jmh}",
-    jmh_report: "gradle.plugin.io.morethan.jmhreport:gradle-jmh-report:${plugin_versions.jmh_report}",
-    nexus: "com.bmuschko:gradle-nexus-plugin:${plugin_versions.nexus}",
-    semantic_versioning: "io.ehdev:gradle-semantic-versioning:${plugin_versions.semantic_versioning}",
-    shadow: "com.github.jengelman.gradle.plugins:shadow:${plugin_versions.shadow}",
-    stats: "org.kordamp.gradle:stats-gradle-plugin:${plugin_versions.stats}",
-    versions: "com.github.ben-manes:gradle-versions-plugin:${plugin_versions.versions}",
+    jmhReport: "gradle.plugin.io.morethan.jmhreport:gradle-jmh-report:${pluginVersions.jmhReport}",
+    nexus: "com.bmuschko:gradle-nexus-plugin:${pluginVersions.nexus}",
+    propdeps: "io.spring.gradle:propdeps-plugin:${pluginVersions.propdeps}",
+    semanticVersioning: "io.ehdev:gradle-semantic-versioning:${pluginVersions.semanticVersioning}",
+    shadow: "com.github.jengelman.gradle.plugins:shadow:${pluginVersions.shadow}",
+    spotbugs: "gradle.plugin.com.github.spotbugs:gradlePlugin:${pluginVersions.spotbugs}",
+    stats: "org.kordamp.gradle:stats-gradle-plugin:${pluginVersions.stats}",
+    versions: "com.github.ben-manes:gradle-versions-plugin:${pluginVersions.versions}",
   ]
 }

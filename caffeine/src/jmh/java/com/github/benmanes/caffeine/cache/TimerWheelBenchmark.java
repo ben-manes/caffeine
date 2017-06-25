@@ -62,8 +62,8 @@ public class TimerWheelBenchmark {
   }
 
   @Benchmark
-  public void findBucket(ThreadState threadState) {
-    timerWheel.findBucket(times[threadState.index++ & MASK]);
+  public Node<Integer, Integer> findBucket(ThreadState threadState) {
+    return timerWheel.findBucket(times[threadState.index++ & MASK]);
   }
 
   @Benchmark
@@ -109,10 +109,10 @@ public class TimerWheelBenchmark {
       this.next = next;
     }
 
-    @Override public Integer getKey() { return null; }
-    @Override public Object getKeyReference() { return null; }
-    @Override public Integer getValue() { return null; }
-    @Override public Object getValueReference() { return null; }
+    @Override public Integer getKey() { throw new UnsupportedOperationException(); }
+    @Override public Object getKeyReference() { throw new UnsupportedOperationException(); }
+    @Override public Integer getValue() { throw new UnsupportedOperationException(); }
+    @Override public Object getValueReference() { throw new UnsupportedOperationException(); }
     @Override public void setValue(Integer value, ReferenceQueue<Integer> referenceQueue) {}
     @Override public boolean containsValue(Object value) { return false; }
     @Override public boolean isAlive() { return false; }
