@@ -54,6 +54,7 @@ Powering infrastructure near you:
  * [Cassandra][cassandra]:  Manage massive amounts of data, fast
  * [Infinispan][infinispan]: Distributed in-memory data grid
  * [Ratpack][ratpack]: Lean & powerful HTTP apps
+ * [Camel][camel]: Routing and mediation engine
  * [Corfu][corfu]: A cluster consistency platform
  * [Orbit][orbit]: Virtual actors on the JVM
  * [Finagle][finagle]: Extensible RPC system
@@ -131,5 +132,6 @@ Snapshots of the development version are available in
 [druid]: http://druid.io/docs/latest/development/extensions-core/caffeine-cache.html
 [jooby]: http://jooby.org/doc/caffeine
 [orbit]: https://github.com/orbit/orbit
+[camel]: https://github.com/apache/camel
 [corfu]: https://github.com/CorfuDB/CorfuDB
 [rapidoid]: https://github.com/rapidoid/rapidoid/issues/104

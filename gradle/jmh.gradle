@@ -63,4 +63,6 @@ jmhReport {
   jmhResultPath = jmh.resultsFile
   jmhReportOutput = file('build/reports/jmh')
 }
-tasks.jmh.finalizedBy tasks.jmhReport 
+
+tasks.jmh.finalizedBy tasks.jmhReport
+tasks.jmh.dependsOn tasks.osgiClasses

@@ -80,7 +80,7 @@ ext {
     coverity: '1.0.10',
     errorProne: '0.0.10',
     jacoco: '0.7.9',
-    jmh: '0.4.1',
+    jmh: '0.4.2',
     jmhReport: '0.2.0',
     nexus: '2.3.1',
     pmd: '5.8.0',
