@@ -66,16 +66,16 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
       switch (event.getEventType()) {
         case CREATED:
           onCreated(event);
-          break;
+          return;
         case UPDATED:
           onUpdated(event);
-          break;
+          return;
         case REMOVED:
           onRemoved(event);
-          break;
+          return;
         case EXPIRED:
           onExpired(event);
-          break;
+          return;
       }
       throw new IllegalStateException("Unknown event type: " + event.getEventType());
     } catch (Exception e) {
