@@ -64,6 +64,7 @@ final class MpscGrowableArrayQueue<E> extends MpscChunkedArrayQueue<E> {
   }
 }
 
+@SuppressWarnings("OvershadowingSubclassFields")
 abstract class MpscChunkedArrayQueue<E> extends MpscChunkedArrayQueueColdProducerFields<E> {
   long p0, p1, p2, p3, p4, p5, p6, p7;
   long p10, p11, p12, p13, p14, p15, p16, p17;
@@ -120,6 +121,7 @@ abstract class BaseMpscLinkedArrayQueueProducerFields<E> extends BaseMpscLinkedA
   protected long producerIndex;
 }
 
+@SuppressWarnings("OvershadowingSubclassFields")
 abstract class BaseMpscLinkedArrayQueuePad2<E> extends BaseMpscLinkedArrayQueueProducerFields<E> {
   long p01, p02, p03, p04, p05, p06, p07;
   long p10, p11, p12, p13, p14, p15, p16, p17;
@@ -131,6 +133,7 @@ abstract class BaseMpscLinkedArrayQueueConsumerFields<E> extends BaseMpscLinkedA
   protected long consumerIndex;
 }
 
+@SuppressWarnings("OvershadowingSubclassFields")
 abstract class BaseMpscLinkedArrayQueuePad3<E> extends BaseMpscLinkedArrayQueueConsumerFields<E> {
   long p0, p1, p2, p3, p4, p5, p6, p7;
   long p10, p11, p12, p13, p14, p15, p16, p17;

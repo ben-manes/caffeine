@@ -41,11 +41,11 @@ public final class TinySetIndexing {
     int requiredChainNumber = rank(chainIndex[fpaux.set], fpaux.chainId);
     int currentChainNumber = rank(isLastIndex[fpaux.set], requiredChainNumber);
     int currentOffset = requiredChainNumber;
-    long tempisLastIndex = isLastIndex[fpaux.set] >>> requiredChainNumber;
+    long tempIsLastIndex = isLastIndex[fpaux.set] >>> requiredChainNumber;
     while (currentChainNumber < requiredChainNumber) {
-      currentChainNumber += tempisLastIndex & 1L;
+      currentChainNumber += ((int) tempIsLastIndex) & 1;
       currentOffset++;
-      tempisLastIndex >>>= 1;
+      tempIsLastIndex >>>= 1;
     }
     return currentOffset;
   }
@@ -61,7 +61,7 @@ public final class TinySetIndexing {
 
     long tempisLastIndex = isLastIndex[fpaux.set] >>> requiredChainNumber;
     while (currentChainNumber < requiredChainNumber) {
-      currentChainNumber += tempisLastIndex & 1L;
+      currentChainNumber += ((int) tempisLastIndex) & 1;
       currentOffset++;
       tempisLastIndex >>>= 1;
     }

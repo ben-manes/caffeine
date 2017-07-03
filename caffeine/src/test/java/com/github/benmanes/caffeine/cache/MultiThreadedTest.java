@@ -97,56 +97,56 @@ public final class MultiThreadedTest {
   @SuppressWarnings({"unchecked", "rawtypes", "SizeGreaterThanOrEqualsZero", "SelfEquals"})
   List<BiConsumer<LoadingCache<Integer, Integer>, Integer>> operations = ImmutableList.of(
       // LoadingCache
-      (cache, key) -> cache.get(key),
-      (cache, key) -> cache.getAll(ImmutableList.of(key)),
-      (cache, key) -> cache.refresh(key),
+      (cache, key) -> { cache.get(key); },
+      (cache, key) -> { cache.getAll(ImmutableList.of(key)); },
+      (cache, key) -> { cache.refresh(key); },
 
       // Cache
-      (cache, key) -> cache.getIfPresent(key),
-      (cache, key) -> cache.get(key, Function.identity()),
-      (cache, key) -> cache.getAllPresent(ImmutableList.of(key)),
-      (cache, key) -> cache.put(key, key),
-      (cache, key) -> cache.putAll(ImmutableMap.of(key, key)),
-      (cache, key) -> cache.invalidate(key),
-      (cache, key) -> cache.invalidateAll(ImmutableList.of(key)),
+      (cache, key) -> { cache.getIfPresent(key); },
+      (cache, key) -> { cache.get(key, Function.identity()); },
+      (cache, key) -> { cache.getAllPresent(ImmutableList.of(key)); },
+      (cache, key) -> { cache.put(key, key); },
+      (cache, key) -> { cache.putAll(ImmutableMap.of(key, key)); },
+      (cache, key) -> { cache.invalidate(key); },
+      (cache, key) -> { cache.invalidateAll(ImmutableList.of(key)); },
       (cache, key) -> { // expensive so do it less frequently
         int random = ThreadLocalRandom.current().nextInt();
         if ((random & 255) == 0) {
           cache.invalidateAll();
         }
       },
-      (cache, key) -> Preconditions.checkState(cache.estimatedSize() >= 0),
-      (cache, key) -> cache.stats(),
-      (cache, key) -> cache.cleanUp(),
+      (cache, key) -> { Preconditions.checkState(cache.estimatedSize() >= 0); },
+      (cache, key) -> { cache.stats(); },
+      (cache, key) -> { cache.cleanUp(); },
 
       // Map
-      (cache, key) -> cache.asMap().containsKey(key),
-      (cache, key) -> cache.asMap().containsValue(key),
-      (cache, key) -> cache.asMap().isEmpty(),
-      (cache, key) -> Preconditions.checkState(cache.asMap().size() >= 0),
-      (cache, key) -> cache.asMap().get(key),
-      (cache, key) -> cache.asMap().put(key, key),
-      (cache, key) -> cache.asMap().putAll(ImmutableMap.of(key, key)),
-      (cache, key) -> cache.asMap().putIfAbsent(key, key),
-      (cache, key) -> cache.asMap().remove(key),
-      (cache, key) -> cache.asMap().remove(key, key),
-      (cache, key) -> cache.asMap().replace(key, key),
-      (cache, key) -> cache.asMap().computeIfAbsent(key, k -> k),
-      (cache, key) -> cache.asMap().computeIfPresent(key, (k, v) -> v),
-      (cache, key) -> cache.asMap().compute(key, (k, v) -> v),
-      (cache, key) -> cache.asMap().merge(key, key, (k, v) -> v),
+      (cache, key) -> { cache.asMap().containsKey(key); },
+      (cache, key) -> { cache.asMap().containsValue(key); },
+      (cache, key) -> { cache.asMap().isEmpty(); },
+      (cache, key) -> { Preconditions.checkState(cache.asMap().size() >= 0); },
+      (cache, key) -> { cache.asMap().get(key); },
+      (cache, key) -> { cache.asMap().put(key, key); },
+      (cache, key) -> { cache.asMap().putAll(ImmutableMap.of(key, key)); },
+      (cache, key) -> { cache.asMap().putIfAbsent(key, key); },
+      (cache, key) -> { cache.asMap().remove(key); },
+      (cache, key) -> { cache.asMap().remove(key, key); },
+      (cache, key) -> { cache.asMap().replace(key, key); },
+      (cache, key) -> { cache.asMap().computeIfAbsent(key, k -> k); },
+      (cache, key) -> { cache.asMap().computeIfPresent(key, (k, v) -> v); },
+      (cache, key) -> { cache.asMap().compute(key, (k, v) -> v); },
+      (cache, key) -> { cache.asMap().merge(key, key, (k, v) -> v); },
       (cache, key) -> { // expensive so do it less frequently
         int random = ThreadLocalRandom.current().nextInt();
         if ((random & 255) == 0) {
           cache.asMap().clear();
         }
       },
-      (cache, key) -> cache.asMap().keySet().toArray(new Object[cache.asMap().size()]),
-      (cache, key) -> cache.asMap().values().toArray(new Object[cache.asMap().size()]),
-      (cache, key) -> cache.asMap().entrySet().toArray(new Entry[cache.asMap().size()]),
-      (cache, key) -> cache.hashCode(),
+      (cache, key) -> { cache.asMap().keySet().toArray(new Object[cache.asMap().size()]); },
+      (cache, key) -> { cache.asMap().values().toArray(new Object[cache.asMap().size()]); },
+      (cache, key) -> { cache.asMap().entrySet().toArray(new Entry[cache.asMap().size()]); },
+      (cache, key) -> { cache.hashCode(); },
       (cache, key) -> { cache.equals(cache); },
-      (cache, key) -> cache.toString(),
+      (cache, key) -> { cache.toString(); },
       (cache, key) -> { // expensive so do it less frequently
         int random = ThreadLocalRandom.current().nextInt();
         if ((random & 255) == 0) {
@@ -155,12 +155,12 @@ public final class MultiThreadedTest {
       });
 
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
+  @SuppressWarnings({"unchecked", "rawtypes", "FutureReturnValueIgnored"})
   List<BiConsumer<AsyncLoadingCache<Integer, Integer>, Integer>> asyncOperations = ImmutableList.of(
-      (cache, key) -> cache.getIfPresent(key),
-      (cache, key) -> cache.get(key, k -> key),
-      (cache, key) -> cache.get(key, (k, e) -> CompletableFuture.completedFuture(key)),
-      (cache, key) -> cache.get(key),
-      (cache, key) -> cache.getAll(ImmutableList.of(key)),
-      (cache, key) -> cache.put(key, CompletableFuture.completedFuture(key)));
+      (cache, key) -> { cache.getIfPresent(key); },
+      (cache, key) -> { cache.get(key, k -> key); },
+      (cache, key) -> { cache.get(key, (k, e) -> CompletableFuture.completedFuture(key)); },
+      (cache, key) -> { cache.get(key); },
+      (cache, key) -> { cache.getAll(ImmutableList.of(key)); },
+      (cache, key) -> { cache.put(key, CompletableFuture.completedFuture(key)); });
 }

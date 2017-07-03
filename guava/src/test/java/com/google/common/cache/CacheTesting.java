@@ -172,9 +172,9 @@ class CacheTesting {
     }
   }
 
-  static int getTotalSegmentSize(Cache<?, ?> cache) {
+  static long getTotalSegmentSize(Cache<?, ?> cache) {
     LocalCache<?, ?> map = toLocalCache(cache);
-    int totalSize = 0;
+    long totalSize = 0;
     for (Segment<?, ?> segment : map.segments) {
       totalSize += segment.maxSegmentWeight;
     }
