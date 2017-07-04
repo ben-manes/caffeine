@@ -16,11 +16,12 @@
 package com.github.benmanes.caffeine.jcache.configuration;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -100,14 +101,15 @@ public final class TypesafeConfigurator {
   /** A one-shot builder for creating a configuration instance. */
   private static final class Configurator<K, V> {
     final CaffeineConfiguration<K, V> configuration;
-    final Config rootConfig;
-    final Config config;
+    final Config customized;
+    final Config merged;
+    final Config root;
 
     Configurator(Config config, String cacheName) {
-      this.rootConfig = requireNonNull(config);
+      this.root = requireNonNull(config);
       this.configuration = new CaffeineConfiguration<>();
-      this.config = rootConfig.getConfig("caffeine.jcache." + cacheName)
-          .withFallback(rootConfig.getConfig("caffeine.jcache.default"));
+      this.customized = root.getConfig("caffeine.jcache." + cacheName);
+      this.merged = customized.withFallback(root.getConfig("caffeine.jcache.default"));
     }
 
     /** Returns a configuration built from the external settings. */
@@ -127,18 +129,17 @@ public final class TypesafeConfigurator {
 
     /** Adds the store-by-value settings. */
     private void addStoreByValue() {
-      boolean enabled = config.getBoolean("store-by-value.enabled");
-      configuration.setStoreByValue(enabled);
-      if (config.hasPath("store-by-value.strategy")) {
+      configuration.setStoreByValue(merged.getBoolean("store-by-value.enabled"));
+      if (isSet("store-by-value.strategy")) {
         configuration.setCopierFactory(factoryCreator.factoryOf(
-            config.getString("store-by-value.strategy")));
+            merged.getString("store-by-value.strategy")));
       }
     }
 
     /** Adds the entry listeners settings. */
     private void addListeners() {
-      for (String path : config.getStringList("listeners")) {
-        Config listener = rootConfig.getConfig(path);
+      for (String path : merged.getStringList("listeners")) {
+        Config listener = root.getConfig(path);
 
         Factory<? extends CacheEntryListener<? super K, ? super V>> listenerFactory =
             factoryCreator.factoryOf(listener.getString("class"));
@@ -151,34 +152,31 @@ public final class TypesafeConfigurator {
         configuration.addCacheEntryListenerConfiguration(
             new MutableCacheEntryListenerConfiguration<>(
                 listenerFactory, filterFactory, oldValueRequired, synchronous));
-
       }
     }
 
     /** Adds the read through settings. */
     private void addReadThrough() {
-      boolean isReadThrough = config.getBoolean("read-through.enabled");
-      configuration.setReadThrough(isReadThrough);
-      if (config.hasPath("read-through.loader")) {
-        String loaderClass = config.getString("read-through.loader");
-        configuration.setCacheLoaderFactory(factoryCreator.factoryOf(loaderClass));
+      configuration.setReadThrough(merged.getBoolean("read-through.enabled"));
+      if (isSet("read-through.loader")) {
+        configuration.setCacheLoaderFactory(factoryCreator.factoryOf(
+            merged.getString("read-through.loader")));
       }
     }
 
     /** Adds the write through settings. */
     private void addWriteThrough() {
-      boolean isWriteThrough = config.getBoolean("write-through.enabled");
-      configuration.setWriteThrough(isWriteThrough);
-      if (config.hasPath("write-through.writer")) {
-        String writerClass = config.getString("write-through.writer");
-        configuration.setCacheWriterFactory(factoryCreator.factoryOf(writerClass));
+      configuration.setWriteThrough(merged.getBoolean("write-through.enabled"));
+      if (isSet("write-through.writer")) {
+        configuration.setCacheWriterFactory(factoryCreator.factoryOf(
+            merged.getString("write-through.writer")));
       }
     }
 
     /** Adds the JMX monitoring settings. */
     private void addMonitoring() {
-      configuration.setStatisticsEnabled(config.getBoolean("monitoring.statistics"));
-      configuration.setManagementEnabled(config.getBoolean("monitoring.management"));
+      configuration.setStatisticsEnabled(merged.getBoolean("monitoring.statistics"));
+      configuration.setManagementEnabled(merged.getBoolean("monitoring.management"));
     }
 
     /** Adds the JCache specification's lazy expiration settings. */
@@ -198,54 +196,62 @@ public final class TypesafeConfigurator {
 
     /** Returns the duration for the expiration time. */
     private @Nullable Duration getDurationFor(String path) {
-      if (!config.hasPath(path)) {
+      if (!isSet(path)) {
         return null;
       }
-      if (config.getString(path).equalsIgnoreCase("eternal")) {
+      if (merged.getString(path).equalsIgnoreCase("eternal")) {
         return Duration.ETERNAL;
       }
-      long millis = config.getDuration(path, TimeUnit.MILLISECONDS);
-      return new Duration(TimeUnit.MILLISECONDS, millis);
+      long millis = merged.getDuration(path, MILLISECONDS);
+      return new Duration(MILLISECONDS, millis);
     }
 
     /** Adds the Caffeine eager expiration settings. */
     public void addEagerExpiration() {
-      Config expiration = config.getConfig("policy.eager-expiration");
-      if (expiration.hasPath("after-write")) {
-        long nanos = expiration.getDuration("after-write", TimeUnit.NANOSECONDS);
+      if (isSet("policy.eager-expiration.after-write")) {
+        long nanos = merged.getDuration("policy.eager-expiration.after-write", NANOSECONDS);
         configuration.setExpireAfterWrite(OptionalLong.of(nanos));
       }
-      if (expiration.hasPath("after-access")) {
-        long nanos = expiration.getDuration("after-access", TimeUnit.NANOSECONDS);
+      if (isSet("policy.eager-expiration.after-access")) {
+        long nanos = merged.getDuration("policy.eager-expiration.after-access", NANOSECONDS);
         configuration.setExpireAfterAccess(OptionalLong.of(nanos));
       }
-      if (expiration.hasPath("variable")) {
-        configuration.setExpiryFactory(Optional.of(
-            FactoryBuilder.factoryOf(expiration.getString("variable"))));
+      if (isSet("policy.eager-expiration.variable")) {
+        configuration.setExpiryFactory(Optional.of(FactoryBuilder.factoryOf(
+            merged.getString("policy.eager-expiration.variable"))));
       }
     }
 
     /** Adds the Caffeine refresh settings. */
     public void addRefresh() {
-      Config refresh = config.getConfig("policy.refresh");
-      if (refresh.hasPath("after-write")) {
-        long nanos = refresh.getDuration("after-write", TimeUnit.NANOSECONDS);
+      if (isSet("policy.refresh.after-write")) {
+        long nanos = merged.getDuration("policy.refresh.after-write", NANOSECONDS);
         configuration.setRefreshAfterWrite(OptionalLong.of(nanos));
       }
     }
 
     /** Adds the maximum size and weight bounding settings. */
     private void addMaximum() {
-      Config maximum = config.getConfig("policy.maximum");
-      if (maximum.hasPath("size")) {
-        configuration.setMaximumSize(OptionalLong.of(maximum.getLong("size")));
+      if (isSet("policy.maximum.size")) {
+        configuration.setMaximumSize(OptionalLong.of(merged.getLong("policy.maximum.size")));
       }
-      if (maximum.hasPath("weight")) {
-        configuration.setMaximumWeight(OptionalLong.of(maximum.getLong("weight")));
+      if (isSet("policy.maximum.weight")) {
+        configuration.setMaximumWeight(OptionalLong.of(merged.getLong("policy.maximum.weight")));
       }
-      if (maximum.hasPath("weigher")) {
-        configuration.setWeigherFactory(FactoryBuilder.factoryOf(maximum.getString("weigher")));
+      if (isSet("policy.maximum.weigher")) {
+        configuration.setWeigherFactory(Optional.of(
+            FactoryBuilder.factoryOf(merged.getString("policy.maximum.weigher"))));
       }
+    }
+
+    /** Returns if the value is present (not unset by the cache configuration). */
+    private boolean isSet(String path) {
+      if (!merged.hasPath(path)) {
+        return false;
+      } else if (customized.hasPathOrNull(path)) {
+        return !customized.getIsNull(path);
+      }
+      return true;
     }
   }
 }

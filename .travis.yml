@@ -5,22 +5,21 @@ jdk:
   - oraclejdk8
 
 env:
- - TERM=dumb
+  global:
+    - TERM=dumb
+  matrix:
+    - GROUP=analysis
+    - GROUP=unitTests
+    - GROUP=slowTests
 
 before_install:
- - cp gradle.properties.ci gradle.properties
- - export JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify"
+  - cp gradle.properties.ci gradle.properties
+  - export JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify"
+
+install: true
 
 script:
- - ./gradlew findbugsMain pmdMain -Dfindbugs -Dpmd --console plain
- - ./gradlew --scan check -x :caffeine:slowCaffeineTest -x :caffeine:slowGuavaTest --console plain
- - travis_wait ./gradlew --scan :caffeine:slowCaffeineTest
- - travis_wait ./gradlew --scan :caffeine:slowGuavaTest
- - sh -c 'cd examples/stats-metrics && ./gradlew test --console plain'
- - sh -c 'cd examples/write-behind-rxjava && mvn test'
-
-after_success:
-- ./gradlew coveralls uploadArchives -x test -x isolatedTests --console plain
+  - ./travis.sh $GROUP
 
 matrix:
   fast_finish: true

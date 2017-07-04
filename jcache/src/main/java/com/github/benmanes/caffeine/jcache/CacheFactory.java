@@ -19,18 +19,20 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.configuration.Factory;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.Ticker;
+import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
@@ -123,7 +125,7 @@ final class CacheFactory {
       this.statistics = new JCacheStatisticsMXBean();
       this.ticker = config.getTickerFactory().create();
       this.expiry = config.getExpiryPolicyFactory().create();
-      this.executor = USE_DIRECT_EXECUTOR ? Runnable::run : ForkJoinPool.commonPool();
+      this.executor = USE_DIRECT_EXECUTOR ? Runnable::run : config.getExecutorFactory().create();
       this.dispatcher = new EventDispatcher<>(executor);
 
       caffeine.executor(executor);
@@ -189,7 +191,11 @@ final class CacheFactory {
     private boolean configureMaximumWeight() {
       if (config.getMaximumWeight().isPresent()) {
         caffeine.maximumWeight(config.getMaximumWeight().getAsLong());
-        caffeine.weigher(config.getWeigherFactory().create());
+        Weigher<K, V> weigher = config.getWeigherFactory().map(Factory::create)
+            .orElseThrow(() -> new IllegalStateException("Weigher not configured"));
+        caffeine.weigher((K key, Expirable<V> expirable) -> {
+          return weigher.weigh(key, expirable.get());
+        });
       }
       return config.getMaximumWeight().isPresent();
     }
@@ -212,7 +218,22 @@ final class CacheFactory {
 
     /** Configures the write expiration and returns if set. */
     private boolean configureExpireVariably() {
-      config.getExpiryFactory().ifPresent(factory -> caffeine.expireAfter(factory.create()));
+      config.getExpiryFactory().ifPresent(factory -> {
+        Expiry<K, V> expiry = factory.create();
+        caffeine.expireAfter(new Expiry<K, Expirable<V>>() {
+          @Override public long expireAfterCreate(K key, Expirable<V> expirable, long currentTime) {
+            return expiry.expireAfterCreate(key, expirable.get(), currentTime);
+          }
+          @Override public long expireAfterUpdate(K key, Expirable<V> expirable,
+              long currentTime, long currentDuration) {
+            return expiry.expireAfterUpdate(key, expirable.get(), currentTime, currentDuration);
+          }
+          @Override public long expireAfterRead(K key, Expirable<V> expirable,
+              long currentTime, long currentDuration) {
+            return expiry.expireAfterRead(key, expirable.get(), currentTime, currentDuration);
+          }
+        });
+      });
       return config.getExpireAfterWrite().isPresent();
     }
 

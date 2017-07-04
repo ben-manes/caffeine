@@ -41,7 +41,7 @@ testNames.each { testName ->
     systemProperties['implementation'] = implementation
 
     // Configure task dependencies
-    if (System.env.'CI' || !name.startsWith('slow')) {
+    if (!name.startsWith('slow')) {
       tasks.test.dependsOn(it)
     }
   }
@@ -51,9 +51,7 @@ task isolatedTests(type: Test, group: 'Cache tests') {
   description = 'Tests that must be run in isolation'
 
   useTestNG()
-  if (!System.env.'CI') {
-    tasks.test.dependsOn(it)
-  }
+  it.onlyIf { !System.env.'CI' }
 }
 
 task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tests') {

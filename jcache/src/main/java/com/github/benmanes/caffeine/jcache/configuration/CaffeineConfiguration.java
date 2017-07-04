@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 import javax.annotation.Nullable;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -48,6 +50,7 @@ import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
  */
 public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<K, V> {
   private static final Factory<Copier> JAVA_COPIER = JavaSerializationCopier::new;
+  private static final Factory<Executor> COMMON_POOL = ForkJoinPool::commonPool;
   private static final Factory<Ticker> SYSTEM_TICKER = Ticker::systemTicker;
   private static final long serialVersionUID = 1L;
 
@@ -55,6 +58,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   private Factory<Weigher<K, V>> weigherFactory;
   private Factory<Expiry<K, V>> expiryFactory;
+  private Factory<Executor> executorFactory;
   private Factory<Copier> copierFactory;
   private Factory<Ticker> tickerFactory;
 
@@ -68,6 +72,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     delegate = new MutableConfiguration<>();
     delegate.setStoreByValue(false);
     tickerFactory = SYSTEM_TICKER;
+    executorFactory = COMMON_POOL;
     copierFactory = JAVA_COPIER;
   }
 
@@ -78,6 +83,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       refreshAfterWriteNanos = config.refreshAfterWriteNanos;
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
+      executorFactory = config.executorFactory;
       expiryFactory = config.expiryFactory;
       copierFactory = config.copierFactory;
       tickerFactory = config.tickerFactory;
@@ -86,6 +92,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       maximumSize = config.maximumSize;
     } else {
       tickerFactory = SYSTEM_TICKER;
+      executorFactory = COMMON_POOL;
       copierFactory = JAVA_COPIER;
     }
   }
@@ -255,6 +262,24 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
+   * Returns the {@link Factory} for the {@link Executor} to be used for the cache.
+   *
+   * @return the {@link Factory} for the {@link Executor}
+   */
+  public Factory<Executor> getExecutorFactory() {
+    return executorFactory;
+  }
+
+  /**
+   * Set the {@link Factory} for the {@link Executor}.
+   *
+   * @param factory the {@link Executor} {@link Factory}
+   */
+  public void setExecutorFactory(Factory<Executor> factory) {
+    executorFactory = requireNonNull(factory);
+  }
+
+  /**
    * Returns the refresh after write in nanoseconds.
    *
    * @return the duration in nanoseconds
@@ -388,17 +413,18 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    *
    * @return the {@link Factory} for the {@link Weigher}
    */
-  public Factory<Weigher<K, V>> getWeigherFactory() {
-    return weigherFactory;
+  public Optional<Factory<Weigher<K, V>>> getWeigherFactory() {
+    return Optional.ofNullable(weigherFactory);
   }
 
   /**
-   * Set the {@link Factory} for the {@link Copier}.
+   * Set the {@link Factory} for the {@link Weigher}.
    *
-   * @param factory the {@link Copier} {@link Factory}
+   * @param factory the {@link Weigher} {@link Factory}
    */
-  public void setWeigherFactory(Factory<Weigher<K, V>> factory) {
-    weigherFactory = requireNonNull(factory);
+  @SuppressWarnings("unchecked")
+  public void setWeigherFactory(Optional<Factory<? extends Weigher<K, V>>> factory) {
+    weigherFactory = (Factory<Weigher<K, V>>) factory.orElse(null);
   }
 
   @Override
@@ -412,6 +438,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     return Objects.equals(refreshAfterWriteNanos, config.refreshAfterWriteNanos)
         && Objects.equals(expireAfterAccessNanos, config.expireAfterAccessNanos)
         && Objects.equals(expireAfterWriteNanos, config.expireAfterWriteNanos)
+        && Objects.equals(executorFactory, config.executorFactory)
         && Objects.equals(copierFactory, config.copierFactory)
         && Objects.equals(tickerFactory, config.tickerFactory)
         && Objects.equals(weigherFactory, config.weigherFactory)

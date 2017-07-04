@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.Cache;
@@ -43,24 +44,40 @@ import com.typesafe.config.ConfigFactory;
 public final class TypesafeConfigurationTest {
 
   @Test
-  public void configuration() {
+  public void defaults() {
+    CaffeineConfiguration<Integer, Integer> defaults =
+        TypesafeConfigurator.defaults(ConfigFactory.load());
+    assertThat(defaults.getMaximumSize(), is(OptionalLong.of(500)));
+  }
+
+  @Test
+  public void testCache() {
     Optional<CaffeineConfiguration<Integer, Integer>> config =
         TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
     assertThat(config.get(), is(equalTo(TypesafeConfigurator.from(
         ConfigFactory.load(), "test-cache").get())));
-    assertThat(config.get(), is(not(equalTo(TypesafeConfigurator.from(
-        ConfigFactory.load(), "test-cache-2").get()))));
-    checkConfig(config.get());
+    checkTestCache(config.get());
   }
 
   @Test
-  public void cache() {
+  public void testCache2() {
+    assertThat(TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-2"),
+        is(not(equalTo(TypesafeConfigurator.from(ConfigFactory.load(), "test-cache").get()))));
+  }
+
+  @Test
+  public void getCache() {
     Cache<Integer, Integer> cache = Caching.getCachingProvider()
         .getCacheManager().getCache("test-cache");
     assertThat(cache, is(not(nullValue())));
+
+    @SuppressWarnings("unchecked")
+    CaffeineConfiguration<Integer, Integer> config =
+        cache.getConfiguration(CaffeineConfiguration.class);
+    checkTestCache(config);
   }
 
-  static void checkConfig(CaffeineConfiguration<?, ?> config) {
+  static void checkTestCache(CaffeineConfiguration<?, ?> config) {
     checkStoreByValue(config);
     checkListener(config);
 
@@ -110,8 +127,8 @@ public final class TypesafeConfigurationTest {
   }
 
   static void checkSize(CaffeineConfiguration<?, ?> config) {
-    assertThat(config.getMaximumSize().isPresent(), is(false));
+    assertThat(config.getMaximumSize(), is(OptionalLong.empty()));
     assertThat(config.getMaximumWeight().getAsLong(), is(1_000L));
-    assertThat(config.getWeigherFactory().create(), instanceOf(TestWeigher.class));
+    assertThat(config.getWeigherFactory().get().create(), instanceOf(TestWeigher.class));
   }
 }

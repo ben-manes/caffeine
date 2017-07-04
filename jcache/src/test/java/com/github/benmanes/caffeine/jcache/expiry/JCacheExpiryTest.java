@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.expiry;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -47,9 +47,9 @@ public final class JCacheExpiryTest extends AbstractJCacheTest {
   @BeforeMethod
   public void setup() {
     Mockito.reset(expiry);
-    when(expiry.expireAfterCreate(any(), any(), anyLong())).thenReturn(ONE_MINUTE);
-    when(expiry.expireAfterUpdate(any(), any(), anyLong(), anyLong())).thenReturn(ONE_MINUTE);
-    when(expiry.expireAfterRead(any(), any(), anyLong(), anyLong())).thenReturn(ONE_MINUTE);
+    when(expiry.expireAfterCreate(anyInt(), anyInt(), anyLong())).thenReturn(ONE_MINUTE);
+    when(expiry.expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong())).thenReturn(ONE_MINUTE);
+    when(expiry.expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong())).thenReturn(ONE_MINUTE);
   }
 
   @Override
@@ -63,12 +63,12 @@ public final class JCacheExpiryTest extends AbstractJCacheTest {
   @Test
   public void configured() {
     jcache.put(KEY_1, VALUE_1);
-    verify(expiry, times(1)).expireAfterCreate(any(), any(), anyLong());
+    verify(expiry, times(1)).expireAfterCreate(anyInt(), anyInt(), anyLong());
 
     jcache.put(KEY_1, VALUE_2);
-    verify(expiry).expireAfterUpdate(any(), any(), anyLong(), anyLong());
+    verify(expiry).expireAfterUpdate(anyInt(), anyInt(), anyLong(), anyLong());
 
     jcache.get(KEY_1);
-    verify(expiry).expireAfterRead(any(), any(), anyLong(), anyLong());
+    verify(expiry).expireAfterRead(anyInt(), anyInt(), anyLong(), anyLong());
   }
 }
