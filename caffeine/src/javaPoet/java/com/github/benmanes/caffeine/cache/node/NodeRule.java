@@ -15,8 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
 import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
+import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
+import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static com.google.common.base.Preconditions.checkState;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import java.lang.ref.Reference;
@@ -26,7 +30,9 @@ import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.Feature;
 import com.google.common.collect.Iterables;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 
 /**
@@ -51,16 +57,40 @@ public abstract class NodeRule implements Consumer<NodeContext> {
 
   protected abstract void execute();
 
-  protected final boolean isBaseClass() {
+  protected boolean isBaseClass() {
     return context.superClass.equals(TypeName.OBJECT);
   }
 
-  protected final Strength keyStrength() {
+  protected Strength keyStrength() {
     return strengthOf(Iterables.get(context.generateFeatures, 0));
   }
 
-  protected final Strength valueStrength() {
+  protected Strength valueStrength() {
     return strengthOf(Iterables.get(context.generateFeatures, 1));
+  }
+
+  protected boolean isStrongKeys() {
+    return context.parentFeatures.contains(Feature.STRONG_KEYS)
+        || context.generateFeatures.contains(Feature.STRONG_KEYS);
+  }
+
+  protected boolean isStrongValues() {
+    return context.parentFeatures.contains(Feature.STRONG_VALUES)
+        || context.generateFeatures.contains(Feature.STRONG_VALUES);
+  }
+
+  protected TypeName keyReferenceType() {
+    checkState(context.generateFeatures.contains(Feature.WEAK_KEYS));
+    return ParameterizedTypeName.get(
+        ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
+  }
+
+  protected TypeName valueReferenceType() {
+    checkState(!context.generateFeatures.contains(Feature.STRONG_VALUES));
+    String clazz = context.generateFeatures.contains(Feature.WEAK_VALUES)
+        ? "WeakValueReference"
+        : "SoftValueReference";
+    return ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME + ".References", clazz), vTypeVar);
   }
 
   /** Creates an accessor that returns the reference. */

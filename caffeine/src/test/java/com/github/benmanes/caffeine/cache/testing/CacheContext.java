@@ -188,10 +188,12 @@ public final class CacheContext {
   }
 
   public void clear() {
+    CacheSpec.interner.remove();
     initialSize();
     original.clear();
     absent = null;
     absentKey = null;
+    absentValue = null;
     firstKey = null;
     middleKey = null;
     lastKey = null;
@@ -222,8 +224,7 @@ public final class CacheContext {
   }
 
   private Integer nextAbsentKey() {
-    int base = original.isEmpty() ? 0 : (lastKey + 1);
-    return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
+    return ThreadLocalRandom.current().nextInt((Integer.MAX_VALUE / 2), Integer.MAX_VALUE);
   }
 
   public long initialSize() {
@@ -278,20 +279,12 @@ public final class CacheContext {
     return original;
   }
 
-  public ReferenceType keyStrength() {
-    return keyStrength;
-  }
-
   public boolean isStrongKeys() {
     return keyStrength == ReferenceType.STRONG;
   }
 
   public boolean isWeakKeys() {
-    return keyStrength == ReferenceType.STRONG;
-  }
-
-  public ReferenceType valueStrength() {
-    return valueStrength;
+    return keyStrength == ReferenceType.WEAK;
   }
 
   public boolean isStrongValues() {
@@ -362,6 +355,10 @@ public final class CacheContext {
 
   public CacheStats stats() {
     return cache.stats();
+  }
+
+  public Cache<?, ?> cache() {
+    return cache;
   }
 
   public boolean expires(Expiration expiration) {

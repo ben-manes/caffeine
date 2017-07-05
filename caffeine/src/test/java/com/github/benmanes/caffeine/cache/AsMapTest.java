@@ -958,7 +958,6 @@ public final class AsMapTest {
     map.computeIfAbsent(context.absentKey(), mappingFunction);
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void computeIfAbsent_error(Map<Integer, Integer> map, CacheContext context) {
@@ -968,6 +967,7 @@ public final class AsMapTest {
     assertThat(map, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    assertThat(map.computeIfAbsent(context.absentKey(), key -> key), is(context.absentKey()));
   }
 
   @CheckNoWriter
@@ -1071,10 +1071,8 @@ public final class AsMapTest {
     map.computeIfPresent(context.firstKey(), mappingFunction);
   }
 
-  @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void computeIfPresent_error(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.computeIfPresent(context.firstKey(), (key, value) -> { throw new Error(); });
@@ -1082,6 +1080,7 @@ public final class AsMapTest {
     assertThat(map, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    assertThat(map.computeIfPresent(context.firstKey(), (k, v) -> -k), is(-context.firstKey()));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1172,9 +1171,8 @@ public final class AsMapTest {
     map.computeIfPresent(context.firstKey(), mappingFunction);
   }
 
-  @CheckNoWriter
+  @CacheSpec
   @Test(dataProvider = "caches")
-  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void compute_error(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.compute(context.absentKey(), (key, value) -> { throw new Error(); });
@@ -1182,6 +1180,7 @@ public final class AsMapTest {
     assertThat(map, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    assertThat(map.computeIfPresent(context.absentKey(), (k, v) -> -k), is(nullValue()));
   }
 
   @CheckNoWriter

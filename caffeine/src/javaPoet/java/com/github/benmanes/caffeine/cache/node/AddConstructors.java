@@ -15,9 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
+import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 
@@ -37,35 +39,70 @@ public final class AddConstructors extends NodeRule {
 
   @Override
   protected void execute() {
-    makeBaseConstructorByKey();
-    makeBaseConstructorByKeyRef();
+    addConstructorByKey();
+    addConstructorByKeyRef();
   }
 
   /** Adds the constructor by key to the node type. */
-  private void makeBaseConstructorByKey() {
+  private void addConstructorByKey() {
     context.constructorByKey = MethodSpec.constructorBuilder().addParameter(keySpec);
     context.constructorByKey.addParameter(keyRefQueueSpec);
-    completeBaseConstructor(context.constructorByKey);
-    if (!isBaseClass()) {
-      context.constructorByKey.addStatement(
-          "super(key, keyReferenceQueue, value, valueReferenceQueue, weight, now)");
+    addCommonParameters(context.constructorByKey);
+    if (isBaseClass()) {
+      callSiblingConstructor();
+    } else {
+      callParentByKey();
     }
   }
 
   /** Adds the constructor by key reference to the node type. */
-  private void makeBaseConstructorByKeyRef() {
+  private void addConstructorByKeyRef() {
     context.constructorByKeyRef = MethodSpec.constructorBuilder().addParameter(keyRefSpec);
-    completeBaseConstructor(context.constructorByKeyRef);
-    if (!isBaseClass()) {
-      context.constructorByKeyRef.addStatement(
-          "super(keyReference, value, valueReferenceQueue, weight, now)");
+    addCommonParameters(context.constructorByKeyRef);
+    if (isBaseClass()) {
+      assignKeyRefAndValue();
+    } else {
+      callParentByKeyRef();
     }
   }
 
-  private void completeBaseConstructor(MethodSpec.Builder constructor) {
+  private void addCommonParameters(MethodSpec.Builder constructor) {
     constructor.addParameter(valueSpec);
     constructor.addParameter(valueRefQueueSpec);
     constructor.addParameter(int.class, "weight");
     constructor.addParameter(long.class, "now");
+  }
+
+  private void callSiblingConstructor() {
+    if (isStrongKeys()) {
+      context.constructorByKey.addStatement("this(key, value, valueReferenceQueue, weight, now)");
+    } else {
+      context.constructorByKey.addStatement(
+          "this(new $T($N, $N), value, valueReferenceQueue, weight, now)", keyReferenceType(),
+          "key", "keyReferenceQueue");
+    }
+  }
+
+  private void assignKeyRefAndValue() {
+    context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
+        UNSAFE_ACCESS, offsetName("key"), "keyReference");
+    if (isStrongValues()) {
+      context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
+          UNSAFE_ACCESS, offsetName("value"), "value");
+    } else {
+      context.constructorByKeyRef.addStatement("$T.UNSAFE.putObject(this, $N, new $T($N, $N, $N))",
+          UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "keyReference",
+          "value", "valueReferenceQueue");
+    }
+  }
+
+  private void callParentByKey() {
+    context.constructorByKey.addStatement(
+        "super(key, keyReferenceQueue, value, valueReferenceQueue, weight, now)");
+  }
+
+  private void callParentByKeyRef() {
+    context.constructorByKeyRef.addStatement(
+        "super(keyReference, value, valueReferenceQueue, weight, now)");
   }
 }

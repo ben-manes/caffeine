@@ -24,6 +24,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -51,7 +53,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
-import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -150,20 +151,23 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void put(Cache<Integer, Integer> cache, CacheContext context) {
-    Integer key = context.firstKey();
+    cache.put(context.firstKey(), context.absentValue());
+    cache.put(context.absentKey(), context.absentValue());
+    Mockito.reset(new Object[] { context.cacheWriter() });
+    context.consumedNotifications().clear();
+
     context.clear();
     GcFinalization.awaitFullGc();
-    cache.put(key, context.absentValue());
 
-    long count = context.initialSize() - cache.estimatedSize() + 1;
-    if (context.population() != Population.SINGLETON) {
-      assertThat(count, is(greaterThan(1L)));
-    }
+    awaitFullCleanup(cache);
+    assertThat(cache.estimatedSize(), is(0L));
+
+    long count = context.initialSize() + 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -193,17 +197,15 @@ public final class ReferenceTest {
       population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void putAll(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> entries = ImmutableMap.of(context.firstKey(), context.absentValue(),
-        context.middleKey(), context.absentValue(), context.lastKey(), context.absentValue());
-    context.clear();
-    GcFinalization.awaitFullGc();
+        context.middleKey(), context.absentValue(), context.absentKey(), context.absentValue());
     cache.putAll(entries);
+    context.clear();
 
-    if (context.population() != Population.SINGLETON) {
-      assertThat(context.initialSize() - cache.estimatedSize(), is(greaterThan(0L)));
-    }
-    long count = context.initialSize() - cache.estimatedSize() + 3;
-    assertThat(count, is(greaterThan(3L)));
+    GcFinalization.awaitFullGc();
+    awaitFullCleanup(cache);
+    assertThat(cache.estimatedSize(), is(3L));
 
+    long count = context.initialSize() - 2;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -227,19 +229,24 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void invalidate(Cache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
+    Integer value = cache.getIfPresent(key);
     context.clear();
+
     GcFinalization.awaitFullGc();
+    awaitFullCleanup(cache);
+    assertThat(cache.estimatedSize(), is(1L));
+
     cache.invalidate(key);
+    assertThat(value, is(notNullValue()));
+    assertThat(cache.estimatedSize(), is(0L));
 
-    long count = context.initialSize() - cache.estimatedSize();
-
-    assertThat(count, is(greaterThan(0L)));
+    long count = context.initialSize() - 1;
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -270,12 +277,13 @@ public final class ReferenceTest {
   public void invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
     context.clear();
+
     GcFinalization.awaitFullGc();
+    awaitFullCleanup(cache);
     cache.invalidateAll(keys);
+    assertThat(cache.estimatedSize(), is(0L));
 
-    long count = context.initialSize() - cache.estimatedSize();
-
-    assertThat(count, is(greaterThan(0L)));
+    long count = context.initialSize() - (context.isWeakKeys() ? keys.size() : 0);
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -299,20 +307,20 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void invalidateAll_full(Cache<Integer, Integer> cache, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
+
+    awaitFullCleanup(cache);
+    assertThat(cache.estimatedSize(), is(0L));
+
     cache.invalidateAll();
-
-    long count = context.initialSize() - cache.estimatedSize();
-
-    assertThat(count, is(greaterThan(0L)));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    assertThat(cache, hasRemovalNotifications(context, 0L, RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(0L, RemovalCause.EXPLICIT));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -333,29 +341,18 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void estimatedSize(Cache<Integer, Integer> cache, CacheContext context) {
-    context.clear();
-    GcFinalization.awaitFullGc();
-    assertThat(cache.estimatedSize(), is(context.initialSize()));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void cleanUp(Cache<Integer, Integer> cache, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
-    cache.cleanUp();
 
-    long count = context.initialSize() - cache.estimatedSize();
+    awaitFullCleanup(cache);
+    assertThat(cache.estimatedSize(), is(0L));
 
-    assertThat(count, is(greaterThan(0L)));
+    long count = context.initialSize();
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -378,19 +375,22 @@ public final class ReferenceTest {
   /* ---------------- LoadingCache -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.SINGLETON, stats = Stats.ENABLED, loader = Loader.IDENTITY,
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      population = Population.FULL, weigher = CacheWeigher.DEFAULT, stats = Stats.ENABLED,
       removalListener = Listener.CONSUMING)
   public void get(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
+    Integer value = context.original().get(key);
     context.clear();
-    GcFinalization.awaitFullGc();
-    assertThat(cache.get(key), is(key));
 
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.COLLECTED));
+    GcFinalization.awaitFullGc();
+    awaitFullCleanup(cache);
+    assertThat(cache.get(key), is(value));
+
+    long count = context.initialSize() - 1;
+    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
+    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -412,20 +412,21 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED,
-      loader = {Loader.IDENTITY, Loader.BULK_IDENTITY}, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      loader = {Loader.NEGATIVE, Loader.BULK_NEGATIVE}, removalListener = Listener.CONSUMING)
   public void getAll(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Set<Integer> keys = context.firstMiddleLastKeys();
     context.clear();
+
     GcFinalization.awaitFullGc();
-    assertThat(cache.getAll(keys), is(Maps.uniqueIndex(keys, Functions.identity())));
+    awaitFullCleanup(cache);
 
-    long count = context.initialSize() - cache.estimatedSize() + keys.size();
+    assertThat(cache.getAll(keys), is(Maps.toMap(keys, key -> -key)));
+    long count = context.initialSize() - (context.isStrongValues() ? keys.size() : 0);
 
-    assertThat(count, is(greaterThan((long) keys.size())));
+    assertThat(cache.estimatedSize(), is((long) keys.size()));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -450,23 +451,26 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, loader = Loader.IDENTITY,
-      removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      loader = Loader.IDENTITY, removalListener = Listener.CONSUMING)
   public void refresh(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
+    Integer value = context.original().get(key);
     context.clear();
+
     GcFinalization.awaitFullGc();
+    awaitFullCleanup(cache);
     cache.refresh(key);
+    assertThat(cache.estimatedSize(), is(1L));
+    assertThat(cache.getIfPresent(key), is(not(value)));
 
-    long count = context.initialSize() - cache.estimatedSize() + 1;
-
-    assertThat(count, is(greaterThan(1L)));
+    long count = context.initialSize() - 1;
+    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> {
-      verifier.deleted(key, context.original().get(key), RemovalCause.COLLECTED);
+      verifier.deletions(count, RemovalCause.COLLECTED);
     });
   }
 
@@ -488,15 +492,18 @@ public final class ReferenceTest {
   /* ---------------- AsyncLoadingCache -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void getIfPresent(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Integer key = context.firstKey();
+    Integer value = context.original().get(key);
     context.clear();
+
     GcFinalization.awaitFullGc();
-    assertThat(cache.getIfPresent(key), is(not(nullValue())));
+    awaitFullCleanup(cache.synchronous());
+    assertThat(cache.synchronous().getIfPresent(key), is(value));
   }
 
   @Test(dataProvider = "caches")
@@ -507,6 +514,7 @@ public final class ReferenceTest {
       removalListener = Listener.CONSUMING)
   public void get(AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     context.clear();
+
     GcFinalization.awaitFullGc();
     assertThat(cache.get(context.absentKey()), is(futureOf(context.absentKey())));
 
@@ -554,64 +562,74 @@ public final class ReferenceTest {
   /* ---------------- Map -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void isEmpty(Map<Integer, Integer> cache, CacheContext context) {
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
+  public void isEmpty(Map<Integer, Integer> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(cache.isEmpty(), is(false));
+    assertThat(map.isEmpty(), is(false));
+
+    awaitFullCleanup(context.cache());
+    assertThat(map.isEmpty(), is(true));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
-  public void size(Map<Integer, Integer> cache, CacheContext context) {
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
+  public void size(Map<Integer, Integer> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(cache.size(), is((int) context.initialSize()));
+    assertThat(map.size(), is((int) context.initialSize()));
+
+    awaitFullCleanup(context.cache());
+    assertThat(map.size(), is(0));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void containsKey(Map<Integer, Integer> map, CacheContext context) {
-    Integer first = context.firstKey();
+    Integer key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(map.containsKey(first), is(false));
+    assertThat(map.containsKey(key), is(context.isStrongValues()));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.WEAK, values = ReferenceType.STRONG,
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void containsValue(Map<Integer, Integer> map, CacheContext context) {
-    Integer value = context.original().get(context.firstKey());
+    Integer key = context.firstKey();
+    Integer value = context.original().get(key);
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(map.containsValue(value), is(false));
+    assertThat(map.containsValue(value), is(true));
+
+    key = null;
+    GcFinalization.awaitFullGc();
+    assertThat(map.containsValue(value), is(not(context.isWeakKeys())));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void clear(Map<Integer, Integer> map, CacheContext context) {
     context.clear();
     GcFinalization.awaitFullGc();
     map.clear();
+    long count = context.initialSize();
 
-    long count = context.initialSize() - map.size();
-
-    assertThat(count, is(greaterThan(0L)));
+    assertThat(map.size(), is(0));
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -634,20 +652,22 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT, population = Population.FULL,
+      stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
   public void putIfAbsent(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
+
     GcFinalization.awaitFullGc();
-    assertThat(map.putIfAbsent(key, context.absentValue()), is(nullValue()));
-    assertThat(map.get(key), is(context.absentValue()));
+    assertThat(map.putIfAbsent(key, context.absentValue()),
+        is(context.isStrongValues() ? notNullValue() : nullValue()));
 
-    long count = context.initialSize() - map.size() + 1;
+    awaitFullCleanup(context.cache());
+    assertThat(map.get(key), is(notNullValue()));
+    assertThat(map.size(), is(1));
 
-    assertThat(count, is(greaterThan(1L)));
+    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -671,20 +691,22 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void put(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(map.put(key, context.absentValue()), is(nullValue()));
-    assertThat(map.get(key), is(context.absentValue()));
+    assertThat(map.put(key, context.absentValue()),
+        is(context.isStrongValues() ? notNullValue() : nullValue()));
 
-    long count = context.initialSize() - map.size() + 1;
+    awaitFullCleanup(context.cache());
+    assertThat(map.get(key), is(notNullValue()));
+    assertThat(map.size(), is(1));
 
-    assertThat(count, is(greaterThan(1L)));
+    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -708,47 +730,52 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void replace(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(map.replace(key, context.absentValue()), is(nullValue()));
+
+    assertThat(map.replace(key, context.absentValue()), is(
+        context.isStrongValues() ? notNullValue() : nullValue()));
   }
 
   // replace_writerFail: Not needed due to replacement being impossible
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void replaceConditionally(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
+    Integer value = context.original().get(key);
+
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(map.replace(key, context.absentValue(), context.absentValue()), is(false));
+    assertThat(map.replace(key, value, context.absentValue()), is(true));
   }
 
   // replace_writerFail: Not needed due to replacement being impossible
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void remove(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(map.remove(key), is(nullValue()));
+    assertThat(map.remove(key), is(context.isStrongValues() ? notNullValue() : nullValue()));
 
-    long count = context.initialSize() - map.size();
+    awaitFullCleanup(context.cache());
+    assertThat(map.size(), is(0));
 
-    assertThat(count, is(greaterThan(0L)));
+    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -772,20 +799,22 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void removeConditionally(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     Integer value = context.original().get(key);
     context.clear();
+
     GcFinalization.awaitFullGc();
     assertThat(map.remove(key, value), is(true));
 
-    long count = context.initialSize() - map.size() - 1;
+    awaitFullCleanup(context.cache());
+    assertThat(map.size(), is(0));
 
-    assertThat(count, is(greaterThan(0L)));
+    long count = context.initialSize() - 1;
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -793,19 +822,21 @@ public final class ReferenceTest {
   // removeConditionally_writerFail: Not needed due to removal being impossible
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void computeIfAbsent(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(map.computeIfAbsent(key, k -> context.absentValue()), is(context.absentValue()));
+    assertThat(map.computeIfAbsent(key, k -> context.absentValue()),
+        context.isStrongValues() ? not(context.absentValue()) : is(context.absentValue()));
 
-    long count = context.initialSize() - map.size() + 1;
+    awaitFullCleanup(context.cache());
+    assertThat(map.size(), is(1));
 
-    assertThat(count, is(greaterThan(1L)));
+    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -829,22 +860,21 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void computeIfPresent(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
-    assertThat(map.computeIfPresent(key, (k, v) -> context.absentValue()), is(nullValue()));
+    assertThat(map.computeIfPresent(key, (k, v) -> context.absentValue()),
+        context.isStrongValues() ? is(context.absentValue()) : is(nullValue()));
 
-    if (context.isGuava()) {
-      context.cleanUp();
-    }
-    long count = context.initialSize() - map.size();
+    awaitFullCleanup(context.cache());
+    assertThat(map.size(), is(context.isStrongValues() ? 1 : 0));
 
-    assertThat(count, is(greaterThan(0L)));
+    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -852,22 +882,24 @@ public final class ReferenceTest {
   // computeIfPresent_writerFail: Not needed due to exiting without side-effects
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void compute(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
+
     assertThat(map.compute(key, (k, v) -> {
-      assertThat(v, is(nullValue()));
+      assertThat(v, is(context.isStrongValues() ? notNullValue() : nullValue()));
       return context.absentValue();
     }), is(context.absentValue()));
 
-    long count = context.initialSize() - map.size() + 1;
+    awaitFullCleanup(context.cache());
+    assertThat(map.size(), is(1));
 
-    assertThat(count, is(greaterThan(1L)));
+    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -891,21 +923,25 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
-      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
-      maximumSize = Maximum.DISABLED, weigher = CacheWeigher.DEFAULT,
-      population = Population.FULL, stats = Stats.ENABLED, removalListener = Listener.CONSUMING)
+  @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
+      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
+      weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,
+      removalListener = Listener.CONSUMING)
   public void merge(Map<Integer, Integer> map, CacheContext context) {
     Integer key = context.firstKey();
     context.clear();
     GcFinalization.awaitFullGc();
     assertThat(map.merge(key, context.absentValue(), (oldValue, v) -> {
-      throw new AssertionError("Should never be called");
+      if (context.isWeakKeys() && !context.isStrongValues()) {
+        throw new AssertionError("Should never be called");
+      }
+      return context.absentValue();
     }), is(context.absentValue()));
 
-    long count = context.initialSize() - map.size() + 1;
+    awaitFullCleanup(context.cache());
+    assertThat(map.size(), is(1));
 
-    assertThat(count, is(greaterThan(1L)));
+    long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
@@ -941,79 +977,99 @@ public final class ReferenceTest {
   /* ---------------- Weights -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
-      removalListener = Listener.CONSUMING, writer = Writer.DISABLED)
+  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
+      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.CONSUMING,
+      writer = Writer.DISABLED)
   public void putIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     Integer key = context.absentKey();
     cache.put(key, ImmutableList.of(1));
     GcFinalization.awaitFullGc();
-    assertThat(cache.asMap().putIfAbsent(key, ImmutableList.of(1, 2, 3)), is(nullValue()));
 
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+    assertThat(cache.asMap().putIfAbsent(key, ImmutableList.of(1, 2, 3)),
+        context.isStrongValues() ? is(ImmutableList.of(1)) : nullValue());
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
+        is(context.isStrongValues() ? 1L : 3L));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
-      removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
+  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
+      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT,
+      writer = Writer.DISABLED)
   public void put_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     Integer key = context.absentKey();
     cache.put(key, ImmutableList.of(1));
     GcFinalization.awaitFullGc();
-    assertThat(cache.asMap().put(key, ImmutableList.of(1, 2, 3)), is(nullValue()));
 
+    assertThat(cache.asMap().put(key, ImmutableList.of(1, 2, 3)),
+        context.isStrongValues() ? is(ImmutableList.of(1)) : nullValue());
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
-      removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
+  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
+      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT,
+      writer = Writer.DISABLED)
   public void computeIfAbsent_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     Integer key = context.absentKey();
     cache.put(key, ImmutableList.of(1));
     GcFinalization.awaitFullGc();
-    cache.asMap().computeIfAbsent(1, k -> ImmutableList.of(1, 2, 3));
 
-    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
-  }
+    cache.asMap().computeIfAbsent(key, k -> ImmutableList.of(1, 2, 3));
+    assertThat(cache.policy().eviction().get().weightedSize().getAsLong(),
+        is(context.isStrongValues() ? 1L : 3L));
+    }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
-      removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
+  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
+      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT,
+      writer = Writer.DISABLED)
   public void compute_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     Integer key = context.absentKey();
     cache.put(key, ImmutableList.of(1));
     GcFinalization.awaitFullGc();
-    cache.asMap().compute(1, (k, v) -> ImmutableList.of(1, 2, 3));
 
+    cache.asMap().compute(key, (k, v) -> ImmutableList.of(1, 2, 3));
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
-      values = {ReferenceType.WEAK, ReferenceType.SOFT}, expireAfterAccess = Expire.DISABLED,
-      expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.UNREACHABLE,
-      weigher = CacheWeigher.COLLECTION, population = Population.EMPTY, stats = Stats.ENABLED,
-      removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
+  @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.COLLECTION,
+      population = Population.EMPTY, stats = Stats.ENABLED, removalListener = Listener.DEFAULT,
+      writer = Writer.DISABLED)
   public void merge_weighted(Cache<Integer, List<Integer>> cache, CacheContext context) {
     Integer key = context.absentKey();
     cache.put(key, ImmutableList.of(1));
     GcFinalization.awaitFullGc();
-    cache.asMap().merge(1, ImmutableList.of(1, 2, 3), (oldValue, v) -> {
-      throw new AssertionError("Should never be called");
+
+    cache.asMap().merge(key, ImmutableList.of(1, 2, 3), (oldValue, v) -> {
+      if (context.isWeakKeys() && !context.isStrongValues()) {
+        throw new AssertionError("Should never be called");
+      }
+      return v;
     });
 
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+  }
+
+  /** Ensures that that all the pending work is performed (Guava limits work per cycle). */
+  private static void awaitFullCleanup(Cache<?, ?> cache) {
+    for (;;) {
+      long size = cache.estimatedSize();
+      cache.cleanUp();
+
+      if (size == cache.estimatedSize()) {
+        break;
+      }
+    }
   }
 }

@@ -15,21 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
-import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
-import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
-import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
-import static com.google.common.base.Preconditions.checkState;
 
 import javax.lang.model.element.Modifier;
 
-import com.github.benmanes.caffeine.cache.Feature;
-import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
 
 /**
  * Adds the key to the node.
@@ -50,8 +41,6 @@ public final class AddKey extends NodeRule {
         .addField(newKeyField())
         .addMethod(newGetter(keyStrength(), kTypeVar, "key", Visibility.LAZY))
         .addMethod(newGetRef("key"));
-    addKeyConstructorAssignment(context.constructorByKey, /* isReference */ false);
-    addKeyConstructorAssignment(context.constructorByKeyRef, /* isReference */ true);
   }
 
   private FieldSpec newKeyField() {
@@ -59,27 +48,5 @@ public final class AddKey extends NodeRule {
         ? FieldSpec.builder(kTypeVar, "key", Modifier.VOLATILE)
         : FieldSpec.builder(keyReferenceType(), "key", Modifier.VOLATILE);
     return fieldSpec.build();
-  }
-
-  private boolean isStrongKeys() {
-    return context.parentFeatures.contains(Feature.STRONG_KEYS)
-        || context.generateFeatures.contains(Feature.STRONG_KEYS);
-  }
-
-  private TypeName keyReferenceType() {
-    checkState(context.generateFeatures.contains(Feature.WEAK_KEYS));
-    return ParameterizedTypeName.get(
-        ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
-  }
-
-  /** Adds a constructor assignment. */
-  private void addKeyConstructorAssignment(MethodSpec.Builder constructor, boolean isReference) {
-    if (isReference || isStrongKeys()) {
-      constructor.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
-          UNSAFE_ACCESS, offsetName("key"), isReference ? "keyReference" : "key");
-    } else {
-      constructor.addStatement("$T.UNSAFE.putObject(this, $N, new $T($N, $N))",
-          UNSAFE_ACCESS, offsetName("key"), keyReferenceType(), "key", "keyReferenceQueue");
-    }
   }
 }
