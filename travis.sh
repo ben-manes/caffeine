@@ -27,7 +27,7 @@ case "$1" in
     ;;
   unitTests)
     run "./gradlew check --console plain"
-    run "./gradlew coveralls uploadArchives -x test --console plain"
+    run "./gradlew coveralls uploadArchives -x :caffeine:slowCaffeineTest -x :caffeine:slowGuavaTest --console plain"
     ;;
   slowTests)
     runSlow "./gradlew :caffeine:slowCaffeineTest --console plain"

@@ -61,6 +61,16 @@ final class CacheFactory {
   }
 
   /**
+   * Returns a if the cache definition is found in the external settings file.
+   *
+   * @param cacheName the name of the cache
+   * @return {@code true} if a definition exists
+   */
+  public boolean isDefinedExternally(String cacheName) {
+    return TypesafeConfigurator.cacheNames(rootConfig).contains(cacheName);
+  }
+
+  /**
    * Returns a newly created cache instance if a definition is found in the external settings file.
    *
    * @param cacheName the name of the cache
@@ -85,23 +95,32 @@ final class CacheFactory {
   }
 
   /** Copies the configuration and overlays it on top of the default settings. */
+  @SuppressWarnings("PMD.AccessorMethodGeneration")
   private <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
       Configuration<K, V> configuration) {
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       return new CaffeineConfiguration<>((CaffeineConfiguration<K, V>) configuration);
     }
 
-    CaffeineConfiguration<K, V> defaults = TypesafeConfigurator.defaults(rootConfig);
+    CaffeineConfiguration<K, V> template = TypesafeConfigurator.defaults(rootConfig);
     if (configuration instanceof CompleteConfiguration<?, ?>) {
-      CaffeineConfiguration<K, V> config = new CaffeineConfiguration<>(
-          (CompleteConfiguration<K, V>) configuration);
-      config.setCopierFactory(defaults.getCopierFactory());
-      return config;
+      CompleteConfiguration<K, V> complete = (CompleteConfiguration<K, V>) configuration;
+      template.setReadThrough(complete.isReadThrough());
+      template.setWriteThrough(complete.isWriteThrough());
+      template.setManagementEnabled(complete.isManagementEnabled());
+      template.setStatisticsEnabled(complete.isStatisticsEnabled());
+      template.getCacheEntryListenerConfigurations()
+          .forEach(template::removeCacheEntryListenerConfiguration);
+      complete.getCacheEntryListenerConfigurations()
+          .forEach(template::addCacheEntryListenerConfiguration);
+      template.setCacheLoaderFactory(complete.getCacheLoaderFactory());
+      template.setCacheWriterFactory(complete.getCacheWriterFactory());
+      template.setExpiryPolicyFactory(complete.getExpiryPolicyFactory());
     }
 
-    defaults.setTypes(configuration.getKeyType(), configuration.getValueType());
-    defaults.setStoreByValue(configuration.isStoreByValue());
-    return defaults;
+    template.setTypes(configuration.getKeyType(), configuration.getValueType());
+    template.setStoreByValue(configuration.isStoreByValue());
+    return template;
   }
 
   /** A one-shot builder for creating a cache instance. */

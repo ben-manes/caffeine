@@ -94,6 +94,8 @@ public final class CacheManagerImpl implements CacheManager {
     CacheProxy<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
       if ((existing != null) && !existing.isClosed()) {
         throw new CacheException("Cache " + cacheName + " already exists");
+      } else if (cacheFactory.isDefinedExternally(cacheName)) {
+        throw new CacheException("Cache " + cacheName + " is configured externally");
       }
       return cacheFactory.createCache(cacheName, configuration);
     });

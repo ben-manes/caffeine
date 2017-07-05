@@ -19,9 +19,11 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,6 +55,18 @@ public final class TypesafeConfigurator {
   static FactoryCreator factoryCreator = FactoryBuilder::factoryOf;
 
   private TypesafeConfigurator() {}
+
+  /**
+   * Retrieves the names of the caches defined in the configuration resource.
+   *
+   * @param config the configuration resource
+   * @return the names of the configured caches
+   */
+  public static Set<String> cacheNames(Config config) {
+    return config.hasPath("caffeine.jcache")
+        ? Collections.unmodifiableSet(config.getObject("caffeine.jcache").keySet())
+        : Collections.emptySet();
+  }
 
   /**
    * Retrieves the default cache settings from the configuration resource.
@@ -114,6 +128,7 @@ public final class TypesafeConfigurator {
 
     /** Returns a configuration built from the external settings. */
     CaffeineConfiguration<K, V> configure() {
+      addKeyValueTypes();
       addStoreByValue();
       addListeners();
       addReadThrough();
@@ -125,6 +140,19 @@ public final class TypesafeConfigurator {
       addMaximum();
 
       return configuration;
+    }
+
+    /** Adds the key and value class types. */
+    private void addKeyValueTypes() {
+      try {
+        @SuppressWarnings("unchecked")
+        Class<K> keyType = (Class<K>) Class.forName(merged.getString("key-type"));
+        @SuppressWarnings("unchecked")
+        Class<V> valueType = (Class<V>) Class.forName(merged.getString("value-type"));
+        configuration.setTypes(keyType, valueType);
+      } catch (ClassNotFoundException e) {
+        throw new IllegalStateException(e);
+      }
     }
 
     /** Adds the store-by-value settings. */

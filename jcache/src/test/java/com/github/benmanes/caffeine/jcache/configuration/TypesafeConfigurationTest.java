@@ -48,6 +48,8 @@ public final class TypesafeConfigurationTest {
     CaffeineConfiguration<Integer, Integer> defaults =
         TypesafeConfigurator.defaults(ConfigFactory.load());
     assertThat(defaults.getMaximumSize(), is(OptionalLong.of(500)));
+    assertThat(defaults.getKeyType(), is(Object.class));
+    assertThat(defaults.getValueType(), is(Object.class));
   }
 
   @Test
@@ -61,8 +63,14 @@ public final class TypesafeConfigurationTest {
 
   @Test
   public void testCache2() {
-    assertThat(TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-2"),
-        is(not(equalTo(TypesafeConfigurator.from(ConfigFactory.load(), "test-cache").get()))));
+    Optional<CaffeineConfiguration<Integer, Integer>> config1 =
+        TypesafeConfigurator.from(ConfigFactory.load(), "test-cache");
+    Optional<CaffeineConfiguration<Integer, Integer>> config2 =
+        TypesafeConfigurator.from(ConfigFactory.load(), "test-cache-2");
+    assertThat(config1, is(not(equalTo(config2))));
+
+    assertThat(config2.get().getKeyType(), is(String.class));
+    assertThat(config2.get().getValueType(), is(Integer.class));
   }
 
   @Test
@@ -81,6 +89,8 @@ public final class TypesafeConfigurationTest {
     checkStoreByValue(config);
     checkListener(config);
 
+    assertThat(config.getKeyType(), is(Object.class));
+    assertThat(config.getValueType(), is(Object.class));
     assertThat(config.getCacheLoaderFactory().create(),
         instanceOf(TestCacheLoader.class));
     assertThat(config.getCacheWriter(), instanceOf(TestCacheWriter.class));
