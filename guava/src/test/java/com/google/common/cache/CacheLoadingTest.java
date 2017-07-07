@@ -30,7 +30,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1871,7 +1870,7 @@ public class CacheLoadingTest extends TestCase {
         new CacheLoader<String, Object>() {
           @Override public Object load(String key) {
             callCount.incrementAndGet();
-            Uninterruptibles.awaitUninterruptibly(startSignal);
+            assertTrue(Uninterruptibles.awaitUninterruptibly(startSignal, 300, TimeUnit.SECONDS));
             return result;
           }
         });
@@ -1900,7 +1899,7 @@ public class CacheLoadingTest extends TestCase {
         new CacheLoader<String, String>() {
           @Override public String load(String key) {
             callCount.incrementAndGet();
-            Uninterruptibles.awaitUninterruptibly(startSignal);
+            assertTrue(Uninterruptibles.awaitUninterruptibly(startSignal, 300, TimeUnit.SECONDS));
             return null;
           }
         });
@@ -1938,7 +1937,7 @@ public class CacheLoadingTest extends TestCase {
         new CacheLoader<String, String>() {
           @Override public String load(String key) {
             callCount.incrementAndGet();
-            Uninterruptibles.awaitUninterruptibly(startSignal);
+            assertTrue(Uninterruptibles.awaitUninterruptibly(startSignal, 300, TimeUnit.SECONDS));
             throw e;
           }
         });
@@ -1979,7 +1978,7 @@ public class CacheLoadingTest extends TestCase {
         new CacheLoader<String, String>() {
           @Override public String load(String key) throws Exception {
             callCount.incrementAndGet();
-            Uninterruptibles.awaitUninterruptibly(startSignal);
+            assertTrue(Uninterruptibles.awaitUninterruptibly(startSignal, 300, TimeUnit.SECONDS));
             throw e;
           }
         });
@@ -2055,7 +2054,7 @@ public class CacheLoadingTest extends TestCase {
       }
     }
     gettersStartedSignal.countDown();
-    gettersComplete.await();
+    assertTrue(gettersComplete.await(300, TimeUnit.SECONDS));
 
     List<Object> resultList = Lists.newArrayListWithExpectedSize(nThreads);
     for (int i = 0; i < nThreads; i++) {
@@ -2076,7 +2075,7 @@ public class CacheLoadingTest extends TestCase {
       @Override
       public String load(String key) {
         getStartedSignal.countDown();
-        Uninterruptibles.awaitUninterruptibly(letGetFinishSignal);
+        assertTrue(Uninterruptibles.awaitUninterruptibly(letGetFinishSignal, 300, TimeUnit.SECONDS));
         return key + suffix;
       }
     };
@@ -2090,16 +2089,16 @@ public class CacheLoadingTest extends TestCase {
     assertFalse(map.containsKey(getKey));
     assertSame(refreshKey, map.get(refreshKey));
 
-    ForkJoinPool.commonPool().execute(() -> {
+    new Thread(() -> {
       cache.getUnchecked(getKey);
       getFinishedSignal.countDown();
-    });
-    ForkJoinPool.commonPool().execute(() -> {
+    }).start();
+    new Thread(() -> {
       cache.refresh(refreshKey);
       getFinishedSignal.countDown();
-    });
+    }).start();
 
-    getStartedSignal.await();
+    assertTrue(getStartedSignal.await(300, TimeUnit.SECONDS));
 
     // computation is in progress; asMap shouldn't have changed
     assertEquals(1, map.size());
@@ -2108,7 +2107,7 @@ public class CacheLoadingTest extends TestCase {
 
     // let computation complete
     letGetFinishSignal.countDown();
-    getFinishedSignal.await();
+    assertTrue(getFinishedSignal.await(300, TimeUnit.SECONDS));
     checkNothingLogged();
 
     // asMap view should have been updated
@@ -2131,7 +2130,7 @@ public class CacheLoadingTest extends TestCase {
       @Override
       public String load(String key) {
         computationStarted.countDown();
-        Uninterruptibles.awaitUninterruptibly(letGetFinishSignal);
+        assertTrue(Uninterruptibles.awaitUninterruptibly(letGetFinishSignal, 300, TimeUnit.SECONDS));
         return key + suffix;
       }
     };
@@ -2141,16 +2140,16 @@ public class CacheLoadingTest extends TestCase {
     ConcurrentMap<String,String> map = cache.asMap();
     map.put(refreshKey, refreshKey);
 
-    ForkJoinPool.commonPool().execute(() -> {
+    new Thread(() -> {
       cache.getUnchecked(getKey);
       getFinishedSignal.countDown();
-    });
-    ForkJoinPool.commonPool().execute(() -> {
+    }).start();
+    new Thread(() -> {
       cache.refresh(refreshKey);
       getFinishedSignal.countDown();
-    });
+    }).start();
 
-    computationStarted.await();
+    assertTrue(computationStarted.await(300, TimeUnit.SECONDS));
     cache.invalidate(getKey);
     cache.invalidate(refreshKey);
     assertFalse(map.containsKey(getKey));
@@ -2158,7 +2157,7 @@ public class CacheLoadingTest extends TestCase {
 
     // let computation complete
     letGetFinishSignal.countDown();
-    getFinishedSignal.await();
+    assertTrue(getFinishedSignal.await(300, TimeUnit.SECONDS));
     checkNothingLogged();
 
     // results should be visible
@@ -2183,7 +2182,7 @@ public class CacheLoadingTest extends TestCase {
       @Override
       public String load(String key) {
         computationStarted.countDown();
-        Uninterruptibles.awaitUninterruptibly(letGetFinishSignal);
+        assertTrue(Uninterruptibles.awaitUninterruptibly(letGetFinishSignal, 300, TimeUnit.SECONDS));
         return key + suffix;
       }
     };
@@ -2193,34 +2192,34 @@ public class CacheLoadingTest extends TestCase {
     ConcurrentMap<String,String> map = cache.asMap();
     map.put(refreshKey, refreshKey);
 
-    ForkJoinPool.commonPool().execute(() -> {
+    new Thread(() -> {
       cache.getUnchecked(getKey);
       getFinishedSignal.countDown();
-    });
-    ForkJoinPool.commonPool().execute(() -> {
+    }).start();
+    new Thread(() -> {
       cache.refresh(refreshKey);
       getFinishedSignal.countDown();
-    });
+    }).start();
 
-    computationStarted.await();
+    assertTrue(computationStarted.await(300, TimeUnit.SECONDS));
     cache.invalidate(getKey);
     cache.invalidate(refreshKey);
     assertFalse(map.containsKey(getKey));
     assertFalse(map.containsKey(refreshKey));
 
     // start new computations
-    ForkJoinPool.commonPool().execute(() -> {
+    new Thread(() -> {
       cache.getUnchecked(getKey);
       getFinishedSignal.countDown();
-    });
-    ForkJoinPool.commonPool().execute(() -> {
+    }).start();
+    new Thread(() -> {
       cache.refresh(refreshKey);
       getFinishedSignal.countDown();
-    });
+    }).start();
 
     // let computation complete
     letGetFinishSignal.countDown();
-    getFinishedSignal.await();
+    assertTrue(getFinishedSignal.await(300, TimeUnit.SECONDS));
     checkNothingLogged();
 
     // results should be visible

@@ -44,6 +44,7 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -1062,7 +1063,7 @@ public class JSR166TestCase extends TestCase {
             @Override
             protected String realCall() {
                 try {
-                    latch.await();
+                  assertTrue(latch.await(300, TimeUnit.SECONDS));
                 } catch (InterruptedException quittingTime) {}
                 return TEST_STRING;
             }};

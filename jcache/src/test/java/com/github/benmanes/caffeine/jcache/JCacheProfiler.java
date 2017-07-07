@@ -18,8 +18,8 @@ package com.github.benmanes.caffeine.jcache;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Random;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -31,6 +31,7 @@ import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider;
 import com.google.common.base.Stopwatch;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A hook for profiling the JCache adapter.
@@ -43,6 +44,7 @@ public final class JCacheProfiler {
   private static final boolean READ = true;
 
   private final Cache<Integer, Boolean> cache;
+  private final Executor executor;
   private final LongAdder count;
   private final Random random;
 
@@ -53,6 +55,8 @@ public final class JCacheProfiler {
     CacheManager cacheManager = provider.getCacheManager(
         provider.getDefaultURI(), provider.getDefaultClassLoader());
     cache = cacheManager.createCache("profiler", new MutableConfiguration<>());
+    executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder()
+        .setPriority(Thread.MIN_PRIORITY).setDaemon(true).build());
   }
 
   public void start() {
@@ -73,7 +77,7 @@ public final class JCacheProfiler {
 
     scheduleStatusTask();
     for (int i = 0; i < THREADS; i++) {
-      ForkJoinPool.commonPool().execute(task);
+      executor.execute(task);
     }
   }
 

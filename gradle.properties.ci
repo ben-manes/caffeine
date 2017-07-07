@@ -1,4 +1,4 @@
-org.gradle.jvmargs=-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify
-org.gradle.daemon=false
+org.gradle.jvmargs=-Xmx1024m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify
+org.gradle.daemon=true
 nexusUsername=
 nexusPassword=

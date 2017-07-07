@@ -32,7 +32,6 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -329,7 +328,6 @@ public class CacheBuilderTest extends TestCase {
   }
 
   @GwtIncompatible("QueuingRemovalListener")
-
   public void testRemovalNotification_clear() throws InterruptedException {
     // If a clear() happens while a computation is pending, we should not get a removal
     // notification.
@@ -339,7 +337,7 @@ public class CacheBuilderTest extends TestCase {
     CacheLoader<String, String> computingFunction = new CacheLoader<String, String>() {
       @Override public String load(String key) {
         if (shouldWait.get()) {
-          Uninterruptibles.awaitUninterruptibly(computingLatch);
+          assertTrue(Uninterruptibles.awaitUninterruptibly(computingLatch, 300, TimeUnit.MINUTES));
         }
         return key;
       }
@@ -356,19 +354,19 @@ public class CacheBuilderTest extends TestCase {
 
     final CountDownLatch computationStarted = new CountDownLatch(1);
     final CountDownLatch computationComplete = new CountDownLatch(1);
-    ForkJoinPool.commonPool().execute(() -> {
+    new Thread(() -> {
       computationStarted.countDown();
       cache.getUnchecked("b");
       computationComplete.countDown();
-    });
+    }).start();
 
     // wait for the computingEntry to be created
-    computationStarted.await();
+    assertTrue(computationStarted.await(300, TimeUnit.MINUTES));
     cache.invalidateAll();
     // let the computation proceed
     computingLatch.countDown();
     // don't check cache.size() until we know the get("b") call is complete
-    computationComplete.await();
+    assertTrue(computationComplete.await(300, TimeUnit.MINUTES));
 
     // At this point, the listener should be holding the seed value (a -> a), and the map should
     // contain the computed value (b -> b), since the clear() happened before the computation
@@ -439,7 +437,7 @@ public class CacheBuilderTest extends TestCase {
       Thread.yield();
     }
     cache.invalidateAll();
-    tasksFinished.await();
+    assertTrue(tasksFinished.await(300, TimeUnit.MINUTES));
 
     // Check all of the removal notifications we received: they should have had correctly-associated
     // keys and values. (An earlier bug saw removal notifications for in-progress computations,
@@ -525,7 +523,7 @@ public class CacheBuilderTest extends TestCase {
     }
 
     threadPool.shutdown();
-    threadPool.awaitTermination(300, TimeUnit.SECONDS);
+    assertTrue(threadPool.awaitTermination(300, TimeUnit.SECONDS));
 
     // Since we're not doing any more cache operations, and the cache only expires/evicts when doing
     // other operations, the cache and the removal queue won't change from this point on.
@@ -562,7 +560,7 @@ public class CacheBuilderTest extends TestCase {
 
     @Override public T load(T key) {
       if (shouldWait.get()) {
-        Uninterruptibles.awaitUninterruptibly(delayLatch);
+        assertTrue(Uninterruptibles.awaitUninterruptibly(delayLatch, 300, TimeUnit.SECONDS));
       }
       return key;
     }

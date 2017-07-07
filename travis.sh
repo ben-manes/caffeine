@@ -1,5 +1,4 @@
-# travis.sh
-#!/bin/sh
+#!/bin/bash
 
 set -eu
 
@@ -19,21 +18,19 @@ runSlow() {
   done
 }
 
-case "$1" in
+case "${1:?''}" in
   analysis)
     run "./gradlew findbugsMain pmdMain -Dfindbugs -Dpmd --console plain"
     run "sh -c 'cd examples/stats-metrics && ./gradlew test --console plain'"
     run "sh -c 'cd examples/write-behind-rxjava && mvn test'"
     ;;
-  unitTests)
+  tests)
     run "./gradlew check --console plain"
-    run "./gradlew coveralls uploadArchives -x :caffeine:slowCaffeineTest -x :caffeine:slowGuavaTest --console plain"
-    ;;
-  slowTests)
     runSlow "./gradlew :caffeine:slowCaffeineTest --console plain"
     runSlow "./gradlew :caffeine:slowGuavaTest  --console plain"
+    run "./gradlew coveralls uploadArchives --console plain"
     ;;
   *)
-    echo $"Usage: $0 {analysis|unitTests|slowTests}"
+    echo $"Usage: $0 {analysis|tests}"
     exit 1
 esac

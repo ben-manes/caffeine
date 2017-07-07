@@ -28,7 +28,6 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,6 +37,7 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.testing.Awaits;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -81,7 +81,7 @@ public final class AsyncTest {
   public void getWhenSuccessful_success_async() {
     CompletableFuture<Integer> future = new CompletableFuture<Integer>();
     AtomicInteger result = new AtomicInteger();
-    ForkJoinPool.commonPool().execute(() -> {
+    ConcurrentTestHarness.execute(() -> {
       result.set(1);
       result.set(Async.getWhenSuccessful(future));
     });
@@ -94,7 +94,7 @@ public final class AsyncTest {
   public void getWhenSuccessful_fails(CompletableFuture<?> future) {
     if ((future != null) && !future.isDone()) {
       AtomicInteger result = new AtomicInteger();
-      ForkJoinPool.commonPool().execute(() -> {
+      ConcurrentTestHarness.execute(() -> {
         result.set(1);
         Object value = Async.getWhenSuccessful(future);
         result.set((value == null) ? 2 : 3);

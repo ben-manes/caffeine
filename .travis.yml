@@ -1,5 +1,5 @@
 language: java
-sudo: false
+sudo: required
 
 jdk:
   - oraclejdk8
@@ -9,8 +9,7 @@ env:
     - TERM=dumb
   matrix:
     - GROUP=analysis
-    - GROUP=unitTests
-    - GROUP=slowTests
+    - GROUP=tests
 
 before_install:
   - cp gradle.properties.ci gradle.properties
