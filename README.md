@@ -71,18 +71,18 @@ Powering infrastructure near you:
 
 On the radar,
  * Early discussions with [HBase][hbase], [Solr][solr], and [Rapidoid][rapidoid]
- * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], and [ohc][ohc]
+ * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], [transitory][transitory], and [ohc][ohc]
 
 ### Download
 
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:2.5.2'
+compile 'com.github.ben-manes.caffeine:caffeine:2.5.3'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:2.5.2'
-compile 'com.github.ben-manes.caffeine:jcache:2.5.2'
+compile 'com.github.ben-manes.caffeine:guava:2.5.3'
+compile 'com.github.ben-manes.caffeine:jcache:2.5.3'
 ```
 
 See the [release notes][releases] for details of the changes.
@@ -127,6 +127,7 @@ Snapshots of the development version are available in
 [ohc]: https://github.com/snazy/ohc
 [go-tinylfu]: https://github.com/dgryski/go-tinylfu
 [mango-cache]: https://github.com/goburrow/cache
+[transitory]: https://github.com/aholstenson/transitory
 [ratpack]: https://github.com/ratpack/ratpack
 [finagle]: https://github.com/twitter/finagle
 [druid]: http://druid.io/docs/latest/development/extensions-core/caffeine-cache.html
