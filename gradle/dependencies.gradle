@@ -55,7 +55,7 @@ ext {
     truth: '0.24',
   ]
   benchmarkVersions = [
-    cache2k: '1.0.0.CR4',
+    cache2k: '1.0.0.Final',
     collision: '0.3.2',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.4',
@@ -87,6 +87,7 @@ ext {
     propdeps: '0.0.10.RELEASE',
     semanticVersioning: '1.1.0',
     shadow: '2.0.1',
+    sonarqube: '2.5',
     spotbugs: '1.0',
     stats: '0.2.0',
     versions: '0.15.0',
@@ -188,6 +189,7 @@ ext {
     propdeps: "io.spring.gradle:propdeps-plugin:${pluginVersions.propdeps}",
     semanticVersioning: "io.ehdev:gradle-semantic-versioning:${pluginVersions.semanticVersioning}",
     shadow: "com.github.jengelman.gradle.plugins:shadow:${pluginVersions.shadow}",
+    sonarqube: "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:${pluginVersions.sonarqube}",
     spotbugs: "gradle.plugin.com.github.spotbugs:gradlePlugin:${pluginVersions.spotbugs}",
     stats: "org.kordamp.gradle:stats-gradle-plugin:${pluginVersions.stats}",
     versions: "com.github.ben-manes:gradle-versions-plugin:${pluginVersions.versions}",

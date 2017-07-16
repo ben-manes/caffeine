@@ -38,6 +38,10 @@ coverity {
   skip = true
 }
 
+sonarqube {
+  skipProject = true
+}
+
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
   // https://github.com/akka/akka/issues/21165

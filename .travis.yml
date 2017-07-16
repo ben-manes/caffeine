@@ -27,6 +27,10 @@ addons:
   apt:
     packages:
       - oracle-java8-installer
+  sonarcloud:
+    organization: caffeine
+    token:
+      secure: "D40GIdgUfGx75Yso8Zjo/E0dIsW9KDDyId5wbBNuozMkxJcS2qOIK1+Ia3GPHKSvkeSQJ/1wVyl3TGJunGZB/dLoZvrqtKwaLCOa/9TZA1+Uc80W88uvaZ5yhoZP4vCQV3ka+2eRBBYUzYUptK0qdpJxWRyAmPFvOqtnHmDYgb4="
 
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
@@ -34,5 +38,6 @@ before_cache:
 cache:
   directories:
     - $HOME/.m2
+    - $HOME/.sonar/cache
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/

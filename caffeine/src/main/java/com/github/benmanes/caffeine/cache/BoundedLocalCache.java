@@ -997,9 +997,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * Performs the post-processing work required after a write.
    *
    * @param task the pending operation to be applied
-   * @param now the current time, in nanoseconds
    */
-  void afterWrite(Runnable task, long now) {
+  void afterWrite(Runnable task) {
     if (buffersWrites()) {
       for (int i = 0; i < WRITE_BUFFER_RETRIES; i++) {
         if (writeBuffer().offer(task)) {
@@ -1649,13 +1648,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             return computed;
           });
           if (prior == node) {
-            afterWrite(new AddTask(node, newWeight), now);
+            afterWrite(new AddTask(node, newWeight));
             return null;
           }
         } else {
           prior = data.putIfAbsent(node.getKeyReference(), node);
           if (prior == null) {
-            afterWrite(new AddTask(node, newWeight), now);
+            afterWrite(new AddTask(node, newWeight));
             return null;
           }
         }
@@ -1714,9 +1713,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       int weightedDifference = mayUpdate ? (newWeight - oldWeight) : 0;
       if ((oldValue == null) || (weightedDifference != 0) || expired) {
-        afterWrite(new UpdateTask(prior, weightedDifference), now);
+        afterWrite(new UpdateTask(prior, weightedDifference));
       } else if (!onlyIfAbsent && expiresAfterWrite() && withinTolerance) {
-        afterWrite(new UpdateTask(prior, weightedDifference), now);
+        afterWrite(new UpdateTask(prior, weightedDifference));
       } else {
         if (mayUpdate) {
           setWriteTime(prior, now);
@@ -1769,7 +1768,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       K castKey = (K) key;
       notifyRemoval(castKey, oldValue, cause);
     }
-    afterWrite(new RemovalTask(node), 0L);
+    afterWrite(new RemovalTask(node));
     return (cause == RemovalCause.EXPLICIT) ? oldValue : null;
   }
 
@@ -1807,7 +1806,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     });
 
     if (cause[0] != null) {
-      afterWrite(new RemovalTask(node[0]), now);
+      afterWrite(new RemovalTask(node[0]));
       if (hasRemovalListener()) {
         notifyRemoval(castKey, oldValue[0], cause[0]);
       }
@@ -1823,7 +1822,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    Node<K, V> removed[] = new Node[1];
+    Node<K, V>[] removed = new Node[1];
     @SuppressWarnings("unchecked")
     K[] oldKey = (K[]) new Object[1];
     @SuppressWarnings("unchecked")
@@ -1856,7 +1855,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     } else if (hasRemovalListener()) {
       notifyRemoval(oldKey[0], oldValue[0], cause[0]);
     }
-    afterWrite(new RemovalTask(removed[0]), now);
+    afterWrite(new RemovalTask(removed[0]));
     return (cause[0] == RemovalCause.EXPLICIT);
   }
 
@@ -1902,7 +1901,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     int weightedDifference = (weight - oldWeight[0]);
     if (expiresAfterWrite() || (weightedDifference != 0)) {
-      afterWrite(new UpdateTask(node, weightedDifference), now);
+      afterWrite(new UpdateTask(node, weightedDifference));
     } else {
       afterRead(node, now, /* recordHit */ false);
     }
@@ -1958,7 +1957,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     int weightedDifference = (weight - oldWeight[0]);
     if (expiresAfterWrite() || (weightedDifference != 0)) {
-      afterWrite(new UpdateTask(node, weightedDifference), now);
+      afterWrite(new UpdateTask(node, weightedDifference));
     } else {
       afterRead(node, now, /* recordHit */ false);
     }
@@ -2076,7 +2075,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     if (node == null) {
       if (removed[0] != null) {
-        afterWrite(new RemovalTask(removed[0]), now);
+        afterWrite(new RemovalTask(removed[0]));
       }
       return null;
     }
@@ -2096,10 +2095,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return oldValue[0];
     }
     if ((oldValue[0] == null) && (cause[0] == null)) {
-      afterWrite(new AddTask(node, weight[1]), now);
+      afterWrite(new AddTask(node, weight[1]));
     } else {
       int weightedDifference = (weight[1] - weight[0]);
-      afterWrite(new UpdateTask(node, weightedDifference), now);
+      afterWrite(new UpdateTask(node, weightedDifference));
     }
 
     return newValue[0];
@@ -2257,15 +2256,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     if (removed[0] != null) {
-      afterWrite(new RemovalTask(removed[0]), now);
+      afterWrite(new RemovalTask(removed[0]));
     } else if (node == null) {
       // absent and not computable
     } else if ((oldValue[0] == null) && (cause[0] == null)) {
-      afterWrite(new AddTask(node, weight[1]), now);
+      afterWrite(new AddTask(node, weight[1]));
     } else {
       int weightedDifference = weight[1] - weight[0];
       if (expiresAfterWrite() || (weightedDifference != 0)) {
-        afterWrite(new UpdateTask(node, weightedDifference), now);
+        afterWrite(new UpdateTask(node, weightedDifference));
       } else {
         if (cause[0] == null) {
           if (!isComputingAsync(node)) {
@@ -3420,13 +3419,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 /** The namespace for field padding through inheritance. */
 final class BLCHeader {
 
-  static abstract class PadDrainStatus<K, V> extends AbstractMap<K, V> {
+  abstract static class PadDrainStatus<K, V> extends AbstractMap<K, V> {
     long p00, p01, p02, p03, p04, p05, p06, p07;
     long p10, p11, p12, p13, p14, p15, p16;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the drain status. */
-  static abstract class DrainStatusRef<K, V> extends PadDrainStatus<K, V> {
+  abstract static class DrainStatusRef<K, V> extends PadDrainStatus<K, V> {
     static final long DRAIN_STATUS_OFFSET =
         UnsafeAccess.objectFieldOffset(DrainStatusRef.class, "drainStatus");
 

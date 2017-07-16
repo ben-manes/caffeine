@@ -86,7 +86,7 @@ public final class LinkedDequeTests extends TestCase {
   }
 
   /** See TestStringQueueGenerator */
-  static abstract class TestLinkedValueGenerator implements TestQueueGenerator<LinkedValue> {
+  abstract static class TestLinkedValueGenerator implements TestQueueGenerator<LinkedValue> {
 
     @Override
     public SampleElements<LinkedValue> samples() {

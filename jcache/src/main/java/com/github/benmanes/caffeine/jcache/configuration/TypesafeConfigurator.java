@@ -212,6 +212,7 @@ public final class TypesafeConfigurator {
       Duration creation = getDurationFor("policy.lazy-expiration.creation");
       Duration update = getDurationFor("policy.lazy-expiration.update");
       Duration access = getDurationFor("policy.lazy-expiration.access");
+      requireNonNull(creation, "policy.lazy-expiration.creation may not be null");
 
       boolean eternal = Objects.equals(creation, Duration.ETERNAL)
           && Objects.equals(update, Duration.ETERNAL)

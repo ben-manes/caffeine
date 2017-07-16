@@ -66,6 +66,12 @@ jar.manifest {
     'com.github.benmanes.caffeine.cache.stats'
 }
 
+sonarqube {
+  properties {
+    property "sonar.exclusions", '**/NodeFactory.java, **/LocalCacheFactory.java'
+  }
+}
+
 task generateLocalCaches(type: JavaExec) {
   main = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'
   classpath = sourceSets.javaPoet.runtimeClasspath

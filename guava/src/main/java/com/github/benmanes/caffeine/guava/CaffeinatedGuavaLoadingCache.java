@@ -44,7 +44,7 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
   static final ThreadLocal<Boolean> nullBulkLoad = ThreadLocal.withInitial(() -> Boolean.FALSE);
   static final long serialVersionUID = 1L;
 
-  final com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache;
+  private final com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache;
 
   CaffeinatedGuavaLoadingCache(com.github.benmanes.caffeine.cache.LoadingCache<K, V> cache) {
     super(cache);

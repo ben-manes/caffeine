@@ -86,8 +86,8 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
-  public <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(String cacheName,
-      C configuration) throws IllegalArgumentException {
+  public <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(
+      String cacheName, C configuration) {
     requireNotClosed();
     requireNonNull(configuration);
 

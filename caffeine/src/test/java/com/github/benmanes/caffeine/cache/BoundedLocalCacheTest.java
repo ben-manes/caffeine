@@ -434,7 +434,7 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
 
     boolean[] ran = new boolean[1];
-    localCache.afterWrite(() -> ran[0] = true, 0);
+    localCache.afterWrite(() -> ran[0] = true);
     assertThat(ran[0], is(true));
 
     assertThat(localCache.writeBuffer().size(), is(0));
@@ -480,7 +480,7 @@ public final class BoundedLocalCacheTest {
 
     int[] triggered = { 0 };
     Runnable triggerTask = () -> triggered[0] = 1 + expectedCount[0];
-    localCache.afterWrite(triggerTask, 0L);
+    localCache.afterWrite(triggerTask);
 
     assertThat(processed[0], is(expectedCount[0]));
     assertThat(triggered[0], is(expectedCount[0] + 1));

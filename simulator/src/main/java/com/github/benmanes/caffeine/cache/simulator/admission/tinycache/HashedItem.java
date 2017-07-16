@@ -22,11 +22,11 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-public class HashedItem {
-  public int set;
-  public byte chainId;
-  public byte fingerprint;
-  public long value;
+final class HashedItem {
+  int set;
+  byte chainId;
+  byte fingerprint;
+  long value;
 
   public HashedItem(int set, byte chainid, byte fingerprit, long value) {
     this.set = set;

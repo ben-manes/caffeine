@@ -128,7 +128,7 @@ final class CacheFactory {
     final Ticker ticker;
     final String cacheName;
     final Executor executor;
-    final ExpiryPolicy expiry;
+    final ExpiryPolicy expiryPolicy;
     final EventDispatcher<K, V> dispatcher;
     final JCacheStatisticsMXBean statistics;
     final Caffeine<Object, Object> caffeine;
@@ -143,7 +143,7 @@ final class CacheFactory {
       this.caffeine = Caffeine.newBuilder();
       this.statistics = new JCacheStatisticsMXBean();
       this.ticker = config.getTickerFactory().create();
-      this.expiry = config.getExpiryPolicyFactory().create();
+      this.expiryPolicy = config.getExpiryPolicyFactory().create();
       this.executor = USE_DIRECT_EXECUTOR ? Runnable::run : config.getExecutorFactory().create();
       this.dispatcher = new EventDispatcher<>(executor);
 
@@ -185,15 +185,15 @@ final class CacheFactory {
     /** Creates a cache that does not read through on a cache miss. */
     private CacheProxy<K, V> newCacheProxy() {
       return new CacheProxy<>(cacheName, executor, cacheManager, config, caffeine.build(),
-          dispatcher, Optional.ofNullable(cacheLoader), expiry, ticker, statistics);
+          dispatcher, Optional.ofNullable(cacheLoader), expiryPolicy, ticker, statistics);
     }
 
     /** Creates a cache that reads through on a cache miss. */
     private CacheProxy<K, V> newLoadingCacheProxy() {
       JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
-          cacheLoader, dispatcher, expiry, ticker, statistics);
+          cacheLoader, dispatcher, expiryPolicy, ticker, statistics);
       CacheProxy<K, V> cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager,
-          config, caffeine.build(adapter), dispatcher, cacheLoader, expiry, ticker, statistics);
+          config, caffeine.build(adapter), dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
       adapter.setCache(cache);
       return cache;
     }

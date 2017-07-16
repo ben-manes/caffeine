@@ -3,6 +3,7 @@
  */
 apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'com.github.spotbugs'
+apply plugin: 'org.sonarqube'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
 apply plugin: 'java'
@@ -56,6 +57,21 @@ jacocoTestReport {
     html.enabled = true
   }
 }
+
+task jacocoMerge(type: JacocoMerge) {
+  executionData tasks.withType(Test)
+
+  doFirst {
+    executionData = files(executionData.findAll { it.exists() })
+  }
+}
+
+sonarqube {
+  properties {
+    property 'sonar.jacoco.reportPath', jacocoMerge.destinationFile
+  }
+}
+tasks.sonarqube.dependsOn(jacocoMerge)
 
 tasks.withType(Test) {
   if (System.properties.containsKey('debug')) {

@@ -97,13 +97,13 @@ final class FastFlowBuffer<E> extends FastFlowHeader.ReadAndWriteCounterRef<E> {
 /** The namespace for field padding through inheritance. */
 final class FastFlowHeader {
 
-  static abstract class PadReadCache<E> extends ReadBuffer<E> {
+  abstract static class PadReadCache<E> extends ReadBuffer<E> {
     long p00, p01, p02, p03, p04, p05, p06, p07;
     long p10, p11, p12, p13, p14, p15, p16, p17;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the read count. */
-  static abstract class ReadCacheRef<E> extends PadReadCache<E> {
+  abstract static class ReadCacheRef<E> extends PadReadCache<E> {
     static final long READ_CACHE_OFFSET =
         UnsafeAccess.objectFieldOffset(ReadCacheRef.class, "readCache");
 
@@ -114,13 +114,13 @@ final class FastFlowHeader {
     }
   }
 
-  static abstract class PadReadCounter<E> extends ReadCacheRef<E> {
+  abstract static class PadReadCounter<E> extends ReadCacheRef<E> {
     long p20, p21, p22, p23, p24, p25, p26, p27;
     long p30, p31, p32, p33, p34, p35, p36, p37;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the read count. */
-  static abstract class ReadCounterRef<E> extends PadReadCounter<E> {
+  abstract static class ReadCounterRef<E> extends PadReadCounter<E> {
     static final long READ_OFFSET =
         UnsafeAccess.objectFieldOffset(ReadCounterRef.class, "readCounter");
 
@@ -131,13 +131,13 @@ final class FastFlowHeader {
     }
   }
 
-  static abstract class PadWriteCounter<E> extends ReadCounterRef<E> {
+  abstract static class PadWriteCounter<E> extends ReadCounterRef<E> {
     long p40, p41, p42, p43, p44, p45, p46, p47;
     long p50, p51, p52, p53, p54, p55, p56, p57;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the write count. */
-  static abstract class ReadAndWriteCounterRef<E> extends PadWriteCounter<E> {
+  abstract static class ReadAndWriteCounterRef<E> extends PadWriteCounter<E> {
     static final long WRITE_OFFSET =
         UnsafeAccess.objectFieldOffset(ReadAndWriteCounterRef.class, "writeCounter");
 

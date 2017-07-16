@@ -128,8 +128,8 @@ public final class PolicyStats {
   }
 
   public double admissionRate() {
-    double candidateCount = admittedCount + rejectedCount;
-    return (candidateCount == 0) ? 1.0 : admittedCount / candidateCount;
+    long candidateCount = admittedCount + rejectedCount;
+    return (candidateCount == 0) ? 1.0 : (double) admittedCount / candidateCount;
   }
 
   public double complexity() {

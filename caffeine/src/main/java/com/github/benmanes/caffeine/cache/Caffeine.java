@@ -807,7 +807,7 @@ public final class Caffeine<K, V> {
   }
 
   @Nonnull
-  Supplier<? extends StatsCounter> getStatsCounterSupplier() {
+  Supplier<StatsCounter> getStatsCounterSupplier() {
     return (statsCounterSupplier == null)
         ? StatsCounter::disabledStatsCounter
         : statsCounterSupplier;

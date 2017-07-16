@@ -55,7 +55,8 @@ public final class CaffeineSpecTest {
   static final long UNSET_LONG = UNSET_INT;
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, compute = Compute.SYNC, writer = Writer.DISABLED,
+  @CacheSpec(initialCapacity = {InitialCapacity.DEFAULT, InitialCapacity.FULL},
+      population = Population.EMPTY, compute = Compute.SYNC, writer = Writer.DISABLED,
       removalListener = Listener.DEFAULT, implementation = Implementation.Caffeine)
   public void specifications(CacheContext context) {
     CaffeineSpec spec = toSpec(context);

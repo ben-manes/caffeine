@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.jcache.spi;
 
+import static javax.cache.configuration.OptionalFeature.STORE_BY_REFERENCE;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -131,13 +133,8 @@ public final class CaffeineCachingProvider implements CachingProvider {
   }
 
   @Override
-  @SuppressWarnings("PMD.TooFewBranchesForASwitchStatement")
   public boolean isSupported(OptionalFeature optionalFeature) {
-    switch (optionalFeature) {
-      case STORE_BY_REFERENCE:
-        return true;
-    }
-    return false;
+    return (optionalFeature == STORE_BY_REFERENCE);
   }
 
   private URI getManagerUri(URI uri) {

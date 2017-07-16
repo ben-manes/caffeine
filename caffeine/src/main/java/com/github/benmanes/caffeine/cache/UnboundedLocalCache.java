@@ -369,7 +369,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     // ensures that the removal notification is processed after the removal has completed
     @SuppressWarnings({"unchecked", "rawtypes"})
-    V oldValue[] = (V[]) new Object[1];
+    V[] oldValue = (V[]) new Object[1];
     if ((writer == CacheWriter.disabledWriter()) || !notifyWriter) {
       oldValue[0] = data.put(key, value);
     } else {
@@ -416,7 +416,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings("unchecked")
     K castKey = (K) key;
     @SuppressWarnings({"unchecked", "rawtypes"})
-    V oldValue[] = (V[]) new Object[1];
+    V[] oldValue = (V[]) new Object[1];
 
     if (writer == CacheWriter.disabledWriter()) {
       oldValue[0] = data.remove(key);
@@ -445,7 +445,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @SuppressWarnings("unchecked")
     K castKey = (K) key;
     @SuppressWarnings({"unchecked", "rawtypes"})
-    V oldValue[] = (V[]) new Object[1];
+    V[] oldValue = (V[]) new Object[1];
 
     data.computeIfPresent(castKey, (k, v) -> {
       if (v.equals(value)) {
@@ -468,7 +468,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     requireNonNull(value);
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    V oldValue[] = (V[]) new Object[1];
+    V[] oldValue = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       if (value != v) {
         writer.write(key, value);
@@ -489,7 +489,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     requireNonNull(newValue);
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    V prev[] = (V[]) new Object[1];
+    V[] prev = (V[]) new Object[1];
     data.computeIfPresent(key, (k, v) -> {
       if (v.equals(oldValue)) {
         if (newValue != v) {

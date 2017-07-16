@@ -40,7 +40,7 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class OhcPolicy implements Policy {
-  private static final int ENTRY_SIZE = 80;
+  private static final long ENTRY_SIZE = 80;
 
   private final OHCache<Long, Long> cache;
   private final PolicyStats policyStats;

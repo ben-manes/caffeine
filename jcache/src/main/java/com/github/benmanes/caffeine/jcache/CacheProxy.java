@@ -746,8 +746,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
-  public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments)
-      throws EntryProcessorException {
+  public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
     requireNonNull(entryProcessor);
     requireNonNull(arguments);
     requireNotClosed();
@@ -961,7 +960,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Writes all of the entries to the cache writer if write-through is enabled. */
-  private <T> CacheWriterException writeAllToCacheWriter(Map<? extends K, ? extends V> map) {
+  private CacheWriterException writeAllToCacheWriter(Map<? extends K, ? extends V> map) {
     if (!configuration.isWriteThrough() || map.isEmpty()) {
       return null;
     }
@@ -985,7 +984,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Deletes all of the entries using the cache writer, retaining only the keys that succeeded. */
-  private <T> CacheWriterException deleteAllToCacheWriter(Set<? extends K> keys) {
+  private CacheWriterException deleteAllToCacheWriter(Set<? extends K> keys) {
     if (!configuration.isWriteThrough() || keys.isEmpty()) {
       return null;
     }
