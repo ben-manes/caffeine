@@ -78,11 +78,11 @@ On the radar,
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:2.5.3'
+compile 'com.github.ben-manes.caffeine:caffeine:2.5.4'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:2.5.3'
-compile 'com.github.ben-manes.caffeine:jcache:2.5.3'
+compile 'com.github.ben-manes.caffeine:guava:2.5.4'
+compile 'com.github.ben-manes.caffeine:jcache:2.5.4'
 ```
 
 See the [release notes][releases] for details of the changes.
