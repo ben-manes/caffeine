@@ -739,6 +739,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param node the entry to evict
    * @param cause the reason to evict
    * @param now the current time, used only if expiring
+   * @return if the entry was evicted
    */
   @GuardedBy("evictionLock")
   @SuppressWarnings({"PMD.CollapsibleIfStatements", "GuardedByChecker"})
@@ -864,7 +865,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     K key;
     V oldValue;
     long oldWriteTime = node.getWriteTime();
-    long refreshWriteTime = isAsync ? (now + Async.MAXIMUM_EXPIRY) : now;
+    long refreshWriteTime = (now + Async.MAXIMUM_EXPIRY);
     if (((now - oldWriteTime) > refreshAfterWriteNanos())
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
         && node.casWriteTime(oldWriteTime, refreshWriteTime)) {

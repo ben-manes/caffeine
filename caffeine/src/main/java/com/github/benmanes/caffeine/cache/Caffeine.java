@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.ConcurrentModificationException;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -411,7 +413,9 @@ public final class Caffeine<K, V> {
    * {@link WeakReference} (by default, strong references are used).
    * <p>
    * <b>Warning:</b> when this method is used, the resulting cache will use identity ({@code ==})
-   * comparison to determine equality of keys.
+   * comparison to determine equality of keys. Its {@link Cache#asMap} view will therefore
+   * technically violate the {@link Map} specification (in the same way that {@link IdentityHashMap}
+   * does).
    * <p>
    * Entries with keys that have been garbage collected may be counted in
    * {@link Cache#estimatedSize()}, but will never be visible to read or write operations; such

@@ -29,12 +29,10 @@ import com.google.common.util.concurrent.ForwardingExecutorService;
  */
 public final class TrackingExecutor extends ForwardingExecutorService {
   private final ExecutorService delegate;
-  private final AtomicInteger totalTasks;
   private final AtomicInteger failures;
 
   public TrackingExecutor(ExecutorService executor) {
     delegate = requireNonNull(executor);
-    totalTasks = new AtomicInteger();
     failures = new AtomicInteger();
   }
 
@@ -55,16 +53,12 @@ public final class TrackingExecutor extends ForwardingExecutorService {
     }
   }
 
-  public int totalTasksCount() {
-    return totalTasks.get();
-  }
-
   public int failureCount() {
     return failures.get();
   }
 
   @Override
-  protected ExecutorService delegate() {
+  public ExecutorService delegate() {
     return delegate;
   }
 }

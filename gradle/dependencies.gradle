@@ -38,7 +38,7 @@ ext {
     jsr305: '3.0.2',
     jsr330: '1',
     stream: '2.9.5',
-    univocityParsers: '2.4.1',
+    univocityParsers: '2.5.1',
     ycsb: '0.12.0',
     xz: '1.6',
   ]
@@ -51,7 +51,7 @@ ext {
     junit: '4.12',
     mockito: '2.8.47',
     paxExam: '4.11.0',
-    testng: '6.11',
+    testng: '6.12',
     truth: '0.24',
   ]
   benchmarkVersions = [
@@ -62,33 +62,33 @@ ext {
     ehcache3: '3.3.1',
     elasticSearch: '5.4.0',
     expiringMap: '0.5.8',
-    jackrabbit: '1.7.3',
-    jamm: '0.3.1',
+    jackrabbit: '1.7.5',
+    jamm: '0.3.2',
     javaObjectLayout: '0.8',
     jmh: 1.19,
     koloboke: '0.6.8',
     ohc: '0.6.1',
-    rapidoid: '5.3.5',
+    rapidoid: '5.4.0',
     slf4j: '1.7.25',
     tcache: '1.0.3',
   ]
   pluginVersions = [
     buildscan: '1.8',
     buildscanRecipes: '0.2.0',
-    checkstyle: '8.0',
+    checkstyle: '8.1',
     coveralls: '2.8.1',
     coverity: '1.0.10',
     errorProne: '0.0.10',
     jacoco: '0.7.9',
     jmh: '0.4.2',
-    jmhReport: '0.4.1',
+    jmhReport: '0.5.0',
     nexus: '2.3.1',
     pmd: '5.8.1',
     propdeps: '0.0.10.RELEASE',
     semanticVersioning: '1.1.0',
     shadow: '2.0.1',
     sonarqube: '2.5',
-    spotbugs: '1.0',
+    spotbugs: '1.2',
     stats: '0.2.0',
     versions: '0.15.0',
   ]
@@ -130,7 +130,7 @@ ext {
       exclude group: 'org.hamcrest'
     },
     osgiCompile: [
-      'org.apache.felix:org.apache.felix.framework:5.6.4',
+      'org.apache.felix:org.apache.felix.framework:5.6.6',
       "org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}",
     ],
     osgiRuntime: [

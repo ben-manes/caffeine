@@ -28,6 +28,11 @@
     <Bug code="NP"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncLoadingCache$AsyncBulkCompleter"/>
+    <Method name="lambda$fillProxies$0"/>
+    <Bug code="RCN"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.BoundedLocalCache"/>
     <Method name="performCleanUp"/>
     <Bug code="UL"/>

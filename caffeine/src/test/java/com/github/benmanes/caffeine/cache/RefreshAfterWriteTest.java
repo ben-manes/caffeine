@@ -26,8 +26,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
@@ -36,8 +38,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
@@ -60,6 +64,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RefreshAfterWrite;
 import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
+import com.github.benmanes.caffeine.cache.testing.TrackingExecutor;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -204,6 +209,45 @@ public final class RefreshAfterWriteTest {
     }
     done.set(true);
     await().until(() -> cache.synchronous().getIfPresent(key), is(-key));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      refreshAfterWrite = Expire.ONE_MINUTE, executor = CacheExecutor.THREADED)
+  public void get_slowRefresh(CacheContext context) {
+    Integer key = context.absentKey();
+    Integer originalValue = context.absentValue();
+    AtomicBoolean reloaded = new AtomicBoolean();
+    AtomicInteger reloading = new AtomicInteger();
+    ThreadPoolExecutor executor = (ThreadPoolExecutor)
+        ((TrackingExecutor) context.executor()).delegate();
+    LoadingCache<Integer, Integer> cache = context.build(new CacheLoader<Integer, Integer>() {
+      @Override public Integer load(Integer key) {
+        throw new AssertionError();
+      }
+      @Override public Integer reload(Integer key, Integer oldValue) {
+        int count = reloading.incrementAndGet();
+        await().untilTrue(reloaded);
+        return count;
+      }
+    });
+
+    cache.put(key, originalValue);
+
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    assertThat(cache.get(key), is(originalValue));
+
+    await().untilAtomic(reloading, is(1));
+    assertThat(cache.getIfPresent(key), is(originalValue));
+
+    context.ticker().advance(2, TimeUnit.MINUTES);
+    assertThat(cache.get(key), is(originalValue));
+
+    reloaded.set(true);
+    await().until(() -> cache.get(key), is(not(originalValue)));
+    await().until(executor::getQueue, is(empty()));
+    assertThat(reloading.get(), is(1));
+    assertThat(cache.get(key), is(1));
   }
 
   @Test(dataProvider = "caches")
