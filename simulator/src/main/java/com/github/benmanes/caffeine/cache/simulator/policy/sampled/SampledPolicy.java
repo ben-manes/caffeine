@@ -108,7 +108,7 @@ public final class SampledPolicy implements Policy {
       List<Node> sample = (policy == EvictionPolicy.RANDOM)
           ? Arrays.asList(table)
           : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
-      Node victim = policy.select(sample, random);
+      Node victim = policy.select(sample, random, tick);
       policyStats.recordEviction();
 
       if (admittor.admit(candidate.key, victim.key)) {
@@ -189,7 +189,7 @@ public final class SampledPolicy implements Policy {
 
     /** Evicts entries based on insertion order. */
     FIFO {
-      @Override Node select(List<Node> sample, Random random) {
+      @Override Node select(List<Node> sample, Random random, long tick) {
         return sample.stream().min((first, second) ->
             Long.compare(first.insertionTime, second.insertionTime)).get();
       }
@@ -197,7 +197,7 @@ public final class SampledPolicy implements Policy {
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     LRU {
-      @Override Node select(List<Node> sample, Random random) {
+      @Override Node select(List<Node> sample, Random random, long tick) {
         return sample.stream().min((first, second) ->
             Long.compare(first.accessTime, second.accessTime)).get();
       }
@@ -205,7 +205,7 @@ public final class SampledPolicy implements Policy {
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     MRU {
-      @Override Node select(List<Node> sample, Random random) {
+      @Override Node select(List<Node> sample, Random random, long tick) {
         return sample.stream().max((first, second) ->
             Long.compare(first.accessTime, second.accessTime)).get();
       }
@@ -215,7 +215,7 @@ public final class SampledPolicy implements Policy {
      * Evicts entries based on how frequently they are used, with the least frequent evicted first.
      */
     LFU {
-      @Override Node select(List<Node> sample, Random random) {
+      @Override Node select(List<Node> sample, Random random, long tick) {
         return sample.stream().min((first, second) ->
             Long.compare(first.frequency, second.frequency)).get();
       }
@@ -225,7 +225,7 @@ public final class SampledPolicy implements Policy {
      * Evicts entries based on how frequently they are used, with the most frequent evicted first.
      */
     MFU {
-      @Override Node select(List<Node> sample, Random random) {
+      @Override Node select(List<Node> sample, Random random, long tick) {
         return sample.stream().max((first, second) ->
             Long.compare(first.frequency, second.frequency)).get();
       }
@@ -233,9 +233,20 @@ public final class SampledPolicy implements Policy {
 
     /** Evicts a random entry. */
     RANDOM {
-      @Override Node select(List<Node> sample, Random random) {
+      @Override Node select(List<Node> sample, Random random, long tick) {
         int victim = random.nextInt(sample.size());
         return sample.get(victim);
+      }
+    },
+
+    /** Evicts entries based on how frequently they are used divided by their age. */
+    HYPERBOLIC {
+      @Override Node select(List<Node> sample, Random random, long tick) {
+        return sample.stream().min((first, second) ->
+            Double.compare(hyperbolic(first, tick), hyperbolic(second, tick))).get();
+      }
+      double hyperbolic(Node node, long tick) {
+        return node.frequency / (double) (tick - node.insertionTime);
       }
     };
 
@@ -244,10 +255,9 @@ public final class SampledPolicy implements Policy {
     }
 
     /** Determines which node to evict. */
-    abstract Node select(List<Node> sample, Random random);
+    abstract Node select(List<Node> sample, Random random, long tick);
   }
 
-  /** A node on the double-linked list. */
   static final class Node {
     final long key;
     final long insertionTime;
@@ -256,7 +266,6 @@ public final class SampledPolicy implements Policy {
     int frequency;
     int index;
 
-    /** Creates a new node. */
     public Node(long key, int index, long tick) {
       this.insertionTime = tick;
       this.accessTime = tick;

@@ -1573,7 +1573,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     for (Iterator<Entry<Object, Object>> iter = result.entrySet().iterator(); iter.hasNext();) {
       Entry<Object, Object> entry = iter.next();
 
-      Object value;
+      V value;
       Node<K, V> node = data.get(nodeFactory.newLookupKey(entry.getKey()));
       if ((node == null) || ((value = node.getValue()) == null) || hasExpired(node, now)) {
         iter.remove();
@@ -1582,10 +1582,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         entry.setValue(value);
         @SuppressWarnings("unchecked")
         K castedKey = (K) entry.getKey();
-        @SuppressWarnings("unchecked")
-        V castedValue = (V) entry.getValue();
         if (!isComputingAsync(node)) {
-          setVariableTime(node, expireAfterRead(node, castedKey, castedValue, now));
+          setVariableTime(node, expireAfterRead(node, castedKey, value, now));
           setAccessTime(node, now);
         }
 
@@ -1596,8 +1594,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     statsCounter().recordHits(result.size());
 
     @SuppressWarnings("unchecked")
-    Map<K, V> castResult = (Map<K, V>) result;
-    return Collections.unmodifiableMap(castResult);
+    Map<K, V> castedResult = (Map<K, V>) result;
+    return Collections.unmodifiableMap(castedResult);
   }
 
   @Override

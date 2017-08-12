@@ -25,20 +25,20 @@
  */
 ext {
   versions = [
-    akka: '2.5.3',
+    akka: '2.5.4',
     commonsCompress: '1.14',
     commonsLang3: '3.6',
     config: '1.3.1',
     errorProneAnnotations: '2.0.21',
     fastutil: '8.1.0',
     flipTables: '1.0.2',
-    guava: '22.0',
+    guava: '23.0',
     javapoet: '1.9.0',
     jcache: '1.0.0',
     jsr305: '3.0.2',
     jsr330: '1',
     stream: '2.9.5',
-    univocityParsers: '2.5.1',
+    univocityParsers: '2.5.2',
     ycsb: '0.12.0',
     xz: '1.6',
   ]
@@ -68,7 +68,7 @@ ext {
     jmh: 1.19,
     koloboke: '0.6.8',
     ohc: '0.6.1',
-    rapidoid: '5.4.0',
+    rapidoid: '5.4.1',
     slf4j: '1.7.25',
     tcache: '1.0.3',
   ]
