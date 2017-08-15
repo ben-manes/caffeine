@@ -55,7 +55,7 @@ ext {
     truth: '0.24',
   ]
   benchmarkVersions = [
-    cache2k: '1.0.0.Final',
+    cache2k: '1.0.1.Final',
     collision: '0.3.2',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.4',
@@ -68,7 +68,7 @@ ext {
     jmh: 1.19,
     koloboke: '0.6.8',
     ohc: '0.6.1',
-    rapidoid: '5.4.1',
+    rapidoid: '5.4.2',
     slf4j: '1.7.25',
     tcache: '1.0.3',
   ]

@@ -25,6 +25,7 @@ import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
@@ -106,28 +107,27 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
-    Map<Object, Object> result = new HashMap<>();
+    Set<Object> uniqueKeys = new HashSet<>();
     for (Object key : keys) {
-      result.put(key, null);
+      uniqueKeys.add(key);
     }
 
     int misses = 0;
-    for (Iterator<Entry<Object, Object>> iter = result.entrySet().iterator(); iter.hasNext();) {
-      Entry<Object, Object> entry = iter.next();
-      Object value = data.get(entry.getKey());
+    Map<Object, Object> result = new HashMap<>(uniqueKeys.size());
+    for (Object key : uniqueKeys) {
+      Object value = data.get(key);
       if (value == null) {
-        iter.remove();
         misses++;
       } else {
-        entry.setValue(value);
+        result.put(key, value);
       }
     }
     statsCounter.recordMisses(misses);
     statsCounter.recordHits(result.size());
 
     @SuppressWarnings("unchecked")
-    Map<K, V> castResult = (Map<K, V>) result;
-    return Collections.unmodifiableMap(castResult);
+    Map<K, V> castedResult = (Map<K, V>) result;
+    return Collections.unmodifiableMap(castedResult);
   }
 
   @Override

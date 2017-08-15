@@ -25,10 +25,12 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -273,6 +275,29 @@ public final class CacheTest {
     assertThat(result, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(misses)).and(hasHitCount(hits)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG, writer = Writer.DISABLED)
+  public void getAllPresent_jdk8186171(Cache<Object, Integer> cache, CacheContext context) {
+    class Key {
+      @Override public int hashCode() {
+        return 0; // to put keys in one bucket
+      }
+    }
+
+    List<Key> keys = new ArrayList<>();
+    for (int i = 0; i < Population.FULL.size(); i++) {
+      keys.add(new Key());
+    }
+
+    Key key = Iterables.getLast(keys);
+    Integer value = context.absentValue();
+    cache.put(key, value);
+
+    Map<Object, Integer> result = cache.getAllPresent(keys);
+    assertThat(result.values(), not(hasItem(nullValue())));
+    assertThat(result, is(equalTo(ImmutableMap.of(key, value))));
   }
 
   /* ---------------- put -------------- */

@@ -21,9 +21,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -74,26 +72,24 @@ interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
 
   /** Sequentially loads each missing entry. */
   default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
-    Map<K, V> result = new HashMap<>();
+    Set<K> uniqueKeys = new HashSet<>();
     for (K key : keys) {
-      result.put(key, null);
+      uniqueKeys.add(key);
     }
 
     int count = 0;
+    Map<K, V> result = new HashMap<>(uniqueKeys.size());
     try {
-      for (Iterator<Entry<K, V>> iter = result.entrySet().iterator(); iter.hasNext();) {
-        Entry<K, V> entry = iter.next();
+      for (K key : uniqueKeys) {
         count++;
 
-        V value = get(entry.getKey());
-        if (value == null) {
-          iter.remove();
-        } else {
-          entry.setValue(value);
+        V value = get(key);
+        if (value != null) {
+          result.put(key, value);
         }
       }
     } catch (Throwable t) {
-      cache().statsCounter().recordMisses(result.size() - count);
+      cache().statsCounter().recordMisses(uniqueKeys.size() - count);
       throw t;
     }
     return Collections.unmodifiableMap(result);

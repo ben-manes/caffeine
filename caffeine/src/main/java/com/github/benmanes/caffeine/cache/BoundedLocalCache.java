@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1563,30 +1564,28 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
-    Map<Object, Object> result = new HashMap<>();
+    Set<Object> uniqueKeys = new HashSet<>();
     for (Object key : keys) {
-      result.put(key, null);
+      uniqueKeys.add(key);
     }
 
     int misses = 0;
     long now = expirationTicker().read();
-    for (Iterator<Entry<Object, Object>> iter = result.entrySet().iterator(); iter.hasNext();) {
-      Entry<Object, Object> entry = iter.next();
-
+    Map<Object, Object> result = new HashMap<>(uniqueKeys.size());
+    for (Object key : uniqueKeys) {
       V value;
-      Node<K, V> node = data.get(nodeFactory.newLookupKey(entry.getKey()));
+      Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
       if ((node == null) || ((value = node.getValue()) == null) || hasExpired(node, now)) {
-        iter.remove();
         misses++;
       } else {
-        entry.setValue(value);
-        @SuppressWarnings("unchecked")
-        K castedKey = (K) entry.getKey();
+        result.put(key, value);
+
         if (!isComputingAsync(node)) {
+          @SuppressWarnings("unchecked")
+          K castedKey = (K) key;
           setVariableTime(node, expireAfterRead(node, castedKey, value, now));
           setAccessTime(node, now);
         }
-
         afterRead(node, now, /* recordHit */ false);
       }
     }

@@ -70,7 +70,7 @@ Powering infrastructure near you:
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
 
 On the radar,
- * Early discussions with [HBase][hbase], [Solr][solr], and [Rapidoid][rapidoid]
+ * Early discussions with [HBase][hbase] and [Solr][solr]
  * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], [transitory][transitory], and [ohc][ohc]
 
 ### Download
@@ -135,4 +135,3 @@ Snapshots of the development version are available in
 [orbit]: https://github.com/orbit/orbit
 [camel]: https://github.com/apache/camel
 [corfu]: https://github.com/CorfuDB/CorfuDB
-[rapidoid]: https://github.com/rapidoid/rapidoid/issues/104
