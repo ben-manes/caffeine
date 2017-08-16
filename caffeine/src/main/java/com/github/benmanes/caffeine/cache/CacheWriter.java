@@ -35,8 +35,8 @@ public interface CacheWriter<K, V> {
 
   /***
    * Writes the value corresponding to the {@code key} to the external resource. The cache will
-   * communicate a write when an entry in the cache is inserted or updated explicitly. The implicit
-   * creation of an entry due to being loaded when absent is not communicated.
+   * communicate a write when an entry in the cache is created or modified, except when that was
+   * due to a load or computation.
    *
    * @param key the non-null key whose value should be written
    * @param value the value associated with {@code key} that should be written
