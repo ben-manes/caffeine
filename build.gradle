@@ -81,6 +81,8 @@ subprojects {
   }
 
   dependencies {
+    errorprone libraries.errorProneCore
+
     provided libraries.jsr305
     provided libraries.errorProneAnnotations
 
