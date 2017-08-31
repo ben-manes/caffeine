@@ -887,6 +887,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
 
   @Override
   public <T> T unwrap(Class<T> clazz) {
+    if (clazz.isAssignableFrom(cache.getClass())) {
+      return clazz.cast(cache);
+    }
     if (clazz.isAssignableFrom(getClass())) {
       return clazz.cast(this);
     }
