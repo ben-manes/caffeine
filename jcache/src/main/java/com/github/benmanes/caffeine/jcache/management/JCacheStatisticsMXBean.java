@@ -27,11 +27,10 @@ import javax.cache.management.CacheStatisticsMXBean;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
-  private final LongAdder removals = new LongAdder();
-  private final LongAdder expiries = new LongAdder();
   private final LongAdder puts = new LongAdder();
   private final LongAdder hits = new LongAdder();
   private final LongAdder misses = new LongAdder();
+  private final LongAdder removals = new LongAdder();
   private final LongAdder evictions = new LongAdder();
   private final LongAdder putTimeNanos = new LongAdder();
   private final LongAdder getTimeNanos = new LongAdder();
@@ -58,7 +57,6 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
     puts.reset();
     misses.reset();
     removals.reset();
-    expiries.reset();
     hits.reset();
     evictions.reset();
     getTimeNanos.reset();

@@ -36,10 +36,11 @@ jmh {
   } else {
     tasks.jmh.doFirst { throw new GradleException("jmh: includePattern expected") }
   }
-  // Benchmark parameters: Seperated by '&' for parameter types, and ',' for multiple values
+  // Benchmark parameters: Separated by '&' for parameter types, and ',' for multiple values
   if (project.hasProperty('benchmarkParameters')) {
-    benchmarkParameters = data.split('&').inject([:]) { map, token ->
-      token.split('=').with { map[it[0]] = it[1] }
+    benchmarkParameters = project.benchmarkParameters.split('&').inject([:]) { map, token ->
+      token.split('=').with { map[it[0]] = (it[1].split(',') as List) }
+      map
     }
   }
 
