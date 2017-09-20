@@ -81,7 +81,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   @Override
   public void setValue(V value) {
     requireNonNull(value);
-    if (action != Action.CREATED) {
+    if ((action != Action.CREATED) && (action != Action.LOADED)) {
       action = exists() ? Action.UPDATED : Action.CREATED;
     }
     this.value = value;
