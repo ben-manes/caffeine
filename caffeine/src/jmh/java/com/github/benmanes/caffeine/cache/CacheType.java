@@ -133,7 +133,7 @@ public enum CacheType {
   },
   LinkedHashMap_Lru {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new LinkedHashMapCache<>(true, maximumSize);
+      return new LinkedHashMapCache<>(maximumSize, /* accessOrder */ true);
     }
   },
   Rapidoid {

@@ -64,7 +64,7 @@ ext {
     expiringMap: '0.5.8',
     jackrabbit: '1.7.7',
     jamm: '0.3.2',
-    javaObjectLayout: '0.8',
+    javaObjectLayout: '0.9',
     jmh: 1.19,
     koloboke: '0.6.8',
     ohc: '0.6.1',

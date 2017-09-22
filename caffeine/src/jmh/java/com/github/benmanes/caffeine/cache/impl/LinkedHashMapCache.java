@@ -28,8 +28,8 @@ import com.github.benmanes.caffeine.cache.BasicCache;
 public final class LinkedHashMapCache<K, V> implements BasicCache<K, V> {
   private final Map<K, V> map;
 
-  public LinkedHashMapCache(boolean accessOrder, int maximumSize) {
-    map = new BoundedLinkedHashMap<>(accessOrder, maximumSize);
+  public LinkedHashMapCache(int maximumSize, boolean accessOrder) {
+    map = new BoundedLinkedHashMap<>(maximumSize, accessOrder);
   }
 
   @Override
@@ -58,7 +58,7 @@ public final class LinkedHashMapCache<K, V> implements BasicCache<K, V> {
     private static final long serialVersionUID = 1L;
     private final int maximumSize;
 
-    public BoundedLinkedHashMap(boolean accessOrder, int maximumSize) {
+    public BoundedLinkedHashMap(int maximumSize, boolean accessOrder) {
       super(maximumSize, 0.75f, accessOrder);
       this.maximumSize = maximumSize;
     }
