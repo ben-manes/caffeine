@@ -105,7 +105,7 @@ tasks.withType(Checkstyle) {
 afterEvaluate {
   tasks.findAll { it.name.startsWith('findbugs') }.each {
     it.enabled = System.properties.containsKey('findbugs')
-    it.group = 'FindBugs'
+    it.group = 'SpotBugs'
     it.reports {
       xml.enabled = false
       html.enabled = true

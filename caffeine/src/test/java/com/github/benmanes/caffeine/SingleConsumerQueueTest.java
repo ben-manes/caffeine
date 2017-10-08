@@ -349,7 +349,7 @@ public class SingleConsumerQueueTest {
   public void iterator_whenPopulated(Queue<Integer> queue) {
     List<Integer> copy = new ArrayList<>();
     populate(copy, queue.size());
-    assertThat(String.format("\nExpected: %s%n     but: %s", queue, copy),
+    assertThat(String.format("%nExpected: %s%n     but: %s", queue, copy),
         elementsEqual(queue.iterator(), copy.iterator()));
   }
 

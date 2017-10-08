@@ -91,6 +91,7 @@ import com.squareup.javapoet.TypeSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class NodeFactoryGenerator {
   final Path directory;
   final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;

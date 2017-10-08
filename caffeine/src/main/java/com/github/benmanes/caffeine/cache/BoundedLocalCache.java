@@ -1371,7 +1371,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /** Updates the weighted size and evicts an entry on overflow. */
+  /** Updates the weighted size. */
   final class UpdateTask implements Runnable {
     final int weightDifference;
     final Node<K, V> node;

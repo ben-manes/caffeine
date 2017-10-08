@@ -20,7 +20,7 @@ runSlow() {
 
 case "${1:?''}" in
   analysis)
-    run "./gradlew findbugsMain pmdMain -Dfindbugs -Dpmd --console plain"
+    run "./gradlew findbugsJavaPoet findbugsMain pmdJavaPoet pmdMain -Dfindbugs -Dpmd --console plain"
     run "sh -c 'cd examples/stats-metrics && ./gradlew test --console plain'"
     run "sh -c 'cd examples/write-behind-rxjava && mvn test'"
     ;;

@@ -34,6 +34,7 @@ import com.squareup.javapoet.MethodSpec;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class AddValue extends NodeRule {
 
   @Override

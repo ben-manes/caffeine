@@ -5,7 +5,7 @@ repositories {
 }
 
 dependencies {
-  compile 'com.github.ben-manes.caffeine:caffeine:2.3.5'
+  compile 'com.github.ben-manes.caffeine:caffeine:2.5.6'
   compile 'io.dropwizard.metrics:metrics-core:3.1.2'
 
   testCompile 'org.testng:testng:6.10'
