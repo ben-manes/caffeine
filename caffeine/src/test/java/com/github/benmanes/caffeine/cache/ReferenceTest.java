@@ -76,6 +76,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.WEAK, population = Population.FULL)
   public void identity_keys(Cache<Integer, Integer> cache, CacheContext context) {
+    @SuppressWarnings("deprecation")
     Integer key = new Integer(context.firstKey());
     assertThat(cache.getIfPresent(key), is(nullValue()));
   }
@@ -83,6 +84,7 @@ public final class ReferenceTest {
   @Test(dataProvider = "caches")
   @CacheSpec(values = {ReferenceType.WEAK, ReferenceType.SOFT}, population = Population.FULL)
   public void identity_values(Cache<Integer, Integer> cache, CacheContext context) {
+    @SuppressWarnings("deprecation")
     Integer value = new Integer(context.original().get(context.firstKey()));
     assertThat(cache.asMap().containsValue(value), is(false));
   }

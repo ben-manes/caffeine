@@ -208,7 +208,7 @@ final class CacheGenerator {
   }
 
   /** Fills the cache up to the population size. */
-  @SuppressWarnings({"unchecked", "BoxedPrimitiveConstructor"})
+  @SuppressWarnings({"deprecation", "unchecked", "BoxedPrimitiveConstructor"})
   private void populate(CacheContext context, Cache<Integer, Integer> cache) {
     if (context.population.size() == 0) {
       return;

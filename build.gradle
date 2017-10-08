@@ -63,6 +63,9 @@ subprojects {
     tasks.uploadArchives.enabled = false
   } else {
     apply plugin: 'net.ltgt.errorprone'
+    dependencies {
+      errorprone libraries.errorProneCore
+    }
   }
 
   sourceCompatibility = JavaVersion.VERSION_1_8
@@ -81,8 +84,6 @@ subprojects {
   }
 
   dependencies {
-    errorprone libraries.errorProneCore
-
     provided libraries.jsr305
     provided libraries.errorProneAnnotations
 

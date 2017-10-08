@@ -3,6 +3,7 @@ sudo: required
 
 jdk:
   - oraclejdk8
+  - oraclejdk9
 
 env:
   global:
@@ -11,22 +12,21 @@ env:
     - GROUP=analysis
     - GROUP=tests
 
-before_install:
-  - cp gradle.properties.ci gradle.properties
-  - export JAVA_OPTS="-Xmx384m -XX:+UseG1GC -XX:SoftRefLRUPolicyMSPerMB=0 -noverify"
-
 install: true
 
 script:
   - ./travis.sh $GROUP
 
 matrix:
+  allow_failures:
+    - jdk: oraclejdk9
   fast_finish: true
 
 addons:
   apt:
     packages:
       - oracle-java8-installer
+      - oracle-java9-installer
   sonarcloud:
     organization: caffeine
     token:
