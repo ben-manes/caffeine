@@ -156,9 +156,13 @@ final class CacheFactory {
 
     /** Creates a configured cache. */
     public CacheProxy<K, V> build() {
-      boolean evicts = configureMaximumSize() | configureMaximumWeight()
-          | configureExpireAfterWrite() | configureExpireAfterAccess()
-          | configureExpireVariably();
+      boolean evicts = false;
+      evicts |= configureMaximumSize();
+      evicts |= configureMaximumWeight();
+      evicts |= configureExpireAfterWrite();
+      evicts |= configureExpireAfterAccess();
+      evicts |= configureExpireVariably();
+
       if (evicts) {
         configureEvictionListener();
       }

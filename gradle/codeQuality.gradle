@@ -35,7 +35,7 @@ checkstyle {
 
 spotbugs {
   effort = 'max'
-  excludeFilter = file("${rootDir}/config/findbugs/exclude.xml")
+  excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
 }
 
 pmd {
@@ -103,8 +103,8 @@ tasks.withType(Checkstyle) {
 }
 
 afterEvaluate {
-  tasks.findAll { it.name.startsWith('findbugs') }.each {
-    it.enabled = System.properties.containsKey('findbugs')
+  tasks.findAll { it.name.startsWith('spotbugs') }.each {
+    it.enabled = System.properties.containsKey('spotbugs')
     it.group = 'SpotBugs'
     it.reports {
       xml.enabled = false

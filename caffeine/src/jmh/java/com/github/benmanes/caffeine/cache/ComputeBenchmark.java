@@ -69,6 +69,7 @@ public class ComputeBenchmark {
   }
 
   @Setup
+  @SuppressWarnings("ReturnValueIgnored")
   public void setup() {
     if (computeType.equals("ConcurrentHashMap")) {
       setupConcurrentHashMap();

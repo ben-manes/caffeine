@@ -189,7 +189,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
     int p2capacity = ceilingPowerOfTwo(initialCapacity);
     // leave lower bit of mask clear
-    long mask = (p2capacity - 1) << 1;
+    long mask = (p2capacity - 1L) << 1;
     // need extra element to point at next array
     E[] buffer = allocate(p2capacity + 1);
     producerBuffer = buffer;
@@ -397,7 +397,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
   private long newBufferAndOffset(E[] nextBuffer, final long index) {
     consumerBuffer = nextBuffer;
-    consumerMask = (nextBuffer.length - 2) << 1;
+    consumerMask = (nextBuffer.length - 2L) << 1;
     final long offsetInNew = modifiedCalcElementOffset(index, consumerMask);
     return offsetInNew;
   }

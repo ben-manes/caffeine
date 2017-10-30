@@ -66,6 +66,11 @@ subprojects {
     dependencies {
       errorprone libraries.errorProneCore
     }
+    configurations.all {
+      resolutionStrategy.dependencySubstitution {
+        substitute module('com.github.stephenc.jcip:jcip-annotations') with module('net.jcip:jcip-annotations:1.0')
+      }
+    }
   }
 
   sourceCompatibility = JavaVersion.VERSION_1_8

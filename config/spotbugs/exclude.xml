@@ -89,4 +89,14 @@
     </Or>
     <Bug code="ST"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy"/>
+    <Method name="finished"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor"/>
+    <Method name="process"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+  </Match>
 </FindBugsFilter>
