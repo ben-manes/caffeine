@@ -49,12 +49,13 @@ Use Caffeine in a community provided integration:
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [jooby][jooby]: Modular micro framework
  * [Druid][druid]: Real-time analytics
+ * [Camel-caffeine][camel-caffeine]: In Camel 2.20.0 a specific Camel component for Caffeine has been released
 
 Powering infrastructure near you:
  * [Cassandra][cassandra]:  Manage massive amounts of data, fast
  * [Infinispan][infinispan]: Distributed in-memory data grid
  * [Ratpack][ratpack]: Lean & powerful HTTP apps
- * [Camel][camel]: Routing and mediation engine
+ * [Camel][camel]: Routing and mediation engine 
  * [Corfu][corfu]: A cluster consistency platform
  * [Orbit][orbit]: Virtual actors on the JVM
  * [Finagle][finagle]: Extensible RPC system
@@ -134,4 +135,5 @@ Snapshots of the development version are available in
 [jooby]: http://jooby.org/doc/caffeine
 [orbit]: https://github.com/orbit/orbit
 [camel]: https://github.com/apache/camel
+[camel-caffeine]: https://github.com/apache/camel/blob/master/components/camel-caffeine/src/main/docs/caffeine-cache-component.adoc
 [corfu]: https://github.com/CorfuDB/CorfuDB
