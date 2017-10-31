@@ -305,6 +305,46 @@ public interface Policy<K, V> {
     void setExpiresAfter(@Nonnull K key, @Nonnegative long duration, @Nonnull TimeUnit unit);
 
     /**
+     * Associates the {@code value} with the {@code key} in this cache if the specified key is not
+     * already associated with a value and returns null, else returns the current value. This method
+     * differs from {@link Map#putIfAbsent} by substituting the configured {@link Expiry} with the
+     * specified write duration, has no effect on the duration if the entry was present, and does
+     * not return the a value.
+     *
+     * @param key the key with which the specified value is to be associated
+     * @param value value to be associated with the specified key
+     * @param duration the length of time from now when the entry should be automatically removed
+     * @param unit the unit that {@code duration} is expressed in
+     * @return <tt>true</tt> if this cache did not already contain the specified entry
+     * @throws IllegalArgumentException if {@code duration} is negative
+     * @throws NullPointerException if the specified key or value is null
+     */
+    default boolean putIfAbsent(@Nonnull K key, @Nonnull V value,
+        @Nonnegative long duration, @Nonnull TimeUnit unit) {
+      // This method will be abstract in version 3.0.0; added & implemented in version 2.6.0
+      throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Associates the {@code value} with the {@code key} in this cache. If the cache previously
+     * contained a value associated with the {@code key}, the old value is replaced by the new
+     * {@code value}. This method differs from {@link Cache#put} by substituting the
+     * configured {@link Expiry} with the specified write duration.
+     *
+     * @param key the key with which the specified value is to be associated
+     * @param value value to be associated with the specified key
+     * @param duration the length of time from now when the entry should be automatically removed
+     * @param unit the unit that {@code duration} is expressed in
+     * @throws IllegalArgumentException if {@code duration} is negative
+     * @throws NullPointerException if the specified key or value is null
+     */
+    default void put(@Nonnull K key, @Nonnull V value,
+        @Nonnegative long duration, @Nonnull TimeUnit unit) {
+      // This method will be abstract in version 3.0.0; added & implemented in version 2.6.0
+      throw new UnsupportedOperationException();
+    }
+
+    /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
      * order of iteration is from the entries most likely to expire (oldest) to the entries least
      * likely to expire (youngest). This order is determined by the expiration policy's best guess

@@ -56,6 +56,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
+import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -349,6 +351,150 @@ public final class ExpireAfterVarTest {
     expireAfterVar.setExpiresAfter(context.absentKey(), 4, TimeUnit.MINUTES);
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.MINUTES),
         is(OptionalLong.empty()));
+
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.estimatedSize(), is(1L));
+  }
+
+  /* ---------------- Policy: putIfAbsent -------------- */
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void putIfAbsent_nullKey(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.putIfAbsent(null, 2, 3, TimeUnit.SECONDS);
+  }
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void putIfAbsent_nullValue(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.putIfAbsent(1, null, 3, TimeUnit.SECONDS);
+  }
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void putIfAbsent_nullTimeUnit(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.putIfAbsent(1, 2, 3, null);
+  }
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void putIfAbsent_negativeDuration(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.putIfAbsent(1, 2, -10, TimeUnit.SECONDS);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void putIfAbsent_insert(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    Integer key = context.absentKey();
+    Integer value = context.absentValue();
+    assertThat(expireAfterVar.putIfAbsent(key, value, 2, TimeUnit.MINUTES), is(true));
+
+    assertThat(cache.getIfPresent(key), is(value));
+    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.MINUTES), is(OptionalLong.of(2)));
+
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.estimatedSize(), is(1L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void putIfAbsent_present(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    Integer key = context.firstKey();
+    Integer value = context.absentValue();
+    assertThat(expireAfterVar.putIfAbsent(key, value, 2, TimeUnit.MINUTES), is(false));
+
+    assertThat(cache.getIfPresent(key), is(context.original().get(key)));
+    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.MINUTES), is(OptionalLong.of(1)));
+
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.estimatedSize(), is(0L));
+  }
+
+  /* ---------------- Policy: putIfAbsent -------------- */
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void put_nullKey(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.put(null, 2, 3, TimeUnit.SECONDS);
+  }
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void put_nullValue(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.put(1, null, 3, TimeUnit.SECONDS);
+  }
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void put_nullTimeUnit(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.put(1, 2, 3, null);
+  }
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void put_negativeDuration(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.put(1, 2, -10, TimeUnit.SECONDS);
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void put_insert(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    Integer key = context.absentKey();
+    Integer value = context.absentValue();
+    expireAfterVar.put(key, value, 2, TimeUnit.MINUTES);
+
+    assertThat(cache.getIfPresent(key), is(value));
+    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.MINUTES), is(OptionalLong.of(2)));
+
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.estimatedSize(), is(1L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void put_replace(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    Integer key = context.firstKey();
+    Integer value = context.absentValue();
+    expireAfterVar.put(key, value, 2, TimeUnit.MINUTES);
+
+    assertThat(cache.getIfPresent(key), is(value));
+    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.MINUTES), is(OptionalLong.of(2)));
 
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();

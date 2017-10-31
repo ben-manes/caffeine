@@ -25,7 +25,7 @@ import com.yahoo.ycsb.generator.HotspotIntegerGenerator;
 import com.yahoo.ycsb.generator.NumberGenerator;
 import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
 import com.yahoo.ycsb.generator.SkewedLatestGenerator;
-import com.yahoo.ycsb.generator.UniformIntegerGenerator;
+import com.yahoo.ycsb.generator.UniformLongGenerator;
 import com.yahoo.ycsb.generator.ZipfianGenerator;
 
 /**
@@ -149,7 +149,7 @@ public final class Synthetic {
    * @return a stream of cache events
    */
   public static LongStream uniform(int lowerBound, int upperBound, int events) {
-    return generate(new UniformIntegerGenerator(lowerBound, upperBound), events);
+    return generate(new UniformLongGenerator(lowerBound, upperBound), events);
   }
 
   /** Returns a sequence of items constructed by the generator. */
