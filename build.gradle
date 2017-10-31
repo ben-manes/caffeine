@@ -40,9 +40,9 @@ allprojects {
   apply from: "${rootDir}/gradle/eclipse.gradle"
 
   repositories {
-    maven { url 'https://jitpack.io' }
-    mavenCentral()
     jcenter()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
   }
 }
 
@@ -65,11 +65,6 @@ subprojects {
     apply plugin: 'net.ltgt.errorprone'
     dependencies {
       errorprone libraries.errorProneCore
-    }
-    configurations.all {
-      resolutionStrategy.dependencySubstitution {
-        substitute module('com.github.stephenc.jcip:jcip-annotations') with module('net.jcip:jcip-annotations:1.0')
-      }
     }
   }
 
