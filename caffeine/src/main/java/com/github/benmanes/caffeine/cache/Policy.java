@@ -306,10 +306,9 @@ public interface Policy<K, V> {
 
     /**
      * Associates the {@code value} with the {@code key} in this cache if the specified key is not
-     * already associated with a value and returns null, else returns the current value. This method
-     * differs from {@link Map#putIfAbsent} by substituting the configured {@link Expiry} with the
-     * specified write duration, has no effect on the duration if the entry was present, and does
-     * not return the a value.
+     * already associated with a value. This method differs from {@link Map#putIfAbsent} by
+     * substituting the configured {@link Expiry} with the specified write duration, has no effect
+     * on the duration if the entry was present, and returns the success rather than a value.
      *
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key

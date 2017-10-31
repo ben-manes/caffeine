@@ -429,7 +429,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache.estimatedSize(), is(0L));
   }
 
-  /* ---------------- Policy: putIfAbsent -------------- */
+  /* ---------------- Policy: put -------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
