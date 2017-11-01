@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,7 +38,7 @@ import javax.cache.event.EventType;
  */
 final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K, V>,
     CacheEntryUpdatedListener<K, V>, CacheEntryRemovedListener<K, V>,
-    CacheEntryExpiredListener<K, V> {
+    CacheEntryExpiredListener<K, V>, Closeable {
   static final Logger logger = Logger.getLogger(EventTypeAwareListener.class.getName());
 
   final CacheEntryListener<? super K, ? super V> listener;
@@ -63,6 +65,9 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   /** Processes the event and logs if an exception is thrown. */
   public void dispatch(@Nonnull JCacheEntryEvent<K, V> event) {
     try {
+      if (event.getSource().isClosed()) {
+        return;
+      }
       switch (event.getEventType()) {
         case CREATED:
           onCreated(event);
@@ -114,6 +119,13 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   public void onExpired(Iterable<CacheEntryEvent<? extends K, ? extends V>> events) {
     if (listener instanceof CacheEntryExpiredListener<?, ?>) {
       ((CacheEntryExpiredListener<K, V>) listener).onExpired(events);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (listener instanceof Closeable) {
+      ((Closeable) listener).close();
     }
   }
 }

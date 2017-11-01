@@ -18,8 +18,10 @@ package com.github.benmanes.caffeine.jcache.event;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,6 +62,11 @@ public final class EventDispatcher<K, V> {
   public EventDispatcher(Executor exectuor) {
     this.dispatchQueues = new ConcurrentHashMap<>();
     this.exectuor = requireNonNull(exectuor);
+  }
+
+  /** Returns the cache entry listener registrations. */
+  public Set<Registration<K, V>> registrations() {
+    return Collections.unmodifiableSet(dispatchQueues.keySet());
   }
 
   /**

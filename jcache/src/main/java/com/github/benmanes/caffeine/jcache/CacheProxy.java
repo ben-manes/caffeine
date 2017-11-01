@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,6 +58,7 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
 import com.github.benmanes.caffeine.jcache.event.EventDispatcher;
+import com.github.benmanes.caffeine.jcache.event.Registration;
 import com.github.benmanes.caffeine.jcache.integration.DisabledCacheWriter;
 import com.github.benmanes.caffeine.jcache.management.JCacheMXBean;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
@@ -865,6 +867,11 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   @Override
+  public boolean isClosed() {
+    return closed;
+  }
+
+  @Override
   public void close() {
     if (isClosed()) {
       return;
@@ -875,14 +882,43 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         enableStatistics(false);
         cacheManager.destroyCache(name);
         closed = true;
+
+        Throwable thrown = null;
+        thrown = tryClose(expiry, thrown);
+        thrown = tryClose(writer, thrown);
+        thrown = tryClose(cacheLoader.orElse(null), thrown);
+        for (Registration<K, V> registration : dispatcher.registrations()) {
+          thrown = tryClose(registration.getCacheEntryListener(), thrown);
+        }
+        if (thrown != null) {
+          logger.log(Level.WARNING, "Failure when closing cache resources", thrown);
+        }
       }
     }
     cache.invalidateAll();
   }
 
-  @Override
-  public boolean isClosed() {
-    return closed;
+  /**
+   * Attempts to close the resource. If an error occurs and an outermost exception is set, then adds
+   * the error to the suppression list.
+   *
+   * @param o the resource to close if Closeable
+   * @param outer the outermost error, or null if unset
+   * @return the outermost error, or null if unset and successful
+   */
+  private static Throwable tryClose(Object o, @Nullable Throwable outer) {
+    if (o instanceof Closeable) {
+      try {
+        ((Closeable) o).close();
+      } catch (Throwable t) {
+        if (outer == null) {
+          return t;
+        }
+        outer.addSuppressed(t);
+        return outer;
+      }
+    }
+    return null;
   }
 
   @Override

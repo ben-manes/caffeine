@@ -26,7 +26,7 @@ import javax.cache.event.CacheEntryListener;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class Registration<K, V> {
+public final class Registration<K, V> {
   private final CacheEntryListenerConfiguration<K, V> configuration;
   private final EventTypeAwareListener<K, V> listener;
   private final CacheEntryEventFilter<K, V> filter;

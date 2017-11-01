@@ -47,11 +47,6 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class CacheFactory {
-  // Avoid asynchronous executions due to the TCK's poor test practices
-  // https://github.com/jsr107/jsr107tck/issues/78
-  static final boolean USE_DIRECT_EXECUTOR =
-      System.getProperties().containsKey("org.jsr107.tck.management.agentId");
-
   final Config rootConfig;
   final CacheManager cacheManager;
 
@@ -143,8 +138,8 @@ final class CacheFactory {
       this.caffeine = Caffeine.newBuilder();
       this.statistics = new JCacheStatisticsMXBean();
       this.ticker = config.getTickerFactory().create();
+      this.executor = config.getExecutorFactory().create();
       this.expiryPolicy = config.getExpiryPolicyFactory().create();
-      this.executor = USE_DIRECT_EXECUTOR ? Runnable::run : config.getExecutorFactory().create();
       this.dispatcher = new EventDispatcher<>(executor);
 
       caffeine.executor(executor);
