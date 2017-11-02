@@ -8,7 +8,7 @@ sourceSets {
   main {
     java.srcDir "${buildDir}/generated-sources/"
   }
-  gen {
+  codeGen {
     java.srcDir "${buildDir}/generated-sources/"
   }
 }
@@ -58,12 +58,12 @@ dependencies {
   javaPoetCompile libraries.commonsLang3
 }
 
-task compileNoDebug(type: JavaCompile) {
-  source = sourceSets.gen.java.srcDirs
+compileCodeGenJava {
+  dependsOn compileJava
   destinationDir = compileJava.destinationDir
-  options.debug = false
+  classpath = sourceSets.main.runtimeClasspath + sourceSets.main.output
   options.incremental = false
-  classpath = sourceSets.main.runtimeClasspath
+  options.debug = false
 }
 
 jar.manifest {
@@ -77,7 +77,7 @@ jar.manifest {
     'com.github.benmanes.caffeine.cache.stats'
 }
 
-jar.dependsOn(compileNoDebug)
+jar.dependsOn(compileCodeGenJava)
 
 sonarqube {
   properties {

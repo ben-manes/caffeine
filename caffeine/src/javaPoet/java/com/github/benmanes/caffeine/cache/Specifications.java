@@ -66,13 +66,16 @@ public final class Specifications {
   public static final TypeName NODE = ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar);
   public static final TypeName UNSAFE_ACCESS =
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
+  public static final TypeName LOCAL_CACHE_FACTORY =
+      ClassName.get(PACKAGE_NAME, "LocalCacheFactory");
 
+  public static final ClassName BUILDER = ClassName.get(PACKAGE_NAME, "Caffeine");
   public static final ParameterSpec BUILDER_PARAM = ParameterSpec.builder(ParameterizedTypeName.get(
-      ClassName.get(PACKAGE_NAME, "Caffeine"), kTypeVar, vTypeVar), "builder").build();
-  public static final TypeName BOUNDED_LOCAL_CACHE = ParameterizedTypeName.get(
+      BUILDER, kTypeVar, vTypeVar), "builder").build();
+  public static final ParameterizedTypeName BOUNDED_LOCAL_CACHE = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "BoundedLocalCache"), kTypeVar, vTypeVar);
 
-  public static final TypeName CACHE_LOADER = ParameterizedTypeName.get(
+  public static final ParameterizedTypeName CACHE_LOADER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "CacheLoader"), TypeVariableName.get("? super K"), vTypeVar);
   public static final ParameterSpec CACHE_LOADER_PARAM =
       ParameterSpec.builder(CACHE_LOADER, "cacheLoader").build();

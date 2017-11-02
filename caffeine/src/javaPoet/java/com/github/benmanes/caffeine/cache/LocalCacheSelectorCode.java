@@ -15,10 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
+import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
+import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
+
 import java.lang.reflect.Constructor;
-import java.util.Set;
 
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.TypeName;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -29,7 +34,8 @@ public final class LocalCacheSelectorCode {
 
   private LocalCacheSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$T sb = new $T()", StringBuilder.class, StringBuilder.class);
+        .addStatement("$T sb = new $T(\"$L$$\")", StringBuilder.class,
+            StringBuilder.class, LOCAL_CACHE_FACTORY);
   }
 
   private LocalCacheSelectorCode keys() {
@@ -90,17 +96,16 @@ public final class LocalCacheSelectorCode {
   }
 
   private LocalCacheSelectorCode selector() {
-    CodeBlock.Builder reflectBuilder = CodeBlock.builder();
-    reflectBuilder.add("try {\n"
-            + "  Class<?> cls = LocalCacheFactory.class.getClassLoader()\n"
-            + "    .loadClass(\"com.github.benmanes.caffeine.cache.LocalCacheFactory$$\" + sb.toString());\n"
-            + "  $T<?> ctor = cls.getDeclaredConstructor(Caffeine.class, CacheLoader.class, boolean.class);\n"
-            + "  return (BoundedLocalCache<K, V>) ctor.newInstance(builder, cacheLoader, async);\n"
-            + "} catch (ReflectiveOperationException e) {\n"
-            + "  throw new IllegalStateException(sb.toString());\n"
-            + "}\n"
-            + "\n", Constructor.class);
-    block.add(reflectBuilder.build());
+    block.beginControlFlow("try")
+            .addStatement("$T<?> cls = $T.class.getClassLoader().loadClass(sb.toString())",
+                Class.class, LOCAL_CACHE_FACTORY)
+            .addStatement("$T<?> ctor = cls.getDeclaredConstructor($T.class, $T.class, $T.class)",
+                Constructor.class, BUILDER, CACHE_LOADER.rawType, TypeName.BOOLEAN)
+            .addStatement("return ($T) ctor.newInstance(builder, cacheLoader, async)",
+                BOUNDED_LOCAL_CACHE)
+          .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
+            .addStatement("throw new $T(sb.toString(), e)", IllegalStateException.class)
+          .endControlFlow();
     return this;
   }
 
@@ -108,7 +113,7 @@ public final class LocalCacheSelectorCode {
     return block.build();
   }
 
-  public static CodeBlock get(Set<String> classNames) {
+  public static CodeBlock get() {
     return new LocalCacheSelectorCode()
         .keys()
         .values()

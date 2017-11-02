@@ -52,7 +52,6 @@ import com.github.benmanes.caffeine.cache.local.AddWriteBuffer;
 import com.github.benmanes.caffeine.cache.local.Finalize;
 import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
 import com.github.benmanes.caffeine.cache.local.LocalCacheRule;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -108,13 +107,12 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private MethodSpec newBoundedLocalCache() {
-    Preconditions.checkState(!classNameToFeatures.isEmpty(), "Must generate all cache types first");
     return MethodSpec.methodBuilder("newBoundedLocalCache")
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
         .returns(BOUNDED_LOCAL_CACHE)
         .addModifiers(Modifier.STATIC)
-        .addCode(LocalCacheSelectorCode.get(classNameToFeatures.keySet()))
+        .addCode(LocalCacheSelectorCode.get())
         .addParameter(BUILDER_PARAM)
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
