@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.lang.reflect.Constructor;
 import java.util.Set;
 
 import com.squareup.javapoet.CodeBlock;
@@ -88,16 +89,18 @@ public final class LocalCacheSelectorCode {
     return this;
   }
 
-  private LocalCacheSelectorCode selector(Set<String> classNames) {
-    CodeBlock.Builder switchBuilder = CodeBlock.builder();
-    switchBuilder.beginControlFlow("switch (sb.toString())");
-    for (String className : classNames) {
-      switchBuilder.addStatement(
-          "case $S: return new $N<>(builder, cacheLoader, async)", className, className);
-    }
-    switchBuilder.addStatement("default: throw new $T(sb.toString())", IllegalStateException.class);
-    switchBuilder.endControlFlow();
-    block.add(switchBuilder.build());
+  private LocalCacheSelectorCode selector() {
+    CodeBlock.Builder reflectBuilder = CodeBlock.builder();
+    reflectBuilder.add("try {\n"
+            + "  Class<?> cls = LocalCacheFactory.class.getClassLoader()\n"
+            + "    .loadClass(\"com.github.benmanes.caffeine.cache.LocalCacheFactory$$\" + sb.toString());\n"
+            + "  $T<?> ctor = cls.getDeclaredConstructor(Caffeine.class, CacheLoader.class, boolean.class);\n"
+            + "  return (BoundedLocalCache<K, V>) ctor.newInstance(builder, cacheLoader, async);\n"
+            + "} catch (ReflectiveOperationException e) {\n"
+            + "  throw new IllegalStateException(sb.toString());\n"
+            + "}\n"
+            + "\n", Constructor.class);
+    block.add(reflectBuilder.build());
     return this;
   }
 
@@ -113,7 +116,7 @@ public final class LocalCacheSelectorCode {
         .stats()
         .maximum()
         .expires()
-        .selector(classNames)
+        .selector()
         .build();
   }
 }
