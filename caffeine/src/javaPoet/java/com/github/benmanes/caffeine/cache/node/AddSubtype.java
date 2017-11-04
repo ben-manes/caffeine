@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 
 import javax.lang.model.element.Modifier;
 
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
 
@@ -39,15 +40,16 @@ public final class AddSubtype extends NodeRule {
   @Override
   protected void execute() {
     context.nodeSubtype = TypeSpec.classBuilder(context.className)
-        .addModifiers(Modifier.STATIC)
+        .addModifiers(Modifier.STATIC, Modifier.PUBLIC)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {
       context.nodeSubtype.addModifiers(Modifier.FINAL);
     }
     if (isBaseClass()) {
-      context.nodeSubtype.addSuperinterface(
-          ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar));
+      context.nodeSubtype
+              .addSuperinterface(ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar))
+              .addSuperinterface(ClassName.get("com.github.benmanes.caffeine.cache", "NodeFactory"));
     } else {
       context.nodeSubtype.superclass(context.superClass);
     }

@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import com.squareup.javapoet.CodeBlock;
 
+import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
+
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -26,7 +28,8 @@ public final class NodeSelectorCode {
 
   private NodeSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$T sb = new $T()", StringBuilder.class, StringBuilder.class);
+            .addStatement("$T sb = new $T(\"$L$$\")",
+            StringBuilder.class, StringBuilder.class, NODE_FACTORY);
   }
 
   private NodeSelectorCode keys() {
@@ -87,9 +90,15 @@ public final class NodeSelectorCode {
   }
 
   private CodeBlock build() {
-    return block
-        .addStatement("return valueOf(sb.toString())")
-        .build();
+    return block.beginControlFlow("try")
+            .addStatement("$T<?> cls = $T.class.getClassLoader().loadClass(sb.toString())",
+                    Class.class, NODE_FACTORY)
+            .addStatement("return ($T) cls.getDeclaredConstructor().newInstance()",
+                    NODE_FACTORY)
+            .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
+            .addStatement("throw new $T(sb.toString(), e)", IllegalStateException.class)
+            .endControlFlow()
+            .build();
   }
 
   public static CodeBlock get() {

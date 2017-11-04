@@ -19,14 +19,14 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeDiagnosingMatcher;
-
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.testing.SerializableTester;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 /**
  * A matcher that evaluates a cache by creating a serialized copy and checking its equality.
@@ -212,7 +212,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     desc.expectThat("empty", copy.estimatedSize(), is(0L));
     desc.expectThat("same weigher", unwrapWeigher(copy.weigher).getClass(),
         is(equalTo(unwrapWeigher(original.weigher).getClass())));
-    desc.expectThat("same nodeFactory", copy.nodeFactory, is(original.nodeFactory));
+    desc.expectThat("same nodeFactory", copy.nodeFactory, sameClass(original.nodeFactory));
     if (original.evicts()) {
       desc.expectThat("same maximumWeight", copy.maximum(), is(original.maximum()));
       desc.expectThat("same maximumEdenWeight", copy.edenMaximum(), is(original.edenMaximum()));
@@ -253,6 +253,20 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     } else if (copy.removalListener().getClass() != original.removalListener().getClass()) {
       desc.expected("same removalListener but was " + copy.removalListener().getClass());
     }
+  }
+
+  private static Matcher<Object> sameClass(Object expected) {
+    return new BaseMatcher<Object>() {
+      @Override
+      public boolean matches(Object item) {
+        return expected.getClass() == item.getClass();
+      }
+
+      @Override
+      public void describeTo(Description description) {
+        description.appendText("Classes are different");
+      }
+    };
   }
 
   @SuppressWarnings("unchecked")

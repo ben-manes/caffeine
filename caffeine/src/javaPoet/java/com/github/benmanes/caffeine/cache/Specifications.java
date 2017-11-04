@@ -15,10 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.lang.ref.ReferenceQueue;
-
-import javax.lang.model.element.Modifier;
-
 import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
@@ -26,6 +22,9 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
+
+import javax.lang.model.element.Modifier;
+import java.lang.ref.ReferenceQueue;
 
 /**
  * Shared constants for a code generation specification.
@@ -40,35 +39,51 @@ public final class Specifications {
   public static final String DEAD_WEAK_KEY = "DEAD_WEAK_KEY";
 
   public static final TypeVariableName kTypeVar = TypeVariableName.get("K");
+  public static final TypeVariableName kTypeVar2 = TypeVariableName.get("K2");
   public static final TypeVariableName vTypeVar = TypeVariableName.get("V");
+  public static final TypeVariableName vTypeVar2 = TypeVariableName.get("V2");
   public static final TypeName kRefQueueType = ParameterizedTypeName.get(
       ClassName.get(ReferenceQueue.class), kTypeVar);
+  public static final TypeName kRefQueueType2 = ParameterizedTypeName.get(
+          ClassName.get(ReferenceQueue.class), kTypeVar2);
   public static final TypeName vRefQueueType = ParameterizedTypeName.get(
       ClassName.get(ReferenceQueue.class), vTypeVar);
+  public static final TypeName vRefQueueType2 = ParameterizedTypeName.get(
+          ClassName.get(ReferenceQueue.class), vTypeVar2);
   public static final ClassName nodeType = ClassName.get(PACKAGE_NAME, "Node");
   public static final TypeName lookupKeyType = ParameterizedTypeName.get(ClassName.get(
       PACKAGE_NAME + ".References", "LookupKeyReference"), kTypeVar);
+  public static final TypeName lookupKeyType2 = ParameterizedTypeName.get(ClassName.get(
+          PACKAGE_NAME + ".References", "LookupKeyReference"), kTypeVar2);
   public static final TypeName referenceKeyType = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
+  public static final TypeName referenceKeyType2 = ParameterizedTypeName.get(
+          ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar2);
   public static final TypeName rawReferenceKeyType = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), ClassName.get(Object.class));
 
   public static final ParameterSpec keySpec = ParameterSpec.builder(kTypeVar, "key").build();
+  public static final ParameterSpec keySpec2 = ParameterSpec.builder(kTypeVar2, "key").build();
   public static final ParameterSpec keyRefSpec =
       ParameterSpec.builder(Object.class, "keyReference").build();
   public static final ParameterSpec keyRefQueueSpec =
       ParameterSpec.builder(kRefQueueType, "keyReferenceQueue").build();
-
+  public static final ParameterSpec keyRefQueueSpec2 =
+          ParameterSpec.builder(kRefQueueType2, "keyReferenceQueue").build();
   public static final ParameterSpec valueSpec = ParameterSpec.builder(vTypeVar, "value").build();
+  public static final ParameterSpec valueSpec2 = ParameterSpec.builder(vTypeVar2, "value").build();
   public static final ParameterSpec valueRefQueueSpec =
       ParameterSpec.builder(vRefQueueType, "valueReferenceQueue").build();
-
+  public static final ParameterSpec valueRefQueueSpec2 =
+          ParameterSpec.builder(vRefQueueType2, "valueReferenceQueue").build();
   public static final TypeName NODE = ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar);
+  public static final TypeName NODE2 = ParameterizedTypeName.get(nodeType, kTypeVar2, vTypeVar2);
   public static final TypeName UNSAFE_ACCESS =
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
   public static final TypeName LOCAL_CACHE_FACTORY =
       ClassName.get(PACKAGE_NAME, "LocalCacheFactory");
-
+  public static final TypeName NODE_FACTORY =
+          ClassName.get(PACKAGE_NAME, "NodeFactory");
   public static final ClassName BUILDER = ClassName.get(PACKAGE_NAME, "Caffeine");
   public static final ParameterSpec BUILDER_PARAM = ParameterSpec.builder(ParameterizedTypeName.get(
       BUILDER, kTypeVar, vTypeVar), "builder").build();

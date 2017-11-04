@@ -40,8 +40,14 @@ public final class AddConstructors extends NodeRule {
 
   @Override
   protected void execute() {
+    addConstructorDefault();
     addConstructorByKey();
     addConstructorByKeyRef();
+  }
+
+  /** Adds the constructor used to create a factory. */
+  private void addConstructorDefault() {
+    context.constructorDefault = MethodSpec.constructorBuilder();
   }
 
   /** Adds the constructor by key to the node type. */
