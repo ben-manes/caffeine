@@ -15,6 +15,40 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.NODE;
+import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
+import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
+import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
+import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
+import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
+import static com.github.benmanes.caffeine.cache.Specifications.lookupKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.rawReferenceKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Year;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
+
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.node.AddConstructors;
 import com.github.benmanes.caffeine.cache.node.AddDeques;
 import com.github.benmanes.caffeine.cache.node.AddExpiration;
@@ -38,42 +72,10 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-
-import javax.lang.model.element.Modifier;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Year;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-
-import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.NODE;
-import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
-import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_STRONG_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.RETIRED_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
-import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
-import static com.github.benmanes.caffeine.cache.Specifications.lookupKeyType;
-import static com.github.benmanes.caffeine.cache.Specifications.rawReferenceKeyType;
-import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
-import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
-import static com.google.common.base.Preconditions.checkState;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Generates the cache entry factory and specialized types. These entries are optimized for the
@@ -94,12 +96,11 @@ import static java.util.Objects.requireNonNull;
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class NodeFactoryGenerator {
-  final Path directory;
-  final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
   final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
-      new AddFactoryMethods(),
-      new AddHealth(), new AddToString(), new Finalize());
+      new AddFactoryMethods(),  new AddHealth(), new AddToString(), new Finalize());
+  final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
+  final Path directory;
 
   TypeSpec.Builder nodeFactory;
 
@@ -113,12 +114,14 @@ public final class NodeFactoryGenerator {
         .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
             .addMember("value", "{$S, $S, $S, $S}", "unchecked", "PMD",
                 "GuardedByChecker", "MissingOverride")
-            .build());
+            .build())
+        .addTypeVariable(kTypeVar)
+        .addTypeVariable(vTypeVar);
     addClassJavaDoc();
-    addNodeStateStatics();
+    addConstants();
     addKeyMethods();
     generatedNodes();
-    addGetFactoryMethods();
+    addNewFactoryMethods();
     writeJavaFile();
   }
 
@@ -137,9 +140,8 @@ public final class NodeFactoryGenerator {
         .addJavadoc("\n@author ben.manes@gmail.com (Ben Manes)\n");
   }
 
-  private void addNodeStateStatics() {
-    Modifier[] modifiers = { Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL };
-
+  private void addConstants() {
+    Modifier[] modifiers = {Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL};
     nodeFactory.addField(FieldSpec.builder(Object.class, RETIRED_STRONG_KEY, modifiers)
         .initializer("new Object()")
         .build());
@@ -156,54 +158,33 @@ public final class NodeFactoryGenerator {
   }
 
   private void addKeyMethods() {
-    nodeFactory.addMethod(newNodeByKeyAbstractMethod())
-        .addMethod(newNodeByKeyRefAbstractMethod())
-        .addMethod(newLookupKeyMethod())
-        .addMethod(newReferenceKeyMethod());
+    nodeFactory
+        .addMethod(newNodeMethod(keySpec, keyRefQueueSpec))
+        .addMethod(newNodeMethod(keyRefSpec))
+        .addMethod(newReferenceKeyMethod())
+        .addMethod(newLookupKeyMethod());
   }
 
-  private MethodSpec.Builder newNodeByKey() {
-    return completeNewNode(MethodSpec.methodBuilder("newNode")
-            .addModifiers(Modifier.PUBLIC)
-            .addParameter(keySpec)
-            .addParameter(keyRefQueueSpec));
-  }
-
-  private MethodSpec.Builder newNodeByKeyRef() {
-    return completeNewNode(MethodSpec.methodBuilder("newNode")
-            .addModifiers(Modifier.PUBLIC)
-            .addParameter(keyRefSpec));
-  }
-
-  private static MethodSpec.Builder completeNewNode(MethodSpec.Builder method) {
-    return method
-            .addTypeVariable(kTypeVar)
-            .addTypeVariable(vTypeVar)
-            .addParameter(valueSpec)
-            .addParameter(valueRefQueueSpec)
-            .addParameter(int.class, "weight")
-            .addParameter(long.class, "now")
-            .returns(NODE);
-  }
-
-  private MethodSpec newNodeByKeyAbstractMethod() {
-    return newNodeByKey().addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
-        .addJavadoc("Returns a node optimized for the specified features.\n").build();
-  }
-
-  private MethodSpec newNodeByKeyRefAbstractMethod() {
-    return newNodeByKeyRef().addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
-        .addJavadoc("Returns a node optimized for the specified features.\n").build();
+  private MethodSpec newNodeMethod(ParameterSpec... keyParams) {
+    return MethodSpec.methodBuilder("newNode")
+        .addJavadoc("Returns a node optimized for the specified features.\n")
+        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+        .addParameters(ImmutableList.copyOf(keyParams))
+        .addParameter(valueSpec)
+        .addParameter(valueRefQueueSpec)
+        .addParameter(int.class, "weight")
+        .addParameter(long.class, "now")
+        .returns(NODE)
+        .build();
   }
 
   private MethodSpec newLookupKeyMethod() {
     return MethodSpec.methodBuilder("newLookupKey")
-        .addModifiers(Modifier.DEFAULT, Modifier.PUBLIC)
         .addJavadoc("Returns a key suitable for looking up an entry in the cache. If the cache "
             + "holds keys strongly\nthen the key is returned. If the cache holds keys weakly "
             + "then a {@link $T}\nholding the key argument is returned.\n", lookupKeyType)
-        .addTypeVariable(kTypeVar)
-        .addParameter(kTypeVar, "key")
+        .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
+        .addParameter(Object.class, "key")
         .addStatement("return key")
         .returns(Object.class)
         .build();
@@ -211,35 +192,32 @@ public final class NodeFactoryGenerator {
 
   private MethodSpec newReferenceKeyMethod() {
     return MethodSpec.methodBuilder("newReferenceKey")
-        .addModifiers(Modifier.DEFAULT, Modifier.PUBLIC)
         .addJavadoc("Returns a key suitable for inserting into the cache. If the cache holds"
             + " keys strongly then\nthe key is returned. If the cache holds keys weakly "
             + "then a {@link $T}\nholding the key argument is returned.\n", referenceKeyType)
-        .addTypeVariable(kTypeVar)
+        .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
         .addParameter(kTypeVar, "key")
         .addParameter(kRefQueueType, "referenceQueue")
-        .returns(Object.class)
         .addStatement("return $L", "key")
+        .returns(Object.class)
         .build();
   }
 
-  private void addGetFactoryMethods() {
-    checkState(!classNameToFeatures.isEmpty(), "Must generate all cache types first");
-
-    nodeFactory.addMethod(MethodSpec.methodBuilder("getFactory")
+  private void addNewFactoryMethods() {
+    nodeFactory.addMethod(MethodSpec.methodBuilder("newFactory")
         .addJavadoc("Returns a factory optimized for the specified features.\n")
-        .addModifiers(Modifier.STATIC, Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
         .addParameter(BUILDER_PARAM)
         .addParameter(boolean.class, "isAsync")
         .addCode(NodeSelectorCode.get())
-        .returns(ClassName.bestGuess("NodeFactory"))
+        .returns(NODE_FACTORY)
         .build());
     nodeFactory.addMethod(MethodSpec.methodBuilder("weakValues")
+        .addJavadoc("Returns whether this factory supports the weak values.\n")
         .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
         .addStatement("return false")
-        .addJavadoc("Returns whether this factory supports the weak values.\n")
         .returns(boolean.class)
         .build());
     nodeFactory.addMethod(MethodSpec.methodBuilder("softValues")

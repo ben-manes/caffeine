@@ -1,23 +1,41 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.benmanes.caffeine.cache.node;
 
-import com.github.benmanes.caffeine.cache.Feature;
-import com.squareup.javapoet.MethodSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.NODE;
+import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
+import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.keySpec;
+import static com.github.benmanes.caffeine.cache.Specifications.lookupKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType;
+import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec;
+import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 
 import javax.lang.model.element.Modifier;
 
-import static com.github.benmanes.caffeine.cache.Specifications.NODE2;
-import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType2;
-import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar2;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefQueueSpec2;
-import static com.github.benmanes.caffeine.cache.Specifications.keyRefSpec;
-import static com.github.benmanes.caffeine.cache.Specifications.keySpec2;
-import static com.github.benmanes.caffeine.cache.Specifications.lookupKeyType2;
-import static com.github.benmanes.caffeine.cache.Specifications.referenceKeyType2;
-import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar2;
-import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpec2;
-import static com.github.benmanes.caffeine.cache.Specifications.valueSpec2;
+import com.github.benmanes.caffeine.cache.Feature;
+import com.google.common.collect.ImmutableList;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
 
-public class AddFactoryMethods extends NodeRule {
+/**
+ * @author github.com/jvassev (Julian Vassev)
+ */
+public final class AddFactoryMethods extends NodeRule {
+
   @Override
   protected boolean applies() {
     return true;
@@ -25,97 +43,71 @@ public class AddFactoryMethods extends NodeRule {
 
   @Override
   protected void execute() {
-    String statementWithKey = makeFactoryStatementKey();
-    String statementWithKeyRef = makeFactoryStatementKeyRef();
-    Object className = context.className;
-
-    context.nodeSubtype
-        .addMethod(newNodeByKey()
-            .addStatement(statementWithKey, className).build())
-        .addMethod(newNodeByKeyRef()
-            .addStatement(statementWithKeyRef, className).build());
+    addFactories();
 
     if (context.generateFeatures.contains(Feature.WEAK_KEYS)) {
-      context.nodeSubtype
-          .addMethod(makeNewLookupKey())
-          .addMethod(makeReferenceKey());
+      addWeakKeys();
     }
     if (context.generateFeatures.contains(Feature.WEAK_VALUES)) {
-      context.nodeSubtype
-          .addMethod(makeWeakValues());
-    }
-    if (context.generateFeatures.contains(Feature.SOFT_VALUES)) {
-      context.nodeSubtype
-          .addMethod(makeSoftValues());
+      addWeakValues();
+    } else if (context.generateFeatures.contains(Feature.SOFT_VALUES)) {
+      addSoftValues();
     }
   }
 
-  private MethodSpec makeSoftValues() {
-    return MethodSpec.methodBuilder("softValues")
+  private void addFactories() {
+    context.nodeSubtype.addMethod(
+        newNode(keySpec, keyRefQueueSpec)
+            .addStatement("return new $N<>(key, keyReferenceQueue, value, "
+                + "valueReferenceQueue, weight, now)", context.className)
+            .build());
+    context.nodeSubtype.addMethod(
+        newNode(keyRefSpec)
+            .addStatement("return new $N<>(keyReference, value, valueReferenceQueue, weight, now)",
+                context.className)
+            .build());
+  }
+
+  private void addWeakKeys() {
+    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("newLookupKey")
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(Object.class, "key")
+        .addStatement("return new $T<>(key)", lookupKeyType)
+        .returns(Object.class)
+        .build());
+    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("newReferenceKey")
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(kTypeVar, "key")
+        .addParameter(kRefQueueType, "referenceQueue")
+        .addStatement("return new $T($L, $L)", referenceKeyType, "key", "referenceQueue")
+        .returns(Object.class)
+        .build());
+  }
+
+  private void addSoftValues() {
+    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("softValues")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return true")
         .returns(boolean.class)
-        .build();
+        .build());
   }
 
-  private MethodSpec makeWeakValues() {
-    return MethodSpec.methodBuilder("weakValues")
+  private void addWeakValues() {
+    context.nodeSubtype.addMethod(MethodSpec.methodBuilder("weakValues")
         .addModifiers(Modifier.PUBLIC)
         .addStatement("return true")
         .returns(boolean.class)
-        .build();
+        .build());
   }
 
-  private MethodSpec makeNewLookupKey() {
-    return MethodSpec.methodBuilder("newLookupKey")
+  private MethodSpec.Builder newNode(ParameterSpec... keyParams) {
+    return MethodSpec.methodBuilder("newNode")
         .addModifiers(Modifier.PUBLIC)
-        .addTypeVariable(kTypeVar2)
-        .addParameter(kTypeVar2, "key")
-        .addStatement("return new $T(key)", lookupKeyType2)
-        .returns(Object.class)
-        .build();
-  }
-
-  private MethodSpec.Builder newNodeByKey() {
-    return completeNewNode(MethodSpec.methodBuilder("newNode")
-            .addModifiers(Modifier.PUBLIC)
-            .addParameter(keySpec2)
-            .addParameter(keyRefQueueSpec2));
-  }
-
-  private MethodSpec.Builder newNodeByKeyRef() {
-    return completeNewNode(MethodSpec.methodBuilder("newNode")
-            .addModifiers(Modifier.PUBLIC)
-            .addParameter(keyRefSpec));
-  }
-
-  private static MethodSpec.Builder completeNewNode(MethodSpec.Builder method) {
-    return method
-            .addTypeVariable(kTypeVar2)
-            .addTypeVariable(vTypeVar2)
-            .addParameter(valueSpec2)
-            .addParameter(valueRefQueueSpec2)
-            .addParameter(int.class, "weight")
-            .addParameter(long.class, "now")
-            .returns(NODE2);
-  }
-
-  private MethodSpec makeReferenceKey() {
-    return MethodSpec.methodBuilder("newReferenceKey")
-        .addModifiers(Modifier.PUBLIC)
-        .addTypeVariable(kTypeVar2)
-        .addParameter(kTypeVar2, "key")
-        .addParameter(kRefQueueType2, "referenceQueue")
-        .addStatement("return new $T($L, $L)", referenceKeyType2, "key", "referenceQueue")
-        .returns(Object.class)
-        .build();
-  }
-
-  private String makeFactoryStatementKey() {
-    return "return new $N<>(key, keyReferenceQueue, value, valueReferenceQueue, weight, now)";
-  }
-
-  private String makeFactoryStatementKeyRef() {
-    return "return new $N<>(keyReference, value, valueReferenceQueue, weight, now)";
+        .addParameters(ImmutableList.copyOf(keyParams))
+        .addParameter(valueSpec)
+        .addParameter(valueRefQueueSpec)
+        .addParameter(int.class, "weight")
+        .addParameter(long.class, "now")
+        .returns(NODE);
   }
 }

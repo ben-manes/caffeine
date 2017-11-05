@@ -39,7 +39,7 @@ public final class NodeContext {
   public MethodSpec.Builder constructorByKeyRef;
   public MethodSpec. Builder constructorDefault;
 
-    public NodeContext(TypeName superClass, String className, boolean isFinal,
+  public NodeContext(TypeName superClass, String className, boolean isFinal,
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
     this.isFinal = isFinal;
     this.className = requireNonNull(className);

@@ -164,7 +164,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   final CacheLoader<K, V> cacheLoader;
   final Buffer<Node<K, V>> readBuffer;
   final CacheWriter<K, V> writer;
-  final NodeFactory nodeFactory;
+  final NodeFactory<K, V> nodeFactory;
   final Weigher<K, V> weigher;
   final Lock evictionLock;
   final Executor executor;
@@ -184,7 +184,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     writer = builder.getCacheWriter();
     weigher = builder.getWeigher(isAsync);
     drainBuffersTask = new PerformCleanupTask();
-    nodeFactory = NodeFactory.getFactory(builder, isAsync);
+    nodeFactory = NodeFactory.newFactory(builder, isAsync);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     evictionLock = (builder.getExecutor() instanceof ForkJoinPool)
         ? new NonReentrantLock()

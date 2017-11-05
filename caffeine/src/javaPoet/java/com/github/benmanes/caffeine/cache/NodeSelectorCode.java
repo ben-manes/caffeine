@@ -15,9 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import com.squareup.javapoet.CodeBlock;
-
 import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
+
+import com.squareup.javapoet.CodeBlock;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -28,8 +28,7 @@ public final class NodeSelectorCode {
 
   private NodeSelectorCode() {
     block = CodeBlock.builder()
-            .addStatement("$T sb = new $T(\"$L$$\")",
-            StringBuilder.class, StringBuilder.class, NODE_FACTORY);
+        .addStatement("$1T sb = new $1T(\"$2L$$\")", StringBuilder.class, NODE_FACTORY.rawType);
   }
 
   private NodeSelectorCode keys() {
@@ -78,7 +77,8 @@ public final class NodeSelectorCode {
   }
 
   private NodeSelectorCode maximum() {
-    block.beginControlFlow("if (builder.evicts())")
+    block
+        .beginControlFlow("if (builder.evicts())")
             .addStatement("sb.append('M')")
             .beginControlFlow("if ((isAsync && builder.evicts()) || builder.isWeighted())")
                 .addStatement("sb.append('W')")
@@ -89,16 +89,20 @@ public final class NodeSelectorCode {
     return this;
   }
 
-  private CodeBlock build() {
-    return block.beginControlFlow("try")
+  private NodeSelectorCode selector() {
+    block
+        .beginControlFlow("try")
             .addStatement("$T<?> cls = $T.class.getClassLoader().loadClass(sb.toString())",
-                    Class.class, NODE_FACTORY)
-            .addStatement("return ($T) cls.getDeclaredConstructor().newInstance()",
-                    NODE_FACTORY)
-            .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
+                Class.class, NODE_FACTORY.rawType)
+            .addStatement("return ($T) cls.getDeclaredConstructor().newInstance()", NODE_FACTORY)
+        .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
             .addStatement("throw new $T(sb.toString(), e)", IllegalStateException.class)
-            .endControlFlow()
-            .build();
+        .endControlFlow();
+    return this;
+  }
+
+  private CodeBlock build() {
+    return block.build();
   }
 
   public static CodeBlock get() {
@@ -107,6 +111,7 @@ public final class NodeSelectorCode {
         .values()
         .expires()
         .maximum()
+        .selector()
         .build();
   }
 }
