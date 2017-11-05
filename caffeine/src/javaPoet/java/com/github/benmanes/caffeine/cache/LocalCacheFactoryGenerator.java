@@ -16,14 +16,18 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.lang.invoke.MethodType;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
@@ -52,6 +56,7 @@ import com.github.benmanes.caffeine.cache.local.AddWriteBuffer;
 import com.github.benmanes.caffeine.cache.local.Finalize;
 import com.github.benmanes.caffeine.cache.local.LocalCacheContext;
 import com.github.benmanes.caffeine.cache.local.LocalCacheRule;
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -59,6 +64,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -71,6 +77,12 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
+  static final FieldSpec FACTORY = FieldSpec.builder(MethodType.class, "FACTORY")
+      .initializer("$T.methodType($T.class, $T.class, $T.class, $T.class)",
+          MethodType.class, void.class, BUILDER, CACHE_LOADER.rawType, TypeName.BOOLEAN)
+      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+      .build();
+
   final Feature[] featureByIndex = new Feature[] {null, null, Feature.LISTENING,
       Feature.STATS, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
       Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
@@ -96,18 +108,15 @@ public final class LocalCacheFactoryGenerator {
         .addMember("value", "{$S, $S, $S, $S}", "unchecked", "unused", "PMD", "MissingOverride")
         .build());
     addClassJavaDoc();
-    generateLocalCaches();
+    addConstants();
 
+    generateLocalCaches();
     addFactoryMethods();
     writeJavaFile();
   }
 
   private void addFactoryMethods() {
-    factory.addMethod(newBoundedLocalCache());
-  }
-
-  private MethodSpec newBoundedLocalCache() {
-    return MethodSpec.methodBuilder("newBoundedLocalCache")
+    factory.addMethod(MethodSpec.methodBuilder("newBoundedLocalCache")
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar)
         .returns(BOUNDED_LOCAL_CACHE)
@@ -117,7 +126,7 @@ public final class LocalCacheFactoryGenerator {
         .addParameter(CACHE_LOADER_PARAM)
         .addParameter(boolean.class, "async")
         .addJavadoc("Returns a cache optimized for this configuration.\n")
-        .build();
+        .build());
   }
 
   private void writeJavaFile() throws IOException {
@@ -127,6 +136,20 @@ public final class LocalCacheFactoryGenerator {
         .indent("  ")
         .build()
         .writeTo(directory);
+  }
+
+  private void addConstants() {
+    List<String> constants = ImmutableList.of("maximum", "edenMaximum", "mainProtectedMaximum",
+        "weightedSize", "edenWeightedSize", "mainProtectedWeightedSize");
+    for (String constant : constants) {
+      String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
+      factory.addField(FieldSpec.builder(String.class, name)
+          .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+          .initializer("$S", constant)
+          .build());
+    }
+    factory.addField(LOOKUP);
+    factory.addField(FACTORY);
   }
 
   private void generateLocalCaches() {

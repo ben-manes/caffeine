@@ -81,7 +81,7 @@ public class TimerWheelBenchmark {
     timerWheel.schedule(timer);
   }
 
-  static final class Timer implements Node<Integer, Integer> {
+  static final class Timer extends Node<Integer, Integer> {
     Node<Integer, Integer> prev;
     Node<Integer, Integer> next;
     long time;

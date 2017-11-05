@@ -281,7 +281,7 @@ public final class TimerWheelTest {
     return scenarios.iterator();
   }
 
-  private static final class Timer implements Node<Long, Long> {
+  private static final class Timer extends Node<Long, Long> {
     Node<Long, Long> prev;
     Node<Long, Long> next;
     long variableTime;

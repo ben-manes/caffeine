@@ -304,7 +304,7 @@ final class TimerWheel<K, V> {
   }
 
   /** A sentinel for the doubly-linked list in the bucket. */
-  static final class Sentinel<K, V> implements Node<K, V> {
+  static final class Sentinel<K, V> extends Node<K, V> {
     Node<K, V> prev;
     Node<K, V> next;
 

@@ -32,96 +32,96 @@ import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings({"GuardedByChecker", "GuardedByValidator"})
-interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
+abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
   /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
   @Nullable
-  K getKey();
+  public abstract K getKey();
 
   /**
    * Returns the reference that the cache is holding the entry by. This is either the key if
    * strongly held or a {@link java.lang.ref.WeakReference} to that key.
    */
   @Nonnull
-  Object getKeyReference();
+  public abstract Object getKeyReference();
 
   /** Return the value or {@code null} if it has been reclaimed by the garbage collector. */
   @Nullable
-  V getValue();
+  public abstract V getValue();
 
   /**
    * Returns the reference to the value. This is either the value if strongly held or a
    * {@link java.lang.ref.Reference} to that value.
    */
   @Nonnull
-  Object getValueReference();
+  public abstract Object getValueReference();
 
   /**
    * Sets the value, which may be held strongly, weakly, or softly. This update may be set lazily
    * and rely on the memory fence when the lock is released.
    */
   @GuardedBy("this")
-  void setValue(@Nonnull V value, @Nullable ReferenceQueue<V> referenceQueue);
+  public abstract void setValue(@Nonnull V value, @Nullable ReferenceQueue<V> referenceQueue);
 
   /**
    * Returns {@code true} if the given objects are considered equivalent. A strongly held value is
    * compared by equality and a weakly or softly held value is compared by identity.
    */
-  boolean containsValue(@Nonnull Object value);
+  public abstract boolean containsValue(@Nonnull Object value);
 
   /** Returns the weight of this entry from the entry's perspective. */
   @Nonnegative
   @GuardedBy("this")
-  default int getWeight() {
+  public int getWeight() {
     return 1;
   }
 
   /** Sets the weight from the entry's perspective. */
   @Nonnegative
   @GuardedBy("this")
-  default void setWeight(int weight) {}
+  public void setWeight(int weight) {}
 
   /** Returns the weight of this entry from the policy's perspective. */
   @Nonnegative
   @GuardedBy("evictionLock")
-  default int getPolicyWeight() {
+  public int getPolicyWeight() {
     return 1;
   }
 
   /** Sets the weight from the policy's perspective. */
   @Nonnegative
   @GuardedBy("evictionLock")
-  default void setPolicyWeight(int weight) {}
+  public void setPolicyWeight(int weight) {}
 
   /* ---------------- Health -------------- */
 
   /** If the entry is available in the hash-table and page replacement policy. */
   @GuardedBy("this")
-  boolean isAlive();
+  public abstract boolean isAlive();
 
   /**
    * If the entry was removed from the hash-table and is awaiting removal from the page
    * replacement policy.
    */
   @GuardedBy("this")
-  boolean isRetired();
+  public abstract boolean isRetired();
 
   /** If the entry was removed from the hash-table and the page replacement policy. */
   @GuardedBy("this")
-  boolean isDead();
+  public abstract boolean isDead();
 
   /** Sets the node to the <tt>retired</tt> state. */
   @GuardedBy("this")
-  void retire();
+  public abstract void retire();
 
   /** Sets the node to the <tt>dead</tt> state. */
   @GuardedBy("this")
-  void die();
+  public abstract void die();
 
   /* ---------------- Variable order -------------- */
 
   /** Returns the time that this entry was last accessed, in ns. */
-  default long getVariableTime() {
+  public long getVariableTime() {
     return 0L;
   }
 
@@ -129,71 +129,71 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * Sets the variable expiration time in nanoseconds. This update may be set lazily and rely on the
    * memory fence when the lock is released.
    */
-  default void setVariableTime(long time) {}
+  public void setVariableTime(long time) {}
 
   @GuardedBy("evictionLock")
-  default @Nullable Node<K, V> getPreviousInVariableOrder() {
+  public @Nullable Node<K, V> getPreviousInVariableOrder() {
     return null;
   }
 
   @GuardedBy("evictionLock")
-  default void setPreviousInVariableOrder(@Nullable Node<K, V> prev) {
+  public void setPreviousInVariableOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
   @GuardedBy("evictionLock")
-  default @Nullable Node<K, V> getNextInVariableOrder() {
+  public @Nullable Node<K, V> getNextInVariableOrder() {
     return null;
   }
 
   @GuardedBy("evictionLock")
-  default void setNextInVariableOrder(@Nullable Node<K, V> prev) {
+  public void setNextInVariableOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
   /* ---------------- Access order -------------- */
 
-  int EDEN = 0;
-  int PROBATION = 1;
-  int PROTECTED = 2;
+  public static final int EDEN = 0;
+  public static final  int PROBATION = 1;
+  public static final  int PROTECTED = 2;
 
   /** Returns if the entry is in the Eden or Main space. */
-  default boolean inEden() {
+  public boolean inEden() {
     return getQueueType() == EDEN;
   }
 
   /** Returns if the entry is in the Main space's probation queue. */
-  default boolean inMainProbation() {
+  public boolean inMainProbation() {
     return getQueueType() == PROBATION;
   }
 
   /** Returns if the entry is in the Main space's protected queue. */
-  default boolean inMainProtected() {
+  public boolean inMainProtected() {
     return getQueueType() == PROTECTED;
   }
 
   /** Sets the status to the Main space's probation queue. */
-  default void makeMainProbation() {
+  public void makeMainProbation() {
     setQueueType(PROBATION);
   }
 
   /** Sets the status to the Main space's protected queue. */
-  default void makeMainProtected() {
+  public void makeMainProtected() {
     setQueueType(PROTECTED);
   }
 
   /** Returns the queue that the entry's resides in (eden, probation, or protected). */
-  default int getQueueType() {
+  public int getQueueType() {
     return EDEN;
   }
 
   /** Set queue that the entry resides in (eden, probation, or protected). */
-  default void setQueueType(int queueType) {
+  public void setQueueType(int queueType) {
     throw new UnsupportedOperationException();
   }
 
   /** Returns the time that this entry was last accessed, in ns. */
-  default long getAccessTime() {
+  public long getAccessTime() {
     return 0L;
   }
 
@@ -201,36 +201,36 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * Sets the access time in nanoseconds. This update may be set lazily and rely on the memory fence
    * when the lock is released.
    */
-  default void setAccessTime(long time) {}
+  public void setAccessTime(long time) {}
 
   @Override
   @GuardedBy("evictionLock")
-  default @Nullable Node<K, V> getPreviousInAccessOrder() {
+  public @Nullable Node<K, V> getPreviousInAccessOrder() {
     return null;
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setPreviousInAccessOrder(@Nullable Node<K, V> prev) {
+  public void setPreviousInAccessOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default @Nullable Node<K, V> getNextInAccessOrder() {
+  public @Nullable Node<K, V> getNextInAccessOrder() {
     return null;
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setNextInAccessOrder(@Nullable Node<K, V> next) {
+  public void setNextInAccessOrder(@Nullable Node<K, V> next) {
     throw new UnsupportedOperationException();
   }
 
   /* ---------------- Write order -------------- */
 
   /** Returns the time that this entry was last written, in ns. */
-  default long getWriteTime() {
+  public long getWriteTime() {
     return 0L;
   }
 
@@ -238,37 +238,47 @@ interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
    * Sets the write time in nanoseconds. This update may be set lazily and rely on the memory fence
    * when the lock is released.
    */
-  default void setWriteTime(long time) {}
+  public void setWriteTime(long time) {}
 
   /**
    * Atomically sets the write time to the given updated value if the current value equals the
    * expected value and returns if the update was successful.
    */
-  default boolean casWriteTime(long expect, long update) {
+  public boolean casWriteTime(long expect, long update) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default @Nullable Node<K, V> getPreviousInWriteOrder() {
+  public @Nullable Node<K, V> getPreviousInWriteOrder() {
     return null;
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setPreviousInWriteOrder(@Nullable Node<K, V> prev) {
+  public void setPreviousInWriteOrder(@Nullable Node<K, V> prev) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default @Nullable Node<K, V> getNextInWriteOrder() {
+  public @Nullable Node<K, V> getNextInWriteOrder() {
     return null;
   }
 
   @Override
   @GuardedBy("evictionLock")
-  default void setNextInWriteOrder(@Nullable Node<K, V> next) {
+  public void setNextInWriteOrder(@Nullable Node<K, V> next) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public final String toString() {
+    return String.format("%s=[key=%s, value=%s, weight=%d, queueType=%,d, accessTimeNS=%,d, "
+        + "writeTimeNS=%,d, varTimeNs=%,d, prevInAccess=%s, nextInAccess=%s, prevInWrite=%s, "
+        + "nextInWrite=%s]", getClass().getSimpleName(), getKey(), getValue(), getWeight(),
+        getQueueType(), getAccessTime(), getWriteTime(), getVariableTime(),
+        getPreviousInAccessOrder() != null, getNextInAccessOrder() != null,
+        getPreviousInWriteOrder() != null, getNextInWriteOrder() != null);
   }
 }

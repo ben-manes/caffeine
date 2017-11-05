@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.lang.invoke.MethodHandles;
 import java.lang.ref.ReferenceQueue;
 
 import javax.lang.model.element.Modifier;
@@ -63,9 +64,13 @@ public final class Specifications {
   public static final ParameterSpec valueRefQueueSpec =
       ParameterSpec.builder(vRefQueueType, "valueReferenceQueue").build();
 
-  public static final TypeName NODE = ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar);
   public static final TypeName UNSAFE_ACCESS =
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
+  public static final FieldSpec LOOKUP = FieldSpec.builder(MethodHandles.Lookup.class, "LOOKUP")
+      .initializer("$T.lookup()", MethodHandles.class)
+      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+      .build();
+
   public static final TypeName LOCAL_CACHE_FACTORY =
       ClassName.get(PACKAGE_NAME, "LocalCacheFactory");
   public static final ParameterizedTypeName NODE_FACTORY = ParameterizedTypeName.get(
@@ -75,6 +80,7 @@ public final class Specifications {
       ParameterizedTypeName.get(BUILDER, kTypeVar, vTypeVar), "builder").build();
   public static final ParameterizedTypeName BOUNDED_LOCAL_CACHE = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "BoundedLocalCache"), kTypeVar, vTypeVar);
+  public static final TypeName NODE = ParameterizedTypeName.get(nodeType, kTypeVar, vTypeVar);
 
   public static final ParameterizedTypeName CACHE_LOADER = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "CacheLoader"), TypeVariableName.get("? super K"), vTypeVar);
@@ -115,10 +121,11 @@ public final class Specifications {
 
   /** Creates a public static field with an Unsafe address offset. */
   public static FieldSpec newFieldOffset(String className, String varName) {
-    String name = offsetName(varName);
-    return FieldSpec.builder(long.class, name, Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL)
-        .initializer("$T.objectFieldOffset($T.class, $S)", UNSAFE_ACCESS,
-            ClassName.bestGuess(className), varName)
+    String fieldName = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName);
+    return FieldSpec
+        .builder(long.class, offsetName(varName), Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL)
+        .initializer("$T.objectFieldOffset($T.class, $L)", UNSAFE_ACCESS,
+            ClassName.bestGuess(className), fieldName)
         .build();
   }
 }

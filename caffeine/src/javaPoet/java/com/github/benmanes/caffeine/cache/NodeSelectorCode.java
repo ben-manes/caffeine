@@ -15,7 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.FACTORY;
+import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
+
+import java.lang.invoke.MethodHandle;
 
 import com.squareup.javapoet.CodeBlock;
 
@@ -92,11 +96,13 @@ public final class NodeSelectorCode {
   private NodeSelectorCode selector() {
     block
         .beginControlFlow("try")
-            .addStatement("$T<?> cls = $T.class.getClassLoader().loadClass(sb.toString())",
+            .addStatement("$T<?> clazz = $T.class.getClassLoader().loadClass(sb.toString())",
                 Class.class, NODE_FACTORY.rawType)
-            .addStatement("return ($T) cls.getDeclaredConstructor().newInstance()", NODE_FACTORY)
-        .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
-            .addStatement("throw new $T(sb.toString(), e)", IllegalStateException.class)
+            .addStatement("$T handle = $N.findConstructor(clazz, $N)",
+                MethodHandle.class, LOOKUP, FACTORY)
+            .addStatement("return ($T) handle.invoke()", NODE_FACTORY)
+        .nextControlFlow("catch ($T t)", Throwable.class)
+            .addStatement("throw new $T(sb.toString(), t)", IllegalStateException.class)
         .endControlFlow();
     return this;
   }
