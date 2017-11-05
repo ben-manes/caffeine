@@ -106,21 +106,22 @@ public final class NodeFactoryGenerator {
   final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
       new AddFactoryMethods(),  new AddHealth(), new Finalize());
-  final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
+  final Feature[] featureByIndex = new Feature[] { null, null,
+      Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
+      Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
   final Path directory;
 
   TypeSpec.Builder nodeFactory;
 
   public NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
-    this.classNameToFeatures = new TreeMap<>();
   }
 
   void generate() throws IOException {
     nodeFactory = TypeSpec.interfaceBuilder("NodeFactory")
         .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-            .addMember("value", "{$S, $S, $S, $S}", "unchecked", "PMD",
-                "GuardedByChecker", "MissingOverride")
+            .addMember("value", "{$S, $S, $S}",
+                "unchecked", "PMD.UnusedFormalParameter", "MissingOverride")
             .build())
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
@@ -232,13 +233,13 @@ public final class NodeFactoryGenerator {
         .returns(NODE_FACTORY)
         .build());
     nodeFactory.addMethod(MethodSpec.methodBuilder("weakValues")
-        .addJavadoc("Returns whether this factory supports the weak values.\n")
+        .addJavadoc("Returns whether this factory supports weak values.\n")
         .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
         .addStatement("return false")
         .returns(boolean.class)
         .build());
     nodeFactory.addMethod(MethodSpec.methodBuilder("softValues")
-        .addJavadoc("Returns whether this factory supports the soft values.\n")
+        .addJavadoc("Returns whether this factory supports soft values.\n")
         .addModifiers(Modifier.PUBLIC, Modifier.DEFAULT)
         .addStatement("return false")
         .returns(boolean.class)
@@ -246,39 +247,42 @@ public final class NodeFactoryGenerator {
   }
 
   private void generatedNodes() {
-    fillClassNameToFeatures();
+    NavigableMap<String, Set<Feature>> classNameToFeatures = getClassNameToFeatures();
     classNameToFeatures.forEach((className, features) -> {
       String higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
-      addNodeSpec(className, isLeaf, features);
+      TypeSpec nodeSpec = makeNodeSpec(className, isLeaf, features);
+      nodeFactory.addType(nodeSpec);
     });
   }
 
-  private void fillClassNameToFeatures() {
-    Feature[] featureByIndex = new Feature[] { null, null,
-        Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
-        Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
+  private NavigableMap<String, Set<Feature>> getClassNameToFeatures() {
+    NavigableMap<String, Set<Feature>> classNameToFeatures = new TreeMap<>();
 
     for (List<Object> combination : combinations()) {
-      Set<Feature> features = new LinkedHashSet<>();
-
-      features.add((Feature) combination.get(0));
-      features.add((Feature) combination.get(1));
-      for (int i = 2; i < combination.size(); i++) {
-        if ((Boolean) combination.get(i)) {
-          features.add(featureByIndex[i]);
-        }
-      }
-      if (features.contains(Feature.MAXIMUM_WEIGHT)) {
-        features.remove(Feature.MAXIMUM_SIZE);
-      }
-
+      Set<Feature> features = getFeatures(combination);
       String className = Feature.makeClassName(features);
       classNameToFeatures.put(encode(className), ImmutableSet.copyOf(features));
     }
+    return classNameToFeatures;
   }
 
-  private void addNodeSpec(String className, boolean isFinal, Set<Feature> features) {
+  private Set<Feature> getFeatures(List<Object> combination) {
+    Set<Feature> features = new LinkedHashSet<>();
+    features.add((Feature) combination.get(0));
+    features.add((Feature) combination.get(1));
+    for (int i = 2; i < combination.size(); i++) {
+      if ((Boolean) combination.get(i)) {
+        features.add(featureByIndex[i]);
+      }
+    }
+    if (features.contains(Feature.MAXIMUM_WEIGHT)) {
+      features.remove(Feature.MAXIMUM_SIZE);
+    }
+    return features;
+  }
+
+  private TypeSpec makeNodeSpec(String className, boolean isFinal, Set<Feature> features) {
     TypeName superClass;
     Set<Feature> parentFeatures;
     Set<Feature> generateFeatures;
@@ -298,7 +302,7 @@ public final class NodeFactoryGenerator {
     for (NodeRule rule : rules) {
       rule.accept(context);
     }
-    nodeFactory.addType(context.nodeSubtype.build());
+    return context.nodeSubtype.build();
   }
 
   private Set<List<Object>> combinations() {

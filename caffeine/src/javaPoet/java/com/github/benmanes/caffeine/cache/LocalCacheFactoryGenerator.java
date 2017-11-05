@@ -91,22 +91,21 @@ public final class LocalCacheFactoryGenerator {
       new AddExpirationTicker(), new AddMaximum(), new AddFastPath(), new AddDeques(),
       new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
       new AddWriteBuffer(), new Finalize());
-  final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
   final Path directory;
 
   TypeSpec.Builder factory;
 
   public LocalCacheFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
-    this.classNameToFeatures = new TreeMap<>();
   }
 
   void generate() throws IOException {
     factory = TypeSpec.classBuilder("LocalCacheFactory")
-        .addModifiers(Modifier.FINAL)
         .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-        .addMember("value", "{$S, $S, $S, $S}", "unchecked", "unused", "PMD", "MissingOverride")
-        .build());
+          .addMember("value", "{$S, $S}", "unchecked", "MissingOverride")
+          .build())
+        .addModifiers(Modifier.FINAL)
+        .addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
     addClassJavaDoc();
     addConstants();
 
@@ -153,32 +152,38 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private void generateLocalCaches() {
-    fillClassNameToFeatures();
+    NavigableMap<String, Set<Feature>> classNameToFeatures = getClassNameToFeatures();
     classNameToFeatures.forEach((className, features) -> {
       String higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
-      addLocalCacheSpec(className, isLeaf, features);
+      TypeSpec cacheSpec = makeLocalCacheSpec(className, isLeaf, features);
+      factory.addType(cacheSpec);
     });
   }
 
-  private void fillClassNameToFeatures() {
+  private NavigableMap<String, Set<Feature>> getClassNameToFeatures() {
+    NavigableMap<String, Set<Feature>> classNameToFeatures = new TreeMap<>();
     for (List<Object> combination : combinations()) {
-      Set<Feature> features = new LinkedHashSet<>();
-
-      features.add(((Boolean) combination.get(0)) ? Feature.STRONG_KEYS : Feature.WEAK_KEYS);
-      features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
-      for (int i = 2; i < combination.size(); i++) {
-        if ((Boolean) combination.get(i)) {
-          features.add(featureByIndex[i]);
-        }
-      }
-      if (features.contains(Feature.MAXIMUM_WEIGHT)) {
-        features.remove(Feature.MAXIMUM_SIZE);
-      }
-
+      Set<Feature> features = getFeatures(combination);
       String className = encode(Feature.makeClassName(features));
-      classNameToFeatures.put(className, ImmutableSet.copyOf(features));
+      classNameToFeatures.put(className, features);
     }
+    return classNameToFeatures;
+  }
+
+  private Set<Feature> getFeatures(List<Object> combination) {
+    Set<Feature> features = new LinkedHashSet<>();
+    features.add(((Boolean) combination.get(0)) ? Feature.STRONG_KEYS : Feature.WEAK_KEYS);
+    features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
+    for (int i = 2; i < combination.size(); i++) {
+      if ((Boolean) combination.get(i)) {
+        features.add(featureByIndex[i]);
+      }
+    }
+    if (features.contains(Feature.MAXIMUM_WEIGHT)) {
+      features.remove(Feature.MAXIMUM_SIZE);
+    }
+    return features;
   }
 
   private Set<List<Object>> combinations() {
@@ -190,7 +195,7 @@ public final class LocalCacheFactoryGenerator {
     return Sets.cartesianProduct(sets);
   }
 
-  private void addLocalCacheSpec(String className, boolean isFinal, Set<Feature> features) {
+  private TypeSpec makeLocalCacheSpec(String className, boolean isFinal, Set<Feature> features) {
     TypeName superClass;
     Set<Feature> parentFeatures;
     Set<Feature> generateFeatures;
@@ -210,7 +215,7 @@ public final class LocalCacheFactoryGenerator {
     for (LocalCacheRule rule : rules) {
       rule.accept(context);
     }
-    factory.addType(context.cache.build());
+    return context.cache.build();
   }
 
   private void addClassJavaDoc() {

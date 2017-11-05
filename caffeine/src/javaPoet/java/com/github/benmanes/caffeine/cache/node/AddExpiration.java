@@ -128,7 +128,7 @@ public final class AddExpiration extends NodeRule {
       return;
     }
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("casWriteTime")
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+        .addModifiers(context.publicFinalModifiers())
         .addParameter(long.class, "expect")
         .addParameter(long.class, "update")
         .returns(boolean.class)

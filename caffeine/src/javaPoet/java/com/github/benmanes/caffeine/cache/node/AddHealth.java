@@ -24,8 +24,6 @@ import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 
 import java.lang.ref.Reference;
 
-import javax.lang.model.element.Modifier;
-
 import com.squareup.javapoet.MethodSpec;
 
 /**
@@ -55,7 +53,7 @@ public final class AddHealth extends NodeRule {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder("isAlive")
         .addStatement("Object key = getKeyReference()")
         .addStatement("return (key != $L) && (key != $L)", retiredArg, deadArg)
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+        .addModifiers(context.publicFinalModifiers())
         .returns(boolean.class)
         .build());
     addState("isRetired", "retire", retiredArg, false);
@@ -65,12 +63,12 @@ public final class AddHealth extends NodeRule {
   private void addState(String checkName, String actionName, String arg, boolean finalized) {
     context.nodeSubtype.addMethod(MethodSpec.methodBuilder(checkName)
         .addStatement("return (getKeyReference() == $L)", arg)
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+        .addModifiers(context.publicFinalModifiers())
         .returns(boolean.class)
         .build());
 
     MethodSpec.Builder action = MethodSpec.methodBuilder(actionName)
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+        .addModifiers(context.publicFinalModifiers());
     if (keyStrength() != Strength.STRONG) {
       action.addStatement("(($T<K>) getKeyReference()).clear()", Reference.class);
     }

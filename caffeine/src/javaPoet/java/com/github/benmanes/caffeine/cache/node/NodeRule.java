@@ -26,8 +26,6 @@ import static org.apache.commons.lang3.StringUtils.capitalize;
 import java.lang.ref.Reference;
 import java.util.function.Consumer;
 
-import javax.lang.model.element.Modifier;
-
 import com.github.benmanes.caffeine.cache.Feature;
 import com.google.common.collect.Iterables;
 import com.squareup.javapoet.ClassName;
@@ -96,7 +94,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   /** Creates an accessor that returns the reference. */
   protected final MethodSpec newGetRef(String varName) {
     MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName) + "Reference")
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+        .addModifiers(context.publicFinalModifiers())
         .returns(Object.class);
     getter.addStatement("return $T.UNSAFE.getObject(this, $N)",
         UNSAFE_ACCESS, offsetName(varName));
@@ -107,7 +105,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   protected final MethodSpec newGetter(Strength strength, TypeName varType,
       String varName, Visibility visibility) {
     MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName))
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+        .addModifiers(context.publicFinalModifiers())
         .returns(varType);
     String type;
     if (varType.isPrimitive()) {
@@ -148,7 +146,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
       type = "Object";
     }
     MethodSpec.Builder setter = MethodSpec.methodBuilder(methodName)
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+        .addModifiers(context.publicFinalModifiers())
         .addParameter(varType, varName);
     if (visibility.isRelaxed) {
       setter.addStatement("$T.UNSAFE.put$L(this, $N, $N)",

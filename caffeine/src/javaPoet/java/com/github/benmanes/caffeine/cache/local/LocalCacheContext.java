@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.local;
 
 import java.util.Set;
 
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
@@ -43,5 +45,17 @@ public final class LocalCacheContext {
     this.generateFeatures = generateFeatures;
     this.cache = TypeSpec.classBuilder(className);
     this.constructor = MethodSpec.constructorBuilder();
+  }
+
+  public Modifier[] publicFinalModifiers() {
+    return isFinal
+        ? new Modifier[] { Modifier.PUBLIC }
+        : new Modifier[] { Modifier.PUBLIC, Modifier.FINAL };
+  }
+
+  public Modifier[] protectedFinalModifiers() {
+    return isFinal
+        ? new Modifier[] { Modifier.PROTECTED }
+        : new Modifier[] { Modifier.PROTECTED, Modifier.FINAL };
   }
 }

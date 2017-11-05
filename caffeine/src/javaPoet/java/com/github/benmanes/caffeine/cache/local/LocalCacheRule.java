@@ -17,21 +17,10 @@ package com.github.benmanes.caffeine.cache.local;
 
 import java.util.function.Consumer;
 
-import javax.lang.model.element.Modifier;
-
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public abstract class LocalCacheRule implements Consumer<LocalCacheContext> {
-  static final Modifier[] publicFinalModifiers =
-    { Modifier.PUBLIC, Modifier.FINAL };
-  static final Modifier[] protectedFinalModifiers =
-    { Modifier.PROTECTED, Modifier.FINAL };
-  static final Modifier[] privateFinalModifiers =
-    { Modifier.PRIVATE, Modifier.FINAL };
-  static final Modifier[] privateVolatileModifiers =
-    { Modifier.PRIVATE, Modifier.VOLATILE };
-
   protected LocalCacheContext context;
 
   @Override

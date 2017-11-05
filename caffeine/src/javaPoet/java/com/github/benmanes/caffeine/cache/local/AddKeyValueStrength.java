@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.local;
 import static com.github.benmanes.caffeine.cache.Specifications.kRefQueueType;
 import static com.github.benmanes.caffeine.cache.Specifications.vRefQueueType;
 
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -54,15 +56,15 @@ public final class AddKeyValueStrength extends LocalCacheRule {
   /** Adds the reference strength methods for the key or value. */
   private void addStrength(String collectName, String queueName, TypeName type) {
     context.cache.addMethod(MethodSpec.methodBuilder(queueName)
-        .addModifiers(protectedFinalModifiers)
+        .addModifiers(context.protectedFinalModifiers())
         .returns(type)
         .addStatement("return $N", queueName)
         .build());
-    context.cache.addField(FieldSpec.builder(type, queueName, privateFinalModifiers)
+    context.cache.addField(FieldSpec.builder(type, queueName, Modifier.FINAL)
         .initializer("new $T()", type)
         .build());
     context.cache.addMethod(MethodSpec.methodBuilder(collectName)
-        .addModifiers(protectedFinalModifiers)
+        .addModifiers(context.protectedFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)
         .build());

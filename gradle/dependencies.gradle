@@ -74,7 +74,7 @@ ext {
   ]
   pluginVersions = [
     buildscan: '1.10.1',
-    buildscanRecipes: '0.2.0',
+    buildscanRecipes: '0.2.3',
     checkstyle: '8.4',
     coveralls: '2.8.2',
     coverity: '1.0.10',

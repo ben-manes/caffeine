@@ -63,7 +63,7 @@ public final class AddValue extends NodeRule {
   /** Creates the setValue method. */
   private MethodSpec makeSetValue() {
     MethodSpec.Builder setter = MethodSpec.methodBuilder("setValue")
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+        .addModifiers(context.publicFinalModifiers())
         .addParameter(vTypeVar, "value")
         .addParameter(vRefQueueType, "referenceQueue");
 
@@ -81,7 +81,7 @@ public final class AddValue extends NodeRule {
 
   private MethodSpec makeContainsValue() {
     MethodSpec.Builder containsValue = MethodSpec.methodBuilder("containsValue")
-        .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+        .addModifiers(context.publicFinalModifiers())
         .addParameter(Object.class, "value")
         .returns(boolean.class);
     if (isStrongValues()) {

@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.local;
 import static com.github.benmanes.caffeine.cache.Specifications.ACCESS_ORDER_DEQUE;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_ORDER_DEQUE;
 
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -79,9 +81,9 @@ public final class AddDeques extends LocalCacheRule {
   }
 
   private void addFieldAndMethod(TypeName type, String name) {
-    context.cache.addField(FieldSpec.builder(type, name, privateFinalModifiers).build());
+    context.cache.addField(FieldSpec.builder(type, name, Modifier.FINAL).build());
     context.cache.addMethod(MethodSpec.methodBuilder(name)
-        .addModifiers(protectedFinalModifiers)
+        .addModifiers(context.protectedFinalModifiers())
         .addStatement("return " + name)
         .returns(type)
         .build());

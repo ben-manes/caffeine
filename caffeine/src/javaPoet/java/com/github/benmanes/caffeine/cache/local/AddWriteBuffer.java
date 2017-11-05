@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.local;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_QUEUE;
 import static com.github.benmanes.caffeine.cache.Specifications.WRITE_QUEUE_TYPE;
 
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -38,14 +40,14 @@ public final class AddWriteBuffer extends LocalCacheRule {
     context.constructor.addStatement(
         "this.writeBuffer = new $T<>(WRITE_BUFFER_MIN, WRITE_BUFFER_MAX)", WRITE_QUEUE_TYPE);
     context.cache.addField(FieldSpec.builder(
-        WRITE_QUEUE, "writeBuffer", privateFinalModifiers).build());
+        WRITE_QUEUE, "writeBuffer", Modifier.FINAL).build());
     context.cache.addMethod(MethodSpec.methodBuilder("writeBuffer")
-        .addModifiers(protectedFinalModifiers)
+        .addModifiers(context.protectedFinalModifiers())
         .addStatement("return writeBuffer")
         .returns(WRITE_QUEUE)
         .build());
     context.cache.addMethod(MethodSpec.methodBuilder("buffersWrites")
-        .addModifiers(protectedFinalModifiers)
+        .addModifiers(context.protectedFinalModifiers())
         .addStatement("return true")
         .returns(boolean.class)
         .build());

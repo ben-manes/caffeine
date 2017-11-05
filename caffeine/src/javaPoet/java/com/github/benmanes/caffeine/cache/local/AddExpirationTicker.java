@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.local;
 
 import static com.github.benmanes.caffeine.cache.Specifications.TICKER;
 
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
@@ -35,9 +37,9 @@ public final class AddExpirationTicker extends LocalCacheRule {
   @Override
   protected void execute() {
     context.constructor.addStatement("this.ticker = builder.getTicker()");
-    context.cache.addField(FieldSpec.builder(TICKER, "ticker", privateFinalModifiers).build());
+    context.cache.addField(FieldSpec.builder(TICKER, "ticker", Modifier.FINAL).build());
     context.cache.addMethod(MethodSpec.methodBuilder("expirationTicker")
-        .addModifiers(publicFinalModifiers)
+        .addModifiers(context.publicFinalModifiers())
         .addStatement("return ticker")
         .returns(TICKER)
         .build());
