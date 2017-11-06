@@ -15,11 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.lang.invoke.MethodHandles;
-import java.lang.ref.ReferenceQueue;
-
-import javax.lang.model.element.Modifier;
-
 import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
@@ -27,6 +22,10 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
+
+import javax.lang.model.element.Modifier;
+import java.lang.invoke.MethodHandles;
+import java.lang.ref.ReferenceQueue;
 
 /**
  * Shared constants for a code generation specification.
@@ -124,8 +123,8 @@ public final class Specifications {
     String fieldName = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName);
     return FieldSpec
         .builder(long.class, offsetName(varName), Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL)
-        .initializer("$T.objectFieldOffset($T.class, $L)", UNSAFE_ACCESS,
-            ClassName.bestGuess(className), fieldName)
+        .initializer("$T.objectFieldOffset($T.class, $L.$L)", UNSAFE_ACCESS,
+            ClassName.bestGuess(className),  LOCAL_CACHE_FACTORY, fieldName)
         .build();
   }
 }

@@ -15,14 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
+
+import java.lang.invoke.MethodHandle;
+
 import static com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
 import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
-
-import java.lang.invoke.MethodHandle;
-
-import com.squareup.javapoet.CodeBlock;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -33,7 +34,7 @@ public final class LocalCacheSelectorCode {
 
   private LocalCacheSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$1T sb = new $1T(\"$2L$$\")", StringBuilder.class, LOCAL_CACHE_FACTORY);
+        .addStatement("$1T sb = new $1T(\"$2N.\")", StringBuilder.class, ((ClassName)LOCAL_CACHE_FACTORY).packageName());
   }
 
   private LocalCacheSelectorCode keys() {
@@ -56,7 +57,7 @@ public final class LocalCacheSelectorCode {
 
   private LocalCacheSelectorCode removalListener() {
     block.beginControlFlow("if (builder.removalListener != null)")
-            .addStatement("sb.append(\"Li\")")
+            .addStatement("sb.append('L')")
         .endControlFlow();
     return this;
   }

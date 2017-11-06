@@ -15,10 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
+import javax.lang.model.element.Modifier;
+
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
-
-import javax.lang.model.element.Modifier;
 
 /**
  * Adds the cache inheritance hierarchy.
@@ -35,7 +35,6 @@ public final class AddSubtype extends LocalCacheRule {
   @Override
   protected void execute() {
     context.cache.superclass(context.superClass)
-        .addModifiers(Modifier.STATIC)
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {

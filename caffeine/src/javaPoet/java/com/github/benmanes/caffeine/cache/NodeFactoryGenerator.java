@@ -15,6 +15,46 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import com.github.benmanes.caffeine.cache.node.AddConstructors;
+import com.github.benmanes.caffeine.cache.node.AddDeques;
+import com.github.benmanes.caffeine.cache.node.AddExpiration;
+import com.github.benmanes.caffeine.cache.node.AddFactoryMethods;
+import com.github.benmanes.caffeine.cache.node.AddHealth;
+import com.github.benmanes.caffeine.cache.node.AddKey;
+import com.github.benmanes.caffeine.cache.node.AddMaximum;
+import com.github.benmanes.caffeine.cache.node.AddSubtype;
+import com.github.benmanes.caffeine.cache.node.AddValue;
+import com.github.benmanes.caffeine.cache.node.Finalize;
+import com.github.benmanes.caffeine.cache.node.NodeContext;
+import com.github.benmanes.caffeine.cache.node.NodeRule;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import com.google.common.io.Resources;
+import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.FieldSpec;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
+
+import javax.lang.model.element.Modifier;
+import java.io.IOException;
+import java.lang.invoke.MethodType;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Year;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
+
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
@@ -37,47 +77,6 @@ import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpe
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-
-import java.io.IOException;
-import java.lang.invoke.MethodType;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Year;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-
-import javax.lang.model.element.Modifier;
-
-import com.github.benmanes.caffeine.cache.node.AddConstructors;
-import com.github.benmanes.caffeine.cache.node.AddDeques;
-import com.github.benmanes.caffeine.cache.node.AddExpiration;
-import com.github.benmanes.caffeine.cache.node.AddFactoryMethods;
-import com.github.benmanes.caffeine.cache.node.AddHealth;
-import com.github.benmanes.caffeine.cache.node.AddKey;
-import com.github.benmanes.caffeine.cache.node.AddMaximum;
-import com.github.benmanes.caffeine.cache.node.AddSubtype;
-import com.github.benmanes.caffeine.cache.node.AddValue;
-import com.github.benmanes.caffeine.cache.node.Finalize;
-import com.github.benmanes.caffeine.cache.node.NodeContext;
-import com.github.benmanes.caffeine.cache.node.NodeRule;
-import com.google.common.base.CaseFormat;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-import com.google.common.io.Resources;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
 
 /**
  * Generates the cache entry factory and specialized types. These entries are optimized for the
@@ -113,8 +112,11 @@ public final class NodeFactoryGenerator {
 
   TypeSpec.Builder nodeFactory;
 
+  private final List<TypeSpec> nodeTypes;
+
   public NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
+    this.nodeTypes = new ArrayList<>();
   }
 
   void generate() throws IOException {
@@ -140,6 +142,14 @@ public final class NodeFactoryGenerator {
         .indent("  ")
         .build()
         .writeTo(directory);
+
+    for (TypeSpec node : nodeTypes) {
+      JavaFile.builder(getClass().getPackage().getName(), node)
+              .addFileComment(header, Year.now())
+              .indent("  ")
+              .build()
+              .writeTo(directory);
+    }
   }
 
   private void addClassJavaDoc() {
@@ -162,14 +172,6 @@ public final class NodeFactoryGenerator {
     nodeFactory.addField(FieldSpec.builder(rawReferenceKeyType, DEAD_WEAK_KEY, modifiers)
         .initializer("new $T(null, null)", rawReferenceKeyType)
         .build());
-
-    List<String> constants = ImmutableList.of("key", "value", "accessTime", "writeTime");
-    for (String constant : constants) {
-      String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
-      nodeFactory.addField(FieldSpec.builder(String.class, name, modifiers)
-          .initializer("$S", constant)
-          .build());
-    }
 
     nodeFactory.addField(LOOKUP);
     nodeFactory.addField(FACTORY);
@@ -252,7 +254,7 @@ public final class NodeFactoryGenerator {
       String higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
       TypeSpec nodeSpec = makeNodeSpec(className, isLeaf, features);
-      nodeFactory.addType(nodeSpec);
+      nodeTypes.add(nodeSpec);
     });
   }
 
@@ -293,7 +295,7 @@ public final class NodeFactoryGenerator {
     } else {
       parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
       generateFeatures = ImmutableSet.of(Iterables.getLast(features));
-      superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME + ".NodeFactory",
+      superClass = ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME,
           encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
     }
 
@@ -324,11 +326,11 @@ public final class NodeFactoryGenerator {
   /** Returns an encoded form of the class name for compact use. */
   private static String encode(String className) {
     return Feature.makeEnumName(className)
-        .replaceFirst("STRONG_KEYS", "S")
-        .replaceFirst("WEAK_KEYS", "W")
-        .replaceFirst("_STRONG_VALUES", "St")
+        .replaceFirst("STRONG_KEYS", "P") // puissant
+        .replaceFirst("WEAK_KEYS", "F") // faible
+        .replaceFirst("_STRONG_VALUES", "S")
         .replaceFirst("_WEAK_VALUES", "W")
-        .replaceFirst("_SOFT_VALUES", "So")
+        .replaceFirst("_SOFT_VALUES", "D") // doux
         .replaceFirst("_EXPIRE_ACCESS", "A")
         .replaceFirst("_EXPIRE_WRITE", "W")
         .replaceFirst("_REFRESH_WRITE", "R")

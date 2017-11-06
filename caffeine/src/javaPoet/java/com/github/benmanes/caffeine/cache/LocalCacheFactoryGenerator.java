@@ -15,31 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
-import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
-import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
-import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
-import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
-
-import java.io.IOException;
-import java.lang.invoke.MethodType;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Year;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-
-import javax.lang.model.element.Modifier;
-
 import com.github.benmanes.caffeine.cache.local.AddConstructor;
 import com.github.benmanes.caffeine.cache.local.AddDeques;
 import com.github.benmanes.caffeine.cache.local.AddExpirationTicker;
@@ -71,6 +46,30 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
+import javax.lang.model.element.Modifier;
+import java.io.IOException;
+import java.lang.invoke.MethodType;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Year;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
+
+import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
+import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
+import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
+
 /**
  * Generates a factory that creates the cache optimized for the user specified configuration.
  *
@@ -95,8 +94,11 @@ public final class LocalCacheFactoryGenerator {
 
   TypeSpec.Builder factory;
 
+  private final List<TypeSpec> factoryTypes;
+
   public LocalCacheFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
+    this.factoryTypes = new ArrayList<>();
   }
 
   void generate() throws IOException {
@@ -135,6 +137,14 @@ public final class LocalCacheFactoryGenerator {
         .indent("  ")
         .build()
         .writeTo(directory);
+
+    for (TypeSpec typeSpec : factoryTypes) {
+      JavaFile.builder(getClass().getPackage().getName(), typeSpec)
+              .addFileComment(header, Year.now())
+              .indent("  ")
+              .build()
+              .writeTo(directory);
+    }
   }
 
   private void addConstants() {
@@ -147,6 +157,15 @@ public final class LocalCacheFactoryGenerator {
           .initializer("$S", constant)
           .build());
     }
+
+    constants = ImmutableList.of("key", "value", "accessTime", "writeTime");
+    for (String constant : constants) {
+      String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
+      factory.addField(FieldSpec.builder(String.class, name)
+              .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+              .initializer("$S", constant)
+              .build());
+    }
     factory.addField(LOOKUP);
     factory.addField(FACTORY);
   }
@@ -157,7 +176,7 @@ public final class LocalCacheFactoryGenerator {
       String higherKey = classNameToFeatures.higherKey(className);
       boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
       TypeSpec cacheSpec = makeLocalCacheSpec(className, isLeaf, features);
-      factory.addType(cacheSpec);
+      factoryTypes.add(cacheSpec);
     });
   }
 
@@ -231,7 +250,7 @@ public final class LocalCacheFactoryGenerator {
         .replaceFirst("WEAK_KEYS", "W")
         .replaceFirst("_STRONG_VALUES", "S")
         .replaceFirst("_INFIRM_VALUES", "I")
-        .replaceFirst("_LISTENING", "Li")
+        .replaceFirst("_LISTENING", "L")
         .replaceFirst("_STATS", "S")
         .replaceFirst("_MAXIMUM", "M")
         .replaceFirst("_WEIGHT", "W")

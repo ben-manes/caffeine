@@ -15,13 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.FACTORY;
-import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
-import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
+import com.squareup.javapoet.CodeBlock;
 
 import java.lang.invoke.MethodHandle;
 
-import com.squareup.javapoet.CodeBlock;
+import static com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.FACTORY;
+import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
+import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -32,25 +32,25 @@ public final class NodeSelectorCode {
 
   private NodeSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$1T sb = new $1T(\"$2L$$\")", StringBuilder.class, NODE_FACTORY.rawType);
+        .addStatement("$1T sb = new $1T(\"$2N.\")", StringBuilder.class, NODE_FACTORY.rawType.packageName());
   }
 
   private NodeSelectorCode keys() {
     block.beginControlFlow("if (builder.isStrongKeys())")
-            .addStatement("sb.append('S')")
+            .addStatement("sb.append('P')")
         .nextControlFlow("else")
-            .addStatement("sb.append('W')")
+            .addStatement("sb.append('F')")
         .endControlFlow();
     return this;
   }
 
   private NodeSelectorCode values() {
     block.beginControlFlow("if (builder.isStrongValues())")
-            .addStatement("sb.append(\"St\")")
+            .addStatement("sb.append('S')")
         .nextControlFlow("else if (builder.isWeakValues())")
             .addStatement("sb.append('W')")
         .nextControlFlow("else")
-            .addStatement("sb.append(\"So\")")
+            .addStatement("sb.append('D')")
         .endControlFlow();
     return this;
   }
