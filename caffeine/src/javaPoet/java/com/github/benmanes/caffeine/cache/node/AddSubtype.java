@@ -15,14 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
-import com.squareup.javapoet.TypeSpec;
-
-import javax.lang.model.element.Modifier;
-
 import static com.github.benmanes.caffeine.cache.Specifications.NODE;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+
+import javax.lang.model.element.Modifier;
+
+import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.TypeSpec;
 
 /**
  * Adds the node inheritance hierarchy.
@@ -39,7 +40,10 @@ public final class AddSubtype extends NodeRule {
   @Override
   protected void execute() {
     context.nodeSubtype = TypeSpec.classBuilder(context.className)
-        .addModifiers(Modifier.PUBLIC)
+        .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
+            .addMember("value", "{$S, $S, $S}",
+                "unchecked", "PMD.UnusedFormalParameter", "MissingOverride")
+            .build())
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {

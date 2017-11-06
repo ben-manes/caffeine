@@ -15,10 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
-import javax.lang.model.element.Modifier;
-
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+
+import javax.lang.model.element.Modifier;
+
+import com.squareup.javapoet.AnnotationSpec;
 
 /**
  * Adds the cache inheritance hierarchy.
@@ -35,6 +37,9 @@ public final class AddSubtype extends LocalCacheRule {
   @Override
   protected void execute() {
     context.cache.superclass(context.superClass)
+        .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
+            .addMember("value", "{$S, $S}", "unchecked", "MissingOverride")
+            .build())
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     if (context.isFinal) {
