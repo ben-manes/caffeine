@@ -15,6 +15,31 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
+import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
+import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
+import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
+
+import java.io.IOException;
+import java.lang.invoke.MethodType;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Year;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
+
+import javax.lang.model.element.Modifier;
+
 import com.github.benmanes.caffeine.cache.local.AddConstructor;
 import com.github.benmanes.caffeine.cache.local.AddDeques;
 import com.github.benmanes.caffeine.cache.local.AddExpirationTicker;
@@ -37,7 +62,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
@@ -45,30 +69,6 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-
-import javax.lang.model.element.Modifier;
-import java.io.IOException;
-import java.lang.invoke.MethodType;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Year;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-
-import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
-import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
-import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
-import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
-import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Generates a factory that creates the cache optimized for the user specified configuration.
@@ -103,9 +103,6 @@ public final class LocalCacheFactoryGenerator {
 
   void generate() throws IOException {
     factory = TypeSpec.classBuilder("LocalCacheFactory")
-        .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-          .addMember("value", "{$S, $S}", "unchecked", "MissingOverride")
-          .build())
         .addModifiers(Modifier.FINAL)
         .addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build());
     addClassJavaDoc();

@@ -87,7 +87,7 @@ ext {
     propdeps: '0.0.10.RELEASE',
     semanticVersioning: '1.1.0',
     shadow: '2.0.1',
-    sonarqube: '2.5',
+    sonarqube: '2.6',
     spotbugs: '1.6.0',
     stats: '0.2.0',
     versions: '0.17.0',

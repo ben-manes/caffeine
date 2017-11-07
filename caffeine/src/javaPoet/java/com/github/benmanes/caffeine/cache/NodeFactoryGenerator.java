@@ -15,46 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import com.github.benmanes.caffeine.cache.node.AddConstructors;
-import com.github.benmanes.caffeine.cache.node.AddDeques;
-import com.github.benmanes.caffeine.cache.node.AddExpiration;
-import com.github.benmanes.caffeine.cache.node.AddFactoryMethods;
-import com.github.benmanes.caffeine.cache.node.AddHealth;
-import com.github.benmanes.caffeine.cache.node.AddKey;
-import com.github.benmanes.caffeine.cache.node.AddMaximum;
-import com.github.benmanes.caffeine.cache.node.AddSubtype;
-import com.github.benmanes.caffeine.cache.node.AddValue;
-import com.github.benmanes.caffeine.cache.node.Finalize;
-import com.github.benmanes.caffeine.cache.node.NodeContext;
-import com.github.benmanes.caffeine.cache.node.NodeRule;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-import com.google.common.io.Resources;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-
-import javax.lang.model.element.Modifier;
-import java.io.IOException;
-import java.lang.invoke.MethodType;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Year;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
@@ -77,6 +37,46 @@ import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpe
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+
+import java.io.IOException;
+import java.lang.invoke.MethodType;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Year;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
+
+import javax.lang.model.element.Modifier;
+
+import com.github.benmanes.caffeine.cache.node.AddConstructors;
+import com.github.benmanes.caffeine.cache.node.AddDeques;
+import com.github.benmanes.caffeine.cache.node.AddExpiration;
+import com.github.benmanes.caffeine.cache.node.AddFactoryMethods;
+import com.github.benmanes.caffeine.cache.node.AddHealth;
+import com.github.benmanes.caffeine.cache.node.AddKey;
+import com.github.benmanes.caffeine.cache.node.AddMaximum;
+import com.github.benmanes.caffeine.cache.node.AddSubtype;
+import com.github.benmanes.caffeine.cache.node.AddValue;
+import com.github.benmanes.caffeine.cache.node.Finalize;
+import com.github.benmanes.caffeine.cache.node.NodeContext;
+import com.github.benmanes.caffeine.cache.node.NodeRule;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import com.google.common.io.Resources;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.FieldSpec;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
 
 /**
  * Generates the cache entry factory and specialized types. These entries are optimized for the
@@ -121,10 +121,6 @@ public final class NodeFactoryGenerator {
 
   void generate() throws IOException {
     nodeFactory = TypeSpec.interfaceBuilder("NodeFactory")
-        .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-            .addMember("value", "{$S, $S, $S}",
-                "unchecked", "PMD.UnusedFormalParameter", "MissingOverride")
-            .build())
         .addTypeVariable(kTypeVar)
         .addTypeVariable(vTypeVar);
     addClassJavaDoc();
