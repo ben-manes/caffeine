@@ -55,20 +55,6 @@ public final class LocalCacheSelectorCode {
     return this;
   }
 
-  private LocalCacheSelectorCode removalListener() {
-    block.beginControlFlow("if (builder.removalListener != null)")
-            .addStatement("sb.append('L')")
-        .endControlFlow();
-    return this;
-  }
-
-  private LocalCacheSelectorCode stats() {
-    block.beginControlFlow("if (builder.isRecordingStats())")
-            .addStatement("sb.append('S')")
-        .endControlFlow();
-    return this;
-  }
-
   private LocalCacheSelectorCode maximum() {
     block.beginControlFlow("if (builder.evicts())")
             .addStatement("sb.append('M')")
@@ -116,8 +102,6 @@ public final class LocalCacheSelectorCode {
     return new LocalCacheSelectorCode()
         .keys()
         .values()
-        .removalListener()
-        .stats()
         .maximum()
         .expires()
         .selector()

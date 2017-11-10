@@ -15,14 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache.local;
 
-import static com.github.benmanes.caffeine.cache.Specifications.EXPIRY;
-import static com.github.benmanes.caffeine.cache.Specifications.TIMER_WHEEL;
-
-import javax.lang.model.element.Modifier;
-
 import com.github.benmanes.caffeine.cache.Feature;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
+
+import javax.lang.model.element.Modifier;
+
+import static com.github.benmanes.caffeine.cache.Specifications.TIMER_WHEEL;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -67,14 +66,6 @@ public final class AddExpireAfterAccess extends LocalCacheRule {
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return (timerWheel != null)")
         .returns(boolean.class)
-        .build());
-
-    context.constructor.addStatement("this.expiry = builder.getExpiry(isAsync)");
-    context.cache.addField(FieldSpec.builder(EXPIRY, "expiry", Modifier.FINAL).build());
-    context.cache.addMethod(MethodSpec.methodBuilder("expiry")
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("return expiry")
-        .returns(EXPIRY)
         .build());
 
     context.constructor.addStatement(

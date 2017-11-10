@@ -170,6 +170,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   final Executor executor;
   final boolean isAsync;
 
+  final StatsCounter statsCounter;
+  final Ticker statsTicker;
+  final RemovalListener<K,V> removalListener;
+  final Ticker expirationTicker;
+  final Expiry<K,V> expiry;
+
   // The collection views
   transient Set<K> keySet;
   transient Collection<V> values;
@@ -193,6 +199,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         ? new BoundedBuffer<>()
         : Buffer.disabled();
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
+
+    statsCounter = builder.isRecordingStats()
+        ? builder.statsCounterSupplier.get()
+        : StatsCounter.disabledStatsCounter();
+    statsTicker = builder.isRecordingStats()
+        ? Ticker.systemTicker()
+        : Ticker.disabledTicker();
+
+    removalListener = builder.removalListener != null
+        ? builder.getRemovalListener(isAsync)
+        : null;
+    expirationTicker = builder.getTicker();
+
+    expiry = builder.getExpiry(isAsync);
 
     if (evicts()) {
       setMaximum(builder.getMaximum());
@@ -253,30 +273,30 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /* ---------------- Stats Support -------------- */
 
   @Override
-  public boolean isRecordingStats() {
-    return false;
+  public final boolean isRecordingStats() {
+    return statsCounter != StatsCounter.disabledStatsCounter();
   }
 
   @Override
-  public StatsCounter statsCounter() {
-    return StatsCounter.disabledStatsCounter();
+  public final StatsCounter statsCounter() {
+    return statsCounter;
   }
 
   @Override
-  public Ticker statsTicker() {
-    return Ticker.disabledTicker();
+  public final Ticker statsTicker() {
+    return statsTicker;
   }
 
   /* ---------------- Removal Listener Support -------------- */
 
   @Override
-  public RemovalListener<K, V> removalListener() {
-    return null;
+  public final RemovalListener<K, V> removalListener() {
+    return removalListener;
   }
 
   @Override
-  public boolean hasRemovalListener() {
-    return false;
+  public final boolean hasRemovalListener() {
+    return removalListener != null;
   }
 
   @Override
@@ -373,13 +393,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return expiresAfterWrite() || refreshAfterWrite();
   }
 
-  protected Expiry<K, V> expiry() {
-    return null;
+  protected final Expiry<K, V> expiry() {
+    return expiry;
   }
 
   @Override
-  public Ticker expirationTicker() {
-    return Ticker.disabledTicker();
+  public final Ticker expirationTicker() {
+    return expirationTicker;
   }
 
   protected TimerWheel<K, V> timerWheel() {

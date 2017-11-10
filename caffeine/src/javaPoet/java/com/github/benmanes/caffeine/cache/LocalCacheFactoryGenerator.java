@@ -42,15 +42,12 @@ import javax.lang.model.element.Modifier;
 
 import com.github.benmanes.caffeine.cache.local.AddConstructor;
 import com.github.benmanes.caffeine.cache.local.AddDeques;
-import com.github.benmanes.caffeine.cache.local.AddExpirationTicker;
 import com.github.benmanes.caffeine.cache.local.AddExpireAfterAccess;
 import com.github.benmanes.caffeine.cache.local.AddExpireAfterWrite;
 import com.github.benmanes.caffeine.cache.local.AddFastPath;
 import com.github.benmanes.caffeine.cache.local.AddKeyValueStrength;
 import com.github.benmanes.caffeine.cache.local.AddMaximum;
 import com.github.benmanes.caffeine.cache.local.AddRefreshAfterWrite;
-import com.github.benmanes.caffeine.cache.local.AddRemovalListener;
-import com.github.benmanes.caffeine.cache.local.AddStats;
 import com.github.benmanes.caffeine.cache.local.AddSubtype;
 import com.github.benmanes.caffeine.cache.local.AddWriteBuffer;
 import com.github.benmanes.caffeine.cache.local.Finalize;
@@ -82,12 +79,12 @@ public final class LocalCacheFactoryGenerator {
       .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
       .build();
 
-  final Feature[] featureByIndex = new Feature[] {null, null, Feature.LISTENING,
-      Feature.STATS, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
+  final Feature[] featureByIndex = new Feature[] {null, null,
+      Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
       Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
   final List<LocalCacheRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructor(),
-      new AddKeyValueStrength(), new AddRemovalListener(), new AddStats(),
-      new AddExpirationTicker(), new AddMaximum(), new AddFastPath(), new AddDeques(),
+      new AddKeyValueStrength(),
+      new AddMaximum(), new AddFastPath(), new AddDeques(),
       new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
       new AddWriteBuffer(), new Finalize());
   final Path directory;
