@@ -1365,7 +1365,7 @@ public final class AsMapTest {
       assertThat(map.get(key), is(value));
     }
     assertThat(map.size(), is(context.original().size()));
-    if (context.isGuava() || context.isAsync()) {
+    if (context.isGuava()) {
       assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
     } else {
       assertThat(context.consumedNotifications(), hasSize(0));

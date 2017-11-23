@@ -613,20 +613,31 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       if (value == null) {
         return false;
       }
-      CompletableFuture<V> oldValueFuture = delegate.get(key);
-      if ((oldValueFuture != null) && !value.equals(Async.getWhenSuccessful(oldValueFuture))) {
-        // Optimistically check if the current value is equal, but don't skip if it may be loading
-        return false;
-      }
 
       @SuppressWarnings("unchecked")
       K castedKey = (K) key;
       boolean[] removed = { false };
-      delegate.compute(castedKey, (k, oldValue) -> {
-        removed[0] = value.equals(Async.getWhenSuccessful(oldValue));
-        return removed[0] ? null : oldValue;
-      }, /* recordStats */ false, /* recordLoad */ false);
-      return removed[0];
+      boolean[] done = { false };
+      for (;;) {
+        CompletableFuture<V> future = delegate.get(key);
+        V oldValue = Async.getWhenSuccessful(future);
+        if ((future != null) && !value.equals(oldValue)) {
+          // Optimistically check if the current value is equal, but don't skip if it may be loading
+          return false;
+        }
+
+        delegate.compute(castedKey, (k, oldValueFuture) -> {
+          if (future != oldValueFuture) {
+            return oldValueFuture;
+          }
+          done[0] = true;
+          removed[0] = value.equals(oldValue);
+          return removed[0] ? null : oldValueFuture;
+        }, /* recordStats */ false, /* recordLoad */ false);
+        if (done[0]) {
+          return removed[0];
+        }
+      }
     }
 
     @Override
@@ -671,34 +682,54 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     public V computeIfPresent(K key,
         BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
       requireNonNull(remappingFunction);
-      CompletableFuture<V> valueFuture = delegate.computeIfPresent(key, (k, oldValueFuture) -> {
-        V oldValue = Async.getWhenSuccessful(oldValueFuture);
+      boolean[] computed = { false };
+      for (;;) {
+        CompletableFuture<V> future = delegate.get(key);
+        V oldValue = Async.getWhenSuccessful(future);
         if (oldValue == null) {
           return null;
         }
-        V newValue = remappingFunction.apply(key, oldValue);
-        return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
-      });
-      return Async.getWhenSuccessful(valueFuture);
+        CompletableFuture<V> valueFuture = delegate.computeIfPresent(key, (k, oldValueFuture) -> {
+          if (future != oldValueFuture) {
+            return oldValueFuture;
+          }
+          computed[0] = true;
+          V newValue = remappingFunction.apply(key, oldValue);
+          return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
+        });
+        if (computed[0] || (valueFuture == null)) {
+          return Async.getWhenSuccessful(valueFuture);
+        }
+      }
     }
 
     @Override
     public V compute(K key,
         BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
       requireNonNull(remappingFunction);
-      long startTime = delegate.statsTicker().read();
-      CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
-        V oldValue = Async.getWhenSuccessful(oldValueFuture);
-        V newValue = remappingFunction.apply(key, oldValue);
-        long loadTime = delegate.statsTicker().read() - startTime;
-        if (newValue == null) {
-          delegate.statsCounter().recordLoadFailure(loadTime);
-          return null;
+      boolean[] computed = { false };
+      for (;;) {
+        CompletableFuture<V> future = delegate.get(key);
+        V oldValue = Async.getWhenSuccessful(future);
+        CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
+          if (future != oldValueFuture) {
+            return oldValueFuture;
+          }
+          computed[0] = true;
+          long startTime = delegate.statsTicker().read();
+          V newValue = remappingFunction.apply(key, oldValue);
+          long loadTime = delegate.statsTicker().read() - startTime;
+          if (newValue == null) {
+            delegate.statsCounter().recordLoadFailure(loadTime);
+            return null;
+          }
+          delegate.statsCounter().recordLoadSuccess(loadTime);
+          return CompletableFuture.completedFuture(newValue);
+        }, /* recordMiss */ false, /* recordLoad */ false);
+        if (computed[0]) {
+          return Async.getWhenSuccessful(valueFuture);
         }
-        delegate.statsCounter().recordLoadSuccess(loadTime);
-        return CompletableFuture.completedFuture(newValue);
-      }, /* recordMiss */ false, /* recordLoad */ false);
-      return Async.getWhenSuccessful(valueFuture);
+      }
     }
 
     @Override
@@ -706,16 +737,34 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
         BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
       requireNonNull(value);
       requireNonNull(remappingFunction);
-      CompletableFuture<V> mergedValueFuture = delegate.merge(
-          key, CompletableFuture.completedFuture(value), (oldValueFuture, valueFuture) -> {
-        V oldValue = Async.getWhenSuccessful(oldValueFuture);
-        if (oldValue == null) {
-          return valueFuture;
+      CompletableFuture<V> newValueFuture = CompletableFuture.completedFuture(value);
+      boolean[] merged = { false };
+      for (;;) {
+        CompletableFuture<V> future = delegate.get(key);
+        V oldValue = Async.getWhenSuccessful(future);
+        CompletableFuture<V> mergedValueFuture = delegate.merge(
+            key, newValueFuture, (oldValueFuture, valueFuture) -> {
+          if (future != oldValueFuture) {
+            return oldValueFuture;
+          }
+          merged[0] = true;
+          if (oldValue == null) {
+            return valueFuture;
+          }
+          V mergedValue = remappingFunction.apply(oldValue, value);
+          if (mergedValue == null) {
+            return null;
+          } else if (mergedValue == oldValue) {
+            return oldValueFuture;
+          } else if (mergedValue == value) {
+            return valueFuture;
+          }
+          return CompletableFuture.completedFuture(mergedValue);
+        });
+        if (merged[0] || (mergedValueFuture == newValueFuture)) {
+          return Async.getWhenSuccessful(mergedValueFuture);
         }
-        V newValue = remappingFunction.apply(oldValue, value);
-        return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
-      });
-      return Async.getWhenSuccessful(mergedValueFuture);
+      }
     }
 
     @Override
