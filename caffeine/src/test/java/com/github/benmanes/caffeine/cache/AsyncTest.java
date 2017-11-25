@@ -159,6 +159,7 @@ public final class AsyncTest {
     return new Object[][] {
         { null },
         { new CompletableFuture<Integer>() },
+        { CompletableFuture.completedFuture(null) },
         { newFailedFuture(new InterruptedException()) },
         { newFailedFuture(new IllegalStateException()) },
     };

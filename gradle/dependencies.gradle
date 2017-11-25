@@ -73,7 +73,7 @@ ext {
     tcache: '1.0.5',
   ]
   pluginVersions = [
-    buildscan: '1.10.2',
+    buildscan: '1.10.3',
     buildscanRecipes: '0.2.3',
     checkstyle: '8.4',
     coveralls: '2.8.2',

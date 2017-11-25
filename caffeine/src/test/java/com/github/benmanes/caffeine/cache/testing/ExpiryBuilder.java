@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.Serializable;
 
 import com.github.benmanes.caffeine.cache.Expiry;
@@ -71,14 +73,20 @@ public final class ExpiryBuilder {
 
     @Override
     public long expireAfterCreate(K key, V value, long currentTime) {
+      requireNonNull(key);
+      requireNonNull(value);
       return createNanos;
     }
     @Override
     public long expireAfterUpdate(K key, V value, long currentTime, long currentDuration) {
+      requireNonNull(key);
+      requireNonNull(value);
       return (updateNanos == UNSET) ? currentDuration : updateNanos;
     }
     @Override
     public long expireAfterRead(K key, V value, long currentTime, long currentDuration) {
+      requireNonNull(key);
+      requireNonNull(value);
       return (readNanos == UNSET) ? currentDuration : readNanos;
     }
   }

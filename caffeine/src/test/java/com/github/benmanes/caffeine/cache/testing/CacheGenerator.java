@@ -186,8 +186,8 @@ final class CacheGenerator {
         && ((context.implementation() != Implementation.Caffeine)
             || (context.expireAfterAccess() != Expire.DISABLED)
             || (context.expireAfterWrite() != Expire.DISABLED));
-    boolean expirationIncompatible = (cacheSpec.mustExpiresWithAnyOf().length > 0)
-        && !Arrays.stream(cacheSpec.mustExpiresWithAnyOf()).anyMatch(context::expires);
+    boolean expirationIncompatible = (cacheSpec.mustExpireWithAnyOf().length > 0)
+        && !Arrays.stream(cacheSpec.mustExpireWithAnyOf()).anyMatch(context::expires);
 
     boolean skip = asyncIncompatible || asyncLoaderIncompatible
         || refreshIncompatible || weigherIncompatible

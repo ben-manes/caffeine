@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +44,14 @@ public final class RemovalListeners {
     return new RejectingRemovalListener<>();
   }
 
+  private static void validate(Object key, Object value, RemovalCause cause) {
+    if (cause != RemovalCause.COLLECTED) {
+      requireNonNull(key);
+      requireNonNull(value);
+    }
+    requireNonNull(cause);
+  }
+
   public static final class RejectingRemovalListener<K, V>
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
@@ -51,6 +61,8 @@ public final class RemovalListeners {
 
     @Override
     public void onRemoval(K key, V value, RemovalCause cause) {
+      validate(key, value, cause);
+
       if (reject) {
         rejected++;
         throw new RejectedExecutionException("Rejected eviction of " +
@@ -71,6 +83,7 @@ public final class RemovalListeners {
 
     @Override
     public synchronized void onRemoval(K key, V value, RemovalCause cause) {
+      validate(key, value, cause);
       evicted.add(new RemovalNotification<>(key, value, cause));
     }
 

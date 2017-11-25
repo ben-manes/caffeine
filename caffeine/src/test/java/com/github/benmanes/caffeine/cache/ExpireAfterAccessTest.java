@@ -65,7 +65,7 @@ public final class ExpireAfterAccessTest {
   /* ---------------- Cache -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(mustExpiresWithAnyOf = { AFTER_ACCESS, VARIABLE },
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getIfPresent(Cache<Integer, Integer> cache, CacheContext context) {
@@ -84,7 +84,7 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(mustExpiresWithAnyOf = { AFTER_ACCESS, VARIABLE },
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void get(Cache<Integer, Integer> cache, CacheContext context) {
@@ -104,7 +104,7 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(mustExpiresWithAnyOf = { AFTER_ACCESS, VARIABLE },
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   public void getAllPresent(Cache<Integer, Integer> cache, CacheContext context) {
@@ -124,7 +124,7 @@ public final class ExpireAfterAccessTest {
   /* ---------------- LoadingCache -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(mustExpiresWithAnyOf = { AFTER_ACCESS, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expireAfterAccess = Expire.ONE_MINUTE,
       loader = Loader.IDENTITY, population = { Population.PARTIAL, Population.FULL })
   public void get(LoadingCache<Integer, Integer> cache, CacheContext context) {
@@ -145,7 +145,7 @@ public final class ExpireAfterAccessTest {
   }
 
   @Test(dataProvider = "caches")
-  @CacheSpec(mustExpiresWithAnyOf = { AFTER_ACCESS, VARIABLE },
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, loader = {Loader.IDENTITY, Loader.BULK_IDENTITY},
       population = { Population.PARTIAL, Population.FULL })
@@ -176,7 +176,7 @@ public final class ExpireAfterAccessTest {
   /* ---------------- AsyncLoadingCache -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(mustExpiresWithAnyOf = { AFTER_ACCESS, VARIABLE },
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = { Population.PARTIAL, Population.FULL })
   @SuppressWarnings("FutureReturnValueIgnored")
@@ -195,7 +195,7 @@ public final class ExpireAfterAccessTest {
   /* ---------------- Map -------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(mustExpiresWithAnyOf = { AFTER_ACCESS, VARIABLE },
+  @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.ACCESS }, expiryTime = Expire.ONE_MINUTE,
       expireAfterAccess = Expire.ONE_MINUTE, population = Population.FULL)
   public void putIfAbsent(Map<Integer, Integer> map, CacheContext context) {

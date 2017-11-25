@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.util.Objects.requireNonNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -194,18 +195,22 @@ public @interface CacheSpec {
     /** A flag indicating that the entry is weighted by the integer value. */
     VALUE(1) {
       @Override public int weigh(Object key, Object value) {
+        requireNonNull(key);
         return ((Integer) value).intValue();
       }
     },
     /** A flag indicating that the entry is weighted by the value's collection size. */
     COLLECTION(1) {
       @Override public int weigh(Object key, Object value) {
+        requireNonNull(key);
         return ((Collection<?>) value).size();
       }
     },
     /** A flag indicating that the entry's weight is randomly changing. */
     RANDOM(1) {
       @Override public int weigh(Object key, Object value) {
+        requireNonNull(key);
+        requireNonNull(value);
         return ThreadLocalRandom.current().nextInt(1, 10);
       }
     };
@@ -218,6 +223,8 @@ public @interface CacheSpec {
 
     @Override
     public int weigh(Object key, Object value) {
+      requireNonNull(key);
+      requireNonNull(value);
       return units;
     }
 
@@ -229,7 +236,7 @@ public @interface CacheSpec {
   /* ---------------- Expiration -------------- */
 
   /** Indicates that the combination must have any of the expiration settings. */
-  Expiration[] mustExpiresWithAnyOf() default {};
+  Expiration[] mustExpireWithAnyOf() default {};
 
   enum Expiration {
     AFTER_WRITE, AFTER_ACCESS, VARIABLE
@@ -438,6 +445,7 @@ public @interface CacheSpec {
     /** A loader that returns the key. */
     IDENTITY {
       @Override public Integer load(Integer key) {
+        requireNonNull(key);
         return key;
       }
     },
