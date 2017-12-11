@@ -110,7 +110,7 @@ Snapshots of the development version are available in
 [releases]: https://github.com/ben-manes/caffeine/releases
 [snapshots]: https://oss.sonatype.org/content/repositories/snapshots
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
-[tinylfu]: http://arxiv.org/pdf/1512.00727.pdf
+[tinylfu]: https://dl.acm.org/authorize?N41277
 [add-a-boost]: https://www.voxxed.com/blog/2015/12/add-a-boost-of-caffeine-to-your-java
 [voxxed]: https://www.voxxed.com
 [modern-cache]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
