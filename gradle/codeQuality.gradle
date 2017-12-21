@@ -35,6 +35,7 @@ checkstyle {
 
 spotbugs {
   effort = 'max'
+  toolVersion = pluginVersions.spotbugs
   excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
 }
 

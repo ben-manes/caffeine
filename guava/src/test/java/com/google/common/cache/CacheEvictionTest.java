@@ -28,8 +28,6 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
-import com.google.common.cache.CacheTesting.Receiver;
-import com.google.common.cache.LocalCache.ReferenceEntry;
 import com.google.common.cache.TestingCacheLoaders.IdentityLoader;
 import com.google.common.cache.TestingRemovalListeners.CountingRemovalListener;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -220,33 +218,6 @@ public class CacheEvictionTest extends TestCase {
     cache.getUnchecked(objectWithHash(0));
     cache.getUnchecked(objectWithHash(0));
     assertEquals(1, removalListener.getCount());
-  }
-
-  public void testUpdateRecency_onGet() {
-    IdentityLoader<Integer> loader = identityLoader();
-    final LoadingCache<Integer, Integer> cache =
-        CaffeinatedGuava.build(Caffeine.newBuilder().maximumSize(MAX_SIZE), loader);
-    CacheTesting.checkRecency(cache, MAX_SIZE,
-        new Receiver<ReferenceEntry<Integer, Integer>>() {
-          @Override
-          public void accept(ReferenceEntry<Integer, Integer> entry) {
-            cache.getUnchecked(entry.getKey());
-          }
-        });
-  }
-
-  public void testUpdateRecency_onInvalidate() {
-    IdentityLoader<Integer> loader = identityLoader();
-    final LoadingCache<Integer, Integer> cache =
-        CaffeinatedGuava.build(Caffeine.newBuilder().maximumSize(MAX_SIZE), loader);
-    CacheTesting.checkRecency(cache, MAX_SIZE,
-        new Receiver<ReferenceEntry<Integer, Integer>>() {
-          @Override
-          public void accept(ReferenceEntry<Integer, Integer> entry) {
-            Integer key = entry.getKey();
-            cache.invalidate(key);
-          }
-        });
   }
 
   // FIXME(ben): Caffeine uses W-TinyLfu, not Lru

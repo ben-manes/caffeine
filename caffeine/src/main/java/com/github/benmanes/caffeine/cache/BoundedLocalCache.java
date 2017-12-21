@@ -51,11 +51,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -163,10 +161,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   final Consumer<Node<K, V>> accessPolicy;
   final CacheLoader<K, V> cacheLoader;
   final Buffer<Node<K, V>> readBuffer;
-  final CacheWriter<K, V> writer;
   final NodeFactory<K, V> nodeFactory;
+  final ReentrantLock evictionLock;
+  final CacheWriter<K, V> writer;
   final Weigher<K, V> weigher;
-  final Lock evictionLock;
   final Executor executor;
   final boolean isAsync;
 
@@ -182,13 +180,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     this.cacheLoader = cacheLoader;
     executor = builder.getExecutor();
     writer = builder.getCacheWriter();
+    evictionLock = new ReentrantLock();
     weigher = builder.getWeigher(isAsync);
     drainBuffersTask = new PerformCleanupTask();
     nodeFactory = NodeFactory.newFactory(builder, isAsync);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
-    evictionLock = (builder.getExecutor() instanceof ForkJoinPool)
-        ? new NonReentrantLock()
-        : new ReentrantLock();
     readBuffer = evicts() || collectKeys() || collectValues() || expiresAfterAccess()
         ? new BoundedBuffer<>()
         : Buffer.disabled();
@@ -1428,10 +1424,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   public void clear() {
-    long now = expirationTicker().read();
-
     evictionLock.lock();
     try {
+      long now = expirationTicker().read();
+
       // Apply all pending writes
       Runnable task;
       while (buffersWrites() && (task = writeBuffer().poll()) != null) {
@@ -1786,7 +1782,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Node<K, V>[] node = new Node[1];
     @SuppressWarnings("unchecked")
     V[] oldValue = (V[]) new Object[1];
-    long now = expirationTicker().read();
     RemovalCause[] cause = new RemovalCause[1];
 
     data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
@@ -1794,7 +1789,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         oldValue[0] = n.getValue();
         if (oldValue[0] == null) {
           cause[0] = RemovalCause.COLLECTED;
-        } else if (hasExpired(n, now)) {
+        } else if (hasExpired(n, expirationTicker().read())) {
           cause[0] = RemovalCause.EXPIRED;
         } else {
           cause[0] = RemovalCause.EXPLICIT;
@@ -1830,14 +1825,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     V[] oldValue = (V[]) new Object[1];
     RemovalCause[] cause = new RemovalCause[1];
 
-    long now = expirationTicker().read();
     data.computeIfPresent(nodeFactory.newLookupKey(key), (kR, node) -> {
       synchronized (node) {
         oldKey[0] = node.getKey();
         oldValue[0] = node.getValue();
         if (oldKey[0] == null) {
           cause[0] = RemovalCause.COLLECTED;
-        } else if (hasExpired(node, now)) {
+        } else if (hasExpired(node, expirationTicker().read())) {
           cause[0] = RemovalCause.EXPIRED;
         } else if (node.containsValue(value)) {
           cause[0] = RemovalCause.EXPLICIT;
@@ -1870,19 +1864,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings("unchecked")
     V[] oldValue = (V[]) new Object[1];
-    long now = expirationTicker().read();
+    long now[] = new long[1];
     int weight = weigher.weigh(key, value);
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
         nodeKey[0] = n.getKey();
         oldValue[0] = n.getValue();
         oldWeight[0] = n.getWeight();
-        if ((nodeKey[0] == null) || (oldValue[0] == null) || hasExpired(n, now)) {
+        if ((nodeKey[0] == null) || (oldValue[0] == null)
+            || hasExpired(n, now[0] = expirationTicker().read())) {
           oldValue[0] = null;
           return n;
         }
 
-        long varTime = expireAfterUpdate(n, key, value, expiry(), now);
+        long varTime = expireAfterUpdate(n, key, value, expiry(), now[0]);
         if (value != oldValue[0]) {
           writer.write(nodeKey[0], value);
         }
@@ -1890,8 +1885,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         n.setWeight(weight);
 
         setVariableTime(n, varTime);
-        setAccessTime(n, now);
-        setWriteTime(n, now);
+        setAccessTime(n, now[0]);
+        setWriteTime(n, now[0]);
         return n;
       }
     });
@@ -1904,7 +1899,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (expiresAfterWrite() || (weightedDifference != 0)) {
       afterWrite(new UpdateTask(node, weightedDifference));
     } else {
-      afterRead(node, now, /* recordHit */ false);
+      afterRead(node, now[0], /* recordHit */ false);
     }
 
     if (hasRemovalListener() && (value != oldValue[0])) {
@@ -1926,18 +1921,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @SuppressWarnings("unchecked")
     V[] prevValue = (V[]) new Object[1];
     int[] oldWeight = new int[1];
-    long now = expirationTicker().read();
+    long[] now = new long[1];
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {
         nodeKey[0] = n.getKey();
         prevValue[0] = n.getValue();
         oldWeight[0] = n.getWeight();
-        if ((nodeKey[0] == null) || (prevValue[0] == null)
-            || hasExpired(n, now) || !n.containsValue(oldValue)) {
+        if ((nodeKey[0] == null) || (prevValue[0] == null) || !n.containsValue(oldValue)
+            || hasExpired(n, now[0] = expirationTicker().read())) {
           return n;
         }
 
-        long varTime = expireAfterUpdate(n, key, newValue, expiry(), now);
+        long varTime = expireAfterUpdate(n, key, newValue, expiry(), now[0]);
         if (newValue != prevValue[0]) {
           writer.write(key, newValue);
         }
@@ -1945,8 +1940,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         n.setWeight(weight);
 
         setVariableTime(n, varTime);
-        setAccessTime(n, now);
-        setWriteTime(n, now);
+        setAccessTime(n, now[0]);
+        setWriteTime(n, now[0]);
         replaced[0] = true;
       }
       return n;
@@ -1960,7 +1955,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (expiresAfterWrite() || (weightedDifference != 0)) {
       afterWrite(new UpdateTask(node, weightedDifference));
     } else {
-      afterRead(node, now, /* recordHit */ false);
+      afterRead(node, now[0], /* recordHit */ false);
     }
 
     if (hasRemovalListener() && (oldValue != newValue)) {
@@ -2543,11 +2538,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public void forEachRemaining(Consumer<? super K> action) {
       requireNonNull(action);
-      long now = cache.expirationTicker().read();
       Consumer<Node<K, V>> consumer = node -> {
         K key = node.getKey();
         V value = node.getValue();
-        if ((key != null) && (value != null) && !cache.hasExpired(node, now) && node.isAlive()) {
+        long now = cache.expirationTicker().read();
+        if ((key != null) && (value != null) && node.isAlive() && !cache.hasExpired(node, now)) {
           action.accept(key);
         }
       };
@@ -2558,11 +2553,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     public boolean tryAdvance(Consumer<? super K> action) {
       requireNonNull(action);
       boolean[] advanced = { false };
-      long now = cache.expirationTicker().read();
       Consumer<Node<K, V>> consumer = node -> {
         K key = node.getKey();
         V value = node.getValue();
-        if ((key != null) && (value != null) && !cache.hasExpired(node, now) && node.isAlive()) {
+        long now = cache.expirationTicker().read();
+        if ((key != null) && (value != null) && node.isAlive() && !cache.hasExpired(node, now)) {
           action.accept(key);
           advanced[0] = true;
         }
@@ -2682,11 +2677,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public void forEachRemaining(Consumer<? super V> action) {
       requireNonNull(action);
-      long now = cache.expirationTicker().read();
       Consumer<Node<K, V>> consumer = node -> {
         K key = node.getKey();
         V value = node.getValue();
-        if ((key != null) && (value != null) && !cache.hasExpired(node, now) && node.isAlive()) {
+        long now = cache.expirationTicker().read();
+        if ((key != null) && (value != null) && node.isAlive() && !cache.hasExpired(node, now)) {
           action.accept(value);
         }
       };
@@ -2894,11 +2889,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public void forEachRemaining(Consumer<? super Entry<K, V>> action) {
       requireNonNull(action);
-      long now = cache.expirationTicker().read();
       Consumer<Node<K, V>> consumer = node -> {
         K key = node.getKey();
         V value = node.getValue();
-        if ((key != null) && (value != null) && !cache.hasExpired(node, now) && node.isAlive()) {
+        long now = cache.expirationTicker().read();
+        if ((key != null) && (value != null) && node.isAlive() && !cache.hasExpired(node, now)) {
           action.accept(new WriteThroughEntry<>(cache, key, value));
         }
       };
@@ -2909,11 +2904,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     public boolean tryAdvance(Consumer<? super Entry<K, V>> action) {
       requireNonNull(action);
       boolean[] advanced = { false };
-      long now = cache.expirationTicker().read();
       Consumer<Node<K, V>> consumer = node -> {
         K key = node.getKey();
         V value = node.getValue();
-        if ((key != null) && (value != null) && !cache.hasExpired(node, now) && node.isAlive()) {
+        long now = cache.expirationTicker().read();
+        if ((key != null) && (value != null) && node.isAlive() && !cache.hasExpired(node, now)) {
           action.accept(new WriteThroughEntry<>(cache, key, value));
           advanced[0] = true;
         }

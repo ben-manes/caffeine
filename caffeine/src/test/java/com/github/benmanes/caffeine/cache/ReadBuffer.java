@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 /**
@@ -28,7 +29,7 @@ public abstract class ReadBuffer<E> implements Buffer<E> {
   public static final int BUFFER_MASK = BUFFER_SIZE - 1;
 
   final Consumer<E> consumer = any -> {};
-  final Lock evictionLock = new NonReentrantLock();
+  final Lock evictionLock = new ReentrantLock();
 
   /**
    * Attempts to record an event.

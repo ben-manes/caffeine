@@ -38,7 +38,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.mockito.Mockito;
@@ -566,7 +565,7 @@ public final class BoundedLocalCacheTest {
 
   void checkDrainBlocks(BoundedLocalCache<Integer, Integer> localCache, Runnable task) {
     AtomicBoolean done = new AtomicBoolean();
-    Lock lock = localCache.evictionLock;
+    ReentrantLock lock = localCache.evictionLock;
     lock.lock();
     try {
       executor.execute(() -> {
@@ -574,16 +573,10 @@ public final class BoundedLocalCacheTest {
         task.run();
         done.set(true);
       });
-      Awaits.await().until(() -> hasQueuedThreads(lock));
+      Awaits.await().until(lock::hasQueuedThreads);
     } finally {
       lock.unlock();
     }
     Awaits.await().untilTrue(done);
-  }
-
-  private boolean hasQueuedThreads(Lock lock) {
-    return (lock instanceof NonReentrantLock)
-        ? ((NonReentrantLock) lock).hasQueuedThreads()
-        : ((ReentrantLock) lock).hasQueuedThreads();
   }
 }

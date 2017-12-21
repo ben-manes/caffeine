@@ -25,7 +25,6 @@ import javax.cache.Cache;
 import javax.cache.Caching;
 import javax.cache.spi.CachingProvider;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
@@ -52,13 +51,12 @@ public final class OSGiTest {
   }
 
   @Test
-  @Ignore("Requires jsr107 cache-api v1.0.1 (see https://github.com/jsr107/jsr107spec/issues/326)")
   public void sanity() {
     CachingProvider cachingProvider = Caching.getCachingProvider(
         "com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider",
         getClass().getClassLoader());
-    Cache<Integer, Integer> cache = cachingProvider.getCacheManager()
-        .getCache("test-cache", Integer.class, Integer.class);
-    assertNull(cache.get(1));
+    Cache<String, Integer> cache = cachingProvider.getCacheManager()
+        .getCache("test-cache-2", String.class, Integer.class);
+    assertNull(cache.get("a"));
   }
 }

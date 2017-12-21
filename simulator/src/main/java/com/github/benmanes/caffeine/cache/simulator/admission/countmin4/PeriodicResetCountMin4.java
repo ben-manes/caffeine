@@ -44,7 +44,7 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
     if (doorkeeperSettings.enabled()) {
       FilterType filterType = settings.membershipFilter();
       double expectedInsertionsMultiplier = doorkeeperSettings.expectedInsertionsMultiplier();
-      long expectedInsertions = (long) expectedInsertionsMultiplier * settings.maximumSize();
+      long expectedInsertions = (long) (expectedInsertionsMultiplier * settings.maximumSize());
       doorkeeper = filterType.create(expectedInsertions, doorkeeperSettings.fpp(), config);
     } else {
       doorkeeper = Membership.disabled();

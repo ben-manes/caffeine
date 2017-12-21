@@ -33,6 +33,7 @@ jar.manifest {
   name 'com.github.ben-manes.caffeine.jcache'
   instruction 'Import-Package',
     'javax.cache.*',
+    'javax.management',
     'com.typesafe.config',
     'com.github.benmanes.caffeine.cache',
     'com.github.benmanes.caffeine.cache.stats'
@@ -40,6 +41,8 @@ jar.manifest {
     'com.github.benmanes.caffeine.jcache.spi',
     'com.github.benmanes.caffeine.jcache.copy',
     'com.github.benmanes.caffeine.jcache.configuration'
+  instruction 'Automatic-Module-Name',
+    'com.github.benmanes.caffeine.jcache'
 }
 
 task unzipJCacheJavaDoc(type: Copy, group: 'Build', description: 'Unzips the JCache JavaDoc') {

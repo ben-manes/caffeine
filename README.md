@@ -54,6 +54,7 @@ Use Caffeine in a community provided integration:
 Powering infrastructure near you:
  * [Cassandra][cassandra]:  Manage massive amounts of data, fast
  * [Infinispan][infinispan]: Distributed in-memory data grid
+ * [Akka][akka-http]: Build reactive applications easily
  * [Ratpack][ratpack]: Lean & powerful HTTP apps
  * [Corfu][corfu]: A cluster consistency platform
  * [Orbit][orbit]: Virtual actors on the JVM
@@ -70,7 +71,7 @@ Powering infrastructure near you:
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
 
 On the radar,
- * Early discussions with [HBase][hbase] and [Solr][solr]
+ * Early discussions with [HBase][hbase], [Solr][solr], and [Play!][play]
  * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], [transitory][transitory], and [ohc][ohc]
 
 ### Download
@@ -135,3 +136,5 @@ Snapshots of the development version are available in
 [orbit]: https://github.com/orbit/orbit
 [camel]: https://github.com/apache/camel/blob/master/components/camel-caffeine/src/main/docs/caffeine-cache-component.adoc
 [corfu]: https://github.com/CorfuDB/CorfuDB
+[akka-http]: https://doc.akka.io/docs/akka-http/current/common/caching.html
+[play]: https://github.com/playframework/playframework/pull/8025

@@ -22,6 +22,8 @@ jar.manifest {
     'com.github.benmanes.caffeine.cache.stats'
   instruction 'Export-Package',
     'com.github.benmanes.caffeine.guava'
+  instruction 'Automatic-Module-Name',
+    'com.github.benmanes.caffeine.guava'
 }
 
 tasks.withType(Javadoc) {

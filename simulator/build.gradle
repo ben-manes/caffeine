@@ -42,6 +42,12 @@ sonarqube {
   skipProject = true
 }
 
+jar.manifest {
+  name 'com.github.benmanes.caffeine.simulator'
+  instruction 'Automatic-Module-Name',
+    'com.github.benmanes.caffeine.simulator'
+}
+
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')
   // https://github.com/akka/akka/issues/21165

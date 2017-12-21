@@ -75,6 +75,8 @@ jar.manifest {
     'com.github.benmanes.caffeine.base',
     'com.github.benmanes.caffeine.cache',
     'com.github.benmanes.caffeine.cache.stats'
+  instruction 'Automatic-Module-Name',
+    'com.github.benmanes.caffeine'
 }
 
 jar.dependsOn(compileCodeGenJava)

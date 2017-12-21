@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.lang.reflect.Field;
 
+import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.google.common.base.Throwables;
 
 /**
@@ -25,6 +26,8 @@ import com.google.common.base.Throwables;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class RandomSeedEnforcer {
+  static final long PROBE = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
+  static final long SEED = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomSeed");
   static final int RANDOM_SEED = 1033096058;
 
   private RandomSeedEnforcer() {}
@@ -36,9 +39,16 @@ public final class RandomSeedEnforcer {
     }
 
     BoundedLocalCache<?, ?> map = (BoundedLocalCache<?, ?>) cache.asMap();
+    resetThreadLocalRandom();
     if (map.evicts()) {
       ensureRandomSeed(map.frequencySketch());
     }
+  }
+
+  /** Forces the eviction jitter to be predictable. */
+  private static void resetThreadLocalRandom() {
+    UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), PROBE, 0x9e3779b9);
+    UnsafeAccess.UNSAFE.putLong(Thread.currentThread(), SEED, RANDOM_SEED);
   }
 
   /** Force the random seed to a predictable value. */

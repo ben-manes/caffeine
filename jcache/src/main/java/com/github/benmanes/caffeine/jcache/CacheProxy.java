@@ -413,6 +413,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     if (statsEnabled) {
       if (added) {
         statistics.recordPuts(1L);
+        statistics.recordMisses(1L);
+      } else {
+        statistics.recordHits(1L);
       }
       statistics.recordPutTime(ticker.read() - start);
     }
