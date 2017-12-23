@@ -50,11 +50,13 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   private final Map<Integer, Integer> map = new HashMap<>();
 
   private int loads;
+  private int writes;
 
   @BeforeMethod
   public void beforeMethod() {
     map.clear();
     loads = 0;
+    writes = 0;
   }
 
   @Override
@@ -90,6 +92,14 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     assertThat(loads, is(2));
   }
 
+  @Test
+  public void writeOccursForInitialLoadOfEntry() {
+    map.put(KEY_1, 100);
+    jcache.invoke(KEY_1, this::process);
+    assertThat(loads, is(1));
+    assertThat(writes, is(1));
+  }
+
   private Object process(MutableEntry<Integer, Integer> entry, Object... arguments) {
     Integer value = MoreObjects.firstNonNull(entry.getValue(), 0);
     entry.setValue(++value);
@@ -100,6 +110,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
 
     @Override
     public void write(Entry<? extends Integer, ? extends Integer> entry) {
+      writes++;
       map.put(entry.getKey(), entry.getValue());
     }
 
