@@ -33,6 +33,7 @@ import javax.cache.processor.MutableEntry;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
+  private final boolean hasEntry;
   private final K key;
 
   private V value;
@@ -40,6 +41,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   private Optional<CacheLoader<K, V>> cacheLoader;
 
   public EntryProcessorEntry(K key, @Nullable V value, Optional<CacheLoader<K, V>> cacheLoader) {
+    this.hasEntry = (value != null);
     this.cacheLoader = cacheLoader;
     this.action = Action.NONE;
     this.value = value;
@@ -81,8 +83,8 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   @Override
   public void setValue(V value) {
     requireNonNull(value);
-    if ((action != Action.CREATED) && (action != Action.LOADED)) {
-      action = exists() ? Action.UPDATED : Action.CREATED;
+    if (action != Action.CREATED) {
+      action = (exists() && hasEntry) ? Action.UPDATED : Action.CREATED;
     }
     this.value = value;
   }
