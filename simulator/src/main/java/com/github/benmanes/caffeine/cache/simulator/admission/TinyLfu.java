@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
-import com.clearspring.analytics.stream.frequency.CountMin64TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.AdaptiveResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.IncrementalResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.PeriodicResetCountMin4;
+import com.github.benmanes.caffeine.cache.simulator.admission.countmin64.CountMin64TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.admission.perfect.PerfectFrequency;
 import com.github.benmanes.caffeine.cache.simulator.admission.table.RandomRemovalFrequencyTable;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheAdapter;

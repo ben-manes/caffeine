@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.membership;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.membership.bloom.AddThisBloomFilter;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.GuavaBloomFilter;
 import com.typesafe.config.Config;
@@ -27,14 +26,6 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum FilterType {
-  ADDTHIS {
-    @Override public Membership create(long expectedInsertions, double fpp, Config config) {
-      return new AddThisBloomFilter(expectedInsertions, fpp);
-    }
-    @Override public String toString() {
-      return "AddThis";
-    }
-  },
   CAFFEINE {
     @Override public Membership create(long expectedInsertions, double fpp, Config config) {
       int randomSeed = new BasicSettings(config).randomSeed();

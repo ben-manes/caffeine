@@ -10,7 +10,6 @@ dependencies {
   compile libraries.akka
   compile libraries.ycsb
   compile libraries.guava
-  compile libraries.stream
   compile libraries.fastutil
   compile libraries.flipTables
   compile benchmarkLibraries.ohc

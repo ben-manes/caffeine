@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.clearspring.analytics.stream.frequency;
+package com.github.benmanes.caffeine.cache.simulator.admission.countmin64;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
@@ -36,21 +36,17 @@ import com.typesafe.config.Config;
 public final class CountMin64TinyLfu implements Frequency {
   private static final int MAX_COUNT = 15;
 
-  final CountMinSketch sketch;
+  final boolean conservative;
+  final CountMin64 sketch;
   final int sampleSize;
   int size;
 
   public CountMin64TinyLfu(Config config) {
     BasicSettings settings = new BasicSettings(config);
+    sketch = new CountMin64(settings.tinyLfu().countMin64().eps(),
+        settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
+    conservative = settings.tinyLfu().conservative();
     sampleSize = 10 * settings.maximumSize();
-
-    if (settings.tinyLfu().conservative()) {
-      sketch = new ConservativeAddSketch(settings.tinyLfu().countMin64().eps(),
-          settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
-    } else {
-      sketch = new CountMinSketch(settings.tinyLfu().countMin64().eps(),
-          settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
-    }
   }
 
   /** Returns the estimated usage frequency of the item. */
@@ -62,7 +58,7 @@ public final class CountMin64TinyLfu implements Frequency {
   @Override
   public void increment(long o) {
     if (sketch.estimateCount(o) < MAX_COUNT) {
-      sketch.add(o, 1);
+      sketch.add(conservative, o, 1);
     }
     size += 1;
     resetIfNeeded();

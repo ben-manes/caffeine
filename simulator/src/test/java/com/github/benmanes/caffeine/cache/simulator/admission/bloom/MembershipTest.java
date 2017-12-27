@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
@@ -43,26 +44,28 @@ public class MembershipTest {
 
   static final boolean display = false;
 
-  @Test
-  public void bloomFilterTest() {
+  @Test(dataProvider = "filterTypes")
+  public void bloomFilterTest(FilterType filterType) {
     for (int capacity = 2 << 10; capacity < (2 << 22); capacity = capacity << 2) {
       long[] input = new Random().longs(capacity).distinct().toArray();
       List<String[]> rows = new ArrayList<>();
       int expectedInsertions = capacity / 2;
 
-      for (FilterType filterType : FilterType.values()) {
-        Membership filter = filterType.create(expectedInsertions, FPP, CONFIG);
-
-        int falsePostives = falsePostives(filter, input);
-        double falsePositiveRate = ((double) falsePostives / expectedInsertions);
-        assertThat(filterType.toString(), falsePositiveRate, is(lessThan(FPP + 0.01)));
-        rows.add(row(filterType, expectedInsertions, falsePostives, falsePositiveRate));
-      }
+      Membership filter = filterType.create(expectedInsertions, FPP, CONFIG);
+      int falsePostives = falsePostives(filter, input);
+      double falsePositiveRate = ((double) falsePostives / expectedInsertions);
+      assertThat(filterType.toString(), falsePositiveRate, is(lessThan(FPP + 0.01)));
+      rows.add(row(filterType, expectedInsertions, falsePostives, falsePositiveRate));
 
       if (display) {
         printTable(rows);
       }
     }
+  }
+
+  @DataProvider(name = "filterTypes")
+  public Object[] providesFilterTypes() {
+    return FilterType.values();
   }
 
   /** Returns the false positives based on an input of unique elements. */
