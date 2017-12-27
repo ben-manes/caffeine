@@ -793,7 +793,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Returns the updated expirable value after performing the post processing actions. */
-  @SuppressWarnings({"fallthrough", "PMD.MissingBreakInSwitch"})
+  @SuppressWarnings({"fallthrough", "PMD.MissingBreakInSwitch", "PMD.SwitchStmtsShouldHaveDefault"})
   private Expirable<V> postProcess(Expirable<V> expirable,
       EntryProcessorEntry<K, V> entry, long currentTimeMS) {
     switch (entry.getAction()) {

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -87,7 +88,7 @@ public final class Registry {
     registerTwoQueue(factories);
     registerAdaptive(factories);
     return factories.entrySet().stream().collect(
-        toMap(entry -> entry.getKey().toLowerCase(), Entry::getValue));
+        toMap(entry -> entry.getKey().toLowerCase(US), Entry::getValue));
   }
 
   /** Returns all of the policies that have been configured for simulation. */

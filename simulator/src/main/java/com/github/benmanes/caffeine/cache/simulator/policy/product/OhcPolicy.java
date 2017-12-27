@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Locale.US;
 import static java.util.stream.Collectors.toSet;
 
 import java.io.IOException;
@@ -104,7 +105,7 @@ public final class OhcPolicy implements Policy {
     public Set<Eviction> policy() {
       Set<Eviction> policies = new HashSet<>();
       for (String policy : config().getStringList("ohc.policy")) {
-        String name = policy.toLowerCase().replaceAll("[^a-z]", "");
+        String name = policy.toLowerCase(US).replaceAll("[^a-z]", "");
         if (name.equals("lru")) {
           policies.add(Eviction.LRU);
         } else if (name.equals("wtinylfu")) {

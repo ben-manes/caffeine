@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
@@ -158,7 +159,7 @@ public final class FrequentlyUsedPolicy implements Policy {
     LFU, MFU;
 
     public String label() {
-      return StringUtils.capitalize(name().toLowerCase());
+      return StringUtils.capitalize(name().toLowerCase(US));
     }
   }
 

@@ -79,7 +79,7 @@ public final class TwoQueuePolicy implements Policy {
   }
 
   @Override
-  @SuppressWarnings("PMD.ConfusingTernary")
+  @SuppressWarnings({"PMD.ConfusingTernary", "PMD.SwitchStmtsShouldHaveDefault"})
   public void record(long key) {
     // On accessing a page X :
     //   if X is in Am then

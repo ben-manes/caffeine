@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator;
 
+import static java.util.Locale.US;
+
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
@@ -40,7 +42,7 @@ public final class Synthetic {
   /** Returns a sequence of events based on the setting's distribution. */
   public static LongStream generate(BasicSettings settings) {
     int events = settings.synthetic().events();
-    switch (settings.synthetic().distribution().toLowerCase()) {
+    switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter":
         return counter(settings.synthetic().counter().start(), events);
       case "exponential":

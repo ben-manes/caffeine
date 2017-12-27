@@ -48,6 +48,7 @@ allprojects {
 
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
+  apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'propdeps-maven'
   apply plugin: 'eclipse'
   apply plugin: 'java'
@@ -61,11 +62,6 @@ subprojects {
 
   if (JavaVersion.current().isJava9Compatible()) {
     tasks.uploadArchives.enabled = false
-  } else {
-    apply plugin: 'net.ltgt.errorprone'
-    dependencies {
-      errorprone libraries.errorProneCore
-    }
   }
 
   sourceCompatibility = JavaVersion.VERSION_1_8
@@ -86,6 +82,8 @@ subprojects {
   dependencies {
     provided libraries.jsr305
     provided libraries.errorProneAnnotations
+
+    errorprone libraries.errorProneCore
 
     testCompile libraries.guava
     testCompile testLibraries.mockito

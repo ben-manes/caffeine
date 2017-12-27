@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
@@ -172,7 +173,7 @@ public final class LinkedPolicy implements Policy {
     };
 
     public String label() {
-      return StringUtils.capitalize(name().toLowerCase());
+      return StringUtils.capitalize(name().toLowerCase(US));
     }
 
     /** Performs any operations required by the policy after a node was successfully retrieved. */

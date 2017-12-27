@@ -210,6 +210,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   }
 
   @Override
+  @SuppressWarnings("MissingDefault")
   public boolean offer(final E e) {
     if (null == e) {
       throw new NullPointerException();
@@ -371,7 +372,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     return nextBuffer;
   }
 
-  private long nextArrayOffset(final long mask) {
+  private static long nextArrayOffset(final long mask) {
     return modifiedCalcElementOffset(mask + 2, Long.MAX_VALUE);
   }
 

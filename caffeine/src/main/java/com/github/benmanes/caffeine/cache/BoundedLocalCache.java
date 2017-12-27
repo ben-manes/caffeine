@@ -1864,7 +1864,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings("unchecked")
     V[] oldValue = (V[]) new Object[1];
-    long now[] = new long[1];
+    long[] now = new long[1];
     int weight = weigher.weigh(key, value);
     Node<K, V> node = data.computeIfPresent(nodeFactory.newLookupKey(key), (k, n) -> {
       synchronized (n) {

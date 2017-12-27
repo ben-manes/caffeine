@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sampled;
 
+import static java.util.Locale.US;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.ArrayList;
@@ -251,7 +252,7 @@ public final class SampledPolicy implements Policy {
     };
 
     public String label() {
-      return StringUtils.capitalize(name().toLowerCase());
+      return StringUtils.capitalize(name().toLowerCase(US));
     }
 
     /** Determines which node to evict. */
@@ -290,7 +291,7 @@ public final class SampledPolicy implements Policy {
       return config().getInt("sampled.size");
     }
     public Sample sampleStrategy() {
-      return Sample.valueOf(config().getString("sampled.strategy").toUpperCase());
+      return Sample.valueOf(config().getString("sampled.strategy").toUpperCase(US));
     }
   }
 }

@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
@@ -67,7 +68,7 @@ public class BasicSettings {
   }
 
   public FilterType membershipFilter() {
-    return FilterType.valueOf(config.getString("membership-filter").toUpperCase());
+    return FilterType.valueOf(config.getString("membership-filter").toUpperCase(US));
   }
 
   public TinyLfuSettings tinyLfu() {
@@ -103,7 +104,7 @@ public class BasicSettings {
 
   public final class ReportSettings {
     public ReportFormat format() {
-      return ReportFormat.valueOf(config().getString("report.format").toUpperCase());
+      return ReportFormat.valueOf(config().getString("report.format").toUpperCase(US));
     }
     public String sortBy() {
       return config().getString("report.sort-by").trim();
@@ -182,7 +183,7 @@ public class BasicSettings {
       return config().getStringList("files.paths");
     }
     public TraceFormat format() {
-      String format = config().getString("files.format").replace('-', '_').toUpperCase();
+      String format = config().getString("files.format").replace('-', '_').toUpperCase(US);
       return TraceFormat.valueOf(format);
     }
   }

@@ -83,7 +83,7 @@ ext {
     jmh: '0.4.5',
     jmhReport: '0.7.0',
     nexus: '2.3.1',
-    pmd: '5.8.1',
+    pmd: '6.0.0',
     propdeps: '0.0.10.RELEASE',
     semanticVersioning: '1.1.0',
     shadow: '2.0.2',

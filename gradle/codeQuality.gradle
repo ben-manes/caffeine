@@ -74,6 +74,26 @@ sonarqube {
 }
 tasks.sonarqube.dependsOn(jacocoMerge)
 
+tasks.withType(JavaCompile) {
+  options.compilerArgs += [
+    '-Xep:ClassName',
+    '-Xep:ComparisonContractViolated',
+    '-Xep:DepAnn',
+    '-Xep:DivZero',
+    '-Xep:LockMethodChecker',
+    '-Xep:LongLiteralLowerCaseSuffix',
+    '-Xep:NoAllocation',
+    '-Xep:NumericEquality',
+    '-Xep:UnlockMethod',
+    '-Xep:FunctionalInterfaceClash',
+    '-Xep:MissingDefault',
+    '-Xep:RedundantThrows',
+    '-Xep:UnnecessaryDefaultInEnumSwitch',
+    '-Xep:MixedArrayDimensions',
+    '-Xep:RemoveUnusedImports',
+  ]
+}
+
 tasks.withType(Test) {
   if (System.properties.containsKey('debug')) {
     jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'

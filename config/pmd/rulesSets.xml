@@ -5,121 +5,97 @@
     xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
   <description>PMD rules for Caffeine</description>
 
-  <rule ref="rulesets/java/basic.xml">
-    <exclude name="AvoidBranchingStatementAsLastInLoop"/>
-  </rule>
-
-  <rule ref="rulesets/java/braces.xml"/>
-
-  <rule ref="rulesets/java/clone.xml"/>
-
-  <rule ref="rulesets/java/codesize.xml">
-    <exclude name="NcssTypeCount"/>
-    <exclude name="TooManyMethods"/>
-    <exclude name="ExcessivePublicCount"/>
-    <exclude name="ExcessiveClassLength"/>
-    <exclude name="ExcessiveMethodLength"/>
-    
-    <exclude name="NPathComplexity"/>
-    <exclude name="CyclomaticComplexity"/>
-    <exclude name="StdCyclomaticComplexity"/>
-    <exclude name="ModifiedCyclomaticComplexity"/>
-  </rule>
-
-  <rule ref="rulesets/java/comments.xml">
-    <exclude name="CommentSize"/>
-    <exclude name="CommentRequired"/>
-    <exclude name="CommentDefaultAccessModifier"/>
-  </rule>
-
-  <rule ref="rulesets/java/coupling.xml">
-    <exclude name="LawOfDemeter"/>
-    <exclude name="ExcessiveImports"/>
-    <exclude name="LoosePackageCoupling"/>
-    <exclude name="CouplingBetweenObjects"/>
-  </rule>
-
-  <rule ref="rulesets/java/design.xml">
-    <exclude name="GodClass"/>
+  <rule ref="category/java/bestpractices.xml">
     <exclude name="UseVarargs"/>
-    <exclude name="ConfusingTernary"/>
-    <exclude name="OptimizableToArrayCall"/>
-    <exclude name="CompareObjectsWithEquals"/>
-    <exclude name="UncommentedEmptyMethodBody"/>
+    <exclude name="SystemPrintln"/>
+    <exclude name="OneDeclarationPerLine"/>
     <exclude name="AvoidReassigningParameters"/>
-    <exclude name="UncommentedEmptyConstructor"/>
-    <exclude name="UnnecessaryLocalBeforeReturn"/>
-    <exclude name="UseLocaleWithCaseConversions"/>
-    <exclude name="SwitchStmtsShouldHaveDefault"/>
-    <exclude name="AvoidSynchronizedAtMethodLevel"/>
-    <exclude name="ConstructorCallsOverridableMethod"/>
     <exclude name="PositionLiteralsFirstInComparisons"/>
-    <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
-    <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
     <exclude name="PositionLiteralsFirstInCaseInsensitiveComparisons"/>
   </rule>
-  <rule ref="rulesets/java/design.xml/ConfusingTernary">
+
+  <rule ref="category/java/codestyle.xml">
+    <exclude name="LongVariable"/>
+    <exclude name="OnlyOneReturn"/>
+    <exclude name="ShortVariable"/>
+    <exclude name="AbstractNaming"/>
+    <exclude name="DefaultPackage"/>
+    <exclude name="ShortClassName"/>
+    <exclude name="ConfusingTernary"/>
+    <exclude name="DontImportJavaLang"/>
+    <exclude name="UselessParentheses"/>
+    <exclude name="PrematureDeclaration"/>
+    <exclude name="TooManyStaticImports"/>
+    <exclude name="AtLeastOneConstructor"/>
+    <exclude name="CallSuperInConstructor"/>
+    <exclude name="LocalVariableCouldBeFinal"/>
+    <exclude name="VariableNamingConventions"/>
+    <exclude name="MethodArgumentCouldBeFinal"/>
+    <exclude name="CommentDefaultAccessModifier"/>
+    <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
+    <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
+  </rule>
+  <rule ref="category/java/codestyle.xml/ConfusingTernary">
     <properties>
       <property name="ignoreElseIf" value="true"/>
     </properties>
   </rule>
 
-  <rule ref="rulesets/java/empty.xml">
-    <exclude name="EmptyWhileStmt"/>
-  </rule>
-
-  <rule ref="rulesets/java/finalizers.xml"/>
-
-  <rule ref="rulesets/java/imports.xml">
-    <exclude name="DontImportJavaLang"/>
-    <exclude name="TooManyStaticImports"/>
-  </rule>
-
-  <rule ref="rulesets/java/naming.xml">
-    <exclude name="LongVariable"/>
-    <exclude name="ShortVariable"/>
-    <exclude name="ShortClassName"/>
-    <exclude name="AbstractNaming"/>
-    <exclude name="VariableNamingConventions"/>
-    <exclude name="AvoidFieldNameMatchingMethodName"/>
-  </rule>
-
-  <rule ref="rulesets/java/optimizations.xml">
-    <exclude name="PrematureDeclaration"/>
-    <exclude name="LocalVariableCouldBeFinal"/>
-    <exclude name="MethodArgumentCouldBeFinal"/>
-    <exclude name="AvoidInstantiatingObjectsInLoops"/>
-  </rule>
-
-  <rule ref="rulesets/java/strictexception.xml">
-    <exclude name="AvoidCatchingThrowable"/>
+  <rule ref="category/java/design.xml">
+    <exclude name="GodClass"/>
+    <exclude name="DataClass"/>
+    <exclude name="NcssCount"/>
+    <exclude name="LawOfDemeter"/>
+    <exclude name="TooManyMethods"/>
+    <exclude name="NPathComplexity"/>
+    <exclude name="ExcessiveImports"/>
+    <exclude name="CyclomaticComplexity"/>
+    <exclude name="ExcessiveClassLength"/>
+    <exclude name="ExcessivePublicCount"/>
+    <exclude name="LoosePackageCoupling"/>
+    <exclude name="ExcessiveMethodLength"/>
+    <exclude name="CouplingBetweenObjects"/>
     <exclude name="AvoidRethrowingException"/>
     <exclude name="AvoidCatchingGenericException"/>
     <exclude name="AvoidThrowingRawExceptionTypes"/>
   </rule>
 
-  <rule ref="rulesets/java/strings.xml">
-    <exclude name="AvoidDuplicateLiterals"/>
+  <rule ref="category/java/documentation.xml">
+    <exclude name="CommentSize"/>
+    <exclude name="CommentRequired"/>
+    <exclude name="UncommentedEmptyMethodBody"/>
+    <exclude name="UncommentedEmptyConstructor"/>
   </rule>
-  <rule ref="rulesets/java/strings.xml/AvoidDuplicateLiterals">
+
+  <rule ref="category/java/errorprone.xml">
+    <exclude name="DontImportSun"/>
+    <exclude name="EmptyWhileStmt"/>
+    <exclude name="NullAssignment"/>
+    <exclude name="AssignmentInOperand"/>
+    <exclude name="UseProperClassLoader"/>
+    <exclude name="AvoidCatchingThrowable"/>
+    <exclude name="AvoidDuplicateLiterals"/>
+    <exclude name="DataflowAnomalyAnalysis"/>
+    <exclude name="CompareObjectsWithEquals"/>
+    <exclude name="AvoidLiteralsInIfCondition"/>
+    <exclude name="BeanMembersShouldSerialize"/>
+    <exclude name="AvoidFieldNameMatchingMethodName"/>
+    <exclude name="ConstructorCallsOverridableMethod"/>
+    <exclude name="AvoidBranchingStatementAsLastInLoop"/>
+  </rule>
+  <rule ref="category/java/errorprone.xml/AvoidDuplicateLiterals">
     <properties>
       <property name="skipAnnotations" value="true"/>
     </properties>
   </rule>
 
-  <rule ref="rulesets/java/sunsecure.xml"/>
-
-  <rule ref="rulesets/java/typeresolution.xml"/>
-
-  <rule ref="rulesets/java/unnecessary.xml">
-    <exclude name="UselessParentheses"/>  
+  <rule ref="category/java/multithreading.xml">
+    <exclude name="DoNotUseThreads"/>
+    <exclude name="AvoidUsingVolatile"/>
+    <exclude name="UseConcurrentHashMap"/>
   </rule>
 
-  <rule ref="rulesets/java/unusedcode.xml">
-    <exclude name="UnusedPrivateMethod"/>
+  <rule ref="category/java/performance.xml">
+    <exclude name="AvoidInstantiatingObjectsInLoops"/>
   </rule>
-
-  <!--
-  <rule ref="rulesets/java/controversial.xml"/>
-  -->
 </ruleset>

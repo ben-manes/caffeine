@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import static java.util.Locale.US;
+
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -79,7 +81,7 @@ public final class TCachePolicy implements Policy {
       super(config);
     }
     public <K, V> EvictionInterface<K, V> policy() {
-      String policy = config().getString("tcache.policy").toLowerCase();
+      String policy = config().getString("tcache.policy").toLowerCase(US);
       switch (policy) {
         case "lfu":
           return new LFUEviction<>();

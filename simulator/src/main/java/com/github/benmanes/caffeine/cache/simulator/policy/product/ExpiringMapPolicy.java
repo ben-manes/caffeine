@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import static java.util.Locale.US;
+
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -73,7 +75,7 @@ public final class ExpiringMapPolicy implements Policy {
       super(config);
     }
     public ExpirationPolicy policy() {
-      String policy = config().getString("expiring-map.policy").toLowerCase();
+      String policy = config().getString("expiring-map.policy").toLowerCase(US);
       switch (policy) {
         case "fifo":
           return ExpirationPolicy.CREATED;

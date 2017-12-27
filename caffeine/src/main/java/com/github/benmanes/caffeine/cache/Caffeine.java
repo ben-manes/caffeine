@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.SoftReference;
@@ -979,10 +980,10 @@ public final class Caffeine<K, V> {
       s.append("refreshNanos=").append(refreshNanos).append("ns, ");
     }
     if (keyStrength != null) {
-      s.append("keyStrength=").append(keyStrength.toString().toLowerCase()).append(", ");
+      s.append("keyStrength=").append(keyStrength.toString().toLowerCase(US)).append(", ");
     }
     if (valueStrength != null) {
-      s.append("valueStrength=").append(valueStrength.toString().toLowerCase()).append(", ");
+      s.append("valueStrength=").append(valueStrength.toString().toLowerCase(US)).append(", ");
     }
     if (removalListener != null) {
       s.append("removalListener, ");

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import static java.util.Locale.US;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
@@ -44,7 +45,7 @@ public final class CollisionPolicy implements Policy {
 
   public CollisionPolicy(CollisionSettings settings, Density density) {
     policyStats = new PolicyStats(String.format("product.Collision (%s)",
-        StringUtils.capitalize(density.name().toLowerCase())));
+        StringUtils.capitalize(density.name().toLowerCase(US))));
     maximumSize = settings.maximumSize();
 
     CollisionBuilder<Object> builder = CollisionCache
@@ -111,7 +112,7 @@ public final class CollisionPolicy implements Policy {
     }
     public Stream<Density> density() {
       return config().getStringList("collision.density").stream()
-          .map(denity -> Density.valueOf(denity.toUpperCase()));
+          .map(denity -> Density.valueOf(denity.toUpperCase(US)));
     }
   }
 }

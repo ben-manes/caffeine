@@ -19,11 +19,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -81,9 +82,9 @@ public abstract class AbstractTraceReader implements TraceReader {
 
   /** Returns the input stream for the raw file. */
   private InputStream openFile(String filePath) throws IOException {
-    File file = new File(filePath);
-    if (file.exists()) {
-      return new FileInputStream(file);
+    Path file = Paths.get(filePath);
+    if (Files.exists(file)) {
+      return Files.newInputStream(file);
     }
     InputStream input = getClass().getResourceAsStream(filePath);
     checkArgument(input != null, "Could not find file: " + filePath);

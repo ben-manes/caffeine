@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbin
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.PROTECTED;
 import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType.WINDOW;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Locale.US;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.HashSet;
@@ -72,7 +73,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
   public HillClimberWindowTinyLfuPolicy(HillClimberType strategy, double percentMain,
       HillClimberWindowTinyLfuSettings settings) {
     String name = String.format("sketch.HillClimberWindowTinyLfu (%s %.0f%%)",
-        strategy.name().toLowerCase(), 100 * (1.0 - percentMain));
+        strategy.name().toLowerCase(US), 100 * (1.0 - percentMain));
 
     this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(settings.config(), policyStats);
@@ -359,7 +360,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     }
     public Set<HillClimberType> strategy() {
       return config().getStringList("hill-climber-window-tiny-lfu.strategy").stream()
-          .map(strategy -> strategy.replace('-', '_').toUpperCase())
+          .map(strategy -> strategy.replace('-', '_').toUpperCase(US))
           .map(HillClimberType::valueOf)
           .collect(toSet());
     }

@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NavigableMap;
@@ -204,10 +205,7 @@ public final class LocalCacheFactoryGenerator {
 
   private Set<List<Object>> combinations() {
     Set<Boolean> options = ImmutableSet.of(true, false);
-    List<Set<Boolean>> sets = new ArrayList<>();
-    for (int i = 0; i < featureByIndex.length; i++) {
-      sets.add(options);
-    }
+    List<Set<Boolean>> sets = Collections.nCopies(featureByIndex.length, options);
     return Sets.cartesianProduct(sets);
   }
 

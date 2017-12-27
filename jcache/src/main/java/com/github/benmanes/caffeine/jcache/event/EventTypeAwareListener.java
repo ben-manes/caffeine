@@ -48,6 +48,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   }
 
   /** Returns if the backing listener consumes this type of event. */
+  @SuppressWarnings("PMD.SwitchStmtsShouldHaveDefault")
   public boolean isCompatible(@Nonnull EventType eventType) {
     switch (eventType) {
       case CREATED:
@@ -63,6 +64,7 @@ final class EventTypeAwareListener<K, V> implements CacheEntryCreatedListener<K,
   }
 
   /** Processes the event and logs if an exception is thrown. */
+  @SuppressWarnings("PMD.SwitchStmtsShouldHaveDefault")
   public void dispatch(@Nonnull JCacheEntryEvent<K, V> event) {
     try {
       if (event.getSource().isClosed()) {

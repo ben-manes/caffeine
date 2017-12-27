@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.simulator.report;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Locale.US;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -81,7 +82,7 @@ public abstract class TextReporter implements Reporter {
   }
 
   private Comparator<PolicyStats> makeComparator() {
-    switch (settings.report().sortBy().toLowerCase()) {
+    switch (settings.report().sortBy().toLowerCase(US)) {
       case "policy":
         return Comparator.comparing(PolicyStats::name);
       case "hit rate":
