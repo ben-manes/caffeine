@@ -70,7 +70,7 @@ subprojects {
   version.with {
     major = 2 // incompatible API changes
     minor = 6 // backwards-compatible additions
-    patch = 1 // backwards-compatible bug fixes
+    patch = 2 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
