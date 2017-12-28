@@ -23,9 +23,10 @@ tasks.withType(JavaCompile) {
 }
 
 javadoc.options.links(
-  'http://docs.oracle.com/javase/8/docs/api/',
-  'http://typesafehub.github.com/config/latest/api/',
-  "http://google.github.io/guava/releases/${versions.guava}/api/docs/")
+  'https://lightbend.github.io/config/latest/api/',
+  "https://google.github.io/guava/releases/${versions.guava}/api/docs/",
+  "https://docs.oracle.com/javase/${JavaVersion.current().majorVersion}/docs/api/",
+  )
 
 checkstyle {
   showViolations = true
