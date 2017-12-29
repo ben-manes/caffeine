@@ -15,8 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Locale.US;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.irr.FrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.LirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
@@ -79,7 +80,7 @@ public final class Registry {
 
   private static Map<String, Function<Config, Set<Policy>>> makeRegistry() {
     Map<String, Function<Config, Set<Policy>>> factories = new HashMap<>();
-    registerIRR(factories);
+    registerIrr(factories);
     registerLinked(factories);
     registerSketch(factories);
     registerOptimal(factories);
@@ -94,7 +95,7 @@ public final class Registry {
   /** Returns all of the policies that have been configured for simulation. */
   public static Set<Policy> policies(BasicSettings settings) {
     return settings.policies().stream()
-        .map(name -> requireNonNull(FACTORIES.get(name), name + " not found"))
+        .map(name -> checkNotNull(FACTORIES.get(name), "%s not found", name))
         .flatMap(factory -> factory.apply(settings.config()).stream())
         .collect(toSet());
   }
@@ -148,7 +149,8 @@ public final class Registry {
     factories.put("sketch.TinyCache_GhostCache", TinyCacheWithGhostCachePolicy::policies);
   }
 
-  private static void registerIRR(Map<String, Function<Config, Set<Policy>>> factories) {
+  private static void registerIrr(Map<String, Function<Config, Set<Policy>>> factories) {
+    factories.put("irr.Frd", FrdPolicy::policies);
     factories.put("irr.Lirs", LirsPolicy::policies);
     factories.put("irr.ClockPro", ClockProPolicy::policies);
   }

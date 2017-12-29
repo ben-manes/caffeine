@@ -189,7 +189,7 @@ public final class LirsPolicy implements Policy {
     node.moveToTop(StackType.Q);
   }
 
-  /** Records a miss when the hot set is full. */
+  /** Records a miss when the hot and cold set are full. */
   private void onFullMiss(Node node) {
     // Upon accessing an HIR non-resident block X. This is a miss. We remove the HIR resident block
     // at the bottom of stack Q (it then becomes a non-resident block) and evict it from the cache.
@@ -235,17 +235,16 @@ public final class LirsPolicy implements Policy {
     // located above it will not have a chance to change their status from HIR to LIR since their
     // recencies are larger than the new maximum recency of the LIR blocks.
     for (;;) {
-      policyStats.recordOperation();
-
       Node bottom = headS.prevS;
       if ((bottom == headS) || (bottom.status == Status.LIR)) {
         break;
       } else if (bottom.status == Status.HIR_NON_RESIDENT) {
-        // the map only needs to hold non-resident entries that are on the stack
+        // The map only needs to hold non-resident entries that are on the stack
         bottom.removeFrom(StackType.NR);
         data.remove(bottom.key);
       }
       bottom.removeFrom(StackType.S);
+      policyStats.recordOperation();
     }
 
     // Bound the number of non-resident entries. While not described in the paper, the author's
