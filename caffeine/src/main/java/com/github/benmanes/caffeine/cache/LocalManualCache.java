@@ -50,7 +50,7 @@ interface LocalManualCache<C extends LocalCache<K, V>, K, V> extends Cache<K, V>
   }
 
   @Override
-  default V get(K key, Function<? super K, ? extends V> mappingFunction) {
+  default @Nullable V get(K key, Function<? super K, ? extends V> mappingFunction) {
     return cache().computeIfAbsent(key, mappingFunction);
   }
 

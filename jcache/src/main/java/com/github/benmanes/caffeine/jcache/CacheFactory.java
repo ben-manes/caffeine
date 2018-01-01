@@ -129,9 +129,6 @@ final class CacheFactory {
     final Caffeine<Object, Object> caffeine;
     final CaffeineConfiguration<K, V> config;
 
-    CacheLoader<K, V> cacheLoader;
-    JCacheEvictionListener<K, V> evictionListener;
-
     Builder(String cacheName, CaffeineConfiguration<K, V> config) {
       this.config = config;
       this.cacheName = cacheName;
@@ -143,9 +140,6 @@ final class CacheFactory {
       this.dispatcher = new EventDispatcher<>(executor);
 
       caffeine.executor(executor);
-      if (config.getCacheLoaderFactory() != null) {
-        cacheLoader = config.getCacheLoaderFactory().create();
-      }
       config.getCacheEntryListenerConfigurations().forEach(dispatcher::register);
     }
 
@@ -158,8 +152,10 @@ final class CacheFactory {
       evicts |= configureExpireAfterAccess();
       evicts |= configureExpireVariably();
 
+      JCacheEvictionListener<K, V> evictionListener = null;
       if (evicts) {
-        configureEvictionListener();
+        evictionListener = new JCacheEvictionListener<>(dispatcher, statistics);
+        caffeine.writer(evictionListener);
       }
 
       CacheProxy<K, V> cache;
@@ -170,7 +166,7 @@ final class CacheFactory {
         cache = newCacheProxy();
       }
 
-      if (evicts) {
+      if (evictionListener != null) {
         evictionListener.setCache(cache);
       }
       return cache;
@@ -178,21 +174,24 @@ final class CacheFactory {
 
     /** Determines if the cache should operate in read through mode. */
     private boolean isReadThrough() {
-      return config.isReadThrough() && (cacheLoader != null);
+      return config.isReadThrough() && (config.getCacheLoaderFactory() != null);
     }
 
     /** Creates a cache that does not read through on a cache miss. */
     private CacheProxy<K, V> newCacheProxy() {
+      Optional<CacheLoader<K, V>> cacheLoader =
+          Optional.ofNullable(config.getCacheLoaderFactory()).map(Factory::create);
       return new CacheProxy<>(cacheName, executor, cacheManager, config, caffeine.build(),
-          dispatcher, Optional.ofNullable(cacheLoader), expiryPolicy, ticker, statistics);
+          dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
     }
 
     /** Creates a cache that reads through on a cache miss. */
     private CacheProxy<K, V> newLoadingCacheProxy() {
+      CacheLoader<K, V> cacheLoader = config.getCacheLoaderFactory().create();
       JCacheLoaderAdapter<K, V> adapter = new JCacheLoaderAdapter<>(
           cacheLoader, dispatcher, expiryPolicy, ticker, statistics);
-      CacheProxy<K, V> cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager,
-          config, caffeine.build(adapter), dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
+      CacheProxy<K, V> cache = new LoadingCacheProxy<>(cacheName, executor, cacheManager, config,
+          caffeine.build(adapter), dispatcher, cacheLoader, expiryPolicy, ticker, statistics);
       adapter.setCache(cache);
       return cache;
     }
@@ -259,12 +258,6 @@ final class CacheFactory {
       if (config.getRefreshAfterWrite().isPresent()) {
         caffeine.refreshAfterWrite(config.getRefreshAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
       }
-    }
-
-    /** Configures the removal listener. */
-    private void configureEvictionListener() {
-      evictionListener = new JCacheEvictionListener<>(dispatcher, statistics);
-      caffeine.writer(evictionListener);
     }
   }
 }

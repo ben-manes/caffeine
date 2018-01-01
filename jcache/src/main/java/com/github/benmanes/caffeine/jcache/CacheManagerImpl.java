@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.Nullable;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
@@ -75,7 +76,7 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
-  public ClassLoader getClassLoader() {
+  public @Nullable ClassLoader getClassLoader() {
     return classLoaderReference.get();
   }
 
@@ -107,7 +108,8 @@ public final class CacheManagerImpl implements CacheManager {
   }
 
   @Override
-  public <K, V> Cache<K, V> getCache(String cacheName, Class<K> keyType, Class<V> valueType) {
+  public @Nullable <K, V> Cache<K, V> getCache(
+      String cacheName, Class<K> keyType, Class<V> valueType) {
     CacheProxy<K, V> cache = getCache(cacheName);
     if (cache == null) {
       return null;

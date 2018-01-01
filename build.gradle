@@ -83,8 +83,6 @@ subprojects {
     provided libraries.jsr305
     provided libraries.errorProneAnnotations
 
-    errorprone libraries.errorProneCore
-
     testCompile libraries.guava
     testCompile testLibraries.mockito
     testCompile testLibraries.hamcrest

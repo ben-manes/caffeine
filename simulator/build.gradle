@@ -47,6 +47,8 @@ jar.manifest {
     'com.github.benmanes.caffeine.simulator'
 }
 
+compileJava.options.compilerArgs += [ '-Xep:NullAway:OFF' ]
+
 tasks.withType(Pmd) {
   enabled &= JavaVersion.current().isJava9Compatible()
 }

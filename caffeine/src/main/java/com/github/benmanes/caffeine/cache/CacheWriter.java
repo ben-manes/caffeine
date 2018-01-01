@@ -76,5 +76,5 @@ enum DisabledWriter implements CacheWriter<Object, Object> {
   public void write(Object key, Object value) {}
 
   @Override
-  public void delete(Object key, Object value, RemovalCause cause) {}
+  public void delete(Object key, @Nullable Object value, RemovalCause cause) {}
 }

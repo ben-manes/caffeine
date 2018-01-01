@@ -18,8 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -61,7 +61,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @throws RuntimeException or Error if the {@link CacheLoader} does so, in which case the mapping
    *         is left unestablished
    */
-  @CheckForNull
+  @Nullable
   V get(@Nonnull K key);
 
   /**

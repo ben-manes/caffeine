@@ -78,17 +78,17 @@ public final class CaffeineSpec {
   long maximumSize = UNSET_INT;
   boolean recordStats;
 
-  Strength keyStrength;
-  Strength valueStrength;
+  @Nullable Strength keyStrength;
+  @Nullable Strength valueStrength;
 
   long expireAfterAccessDuration = UNSET_INT;
-  TimeUnit expireAfterAccessTimeUnit;
+  @Nullable TimeUnit expireAfterAccessTimeUnit;
 
   long expireAfterWriteDuration = UNSET_INT;
-  TimeUnit expireAfterWriteTimeUnit;
+  @Nullable TimeUnit expireAfterWriteTimeUnit;
 
   long refreshAfterWriteDuration = UNSET_INT;
-  TimeUnit refreshAfterWriteTimeUnit;
+  @Nullable TimeUnit refreshAfterWriteTimeUnit;
 
   private CaffeineSpec(String specification) {
     this.specification = requireNonNull(specification);
@@ -123,13 +123,13 @@ public final class CaffeineSpec {
         throw new IllegalStateException();
       }
     }
-    if (expireAfterAccessDuration != UNSET_INT) {
+    if (expireAfterAccessTimeUnit != null) {
       builder.expireAfterAccess(expireAfterAccessDuration, expireAfterAccessTimeUnit);
     }
-    if (expireAfterWriteDuration != UNSET_INT) {
+    if (expireAfterWriteTimeUnit != null) {
       builder.expireAfterWrite(expireAfterWriteDuration, expireAfterWriteTimeUnit);
     }
-    if (refreshAfterWriteDuration != UNSET_INT) {
+    if (refreshAfterWriteTimeUnit != null) {
       builder.refreshAfterWrite(refreshAfterWriteDuration, refreshAfterWriteTimeUnit);
     }
     if (recordStats) {
@@ -159,7 +159,6 @@ public final class CaffeineSpec {
     }
 
     String[] keyAndValue = option.split(SPLIT_KEY_VALUE);
-    requireArgument(keyAndValue.length != 0, "blank key-value pair");
     requireArgument(keyAndValue.length <= 2,
         "key-value pair %s with more than one equals sign", option);
 
@@ -208,14 +207,14 @@ public final class CaffeineSpec {
   }
 
   /** Configures the initial capacity. */
-  void initialCapacity(String key, String value) {
+  void initialCapacity(String key, @Nullable String value) {
     requireArgument(initialCapacity == UNSET_INT,
         "initial capacity was already set to %,d", initialCapacity);
     initialCapacity = parseInt(key, value);
   }
 
   /** Configures the maximum size. */
-  void maximumSize(String key, String value) {
+  void maximumSize(String key, @Nullable String value) {
     requireArgument(maximumSize == UNSET_INT,
         "maximum size was already set to %,d", maximumSize);
     requireArgument(maximumWeight == UNSET_INT,
@@ -224,7 +223,7 @@ public final class CaffeineSpec {
   }
 
   /** Configures the maximum size. */
-  void maximumWeight(String key, String value) {
+  void maximumWeight(String key, @Nullable String value) {
     requireArgument(maximumWeight == UNSET_INT,
         "maximum weight was already set to %,d", maximumWeight);
     requireArgument(maximumSize == UNSET_INT,
@@ -247,24 +246,24 @@ public final class CaffeineSpec {
   }
 
   /** Configures expire after access. */
-  void expireAfterAccess(String key, String value) {
+  void expireAfterAccess(String key, @Nullable String value) {
     requireArgument(expireAfterAccessDuration == UNSET_INT, "expireAfterAccess was already set");
-    expireAfterAccessTimeUnit = parseTimeUnit(key, value);
     expireAfterAccessDuration = parseDuration(key, value);
+    expireAfterAccessTimeUnit = parseTimeUnit(key, value);
   }
 
   /** Configures expire after write. */
-  void expireAfterWrite(String key, String value) {
+  void expireAfterWrite(String key, @Nullable String value) {
     requireArgument(expireAfterWriteDuration == UNSET_INT, "expireAfterWrite was already set");
-    expireAfterWriteTimeUnit = parseTimeUnit(key, value);
     expireAfterWriteDuration = parseDuration(key, value);
+    expireAfterWriteTimeUnit = parseTimeUnit(key, value);
   }
 
   /** Configures refresh after write. */
-  void refreshAfterWrite(String key, String value) {
+  void refreshAfterWrite(String key, @Nullable String value) {
     requireArgument(refreshAfterWriteDuration == UNSET_INT, "refreshAfterWrite was already set");
-    refreshAfterWriteTimeUnit = parseTimeUnit(key, value);
     refreshAfterWriteDuration = parseDuration(key, value);
+    refreshAfterWriteTimeUnit = parseTimeUnit(key, value);
   }
 
   /** Configures the value as weak or soft references. */
@@ -275,8 +274,8 @@ public final class CaffeineSpec {
   }
 
   /** Returns a parsed int value. */
-  static int parseInt(String key, String value) {
-    requireArgument(value != null && !value.isEmpty(), "value of key %s was omitted", key);
+  static int parseInt(String key, @Nullable String value) {
+    requireArgument((value != null) && !value.isEmpty(), "value of key %s was omitted", key);
     try {
       return Integer.parseInt(value);
     } catch (NumberFormatException e) {
@@ -286,8 +285,8 @@ public final class CaffeineSpec {
   }
 
   /** Returns a parsed long value. */
-  static long parseLong(String key, String value) {
-    requireArgument(value != null && !value.isEmpty(), "value of key %s was omitted", key);
+  static long parseLong(String key, @Nullable String value) {
+    requireArgument((value != null) && !value.isEmpty(), "value of key %s was omitted", key);
     try {
       return Long.parseLong(value);
     } catch (NumberFormatException e) {
@@ -297,14 +296,17 @@ public final class CaffeineSpec {
   }
 
   /** Returns a parsed duration value. */
-  static long parseDuration(String key, String value) {
-    requireArgument(value != null && !value.isEmpty(), "value of key %s omitted", key);
-    return parseLong(key, value.substring(0, value.length() - 1));
+  static long parseDuration(String key, @Nullable String value) {
+    requireArgument((value != null) && !value.isEmpty(), "value of key %s omitted", key);
+    @SuppressWarnings("NullAway")
+    String duration = value.substring(0, value.length() - 1);
+    return parseLong(key, duration);
   }
 
   /** Returns a parsed {@link TimeUnit} value. */
-  static TimeUnit parseTimeUnit(String key, String value) {
-    requireArgument(value != null && !value.isEmpty(), "value of key %s omitted", key);
+  static TimeUnit parseTimeUnit(String key, @Nullable String value) {
+    requireArgument((value != null) && !value.isEmpty(), "value of key %s omitted", key);
+    @SuppressWarnings("NullAway")
     char lastChar = Character.toLowerCase(value.charAt(value.length() - 1));
     switch (lastChar) {
       case 'd':

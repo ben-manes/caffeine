@@ -143,7 +143,7 @@ public abstract class AbstractCopier<A> implements Copier {
 
   /** @return a deep copy of the object. */
   private <T> T deepCopy(T object) {
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "NullAway"})
     T copy = (T) deepCopyStrategies.get(object.getClass()).apply(object);
     return copy;
   }

@@ -4,6 +4,7 @@
 apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'com.github.spotbugs'
 apply plugin: 'org.sonarqube'
+apply plugin: 'net.ltgt.apt'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
 apply plugin: 'java'
@@ -15,11 +16,8 @@ configurations {
 
 dependencies {
   checkstyleConfig gradlePlugins.checkstyle
-}
-
-tasks.withType(JavaCompile) {
-  options.encoding = 'UTF-8'
-  options.compilerArgs << '-Xlint:all'
+  errorprone libraries.errorProneCore
+  apt annotationProcessors.nullaway
 }
 
 javadoc.options.links(
@@ -76,6 +74,8 @@ sonarqube {
 tasks.sonarqube.dependsOn(jacocoMerge)
 
 tasks.withType(JavaCompile) {
+  options.encoding = 'UTF-8'
+  options.compilerArgs << '-Xlint:all'
   options.compilerArgs += [
     '-Xep:ClassName',
     '-Xep:ComparisonContractViolated',
@@ -93,6 +93,12 @@ tasks.withType(JavaCompile) {
     '-Xep:MixedArrayDimensions',
     '-Xep:RemoveUnusedImports',
   ]
+  if (name == 'compileJava') {
+    options.compilerArgs += [
+      '-XepOpt:NullAway:AnnotatedPackages=com.github.benmanes.caffeine',
+      '-Xep:NullAway:ERROR',
+    ]
+  }
 }
 
 tasks.withType(Test) {

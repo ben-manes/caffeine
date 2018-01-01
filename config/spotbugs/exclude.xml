@@ -57,6 +57,11 @@
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
+    <Method name="copyOf"/>
+    <Bug code="NP"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
     <Method name="postProcess"/>
     <Bug code="SF"/>
   </Match>

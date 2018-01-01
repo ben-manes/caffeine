@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Deque;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
@@ -58,22 +59,22 @@ final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeq
   }
 
   @Override
-  public E getPrevious(E e) {
+  public @Nullable E getPrevious(E e) {
     return e.getPreviousInAccessOrder();
   }
 
   @Override
-  public void setPrevious(E e, E prev) {
+  public void setPrevious(E e, @Nullable E prev) {
     e.setPreviousInAccessOrder(prev);
   }
 
   @Override
-  public E getNext(E e) {
+  public @Nullable E getNext(E e) {
     return e.getNextInAccessOrder();
   }
 
   @Override
-  public void setNext(E e, E next) {
+  public void setNext(E e, @Nullable E next) {
     e.setNextInAccessOrder(next);
   }
 
@@ -86,18 +87,18 @@ final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeq
      * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
      * element on the deque.
      */
-    T getPreviousInAccessOrder();
+    @Nullable T getPreviousInAccessOrder();
 
     /** Sets the previous element or <tt>null</tt> if there is no link. */
-    void setPreviousInAccessOrder(T prev);
+    void setPreviousInAccessOrder(@Nullable T prev);
 
     /**
      * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
      * element on the deque.
      */
-    T getNextInAccessOrder();
+    @Nullable T getNextInAccessOrder();
 
     /** Sets the next element or <tt>null</tt> if there is no link. */
-    void setNextInAccessOrder(T next);
+    void setNextInAccessOrder(@Nullable T next);
   }
 }

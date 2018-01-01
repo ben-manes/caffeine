@@ -43,8 +43,8 @@ public final class AddSubtype extends NodeRule {
   protected void execute() {
     context.nodeSubtype = TypeSpec.classBuilder(context.className)
         .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-            .addMember("value", "{$S, $S, $S}",
-                "unchecked", "PMD.UnusedFormalParameter", "MissingOverride")
+            .addMember("value", "{$S, $S, $S, $S}",
+                "unchecked", "PMD.UnusedFormalParameter", "MissingOverride", "NullAway")
             .build())
         .addJavadoc(getJavaDoc())
         .addTypeVariable(kTypeVar)

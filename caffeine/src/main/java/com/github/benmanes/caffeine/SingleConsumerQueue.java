@@ -76,6 +76,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
  */
+@SuppressWarnings("NullAway")
 public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     implements Queue<E>, Serializable {
 
@@ -467,8 +468,8 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   static class Node<E> {
     static final long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
 
-    E value;
-    volatile Node<E> next;
+    @Nullable E value;
+    @Nullable volatile Node<E> next;
 
     Node(@Nullable E value) {
       this.value = value;
@@ -536,7 +537,7 @@ final class SCQHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the head node. */
   abstract static class HeadRef<E> extends PadHead<E> {
-    Node<E> head;
+    @Nullable Node<E> head;
   }
 
   abstract static class PadHeadAndTail<E> extends HeadRef<E> {
@@ -548,7 +549,7 @@ final class SCQHeader {
   abstract static class HeadAndTailRef<E> extends PadHeadAndTail<E> {
     static final long TAIL_OFFSET = UnsafeAccess.objectFieldOffset(HeadAndTailRef.class, "tail");
 
-    volatile Node<E> tail;
+    @Nullable volatile Node<E> tail;
 
     void lazySetTail(Node<E> next) {
       UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);

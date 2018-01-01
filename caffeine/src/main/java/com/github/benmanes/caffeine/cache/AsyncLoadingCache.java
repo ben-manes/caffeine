@@ -21,8 +21,8 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -48,7 +48,7 @@ public interface AsyncLoadingCache<K, V> {
    *         or {@code null} if this map contains no mapping for the key
    * @throws NullPointerException if the specified key is null
    */
-  @CheckForNull
+  @Nullable
   CompletableFuture<V> getIfPresent(@Nonnull Object key);
 
   /**

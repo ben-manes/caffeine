@@ -15,10 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
-import java.io.PrintStream;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import org.cache2k.Cache;
@@ -28,7 +26,6 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.ByteStreams;
 import com.typesafe.config.Config;
 
 /**
@@ -37,28 +34,22 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Cache2kPolicy implements Policy {
+  private static final Logger logger = Logger.getLogger("org.cache2k");
+
   private final Cache<Object, Object> cache;
   private final PolicyStats policyStats;
   private final int maximumSize;
 
   public Cache2kPolicy(Config config) {
-    Logger logger = LogManager.getLogManager().getLogger("");
-    Level level = logger.getLevel();
-    logger.setLevel(Level.OFF);
-    PrintStream err = System.err;
-    System.setErr(new PrintStream(ByteStreams.nullOutputStream()));
-    try {
-      this.policyStats = new PolicyStats("product.Cache2k");
-      BasicSettings settings = new BasicSettings(config);
-      cache = Cache2kBuilder.of(Object.class, Object.class)
-          .entryCapacity(settings.maximumSize())
-          .eternal(true)
-          .build();
-      maximumSize = settings.maximumSize();
-    } finally {
-      System.setErr(err);
-      LogManager.getLogManager().getLogger("").setLevel(level);
-    }
+    logger.setLevel(Level.WARNING);
+
+    policyStats = new PolicyStats("product.Cache2k");
+    BasicSettings settings = new BasicSettings(config);
+    cache = Cache2kBuilder.of(Object.class, Object.class)
+        .entryCapacity(settings.maximumSize())
+        .eternal(true)
+        .build();
+    maximumSize = settings.maximumSize();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */

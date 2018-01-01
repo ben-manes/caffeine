@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
@@ -47,6 +48,7 @@ public final class JCacheLoaderAdapter<K, V>
 
   private CacheProxy<K, V> cache;
 
+  @SuppressWarnings("NullAway")
   public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher,
       ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);
@@ -66,7 +68,7 @@ public final class JCacheLoaderAdapter<K, V>
   }
 
   @Override
-  public Expirable<V> load(K key) {
+  public @Nullable Expirable<V> load(K key) {
     try {
       boolean statsEnabled = statistics.isEnabled();
       long start = statsEnabled ? ticker.read() : 0L;

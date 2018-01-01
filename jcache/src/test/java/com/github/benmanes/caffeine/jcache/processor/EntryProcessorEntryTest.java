@@ -19,7 +19,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasToString;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
 
 import java.util.Map;
@@ -48,33 +47,13 @@ public final class EntryProcessorEntryTest {
   }
 
   @Test
-  public void equals_wrongType() {
-    assertThat(entry, is(not(equalTo(Maps.immutableEntry(1, 2)))));
-  }
-
-  @Test
-  public void equals_wrongValue() {
-    assertThat(entry, is(not(equalTo(new EntryProcessorEntry<>(1, 3, Optional.empty())))));
-  }
-
-  @Test
-  public void equals_nullValue() {
-    assertThat(entry, is(not(equalTo(new EntryProcessorEntry<>(1, null, Optional.empty())))));
-  }
-
-  @Test
   public void equals() {
     assertThat(entry, is(equalTo(entry)));
   }
 
   @Test
-  public void hash_zero() {
-    assertThat(new EntryProcessorEntry<>(null, null, Optional.empty()).hashCode(), is(0));
-  }
-
-  @Test
   public void hash() {
-    assertThat(entry.hashCode(), is(equalTo(Maps.immutableEntry(1, 2).hashCode())));
+    assertThat(entry.hashCode(), is(entry.hashCode()));
   }
 
   @Test

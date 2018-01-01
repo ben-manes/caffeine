@@ -20,6 +20,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -79,19 +80,19 @@ interface LinkedDeque<E> extends Deque<E> {
    * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
    * element on the deque.
    */
-  E getPrevious(E e);
+  @Nullable E getPrevious(E e);
 
   /** Sets the previous element or <tt>null</tt> if there is no link. */
-  void setPrevious(E e, E prev);
+  void setPrevious(E e, @Nullable E prev);
 
   /**
    * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
    * element on the deque.
    */
-  E getNext(E e);
+  @Nullable E getNext(E e);
 
   /** Sets the next element or <tt>null</tt> if there is no link. */
-  void setNext(E e, E next);
+  void setNext(E e, @Nullable E next);
 
   @Override
   PeekingIterator<E> iterator();
@@ -102,7 +103,7 @@ interface LinkedDeque<E> extends Deque<E> {
   interface PeekingIterator<E> extends Iterator<E> {
 
     /** Returns the next element in the iteration, without advancing the iteration. */
-    E peek();
+    @Nullable E peek();
 
     /** Returns an iterator that returns the first iteration followed by the second iteration. */
     static <E> PeekingIterator<E> concat(PeekingIterator<E> first, PeekingIterator<E> second) {
@@ -118,7 +119,7 @@ interface LinkedDeque<E> extends Deque<E> {
           }
           throw new NoSuchElementException();
         }
-        @Override public E peek() {
+        @Override public @Nullable E peek() {
           return first.hasNext() ? first.peek() : second.peek();
         }
       };
@@ -142,7 +143,7 @@ interface LinkedDeque<E> extends Deque<E> {
           boolean greaterOrEqual = (comparator.compare(o1, o2) >= 0);
           return greaterOrEqual ? first.next() : second.next();
         }
-        @Override public E peek() {
+        @Override public @Nullable E peek() {
           if (!first.hasNext()) {
             return second.peek();
           } else if (!second.hasNext()) {

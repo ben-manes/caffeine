@@ -56,17 +56,18 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
 
   private final MutableConfiguration<K, V> delegate;
 
-  private Factory<Weigher<K, V>> weigherFactory;
-  private Factory<Expiry<K, V>> expiryFactory;
+  private @Nullable Factory<Weigher<K, V>> weigherFactory;
+  private @Nullable Factory<Expiry<K, V>> expiryFactory;
+
   private Factory<Executor> executorFactory;
   private Factory<Copier> copierFactory;
   private Factory<Ticker> tickerFactory;
 
-  private Long refreshAfterWriteNanos;
-  private Long expireAfterAccessNanos;
-  private Long expireAfterWriteNanos;
-  private Long maximumWeight;
-  private Long maximumSize;
+  private @Nullable Long refreshAfterWriteNanos;
+  private @Nullable Long expireAfterAccessNanos;
+  private @Nullable Long expireAfterWriteNanos;
+  private @Nullable Long maximumWeight;
+  private @Nullable Long maximumSize;
 
   public CaffeineConfiguration() {
     delegate = new MutableConfiguration<>();

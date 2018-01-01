@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
+
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nonnegative;
@@ -76,6 +78,7 @@ final class FrequencySketch<E> {
    * Creates a lazily initialized frequency sketch, requiring {@link #ensureCapacity} be called
    * when the maximum size of the cache has been determined.
    */
+  @SuppressWarnings("NullAway")
   public FrequencySketch() {
     int seed = ThreadLocalRandom.current().nextInt();
     this.randomSeed = ((seed & 1) == 0) ? seed + 1 : seed;
@@ -89,7 +92,7 @@ final class FrequencySketch<E> {
    * @param maximumSize the maximum size of the cache
    */
   public void ensureCapacity(@Nonnegative long maximumSize) {
-    Caffeine.requireArgument(maximumSize >= 0);
+    requireArgument(maximumSize >= 0);
     int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {
       return;

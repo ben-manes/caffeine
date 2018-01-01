@@ -17,11 +17,9 @@ package com.github.benmanes.caffeine.jcache.processor;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Objects;
 import java.util.Optional;
 
 import javax.annotation.Nullable;
-import javax.cache.Cache;
 import javax.cache.integration.CacheLoader;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
@@ -36,8 +34,8 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   private final boolean hasEntry;
   private final K key;
 
-  private V value;
   private Action action;
+  private @Nullable V value;
   private Optional<CacheLoader<K, V>> cacheLoader;
 
   public EntryProcessorEntry(K key, @Nullable V value, Optional<CacheLoader<K, V>> cacheLoader) {
@@ -59,7 +57,7 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   }
 
   @Override
-  public V getValue() {
+  public @Nullable V getValue() {
     if (action != Action.NONE) {
       return value;
     } else if (value != null) {
@@ -102,21 +100,6 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
     @SuppressWarnings("unchecked")
     T castedEntry = (T) this;
     return castedEntry;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (!(o instanceof Cache.Entry<?, ?>)) {
-      return false;
-    }
-    Cache.Entry<?, ?> entry = (Cache.Entry<?, ?>) o;
-    return Objects.equals(key, entry.getKey())
-        && Objects.equals(getValue(), entry.getValue());
-  }
-
-  @Override
-  public int hashCode() {
-    return (key == null ? 0 : key.hashCode()) ^ (getValue() == null ? 0 : value.hashCode());
   }
 
   @Override

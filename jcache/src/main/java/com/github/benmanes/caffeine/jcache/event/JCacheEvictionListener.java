@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
 import javax.cache.Cache;
 
 import com.github.benmanes.caffeine.cache.CacheWriter;
@@ -36,6 +37,7 @@ public final class JCacheEvictionListener<K, V> implements CacheWriter<K, Expira
 
   private Cache<K, V> cache;
 
+  @SuppressWarnings("NullAway")
   public JCacheEvictionListener(EventDispatcher<K, V> dispatcher,
       JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);
@@ -55,12 +57,14 @@ public final class JCacheEvictionListener<K, V> implements CacheWriter<K, Expira
   public void write(K key, Expirable<V> value) {}
 
   @Override
-  public void delete(K key, Expirable<V> value, RemovalCause cause) {
+  public void delete(K key, @Nullable Expirable<V> expirable, RemovalCause cause) {
     if (cause.wasEvicted()) {
+      @SuppressWarnings("NullAway")
+      V value = expirable.get();
       if (cause == RemovalCause.EXPIRED) {
-        dispatcher.publishExpiredQuietly(cache, key, value.get());
+        dispatcher.publishExpiredQuietly(cache, key, value);
       } else {
-        dispatcher.publishRemovedQuietly(cache, key, value.get());
+        dispatcher.publishRemovedQuietly(cache, key, value);
       }
       statistics.recordEvictions(1L);
     }

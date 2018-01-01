@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 
 /**
@@ -95,7 +97,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   static final int ATTEMPTS = 3;
 
   /** Table of buffers. When non-null, size is a power of 2. */
-  transient volatile Buffer<E>[] table;
+  transient volatile @Nullable Buffer<E>[] table;
 
   /** Spinlock (locked via CAS) used when resizing and/or creating Buffers. */
   transient volatile int tableBusy;
@@ -216,17 +218,18 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     }
     boolean collide = false; // True if last slot nonempty
     for (int attempt = 0; attempt < ATTEMPTS; attempt++) {
-      Buffer<E>[] buffers;
+      Buffer<E>[] buffers = table;
       Buffer<E> buffer;
       int n;
-      if ((buffers = table) != null && (n = buffers.length) > 0) {
+      if ((buffers != null) && ((n = buffers.length) > 0)) {
         if ((buffer = buffers[(n - 1) & h]) == null) {
           if ((tableBusy == 0) && casTableBusy()) { // Try to attach new Buffer
             boolean created = false;
             try { // Recheck under lock
               Buffer<E>[] rs;
               int mask, j;
-              if (((rs = table) != null) && ((mask = rs.length) > 0)
+              rs = table;
+              if ((rs != null) && ((mask = rs.length) > 0)
                   && (rs[j = (mask - 1) & h] == null)) {
                 rs[j] = create(e);
                 created = true;

@@ -208,6 +208,7 @@ public final class TypesafeConfigurator {
     }
 
     /** Adds the JCache specification's lazy expiration settings. */
+    @SuppressWarnings("NullAway")
     public void addLazyExpiration() {
       Duration creation = getDurationFor("policy.lazy-expiration.creation");
       Duration update = getDurationFor("policy.lazy-expiration.update");

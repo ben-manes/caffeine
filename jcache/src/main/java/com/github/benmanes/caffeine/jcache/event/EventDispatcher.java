@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
 import javax.cache.Cache;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryEventFilter;
@@ -199,7 +200,7 @@ public final class EventDispatcher<K, V> {
 
   /** Broadcasts the event to all of the interested listener's dispatch queues. */
   private void publish(Cache<K, V> cache, EventType eventType,
-      K key, V oldValue, V newValue, boolean quiet) {
+      K key, @Nullable V oldValue, @Nullable V newValue, boolean quiet) {
     if (dispatchQueues.isEmpty()) {
       return;
     }

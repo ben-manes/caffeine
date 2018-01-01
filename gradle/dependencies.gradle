@@ -39,7 +39,7 @@ ext {
     jsr330: '1',
     univocityParsers: '2.5.9',
     ycsb: '1.13.0-RC1',
-    xz: '1.6',
+    xz: '1.7',
   ]
   testVersions = [
     awaitility: '3.0.0',
@@ -54,27 +54,28 @@ ext {
     truth: '0.24',
   ]
   benchmarkVersions = [
-    cache2k: '1.0.1.Final',
+    cache2k: '1.0.2.Final',
     collision: '0.3.3',
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.4',
     ehcache3: '3.4.0',
     elasticSearch: '6.1.1',
     expiringMap: '0.5.8',
-    jackrabbit: '1.7.12',
+    jackrabbit: '1.7.14',
     jamm: '0.3.2',
     javaObjectLayout: '0.9',
     jmh: 1.19,
     koloboke: '0.6.8',
     ohc: '0.6.1',
-    rapidoid: '5.5.0',
+    rapidoid: '5.5.1',
     slf4j: '1.7.25',
     tcache: '1.0.5',
   ]
   pluginVersions = [
+    apt: '0.13',
     buildscan: '1.11',
     buildscanRecipes: '0.2.3',
-    checkstyle: '8.5',
+    checkstyle: '8.7',
     coveralls: '2.8.2',
     coverity: '1.0.10',
     errorProne: '0.0.13',
@@ -91,6 +92,9 @@ ext {
     spotbugsPlugin: '1.6.0',
     stats: '0.2.2',
     versions: '0.17.0',
+  ]
+  annotationProcessorVersions = [
+    nullaway: '0.3.0',
   ]
 
   libraries = [
@@ -172,6 +176,7 @@ ext {
     tcache: "com.trivago:triava:${benchmarkVersions.tcache}",
   ]
   gradlePlugins = [
+    apt: "net.ltgt.gradle:gradle-apt-plugin:${pluginVersions.apt}",
     buildscan: "com.gradle:build-scan-plugin:${pluginVersions.buildscan}",
     buildscanRecipes: "me.champeau.gradle:buildscan-recipes-plugin:${pluginVersions.buildscanRecipes}",
     checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${pluginVersions.checkstyle}") {
@@ -193,5 +198,8 @@ ext {
     spotbugs: "gradle.plugin.com.github.spotbugs:gradlePlugin:${pluginVersions.spotbugsPlugin}",
     stats: "org.kordamp.gradle:stats-gradle-plugin:${pluginVersions.stats}",
     versions: "com.github.ben-manes:gradle-versions-plugin:${pluginVersions.versions}",
+  ]
+  annotationProcessors = [
+    nullaway: "com.uber.nullaway:nullaway:${annotationProcessorVersions.nullaway}",
   ]
 }

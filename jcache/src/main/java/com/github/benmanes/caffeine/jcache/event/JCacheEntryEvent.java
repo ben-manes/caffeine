@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nullable;
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.EventType;
@@ -34,10 +35,11 @@ final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V>
   private static final long serialVersionUID = 1L;
 
   private final K key;
-  private final V oldValue;
-  private final V newValue;
+  private final @Nullable V oldValue;
+  private final @Nullable V newValue;
 
-  JCacheEntryEvent(Cache<K, V> source, EventType eventType, K key, V oldValue, V newValue) {
+  JCacheEntryEvent(Cache<K, V> source, EventType eventType,
+      K key, @Nullable V oldValue, @Nullable V newValue) {
     super(source, eventType);
     this.key = requireNonNull(key);
     this.oldValue = oldValue;
@@ -50,12 +52,12 @@ final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V>
   }
 
   @Override
-  public V getValue() {
+  public @Nullable V getValue() {
     return newValue;
   }
 
   @Override
-  public V getOldValue() {
+  public @Nullable V getOldValue() {
     return oldValue;
   }
 

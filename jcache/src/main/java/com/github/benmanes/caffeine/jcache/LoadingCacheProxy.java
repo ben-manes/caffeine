@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
@@ -57,7 +58,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   @Override
   @SuppressWarnings("PMD.AvoidCatchingNPE")
-  public V get(K key) {
+  public @Nullable V get(K key) {
     requireNotClosed();
     try {
       return getOrLoad(key);
@@ -72,7 +73,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
 
   /** Retrieves the value from the cache, loading it if necessary. */
   @SuppressWarnings("PMD.AvoidDeeplyNestedIfStmts")
-  private V getOrLoad(K key) {
+  private @Nullable V getOrLoad(K key) {
     boolean statsEnabled = statistics.isEnabled();
     long start = statsEnabled ? ticker.read() : 0L;
 

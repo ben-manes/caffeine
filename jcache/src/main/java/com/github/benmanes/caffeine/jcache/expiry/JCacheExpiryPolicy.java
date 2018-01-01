@@ -34,10 +34,10 @@ public final class JCacheExpiryPolicy implements ExpiryPolicy, Serializable {
   private static final long serialVersionUID = 1L;
 
   private final Duration creation;
-  private final Duration update;
-  private final Duration access;
+  private final @Nullable Duration update;
+  private final @Nullable Duration access;
 
-  public JCacheExpiryPolicy(@Nonnull Duration creation, 
+  public JCacheExpiryPolicy(@Nonnull Duration creation,
       @Nullable Duration update, @Nullable Duration access) {
     this.creation = requireNonNull(creation);
     this.update = update;
@@ -50,12 +50,12 @@ public final class JCacheExpiryPolicy implements ExpiryPolicy, Serializable {
   }
 
   @Override
-  public Duration getExpiryForUpdate() {
+  public @Nullable Duration getExpiryForUpdate() {
     return update;
   }
 
   @Override
-  public Duration getExpiryForAccess() {
+  public @Nullable Duration getExpiryForAccess() {
     return access;
   }
 

@@ -15,8 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.UNSET_INT;
+
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nullable;
 
 /**
  * Serializes the configuration of the cache, reconsitituting it as a {@link Cache},
@@ -29,22 +33,23 @@ import java.util.concurrent.TimeUnit;
 final class SerializationProxy<K, V> implements Serializable {
   private static final long serialVersionUID = 1;
 
-  Ticker ticker;
   boolean async;
   boolean weakKeys;
   boolean weakValues;
   boolean softValues;
-  Expiry<?, ?> expiry;
-  Weigher<?, ?> weigher;
-  CacheWriter<?, ?> writer;
   boolean isRecordingStats;
+  long refreshAfterWriteNanos;
   long expiresAfterWriteNanos;
   long expiresAfterAccessNanos;
-  long refreshAfterWriteNanos;
-  AsyncCacheLoader<?, ?> loader;
-  RemovalListener<?, ?> removalListener;
-  long maximumSize = Caffeine.UNSET_INT;
-  long maximumWeight = Caffeine.UNSET_INT;
+  long maximumSize = UNSET_INT;
+  long maximumWeight = UNSET_INT;
+
+  @Nullable Ticker ticker;
+  @Nullable Expiry<?, ?> expiry;
+  @Nullable Weigher<?, ?> weigher;
+  @Nullable CacheWriter<?, ?> writer;
+  @Nullable AsyncCacheLoader<?, ?> loader;
+  @Nullable RemovalListener<?, ?> removalListener;
 
   @SuppressWarnings("unchecked")
   Caffeine<Object, Object> recreateCaffeine() {
@@ -55,10 +60,10 @@ final class SerializationProxy<K, V> implements Serializable {
     if (isRecordingStats) {
       builder.recordStats();
     }
-    if (maximumSize != Caffeine.UNSET_INT) {
+    if (maximumSize != UNSET_INT) {
       builder.maximumSize(maximumSize);
     }
-    if (maximumWeight != Caffeine.UNSET_INT) {
+    if (weigher != null) {
       builder.maximumWeight(maximumWeight);
       builder.weigher((Weigher<Object, Object>) weigher);
     }
@@ -86,7 +91,7 @@ final class SerializationProxy<K, V> implements Serializable {
     if (removalListener != null) {
       builder.removalListener((RemovalListener<Object, Object>) removalListener);
     }
-    if (writer != CacheWriter.disabledWriter()) {
+    if ((writer != null) && (writer != CacheWriter.disabledWriter())) {
       builder.writer((CacheWriter<Object, Object>) writer);
     }
     return builder;
@@ -94,15 +99,16 @@ final class SerializationProxy<K, V> implements Serializable {
 
   Object readResolve() {
     Caffeine<Object, Object> builder = recreateCaffeine();
-    if (async) {
+    if (loader == null) {
+      return builder.build();
+    } else if (async) {
       @SuppressWarnings("unchecked")
       AsyncCacheLoader<K, V> cacheLoader = (AsyncCacheLoader<K, V>) loader;
       return builder.buildAsync(cacheLoader);
-    } else if (loader != null) {
+    } else {
       @SuppressWarnings("unchecked")
       CacheLoader<K, V> cacheLoader = (CacheLoader<K, V>) loader;
       return builder.build(cacheLoader);
     }
-    return builder.build();
   }
 }

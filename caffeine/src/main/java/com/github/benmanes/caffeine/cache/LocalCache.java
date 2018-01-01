@@ -39,14 +39,12 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   boolean isRecordingStats();
 
   /** Returns the {@link StatsCounter} used by this cache. */
-  @Nonnull
-  StatsCounter statsCounter();
+  @Nonnull StatsCounter statsCounter();
 
   /** Returns whether this cache notifies when an entry is removed. */
   boolean hasRemovalListener();
 
-  /** Returns the {@link RemovalListener} used by this cache or <tt>null</tt> if not used. */
-  @Nullable
+  /** Returns the {@link RemovalListener} used by this cache. */
   RemovalListener<K, V> removalListener();
 
   /** Asynchronously sends a removal notification to the listener. */
@@ -97,7 +95,8 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   V put(@Nonnull K key, @Nonnull V value, boolean notifyWriter);
 
   @Override
-  default V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+  default @Nullable V compute(K key,
+      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
     return compute(key, remappingFunction, /* recordMiss */ false, /* recordLoad */ true);
   }
 
@@ -105,11 +104,11 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * See {@link ConcurrentMap#compute}. This method differs by accepting parameters indicating
    * whether to record miss and load statistics based on the success of this operation.
    */
-  V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+  @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
       boolean recordMiss, boolean recordLoad);
 
   @Override
-  default V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+  default @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
     return computeIfAbsent(key, mappingFunction, /* recordStats */ true, /* recordLoad */ true);
   }
 
@@ -117,7 +116,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * See {@link ConcurrentMap#computeIfAbsent}. This method differs by accepting parameters
    * indicating how to record statistics.
    */
-  V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
+  @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
       boolean recordStats, boolean recordLoad);
 
   /** See {@link Cache#invalidateAll(Iterable)}. */

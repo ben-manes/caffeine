@@ -23,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -44,6 +43,7 @@ final class Async {
   }
 
   /** Returns the current value or null if either not done or failed. */
+  @SuppressWarnings("NullAway")
   static @Nullable <V> V getIfReady(@Nullable CompletableFuture<V> future) {
     return isReady(future) ? future.join() : null;
   }
@@ -78,8 +78,11 @@ final class Async {
 
     @Override
     @SuppressWarnings("FutureReturnValueIgnored")
-    public void onRemoval(K key, @Nonnull CompletableFuture<V> future, RemovalCause cause) {
-      future.thenAcceptAsync(value -> delegate.onRemoval(key, value, cause), executor);
+    public void onRemoval(@Nullable K key,
+        @Nullable CompletableFuture<V> future, RemovalCause cause) {
+      if (future != null) {
+        future.thenAcceptAsync(value -> delegate.onRemoval(key, value, cause), executor);
+      }
     }
 
     Object writeReplace() {
