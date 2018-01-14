@@ -413,6 +413,7 @@ public class JSR166TestCase extends TestCase {
      * threadRecordFailure) any AssertionFailedError thrown, so that
      * the current testcase will fail.
      */
+    @SuppressWarnings("CatchFail")
     public void threadFail(String reason) {
         try {
             fail(reason);
@@ -568,6 +569,7 @@ public class JSR166TestCase extends TestCase {
     /**
      * Waits out termination of a thread pool or fails doing so.
      */
+    @SuppressWarnings("CatchFail")
     void joinPool(ExecutorService exec) {
         try {
             exec.shutdown();
@@ -604,6 +606,7 @@ public class JSR166TestCase extends TestCase {
     /**
      * Checks that thread does not terminate within the given millisecond delay.
      */
+    @SuppressWarnings("CatchFail")
     void assertThreadStaysAlive(Thread thread, long millis) {
         try {
             // No need to optimize the failing case via Thread.join.
@@ -625,6 +628,7 @@ public class JSR166TestCase extends TestCase {
     /**
      * Checks that the threads do not terminate within the given millisecond delay.
      */
+    @SuppressWarnings("CatchFail")
     void assertThreadsStayAlive(long millis, Thread... threads) {
         try {
             // No need to optimize the failing case via Thread.join.
@@ -911,6 +915,7 @@ public class JSR166TestCase extends TestCase {
      * to terminate (using {@link Thread#join(long)}), else interrupts
      * the thread (in the hope that it may terminate later) and fails.
      */
+    @SuppressWarnings("CatchFail")
     void awaitTermination(Thread t, long timeoutMillis) {
         try {
             t.join(timeoutMillis);

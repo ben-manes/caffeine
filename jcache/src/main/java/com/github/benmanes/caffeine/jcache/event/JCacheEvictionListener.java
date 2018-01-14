@@ -37,7 +37,7 @@ public final class JCacheEvictionListener<K, V> implements CacheWriter<K, Expira
 
   private Cache<K, V> cache;
 
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings("NullAway.Init")
   public JCacheEvictionListener(EventDispatcher<K, V> dispatcher,
       JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);

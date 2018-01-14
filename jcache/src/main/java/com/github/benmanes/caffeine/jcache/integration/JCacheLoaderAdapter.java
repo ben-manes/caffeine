@@ -48,7 +48,7 @@ public final class JCacheLoaderAdapter<K, V>
 
   private CacheProxy<K, V> cache;
 
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings("NullAway.Init")
   public JCacheLoaderAdapter(CacheLoader<K, V> delegate, EventDispatcher<K, V> dispatcher,
       ExpiryPolicy expiry, Ticker ticker, JCacheStatisticsMXBean statistics) {
     this.dispatcher = requireNonNull(dispatcher);

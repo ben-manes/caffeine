@@ -100,10 +100,10 @@ final class TimerWheel<K, V> {
       for (int i = 0; i < SHIFT.length; i++) {
         long previousTicks = (previousTimeNanos >> SHIFT[i]);
         long currentTicks = (currentTimeNanos >> SHIFT[i]);
-        if ((currentTicks - previousTicks) <= 0) {
+        if ((currentTicks - previousTicks) <= 0L) {
           break;
         }
-        expire(i, previousTicks, currentTicks, previousTimeNanos, currentTimeNanos);
+        expire(i, previousTicks, currentTicks);
       }
     } catch (Throwable t) {
       nanos = previousTimeNanos;
@@ -117,15 +117,12 @@ final class TimerWheel<K, V> {
    * @param index the wheel being operated on
    * @param previousTicks the previous number of ticks
    * @param currentTicks the current number of ticks
-   * @param previousTimeNanos the previous time, in nanoseconds
-   * @param currentTimeNanos the current time, in nanoseconds
    */
-  void expire(int index, long previousTicks, long currentTicks,
-      long previousTimeNanos, long currentTimeNanos) {
+  void expire(int index, long previousTicks, long currentTicks) {
     Node<K, V>[] timerWheel = wheel[index];
 
     int start, end;
-    if ((currentTimeNanos - previousTimeNanos) >= SPANS[index + 1]) {
+    if ((currentTicks - previousTicks) >= timerWheel.length) {
       end = timerWheel.length;
       start = 0;
     } else {
@@ -148,7 +145,7 @@ final class TimerWheel<K, V> {
         node.setNextInVariableOrder(null);
 
         try {
-          if (((node.getVariableTime() - currentTimeNanos) > 0)
+          if (((node.getVariableTime() - nanos) > 0)
               || !cache.evictEntry(node, RemovalCause.EXPIRED, nanos)) {
             Node<K, V> newSentinel = findBucket(node.getVariableTime());
             link(newSentinel, node);

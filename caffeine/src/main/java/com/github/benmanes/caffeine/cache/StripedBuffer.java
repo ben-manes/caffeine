@@ -218,18 +218,17 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     }
     boolean collide = false; // True if last slot nonempty
     for (int attempt = 0; attempt < ATTEMPTS; attempt++) {
-      Buffer<E>[] buffers = table;
+      Buffer<E>[] buffers;
       Buffer<E> buffer;
       int n;
-      if ((buffers != null) && ((n = buffers.length) > 0)) {
+      if (((buffers = table) != null) && ((n = buffers.length) > 0)) {
         if ((buffer = buffers[(n - 1) & h]) == null) {
           if ((tableBusy == 0) && casTableBusy()) { // Try to attach new Buffer
             boolean created = false;
             try { // Recheck under lock
               Buffer<E>[] rs;
               int mask, j;
-              rs = table;
-              if ((rs != null) && ((mask = rs.length) > 0)
+              if (((rs = table) != null) && ((mask = rs.length) > 0)
                   && (rs[j = (mask - 1) & h] == null)) {
                 rs[j] = create(e);
                 created = true;

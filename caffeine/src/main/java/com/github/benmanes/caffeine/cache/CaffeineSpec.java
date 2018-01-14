@@ -144,6 +144,7 @@ public final class CaffeineSpec {
    * @param specification the string form
    * @return the parsed specification
    */
+  @SuppressWarnings("StringSplitter")
   public static CaffeineSpec parse(String specification) {
     CaffeineSpec spec = new CaffeineSpec(specification);
     for (String option : specification.split(SPLIT_OPTIONS)) {
@@ -158,6 +159,7 @@ public final class CaffeineSpec {
       return;
     }
 
+    @SuppressWarnings("StringSplitter")
     String[] keyAndValue = option.split(SPLIT_KEY_VALUE);
     requireArgument(keyAndValue.length <= 2,
         "key-value pair %s with more than one equals sign", option);

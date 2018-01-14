@@ -452,7 +452,6 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       if (publishToWriter) {
         publishToCacheWriter(writer::write, () -> new EntryProxy<>(key, value));
       }
-      @SuppressWarnings("NullAway")
       V copy = copyOf(value);
       dispatcher.publishCreated(this, key, copy);
       return new Expirable<>(copy, expireTimeMS);

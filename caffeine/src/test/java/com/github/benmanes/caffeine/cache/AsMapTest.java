@@ -73,7 +73,9 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.WriteException;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.testing.SerializableTester;
 
 /**
@@ -1543,7 +1545,7 @@ public final class AsMapTest {
     assertThat(keys.contains(new Object()), is(false));
     assertThat(keys.remove(new Object()), is(false));
     assertThat(keys, hasSize(context.original().size()));
-    for (Integer key : keys) {
+    for (Integer key : ImmutableSet.copyOf(keys)) {
       assertThat(keys.contains(key), is(true));
       assertThat(keys.remove(key), is(true));
       assertThat(keys.remove(key), is(false));
@@ -1756,7 +1758,7 @@ public final class AsMapTest {
     assertThat(values.contains(new Object()), is(false));
     assertThat(values.remove(new Object()), is(false));
     assertThat(values, hasSize(context.original().size()));
-    for (Integer value : values) {
+    for (Integer value : ImmutableList.copyOf(values)) {
       assertThat(values.contains(value), is(true));
       assertThat(values.remove(value), is(true));
       assertThat(values.remove(value), is(false));

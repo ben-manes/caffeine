@@ -78,7 +78,7 @@ final class FrequencySketch<E> {
    * Creates a lazily initialized frequency sketch, requiring {@link #ensureCapacity} be called
    * when the maximum size of the cache has been determined.
    */
-  @SuppressWarnings("NullAway")
+  @SuppressWarnings("NullAway.Init")
   public FrequencySketch() {
     int seed = ThreadLocalRandom.current().nextInt();
     this.randomSeed = ((seed & 1) == 0) ? seed + 1 : seed;

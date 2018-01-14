@@ -102,7 +102,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    *
    * A memento of the reads and writes that were performed on the map are recorded in buffers. These
    * buffers are drained at the first opportunity after a write or when a read buffer is full. The
-   * reads are offered in a buffer that will reject additions if contented on or if it is full and a
+   * reads are offered in a buffer that will reject additions if contended on or if it is full and a
    * draining process is required. Due to the concurrent nature of the read and write operations a
    * strict policy ordering is not possible, but is observably strict when single threaded. The
    * buffers are drained asynchronously to minimize the request latency and uses a state machine to

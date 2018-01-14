@@ -1746,7 +1746,7 @@ public class CacheLoadingTest extends TestCase {
   /**
    * Make sure LoadingCache correctly wraps ExecutionExceptions and UncheckedExecutionExceptions.
    */
-  public void testLoadingExceptionWithCause() {
+  public void testLoadingExceptionWithCause() throws ExecutionException {
     final Exception cause = new Exception();
     final UncheckedExecutionException uee = new UncheckedExecutionException(cause);
     final ExecutionException ee = new ExecutionException(cause);
@@ -1758,8 +1758,6 @@ public class CacheLoadingTest extends TestCase {
 
     try {
       cacheUnchecked.get(new Object());
-      fail();
-    } catch (ExecutionException e) {
       fail();
     } catch (UncheckedExecutionException caughtEe) {
       assertSame(uee, caughtEe.getCause());
@@ -1777,8 +1775,6 @@ public class CacheLoadingTest extends TestCase {
 
     try {
       cacheUnchecked.getAll(asList(new Object()));
-      fail();
-    } catch (ExecutionException e) {
       fail();
     } catch (UncheckedExecutionException caughtEe) {
       assertSame(uee, caughtEe.getCause());
@@ -1809,7 +1805,7 @@ public class CacheLoadingTest extends TestCase {
     }
   }
 
-  public void testBulkLoadingExceptionWithCause() {
+  public void testBulkLoadingExceptionWithCause() throws ExecutionException {
     final Exception cause = new Exception();
     final UncheckedExecutionException uee = new UncheckedExecutionException(cause);
     final ExecutionException ee = new ExecutionException(cause);
@@ -1821,8 +1817,6 @@ public class CacheLoadingTest extends TestCase {
 
     try {
       cacheUnchecked.getAll(asList(new Object()));
-      fail();
-    } catch (ExecutionException e) {
       fail();
     } catch (UncheckedExecutionException caughtEe) {
       assertSame(uee, caughtEe.getCause());

@@ -342,9 +342,9 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public PeekingIterator<E> iterator() {
     return new AbstractLinkedIterator(first) {
+      @SuppressWarnings("NullAway")
       @Override @Nullable E computeNext() {
         return getNext(cursor);
       }
@@ -352,9 +352,9 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public PeekingIterator<E> descendingIterator() {
     return new AbstractLinkedIterator(last) {
+      @SuppressWarnings("NullAway")
       @Override @Nullable E computeNext() {
         return getPrevious(cursor);
       }
