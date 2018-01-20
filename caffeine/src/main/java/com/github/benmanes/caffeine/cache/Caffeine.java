@@ -712,7 +712,8 @@ public final class Caffeine<K, V> {
   @Nonnull
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> removalListener(
       @Nonnull RemovalListener<? super K1, ? super V1> removalListener) {
-    requireState(this.removalListener == null);
+    requireState(this.removalListener == null,
+        "removal listener was already set to %s", this.removalListener);
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
@@ -867,7 +868,6 @@ public final class Caffeine<K, V> {
    * @param <K1> the key type of the loader
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
-   * @throws NullPointerException if the specified cache loader is null
    */
   @Nonnull
   public <K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
@@ -890,13 +890,14 @@ public final class Caffeine<K, V> {
    * <p>
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
+   * <p>
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or
+   * {@link #writer}.
    *
    * @param loader the cache loader used to obtain new values
    * @param <K1> the key type of the loader
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
-   * @throws IllegalStateException if the value strength is weak or soft
-   * @throws NullPointerException if the specified cache loader is null
    */
   @Nonnull
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
@@ -913,19 +914,21 @@ public final class Caffeine<K, V> {
    * <p>
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
+   * <p>
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or
+   * {@link #writer}.
    *
    * @param loader the cache loader used to obtain new values
    * @param <K1> the key type of the loader
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
-   * @throws IllegalStateException if the value strength is weak or soft
-   * @throws NullPointerException if the specified cache loader is null
    */
   @Nonnull
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       @Nonnull AsyncCacheLoader<? super K1, V1> loader) {
-    requireState(valueStrength == null);
-    requireState(writer == null);
+    requireState(valueStrength == null,
+        "Weak or soft values can not be combined with AsyncLoadingCache");
+    requireState(writer == null, "CacheWriter can not be combined with AsyncLoadingCache");
     requireWeightWithWeigher();
     requireNonNull(loader);
 

@@ -59,7 +59,7 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     ehcache2: '2.10.4',
     ehcache3: '3.4.0',
-    elasticSearch: '6.1.1',
+    elasticSearch: '6.1.2',
     expiringMap: '0.5.8',
     jackrabbit: '1.8.0',
     jamm: '0.3.2',
