@@ -129,7 +129,6 @@ public final class FrdPolicy implements Policy {
 
     Node victim = headFilter.prevFilter;
     victim.removeFrom(StackType.FILTER);
-    victim.moveToTop(StackType.MAIN);
     if (victim.isInMain) {
       victim.status = Status.NON_RESIDENT;
     } else {
