@@ -124,8 +124,12 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * include cache contents, but only configuration.
  *
  * @author ben.manes@gmail.com (Ben Manes)
- * @param <K> the base key type for all caches created by this builder
- * @param <V> the base value type for all caches created by this builder
+ * @param <K> the most general key type this builder will be able to create caches for. This is
+ *     normally {@code Object} unless it is constrained by using a method like {@code
+ *     #removalListener}
+ * @param <V> the most general value type this builder will be able to create caches for. This is
+ *     normally {@code Object} unless it is constrained by using a method like {@code
+ *     #removalListener}
  */
 @SuppressWarnings("PMD.TooManyFields")
 public final class Caffeine<K, V> {
@@ -193,6 +197,9 @@ public final class Caffeine<K, V> {
   /**
    * Constructs a new {@code Caffeine} instance with default settings, including strong keys, strong
    * values, and no automatic eviction of any kind.
+   * <p>
+   * Note that while this return type is {@code Caffeine<Object, Object>}, type parameters on the
+   * {@link #build} methods allow you to create a cache of any key and value type desired.
    *
    * @return a new instance with default settings
    */

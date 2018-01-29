@@ -59,6 +59,9 @@ dependencies {
 }
 
 compileCodeGenJava {
+  outputs.upToDateWhen {
+    !gradle.taskGraph.hasTask('uploadArchives')
+  }
   dependsOn compileJava
   destinationDir = compileJava.destinationDir
   classpath = sourceSets.main.runtimeClasspath + sourceSets.main.output

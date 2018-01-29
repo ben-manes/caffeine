@@ -8,6 +8,7 @@
   <rule ref="category/java/bestpractices.xml">
     <exclude name="UseVarargs"/>
     <exclude name="SystemPrintln"/>
+    <exclude name="GuardLogStatement"/>
     <exclude name="OneDeclarationPerLine"/>
     <exclude name="AvoidReassigningParameters"/>
     <exclude name="PositionLiteralsFirstInComparisons"/>
