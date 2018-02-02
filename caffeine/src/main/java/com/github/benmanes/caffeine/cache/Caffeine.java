@@ -139,7 +139,7 @@ public final class Caffeine<K, V> {
   enum Strength { WEAK, SOFT }
   static final int UNSET_INT = -1;
 
-  static final int DEFAULT_INITIAL_CAPACITY = 0;
+  static final int DEFAULT_INITIAL_CAPACITY = 64;
   static final int DEFAULT_EXPIRATION_NANOS = 0;
   static final int DEFAULT_REFRESH_NANOS = 0;
 
