@@ -1229,7 +1229,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
       demoted.makeMainProbation();
       accessOrderProbationDeque().add(demoted);
-      mainProtectedWeightedSize -= node.getPolicyWeight();
+      mainProtectedWeightedSize -= demoted.getPolicyWeight();
     }
 
     lazySetMainProtectedWeightedSize(mainProtectedWeightedSize);
