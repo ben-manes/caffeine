@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
+import java.time.Duration;
 import java.util.ConcurrentModificationException;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -519,6 +520,25 @@ public final class Caffeine<K, V> {
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
    * described in the class javadoc.
    *
+   * @param duration the amount of time after an entry is created that it should be automatically
+   *        removed
+   * @return this builder instance
+   * @throws IllegalArgumentException if the length of time is negative
+   * @throws IllegalStateException if the time to live or variable expiration was already set
+   */
+  @Nonnull
+  public Caffeine<K, V> expireAfterWrite(@Nonnull Duration duration) {
+    return expireAfterWrite(duration.toNanos(), TimeUnit.NANOSECONDS);
+  }
+
+  /**
+   * Specifies that each entry should be automatically removed from the cache once a fixed duration
+   * has elapsed after the entry's creation, or the most recent replacement of its value.
+   * <p>
+   * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
+   * read or write operations. Expired entries are cleaned up as part of the routine maintenance
+   * described in the class javadoc.
+   *
    * @param duration the length of time after an entry is created that it should be automatically
    *        removed
    * @param unit the unit that {@code duration} is expressed in
@@ -543,6 +563,28 @@ public final class Caffeine<K, V> {
 
   boolean expiresAfterWrite() {
     return (expireAfterWriteNanos != UNSET_INT);
+  }
+
+  /**
+   * Specifies that each entry should be automatically removed from the cache once a fixed duration
+   * has elapsed after the entry's creation, the most recent replacement of its value, or its last
+   * read. Access time is reset by all cache read and write operations (including
+   * {@code Cache.asMap().get(Object)} and {@code Cache.asMap().put(K, V)}), but not by operations
+   * on the collection-views of {@link Cache#asMap}.
+   * <p>
+   * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
+   * read or write operations. Expired entries are cleaned up as part of the routine maintenance
+   * described in the class javadoc.
+   *
+   * @param duration the amount of time after an entry is created that it should be automatically
+   *        removed
+   * @return this builder instance
+   * @throws IllegalArgumentException if the length of time is negative
+   * @throws IllegalStateException if the time to idle or variable expiration was already set
+   */
+  @Nonnull
+  public Caffeine<K, V> expireAfterAccess(@Nonnull Duration duration) {
+    return expireAfterAccess(duration.toNanos(), TimeUnit.NANOSECONDS);
   }
 
   /**
@@ -638,11 +680,34 @@ public final class Caffeine<K, V> {
    * <p>
    * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
    *
+   * @param duration the amount of time after an entry is created that it should be automatically
+   *        removed
+   * @return this builder instance
+   * @throws IllegalArgumentException if the length of time is zero or negative
+   * @throws IllegalStateException if the refresh interval was already set
+   */
+  @Nonnull
+  public Caffeine<K, V> refreshAfterWrite(@Nonnull Duration duration) {
+    return refreshAfterWrite(duration.toNanos(), TimeUnit.NANOSECONDS);
+  }
+
+  /**
+   * Specifies that active entries are eligible for automatic refresh once a fixed duration has
+   * elapsed after the entry's creation, or the most recent replacement of its value. The semantics
+   * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
+   * {@link CacheLoader#reload}.
+   * <p>
+   * Automatic refreshes are performed when the first stale request for an entry occurs. The request
+   * triggering refresh will make an asynchronous call to {@link CacheLoader#reload} and immediately
+   * return the old value.
+   * <p>
+   * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
+   *
    * @param duration the length of time after an entry is created that it should be considered
    *        stale, and thus eligible for refresh
    * @param unit the unit that {@code duration} is expressed in
    * @return this builder instance
-   * @throws IllegalArgumentException if {@code duration} is negative
+   * @throws IllegalArgumentException if {@code duration} is zero or negative
    * @throws IllegalStateException if the refresh interval was already set
    */
   @Nonnull
