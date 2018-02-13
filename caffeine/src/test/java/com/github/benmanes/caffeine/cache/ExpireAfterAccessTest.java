@@ -28,8 +28,10 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -222,10 +224,29 @@ public final class ExpireAfterAccessTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  public void getExpiresAfter_duration(CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    assertThat(expireAfterAccess.getExpiresAfter(), is(Duration.ofMinutes(1L)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void setExpiresAfter(Cache<Integer, Integer> cache, CacheContext context,
       @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.setExpiresAfter(2, TimeUnit.MINUTES);
     assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(2L));
+
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.estimatedSize(), is(context.initialSize()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
+  public void setExpiresAfter_duration(Cache<Integer, Integer> cache, CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    expireAfterAccess.setExpiresAfter(Duration.ofMinutes(2L));
+    assertThat(expireAfterAccess.getExpiresAfter(), is(Duration.ofMinutes(2L)));
 
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
@@ -242,6 +263,19 @@ public final class ExpireAfterAccessTest {
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
     Assert.assertFalse(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void ageOf_duration(CacheContext context,
+      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+    assertThat(expireAfterAccess.ageOf(context.firstKey()), is(Optional.of(Duration.ZERO)));
+    context.ticker().advance(30, TimeUnit.SECONDS);
+    assertThat(expireAfterAccess.ageOf(context.firstKey()),
+        is(Optional.of(Duration.ofSeconds(30L))));
+    context.ticker().advance(45, TimeUnit.SECONDS);
+    Assert.assertFalse(expireAfterAccess.ageOf(context.firstKey()).isPresent());
   }
 
   /* ---------------- Policy: oldest -------------- */

@@ -3248,6 +3248,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public void setExpiresAfter(K key, long duration, TimeUnit unit) {
         requireNonNull(key);
         requireNonNull(unit);
+        requireArgument(duration >= 0);
         Object lookupKey = cache.nodeFactory.newLookupKey(key);
         Node<K, V> node = cache.data.get(lookupKey);
         if (node != null) {

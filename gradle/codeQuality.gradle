@@ -15,9 +15,9 @@ configurations {
 }
 
 dependencies {
+  annotationProcessor annotationProcessors.nullaway
   checkstyleConfig gradlePlugins.checkstyle
   errorprone libraries.errorProneCore
-  apt annotationProcessors.nullaway
 }
 
 javadoc.options.links(

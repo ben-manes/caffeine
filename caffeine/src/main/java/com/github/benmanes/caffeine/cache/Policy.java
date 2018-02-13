@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -213,6 +214,8 @@ public interface Policy<K, V> {
      * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
      * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
      * where {@code freshnessLifetime = expires - currentTime}.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
      *
      * @param key the key for the entry being queried
      * @param unit the unit that {@code age} is expressed in
@@ -222,10 +225,32 @@ public interface Policy<K, V> {
     OptionalLong ageOf(@Nonnull K key, @Nonnull TimeUnit unit);
 
     /**
+     * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
+     * estimate of the amount of time since the entry's expiration was last reset.
+     * <p>
+     * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
+     * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
+     * where {@code freshnessLifetime = expires - currentTime}.
+     *
+     * @param key the key for the entry being queried
+     * @return the age if the entry is present in the cache
+     */
+    @Nonnull
+    default Optional<Duration> ageOf(@Nonnull K key) {
+      // This method will be abstract in version 3.0.0
+      OptionalLong duration = ageOf(key, TimeUnit.NANOSECONDS);
+      return duration.isPresent()
+          ? Optional.of(Duration.ofNanos(duration.getAsLong()))
+          : Optional.empty();
+    }
+
+    /**
      * Returns the fixed duration used to determine if an entry should be automatically removed due
      * to elapsing this time bound. An entry is considered fresh if its age is less than this
      * duration, and stale otherwise. The expiration policy determines when the entry's age is
      * reset.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
      *
      * @param unit the unit that duration is expressed in
      * @return the length of time after which an entry should be automatically removed
@@ -234,14 +259,42 @@ public interface Policy<K, V> {
     long getExpiresAfter(@Nonnull TimeUnit unit);
 
     /**
+     * Returns the fixed duration used to determine if an entry should be automatically removed due
+     * to elapsing this time bound. An entry is considered fresh if its age is less than this
+     * duration, and stale otherwise. The expiration policy determines when the entry's age is
+     * reset.
+     *
+     * @return the length of time after which an entry should be automatically removed
+     */
+    @Nonnull
+    default Duration getExpiresAfter() {
+      // This method will be abstract in version 3.0.0
+      return Duration.ofNanos(getExpiresAfter(TimeUnit.NANOSECONDS));
+    }
+
+    /**
      * Specifies that each entry should be automatically removed from the cache once a fixed
      * duration has elapsed. The expiration policy determines when the entry's age is reset.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
      *
      * @param duration the length of time after which an entry should be automatically removed
      * @param unit the unit that {@code duration} is expressed in
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     void setExpiresAfter(@Nonnegative long duration, @Nonnull TimeUnit unit);
+
+    /**
+     * Specifies that each entry should be automatically removed from the cache once a fixed
+     * duration has elapsed. The expiration policy determines when the entry's age is reset.
+     *
+     * @param duration the length of time after which an entry should be automatically removed
+     * @throws IllegalArgumentException if {@code duration} is negative
+     */
+    default void setExpiresAfter(@Nonnull Duration duration) {
+      // This method will be abstract in version 3.0.0
+      setExpiresAfter(duration.toNanos(), TimeUnit.NANOSECONDS);
+    }
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -284,6 +337,8 @@ public interface Policy<K, V> {
     /**
      * Returns the duration until the entry should be automatically removed. The expiration policy
      * determines when the entry's duration is reset.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
      *
      * @param key the key for the entry being queried
      * @param unit the unit that {@code age} is expressed in
@@ -291,6 +346,22 @@ public interface Policy<K, V> {
      */
     @Nonnull
     OptionalLong getExpiresAfter(@Nonnull K key, @Nonnull TimeUnit unit);
+
+    /**
+     * Returns the duration until the entry should be automatically removed. The expiration policy
+     * determines when the entry's duration is reset.
+     *
+     * @param key the key for the entry being queried
+     * @return the duration if the entry is present in the cache
+     */
+    @Nonnull
+    default Optional<Duration> getExpiresAfter(@Nonnull K key) {
+      // This method will be abstract in version 3.0.0
+      OptionalLong duration = getExpiresAfter(key, TimeUnit.NANOSECONDS);
+      return duration.isPresent()
+          ? Optional.of(Duration.ofNanos(duration.getAsLong()))
+          : Optional.empty();
+    }
 
     /**
      * Specifies that the entry should be automatically removed from the cache once the duration has
@@ -305,6 +376,40 @@ public interface Policy<K, V> {
     void setExpiresAfter(@Nonnull K key, @Nonnegative long duration, @Nonnull TimeUnit unit);
 
     /**
+     * Specifies that the entry should be automatically removed from the cache once the duration has
+     * elapsed. The expiration policy determines when the entry's age is reset.
+     *
+     * @param key the key for the entry being set
+     * @param duration the length of time from now when the entry should be automatically removed
+     * @throws IllegalArgumentException if {@code duration} is negative
+     */
+    default void setExpiresAfter(@Nonnull K key, @Nonnull Duration duration) {
+      // This method will be abstract in version 3.0.0
+      setExpiresAfter(key, duration.toNanos(), TimeUnit.NANOSECONDS);
+    }
+
+    /**
+     * Associates the {@code value} with the {@code key} in this cache if the specified key is not
+     * already associated with a value. This method differs from {@link Map#putIfAbsent} by
+     * substituting the configured {@link Expiry} with the specified write duration, has no effect
+     * on the duration if the entry was present, and returns the success rather than a value.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
+     *
+     * @param key the key with which the specified value is to be associated
+     * @param value value to be associated with the specified key
+     * @param duration the length of time from now when the entry should be automatically removed
+     * @param unit the unit that {@code duration} is expressed in
+     * @return <tt>true</tt> if this cache did not already contain the specified entry
+     * @throws IllegalArgumentException if {@code duration} is negative
+     */
+    default boolean putIfAbsent(@Nonnull K key, @Nonnull V value,
+        @Nonnegative long duration, @Nonnull TimeUnit unit) {
+      // This method was added & implemented in version 2.6.0
+      throw new UnsupportedOperationException();
+    }
+
+    /**
      * Associates the {@code value} with the {@code key} in this cache if the specified key is not
      * already associated with a value. This method differs from {@link Map#putIfAbsent} by
      * substituting the configured {@link Expiry} with the specified write duration, has no effect
@@ -313,14 +418,32 @@ public interface Policy<K, V> {
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
      * @param duration the length of time from now when the entry should be automatically removed
-     * @param unit the unit that {@code duration} is expressed in
      * @return <tt>true</tt> if this cache did not already contain the specified entry
+     * @throws IllegalArgumentException if {@code duration} is negative
+     */
+    default boolean putIfAbsent(@Nonnull K key, @Nonnull V value, @Nonnull Duration duration) {
+      // This method will be abstract in version 3.0.0
+      return putIfAbsent(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
+    }
+
+    /**
+     * Associates the {@code value} with the {@code key} in this cache. If the cache previously
+     * contained a value associated with the {@code key}, the old value is replaced by the new
+     * {@code value}. This method differs from {@link Cache#put} by substituting the
+     * configured {@link Expiry} with the specified write duration.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
+     *
+     * @param key the key with which the specified value is to be associated
+     * @param value value to be associated with the specified key
+     * @param duration the length of time from now when the entry should be automatically removed
+     * @param unit the unit that {@code duration} is expressed in
      * @throws IllegalArgumentException if {@code duration} is negative
      * @throws NullPointerException if the specified key or value is null
      */
-    default boolean putIfAbsent(@Nonnull K key, @Nonnull V value,
+    default void put(@Nonnull K key, @Nonnull V value,
         @Nonnegative long duration, @Nonnull TimeUnit unit) {
-      // This method will be abstract in version 3.0.0; added & implemented in version 2.6.0
+      // This method was added & implemented in version 2.6.0
       throw new UnsupportedOperationException();
     }
 
@@ -333,14 +456,11 @@ public interface Policy<K, V> {
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
      * @param duration the length of time from now when the entry should be automatically removed
-     * @param unit the unit that {@code duration} is expressed in
      * @throws IllegalArgumentException if {@code duration} is negative
-     * @throws NullPointerException if the specified key or value is null
      */
-    default void put(@Nonnull K key, @Nonnull V value,
-        @Nonnegative long duration, @Nonnull TimeUnit unit) {
-      // This method will be abstract in version 3.0.0; added & implemented in version 2.6.0
-      throw new UnsupportedOperationException();
+    default void put(@Nonnull K key, @Nonnull V value, @Nonnull Duration duration) {
+      // This method will be abstract in version 3.0.0
+      put(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
     }
 
     /**

@@ -34,6 +34,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -338,19 +339,52 @@ public final class ExpireAfterVarTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void getExpiresAfter_duration(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey()),
+        is(Optional.empty()));
+    assertThat(expireAfterVar.getExpiresAfter(context.firstKey()),
+        is(Optional.of(Duration.ofMinutes(1L))));
+
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(TimeUnit.HOURS.toNanos(1));
+    cache.put(context.firstKey(), context.absentValue());
+    assertThat(expireAfterVar.getExpiresAfter(context.firstKey()),
+        is(Optional.of(Duration.ofHours(1))));
+
+    assertThat(expireAfterVar.getExpiresAfter(context.lastKey()),
+        is(Optional.of(Duration.ofMinutes(1))));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
   public void setExpiresAfter(Cache<Integer, Integer> cache, CacheContext context,
       VarExpiration<Integer, Integer> expireAfterVar) {
     expireAfterVar.setExpiresAfter(context.firstKey(), 2, TimeUnit.MINUTES);
     assertThat(expireAfterVar.getExpiresAfter(context.firstKey(), TimeUnit.MINUTES),
         is(OptionalLong.of(2)));
 
-    expireAfterVar.setExpiresAfter(context.lastKey(), -2, TimeUnit.MINUTES);
-    assertThat(expireAfterVar.getExpiresAfter(context.lastKey(), TimeUnit.MINUTES),
-        is(OptionalLong.empty()));
-
     expireAfterVar.setExpiresAfter(context.absentKey(), 4, TimeUnit.MINUTES);
     assertThat(expireAfterVar.getExpiresAfter(context.absentKey(), TimeUnit.MINUTES),
         is(OptionalLong.empty()));
+
+    context.ticker().advance(90, TimeUnit.SECONDS);
+    cache.cleanUp();
+    assertThat(cache.estimatedSize(), is(1L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void setExpiresAfter_duration(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.setExpiresAfter(context.firstKey(), Duration.ofMinutes(2L));
+    assertThat(expireAfterVar.getExpiresAfter(context.firstKey()),
+        is(Optional.of(Duration.ofMinutes(2L))));
+
+    expireAfterVar.setExpiresAfter(context.absentKey(), Duration.ofMinutes(4L));
+    assertThat(expireAfterVar.getExpiresAfter(context.absentKey()), is(Optional.empty()));
 
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
@@ -395,6 +429,15 @@ public final class ExpireAfterVarTest {
     expireAfterVar.putIfAbsent(1, 2, -10, TimeUnit.SECONDS);
   }
 
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void putIfAbsent_nullDuration(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.putIfAbsent(1, 2, null);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -402,10 +445,10 @@ public final class ExpireAfterVarTest {
       VarExpiration<Integer, Integer> expireAfterVar) {
     Integer key = context.absentKey();
     Integer value = context.absentValue();
-    assertThat(expireAfterVar.putIfAbsent(key, value, 2, TimeUnit.MINUTES), is(true));
+    assertThat(expireAfterVar.putIfAbsent(key, value, Duration.ofMinutes(2L)), is(true));
 
     assertThat(cache.getIfPresent(key), is(value));
-    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.MINUTES), is(OptionalLong.of(2)));
+    assertThat(expireAfterVar.getExpiresAfter(key), is(Optional.of(Duration.ofMinutes(2L))));
 
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
@@ -419,10 +462,10 @@ public final class ExpireAfterVarTest {
       VarExpiration<Integer, Integer> expireAfterVar) {
     Integer key = context.firstKey();
     Integer value = context.absentValue();
-    assertThat(expireAfterVar.putIfAbsent(key, value, 2, TimeUnit.MINUTES), is(false));
+    assertThat(expireAfterVar.putIfAbsent(key, value, Duration.ofMinutes(2L)), is(false));
 
     assertThat(cache.getIfPresent(key), is(context.original().get(key)));
-    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.MINUTES), is(OptionalLong.of(1)));
+    assertThat(expireAfterVar.getExpiresAfter(key), is(Optional.of(Duration.ofMinutes(1L))));
 
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
@@ -467,6 +510,15 @@ public final class ExpireAfterVarTest {
     expireAfterVar.put(1, 2, -10, TimeUnit.SECONDS);
   }
 
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
+      expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
+  public void put_nullDuration(Cache<Integer, Integer> cache, CacheContext context,
+      VarExpiration<Integer, Integer> expireAfterVar) {
+    expireAfterVar.put(1, 2, null);
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.WRITE, expiryTime = Expire.ONE_MINUTE)
@@ -474,10 +526,10 @@ public final class ExpireAfterVarTest {
       VarExpiration<Integer, Integer> expireAfterVar) {
     Integer key = context.absentKey();
     Integer value = context.absentValue();
-    expireAfterVar.put(key, value, 2, TimeUnit.MINUTES);
+    expireAfterVar.put(key, value, Duration.ofMinutes(2L));
 
     assertThat(cache.getIfPresent(key), is(value));
-    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.MINUTES), is(OptionalLong.of(2)));
+    assertThat(expireAfterVar.getExpiresAfter(key), is(Optional.of(Duration.ofMinutes(2L))));
 
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
@@ -491,10 +543,10 @@ public final class ExpireAfterVarTest {
       VarExpiration<Integer, Integer> expireAfterVar) {
     Integer key = context.firstKey();
     Integer value = context.absentValue();
-    expireAfterVar.put(key, value, 2, TimeUnit.MINUTES);
+    expireAfterVar.put(key, value, Duration.ofMinutes(2L));
 
     assertThat(cache.getIfPresent(key), is(value));
-    assertThat(expireAfterVar.getExpiresAfter(key, TimeUnit.MINUTES), is(OptionalLong.of(2)));
+    assertThat(expireAfterVar.getExpiresAfter(key), is(Optional.of(Duration.ofMinutes(2L))));
 
     context.ticker().advance(90, TimeUnit.SECONDS);
     cache.cleanUp();
