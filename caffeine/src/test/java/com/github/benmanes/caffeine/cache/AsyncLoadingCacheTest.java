@@ -33,8 +33,10 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -584,6 +586,35 @@ public final class AsyncLoadingCacheTest {
     int loads = context.loader().isBulk() ? 1 : absentKeys.size();
     assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
   }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_ordered_absent(
+      AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.absentKeys());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys).join().keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_ordered_present(
+      AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.original().keySet());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys).join().keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
 
   @CheckNoWriter
   @Test(dataProvider = "caches")

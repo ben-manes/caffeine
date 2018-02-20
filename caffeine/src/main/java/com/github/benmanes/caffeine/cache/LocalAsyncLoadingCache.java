@@ -25,8 +25,9 @@ import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
@@ -164,7 +165,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       return getAllBulk(keys);
     }
 
-    Map<K, CompletableFuture<V>> result = new HashMap<>();
+    Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
     Function<K, CompletableFuture<V>> mappingFunction = this::get;
     for (K key : keys) {
       CompletableFuture<V> future = result.computeIfAbsent(key, mappingFunction);
@@ -176,7 +177,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
   /** Computes all of the missing entries in a single {@link CacheLoader#asyncLoadAll} call. */
   @SuppressWarnings("FutureReturnValueIgnored")
   private CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
-    Map<K, CompletableFuture<V>> futures = new HashMap<>();
+    Map<K, CompletableFuture<V>> futures = new LinkedHashMap<>();
     Map<K, CompletableFuture<V>> proxies = new HashMap<>();
 
     for (K key : keys) {
@@ -222,7 +223,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
     @SuppressWarnings("rawtypes")
     CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
     return CompletableFuture.allOf(array).thenApply(ignored -> {
-      Map<K, V> result = new HashMap<>(futures.size());
+      Map<K, V> result = new LinkedHashMap<>(futures.size());
       futures.forEach((key, future) -> {
         V value = future.getNow(null);
         if (value != null) {
@@ -348,13 +349,13 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
 
     @Override
     public Map<K, V> getAllPresent(Iterable<?> keys) {
-      Set<Object> uniqueKeys = new HashSet<>();
+      Set<Object> uniqueKeys = new LinkedHashSet<>();
       for (Object key : keys) {
         uniqueKeys.add(key);
       }
 
       int misses = 0;
-      Map<Object, Object> result = new HashMap<>();
+      Map<Object, Object> result = new LinkedHashMap<>();
       for (Object key : uniqueKeys) {
         CompletableFuture<V> future = cache.get(key);
         Object value = Async.getIfReady(future);

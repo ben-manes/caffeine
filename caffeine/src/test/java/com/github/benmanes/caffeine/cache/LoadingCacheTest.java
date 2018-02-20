@@ -274,6 +274,34 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
   }
 
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_ordered_absent(
+      LoadingCache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.absentKeys());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys).keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_ordered_present(
+      LoadingCache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.original().keySet());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys).keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       keys = ReferenceType.STRONG, writer = Writer.DISABLED)

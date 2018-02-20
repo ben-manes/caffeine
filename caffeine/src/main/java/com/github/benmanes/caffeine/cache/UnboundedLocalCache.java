@@ -24,9 +24,9 @@ import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -107,13 +107,13 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
-    Set<Object> uniqueKeys = new HashSet<>();
+    Set<Object> uniqueKeys = new LinkedHashSet<>();
     for (Object key : keys) {
       uniqueKeys.add(key);
     }
 
     int misses = 0;
-    Map<Object, Object> result = new HashMap<>(uniqueKeys.size());
+    Map<Object, Object> result = new LinkedHashMap<>(uniqueKeys.size());
     for (Object key : uniqueKeys) {
       Object value = data.get(key);
       if (value == null) {

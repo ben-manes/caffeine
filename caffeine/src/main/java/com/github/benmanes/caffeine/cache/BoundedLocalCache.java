@@ -34,10 +34,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -1574,14 +1573,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
-    Set<Object> uniqueKeys = new HashSet<>();
+    Set<Object> uniqueKeys = new LinkedHashSet<>();
     for (Object key : keys) {
       uniqueKeys.add(key);
     }
 
     int misses = 0;
     long now = expirationTicker().read();
-    Map<Object, Object> result = new HashMap<>(uniqueKeys.size());
+    Map<Object, Object> result = new LinkedHashMap<>(uniqueKeys.size());
     for (Object key : uniqueKeys) {
       V value;
       Node<K, V> node = data.get(nodeFactory.newLookupKey(key));

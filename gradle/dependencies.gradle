@@ -73,7 +73,7 @@ ext {
   ]
   pluginVersions = [
     apt: '0.14',
-    buildscan: '1.12',
+    buildscan: '1.12.1',
     buildscanRecipes: '0.2.3',
     checkstyle: '8.8',
     coveralls: '2.8.2',
@@ -87,14 +87,14 @@ ext {
     propdeps: '0.0.10.RELEASE',
     semanticVersioning: '1.1.0',
     shadow: '2.0.2',
-    sonarqube: '2.6.1',
+    sonarqube: '2.6.2',
     spotbugs: '3.1.1',
     spotbugsPlugin: '1.6.0',
     stats: '0.2.2',
     versions: '0.17.0',
   ]
   annotationProcessorVersions = [
-    nullaway: '0.3.2',
+    nullaway: '0.3.3',
   ]
 
   libraries = [

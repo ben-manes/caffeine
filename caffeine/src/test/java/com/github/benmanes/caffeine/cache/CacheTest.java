@@ -277,6 +277,18 @@ public final class CacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_ordered(Cache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.original().keySet());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAllPresent(keys).keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, keys = ReferenceType.STRONG, writer = Writer.DISABLED)
   public void getAllPresent_jdk8186171(Cache<Object, Integer> cache, CacheContext context) {
