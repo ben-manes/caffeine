@@ -15,15 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
+import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
+import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
+
+import java.lang.reflect.Constructor;
+
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
-
-import java.lang.invoke.MethodHandle;
-
-import static com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.FACTORY;
-import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
-import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACTORY;
-import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
+import com.squareup.javapoet.TypeName;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -34,7 +35,8 @@ public final class LocalCacheSelectorCode {
 
   private LocalCacheSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$1T sb = new $1T(\"$2N.\")", StringBuilder.class, ((ClassName)LOCAL_CACHE_FACTORY).packageName());
+        .addStatement("$1T sb = new $1T(\"$2N.\")", StringBuilder.class,
+            ((ClassName)LOCAL_CACHE_FACTORY).packageName());
   }
 
   private LocalCacheSelectorCode keys() {
@@ -95,16 +97,19 @@ public final class LocalCacheSelectorCode {
   }
 
   private LocalCacheSelectorCode selector() {
-    block.beginControlFlow("try")
+    block
+        .beginControlFlow("try")
             .addStatement("$T<?> clazz = $T.class.getClassLoader().loadClass(sb.toString())",
                 Class.class, LOCAL_CACHE_FACTORY)
-            .addStatement("$T handle = $N.findConstructor(clazz, $N)",
-                MethodHandle.class, LOOKUP, FACTORY)
-            .addStatement("return ($T) handle.invoke(builder, cacheLoader, async)",
+            .addStatement("$T<?> ctor = clazz.getDeclaredConstructor($T.class, $T.class, $T.class)",
+                Constructor.class, BUILDER, CACHE_LOADER.rawType, TypeName.BOOLEAN)
+            .add("@SuppressWarnings($S)\n", "unchecked")
+            .addStatement("$1T factory = ($1T) ctor.newInstance(builder, cacheLoader, async)",
                 BOUNDED_LOCAL_CACHE)
-          .nextControlFlow("catch ($T t)", Throwable.class)
-            .addStatement("throw new $T(sb.toString(), t)", IllegalStateException.class)
-          .endControlFlow();
+            .addStatement("return factory")
+        .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
+            .addStatement("throw new $T(sb.toString(), e)", IllegalStateException.class)
+      .endControlFlow();
     return this;
   }
 

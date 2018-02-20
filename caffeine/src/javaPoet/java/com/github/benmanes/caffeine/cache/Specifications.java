@@ -15,6 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.lang.ref.ReferenceQueue;
+
+import javax.lang.model.element.Modifier;
+
 import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
@@ -22,10 +26,6 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
-
-import javax.lang.model.element.Modifier;
-import java.lang.invoke.MethodHandles;
-import java.lang.ref.ReferenceQueue;
 
 /**
  * Shared constants for a code generation specification.
@@ -65,10 +65,6 @@ public final class Specifications {
 
   public static final TypeName UNSAFE_ACCESS =
       ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
-  public static final FieldSpec LOOKUP = FieldSpec.builder(MethodHandles.Lookup.class, "LOOKUP")
-      .initializer("$T.lookup()", MethodHandles.class)
-      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-      .build();
 
   public static final TypeName LOCAL_CACHE_FACTORY =
       ClassName.get(PACKAGE_NAME, "LocalCacheFactory");

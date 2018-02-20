@@ -15,13 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import com.squareup.javapoet.CodeBlock;
-
-import java.lang.invoke.MethodHandle;
-
-import static com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator.FACTORY;
-import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
+
+import com.squareup.javapoet.CodeBlock;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -32,7 +28,8 @@ public final class NodeSelectorCode {
 
   private NodeSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$1T sb = new $1T(\"$2N.\")", StringBuilder.class, NODE_FACTORY.rawType.packageName());
+        .addStatement("$1T sb = new $1T(\"$2N.\")",
+            StringBuilder.class, NODE_FACTORY.rawType.packageName());
   }
 
   private NodeSelectorCode keys() {
@@ -98,11 +95,12 @@ public final class NodeSelectorCode {
         .beginControlFlow("try")
             .addStatement("$T<?> clazz = $T.class.getClassLoader().loadClass(sb.toString())",
                 Class.class, NODE_FACTORY.rawType)
-            .addStatement("$T handle = $N.findConstructor(clazz, $N)",
-                MethodHandle.class, LOOKUP, FACTORY)
-            .addStatement("return ($T) handle.invoke()", NODE_FACTORY)
-        .nextControlFlow("catch ($T t)", Throwable.class)
-            .addStatement("throw new $T(sb.toString(), t)", IllegalStateException.class)
+            .add("@SuppressWarnings($S)\n", "unchecked")
+            .addStatement("$1T factory = ($1T) clazz.getDeclaredConstructor().newInstance()",
+                NODE_FACTORY)
+            .addStatement("return factory")
+        .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
+            .addStatement("throw new $T(sb.toString(), e)", IllegalStateException.class)
         .endControlFlow();
     return this;
   }

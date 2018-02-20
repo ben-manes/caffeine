@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_STRONG_KEY;
 import static com.github.benmanes.caffeine.cache.Specifications.DEAD_WEAK_KEY;
-import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE;
 import static com.github.benmanes.caffeine.cache.Specifications.NODE_FACTORY;
 import static com.github.benmanes.caffeine.cache.Specifications.PACKAGE_NAME;
@@ -39,7 +38,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.lang.invoke.MethodType;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
@@ -97,11 +95,6 @@ import com.squareup.javapoet.TypeSpec;
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class NodeFactoryGenerator {
-  static final FieldSpec FACTORY = FieldSpec.builder(MethodType.class, "FACTORY")
-      .initializer("$T.methodType($T.class)", MethodType.class, void.class)
-      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-      .build();
-
   final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
       new AddFactoryMethods(),  new AddHealth(), new Finalize());
@@ -168,9 +161,6 @@ public final class NodeFactoryGenerator {
     nodeFactory.addField(FieldSpec.builder(rawReferenceKeyType, DEAD_WEAK_KEY, modifiers)
         .initializer("new $T(null, null)", rawReferenceKeyType)
         .build());
-
-    nodeFactory.addField(LOOKUP);
-    nodeFactory.addField(FACTORY);
   }
 
   private void addKeyMethods() {

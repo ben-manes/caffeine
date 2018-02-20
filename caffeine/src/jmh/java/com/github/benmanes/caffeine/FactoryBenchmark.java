@@ -53,7 +53,7 @@ public class FactoryBenchmark {
   }
 
   @Benchmark
-  public Alpha reflectionFactory(ThreadState state) {
+  public Alpha reflection(ThreadState state) {
     return reflectionFactory.newInstance(state.i++);
   }
 
