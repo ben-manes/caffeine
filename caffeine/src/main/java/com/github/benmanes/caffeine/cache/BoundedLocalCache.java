@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.Node.EDEN;
@@ -154,6 +155,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final double PERCENT_MAIN_PROTECTED = 0.80d;
   /** The maximum time window between entry updates before the expiration must be reordered. */
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
+  /** The maximum duration before an entry expires. */
+  static final long MAXIMUM_EXPIRY = (Long.MAX_VALUE >> 1); // 150 years
 
   final ConcurrentHashMap<Object, Node<K, V>> data;
   @Nullable final CacheLoader<K, V> cacheLoader;
@@ -724,13 +727,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /** Returns if the entry has expired. */
+  @SuppressWarnings("ShortCircuitBoolean")
   boolean hasExpired(Node<K, V> node, long now) {
-    if (isComputingAsync(node)) {
-      return false;
-    }
     return (expiresAfterAccess() && (now - node.getAccessTime() >= expiresAfterAccessNanos()))
-        || (expiresAfterWrite() && (now - node.getWriteTime() >= expiresAfterWriteNanos()))
-        || (expiresVariable() && (now - node.getVariableTime() >= 0));
+        | (expiresAfterWrite() && (now - node.getWriteTime() >= expiresAfterWriteNanos()))
+        | (expiresVariable() && (now - node.getVariableTime() >= 0));
   }
 
   /**
@@ -866,7 +867,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     K key;
     V oldValue;
     long oldWriteTime = node.getWriteTime();
-    long refreshWriteTime = (now + Async.MAXIMUM_EXPIRY);
+    long refreshWriteTime = (now + ASYNC_EXPIRY);
     if (((now - oldWriteTime) > refreshAfterWriteNanos())
         && ((key = node.getKey()) != null) && ((oldValue = node.getValue()) != null)
         && node.casWriteTime(oldWriteTime, refreshWriteTime)) {
@@ -941,7 +942,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   long expireAfterCreate(@Nullable K key, @Nullable V value, Expiry<K, V> expiry, long now) {
     if (expiresVariable() && (key != null) && (value != null)) {
       long duration = expiry.expireAfterCreate(key, value, now);
-      return (now + duration);
+      return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
     }
     return 0L;
   }
@@ -961,7 +962,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (expiresVariable() && (key != null) && (value != null)) {
       long currentDuration = Math.max(1, node.getVariableTime() - now);
       long duration = expiry.expireAfterUpdate(key, value, now, currentDuration);
-      return (now + duration);
+      return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
     }
     return 0L;
   }
@@ -981,7 +982,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (expiresVariable() && (key != null) && (value != null)) {
       long currentDuration = Math.max(1, node.getVariableTime() - now);
       long duration = expiry.expireAfterRead(key, value, now, currentDuration);
-      return (now + duration);
+      return isAsync ? (now + duration) : (now + Math.min(duration, MAXIMUM_EXPIRY));
     }
     return 0L;
   }
@@ -1340,7 +1341,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (isComputingAsync(node)) {
         synchronized (node) {
           if (!Async.isReady((CompletableFuture<?>) node.getValue())) {
-            long expirationTime = expirationTicker().read() + Long.MAX_VALUE;
+            long expirationTime = expirationTicker().read() + ASYNC_EXPIRY;
             setVariableTime(node, expirationTime);
             setAccessTime(node, expirationTime);
             setWriteTime(node, expirationTime);
@@ -3255,7 +3256,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           long durationNanos = TimeUnit.NANOSECONDS.convert(duration, unit);
           synchronized (node) {
             now = cache.expirationTicker().read();
-            node.setVariableTime(now + durationNanos);
+            node.setVariableTime(now + Math.min(durationNanos, MAXIMUM_EXPIRY));
           }
           cache.afterRead(node, now, /* recordHit */ false);
         }

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -27,6 +28,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -42,6 +44,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -59,6 +62,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
+import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -71,6 +75,33 @@ import com.google.common.collect.Iterables;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterVarTest {
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(expiryTime = Expire.FOREVER,
+      expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS })
+  public void expiry_bounds(Cache<Integer, Integer> cache, CacheContext context) {
+    context.ticker().advance(System.nanoTime());
+    AtomicBoolean running = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    Integer key = context.absentKey();
+    cache.put(key, key);
+
+    try {
+      ConcurrentTestHarness.execute(() -> {
+        while (!done.get()) {
+          context.ticker().advance(1, TimeUnit.MINUTES);
+          cache.get(key, Integer::new);
+          running.set(true);
+        }
+      });
+      await().untilTrue(running);
+      cache.cleanUp();
+
+      assertThat(cache.get(key, Integer::new), sameInstance(key));
+    } finally {
+      done.set(true);
+    }
+  }
 
   /* ---------------- Create -------------- */
 

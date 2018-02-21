@@ -15,7 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.Async.MAXIMUM_EXPIRY;
+import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.MAXIMUM_EXPIRY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -112,13 +113,13 @@ public final class AsyncTest {
     AsyncExpiry<Integer, Integer> expiry = makeAsyncExpiry(ONE_MINUTE, ONE_MINUTE, ONE_MINUTE);
     CompletableFuture<Integer> future = new CompletableFuture<Integer>();
 
-    assertThat(expiry.expireAfterCreate(0, future, 1L), is(Long.MAX_VALUE));
+    assertThat(expiry.expireAfterCreate(0, future, 1L), is(ASYNC_EXPIRY));
     verify(expiry.delegate, never()).expireAfterCreate(any(), any(), anyLong());
 
-    assertThat(expiry.expireAfterUpdate(0, future, 1L, 2L), is(Long.MAX_VALUE));
+    assertThat(expiry.expireAfterUpdate(0, future, 1L, 2L), is(ASYNC_EXPIRY));
     verify(expiry.delegate, never()).expireAfterUpdate(any(), any(), anyLong(), anyLong());
 
-    assertThat(expiry.expireAfterRead(0, future, 1L, 2L), is(Long.MAX_VALUE));
+    assertThat(expiry.expireAfterRead(0, future, 1L, 2L), is(ASYNC_EXPIRY));
     verify(expiry.delegate, never()).expireAfterRead(any(), any(), anyLong(), anyLong());
   }
 
