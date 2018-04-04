@@ -68,7 +68,7 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * <pre>{@code
  *   LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
  *       .maximumSize(10_000)
- *       .expireAfterWrite(10, TimeUnit.MINUTES)
+ *       .expireAfterWrite(Duration.ofMinutes(10))
  *       .removalListener((Key key, Graph graph, RemovalCause cause) ->
  *           System.out.printf("Key %s was removed (%s)%n", key, cause))
  *       .build(key -> createExpensiveGraph(key));
@@ -239,7 +239,7 @@ public final class Caffeine<K, V> {
    * value unnecessarily high wastes memory.
    *
    * @param initialCapacity minimum total size for the internal data structures
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalArgumentException if {@code initialCapacity} is negative
    * @throws IllegalStateException if an initial capacity was already set
    */
@@ -274,7 +274,7 @@ public final class Caffeine<K, V> {
    * may experience non-deterministic behavior.
    *
    * @param executor the executor to use for asynchronous execution
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws NullPointerException if the specified executor is null
    */
   @Nonnull
@@ -302,7 +302,7 @@ public final class Caffeine<K, V> {
    * This feature cannot be used in conjunction with {@link #maximumWeight}.
    *
    * @param maximumSize the maximum size of the cache
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalArgumentException if {@code size} is negative
    * @throws IllegalStateException if a maximum size or weight was already set
    */
@@ -338,7 +338,7 @@ public final class Caffeine<K, V> {
    * This feature cannot be used in conjunction with {@link #maximumSize}.
    *
    * @param maximumWeight the maximum total weight of entries the cache may contain
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalArgumentException if {@code maximumWeight} is negative
    * @throws IllegalStateException if a maximum weight or size was already set
    */
@@ -433,7 +433,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #writer}.
    *
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalStateException if the key strength was already set or the writer was set
    */
   @Nonnull
@@ -465,7 +465,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalStateException if the value strength was already set
    */
   @Nonnull
@@ -502,7 +502,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalStateException if the value strength was already set
    */
   @Nonnull
@@ -520,11 +520,12 @@ public final class Caffeine<K, V> {
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
    * described in the class javadoc.
    *
-   * @param duration the amount of time after an entry is created that it should be automatically
+   * @param duration the length of time after an entry is created that it should be automatically
    *        removed
-   * @return this builder instance
-   * @throws IllegalArgumentException if the length of time is negative
-   * @throws IllegalStateException if the time to live or variable expiration was already set
+   * @return this {@code Caffeine} instance instance (for chaining)
+   * @throws IllegalArgumentException if {@code duration} is negative
+   * @throws IllegalStateException if the time to live or time to idle was already set
+   * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
   @Nonnull
   public Caffeine<K, V> expireAfterWrite(@Nonnull Duration duration) {
@@ -542,7 +543,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is created that it should be automatically
    *        removed
    * @param unit the unit that {@code duration} is expressed in
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to live or variable expiration was already set
    */
@@ -568,19 +569,20 @@ public final class Caffeine<K, V> {
   /**
    * Specifies that each entry should be automatically removed from the cache once a fixed duration
    * has elapsed after the entry's creation, the most recent replacement of its value, or its last
-   * read. Access time is reset by all cache read and write operations (including
-   * {@code Cache.asMap().get(Object)} and {@code Cache.asMap().put(K, V)}), but not by operations
-   * on the collection-views of {@link Cache#asMap}.
+   * access. Access time is reset by all cache read and write operations (including {@code
+   * Cache.asMap().get(Object)} and {@code Cache.asMap().put(K, V)}), but not by operations on the
+   * collection-views of {@link Cache#asMap}.
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
    * described in the class javadoc.
    *
-   * @param duration the amount of time after an entry is created that it should be automatically
-   *        removed
-   * @return this builder instance
-   * @throws IllegalArgumentException if the length of time is negative
-   * @throws IllegalStateException if the time to idle or variable expiration was already set
+   * @param duration the length of time after an entry is last accessed that it should be
+   *        automatically removed
+   * @return this {@code Caffeine} instance (for chaining)
+   * @throws IllegalArgumentException if {@code duration} is negative
+   * @throws IllegalStateException if the time to idle or time to live was already set
+   * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
   @Nonnull
   public Caffeine<K, V> expireAfterAccess(@Nonnull Duration duration) {
@@ -601,7 +603,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is last accessed that it should be
    *        automatically removed
    * @param unit the unit that {@code duration} is expressed in
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to idle or variable expiration was already set
    */
@@ -638,7 +640,7 @@ public final class Caffeine<K, V> {
    * @param expiry the expiry to use in calculating the expiration time of cache entries
    * @param <K1> key type of the weigher
    * @param <V1> value type of the weigher
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalStateException if expiration was already set
    */
   @Nonnull
@@ -671,8 +673,8 @@ public final class Caffeine<K, V> {
   /**
    * Specifies that active entries are eligible for automatic refresh once a fixed duration has
    * elapsed after the entry's creation, or the most recent replacement of its value. The semantics
-   * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
-   * {@link CacheLoader#reload}.
+   * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling {@link
+   * CacheLoader#reload}.
    * <p>
    * Automatic refreshes are performed when the first stale request for an entry occurs. The request
    * triggering refresh will make an asynchronous call to {@link CacheLoader#reload} and immediately
@@ -680,11 +682,12 @@ public final class Caffeine<K, V> {
    * <p>
    * <b>Note:</b> <i>all exceptions thrown during refresh will be logged and then swallowed</i>.
    *
-   * @param duration the amount of time after an entry is created that it should be automatically
-   *        removed
-   * @return this builder instance
-   * @throws IllegalArgumentException if the length of time is zero or negative
+   * @param duration the length of time after an entry is created that it should be considered
+   *     stale, and thus eligible for refresh
+   * @return this {@code Caffeine} instance (for chaining)
+   * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the refresh interval was already set
+   * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
   @Nonnull
   public Caffeine<K, V> refreshAfterWrite(@Nonnull Duration duration) {
@@ -706,7 +709,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is created that it should be considered
    *        stale, and thus eligible for refresh
    * @param unit the unit that {@code duration} is expressed in
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is zero or negative
    * @throws IllegalStateException if the refresh interval was already set
    */
@@ -736,7 +739,7 @@ public final class Caffeine<K, V> {
    * with {@link #expireAfterWrite}, {@link #expireAfterAccess}, or {@link #refreshAfterWrite}.
    *
    * @param ticker a nanosecond-precision time source
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    * @throws IllegalStateException if a ticker was already set
    * @throws NullPointerException if the specified ticker is null
    */
@@ -853,7 +856,7 @@ public final class Caffeine<K, V> {
    * requires bookkeeping to be performed with each operation, and thus imposes a performance
    * penalty on cache operation.
    *
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    */
   @Nonnull
   public Caffeine<K, V> recordStats() {
@@ -870,7 +873,7 @@ public final class Caffeine<K, V> {
    * suppressed and logged.
    *
    * @param statsCounterSupplier a supplier instance that returns a new {@link StatsCounter}
-   * @return this builder instance
+   * @return this {@code Caffeine} instance instance (for chaining)
    */
   @Nonnull
   public Caffeine<K, V> recordStats(

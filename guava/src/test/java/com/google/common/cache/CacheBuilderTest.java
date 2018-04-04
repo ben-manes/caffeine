@@ -56,6 +56,7 @@ import junit.framework.TestCase;
  * Unit tests for Caffeine.
  */
 @GwtCompatible(emulated = true)
+@SuppressWarnings("CanonicalDuration")
 public class CacheBuilderTest extends TestCase {
 
   public void testNewBuilder() {
@@ -209,12 +210,43 @@ public class CacheBuilderTest extends TestCase {
     } catch (IllegalStateException expected) {}
   }
 
+  @GwtIncompatible // java.time.Duration
+  public void testLargeDurations() {
+    java.time.Duration threeHundredYears = java.time.Duration.ofDays(365 * 300);
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    try {
+      builder.expireAfterWrite(threeHundredYears);
+      fail();
+    } catch (ArithmeticException expected) {
+    }
+    try {
+      builder.expireAfterAccess(threeHundredYears);
+      fail();
+    } catch (ArithmeticException expected) {
+    }
+    try {
+      builder.refreshAfterWrite(threeHundredYears);
+      fail();
+    } catch (ArithmeticException expected) {
+    }
+  }
+
   public void testTimeToLive_negative() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     try {
       builder.expireAfterWrite(-1, SECONDS);
       fail();
     } catch (IllegalArgumentException expected) {}
+  }
+
+  @GwtIncompatible // java.time.Duration
+  public void testTimeToLive_negative_duration() {
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    try {
+      builder.expireAfterWrite(java.time.Duration.ofSeconds(-1));
+      fail();
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   public void testTimeToLive_small() {
@@ -233,12 +265,34 @@ public class CacheBuilderTest extends TestCase {
     } catch (IllegalStateException expected) {}
   }
 
+  @GwtIncompatible // java.time.Duration
+  public void testTimeToLive_setTwice_duration() {
+    Caffeine<Object, Object> builder =
+        Caffeine.newBuilder().expireAfterWrite(java.time.Duration.ofSeconds(3600));
+    try {
+      // even to the same value is not allowed
+      builder.expireAfterWrite(java.time.Duration.ofSeconds(3600));
+      fail();
+    } catch (IllegalStateException expected) {
+    }
+  }
+
   public void testTimeToIdle_negative() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     try {
       builder.expireAfterAccess(-1, SECONDS);
       fail();
     } catch (IllegalArgumentException expected) {}
+  }
+
+  @GwtIncompatible // java.time.Duration
+  public void testTimeToIdle_negative_duration() {
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    try {
+      builder.expireAfterAccess(java.time.Duration.ofSeconds(-1));
+      fail();
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   public void testTimeToIdle_small() {
@@ -255,6 +309,18 @@ public class CacheBuilderTest extends TestCase {
       builder.expireAfterAccess(3600, SECONDS);
       fail();
     } catch (IllegalStateException expected) {}
+  }
+
+  @GwtIncompatible // java.time.Duration
+  public void testTimeToIdle_setTwice_duration() {
+    Caffeine<Object, Object> builder =
+        Caffeine.newBuilder().expireAfterAccess(java.time.Duration.ofSeconds(3600));
+    try {
+      // even to the same value is not allowed
+      builder.expireAfterAccess(java.time.Duration.ofSeconds(3600));
+      fail();
+    } catch (IllegalStateException expected) {
+    }
   }
 
   public void testTimeToIdleAndToLive() {
@@ -274,6 +340,16 @@ public class CacheBuilderTest extends TestCase {
     } catch (IllegalArgumentException expected) {}
   }
 
+  @GwtIncompatible // java.time.Duration
+  public void testRefresh_zero_duration() {
+    Caffeine<Object, Object> builder = Caffeine.newBuilder();
+    try {
+      builder.refreshAfterWrite(java.time.Duration.ZERO);
+      fail();
+    } catch (IllegalArgumentException expected) {
+    }
+  }
+
   @GwtIncompatible("refreshAfterWrite")
   public void testRefresh_setTwice() {
     Caffeine<Object, Object> builder =
@@ -283,6 +359,18 @@ public class CacheBuilderTest extends TestCase {
       builder.refreshAfterWrite(3600, SECONDS);
       fail();
     } catch (IllegalStateException expected) {}
+  }
+
+  @GwtIncompatible // java.time.Duration
+  public void testRefresh_setTwice_duration() {
+    Caffeine<Object, Object> builder =
+        Caffeine.newBuilder().refreshAfterWrite(java.time.Duration.ofSeconds(3600));
+    try {
+      // even to the same value is not allowed
+      builder.refreshAfterWrite(java.time.Duration.ofSeconds(3600));
+      fail();
+    } catch (IllegalStateException expected) {
+    }
   }
 
   public void testTicker_setTwice() {

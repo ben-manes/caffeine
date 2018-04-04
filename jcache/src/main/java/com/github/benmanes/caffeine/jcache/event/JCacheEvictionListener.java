@@ -58,8 +58,7 @@ public final class JCacheEvictionListener<K, V> implements CacheWriter<K, Expira
 
   @Override
   public void delete(K key, @Nullable Expirable<V> expirable, RemovalCause cause) {
-    if (cause.wasEvicted()) {
-      @SuppressWarnings("NullAway")
+    if (cause.wasEvicted() && (expirable != null)) {
       V value = expirable.get();
       if (cause == RemovalCause.EXPIRED) {
         dispatcher.publishExpiredQuietly(cache, key, value);

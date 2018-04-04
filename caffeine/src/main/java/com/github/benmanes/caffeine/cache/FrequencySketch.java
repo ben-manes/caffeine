@@ -80,8 +80,7 @@ final class FrequencySketch<E> {
    */
   @SuppressWarnings("NullAway.Init")
   public FrequencySketch() {
-    int seed = ThreadLocalRandom.current().nextInt();
-    this.randomSeed = ((seed & 1) == 0) ? seed + 1 : seed;
+    this.randomSeed = 1 | ThreadLocalRandom.current().nextInt();
   }
 
   /**

@@ -156,6 +156,6 @@ public final class Synthetic {
 
   /** Returns a sequence of items constructed by the generator. */
   private static LongStream generate(NumberGenerator generator, long count) {
-    return LongStream.range(0, count).map(ignored -> generator.nextValue().intValue());
+    return LongStream.range(0, count).map(ignored -> generator.nextValue().longValue());
   }
 }
