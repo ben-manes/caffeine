@@ -52,9 +52,11 @@ public final class Synthetic {
         return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
             hotspot.hotOpnFraction(), hotspot.hotsetFraction(), events);
       case "zipfian":
-        return zipfian(settings.synthetic().zipfian().items(), events);
+        return zipfian(settings.synthetic().zipfian().items(),
+            settings.synthetic().zipfian().constant(), events);
       case "scrambled-zipfian":
-        return scrambledZipfian(settings.synthetic().zipfian().items(), events);
+        return scrambledZipfian(settings.synthetic().zipfian().items(),
+            settings.synthetic().zipfian().constant(), events);
       case "skewed-zipfian-latest":
         return skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
       case "uniform":
@@ -113,10 +115,11 @@ public final class Synthetic {
    * items) clustered together.
    *
    * @param items the number of items in the distribution
+   * @param constant the skew factor for the distribution
    * @param events the number of events in the distribution
    */
-  public static LongStream scrambledZipfian(int items, int events) {
-    return generate(new ScrambledZipfianGenerator(items), events);
+  public static LongStream scrambledZipfian(int items, double constant, int events) {
+    return generate(new ScrambledZipfianGenerator(0, items - 1, constant), events);
   }
 
   /**
@@ -135,10 +138,11 @@ public final class Synthetic {
    * zipfian distribution.
    *
    * @param items the number of items in the distribution
+   * @param constant the skew factor for the distribution
    * @param events the number of events in the distribution
    */
-  public static LongStream zipfian(int items, int events) {
-    return generate(new ZipfianGenerator(items), events);
+  public static LongStream zipfian(int items, double constant, int events) {
+    return generate(new ZipfianGenerator(items, constant), events);
   }
 
   /**

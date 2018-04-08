@@ -39,7 +39,6 @@ public class EvictionBenchmark {
   @Param({
     "LinkedHashMap_Lru",
     "Caffeine",
-    "Ehcache2_Lru",
     "Ehcache3",
   })
   CacheType cacheType;

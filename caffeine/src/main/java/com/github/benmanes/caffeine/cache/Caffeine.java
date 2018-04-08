@@ -239,7 +239,7 @@ public final class Caffeine<K, V> {
    * value unnecessarily high wastes memory.
    *
    * @param initialCapacity minimum total size for the internal data structures
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code initialCapacity} is negative
    * @throws IllegalStateException if an initial capacity was already set
    */
@@ -274,7 +274,7 @@ public final class Caffeine<K, V> {
    * may experience non-deterministic behavior.
    *
    * @param executor the executor to use for asynchronous execution
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws NullPointerException if the specified executor is null
    */
   @Nonnull
@@ -302,7 +302,7 @@ public final class Caffeine<K, V> {
    * This feature cannot be used in conjunction with {@link #maximumWeight}.
    *
    * @param maximumSize the maximum size of the cache
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code size} is negative
    * @throws IllegalStateException if a maximum size or weight was already set
    */
@@ -338,7 +338,7 @@ public final class Caffeine<K, V> {
    * This feature cannot be used in conjunction with {@link #maximumSize}.
    *
    * @param maximumWeight the maximum total weight of entries the cache may contain
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code maximumWeight} is negative
    * @throws IllegalStateException if a maximum weight or size was already set
    */
@@ -433,7 +433,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #writer}.
    *
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if the key strength was already set or the writer was set
    */
   @Nonnull
@@ -465,7 +465,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if the value strength was already set
    */
   @Nonnull
@@ -502,7 +502,7 @@ public final class Caffeine<K, V> {
    * <p>
    * This feature cannot be used in conjunction with {@link #buildAsync}.
    *
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if the value strength was already set
    */
   @Nonnull
@@ -522,7 +522,7 @@ public final class Caffeine<K, V> {
    *
    * @param duration the length of time after an entry is created that it should be automatically
    *        removed
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to live or time to idle was already set
    * @throws ArithmeticException for durations greater than +/- approximately 292 years
@@ -543,7 +543,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is created that it should be automatically
    *        removed
    * @param unit the unit that {@code duration} is expressed in
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to live or variable expiration was already set
    */
@@ -603,7 +603,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is last accessed that it should be
    *        automatically removed
    * @param unit the unit that {@code duration} is expressed in
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to idle or variable expiration was already set
    */
@@ -640,7 +640,7 @@ public final class Caffeine<K, V> {
    * @param expiry the expiry to use in calculating the expiration time of cache entries
    * @param <K1> key type of the weigher
    * @param <V1> value type of the weigher
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if expiration was already set
    */
   @Nonnull
@@ -709,7 +709,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is created that it should be considered
    *        stale, and thus eligible for refresh
    * @param unit the unit that {@code duration} is expressed in
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalArgumentException if {@code duration} is zero or negative
    * @throws IllegalStateException if the refresh interval was already set
    */
@@ -739,7 +739,7 @@ public final class Caffeine<K, V> {
    * with {@link #expireAfterWrite}, {@link #expireAfterAccess}, or {@link #refreshAfterWrite}.
    *
    * @param ticker a nanosecond-precision time source
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if a ticker was already set
    * @throws NullPointerException if the specified ticker is null
    */
@@ -856,7 +856,7 @@ public final class Caffeine<K, V> {
    * requires bookkeeping to be performed with each operation, and thus imposes a performance
    * penalty on cache operation.
    *
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    */
   @Nonnull
   public Caffeine<K, V> recordStats() {
@@ -873,7 +873,7 @@ public final class Caffeine<K, V> {
    * suppressed and logged.
    *
    * @param statsCounterSupplier a supplier instance that returns a new {@link StatsCounter}
-   * @return this {@code Caffeine} instance instance (for chaining)
+   * @return this {@code Caffeine} instance (for chaining)
    */
   @Nonnull
   public Caffeine<K, V> recordStats(

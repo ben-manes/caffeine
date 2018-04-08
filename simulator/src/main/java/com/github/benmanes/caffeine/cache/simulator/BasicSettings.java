@@ -247,6 +247,9 @@ public class BasicSettings {
       public int items() {
         return config().getInt("synthetic.zipfian.items");
       }
+      public double constant() {
+        return config().getDouble("synthetic.zipfian.constant");
+      }
     }
   }
 }

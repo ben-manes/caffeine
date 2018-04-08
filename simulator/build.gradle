@@ -18,7 +18,6 @@ dependencies {
   compile benchmarkLibraries.tcache
   compile libraries.univocityParsers
   compile benchmarkLibraries.cache2k
-  compile benchmarkLibraries.ehcache2
   compile benchmarkLibraries.ehcache3
   compile benchmarkLibraries.rapidoid
   compile benchmarkLibraries.collision

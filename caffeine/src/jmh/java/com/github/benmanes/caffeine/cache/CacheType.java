@@ -25,7 +25,6 @@ import com.github.benmanes.caffeine.cache.impl.CaffeineCache;
 import com.github.benmanes.caffeine.cache.impl.Collision;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentHashMapV7;
 import com.github.benmanes.caffeine.cache.impl.ConcurrentMapCache;
-import com.github.benmanes.caffeine.cache.impl.Ehcache2;
 import com.github.benmanes.caffeine.cache.impl.Ehcache3;
 import com.github.benmanes.caffeine.cache.impl.ElasticSearchCache;
 import com.github.benmanes.caffeine.cache.impl.ExpiringMapCache;
@@ -37,7 +36,6 @@ import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 import com.trivago.triava.tcache.EvictionPolicy;
 
 import net.jodah.expiringmap.ExpirationPolicy;
-import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 
 /**
  * A factory for creating a {@link BasicCache} implementation.
@@ -91,11 +89,6 @@ public enum CacheType {
             .maximumWeightedCapacity(maximumSize)
             .initialCapacity(maximumSize)
             .build());
-    }
-  },
-  Ehcache2_Lru {
-    @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
-      return new Ehcache2<>(maximumSize, MemoryStoreEvictionPolicy.LRU);
     }
   },
   Ehcache3 {

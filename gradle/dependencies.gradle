@@ -38,7 +38,7 @@ ext {
     jsr305: '3.0.2',
     jsr330: '1',
     univocityParsers: '2.6.2',
-    ycsb: '1.13.0-RC1',
+    ycsb: '0.13.0',
     xz: '1.8',
   ]
   testVersions = [
@@ -48,7 +48,7 @@ ext {
     jcacheTck: '1.1.0',
     jctools: '2.1.2',
     junit: '4.12',
-    mockito: '2.17.0',
+    mockito: '2.18.0',
     paxExam: '4.11.0',
     testng: '6.14.3',
     truth: '0.24',
@@ -57,7 +57,6 @@ ext {
     cache2k: '1.0.2.Final',
     collision: '0.3.3',
     concurrentlinkedhashmap: '1.4.2',
-    ehcache2: '2.10.4',
     ehcache3: '3.5.2',
     elasticSearch: '6.2.3',
     expiringMap: '0.5.8',
@@ -155,7 +154,6 @@ ext {
     cache2k: "org.cache2k:cache2k-core:${benchmarkVersions.cache2k}",
     collision: "systems.comodal:collision:${benchmarkVersions.collision}",
     concurrentlinkedhashmap: "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:${benchmarkVersions.concurrentlinkedhashmap}",
-    ehcache2: "net.sf.ehcache:ehcache:${benchmarkVersions.ehcache2}",
     ehcache3: "org.ehcache:ehcache:${benchmarkVersions.ehcache3}",
     elasticSearch: dependencies.create("org.elasticsearch:elasticsearch:${benchmarkVersions.elasticSearch}") {
       exclude group: 'org.apache.lucene'

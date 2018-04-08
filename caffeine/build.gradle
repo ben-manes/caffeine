@@ -41,7 +41,6 @@ dependencies {
   jmh benchmarkLibraries.jamm
   jmh benchmarkLibraries.tcache
   jmh benchmarkLibraries.cache2k
-  jmh benchmarkLibraries.ehcache2
   jmh benchmarkLibraries.ehcache3
   jmh benchmarkLibraries.koloboke
   jmh benchmarkLibraries.rapidoid
@@ -59,8 +58,8 @@ dependencies {
 }
 
 compileCodeGenJava {
-  outputs.upToDateWhen {
-    !gradle.taskGraph.hasTask('uploadArchives')
+  gradle.taskGraph.whenReady {
+    enabled = gradle.taskGraph.hasTask('uploadArchives')
   }
   dependsOn compileJava
   destinationDir = compileJava.destinationDir
