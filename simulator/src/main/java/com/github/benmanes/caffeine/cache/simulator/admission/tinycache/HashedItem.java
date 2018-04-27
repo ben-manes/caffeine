@@ -28,10 +28,10 @@ final class HashedItem {
   byte fingerprint;
   long value;
 
-  public HashedItem(int set, byte chainid, byte fingerprit, long value) {
+  public HashedItem(int set, byte chainId, byte fingerprit, long value) {
     this.set = set;
     this.value = value;
-    this.chainId = chainid;
+    this.chainId = chainId;
     this.fingerprint = fingerprit;
   }
 

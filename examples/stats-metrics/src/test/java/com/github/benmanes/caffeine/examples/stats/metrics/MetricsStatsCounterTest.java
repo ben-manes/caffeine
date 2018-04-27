@@ -48,6 +48,6 @@ public final class MetricsStatsCounterTest {
 
     // Statistics can be queried and reported on
     assertThat(cache.stats().hitCount(), is(3L));
-    assertThat(registry.meter("example.hits").getCount(), is(3L));
+    assertThat(registry.counter("example.hits").getCount(), is(3L));
   }
 }

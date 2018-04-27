@@ -1,3 +1,4 @@
 * text=auto
 gradlew text eol=lf
 gradlew.bat text eol=crlf
+mvnw.cmd text eol=crlf

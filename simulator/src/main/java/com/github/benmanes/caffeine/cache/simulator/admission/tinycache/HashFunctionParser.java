@@ -32,8 +32,8 @@ public final class HashFunctionParser {
   private final static long m = 0xc6a4a7935bd1e995L;
   private final static int r = 47;
 
-  public HashFunctionParser(int nrsets) {
-    this.nrSets = nrsets;
+  public HashFunctionParser(int nrSets) {
+    this.nrSets = nrSets;
     fpaux = new HashedItem(fpMask, fpMask, fpMask, 0L);
   }
 
