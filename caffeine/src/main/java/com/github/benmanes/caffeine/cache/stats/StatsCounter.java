@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
+import java.util.Map;
+
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -50,19 +52,20 @@ public interface StatsCounter {
   void recordMisses(@Nonnegative int count);
 
   /**
-   * Records the successful load of a new entry. This should be called when a cache request causes
-   * an entry to be loaded, and the loading completes successfully. In contrast to
-   * {@link #recordMisses}, this method should only be called by the loading thread.
+   * Records the successful load of a new entry. This method should be called when a cache request
+   * causes an entry to be loaded (such as by {@link Cache#get} or {@link Map#computeIfAbsent}) and
+   * the loading completes successfully. In contrast to {@link #recordMisses}, this method should
+   * only be called by the loading thread.
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    */
   void recordLoadSuccess(@Nonnegative long loadTime);
 
   /**
-   * Records the failed load of a new entry. This should be called when a cache request causes an
-   * entry to be loaded, but either no value is found or an exception is thrown while loading the
-   * entry. In contrast to {@link #recordMisses}, this method should only be called by the loading
-   * thread.
+   * Records the failed load of a new entry. This method should be called when a cache request
+   * causes an entry to be loaded (such as by {@link Cache#get} or {@link Map#computeIfAbsent}), but
+   * an exception is thrown while loading the entry or the loading function returns null. In
+   * contrast to {@link #recordMisses}, this method should only be called by the loading thread.
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    *        prior to discovering the value doesn't exist or an exception being thrown
