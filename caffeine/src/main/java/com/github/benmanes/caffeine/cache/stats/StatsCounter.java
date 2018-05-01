@@ -51,8 +51,11 @@ public interface StatsCounter {
 
   /**
    * Records the successful load of a new entry. This should be called when a cache request causes
-   * an entry to be loaded, and the loading completes successfully. In contrast to
-   * {@link #recordMisses}, this method should only be called by the loading thread.
+   * an entry to be loaded (as the result of calling methods of {@link
+   * com.github.benmanes.caffeine.cache.LoadingCache}, {@link
+   * com.github.benmanes.caffeine.cache.AsyncLoadingCache}, or {@link Cache#get}), and the loading
+   * completes successfully. In contrast to {@link #recordMisses}, this method should only be
+   * called by the loading thread.
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    */
@@ -60,9 +63,11 @@ public interface StatsCounter {
 
   /**
    * Records the failed load of a new entry. This should be called when a cache request causes an
-   * entry to be loaded, but either no value is found or an exception is thrown while loading the
-   * entry. In contrast to {@link #recordMisses}, this method should only be called by the loading
-   * thread.
+   * entry to be loaded (as the result of calling methods of {@link
+   * com.github.benmanes.caffeine.cache.LoadingCache}, {@link
+   * com.github.benmanes.caffeine.cache.AsyncLoadingCache}, or {@link Cache#get}), but an exception
+   * is thrown while loading the entry, or the loading function returns null. In contrast to {@link
+   * #recordMisses}, this method should only be called by the loading thread.
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    *        prior to discovering the value doesn't exist or an exception being thrown

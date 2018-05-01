@@ -67,6 +67,13 @@ public interface Cache<K, V> {
    * <p>
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
+   * <p>
+   * If the mappingFunction returns null or throws and unchecked exception or error, a {@link
+   * com.github.benmanes.caffeine.cache.stats.StatsCounter#recordLoadFailure(long)
+   * StatsCounter.recordLoadFailure(1)} event is recorded. If the mappingFunction returns a non-null
+   * value which is stored in the cache, a {@link
+   * com.github.benmanes.caffeine.cache.stats.StatsCounter#recordLoadSuccess(long)
+   * StatsCounter.recordLoadSuccess(1)} event is recorded.
    *
    * @param key the key with which the specified value is to be associated
    * @param mappingFunction the function to compute a value
