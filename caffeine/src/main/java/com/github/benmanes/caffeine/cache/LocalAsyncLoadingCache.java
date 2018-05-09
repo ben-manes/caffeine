@@ -298,7 +298,7 @@ abstract class LocalAsyncLoadingCache<C extends LocalCache<K, CompletableFuture<
       } else {
         fillProxies(result);
         addNewEntries(result);
-        cache.statsCounter().recordLoadSuccess(result.size());
+        cache.statsCounter().recordLoadSuccess(loadTime);
       }
     }
 

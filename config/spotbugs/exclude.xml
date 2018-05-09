@@ -49,6 +49,13 @@
     <Bug code="UuF"/>
   </Match>
 
+  <!-- Guava -->
+  <Match>
+    <Class name="com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache"/>
+    <Method name="apply"/>
+    <Bug pattern="NP_METHOD_PARAMETER_TIGHTENS_ANNOTATION"/>
+  </Match>
+
   <!-- JCache -->
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.event.EventDispatcher"/>

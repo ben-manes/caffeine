@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
@@ -480,5 +481,11 @@ public final class CacheContext {
   }
 
   @SuppressWarnings("serial")
-  static final class SerializableFakeTicker extends FakeTicker implements Serializable {}
+  static final class SerializableFakeTicker extends FakeTicker implements Serializable {
+    private static final long START_TIME = new Random().nextLong();
+
+    public SerializableFakeTicker() {
+      advance(START_TIME);
+    }
+  }
 }

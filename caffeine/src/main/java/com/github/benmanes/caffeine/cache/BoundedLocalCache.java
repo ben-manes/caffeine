@@ -873,6 +873,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         && node.casWriteTime(oldWriteTime, refreshWriteTime)) {
       try {
         CompletableFuture<V> refreshFuture;
+        long startTime = statsTicker().read();
         if (isAsync) {
           @SuppressWarnings("unchecked")
           CompletableFuture<V> future = (CompletableFuture<V>) oldValue;
@@ -892,7 +893,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           refreshFuture = refresh;
         }
         refreshFuture.whenComplete((newValue, error) -> {
-          long loadTime = statsTicker().read() - now;
+          long loadTime = statsTicker().read() - startTime;
           if (error != null) {
             logger.log(Level.WARNING, "Exception thrown during refresh", error);
             node.casWriteTime(refreshWriteTime, oldWriteTime);
