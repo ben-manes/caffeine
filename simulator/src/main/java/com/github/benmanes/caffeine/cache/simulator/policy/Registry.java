@@ -94,9 +94,15 @@ public final class Registry {
   /** Returns all of the policies that have been configured for simulation. */
   public static Set<Policy> policies(BasicSettings settings) {
     return settings.policies().stream()
-        .map(name -> checkNotNull(FACTORIES.get(name), "%s not found", name))
-        .flatMap(factory -> factory.apply(settings.config()).stream())
+        .flatMap(name -> policy(settings, name).stream())
         .collect(toSet());
+  }
+
+  /** Returns all of the policy variations that have been configured. */
+  public static Set<Policy> policy(BasicSettings settings, String name) {
+    Function<Config, Set<Policy>> factory = FACTORIES.get(name.toLowerCase(US));
+    checkNotNull(factory, "%s not found", name);
+    return factory.apply(settings.config());
   }
 
   private static void registerOptimal(Map<String, Function<Config, Set<Policy>>> factories) {

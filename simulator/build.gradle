@@ -32,6 +32,17 @@ test {
   useTestNG()
 }
 
+// JMH zip archive overlaps with the application's
+if (!(gradle.startParameter.taskNames ==~ /.*uploadArchives.*/)) {
+  apply from: "${rootDir}/gradle/jmh.gradle"
+
+  jmh {
+    benchmarkMode = ['avgt']
+    warmupIterations = 1
+    iterations = 3
+  }
+}
+
 coverity {
   skip = true
 }
