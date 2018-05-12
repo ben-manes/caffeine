@@ -16,12 +16,15 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.lang.reflect.Field;
+import java.util.concurrent.ConcurrentMap;
+
+import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.google.common.base.Throwables;
 
 /**
- * A hook to enforce a predictable random seed is used by Caffeine's caches.
+ * A hook to enforce that a predictable random seed is used by Caffeine's caches.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -34,15 +37,26 @@ public final class RandomSeedEnforcer {
 
   /** Force the random seed to a predictable value. */
   public static void ensureRandomSeed(Cache<?, ?> cache) {
-    if (!(cache.asMap() instanceof BoundedLocalCache<?, ?>)) {
+    BoundedLocalCache<?, ?> map = unwrap(cache);
+    if (map == null) {
       return;
     }
 
-    BoundedLocalCache<?, ?> map = (BoundedLocalCache<?, ?>) cache.asMap();
     resetThreadLocalRandom();
     if (map.evicts()) {
       ensureRandomSeed(map.frequencySketch());
     }
+  }
+
+  /** Returns the underlying bounded cache, or null if not applicable. */
+  private static @Nullable BoundedLocalCache<?, ?> unwrap(Cache<?, ?> cache) {
+    ConcurrentMap<?, ?> map = cache.asMap();
+    if (map instanceof LocalAsyncLoadingCache.AsMapView<?, ?>) {
+      map = ((LocalAsyncLoadingCache.AsMapView<?, ?>) cache.asMap()).delegate;
+    }
+    return (map instanceof BoundedLocalCache<?, ?>)
+        ? (BoundedLocalCache<?, ?>) map
+        : null;
   }
 
   /** Forces the eviction jitter to be predictable. */
