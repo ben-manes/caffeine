@@ -1540,8 +1540,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
       return null;
     }
+
+    V value = node.getValue();
     long now = expirationTicker().read();
-    if (hasExpired(node, now)) {
+    if (hasExpired(node, now) || (collectValues() && (value == null))) {
       if (recordStats) {
         statsCounter().recordMisses(1);
       }
@@ -1549,13 +1551,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return null;
     }
 
-    @SuppressWarnings("unchecked")
-    K castedKey = (K) key;
-    V value = node.getValue();
-
     if (!isComputingAsync(node)) {
-      setVariableTime(node, expireAfterRead(node, castedKey, value, expiry(), now));
+      @SuppressWarnings("unchecked")
+      K castedKey = (K) key;
       setAccessTime(node, now);
+      setVariableTime(node, expireAfterRead(node, castedKey, value, expiry(), now));
     }
     afterRead(node, now, recordStats);
     return value;
