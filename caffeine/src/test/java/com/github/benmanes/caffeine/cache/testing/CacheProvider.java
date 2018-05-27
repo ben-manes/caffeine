@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 
 import org.testng.annotations.DataProvider;
 
+import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -66,12 +67,13 @@ public final class CacheProvider {
     Options options = Options.fromSystemProperties();
 
     // Inspect the test parameters for interface constraints (loading, async)
-    boolean isAsyncLoadingOnly = hasCacheOfType(testMethod, AsyncLoadingCache.class);
-    boolean isLoadingOnly = isAsyncLoadingOnly
-        || hasCacheOfType(testMethod, LoadingCache.class)
+    boolean isAsyncOnly = hasCacheOfType(testMethod, AsyncCache.class);
+    boolean isLoadingOnly =
+        hasCacheOfType(testMethod, LoadingCache.class)
+        || hasCacheOfType(testMethod, AsyncLoadingCache.class)
         || options.compute().filter(Compute.ASYNC::equals).isPresent();
 
-    return new CacheGenerator(cacheSpec, options, isLoadingOnly, isAsyncLoadingOnly);
+    return new CacheGenerator(cacheSpec, options, isLoadingOnly, isAsyncOnly);
   }
 
   /**
@@ -100,7 +102,8 @@ public final class CacheProvider {
           params[i] = context.caffeine;
         } else if (clazz.isAssignableFrom(cache.getClass())) {
           params[i] = cache;
-        } else if (clazz.isAssignableFrom(AsyncLoadingCache.class)) {
+        } else if ((context.asyncCache != null)
+            && clazz.isAssignableFrom(context.asyncCache.getClass())) {
           params[i] = context.asyncCache;
         } else if (clazz.isAssignableFrom(Map.class)) {
           params[i] = cache.asMap();

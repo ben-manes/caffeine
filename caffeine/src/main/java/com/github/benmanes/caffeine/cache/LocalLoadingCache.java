@@ -37,8 +37,7 @@ import javax.annotation.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
-    extends LocalManualCache<C, K, V>, LoadingCache<K, V> {
+interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K, V> {
   Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
   /** Returns the {@link CacheLoader} used by this cache. */

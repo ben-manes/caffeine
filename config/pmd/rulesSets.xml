@@ -8,6 +8,7 @@
   <rule ref="category/java/bestpractices.xml">
     <exclude name="UseVarargs"/>
     <exclude name="SystemPrintln"/>
+    <exclude name="MissingOverride"/>
     <exclude name="GuardLogStatement"/>
     <exclude name="OneDeclarationPerLine"/>
     <exclude name="AvoidReassigningParameters"/>
@@ -29,6 +30,7 @@
     <exclude name="TooManyStaticImports"/>
     <exclude name="AtLeastOneConstructor"/>
     <exclude name="CallSuperInConstructor"/>
+    <exclude name="ClassNamingConventions"/>
     <exclude name="LocalVariableCouldBeFinal"/>
     <exclude name="VariableNamingConventions"/>
     <exclude name="MethodArgumentCouldBeFinal"/>
@@ -87,6 +89,7 @@
   <rule ref="category/java/errorprone.xml/AvoidDuplicateLiterals">
     <properties>
       <property name="skipAnnotations" value="true"/>
+      <property name="maxDuplicateLiterals" value="10"/>
     </properties>
   </rule>
 

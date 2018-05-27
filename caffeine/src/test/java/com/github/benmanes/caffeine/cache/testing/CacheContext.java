@@ -34,6 +34,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -103,9 +104,9 @@ public final class CacheContext {
   final boolean isAsyncLoading;
 
   Cache<?, ?> cache;
+  AsyncCache<?, ?> asyncCache;
   Caffeine<Object, Object> caffeine;
   CacheBuilder<Object, Object> guava;
-  AsyncLoadingCache<?, ?> asyncCache;
 
   @Nullable Integer firstKey;
   @Nullable Integer middleKey;

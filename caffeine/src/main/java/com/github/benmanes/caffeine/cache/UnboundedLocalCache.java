@@ -851,8 +851,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   /* ---------------- Manual Cache -------------- */
 
-  static class UnboundedLocalManualCache<K, V>
-      implements LocalManualCache<UnboundedLocalCache<K, V>, K, V>, Serializable {
+  static class UnboundedLocalManualCache<K, V> implements LocalManualCache<K, V>, Serializable {
     private static final long serialVersionUID = 1;
 
     final UnboundedLocalCache<K, V> cache;
@@ -913,7 +912,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   /* ---------------- Loading Cache -------------- */
 
   static final class UnboundedLocalLoadingCache<K, V> extends UnboundedLocalManualCache<K, V>
-      implements LocalLoadingCache<UnboundedLocalCache<K, V>, K, V> {
+      implements LocalLoadingCache<K, V> {
     private static final long serialVersionUID = 1;
 
     final CacheLoader<? super K, V> loader;
@@ -966,23 +965,34 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
   }
 
-  /* ---------------- Async Loading Cache -------------- */
+  /* ---------------- Async Cache -------------- */
 
-  static final class UnboundedLocalAsyncLoadingCache<K, V>
-      extends LocalAsyncLoadingCache<UnboundedLocalCache<K, CompletableFuture<V>>, K, V>
-      implements Serializable {
+  static final class UnboundedLocalAsyncCache<K, V> implements LocalAsyncCache<K, V>, Serializable {
     private static final long serialVersionUID = 1;
 
+    final UnboundedLocalCache<K, CompletableFuture<V>> cache;
+
+    @Nullable CacheView<K, V> cacheView;
     @Nullable Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
-    UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, AsyncCacheLoader<? super K, V> loader) {
-      super(new UnboundedLocalCache<>(
-          (Caffeine<K, CompletableFuture<V>>) builder, /* async */ true), loader);
+    UnboundedLocalAsyncCache(Caffeine<K, V> builder) {
+      cache = new UnboundedLocalCache<>(
+          (Caffeine<K, CompletableFuture<V>>) builder, /* async */ true);
     }
 
     @Override
-    protected Policy<K, V> policy() {
+    public UnboundedLocalCache<K, CompletableFuture<V>> cache() {
+      return cache;
+    }
+
+    @Override
+    public Cache<K, V> synchronous() {
+      return (cacheView == null) ? (cacheView = new CacheView<>(this)) : cacheView;
+    }
+
+    @Override
+    public Policy<K, V> policy() {
       return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
     }
 
@@ -994,6 +1004,48 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       SerializationProxy<K, V> proxy = new SerializationProxy<>();
       proxy.isRecordingStats = cache.isRecordingStats;
       proxy.removalListener = cache.removalListener;
+      proxy.ticker = cache.ticker;
+      proxy.writer = cache.writer;
+      proxy.async = true;
+      return proxy;
+    }
+  }
+
+  /* ---------------- Async Loading Cache -------------- */
+
+  static final class UnboundedLocalAsyncLoadingCache<K, V>
+      extends LocalAsyncLoadingCache<K, V> implements Serializable {
+    private static final long serialVersionUID = 1;
+
+    final UnboundedLocalCache<K, CompletableFuture<V>> cache;
+
+    @Nullable Policy<K, V> policy;
+
+    @SuppressWarnings("unchecked")
+    UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, AsyncCacheLoader<? super K, V> loader) {
+      super(loader);
+      cache = new UnboundedLocalCache<>(
+          (Caffeine<K, CompletableFuture<V>>) builder, /* async */ true);
+    }
+
+    @Override
+    public LocalCache<K, CompletableFuture<V>> cache() {
+      return cache;
+    }
+
+    @Override
+    public Policy<K, V> policy() {
+      return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
+    }
+
+    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+      throw new InvalidObjectException("Proxy required");
+    }
+
+    Object writeReplace() {
+      SerializationProxy<K, V> proxy = new SerializationProxy<>();
+      proxy.isRecordingStats = cache.isRecordingStats();
+      proxy.removalListener = cache.removalListener();
       proxy.ticker = cache.ticker;
       proxy.writer = cache.writer;
       proxy.loader = loader;

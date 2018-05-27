@@ -17,12 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -37,66 +33,7 @@ import javax.annotation.concurrent.ThreadSafe;
  * @param <V> the type of mapped values
  */
 @ThreadSafe
-public interface AsyncLoadingCache<K, V> {
-
-  /**
-   * Returns the future associated with {@code key} in this cache, or {@code null} if there is no
-   * cached future for {@code key}.
-   *
-   * @param key key whose associated value is to be returned
-   * @return the current (existing or computed) future value to which the specified key is mapped,
-   *         or {@code null} if this map contains no mapping for the key
-   * @throws NullPointerException if the specified key is null
-   */
-  @Nullable
-  CompletableFuture<V> getIfPresent(@Nonnull Object key);
-
-  /**
-   * Returns the future associated with {@code key} in this cache, obtaining that value from
-   * {@code mappingFunction} if necessary. This method provides a simple substitute for the
-   * conventional "if cached, return; otherwise create, cache and return" pattern.
-   * <p>
-   * If the specified key is not already associated with a value, attempts to compute its value
-   * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
-   * is performed atomically, so the function is applied at most once per key. If the asynchronous
-   * computation fails, the entry will be automatically removed from this cache.
-   * <p>
-   * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
-   * attempt to update any other mappings of this cache.
-   *
-   * @param key key with which the specified value is to be associated
-   * @param mappingFunction the function to asynchronously compute a value
-   * @return the current (existing or computed) future value associated with the specified key
-   * @throws NullPointerException if the specified key or mappingFunction is null
-   */
-  @Nonnull
-  CompletableFuture<V> get(@Nonnull K key,
-      @Nonnull Function<? super K, ? extends V> mappingFunction);
-
-  /**
-   * Returns the future associated with {@code key} in this cache, obtaining that value from
-   * {@code mappingFunction} if necessary. This method provides a simple substitute for the
-   * conventional "if cached, return; otherwise create, cache and return" pattern.
-   * <p>
-   * If the specified key is not already associated with a value, attempts to compute its value
-   * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
-   * is performed atomically, so the function is applied at most once per key. If the asynchronous
-   * computation fails, the entry will be automatically removed from this cache.
-   * <p>
-   * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
-   * attempt to update any other mappings of this cache.
-   *
-   * @param key key with which the specified value is to be associated
-   * @param mappingFunction the function to asynchronously compute a value
-   * @return the current (existing or computed) future value associated with the specified key
-   * @throws NullPointerException if the specified key or mappingFunction is null, or if the
-   *         future returned by the mappingFunction is null
-   * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
-   *         in which case the mapping is left unestablished
-   */
-  @Nonnull
-  CompletableFuture<V> get(@Nonnull K key,
-      @Nonnull BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction);
+public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
@@ -147,20 +84,6 @@ public interface AsyncLoadingCache<K, V> {
   CompletableFuture<Map<K, V>> getAll(@Nonnull Iterable<? extends K> keys);
 
   /**
-   * Associates {@code value} with {@code key} in this cache. If the cache previously contained a
-   * value associated with {@code key}, the old value is replaced by {@code value}. If the
-   * asynchronous computation fails, the entry will be automatically removed.
-   * <p>
-   * Prefer {@link #get(Object, Function)} when using the conventional "if cached, return; otherwise
-   * create, cache and return" pattern.
-   *
-   * @param key key with which the specified value is to be associated
-   * @param valueFuture value to be associated with the specified key
-   * @throws NullPointerException if the specified key or value is null
-   */
-  void put(@Nonnull K key, @Nonnull CompletableFuture<V> valueFuture);
-
-  /**
    * Returns a view of the entries stored in this cache as a synchronous {@link LoadingCache}. A
    * mapping is not present if the value is currently being loaded. Modifications made to the
    * synchronous cache directly affect the asynchronous cache. If a modification is made to a
@@ -169,5 +92,6 @@ public interface AsyncLoadingCache<K, V> {
    * @return a thread-safe synchronous view of this cache
    */
   @Nonnull
+  @Override
   LoadingCache<K, V> synchronous();
 }

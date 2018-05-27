@@ -95,8 +95,12 @@ public final class CaffeineCacheFromContext {
       builder.writer(context.cacheWriter());
     }
     if (context.isAsync()) {
-      context.asyncCache = builder.buildAsync(
-          context.isAsyncLoading ? context.loader.async() : context.loader);
+      if (context.loader == null) {
+        context.asyncCache = builder.buildAsync();
+      } else {
+        context.asyncCache = builder.buildAsync(
+            context.isAsyncLoading ? context.loader.async() : context.loader);
+      }
       context.cache = context.asyncCache.synchronous();
     } else if (context.loader == null) {
       context.cache = builder.build();

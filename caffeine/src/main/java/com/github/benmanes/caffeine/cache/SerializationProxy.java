@@ -99,16 +99,20 @@ final class SerializationProxy<K, V> implements Serializable {
 
   Object readResolve() {
     Caffeine<Object, Object> builder = recreateCaffeine();
-    if (loader == null) {
-      return builder.build();
-    } else if (async) {
+    if (async) {
+      if (loader == null) {
+        return builder.buildAsync();
+      }
       @SuppressWarnings("unchecked")
       AsyncCacheLoader<K, V> cacheLoader = (AsyncCacheLoader<K, V>) loader;
       return builder.buildAsync(cacheLoader);
-    } else {
-      @SuppressWarnings("unchecked")
-      CacheLoader<K, V> cacheLoader = (CacheLoader<K, V>) loader;
-      return builder.build(cacheLoader);
     }
+
+    if (loader == null) {
+      return builder.build();
+    }
+    @SuppressWarnings("unchecked")
+    CacheLoader<K, V> cacheLoader = (CacheLoader<K, V>) loader;
+    return builder.build(cacheLoader);
   }
 }

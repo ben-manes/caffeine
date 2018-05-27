@@ -29,10 +29,10 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-interface LocalManualCache<C extends LocalCache<K, V>, K, V> extends Cache<K, V> {
+interface LocalManualCache<K, V> extends Cache<K, V> {
 
   /** Returns the backing {@link LocalCache} data store. */
-  C cache();
+  LocalCache<K, V> cache();
 
   @Override
   default long estimatedSize() {

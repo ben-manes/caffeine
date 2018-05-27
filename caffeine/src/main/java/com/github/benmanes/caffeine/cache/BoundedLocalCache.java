@@ -3027,8 +3027,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /* ---------------- Manual Cache -------------- */
 
-  static class BoundedLocalManualCache<K, V> implements
-      LocalManualCache<BoundedLocalCache<K, V>, K, V>, Serializable {
+  static class BoundedLocalManualCache<K, V> implements LocalManualCache<K, V>, Serializable {
     private static final long serialVersionUID = 1;
 
     final BoundedLocalCache<K, V> cache;
@@ -3351,8 +3350,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /* ---------------- Loading Cache -------------- */
 
-  static final class BoundedLocalLoadingCache<K, V> extends BoundedLocalManualCache<K, V>
-      implements LocalLoadingCache<BoundedLocalCache<K, V>, K, V> {
+  static final class BoundedLocalLoadingCache<K, V>
+      extends BoundedLocalManualCache<K, V> implements LocalLoadingCache<K, V> {
     private static final long serialVersionUID = 1;
 
     final boolean hasBulkLoader;
@@ -3408,45 +3407,87 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
+  /* ---------------- Async Cache -------------- */
+
+  static final class BoundedLocalAsyncCache<K, V> implements LocalAsyncCache<K, V>, Serializable {
+    private static final long serialVersionUID = 1;
+
+    final BoundedLocalCache<K, CompletableFuture<V>> cache;
+    final boolean isWeighted;
+
+    @Nullable CacheView<K, V> cacheView;
+    @Nullable Policy<K, V> policy;
+
+    @SuppressWarnings("unchecked")
+    BoundedLocalAsyncCache(Caffeine<K, V> builder) {
+      cache = (BoundedLocalCache<K, CompletableFuture<V>>) LocalCacheFactory
+          .newBoundedLocalCache(builder, /* loader */ null, /* async */ true);
+      isWeighted = builder.isWeighted();
+    }
+
+    @Override
+    public BoundedLocalCache<K, CompletableFuture<V>> cache() {
+      return cache;
+    }
+
+    @Override
+    public Cache<K, V> synchronous() {
+      return (cacheView == null) ? (cacheView = new CacheView<>(this)) : cacheView;
+    }
+
+    @Override
+    public Policy<K, V> policy() {
+      if (policy == null) {
+        @SuppressWarnings("unchecked")
+        BoundedLocalCache<K, V> castCache = (BoundedLocalCache<K, V>) cache;
+        Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
+        @SuppressWarnings("unchecked")
+        Function<V, V> castTransformer = (Function<V, V>) transformer;
+        policy = new BoundedPolicy<>(castCache, castTransformer, isWeighted);
+      }
+      return policy;
+    }
+
+    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+      throw new InvalidObjectException("Proxy required");
+    }
+
+    Object writeReplace() {
+      SerializationProxy<K, V> proxy = makeSerializationProxy(cache, isWeighted);
+      if (cache.refreshAfterWrite()) {
+        proxy.refreshAfterWriteNanos = cache.refreshAfterWriteNanos();
+      }
+      proxy.async = true;
+      return proxy;
+    }
+  }
+
   /* ---------------- Async Loading Cache -------------- */
 
   static final class BoundedLocalAsyncLoadingCache<K, V>
-      extends LocalAsyncLoadingCache<BoundedLocalCache<K, CompletableFuture<V>>, K, V>
-      implements Serializable {
+      extends LocalAsyncLoadingCache<K, V> implements Serializable {
     private static final long serialVersionUID = 1;
 
+    final BoundedLocalCache<K, CompletableFuture<V>> cache;
     final boolean isWeighted;
+
     @Nullable Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
     BoundedLocalAsyncLoadingCache(Caffeine<K, V> builder, AsyncCacheLoader<? super K, V> loader) {
-      super((BoundedLocalCache<K, CompletableFuture<V>>) LocalCacheFactory.newBoundedLocalCache(
-          builder, asyncLoader(loader, builder), /* async */ true), loader);
+      super(loader);
       isWeighted = builder.isWeighted();
-    }
-
-    private static <K, V> CacheLoader<K, V> asyncLoader(
-        AsyncCacheLoader<? super K, V> loader, Caffeine<?, ?> builder) {
-      Executor executor = builder.getExecutor();
-      return new CacheLoader<K, V>() {
-        @Override public V load(K key) {
-          @SuppressWarnings("unchecked")
-          V newValue = (V) loader.asyncLoad(key, executor);
-          return newValue;
-        }
-        @Override public V reload(K key, V oldValue) {
-          @SuppressWarnings("unchecked")
-          V newValue = (V) loader.asyncReload(key, oldValue, executor);
-          return newValue;
-        }
-        @Override public CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) {
-          return loader.asyncReload(key, oldValue, executor);
-        }
-      };
+      cache = (BoundedLocalCache<K, CompletableFuture<V>>) LocalCacheFactory
+          .newBoundedLocalCache(builder, new AsyncLoader<>(loader, builder), /* async */ true);
     }
 
     @Override
-    protected Policy<K, V> policy() {
+    public BoundedLocalCache<K, CompletableFuture<V>> cache() {
+      return cache;
+    }
+
+    @Override
+    public Policy<K, V> policy() {
       if (policy == null) {
         @SuppressWarnings("unchecked")
         BoundedLocalCache<K, V> castCache = (BoundedLocalCache<K, V>) cache;
@@ -3470,6 +3511,30 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       proxy.loader = loader;
       proxy.async = true;
       return proxy;
+    }
+
+    static final class AsyncLoader<K, V> implements CacheLoader<K, V> {
+      final AsyncCacheLoader<? super K, V> loader;
+      final Executor executor;
+
+      AsyncLoader(AsyncCacheLoader<? super K, V> loader, Caffeine<?, ?> builder) {
+        this.executor = requireNonNull(builder.getExecutor());
+        this.loader = requireNonNull(loader);
+      }
+
+      @Override public V load(K key) {
+        @SuppressWarnings("unchecked")
+        V newValue = (V) loader.asyncLoad(key, executor);
+        return newValue;
+      }
+      @Override public V reload(K key, V oldValue) {
+        @SuppressWarnings("unchecked")
+        V newValue = (V) loader.asyncReload(key, oldValue, executor);
+        return newValue;
+      }
+      @Override public CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) {
+        return loader.asyncReload(key, oldValue, executor);
+      }
     }
   }
 }

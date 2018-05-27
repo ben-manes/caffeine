@@ -906,7 +906,9 @@ public final class Caffeine<K, V> {
   }
 
   /**
-   * Builds a cache which does not automatically load values when keys are requested.
+   * Builds a cache which does not automatically load values when keys are requested unless a
+   * mapping function is provided. Note that multiple threads can concurrently load values for
+   * distinct keys.
    * <p>
    * Consider {@link #build(CacheLoader)} instead, if it is feasible to implement a
    * {@code CacheLoader}.
@@ -925,7 +927,7 @@ public final class Caffeine<K, V> {
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return isBounded() || refreshes()
+    return isBounded()
         ? new BoundedLocalCache.BoundedLocalManualCache<>(self)
         : new UnboundedLocalCache.UnboundedLocalManualCache<>(self);
   }
@@ -957,6 +959,40 @@ public final class Caffeine<K, V> {
   }
 
   /**
+   * Builds a cache which does not automatically load values when keys are requested unless a
+   * mapping function is provided. The returned {@link CompletableFuture} may be already loaded or
+   * currently computing the value for a given key. If the asynchronous computation fails or
+   * computes a {@code null} value then the entry will be automatically removed. Note that multiple
+   * threads can concurrently load values for distinct keys.
+   * <p>
+   * Consider {@link #buildAsync(CacheLoader)} or {@link #buildAsync(AsyncCacheLoader)} instead, if
+   * it is feasible to implement an {@code CacheLoader} or {@code AsyncCacheLoader}.
+   * <p>
+   * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
+   * again to create multiple independent caches.
+   * <p>
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or
+   * {@link #writer(CacheWriter)}.
+   *
+   * @param <K1> the key type of the cache
+   * @param <V1> the value type of the cache
+   * @return a cache having the requested features
+   */
+  @Nonnull
+  public <K1 extends K, V1 extends V> AsyncCache<K1, V1> buildAsync() {
+    requireState(valueStrength == null, "Weak or soft values can not be combined with AsyncCache");
+    requireState(writer == null, "CacheWriter can not be combined with AsyncCache");
+    requireWeightWithWeigher();
+    requireNonLoadingCache();
+
+    @SuppressWarnings("unchecked")
+    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    return isBounded()
+        ? new BoundedLocalCache.BoundedLocalAsyncCache<>(self)
+        : new UnboundedLocalCache.UnboundedLocalAsyncCache<>(self);
+  }
+
+  /**
    * Builds a cache, which either returns a {@link CompletableFuture} already loaded or currently
    * computing the value for a given key, or atomically computes the value asynchronously through a
    * supplied mapping function or the supplied {@code CacheLoader}. If the asynchronous computation
@@ -967,7 +1003,7 @@ public final class Caffeine<K, V> {
    * again to create multiple independent caches.
    * <p>
    * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or
-   * {@link #writer}.
+   * {@link #writer(CacheWriter)}.
    *
    * @param loader the cache loader used to obtain new values
    * @param <K1> the key type of the loader
@@ -991,7 +1027,7 @@ public final class Caffeine<K, V> {
    * again to create multiple independent caches.
    * <p>
    * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or
-   * {@link #writer}.
+   * {@link #writer(CacheWriter)}.
    *
    * @param loader the cache loader used to obtain new values
    * @param <K1> the key type of the loader

@@ -58,6 +58,7 @@ public final class CaffeineTest {
   public void unconfigured() {
     assertThat(Caffeine.newBuilder().build(), is(not(nullValue())));
     assertThat(Caffeine.newBuilder().build(loader), is(not(nullValue())));
+    assertThat(Caffeine.newBuilder().buildAsync(), is(not(nullValue())));
     assertThat(Caffeine.newBuilder().buildAsync(loader), is(not(nullValue())));
     assertThat(Caffeine.newBuilder().toString(), is(Caffeine.newBuilder().toString()));
   }
@@ -65,12 +66,13 @@ public final class CaffeineTest {
   @Test
   public void configured() {
     Caffeine<Object, Object> configured = Caffeine.newBuilder()
-        .initialCapacity(1).weakKeys().softValues()
+        .initialCapacity(1).weakKeys()
         .expireAfterAccess(1, TimeUnit.SECONDS).expireAfterWrite(1, TimeUnit.SECONDS)
         .removalListener((k, v, c) -> {}).recordStats();
     assertThat(configured.build(), is(not(nullValue())));
+    assertThat(configured.buildAsync(), is(not(nullValue())));
     assertThat(configured.build(loader), is(not(nullValue())));
-    assertThat(Caffeine.newBuilder().buildAsync(loader), is(not(nullValue())));
+    assertThat(configured.buildAsync(loader), is(not(nullValue())));
 
     assertThat(configured.refreshAfterWrite(1, TimeUnit.SECONDS).toString(),
         is(not(Caffeine.newBuilder().toString())));

@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static com.google.common.base.Predicates.equalTo;
-import static com.google.common.base.Predicates.not;
 import static org.mockito.Mockito.reset;
 
 import java.util.Arrays;
@@ -55,13 +53,13 @@ import com.google.common.collect.Sets;
 final class CacheGenerator {
   private final Options options;
   private final CacheSpec cacheSpec;
+  private final boolean isAsyncOnly;
   private final boolean isLoadingOnly;
-  private final boolean isAsyncLoadingOnly;
 
   public CacheGenerator(CacheSpec cacheSpec, Options options,
-      boolean isLoadingOnly, boolean isAsyncLoadingOnly) {
-    this.isAsyncLoadingOnly = isAsyncLoadingOnly;
+      boolean isLoadingOnly, boolean isAsyncOnly) {
     this.isLoadingOnly = isLoadingOnly;
+    this.isAsyncOnly = isAsyncOnly;
     this.cacheSpec = cacheSpec;
     this.options = options;
   }
@@ -89,17 +87,13 @@ final class CacheGenerator {
     Set<Implementation> implementations = filterTypes(
         options.implementation(), cacheSpec.implementation());
 
-    if (System.getProperty("java.version").contains("9")) {
-      values = Sets.filter(values, not(equalTo(ReferenceType.SOFT)));
-    }
-
-    if (isAsyncLoadingOnly) {
+    if (isAsyncOnly) {
       values = values.contains(ReferenceType.STRONG)
           ? ImmutableSet.of(ReferenceType.STRONG)
           : ImmutableSet.of();
       computations = Sets.filter(computations, Compute.ASYNC::equals);
     }
-    if (isAsyncLoadingOnly || computations.equals(ImmutableSet.of(Compute.ASYNC))) {
+    if (isAsyncOnly || computations.equals(ImmutableSet.of(Compute.ASYNC))) {
       implementations = implementations.contains(Implementation.Caffeine)
           ? ImmutableSet.of(Implementation.Caffeine)
           : ImmutableSet.of();
@@ -174,8 +168,7 @@ final class CacheGenerator {
   /** Returns if the context is a viable configuration. */
   private boolean isCompatible(CacheContext context) {
     boolean asyncIncompatible = context.isAsync()
-        && ((context.implementation() != Implementation.Caffeine)
-        || !context.isStrongValues() || !context.isLoading());
+        && ((context.implementation() != Implementation.Caffeine) || !context.isStrongValues());
     boolean asyncLoaderIncompatible = context.isAsyncLoading()
         && (!context.isAsync() || !context.isLoading());
     boolean refreshIncompatible = context.refreshes() && !context.isLoading();
