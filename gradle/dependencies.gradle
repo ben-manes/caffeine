@@ -25,17 +25,17 @@
  */
 ext {
   versions = [
-    akka: '2.5.12',
+    akka: '2.5.13',
+    checkerFramework: '2.5.1',
     commonsCompress: '1.16.1',
     commonsLang3: '3.7',
     config: '1.3.3',
     errorProne: '2.3.1',
-    fastutil: '8.1.1',
+    fastutil: '8.2.1',
     flipTables: '1.0.2',
     guava: '25.1-jre',
     javapoet: '1.11.1',
     jcache: '1.1.0',
-    jsr305: '3.0.2',
     jsr330: '1',
     univocityParsers: '2.6.3',
     ycsb: '0.13.0',
@@ -66,15 +66,13 @@ ext {
     jmh: '1.21',
     koloboke: '0.6.8',
     ohc: '0.6.1',
-    rapidoid: '5.5.4',
     slf4j: '1.7.25',
     tcache: '1.0.5',
   ]
   pluginVersions = [
     apt: '0.15',
     buildscan: '1.13.4',
-    buildscanRecipes: '0.2.3',
-    checkstyle: '8.10',
+    checkstyle: '8.10.1',
     coveralls: '2.8.2',
     coverity: '1.0.10',
     errorProne: '0.0.14',
@@ -98,6 +96,7 @@ ext {
 
   libraries = [
     akka: "com.typesafe.akka:akka-actor_2.12:${versions.akka}",
+    checkerAnnotations: "org.checkerframework:checker-qual:${versions.checkerFramework}",
     commonsCompress: "org.apache.commons:commons-compress:${versions.commonsCompress}",
     commonsLang3: "org.apache.commons:commons-lang3:${versions.commonsLang3}",
     config: "com.typesafe:config:${versions.config}",
@@ -108,7 +107,6 @@ ext {
     guava: "com.google.guava:guava:${versions.guava}",
     javapoet: "com.squareup:javapoet:${versions.javapoet}",
     jcache: "javax.cache:cache-api:${versions.jcache}",
-    jsr305: "com.google.code.findbugs:jsr305:${versions.jsr305}",
     jsr330: "javax.inject:javax.inject:${versions.jsr330}",
     univocityParsers: "com.univocity:univocity-parsers:${versions.univocityParsers}",
     ycsb: "com.github.brianfrankcooper.ycsb:core:${versions.ycsb}",
@@ -169,14 +167,12 @@ ext {
       "net.openhft:koloboke-impl-jdk8:${benchmarkVersions.koloboke}",
     ],
     ohc: "org.caffinitas.ohc:ohc-core-j8:${benchmarkVersions.ohc}",
-    rapidoid: "org.rapidoid:rapidoid-commons:${benchmarkVersions.rapidoid}",
     slf4jNop: "org.slf4j:slf4j-nop:${benchmarkVersions.slf4j}",
     tcache: "com.trivago:triava:${benchmarkVersions.tcache}",
   ]
   gradlePlugins = [
     apt: "net.ltgt.gradle:gradle-apt-plugin:${pluginVersions.apt}",
     buildscan: "com.gradle:build-scan-plugin:${pluginVersions.buildscan}",
-    buildscanRecipes: "me.champeau.gradle:buildscan-recipes-plugin:${pluginVersions.buildscanRecipes}",
     checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${pluginVersions.checkstyle}") {
       transitive = false
     },

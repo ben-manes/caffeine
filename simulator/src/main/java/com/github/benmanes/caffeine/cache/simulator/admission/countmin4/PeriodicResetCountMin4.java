@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission.countmin4;
 
-import javax.annotation.Nonnegative;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.TinyLfuSettings.DoorkeeperSettings;
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
@@ -52,7 +50,7 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
   }
 
   @Override
-  protected void ensureCapacity(@Nonnegative long maximumSize) {
+  protected void ensureCapacity(long maximumSize) {
     super.ensureCapacity(maximumSize);
     period = (maximumSize == 0) ? 10 : (10 * table.length);
     if (period <= 0) {

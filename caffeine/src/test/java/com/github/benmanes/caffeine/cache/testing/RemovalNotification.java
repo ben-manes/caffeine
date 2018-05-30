@@ -20,12 +20,12 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map.Entry;
 import java.util.Objects;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.Immutable;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.google.errorprone.annotations.Immutable;
 
 /**
  * A notification of the removal of a single entry. The key and/or value may be null if they were
@@ -34,7 +34,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Immutable
+@Immutable(containerOf = {"K", "V"})
 public final class RemovalNotification<K, V> implements Entry<K, V> {
   @Nullable private final K key;
   @Nullable private final V value;
@@ -47,7 +47,7 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
    * @param value the value represented by this entry
    * @param cause the reason for which the entry was removed
    */
-  public RemovalNotification(@Nullable K key, @Nullable V value, @Nonnull RemovalCause cause) {
+  public RemovalNotification(@Nullable K key, @Nullable V value, @NonNull RemovalCause cause) {
     this.cause = requireNonNull(cause);
     this.value = value;
     this.key = key;
@@ -56,7 +56,7 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
   /**
    * @return the cause for which the entry was removed
    */
-  @Nonnull
+  @NonNull
   public RemovalCause getCause() {
     return cause;
   }

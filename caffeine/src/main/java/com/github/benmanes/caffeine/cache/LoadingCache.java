@@ -18,9 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache,
@@ -33,7 +32,6 @@ import javax.annotation.concurrent.ThreadSafe;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-@ThreadSafe
 public interface LoadingCache<K, V> extends Cache<K, V> {
 
   /**
@@ -62,7 +60,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    *         is left unestablished
    */
   @Nullable
-  V get(@Nonnull K key);
+  V get(@NonNull K key);
 
   /**
    * Returns a map of the values associated with the {@code keys}, creating or retrieving those
@@ -90,8 +88,8 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    *         values, or fails to return an entry for each requested key. In all cases, the mapping
    *         is left unestablished
    */
-  @Nonnull
-  Map<K, V> getAll(@Nonnull Iterable<? extends K> keys);
+  @NonNull
+  Map<K, V> getAll(@NonNull Iterable<? extends K> keys);
 
   /**
    * Loads a new value for the {@code key}, asynchronously. While the new value is loading the
@@ -107,5 +105,5 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @param key key with which a value may be associated
    * @throws NullPointerException if the specified key is null
    */
-  void refresh(@Nonnull K key);
+  void refresh(@NonNull K key);
 }

@@ -26,6 +26,9 @@ plugins.withType(EclipsePlugin) {
 }
 
 dependencies {
+  compile libraries.checkerAnnotations
+  compile libraries.errorProneAnnotations
+
   testCompile libraries.ycsb
   testCompile libraries.guava
   testCompile libraries.fastutil
@@ -43,7 +46,6 @@ dependencies {
   jmh benchmarkLibraries.cache2k
   jmh benchmarkLibraries.ehcache3
   jmh benchmarkLibraries.koloboke
-  jmh benchmarkLibraries.rapidoid
   jmh benchmarkLibraries.slf4jNop
   jmh benchmarkLibraries.collision
   jmh benchmarkLibraries.jackrabbit
@@ -52,7 +54,6 @@ dependencies {
   jmh benchmarkLibraries.concurrentlinkedhashmap
 
   javaPoetCompile libraries.guava
-  javaPoetCompile libraries.jsr305
   javaPoetCompile libraries.javapoet
   javaPoetCompile libraries.commonsLang3
 }
@@ -96,6 +97,7 @@ task generateLocalCaches(type: JavaExec) {
   jvmArgs += '-noverify'
 
   outputs.upToDateWhen { !tasks.compileJavaPoetJava.didWork }
+  outputs.dir "${buildDir}/generated-sources/"
 }
 compileJava.dependsOn(generateLocalCaches)
 
@@ -106,6 +108,7 @@ task generateNodes(type: JavaExec) {
   jvmArgs += '-noverify'
 
   outputs.upToDateWhen { !tasks.compileJavaPoetJava.didWork }
+  outputs.dir "${buildDir}/generated-sources/"
 }
 compileJava.dependsOn(generateNodes)
 

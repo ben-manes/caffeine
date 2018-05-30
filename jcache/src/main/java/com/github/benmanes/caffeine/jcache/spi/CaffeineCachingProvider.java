@@ -24,13 +24,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.WeakHashMap;
 
-import javax.annotation.concurrent.GuardedBy;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.OptionalFeature;
 import javax.cache.spi.CachingProvider;
 
 import com.github.benmanes.caffeine.jcache.CacheManagerImpl;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 /**
  * A provider that produces a JCache implementation backed by Caffeine. Typically this provider is

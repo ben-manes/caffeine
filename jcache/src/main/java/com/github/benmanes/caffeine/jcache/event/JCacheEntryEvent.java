@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.EventType;

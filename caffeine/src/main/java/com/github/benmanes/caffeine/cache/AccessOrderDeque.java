@@ -17,8 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Deque;
 
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
 
@@ -28,7 +27,6 @@ import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
  */
-@NotThreadSafe
 final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeque<E> {
 
   @Override

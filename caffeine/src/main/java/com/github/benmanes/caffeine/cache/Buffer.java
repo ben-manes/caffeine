@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.function.Consumer;
 
-import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * A multiple-producer / single-consumer buffer that rejects new elements if it is full or
@@ -50,7 +50,7 @@ interface Buffer<E> {
    * @param e the element to add
    * @return {@code 1} if the buffer is full, {@code -1} if the CAS failed, or {@code 0} if added
    */
-  int offer(@Nonnull E e);
+  int offer(@NonNull E e);
 
   /**
    * Drains the buffer, sending each element to the consumer for processing. The caller must ensure
@@ -58,7 +58,7 @@ interface Buffer<E> {
    *
    * @param consumer the action to perform on each element
    */
-  void drainTo(@Nonnull Consumer<E> consumer);
+  void drainTo(@NonNull Consumer<E> consumer);
 
   /**
    * Returns the number of elements residing in the buffer.

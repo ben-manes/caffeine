@@ -19,9 +19,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.NotThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * A probabilistic multiset for estimating the popularity of an element within a time window. The
@@ -30,7 +28,6 @@ import javax.annotation.concurrent.NotThreadSafe;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@NotThreadSafe
 final class FrequencySketch<E> {
 
   /*
@@ -90,7 +87,7 @@ final class FrequencySketch<E> {
    *
    * @param maximumSize the maximum size of the cache
    */
-  public void ensureCapacity(@Nonnegative long maximumSize) {
+  public void ensureCapacity(long maximumSize) {
     requireArgument(maximumSize >= 0);
     int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {
@@ -120,8 +117,7 @@ final class FrequencySketch<E> {
    * @param e the element to count occurrences of
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
-  @Nonnegative
-  public int frequency(@Nonnull E e) {
+  public int frequency(@NonNull E e) {
     if (isNotInitialized()) {
       return 0;
     }
@@ -144,7 +140,7 @@ final class FrequencySketch<E> {
    *
    * @param e the element to add
    */
-  public void increment(@Nonnull E e) {
+  public void increment(@NonNull E e) {
     if (isNotInitialized()) {
       return;
     }

@@ -15,9 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Communicates the write or deletion of a value, based on a key, to an external resource. A writer
@@ -30,7 +29,6 @@ import javax.annotation.concurrent.ThreadSafe;
  * @param <V> the most general type of values this write can write; for example {@code Object} if
  *        any value is acceptable
  */
-@ThreadSafe
 public interface CacheWriter<K, V> {
 
   /***
@@ -42,7 +40,7 @@ public interface CacheWriter<K, V> {
    * @param value the value associated with {@code key} that should be written
    * @throws RuntimeException or Error, in which case the mapping is unchanged
    */
-  void write(@Nonnull K key, @Nonnull V value);
+  void write(@NonNull K key, @NonNull V value);
 
   /**
    * Deletes the value corresponding to the {@code key} from the external resource. The cache will
@@ -53,7 +51,7 @@ public interface CacheWriter<K, V> {
    * @param cause the reason for which the entry was removed
    * @throws RuntimeException or Error, in which case the mapping is unchanged
    */
-  void delete(@Nonnull K key, @Nullable V value, @Nonnull RemovalCause cause);
+  void delete(@NonNull K key, @Nullable V value, @NonNull RemovalCause cause);
 
   /**
    * Returns a writer that does nothing.
@@ -62,7 +60,7 @@ public interface CacheWriter<K, V> {
    * @param <V> the type of values
    * @return a writer that performs no operations
    */
-  static @Nonnull <K, V> CacheWriter<K, V> disabledWriter() {
+  static @NonNull <K, V> CacheWriter<K, V> disabledWriter() {
     @SuppressWarnings("unchecked")
     CacheWriter<K, V> writer = (CacheWriter<K, V>) DisabledWriter.INSTANCE;
     return writer;

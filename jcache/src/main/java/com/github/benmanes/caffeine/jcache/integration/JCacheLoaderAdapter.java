@@ -21,11 +21,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.CacheProxy;
@@ -68,6 +69,7 @@ public final class JCacheLoaderAdapter<K, V>
   }
 
   @Override
+  @SuppressWarnings("NullAway")
   public @Nullable Expirable<V> load(K key) {
     try {
       boolean statsEnabled = statistics.isEnabled();

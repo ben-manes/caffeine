@@ -18,7 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import java.lang.reflect.Field;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.google.common.base.Throwables;

@@ -23,7 +23,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Factory;

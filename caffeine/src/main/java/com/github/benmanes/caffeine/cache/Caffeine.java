@@ -34,9 +34,8 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.cache.Async.AsyncRemovalListener;
@@ -204,7 +203,7 @@ public final class Caffeine<K, V> {
    *
    * @return a new instance with default settings
    */
-  @Nonnull
+  @NonNull
   public static Caffeine<Object, Object> newBuilder() {
     return new Caffeine<>();
   }
@@ -215,7 +214,7 @@ public final class Caffeine<K, V> {
    * @param spec the specification to build from
    * @return a new instance with the specification's settings
    */
-  @Nonnull
+  @NonNull
   public static Caffeine<Object, Object> from(CaffeineSpec spec) {
     Caffeine<Object, Object> builder = spec.toBuilder();
     builder.strictParsing = false;
@@ -228,7 +227,7 @@ public final class Caffeine<K, V> {
    * @param spec a String in the format specified by {@link CaffeineSpec}
    * @return a new instance with the specification's settings
    */
-  @Nonnull
+  @NonNull
   public static Caffeine<Object, Object> from(String spec) {
     return from(CaffeineSpec.parse(spec));
   }
@@ -243,8 +242,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalArgumentException if {@code initialCapacity} is negative
    * @throws IllegalStateException if an initial capacity was already set
    */
-  @Nonnull
-  public Caffeine<K, V> initialCapacity(@Nonnegative int initialCapacity) {
+  @NonNull
+  public Caffeine<K, V> initialCapacity(int initialCapacity) {
     requireState(this.initialCapacity == UNSET_INT,
         "initial capacity was already set to %s", this.initialCapacity);
     requireArgument(initialCapacity >= 0);
@@ -277,14 +276,14 @@ public final class Caffeine<K, V> {
    * @return this {@code Caffeine} instance (for chaining)
    * @throws NullPointerException if the specified executor is null
    */
-  @Nonnull
-  public Caffeine<K, V> executor(@Nonnull Executor executor) {
+  @NonNull
+  public Caffeine<K, V> executor(@NonNull Executor executor) {
     requireState(this.executor == null, "executor was already set to %s", this.executor);
     this.executor = requireNonNull(executor);
     return this;
   }
 
-  @Nonnull
+  @NonNull
   Executor getExecutor() {
     return (executor == null) ? ForkJoinPool.commonPool() : executor;
   }
@@ -306,8 +305,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalArgumentException if {@code size} is negative
    * @throws IllegalStateException if a maximum size or weight was already set
    */
-  @Nonnull
-  public Caffeine<K, V> maximumSize(@Nonnegative long maximumSize) {
+  @NonNull
+  public Caffeine<K, V> maximumSize(long maximumSize) {
     requireState(this.maximumSize == UNSET_INT,
         "maximum size was already set to %s", this.maximumSize);
     requireState(this.maximumWeight == UNSET_INT,
@@ -342,8 +341,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalArgumentException if {@code maximumWeight} is negative
    * @throws IllegalStateException if a maximum weight or size was already set
    */
-  @Nonnull
-  public Caffeine<K, V> maximumWeight(@Nonnegative long maximumWeight) {
+  @NonNull
+  public Caffeine<K, V> maximumWeight(long maximumWeight) {
     requireState(this.maximumWeight == UNSET_INT,
         "maximum weight was already set to %s", this.maximumWeight);
     requireState(this.maximumSize == UNSET_INT,
@@ -383,9 +382,9 @@ public final class Caffeine<K, V> {
    *         remaining configuration and cache building
    * @throws IllegalStateException if a weigher was already set
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> weigher(
-      @Nonnull Weigher<? super K1, ? super V1> weigher) {
+      @NonNull Weigher<? super K1, ? super V1> weigher) {
     requireNonNull(weigher);
     requireState(this.weigher == null, "weigher was already set to %s", this.weigher);
     requireState(!strictParsing || this.maximumSize == UNSET_INT,
@@ -405,12 +404,11 @@ public final class Caffeine<K, V> {
     return (weigher != null);
   }
 
-  @Nonnegative
   long getMaximum() {
     return isWeighted() ? maximumWeight : maximumSize;
   }
 
-  @Nonnull @SuppressWarnings({"unchecked", "rawtypes"})
+  @NonNull @SuppressWarnings({"unchecked", "rawtypes"})
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
     Weigher<K1, V1> delegate = (weigher == null) || (weigher == Weigher.singletonWeigher())
         ? Weigher.singletonWeigher()
@@ -436,7 +434,7 @@ public final class Caffeine<K, V> {
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if the key strength was already set or the writer was set
    */
-  @Nonnull
+  @NonNull
   public Caffeine<K, V> weakKeys() {
     requireState(keyStrength == null, "Key strength was already set to %s", keyStrength);
     requireState(writer == null, "Weak keys may not be used with CacheWriter");
@@ -468,7 +466,7 @@ public final class Caffeine<K, V> {
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if the value strength was already set
    */
-  @Nonnull
+  @NonNull
   public Caffeine<K, V> weakValues() {
     requireState(valueStrength == null, "Value strength was already set to %s", valueStrength);
     valueStrength = Strength.WEAK;
@@ -505,7 +503,7 @@ public final class Caffeine<K, V> {
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if the value strength was already set
    */
-  @Nonnull
+  @NonNull
   public Caffeine<K, V> softValues() {
     requireState(valueStrength == null, "Value strength was already set to %s", valueStrength);
     valueStrength = Strength.SOFT;
@@ -527,8 +525,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the time to live or time to idle was already set
    * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
-  @Nonnull
-  public Caffeine<K, V> expireAfterWrite(@Nonnull Duration duration) {
+  @NonNull
+  public Caffeine<K, V> expireAfterWrite(@NonNull Duration duration) {
     return expireAfterWrite(duration.toNanos(), TimeUnit.NANOSECONDS);
   }
 
@@ -547,8 +545,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to live or variable expiration was already set
    */
-  @Nonnull
-  public Caffeine<K, V> expireAfterWrite(@Nonnegative long duration, @Nonnull TimeUnit unit) {
+  @NonNull
+  public Caffeine<K, V> expireAfterWrite(long duration, @NonNull TimeUnit unit) {
     requireState(expireAfterWriteNanos == UNSET_INT,
         "expireAfterWrite was already set to %s ns", expireAfterWriteNanos);
     requireState(expiry == null, "expireAfterAccess may not be used with variable expiration");
@@ -557,7 +555,6 @@ public final class Caffeine<K, V> {
     return this;
   }
 
-  @Nonnegative
   long getExpiresAfterWriteNanos() {
     return expiresAfterWrite() ? expireAfterWriteNanos : DEFAULT_EXPIRATION_NANOS;
   }
@@ -584,8 +581,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the time to idle or time to live was already set
    * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
-  @Nonnull
-  public Caffeine<K, V> expireAfterAccess(@Nonnull Duration duration) {
+  @NonNull
+  public Caffeine<K, V> expireAfterAccess(@NonNull Duration duration) {
     return expireAfterAccess(duration.toNanos(), TimeUnit.NANOSECONDS);
   }
 
@@ -607,8 +604,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalArgumentException if {@code duration} is negative
    * @throws IllegalStateException if the time to idle or variable expiration was already set
    */
-  @Nonnull
-  public Caffeine<K, V> expireAfterAccess(@Nonnegative long duration, @Nonnull TimeUnit unit) {
+  @NonNull
+  public Caffeine<K, V> expireAfterAccess(long duration, @NonNull TimeUnit unit) {
     requireState(expireAfterAccessNanos == UNSET_INT,
         "expireAfterAccess was already set to %s ns", expireAfterAccessNanos);
     requireState(expiry == null, "expireAfterAccess may not be used with variable expiration");
@@ -617,7 +614,6 @@ public final class Caffeine<K, V> {
     return this;
   }
 
-  @Nonnegative
   long getExpiresAfterAccessNanos() {
     return expiresAfterAccess() ? expireAfterAccessNanos : DEFAULT_EXPIRATION_NANOS;
   }
@@ -643,9 +639,9 @@ public final class Caffeine<K, V> {
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if expiration was already set
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> expireAfter(
-      @Nonnull Expiry<? super K1, ? super V1> expiry) {
+      @NonNull Expiry<? super K1, ? super V1> expiry) {
     requireNonNull(expiry);
     requireState(this.expiry == null, "Expiry was already set to %s", this.expiry);
     requireState(this.expireAfterAccessNanos == UNSET_INT,
@@ -689,8 +685,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the refresh interval was already set
    * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
-  @Nonnull
-  public Caffeine<K, V> refreshAfterWrite(@Nonnull Duration duration) {
+  @NonNull
+  public Caffeine<K, V> refreshAfterWrite(@NonNull Duration duration) {
     return refreshAfterWrite(duration.toNanos(), TimeUnit.NANOSECONDS);
   }
 
@@ -713,8 +709,8 @@ public final class Caffeine<K, V> {
    * @throws IllegalArgumentException if {@code duration} is zero or negative
    * @throws IllegalStateException if the refresh interval was already set
    */
-  @Nonnull
-  public Caffeine<K, V> refreshAfterWrite(@Nonnegative long duration, @Nonnull TimeUnit unit) {
+  @NonNull
+  public Caffeine<K, V> refreshAfterWrite(long duration, @NonNull TimeUnit unit) {
     requireNonNull(unit);
     requireState(refreshNanos == UNSET_INT, "refresh was already set to %s ns", refreshNanos);
     requireArgument(duration > 0, "duration must be positive: %s %s", duration, unit);
@@ -722,7 +718,6 @@ public final class Caffeine<K, V> {
     return this;
   }
 
-  @Nonnegative
   long getRefreshAfterWriteNanos() {
     return refreshes() ? refreshNanos : DEFAULT_REFRESH_NANOS;
   }
@@ -743,14 +738,14 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a ticker was already set
    * @throws NullPointerException if the specified ticker is null
    */
-  @Nonnull
-  public Caffeine<K, V> ticker(@Nonnull Ticker ticker) {
+  @NonNull
+  public Caffeine<K, V> ticker(@NonNull Ticker ticker) {
     requireState(this.ticker == null, "Ticker was already set to %s", this.ticker);
     this.ticker = requireNonNull(ticker);
     return this;
   }
 
-  @Nonnull
+  @NonNull
   Ticker getTicker() {
     boolean useTicker = expiresVariable() || expiresAfterAccess()
         || expiresAfterWrite() || refreshes() || isRecordingStats();
@@ -784,9 +779,9 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a removal listener was already set
    * @throws NullPointerException if the specified removal listener is null
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> removalListener(
-      @Nonnull RemovalListener<? super K1, ? super V1> removalListener) {
+      @NonNull RemovalListener<? super K1, ? super V1> removalListener) {
     requireState(this.removalListener == null,
         "removal listener was already set to %s", this.removalListener);
 
@@ -832,9 +827,9 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a writer was already set or if the key strength is weak
    * @throws NullPointerException if the specified writer is null
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> writer(
-      @Nonnull CacheWriter<? super K1, ? super V1> writer) {
+      @NonNull CacheWriter<? super K1, ? super V1> writer) {
     requireState(this.writer == null, "Writer was already set to %s", this.writer);
     requireState(keyStrength == null, "Weak keys may not be used with CacheWriter");
 
@@ -858,7 +853,7 @@ public final class Caffeine<K, V> {
    *
    * @return this {@code Caffeine} instance (for chaining)
    */
-  @Nonnull
+  @NonNull
   public Caffeine<K, V> recordStats() {
     requireState(this.statsCounterSupplier == null, "Statistics recording was already set");
     statsCounterSupplier = ENABLED_STATS_COUNTER_SUPPLIER;
@@ -875,9 +870,9 @@ public final class Caffeine<K, V> {
    * @param statsCounterSupplier a supplier instance that returns a new {@link StatsCounter}
    * @return this {@code Caffeine} instance (for chaining)
    */
-  @Nonnull
+  @NonNull
   public Caffeine<K, V> recordStats(
-      @Nonnull Supplier<? extends StatsCounter> statsCounterSupplier) {
+      @NonNull Supplier<? extends StatsCounter> statsCounterSupplier) {
     requireState(this.statsCounterSupplier == null, "Statistics recording was already set");
     requireNonNull(statsCounterSupplier);
     this.statsCounterSupplier = () -> StatsCounter.guardedStatsCounter(statsCounterSupplier.get());
@@ -888,7 +883,7 @@ public final class Caffeine<K, V> {
     return (statsCounterSupplier != null);
   }
 
-  @Nonnull
+  @NonNull
   Supplier<StatsCounter> getStatsCounterSupplier() {
     return (statsCounterSupplier == null)
         ? StatsCounter::disabledStatsCounter
@@ -920,7 +915,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
     requireWeightWithWeigher();
     requireNonLoadingCache();
@@ -946,9 +941,9 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
-      @Nonnull CacheLoader<? super K1, V1> loader) {
+      @NonNull CacheLoader<? super K1, V1> loader) {
     requireWeightWithWeigher();
 
     @SuppressWarnings("unchecked")
@@ -978,7 +973,7 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> AsyncCache<K1, V1> buildAsync() {
     requireState(valueStrength == null, "Weak or soft values can not be combined with AsyncCache");
     requireState(writer == null, "CacheWriter can not be combined with AsyncCache");
@@ -1010,9 +1005,9 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
-      @Nonnull CacheLoader<? super K1, V1> loader) {
+      @NonNull CacheLoader<? super K1, V1> loader) {
     return buildAsync((AsyncCacheLoader<? super K1, V1>) loader);
   }
 
@@ -1034,9 +1029,9 @@ public final class Caffeine<K, V> {
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
-  @Nonnull
+  @NonNull
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
-      @Nonnull AsyncCacheLoader<? super K1, V1> loader) {
+      @NonNull AsyncCacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null,
         "Weak or soft values can not be combined with AsyncLoadingCache");
     requireState(writer == null, "CacheWriter can not be combined with AsyncLoadingCache");

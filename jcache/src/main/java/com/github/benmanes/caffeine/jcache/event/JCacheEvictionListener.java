@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.Cache;
 
 import com.github.benmanes.caffeine.cache.CacheWriter;

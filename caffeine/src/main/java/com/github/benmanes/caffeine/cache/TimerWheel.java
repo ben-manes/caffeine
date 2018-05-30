@@ -28,8 +28,7 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A hierarchical timer wheel to add, remove, and fire expiration events in amortized O(1) time. The
@@ -38,7 +37,6 @@ import javax.annotation.concurrent.NotThreadSafe;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@NotThreadSafe
 final class TimerWheel<K, V> {
 
   /*

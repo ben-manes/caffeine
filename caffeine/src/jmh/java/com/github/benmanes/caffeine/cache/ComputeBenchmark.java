@@ -27,8 +27,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
-import org.rapidoid.cache.Caching;
-import org.rapidoid.lambda.Mapper;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -44,7 +42,6 @@ public class ComputeBenchmark {
   static final int MASK = SIZE - 1;
   static final int ITEMS = SIZE / 3;
   static final Integer COMPUTE_KEY = SIZE / 2;
-  static final Mapper<Integer, Boolean> mapper = any -> Boolean.TRUE;
   static final Function<Integer, Boolean> mappingFunction = any -> Boolean.TRUE;
   static final CacheLoader<Integer, Boolean> cacheLoader = CacheLoader.from(key -> Boolean.TRUE);
 
@@ -77,8 +74,6 @@ public class ComputeBenchmark {
       setupCaffeine();
     } else if (computeType.equals("Guava")) {
       setupGuava();
-    } else if (computeType.equals("Rapidoid")) {
-      setupRapidoid();
     } else {
       throw new AssertionError("Unknown computingType: " + computeType);
     }
@@ -109,10 +104,5 @@ public class ComputeBenchmark {
     com.google.common.cache.LoadingCache<Integer, Boolean> cache =
         CacheBuilder.newBuilder().concurrencyLevel(64).build(cacheLoader);
     benchmarkFunction = cache::getUnchecked;
-  }
-
-  private void setupRapidoid() {
-    org.rapidoid.cache.Cache<Integer, Boolean> cache = Caching.of(mapper).build();
-    benchmarkFunction = cache::get;
   }
 }

@@ -17,9 +17,7 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import java.util.Map;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 
@@ -29,7 +27,6 @@ import com.github.benmanes.caffeine.cache.Cache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@ThreadSafe
 public interface StatsCounter {
 
   /**
@@ -37,7 +34,7 @@ public interface StatsCounter {
    *
    * @param count the number of hits to record
    */
-  void recordHits(@Nonnegative int count);
+  void recordHits(int count);
 
   /**
    * Records cache misses. This should be called when a cache request returns a value that was not
@@ -49,7 +46,7 @@ public interface StatsCounter {
    *
    * @param count the number of misses to record
    */
-  void recordMisses(@Nonnegative int count);
+  void recordMisses(int count);
 
   /**
    * Records the successful load of a new entry. This method should be called when a cache request
@@ -59,7 +56,7 @@ public interface StatsCounter {
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    */
-  void recordLoadSuccess(@Nonnegative long loadTime);
+  void recordLoadSuccess(long loadTime);
 
   /**
    * Records the failed load of a new entry. This method should be called when a cache request
@@ -70,7 +67,7 @@ public interface StatsCounter {
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    *        prior to discovering the value doesn't exist or an exception being thrown
    */
-  void recordLoadFailure(@Nonnegative long loadTime);
+  void recordLoadFailure(long loadTime);
 
   /**
    * Records the eviction of an entry from the cache. This should only been called when an entry is
@@ -101,7 +98,7 @@ public interface StatsCounter {
    *
    * @return a snapshot of this counter's values
    */
-  @Nonnull
+  @NonNull
   CacheStats snapshot();
 
   /**
@@ -109,7 +106,7 @@ public interface StatsCounter {
    *
    * @return an accumulator that does not record metrics
    */
-  static @Nonnull StatsCounter disabledStatsCounter() {
+  static @NonNull StatsCounter disabledStatsCounter() {
     return DisabledStatsCounter.INSTANCE;
   }
 
@@ -120,7 +117,7 @@ public interface StatsCounter {
    * @param statsCounter the accumulator to delegate to
    * @return an accumulator that suppresses and logs any exception thrown by the delegate
    */
-  static @Nonnull StatsCounter guardedStatsCounter(@Nonnull StatsCounter statsCounter) {
+  static @NonNull StatsCounter guardedStatsCounter(@NonNull StatsCounter statsCounter) {
     return new GuardedStatsCounter(statsCounter);
   }
 }

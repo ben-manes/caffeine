@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.configuration;
 
-import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import javax.cache.configuration.Factory;
 
 /**
@@ -33,6 +33,6 @@ public interface FactoryCreator {
    * @param <T> the type of the instances being produced
    * @return a {@link Factory} for the specified class
    */
-  @Nonnull
+  @NonNull
   <T> Factory<T> factoryOf(String className);
 }

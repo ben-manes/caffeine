@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 

@@ -19,9 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Arrays;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.concurrent.NotThreadSafe;
-
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 
 /**
@@ -33,7 +30,6 @@ import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@NotThreadSafe
 public final class BloomFilter implements Membership {
   static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
@@ -53,8 +49,7 @@ public final class BloomFilter implements Membership {
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    * @param randomSeed the smear to protect against hash flooding, adjusted to an odd value
    */
-  public BloomFilter(@Nonnegative long expectedInsertions,
-      @Nonnegative double fpp, int randomSeed) {
+  public BloomFilter(long expectedInsertions, double fpp, int randomSeed) {
     this.randomSeed = ((randomSeed & 1) == 0) ? randomSeed + 1 : randomSeed;
     ensureCapacity(expectedInsertions, fpp);
   }
@@ -67,7 +62,7 @@ public final class BloomFilter implements Membership {
    * @param expectedInsertions the number of expected insertions
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    */
-  void ensureCapacity(@Nonnegative long expectedInsertions, @Nonnegative double fpp) {
+  void ensureCapacity(long expectedInsertions, double fpp) {
     checkArgument(expectedInsertions >= 0);
     checkArgument(fpp > 0 && fpp < 1);
 

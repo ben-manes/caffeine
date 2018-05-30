@@ -15,8 +15,7 @@
  */
 package com.github.benmanes.caffeine.jcache.copy;
 
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * An object is copied when the cache is configured with <tt>storeByValue</tt> to guard against
@@ -24,7 +23,6 @@ import javax.annotation.concurrent.ThreadSafe;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@ThreadSafe
 @FunctionalInterface
 public interface Copier {
 
@@ -36,8 +34,8 @@ public interface Copier {
    * @param <T> the type of object being copied
    * @return a copy of the object
    */
-  @Nonnull
-  <T> T copy(@Nonnull T object, @Nonnull ClassLoader classLoader);
+  @NonNull
+  <T> T copy(@NonNull T object, @NonNull ClassLoader classLoader);
 
   /** @return a copy strategy that performs an identity function, for use by store-by-reference */
   static Copier identity() {
@@ -49,7 +47,7 @@ enum IdentityCopier implements Copier {
   INSTANCE;
 
   @Override
-  public <T> T copy(@Nonnull T object, @Nonnull ClassLoader classLoader) {
+  public <T> T copy(@NonNull T object, @NonNull ClassLoader classLoader) {
     return object;
   }
 }

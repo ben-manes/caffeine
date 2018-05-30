@@ -20,9 +20,8 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A semi-persistent mapping from keys to values. Cache entries are manually added using
@@ -36,7 +35,6 @@ import javax.annotation.concurrent.ThreadSafe;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-@ThreadSafe
 public interface AsyncCache<K, V> {
 
   /**
@@ -49,7 +47,7 @@ public interface AsyncCache<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
-  CompletableFuture<V> getIfPresent(@Nonnull Object key);
+  CompletableFuture<V> getIfPresent(@NonNull Object key);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
@@ -69,9 +67,9 @@ public interface AsyncCache<K, V> {
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key or mappingFunction is null
    */
-  @Nonnull
-  CompletableFuture<V> get(@Nonnull K key,
-      @Nonnull Function<? super K, ? extends V> mappingFunction);
+  @NonNull
+  CompletableFuture<V> get(@NonNull K key,
+      @NonNull Function<? super K, ? extends V> mappingFunction);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
@@ -94,9 +92,9 @@ public interface AsyncCache<K, V> {
    * @throws RuntimeException or Error if the mappingFunction does when constructing the future,
    *         in which case the mapping is left unestablished
    */
-  @Nonnull
-  CompletableFuture<V> get(@Nonnull K key,
-      @Nonnull BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction);
+  @NonNull
+  CompletableFuture<V> get(@NonNull K key,
+      @NonNull BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction);
 
   /**
    * Associates {@code value} with {@code key} in this cache. If the cache previously contained a
@@ -110,7 +108,7 @@ public interface AsyncCache<K, V> {
    * @param valueFuture value to be associated with the specified key
    * @throws NullPointerException if the specified key or value is null
    */
-  void put(@Nonnull K key, @Nonnull CompletableFuture<V> valueFuture);
+  void put(@NonNull K key, @NonNull CompletableFuture<V> valueFuture);
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link Cache}. A mapping is
@@ -120,6 +118,6 @@ public interface AsyncCache<K, V> {
    *
    * @return a thread-safe synchronous view of this cache
    */
-  @Nonnull
+  @NonNull
   Cache<K, V> synchronous();
 }

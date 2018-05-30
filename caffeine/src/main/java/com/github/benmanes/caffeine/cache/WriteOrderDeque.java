@@ -17,8 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Deque;
 
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
 
@@ -28,7 +27,6 @@ import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
  */
-@NotThreadSafe
 final class WriteOrderDeque<E extends WriteOrder<E>> extends AbstractLinkedDeque<E> {
 
   @Override

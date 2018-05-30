@@ -15,9 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Calculates when cache entries expire. A single expiration time is retained so that the lifetime
@@ -25,7 +23,6 @@ import javax.annotation.concurrent.ThreadSafe;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@ThreadSafe
 public interface Expiry<K, V> {
 
   /**
@@ -42,7 +39,7 @@ public interface Expiry<K, V> {
    * @param currentTime the current time, in nanoseconds
    * @return the length of time before the entry expires, in nanoseconds
    */
-  long expireAfterCreate(@Nonnull K key, @Nonnull V value, long currentTime);
+  long expireAfterCreate(@NonNull K key, @NonNull V value, long currentTime);
 
   /**
    * Specifies that the entry should be automatically removed from the cache once the duration has
@@ -60,8 +57,7 @@ public interface Expiry<K, V> {
    * @param currentDuration the current duration, in nanoseconds
    * @return the length of time before the entry expires, in nanoseconds
    */
-  long expireAfterUpdate(@Nonnull K key, @Nonnull V value,
-      long currentTime, @Nonnegative long currentDuration);
+  long expireAfterUpdate(@NonNull K key, @NonNull V value, long currentTime, long currentDuration);
 
   /**
    * Specifies that the entry should be automatically removed from the cache once the duration has
@@ -79,6 +75,5 @@ public interface Expiry<K, V> {
    * @param currentDuration the current duration, in nanoseconds
    * @return the length of time before the entry expires, in nanoseconds
    */
-  long expireAfterRead(@Nonnull K key, @Nonnull V value,
-      long currentTime, @Nonnegative long currentDuration);
+  long expireAfterRead(@NonNull K key, @NonNull V value, long currentTime, long currentDuration);
 }

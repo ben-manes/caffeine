@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.jcache.management;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
-import javax.annotation.Nonnegative;
 import javax.cache.management.CacheStatisticsMXBean;
 
 /**
@@ -80,7 +79,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of hits to record
    */
-  public void recordHits(@Nonnegative long count) {
+  public void recordHits(long count) {
     if (enabled) {
       hits.add(count);
     }
@@ -103,7 +102,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of misses to record
    */
-  public void recordMisses(@Nonnegative long count) {
+  public void recordMisses(long count) {
     if (enabled) {
       misses.add(count);
     }
@@ -124,7 +123,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of writes to record
    */
-  public void recordPuts(@Nonnegative long count) {
+  public void recordPuts(long count) {
     if (enabled && (count != 0)) {
       puts.add(count);
     }
@@ -140,7 +139,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of removals to record
    */
-  public void recordRemovals(@Nonnegative long count) {
+  public void recordRemovals(long count) {
     if (enabled) {
       removals.add(count);
     }
@@ -156,7 +155,7 @@ public final class JCacheStatisticsMXBean implements CacheStatisticsMXBean {
    *
    * @param count the number of evictions to record
    */
-  public void recordEvictions(@Nonnegative long count) {
+  public void recordEvictions(long count) {
     if (enabled) {
       evictions.add(count);
     }

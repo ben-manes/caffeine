@@ -19,7 +19,6 @@ dependencies {
   compile libraries.univocityParsers
   compile benchmarkLibraries.cache2k
   compile benchmarkLibraries.ehcache3
-  compile benchmarkLibraries.rapidoid
   compile benchmarkLibraries.collision
   compile benchmarkLibraries.slf4jNop
   compile benchmarkLibraries.expiringMap

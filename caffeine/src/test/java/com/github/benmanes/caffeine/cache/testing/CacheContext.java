@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;

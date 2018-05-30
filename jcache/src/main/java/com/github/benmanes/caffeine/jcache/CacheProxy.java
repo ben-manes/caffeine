@@ -38,8 +38,6 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -54,6 +52,9 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
@@ -1060,7 +1061,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @return a copy of the object if storing by value or the same instance if by reference
    */
   @SuppressWarnings("NullAway")
-  protected final @Nonnull <T> T copyOf(@Nullable T object) {
+  protected final @NonNull <T> T copyOf(@Nullable T object) {
     if (object == null) {
       return null;
     }
@@ -1159,8 +1160,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   /** An iterator to safely expose the cache entries. */
   final class EntryIterator implements Iterator<Cache.Entry<K, V>> {
     final Iterator<Map.Entry<K, Expirable<V>>> delegate = cache.asMap().entrySet().iterator();
-    @Nullable Map.Entry<K, Expirable<V>> current;
-    @Nullable Map.Entry<K, Expirable<V>> cursor;
+    Map.@Nullable Entry<K, Expirable<V>> current;
+    Map.@Nullable Entry<K, Expirable<V>> cursor;
 
     @Override
     public boolean hasNext() {

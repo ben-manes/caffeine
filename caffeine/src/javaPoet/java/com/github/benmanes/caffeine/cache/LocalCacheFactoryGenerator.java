@@ -35,8 +35,9 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 
-import javax.annotation.Nullable;
 import javax.lang.model.element.Modifier;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.local.AddConstructor;
 import com.github.benmanes.caffeine.cache.local.AddDeques;

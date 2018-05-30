@@ -19,8 +19,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Computes or retrieves values asynchronously, based on a key, for use in populating a
@@ -38,7 +37,6 @@ import javax.annotation.concurrent.ThreadSafe;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@ThreadSafe
 @FunctionalInterface
 public interface AsyncCacheLoader<K, V> {
 
@@ -49,8 +47,8 @@ public interface AsyncCacheLoader<K, V> {
    * @param executor the executor with which the entry is asynchronously loaded
    * @return the future value associated with {@code key}
    */
-  @Nonnull
-  CompletableFuture<V> asyncLoad(@Nonnull K key, @Nonnull Executor executor);
+  @NonNull
+  CompletableFuture<V> asyncLoad(@NonNull K key, @NonNull Executor executor);
 
   /**
    * Asynchronously computes or retrieves the values corresponding to {@code keys}. This method is
@@ -70,9 +68,9 @@ public interface AsyncCacheLoader<K, V> {
    * @return a future containing the map from each key in {@code keys} to the value associated with
    *         that key; <b>may not contain null values</b>
    */
-  @Nonnull
+  @NonNull
   default CompletableFuture<Map<K, V>> asyncLoadAll(
-      @Nonnull Iterable<? extends K> keys, @Nonnull Executor executor) {
+      @NonNull Iterable<? extends K> keys, @NonNull Executor executor) {
     throw new UnsupportedOperationException();
   }
 
@@ -90,9 +88,9 @@ public interface AsyncCacheLoader<K, V> {
    * @return a future containing the new value associated with {@code key}, or containing
    *         {@code null} if the mapping is to be removed
    */
-  @Nonnull
+  @NonNull
   default CompletableFuture<V> asyncReload(
-      @Nonnull K key, @Nonnull V oldValue, @Nonnull Executor executor) {
+      @NonNull K key, @NonNull V oldValue, @NonNull Executor executor) {
     return asyncLoad(key, executor);
   }
 }

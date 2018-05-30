@@ -17,8 +17,7 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import java.util.concurrent.atomic.LongAdder;
 
-import javax.annotation.Nonnegative;
-import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 
@@ -50,23 +49,23 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   }
 
   @Override
-  public void recordHits(@Nonnegative int count) {
+  public void recordHits(int count) {
     hitCount.add(count);
   }
 
   @Override
-  public void recordMisses(@Nonnegative int count) {
+  public void recordMisses(int count) {
     missCount.add(count);
   }
 
   @Override
-  public void recordLoadSuccess(@Nonnegative long loadTime) {
+  public void recordLoadSuccess(long loadTime) {
     loadSuccessCount.increment();
     totalLoadTime.add(loadTime);
   }
 
   @Override
-  public void recordLoadFailure(@Nonnegative long loadTime) {
+  public void recordLoadFailure(long loadTime) {
     loadFailureCount.increment();
     totalLoadTime.add(loadTime);
   }
@@ -100,7 +99,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
    *
    * @param other the counter to increment from
    */
-  public void incrementBy(@Nonnull StatsCounter other) {
+  public void incrementBy(@NonNull StatsCounter other) {
     CacheStats otherStats = other.snapshot();
     hitCount.add(otherStats.hitCount());
     missCount.add(otherStats.missCount());

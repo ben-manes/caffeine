@@ -23,7 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
 

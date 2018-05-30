@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.base.Throwables;
@@ -112,7 +112,7 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
 
   @Override
   @SuppressWarnings("NullAway")
-  public V apply(@Nonnull K key) {
+  public V apply(@NonNull K key) {
     return cache.get(key);
   }
 

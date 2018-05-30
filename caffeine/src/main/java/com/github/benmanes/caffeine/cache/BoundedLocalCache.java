@@ -63,16 +63,15 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
 import com.github.benmanes.caffeine.cache.LinkedDeque.PeekingIterator;
 import com.github.benmanes.caffeine.cache.References.InternalReference;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 /**
  * An in-memory cache implementation that supports full concurrency of retrievals, a high expected
@@ -86,7 +85,6 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-@ThreadSafe
 abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     implements LocalCache<K, V> {
 
@@ -604,13 +602,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       K victimKey = victim.getKey();
       K candidateKey = candidate.getKey();
       if (victimKey == null) {
-        @Nonnull Node<K, V> evict = victim;
+        @NonNull Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       } else if (candidateKey == null) {
         candidates--;
-        @Nonnull Node<K, V> evict = candidate;
+        @NonNull Node<K, V> evict = candidate;
         candidate = candidate.getPreviousInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
@@ -3127,7 +3125,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public boolean isWeighted() {
         return isWeighted;
       }
-      @Override public OptionalInt weightOf(@Nonnull K key) {
+      @Override public OptionalInt weightOf(@NonNull K key) {
         requireNonNull(key);
         if (!isWeighted) {
           return OptionalInt.empty();

@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache.impl;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import javax.annotation.concurrent.NotThreadSafe;
-
 import com.github.benmanes.caffeine.cache.BasicCache;
 
 /**
@@ -53,7 +51,6 @@ public final class LinkedHashMapCache<K, V> implements BasicCache<K, V> {
     }
   }
 
-  @NotThreadSafe
   static final class BoundedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
     private static final long serialVersionUID = 1L;
     private final int maximumSize;

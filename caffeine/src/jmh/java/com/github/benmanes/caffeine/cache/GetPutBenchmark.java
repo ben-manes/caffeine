@@ -59,7 +59,6 @@ public class GetPutBenchmark {
     "ExpiringMap_Lru",
     "TCache_Lfu",
     "TCache_Lru",
-    "Rapidoid",
   })
   CacheType cacheType;
 

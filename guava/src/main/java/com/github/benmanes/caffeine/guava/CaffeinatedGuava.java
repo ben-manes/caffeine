@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.guava;
 
 import java.lang.reflect.Method;
 
-import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.BulkLoader;
@@ -41,9 +41,9 @@ public final class CaffeinatedGuava {
    * @param builder the configured cache builder
    * @return a cache exposed under the Guava APIs
    */
-  @Nonnull
+  @NonNull
   public static <K, V, K1 extends K, V1 extends V> Cache<K1, V1> build(
-      @Nonnull Caffeine<K, V> builder) {
+      @NonNull Caffeine<K, V> builder) {
     return new CaffeinatedGuavaCache<>(builder.build());
   }
 
@@ -54,9 +54,9 @@ public final class CaffeinatedGuava {
    * @param loader the cache loader used to obtain new values
    * @return a cache exposed under the Guava APIs
    */
-  @Nonnull
+  @NonNull
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
-      @Nonnull Caffeine<K, V> builder, @Nonnull CacheLoader<? super K1, V1> loader) {
+      @NonNull Caffeine<K, V> builder, @NonNull CacheLoader<? super K1, V1> loader) {
     @SuppressWarnings("unchecked")
     CacheLoader<K1, V1> castedLoader = (CacheLoader<K1, V1>) loader;
     return build(builder, hasLoadAll(castedLoader)
@@ -71,10 +71,10 @@ public final class CaffeinatedGuava {
    * @param loader the cache loader used to obtain new values
    * @return a cache exposed under the Guava APIs
    */
-  @Nonnull
+  @NonNull
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
-      @Nonnull Caffeine<K, V> builder,
-      @Nonnull com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> loader) {
+      @NonNull Caffeine<K, V> builder,
+      com.github.benmanes.caffeine.cache.@NonNull CacheLoader<? super K1, V1> loader) {
     return new CaffeinatedGuavaLoadingCache<>(builder.build(loader));
   }
 

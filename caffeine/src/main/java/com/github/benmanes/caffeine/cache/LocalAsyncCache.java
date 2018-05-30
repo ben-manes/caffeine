@@ -40,14 +40,14 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
 /**
- * This class provides a skeletal implementation of the {@link AsyncLoadingCache} interface to
- * minimize the effort required to implement a {@link LocalCache}.
+ * This class provides a skeletal implementation of the {@link AsyncCache} interface to minimize the
+ * effort required to implement a {@link LocalCache}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -61,13 +61,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   Policy<K, V> policy();
 
   @Override
-  default @Nullable CompletableFuture<V> getIfPresent(@Nonnull Object key) {
+  default @Nullable CompletableFuture<V> getIfPresent(@NonNull Object key) {
     return cache().getIfPresent(key, /* recordStats */ true);
   }
 
   @Override
-  default CompletableFuture<V> get(@Nonnull K key,
-      @Nonnull Function<? super K, ? extends V> mappingFunction) {
+  default CompletableFuture<V> get(@NonNull K key,
+      @NonNull Function<? super K, ? extends V> mappingFunction) {
     requireNonNull(mappingFunction);
     return get(key, (k1, executor) -> CompletableFuture.supplyAsync(
         () -> mappingFunction.apply(key), executor));

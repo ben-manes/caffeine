@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.admission.countmin4;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import javax.annotation.Nonnegative;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
 import com.typesafe.config.Config;
@@ -65,7 +63,7 @@ public abstract class CountMin4 implements Frequency {
    *
    * @param maximumSize the maximum size of the cache
    */
-  protected void ensureCapacity(@Nonnegative long maximumSize) {
+  protected void ensureCapacity(long maximumSize) {
     checkArgument(maximumSize >= 0);
     int maximum = (int) Math.min(maximumSize, Integer.MAX_VALUE >>> 1);
     if ((table != null) && (table.length >= maximum)) {
@@ -83,7 +81,6 @@ public abstract class CountMin4 implements Frequency {
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
   @Override
-  @Nonnegative
   public int frequency(long e) {
     int hash = spread(Long.hashCode(e));
     int start = (hash & 3) << 2;

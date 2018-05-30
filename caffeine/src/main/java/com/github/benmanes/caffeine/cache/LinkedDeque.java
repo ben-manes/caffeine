@@ -20,8 +20,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A linked list extension of the {@link Deque} interface where the link pointers are tightly
@@ -45,7 +44,6 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
  */
-@NotThreadSafe
 interface LinkedDeque<E> extends Deque<E> {
 
   /**

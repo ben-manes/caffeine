@@ -18,8 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.ThreadSafe;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache
@@ -32,7 +31,6 @@ import javax.annotation.concurrent.ThreadSafe;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-@ThreadSafe
 public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
 
   /**
@@ -51,8 +49,8 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    * @throws RuntimeException or Error if the {@link CacheLoader} does when constructing the future,
    *         in which case the mapping is left unestablished
    */
-  @Nonnull
-  CompletableFuture<V> get(@Nonnull K key);
+  @NonNull
+  CompletableFuture<V> get(@NonNull K key);
 
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
@@ -80,8 +78,8 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *         {@link CacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing the
    *         future, in which case the mapping is left unestablished
    */
-  @Nonnull
-  CompletableFuture<Map<K, V>> getAll(@Nonnull Iterable<? extends K> keys);
+  @NonNull
+  CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends K> keys);
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link LoadingCache}. A
@@ -91,7 +89,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *
    * @return a thread-safe synchronous view of this cache
    */
-  @Nonnull
+  @NonNull
   @Override
   LoadingCache<K, V> synchronous();
 }

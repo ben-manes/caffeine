@@ -21,9 +21,8 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Static utility methods and classes pertaining to weak and soft references.
@@ -45,7 +44,7 @@ final class References {
      * @return The object to which this reference refers, or {@code null} if this reference object
      *         has been cleared
      */
-    @CheckForNull
+    @Nullable
     E get();
 
     /**
@@ -55,7 +54,7 @@ final class References {
      *
      * @return the key that is associated to the cached entry
      */
-    @Nonnull
+    @NonNull
     Object getKeyReference();
 
     /**
@@ -85,7 +84,7 @@ final class References {
     private final int hashCode;
     private final E e;
 
-    public LookupKeyReference(@Nonnull E e) {
+    public LookupKeyReference(@NonNull E e) {
       this.hashCode = System.identityHashCode(e);
       this.e = requireNonNull(e);
     }
@@ -149,7 +148,7 @@ final class References {
       implements InternalReference<V> {
     private final Object keyReference;
 
-    public WeakValueReference(@Nonnull Object keyReference,
+    public WeakValueReference(@NonNull Object keyReference,
         @Nullable V value, @Nullable ReferenceQueue<V> queue) {
       super(value, queue);
       this.keyReference = keyReference;
@@ -181,7 +180,7 @@ final class References {
       implements InternalReference<V> {
     private final Object keyReference;
 
-    public SoftValueReference(@Nonnull Object keyReference,
+    public SoftValueReference(@NonNull Object keyReference,
         @Nullable V value, @Nullable ReferenceQueue<V> queue) {
       super(value, queue);
       this.keyReference = keyReference;
