@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.lang.ref.ReferenceQueue;
 
+import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -69,6 +70,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   public abstract boolean containsValue(@NonNull Object value);
 
   /** Returns the weight of this entry from the entry's perspective. */
+  @NonNegative
   @GuardedBy("this")
   public int getWeight() {
     return 1;
@@ -76,9 +78,10 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
 
   /** Sets the weight from the entry's perspective. */
   @GuardedBy("this")
-  public void setWeight(int weight) {}
+  public void setWeight(@NonNegative int weight) {}
 
   /** Returns the weight of this entry from the policy's perspective. */
+  @NonNegative
   @GuardedBy("evictionLock")
   public int getPolicyWeight() {
     return 1;
@@ -86,7 +89,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
 
   /** Sets the weight from the policy's perspective. */
   @GuardedBy("evictionLock")
-  public void setPolicyWeight(int weight) {}
+  public void setPolicyWeight(@NonNegative int weight) {}
 
   /* ---------------- Health -------------- */
 

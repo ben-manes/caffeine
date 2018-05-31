@@ -83,7 +83,8 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    *         caught, the thread's interrupt status is set
    */
   @NonNull
-  default Map<K, V> loadAll(@NonNull Iterable<? extends K> keys) throws Exception {
+  default Map<@NonNull K, @NonNull V> loadAll(
+      @NonNull Iterable<? extends @NonNull K> keys) throws Exception {
     throw new UnsupportedOperationException();
   }
 
@@ -128,7 +129,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    *         that key; <b>may not contain null values</b>
    */
   @Override @NonNull
-  default CompletableFuture<Map<K, V>> asyncLoadAll(
+  default CompletableFuture<Map<@NonNull K, @NonNull V>> asyncLoadAll(
       @NonNull Iterable<? extends K> keys, @NonNull Executor executor) {
     requireNonNull(keys);
     requireNonNull(executor);

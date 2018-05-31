@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
+import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -90,7 +91,7 @@ public interface Cache<K, V> {
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
   @NonNull
-  Map<K, V> getAllPresent(@NonNull Iterable<?> keys);
+  Map<@NonNull K, @NonNull V> getAllPresent(@NonNull Iterable<@NonNull ?> keys);
 
   /**
    * Associates the {@code value} with the {@code key} in this cache. If the cache previously
@@ -116,7 +117,7 @@ public interface Cache<K, V> {
    * @throws NullPointerException if the specified map is null or the specified map contains null
    *         keys or values
    */
-  void putAll(@NonNull Map<? extends K,? extends V> map);
+  void putAll(@NonNull Map<? extends @NonNull K,? extends @NonNull V> map);
 
   /**
    * Discards any cached value for the {@code key}. The behavior of this operation is undefined for
@@ -150,6 +151,7 @@ public interface Cache<K, V> {
    *
    * @return the estimated number of mappings
    */
+  @NonNegative
   long estimatedSize();
 
   /**
@@ -175,7 +177,7 @@ public interface Cache<K, V> {
    * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
    */
   @NonNull
-  ConcurrentMap<K, V> asMap();
+  ConcurrentMap<@NonNull K, @NonNull V> asMap();
 
   /**
    * Performs any pending maintenance operations needed by the cache. Exactly which activities are

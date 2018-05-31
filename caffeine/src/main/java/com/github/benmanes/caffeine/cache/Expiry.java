@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -57,7 +58,8 @@ public interface Expiry<K, V> {
    * @param currentDuration the current duration, in nanoseconds
    * @return the length of time before the entry expires, in nanoseconds
    */
-  long expireAfterUpdate(@NonNull K key, @NonNull V value, long currentTime, long currentDuration);
+  long expireAfterUpdate(@NonNull K key, @NonNull V value,
+      long currentTime, @NonNegative long currentDuration);
 
   /**
    * Specifies that the entry should be automatically removed from the cache once the duration has
@@ -75,5 +77,6 @@ public interface Expiry<K, V> {
    * @param currentDuration the current duration, in nanoseconds
    * @return the length of time before the entry expires, in nanoseconds
    */
-  long expireAfterRead(@NonNull K key, @NonNull V value, long currentTime, long currentDuration);
+  long expireAfterRead(@NonNull K key, @NonNull V value,
+      long currentTime, @NonNegative long currentDuration);
 }

@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Arrays;
 
+import org.checkerframework.checker.index.qual.NonNegative;
+
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 
 /**
@@ -49,7 +51,8 @@ public final class BloomFilter implements Membership {
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    * @param randomSeed the smear to protect against hash flooding, adjusted to an odd value
    */
-  public BloomFilter(long expectedInsertions, double fpp, int randomSeed) {
+  public BloomFilter(@NonNegative long expectedInsertions,
+      @NonNegative double fpp, int randomSeed) {
     this.randomSeed = ((randomSeed & 1) == 0) ? randomSeed + 1 : randomSeed;
     ensureCapacity(expectedInsertions, fpp);
   }
@@ -62,7 +65,7 @@ public final class BloomFilter implements Membership {
    * @param expectedInsertions the number of expected insertions
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    */
-  void ensureCapacity(long expectedInsertions, double fpp) {
+  void ensureCapacity(@NonNegative long expectedInsertions, @NonNegative double fpp) {
     checkArgument(expectedInsertions >= 0);
     checkArgument(fpp > 0 && fpp < 1);
 

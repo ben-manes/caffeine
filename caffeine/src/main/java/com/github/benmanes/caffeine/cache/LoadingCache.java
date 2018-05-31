@@ -89,7 +89,7 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    *         is left unestablished
    */
   @NonNull
-  Map<K, V> getAll(@NonNull Iterable<? extends K> keys);
+  Map<@NonNull K, @NonNull V> getAll(@NonNull Iterable<? extends @NonNull K> keys);
 
   /**
    * Loads a new value for the {@code key}, asynchronously. While the new value is loading the

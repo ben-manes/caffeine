@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
 
+import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -40,6 +41,7 @@ public interface Weigher<K, V> {
    * @param value the value to weigh
    * @return the weight of the entry; must be non-negative
    */
+  @NonNegative
   int weigh(@NonNull K key, @NonNull V value);
 
   /**

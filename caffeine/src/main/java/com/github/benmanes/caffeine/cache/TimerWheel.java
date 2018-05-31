@@ -28,6 +28,7 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -165,7 +166,7 @@ final class TimerWheel<K, V> {
    *
    * @param node the entry in the cache
    */
-  public void schedule(Node<K, V> node) {
+  public void schedule(@NonNull Node<K, V> node) {
     Node<K, V> sentinel = findBucket(node.getVariableTime());
     link(sentinel, node);
   }
@@ -175,7 +176,7 @@ final class TimerWheel<K, V> {
    *
    * @param node the entry in the cache
    */
-  public void reschedule(Node<K, V> node) {
+  public void reschedule(@NonNull Node<K, V> node) {
     if (node.getNextInVariableOrder() != null) {
       unlink(node);
       schedule(node);
@@ -187,7 +188,7 @@ final class TimerWheel<K, V> {
    *
    * @param node the entry in the cache
    */
-  public void deschedule(Node<K, V> node) {
+  public void deschedule(@NonNull Node<K, V> node) {
     unlink(node);
     node.setNextInVariableOrder(null);
     node.setPreviousInVariableOrder(null);
@@ -241,7 +242,7 @@ final class TimerWheel<K, V> {
    * @param transformer a function that unwraps the value
    * @return an unmodifiable snapshot in the desired order
    */
-  public Map<K, V> snapshot(boolean ascending, int limit, Function<V, V> transformer) {
+  public Map<K, V> snapshot(boolean ascending, int limit, @NonNull Function<V, V> transformer) {
     requireArgument(limit >= 0);
 
     Map<K, V> map = new LinkedHashMap<>(Math.min(limit, cache.size()));

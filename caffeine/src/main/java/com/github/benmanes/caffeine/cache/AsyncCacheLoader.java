@@ -69,8 +69,8 @@ public interface AsyncCacheLoader<K, V> {
    *         that key; <b>may not contain null values</b>
    */
   @NonNull
-  default CompletableFuture<Map<K, V>> asyncLoadAll(
-      @NonNull Iterable<? extends K> keys, @NonNull Executor executor) {
+  default CompletableFuture<Map<@NonNull K, @NonNull V>> asyncLoadAll(
+      @NonNull Iterable<? extends @NonNull K> keys, @NonNull Executor executor) {
     throw new UnsupportedOperationException();
   }
 

@@ -34,6 +34,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -243,7 +244,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if an initial capacity was already set
    */
   @NonNull
-  public Caffeine<K, V> initialCapacity(int initialCapacity) {
+  public Caffeine<K, V> initialCapacity(@NonNegative int initialCapacity) {
     requireState(this.initialCapacity == UNSET_INT,
         "initial capacity was already set to %s", this.initialCapacity);
     requireArgument(initialCapacity >= 0);
@@ -306,7 +307,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a maximum size or weight was already set
    */
   @NonNull
-  public Caffeine<K, V> maximumSize(long maximumSize) {
+  public Caffeine<K, V> maximumSize(@NonNegative long maximumSize) {
     requireState(this.maximumSize == UNSET_INT,
         "maximum size was already set to %s", this.maximumSize);
     requireState(this.maximumWeight == UNSET_INT,
@@ -342,7 +343,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if a maximum weight or size was already set
    */
   @NonNull
-  public Caffeine<K, V> maximumWeight(long maximumWeight) {
+  public Caffeine<K, V> maximumWeight(@NonNegative long maximumWeight) {
     requireState(this.maximumWeight == UNSET_INT,
         "maximum weight was already set to %s", this.maximumWeight);
     requireState(this.maximumSize == UNSET_INT,
@@ -546,7 +547,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the time to live or variable expiration was already set
    */
   @NonNull
-  public Caffeine<K, V> expireAfterWrite(long duration, @NonNull TimeUnit unit) {
+  public Caffeine<K, V> expireAfterWrite(@NonNegative long duration, @NonNull TimeUnit unit) {
     requireState(expireAfterWriteNanos == UNSET_INT,
         "expireAfterWrite was already set to %s ns", expireAfterWriteNanos);
     requireState(expiry == null, "expireAfterAccess may not be used with variable expiration");
@@ -605,7 +606,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the time to idle or variable expiration was already set
    */
   @NonNull
-  public Caffeine<K, V> expireAfterAccess(long duration, @NonNull TimeUnit unit) {
+  public Caffeine<K, V> expireAfterAccess(@NonNegative long duration, @NonNull TimeUnit unit) {
     requireState(expireAfterAccessNanos == UNSET_INT,
         "expireAfterAccess was already set to %s ns", expireAfterAccessNanos);
     requireState(expiry == null, "expireAfterAccess may not be used with variable expiration");
@@ -710,7 +711,7 @@ public final class Caffeine<K, V> {
    * @throws IllegalStateException if the refresh interval was already set
    */
   @NonNull
-  public Caffeine<K, V> refreshAfterWrite(long duration, @NonNull TimeUnit unit) {
+  public Caffeine<K, V> refreshAfterWrite(@NonNegative long duration, @NonNull TimeUnit unit) {
     requireNonNull(unit);
     requireState(refreshNanos == UNSET_INT, "refresh was already set to %s ns", refreshNanos);
     requireArgument(duration > 0, "duration must be positive: %s %s", duration, unit);

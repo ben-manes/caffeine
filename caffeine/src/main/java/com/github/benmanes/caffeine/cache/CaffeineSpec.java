@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine.Strength;
@@ -145,7 +146,7 @@ public final class CaffeineSpec {
    * @return the parsed specification
    */
   @SuppressWarnings("StringSplitter")
-  public static CaffeineSpec parse(String specification) {
+  public static @NonNull CaffeineSpec parse(@NonNull String specification) {
     CaffeineSpec spec = new CaffeineSpec(specification);
     for (String option : specification.split(SPLIT_OPTIONS)) {
       spec.parseOption(option.trim());

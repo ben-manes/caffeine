@@ -79,7 +79,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *         future, in which case the mapping is left unestablished
    */
   @NonNull
-  CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends K> keys);
+  CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys);
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link LoadingCache}. A

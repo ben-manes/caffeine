@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import java.util.Map;
 
+import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -34,7 +35,7 @@ public interface StatsCounter {
    *
    * @param count the number of hits to record
    */
-  void recordHits(int count);
+  void recordHits(@NonNegative int count);
 
   /**
    * Records cache misses. This should be called when a cache request returns a value that was not
@@ -46,7 +47,7 @@ public interface StatsCounter {
    *
    * @param count the number of misses to record
    */
-  void recordMisses(int count);
+  void recordMisses(@NonNegative int count);
 
   /**
    * Records the successful load of a new entry. This method should be called when a cache request
@@ -56,7 +57,7 @@ public interface StatsCounter {
    *
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    */
-  void recordLoadSuccess(long loadTime);
+  void recordLoadSuccess(@NonNegative long loadTime);
 
   /**
    * Records the failed load of a new entry. This method should be called when a cache request
@@ -67,7 +68,7 @@ public interface StatsCounter {
    * @param loadTime the number of nanoseconds the cache spent computing or retrieving the new value
    *        prior to discovering the value doesn't exist or an exception being thrown
    */
-  void recordLoadFailure(long loadTime);
+  void recordLoadFailure(@NonNegative long loadTime);
 
   /**
    * Records the eviction of an entry from the cache. This should only been called when an entry is
@@ -87,7 +88,7 @@ public interface StatsCounter {
    *
    * @param weight the weight of the evicted entry
    */
-  default void recordEviction(int weight) {
+  default void recordEviction(@NonNegative int weight) {
     // This method will be abstract in version 3.0.0
     recordEviction();
   }

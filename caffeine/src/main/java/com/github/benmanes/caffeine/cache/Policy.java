@@ -22,6 +22,7 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
+import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -148,6 +149,7 @@ public interface Policy<K, V> {
      *
      * @return the maximum size bounding, which may be either weighted or unweighted
      */
+    @NonNegative
     long getMaximum();
 
     /**
@@ -163,7 +165,7 @@ public interface Policy<K, V> {
      *        cache was constructed
      * @throws IllegalArgumentException if the maximum size specified is negative
      */
-    void setMaximum(long maximum);
+    void setMaximum(@NonNegative long maximum);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -180,7 +182,7 @@ public interface Policy<K, V> {
      * @return a snapshot view of the cache from coldest entry to the hottest
      */
     @NonNull
-    Map<K, V> coldest(int limit);
+    Map<@NonNull K, @NonNull V> coldest(@NonNegative int limit);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -197,7 +199,7 @@ public interface Policy<K, V> {
      * @return a snapshot view of the cache from hottest entry to the coldest
      */
     @NonNull
-    Map<K, V> hottest(int limit);
+    Map<@NonNull K, @NonNull V> hottest(@NonNegative int limit);
   }
 
   /** The low-level operations for a cache with a fixed expiration policy. */
@@ -251,6 +253,7 @@ public interface Policy<K, V> {
      * @param unit the unit that duration is expressed in
      * @return the length of time after which an entry should be automatically removed
      */
+    @NonNegative
     long getExpiresAfter(@NonNull TimeUnit unit);
 
     /**
@@ -277,7 +280,7 @@ public interface Policy<K, V> {
      * @param unit the unit that {@code duration} is expressed in
      * @throws IllegalArgumentException if {@code duration} is negative
      */
-    void setExpiresAfter(long duration, @NonNull TimeUnit unit);
+    void setExpiresAfter(@NonNegative long duration, @NonNull TimeUnit unit);
 
     /**
      * Specifies that each entry should be automatically removed from the cache once a fixed
@@ -306,7 +309,7 @@ public interface Policy<K, V> {
      * @return a snapshot view of the cache from oldest entry to the youngest
      */
     @NonNull
-    Map<K, V> oldest(int limit);
+    Map<@NonNull K, @NonNull V> oldest(@NonNegative int limit);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -323,7 +326,7 @@ public interface Policy<K, V> {
      * @return a snapshot view of the cache from youngest entry to the oldest
      */
     @NonNull
-    Map<K, V> youngest(int limit);
+    Map<@NonNull K, @NonNull V> youngest(@NonNegative int limit);
   }
 
   /** The low-level operations for a cache with a variable expiration policy. */
@@ -368,7 +371,7 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      * @throws NullPointerException if the unit is null
      */
-    void setExpiresAfter(@NonNull K key, long duration, @NonNull TimeUnit unit);
+    void setExpiresAfter(@NonNull K key, @NonNegative long duration, @NonNull TimeUnit unit);
 
     /**
      * Specifies that the entry should be automatically removed from the cache once the duration has
@@ -399,7 +402,7 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     default boolean putIfAbsent(@NonNull K key, @NonNull V value,
-        long duration, @NonNull TimeUnit unit) {
+        @NonNegative long duration, @NonNull TimeUnit unit) {
       // This method was added & implemented in version 2.6.0
       throw new UnsupportedOperationException();
     }
@@ -436,7 +439,8 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      * @throws NullPointerException if the specified key or value is null
      */
-    default void put(@NonNull K key, @NonNull V value, long duration, @NonNull TimeUnit unit) {
+    default void put(@NonNull K key, @NonNull V value,
+        @NonNegative long duration, @NonNull TimeUnit unit) {
       // This method was added & implemented in version 2.6.0
       throw new UnsupportedOperationException();
     }
@@ -472,7 +476,7 @@ public interface Policy<K, V> {
      * @return a snapshot view of the cache from oldest entry to the youngest
      */
     @NonNull
-    Map<K, V> oldest(int limit);
+    Map<@NonNull K, @NonNull V> oldest(@NonNegative int limit);
 
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
@@ -489,6 +493,6 @@ public interface Policy<K, V> {
      * @return a snapshot view of the cache from youngest entry to the oldest
      */
     @NonNull
-    Map<K, V> youngest(int limit);
+    Map<@NonNull K, @NonNull V> youngest(@NonNegative int limit);
   }
 }
