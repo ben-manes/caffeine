@@ -23,6 +23,7 @@ import java.util.stream.IntStream;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import junit.framework.TestCase;
 
@@ -45,6 +46,7 @@ public class LocalCacheMapComputeTest extends TestCase {
     super.setUp();
     this.cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(500000, TimeUnit.MILLISECONDS)
+        .executor(MoreExecutors.directExecutor())
         .maximumSize(count));
   }
 
@@ -54,6 +56,28 @@ public class LocalCacheMapComputeTest extends TestCase {
       cache.asMap().computeIfAbsent(key, k -> "value" + n);
     });
     assertEquals(1, cache.size());
+  }
+
+  public void testComputeIfAbsentEviction() {
+    Cache<String, String> c = CaffeinatedGuava.build(
+        Caffeine.newBuilder().executor(MoreExecutors.directExecutor()).maximumSize(1));
+
+    assertThat(c.asMap().computeIfAbsent("hash-1", k -> "")).isEqualTo("");
+    assertThat(c.asMap().computeIfAbsent("hash-1", k -> "")).isEqualTo("");
+    assertThat(c.asMap().computeIfAbsent("hash-1", k -> "")).isEqualTo("");
+    assertThat(c.size()).isEqualTo(1);
+    assertThat(c.asMap().computeIfAbsent("hash-2", k -> "")).isEqualTo("");
+  }
+
+  public void testComputeEviction() {
+    Cache<String, String> c = CaffeinatedGuava.build(
+        Caffeine.newBuilder().executor(MoreExecutors.directExecutor()).maximumSize(1));
+
+    assertThat(c.asMap().compute("hash-1", (k, v) -> "a")).isEqualTo("a");
+    assertThat(c.asMap().compute("hash-1", (k, v) -> "b")).isEqualTo("b");
+    assertThat(c.asMap().compute("hash-1", (k, v) -> "c")).isEqualTo("c");
+    assertThat(c.size()).isEqualTo(1);
+    assertThat(c.asMap().computeIfAbsent("hash-2", k -> "")).isEqualTo("");
   }
 
   public void testComputeIfPresent() {
@@ -82,5 +106,14 @@ public class LocalCacheMapComputeTest extends TestCase {
       cache.asMap().compute(key, (k, v) -> null);
     });
     assertEquals(0, cache.size());
+  }
+
+  public void testComputeExceptionally() {
+    try {
+      doParallelCacheOp(count, n -> {
+        cache.asMap().compute(key, (k, v) -> { throw new RuntimeException(); });
+      });
+      fail("Should not get here");
+    } catch (RuntimeException ex) {}
   }
 }
