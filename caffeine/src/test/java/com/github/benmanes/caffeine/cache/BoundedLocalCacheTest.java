@@ -62,7 +62,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Maximum;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -124,6 +123,29 @@ public final class BoundedLocalCacheTest {
     });
   }
 
+  @Test
+  public void rescheduleDrainBuffers() {
+    AtomicBoolean evicting = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    CacheWriter<Integer, Integer> writer = new CacheWriter<Integer, Integer>() {
+      @Override public void write(Integer key, Integer value) {}
+      @Override public void delete(Integer key, Integer value, RemovalCause cause) {
+        evicting.set(true);
+        await().untilTrue(done);
+      }
+    };
+    BoundedLocalCache<Integer, Integer> map = asBoundedLocalCache(
+        Caffeine.newBuilder().writer(writer).maximumSize(0L).build());
+    map.put(1, 1);
+    await().untilTrue(evicting);
+
+    map.put(2, 2);
+    assertThat(map.drainStatus, is(PROCESSING_TO_REQUIRED));
+
+    done.set(true);
+    await().until(() -> map.drainStatus, is(IDLE));
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.FULL, maximumSize = Maximum.FULL,
@@ -169,8 +191,8 @@ public final class BoundedLocalCacheTest {
         localCache.put(newEntry.getKey(), newEntry.getValue());
         assertThat(localCache.remove(oldEntry.getKey()), is(oldEntry.getValue()));
       });
-      Awaits.await().until(() -> localCache.containsKey(oldEntry.getKey()), is(false));
-      Awaits.await().until(() -> {
+      await().until(() -> localCache.containsKey(oldEntry.getKey()), is(false));
+      await().until(() -> {
         synchronized (node) {
           return !node.isAlive();
         }
@@ -180,7 +202,7 @@ public final class BoundedLocalCacheTest {
 
       checkStatus(node, Status.DEAD);
       assertThat(localCache.containsKey(newEntry.getKey()), is(true));
-      Awaits.await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+      await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
     } finally {
       localCache.evictionLock.unlock();
     }
@@ -531,7 +553,7 @@ public final class BoundedLocalCacheTest {
     localCache.evictionLock.lock();
     try {
       ConcurrentTestHarness.execute(task);
-      Awaits.await().untilTrue(done);
+      await().untilTrue(done);
     } finally {
       localCache.evictionLock.unlock();
     }
@@ -573,10 +595,10 @@ public final class BoundedLocalCacheTest {
         task.run();
         done.set(true);
       });
-      Awaits.await().until(lock::hasQueuedThreads);
+      await().until(lock::hasQueuedThreads);
     } finally {
       lock.unlock();
     }
-    Awaits.await().untilTrue(done);
+    await().untilTrue(done);
   }
 }

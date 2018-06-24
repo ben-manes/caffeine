@@ -42,7 +42,6 @@ allprojects {
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'net.ltgt.errorprone'
-  apply plugin: 'propdeps-maven'
   apply plugin: 'eclipse'
   apply plugin: 'java'
   apply plugin: 'idea'
@@ -67,10 +66,6 @@ subprojects {
     releaseBuild = rootProject.hasProperty('release')
   }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
-
-  idea.module {
-    scopes.PROVIDED.plus += [ configurations.provided ]
-  }
 
   dependencies {
     testCompile libraries.guava

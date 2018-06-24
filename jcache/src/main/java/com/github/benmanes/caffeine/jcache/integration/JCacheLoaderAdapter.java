@@ -69,7 +69,6 @@ public final class JCacheLoaderAdapter<K, V>
   }
 
   @Override
-  @SuppressWarnings("NullAway")
   public @Nullable Expirable<V> load(K key) {
     try {
       boolean statsEnabled = statistics.isEnabled();

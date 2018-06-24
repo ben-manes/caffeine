@@ -51,6 +51,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -1107,6 +1108,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       maintenance(task);
     } finally {
       evictionLock.unlock();
+    }
+    if ((drainStatus() == REQUIRED) && (executor == ForkJoinPool.commonPool())) {
+      scheduleDrainBuffers();
     }
   }
 
