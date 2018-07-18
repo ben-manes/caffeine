@@ -553,7 +553,7 @@ public final class Caffeine<K, V> {
   public Caffeine<K, V> expireAfterWrite(@NonNegative long duration, @NonNull TimeUnit unit) {
     requireState(expireAfterWriteNanos == UNSET_INT,
         "expireAfterWrite was already set to %s ns", expireAfterWriteNanos);
-    requireState(expiry == null, "expireAfterAccess may not be used with variable expiration");
+    requireState(expiry == null, "expireAfterWrite may not be used with variable expiration");
     requireArgument(duration >= 0, "duration cannot be negative: %s %s", duration, unit);
     this.expireAfterWriteNanos = unit.toNanos(duration);
     return this;
