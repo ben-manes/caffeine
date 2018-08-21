@@ -72,7 +72,6 @@ public class TestEdenResize {
             cache.put(counter, counter);
         }
 
-
         // need to wait for a moment to give the cache time to evict stuff.
         sleep(1000);
 
@@ -91,6 +90,4 @@ public class TestEdenResize {
         }
         Assert.assertTrue("All keys made it to the main cache!", missing);
     }
-
-
 }

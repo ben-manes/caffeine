@@ -186,7 +186,6 @@ public interface Policy<K, V> {
      */
     void setMaximum(@NonNegative long maximum, double percentMain);
 
-
     /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
      * order of iteration is from the entries least likely to be retained (coldest) to the entries

@@ -3168,8 +3168,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public long getMaximum() {
         return cache.maximum();
       }
-      @Override public void setMaximum(long maximum)
-      {
+      @Override public void setMaximum(long maximum) {
         setMaximum(maximum, PERCENT_MAIN);
       }
       @Override public void setMaximum(long maximum, double percentMain) {
