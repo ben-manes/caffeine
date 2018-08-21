@@ -453,6 +453,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @GuardedBy("evictionLock")
   void setMaximum(long maximum, double mainPercentage) {
     requireArgument(maximum >= 0);
+    requireArgument(mainPercentage >= 0);
+    requireArgument(mainPercentage <= 1.0d);
 
     long max = Math.min(maximum, MAXIMUM_CAPACITY);
     long eden = max - (long) (max * mainPercentage);
@@ -3173,7 +3175,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public void setMaximum(long maximum, double percentMain) {
         cache.evictionLock.lock();
         try {
-          cache.setMaximum(maximum);
+          cache.setMaximum(maximum, percentMain);
           cache.maintenance(/* ignored */ null);
         } finally {
           cache.evictionLock.unlock();
