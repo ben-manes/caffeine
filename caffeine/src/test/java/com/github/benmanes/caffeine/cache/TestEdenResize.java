@@ -1,5 +1,7 @@
 package com.github.benmanes.caffeine.cache;
 
+import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import org.ehcache.impl.internal.executor.ExecutorUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,15 +45,12 @@ public class TestEdenResize {
 
     @Test
     public void Test100PercentWindow() throws InterruptedException {
-        Cache<Integer, Integer> cache = Caffeine.newBuilder().maximumSize(1000).build();
+        Cache<Integer, Integer> cache = Caffeine.newBuilder().maximumSize(1000).executor(CacheSpec.CacheExecutor.DIRECT.create()).build();
         Policy.Eviction<Integer, Integer> eviction = cache.policy().eviction().get();
         eviction.setMaximum(eviction.getMaximum(), 0d);
         for (int counter = 0; counter < 2000; ++counter) {
             cache.put(counter, counter);
         }
-
-        // need to wait for a moment to give the cache time to evict stuff.
-        sleep(1000);
 
         // if the window is 100% of the cache, the last 1000 entries should be in the cache. There can be a  temporary
         // overhang containing arbitrary older keys.
@@ -65,15 +64,12 @@ public class TestEdenResize {
 
     @Test
     public void Test50PercentWindow() throws InterruptedException {
-        Cache<Integer, Integer> cache = Caffeine.newBuilder().maximumSize(1000).build();
+        Cache<Integer, Integer> cache = Caffeine.newBuilder().maximumSize(1000).executor(CacheSpec.CacheExecutor.DIRECT.create()).build();
         Policy.Eviction<Integer, Integer> eviction = cache.policy().eviction().get();
         eviction.setMaximum(eviction.getMaximum(), .5d);
         for (int counter = 0; counter < 2000; ++counter) {
             cache.put(counter, counter);
         }
-
-        // need to wait for a moment to give the cache time to evict stuff.
-        sleep(1000);
 
         // if the window is 50% of the cache, the last 500 entries should be in the cache.
         Map<Integer, Integer> cm = cache.asMap();
