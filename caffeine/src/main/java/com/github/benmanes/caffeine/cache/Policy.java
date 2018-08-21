@@ -168,6 +168,25 @@ public interface Policy<K, V> {
     void setMaximum(@NonNegative long maximum);
 
     /**
+     * Specifies the maximum total size of this cache. This value may be interpreted as the weighted
+     * or unweighted threshold size based on how this cache was constructed. If the cache currently
+     * exceeds the new maximum size this operation eagerly evict entries until the cache shrinks to
+     * the appropriate size.
+     * <p>
+     * This version also sets the ratio between LRU eden and the LFU cache
+     * <p>
+     * Note that some implementations may have an internal inherent bound on the maximum total size.
+     * If the value specified exceeds that bound, then the value is set to the internal maximum.
+     *
+     * @param maximum the maximum, interpreted as weighted or unweighted size depending on how this
+     *        cache was constructed
+     * @param percentMain relative size of the main (LFU) cache as percentage (0 &lt; percentMain &lt; 1)
+     * @throws IllegalArgumentException if the maximum size specified is negative
+     */
+    void setMaximum(@NonNegative long maximum, double percentMain);
+
+
+    /**
      * Returns an unmodifiable snapshot {@link Map} view of the cache with ordered traversal. The
      * order of iteration is from the entries least likely to be retained (coldest) to the entries
      * most likely to be retained (hottest). This order is determined by the eviction policy's best
