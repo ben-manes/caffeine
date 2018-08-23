@@ -1,14 +1,9 @@
 package com.github.benmanes.caffeine.cache;
 
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import org.ehcache.impl.internal.executor.ExecutorUtil;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.Console;
 import java.util.Map;
-
-import static java.lang.Thread.sleep;
 
 public class TestEdenResize {
     @Test
