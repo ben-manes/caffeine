@@ -180,7 +180,7 @@ public interface Policy<K, V> {
      *
      * @param maximum the maximum, interpreted as weighted or unweighted size depending on how this
      *        cache was constructed
-     * @param percentMain relative size of the main (LFU) cache as percentage (0 &le; percentMain &le; 1)
+     * @param percentMain relative size of the main (LFU) cache as percentage of maximum (0 &le; percentMain &le; 1)
      * @throws IllegalArgumentException if the maximum size specified is negative or percentMain is less
      *        than 0 or greater than 1
      */
