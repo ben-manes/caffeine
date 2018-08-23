@@ -3,6 +3,7 @@ package com.github.benmanes.caffeine.cache;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import org.junit.Assert;
 import org.junit.Test;
+
 import java.util.Map;
 
 public class TestEdenResize {
@@ -64,13 +65,13 @@ public class TestEdenResize {
             cache.put(counter, counter);
         }
 
-        // if the window is 50% of the cache, the last 500 entries should be in the cache.
+        // if the window is 50% of the cache, the last 5 entries should be in the cache.
         Map<Integer, Integer> cm = cache.asMap();
         for (int counter = 15; counter < 20; ++counter) {
             Assert.assertTrue(cm.keySet().contains(counter));
         }
 
-        // some keys between 1000 and 1500 will be missing because they didn't make it to the main cache
+        // some keys between 10 and 15 will be missing because they didn't make it to the main cache
         boolean missing = false;
         for (int counter = 10; counter < 15; ++counter) {
             if (!cm.keySet().contains(counter)) {
