@@ -100,7 +100,7 @@ final class SimpleClimber implements HillClimber {
       return config().getDouble(BASE_PATH + "percent-sample");
     }
     public double tolerance() {
-      return config().getInt(BASE_PATH + "tolerance");
+      return config().getDouble(BASE_PATH + "tolerance");
     }
   }
 }
