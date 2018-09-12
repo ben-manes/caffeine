@@ -30,6 +30,7 @@ import com.typesafe.config.Config;
 enum HillClimberType {
   SIMPLE(SimpleClimber::new),
   INDICATOR(IndicatorClimber::new),
+  MINISIM(MiniSimClimber::new),
   SIMULATED_ANNEALING(SimulatedAnnealingClimber::new);
 
   private final Function<Config, HillClimber> factory;

@@ -25,10 +25,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 interface HillClimber {
 
+  default void doAlways(long key) {
+  };
+
   /**
    * Records that a hit occurred.
    *
-   * @param key the key accessed
+   * @param key   the key accessed
    * @param queue the queue the entry was found in
    */
   void onHit(long key, QueueType queue);
@@ -43,7 +46,7 @@ interface HillClimber {
   /**
    * Determines how to adapt the segment sizes.
    *
-   * @param windowSize the current window size
+   * @param windowSize    the current window size
    * @param protectedSize the current protected size
    * @return the adjustment to the segments
    */
@@ -55,7 +58,10 @@ interface HillClimber {
 
   /** The adaptation type and its magnitude. */
   final class Adaptation {
-    enum Type { HOLD, INCREASE_WINDOW, DECREASE_WINDOW }
+    enum Type {
+      HOLD, INCREASE_WINDOW, DECREASE_WINDOW
+    }
+
     static final Adaptation HOLD = new Adaptation(Type.HOLD, 0);
 
     final int amount;
@@ -67,4 +73,5 @@ interface HillClimber {
       this.amount = amount;
     }
   }
+
 }
