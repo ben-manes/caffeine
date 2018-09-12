@@ -22,7 +22,6 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.Indicator;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
@@ -30,14 +29,13 @@ import com.typesafe.config.Config;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * Indicator based adaptive version of FRD
+ * Hill climber version of FRD
  * 
  * @author ohadey@gmail.com (Ohad Eytan)
  */
-public final class IndicatorFrdPolicy implements Policy {
+public final class HillClimberFrdPolicy implements Policy {
   final Long2ObjectOpenHashMap<Node> data;
   final PolicyStats policyStats;
-  final Indicator indicator;
   final Node headFilter;
   final Node headMain;
 
@@ -49,7 +47,16 @@ public final class IndicatorFrdPolicy implements Policy {
   int residentFilter;
   int residentMain;
 
-  public IndicatorFrdPolicy(Config config) {
+  private final int pivot;
+  private int sample;
+  private final int sampleSize;
+  private int hitsInSample;
+  private int missesInSample;
+  private double previousHitRate;
+  private final double tolerance;
+  private boolean increaseWindow;
+
+  public HillClimberFrdPolicy(Config config) {
     FrdSettings settings = new FrdSettings(config);
     this.maximumMainResidentSize = (int) (settings.maximumSize() * settings.percentMain());
     this.maximumFilterSize = settings.maximumSize() - maximumMainResidentSize;
@@ -58,23 +65,28 @@ public final class IndicatorFrdPolicy implements Policy {
     this.maximumSize = settings.maximumSize();
     this.headFilter = new Node();
     this.headMain = new Node();
-    this.indicator = new Indicator(config);
+
+    this.sampleSize = (int) (10 * settings.maximumSize());
+    this.pivot = (int) (0.05 * settings.maximumSize());
+    this.tolerance = 100d * 0;
   }
 
-  /** Returns all variations of this policy based on the configuration parameters. */
+  /**
+   * Returns all variations of this policy based on the configuration parameters.
+   */
   public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new IndicatorFrdPolicy(config));
+    return ImmutableSet.of(new HillClimberFrdPolicy(config));
   }
 
   @Override
   public void record(long key) {
     policyStats.recordOperation();
     adapt(key);
-   
+
     Node node = data.get(key);
     if (node == null) {
       node = new Node(key);
-      data.put(key,node);
+      data.put(key, node);
       onMiss(node);
     } else if (node.status == Status.FILTER) {
       onFilterHit(node);
@@ -82,37 +94,52 @@ public final class IndicatorFrdPolicy implements Policy {
       onMainHit(node);
     } else if (node.status == Status.NON_RESIDENT) {
       if (residentMain < maximumMainResidentSize) {
-    	checkState(residentFilter > maximumFilterSize);
-    	adaptFilterToMain(node);
-      } else { 
+        checkState(residentFilter > maximumFilterSize);
+        adaptFilterToMain(node);
+      } else {
         onNonResidentHit(node);
       }
     } else {
       throw new IllegalStateException();
     }
   }
-  
+
   private void adapt(long key) {
-	indicator.record(key);
-	if (indicator.getSample() == 50000) {
-		
-		maximumFilterSize = (int) (maximumSize * indicator.getIndicator());
-		if (maximumFilterSize <= 0) {
-		  maximumFilterSize = 1;
-		}
-		if (maximumFilterSize >= maximumSize) {
-		  maximumFilterSize = maximumSize - 1;	
-		}
-	    maximumMainResidentSize = maximumSize - maximumFilterSize;
-		indicator.reset();
-	}
+    if (sample >= sampleSize) {
+      double hitRate = (100d * hitsInSample) / (hitsInSample + missesInSample);
+      if (!Double.isNaN(hitRate) && !Double.isInfinite(hitRate) && (previousHitRate != 0.0)) {
+        if (hitRate < (previousHitRate + tolerance)) {
+          increaseWindow = !increaseWindow;
+        }
+        if (increaseWindow) {
+          maximumFilterSize += pivot;
+        } else {
+          maximumFilterSize -= pivot;
+        }
+        if (maximumFilterSize <= 0) {
+          maximumFilterSize = 1;
+        }
+        if (maximumFilterSize >= maximumSize) {
+          maximumFilterSize = maximumSize - 1;
+        }
+        maximumMainResidentSize = maximumSize - maximumFilterSize;
+        // System.out.println(maximumFilterSize);
+      }
+      previousHitRate = hitRate;
+
+      missesInSample = 0;
+      hitsInSample = 0;
+      sample = 0;
+    }
   }
 
-
   private void onMiss(Node node) {
-    // Initially, both the filter and reuse distance stacks are filled with newly arrived blocks
+    // Initially, both the filter and reuse distance stacks are filled with newly
+    // arrived blocks
     // from the reuse distance stack to the filter stack.
     policyStats.recordMiss();
+    missesInSample++;
+    sample++;
 
     if (residentSize < maximumMainResidentSize) {
       onMainWarmupMiss(node);
@@ -123,41 +150,45 @@ public final class IndicatorFrdPolicy implements Policy {
       residentSize++;
       residentFilter++;
     } else if (residentFilter < maximumFilterSize) {
-    	adaptMainToFilter(node);
-    } else { 
+      adaptMainToFilter(node);
+    } else {
       onFullMiss(node);
     }
   }
-  
+
   private void adaptMainToFilter(Node node) {
-	// Cache miss and history miss with adaptation: Evict from main stack. Than, insert to filter stack.
-	policyStats.recordEviction();
+    // Cache miss and history miss with adaptation: Evict from main stack. Than,
+    // insert to filter stack.
+    policyStats.recordEviction();
 
     pruneStack();
     Node victim = headMain.prevMain;
     victim.removeFrom(StackType.MAIN);
     data.remove(victim.key);
-    pruneStack();	
+    pruneStack();
     residentMain--;
-	
-    node.moveToTop(StackType.FILTER); 
-    node.moveToTop(StackType.MAIN); 
+
+    node.moveToTop(StackType.FILTER);
+    node.moveToTop(StackType.MAIN);
     node.status = Status.FILTER;
     residentFilter++;
   }
 
   private void adaptFilterToMain(Node node) {
-	// Cache miss and history hit with adaptation: Evict from filter stack. Than, insert to main stack.
-	policyStats.recordEviction();
-	policyStats.recordMiss();
+    // Cache miss and history hit with adaptation: Evict from filter stack. Than,
+    // insert to main stack.
+    policyStats.recordEviction();
+    policyStats.recordMiss();
+    missesInSample++;
+    sample++;
 
-    Node victim = headFilter.prevFilter; 
-    victim.removeFrom(StackType.FILTER); 
+    Node victim = headFilter.prevFilter;
+    victim.removeFrom(StackType.FILTER);
     if (victim.isInMain) {
       victim.status = Status.NON_RESIDENT;
     } else {
-      data.remove(victim.key); 
-    }	
+      data.remove(victim.key);
+    }
     residentFilter--;
 
     node.moveToTop(StackType.MAIN);
@@ -177,42 +208,56 @@ public final class IndicatorFrdPolicy implements Policy {
   }
 
   private void onFullMiss(Node node) {
-    // Cache miss and history miss: Evict the oldest block in the filter stack. Then, insert the
-    // missed block into the filter stack and generate a history block for the missed block. In
-    // addition, insert the history block into the reuse distance stack. No eviction occurs in the
+    // Cache miss and history miss: Evict the oldest block in the filter stack.
+    // Then, insert the
+    // missed block into the filter stack and generate a history block for the
+    // missed block. In
+    // addition, insert the history block into the reuse distance stack. No eviction
+    // occurs in the
     // reuse distance stack because the history block contains only metadata.
     policyStats.recordEviction();
 
-    Node victim = headFilter.prevFilter; 
-    victim.removeFrom(StackType.FILTER); 
+    Node victim = headFilter.prevFilter;
+    victim.removeFrom(StackType.FILTER);
     if (victim.isInMain) {
       victim.status = Status.NON_RESIDENT;
     } else {
-      data.remove(victim.key); 
+      data.remove(victim.key);
     }
 
-    node.moveToTop(StackType.FILTER); 
-    node.moveToTop(StackType.MAIN); 
-    node.status = Status.FILTER; 
-  } 
+    node.moveToTop(StackType.FILTER);
+    node.moveToTop(StackType.MAIN);
+    node.status = Status.FILTER;
+  }
 
   private void onFilterHit(Node node) {
-    // Cache hit in the filter stack: Move the corresponding block to the MRU position of the filter
-    // stack. The associated history block should be updated to maintain reuse distance order (i.e.,
-    // move its history block in the reuse distance stack to the MRU position of the reuse distance
+    // Cache hit in the filter stack: Move the corresponding block to the MRU
+    // position of the filter
+    // stack. The associated history block should be updated to maintain reuse
+    // distance order (i.e.,
+    // move its history block in the reuse distance stack to the MRU position of the
+    // reuse distance
     // stack).
     policyStats.recordHit();
+    hitsInSample++;
+    sample++;
 
     node.moveToTop(StackType.FILTER);
     node.moveToTop(StackType.MAIN);
   }
 
   private void onMainHit(Node node) {
-    // Cache hit in the reuse distance stack: Move the corresponding block to the MRU position of
-    // the reuse distance stack. If the corresponding block is in the LRU position of the reuse
-    // distance stack (i.e., the oldest resident block), the history blocks between the LRU position
-    // and the 2nd oldest resident block are removed. Otherwise, no history block removing occurs.
+    // Cache hit in the reuse distance stack: Move the corresponding block to the
+    // MRU position of
+    // the reuse distance stack. If the corresponding block is in the LRU position
+    // of the reuse
+    // distance stack (i.e., the oldest resident block), the history blocks between
+    // the LRU position
+    // and the 2nd oldest resident block are removed. Otherwise, no history block
+    // removing occurs.
     policyStats.recordHit();
+    hitsInSample++;
+    sample++;
 
     boolean wasBottom = (headMain.prevMain == node);
     node.moveToTop(StackType.MAIN);
@@ -238,12 +283,17 @@ public final class IndicatorFrdPolicy implements Policy {
   }
 
   private void onNonResidentHit(Node node) {
-    // Cache miss but history hit: Remove all history blocks between the 2nd oldest and the oldest
-    // resident blocks. Next, evict the oldest resident block from the reuse distance stack. Then,
-    // move the history hit block to the MRU position in the reuse distance stack and change it to a
+    // Cache miss but history hit: Remove all history blocks between the 2nd oldest
+    // and the oldest
+    // resident blocks. Next, evict the oldest resident block from the reuse
+    // distance stack. Then,
+    // move the history hit block to the MRU position in the reuse distance stack
+    // and change it to a
     // resident block. No insertion or eviction occurs in the filter stack.
     policyStats.recordEviction();
     policyStats.recordMiss();
+    missesInSample++;
+    sample++;
 
     pruneStack();
     Node victim = headMain.prevMain;
@@ -263,12 +313,8 @@ public final class IndicatorFrdPolicy implements Policy {
 
   @Override
   public void finished() {
-    long filterSize = data.values().stream()
-        .filter(node -> node.status == Status.FILTER)
-        .count();
-    long mainSize = data.values().stream()
-        .filter(node -> node.status == Status.MAIN)
-        .count();
+    long filterSize = data.values().stream().filter(node -> node.status == Status.FILTER).count();
+    long mainSize = data.values().stream().filter(node -> node.status == Status.MAIN).count();
 
     checkState((filterSize + mainSize) <= maximumSize);
     checkState(residentFilter == filterSize);
@@ -276,14 +322,12 @@ public final class IndicatorFrdPolicy implements Policy {
   }
 
   enum Status {
-    NON_RESIDENT,
-    FILTER,
-    MAIN,
+    NON_RESIDENT, FILTER, MAIN,
   }
 
   enum StackType {
     FILTER, // holds all of the resident filter blocks
-    MAIN,   // holds all of the resident and non-resident blocks
+    MAIN, // holds all of the resident and non-resident blocks
   }
 
   final class Node {
@@ -364,10 +408,7 @@ public final class IndicatorFrdPolicy implements Policy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", status)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", status).toString();
     }
   }
 
