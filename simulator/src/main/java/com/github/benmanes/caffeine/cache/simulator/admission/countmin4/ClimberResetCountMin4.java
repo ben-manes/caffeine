@@ -22,13 +22,13 @@ import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.typesafe.config.Config;
 
 /**
- * A sketch where the aging process is a dynamic process and adjusts to the recency/frequency bias
- * of the actual workload.
+ * A sketch where the aging process is a dynamic process and adjusts to the
+ * recency/frequency bias of the actual workload.
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AdaptiveResetCountMin4 extends CountMin4 {
+public final class ClimberResetCountMin4 extends CountMin4 {
   static final long ONE_MASK = 0x1111111111111111L;
 
   final Membership doorkeeper;
@@ -36,11 +36,11 @@ public final class AdaptiveResetCountMin4 extends CountMin4 {
   int additions;
   int period;
   int prevMisses; // misses in previous interval
-  int misses;     // misses in this interval
+  int misses; // misses in this interval
   int direction = 1; // are we increasing the 'step size' or decreasing it
   int eventsToCount; // events yet to count before we make a decision.
 
-  public AdaptiveResetCountMin4(Config config) {
+  public ClimberResetCountMin4(Config config) {
     super(config);
     BasicSettings settings = new BasicSettings(config);
     DoorkeeperSettings doorkeeperSettings = settings.tinyLfu().countMin4().periodic().doorkeeper();
@@ -82,8 +82,8 @@ public final class AdaptiveResetCountMin4 extends CountMin4 {
   }
 
   /**
-   * Reduces every counter by half of its original value. To reduce the truncation error, the sample
-   * is reduced by the number of counters with an odd value.
+   * Reduces every counter by half of its original value. To reduce the truncation
+   * error, the sample is reduced by the number of counters with an odd value.
    */
   @Override
   protected void tryReset(boolean added) {
@@ -108,7 +108,8 @@ public final class AdaptiveResetCountMin4 extends CountMin4 {
 
   @Override
   public void reportMiss() {
-    // Each time there is a miss, TinyLFU invokes the reportMiss function and we can make decisions
+    // Each time there is a miss, TinyLFU invokes the reportMiss function and we can
+    // make decisions
     misses++;
 
     if (eventsToCount <= 0) {
@@ -129,4 +130,30 @@ public final class AdaptiveResetCountMin4 extends CountMin4 {
       }
     }
   }
+
+  public int getStep() {
+    return step;
+  }
+
+  public void setStep(int x) {
+    step = x;
+    if (step < 1) {
+      step = 1;
+    } else if (step > 15) {
+      step = 15;
+    }
+  }
+
+  public int getEventsToCount() {
+    return eventsToCount;
+  }
+
+  public void resetEventsToCount() {
+    eventsToCount = period;
+  }
+
+  public int getPeriod() {
+    return period;
+  }
+
 }
