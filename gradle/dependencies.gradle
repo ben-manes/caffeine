@@ -68,6 +68,8 @@ ext {
     ohc: '0.6.1',
     slf4j: '1.7.25',
     tcache: '1.0.5',
+    stream: '2.9.5',
+    commonsMath3: '3.6.1',
   ]
   pluginVersions = [
     apt: '0.16',
@@ -168,6 +170,8 @@ ext {
     ohc: "org.caffinitas.ohc:ohc-core-j8:${benchmarkVersions.ohc}",
     slf4jNop: "org.slf4j:slf4j-nop:${benchmarkVersions.slf4j}",
     tcache: "com.trivago:triava:${benchmarkVersions.tcache}",
+    stream: "com.clearspring.analytics:stream:${benchmarkVersions.stream}",
+    commonsMath3: "org.apache.commons:commons-math3:${benchmarkVersions.commonsMath3}",
   ]
   gradlePlugins = [
     apt: "net.ltgt.gradle:gradle-apt-plugin:${pluginVersions.apt}",

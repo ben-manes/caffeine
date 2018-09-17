@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Ben Manes. All Rights Reserved.
+ * Copyright 2018 Ben Manes and Ohad Eytan. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ public final class HillClimberFrdPolicy implements Policy {
     this.headFilter = new Node();
     this.headMain = new Node();
 
-    this.sampleSize = (int) (10 * settings.maximumSize());
+    this.sampleSize = 10 * settings.maximumSize();
     this.pivot = (int) (0.05 * settings.maximumSize());
     this.tolerance = 100d * 0;
   }

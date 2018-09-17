@@ -50,6 +50,6 @@ public final class IndicatorClimber implements HillClimber {
       }
       return new Adaptation(Adaptation.Type.DECREASE_WINDOW, (int) ((oldPercent - newPercent) * cacheSize));
     }
-    return new Adaptation(Adaptation.Type.HOLD, 0);
+    return Adaptation.HOLD;
   }
 }

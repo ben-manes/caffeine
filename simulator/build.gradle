@@ -23,9 +23,8 @@ dependencies {
   compile benchmarkLibraries.slf4jNop
   compile benchmarkLibraries.expiringMap
   compile benchmarkLibraries.elasticSearch
-  compile 'com.clearspring.analytics:stream:2.9.5'
-  compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
-  compile group: 'com.sangupta', name: 'murmur', version: '1.0.0' 
+  compile benchmarkLibraries.stream
+  compile benchmarkLibraries.commonsMath3
 
   testCompile testLibraries.testng
 }
