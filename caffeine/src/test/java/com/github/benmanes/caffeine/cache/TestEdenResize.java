@@ -1,15 +1,28 @@
 package com.github.benmanes.caffeine.cache;
 
+import com.github.benmanes.caffeine.cache.testing.CacheContext;
+import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
+import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import org.junit.Assert;
-import org.junit.Test;
+import org.testng.annotations.Listeners;
+import org.testng.annotations.Test;
 
 import java.util.Map;
 
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
+import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
+
+@Listeners(CacheValidationListener.class)
+@Test(dataProviderClass = CacheProvider.class)
 public class TestEdenResize {
-    @Test
-    public void TestResizingEden() {
-        Cache<Integer, Integer> cache = Caffeine.newBuilder().maximumSize(1024).build();
+    @Test(dataProvider = "caches")
+    @CacheSpec(mustExpireWithAnyOf = {AFTER_WRITE, VARIABLE},
+            maximumSize = CacheSpec.Maximum.TEN,
+            expireAfterWrite = {CacheSpec.Expire.DISABLED, CacheSpec.Expire.ONE_MINUTE},
+            expiry = {CacheSpec.CacheExpiry.WRITE}, expiryTime = CacheSpec.Expire.ONE_MINUTE,
+            population = {CacheSpec.Population.PARTIAL, CacheSpec.Population.FULL})
+    public void TestResizingEden(Cache<Integer, Integer> cache, CacheContext context) {
         cache.put(1, 1);
         Policy.Eviction<Integer, Integer> eviction = cache.policy().eviction().orElse(null);
         Assert.assertNotNull(cache.getIfPresent(1));
@@ -31,17 +44,25 @@ public class TestEdenResize {
         return true;
     }
 
-    @Test
-    public void TestPercentageMainOutOfBounds() {
-        Cache<Integer, Integer> cache = Caffeine.newBuilder().maximumSize(1024).build();
+    @Test(dataProvider = "caches")
+    @CacheSpec(mustExpireWithAnyOf = {AFTER_WRITE, VARIABLE},
+            maximumSize = CacheSpec.Maximum.TEN,
+            expireAfterWrite = {CacheSpec.Expire.DISABLED, CacheSpec.Expire.ONE_MINUTE},
+            expiry = {CacheSpec.CacheExpiry.WRITE}, expiryTime = CacheSpec.Expire.ONE_MINUTE,
+            population = {CacheSpec.Population.PARTIAL, CacheSpec.Population.FULL})
+    public void TestPercentageMainOutOfBounds(Cache<Integer, Integer> cache, CacheContext context) {
         Policy.Eviction<Integer, Integer> eviction = cache.policy().eviction().orElse(null);
         Assert.assertFalse("Failed to throw for percentMain < 0", cleanlySetPercentMain(eviction, -1d));
         Assert.assertFalse("Failed to throw for percentMain > 1", cleanlySetPercentMain(eviction, 1.01d));
     }
 
-    @Test
-    public void Test100PercentWindow() throws InterruptedException {
-        Cache<Integer, Integer> cache = Caffeine.newBuilder().maximumSize(10).executor(CacheSpec.CacheExecutor.DIRECT.create()).build();
+    @Test(dataProvider = "caches")
+    @CacheSpec(mustExpireWithAnyOf = {AFTER_WRITE, VARIABLE},
+            maximumSize = CacheSpec.Maximum.TEN,
+            expireAfterWrite = {CacheSpec.Expire.DISABLED, CacheSpec.Expire.ONE_MINUTE},
+            expiry = {CacheSpec.CacheExpiry.WRITE}, expiryTime = CacheSpec.Expire.ONE_MINUTE,
+            population = {CacheSpec.Population.PARTIAL, CacheSpec.Population.FULL})
+    public void Test100PercentWindow(Cache<Integer, Integer> cache, CacheContext context) {
         Policy.Eviction<Integer, Integer> eviction = cache.policy().eviction().get();
         eviction.setMaximum(eviction.getMaximum(), 0d);
         for (int counter = 0; counter < 20; ++counter) {
@@ -56,9 +77,14 @@ public class TestEdenResize {
         }
     }
 
-    @Test
-    public void Test50PercentWindow() throws InterruptedException {
-        Cache<Integer, Integer> cache = Caffeine.newBuilder().maximumSize(10).executor(CacheSpec.CacheExecutor.DIRECT.create()).build();
+    @Test(dataProvider = "caches")
+    @CacheSpec(mustExpireWithAnyOf = {AFTER_WRITE, VARIABLE},
+            maximumSize = CacheSpec.Maximum.TEN,
+            weigher = {CacheSpec.CacheWeigher.DEFAULT, CacheSpec.CacheWeigher.TEN},
+            expireAfterWrite = {CacheSpec.Expire.DISABLED, CacheSpec.Expire.ONE_MINUTE},
+            expiry = {CacheSpec.CacheExpiry.WRITE}, expiryTime = CacheSpec.Expire.ONE_MINUTE,
+            population = {CacheSpec.Population.PARTIAL, CacheSpec.Population.FULL})
+    public void Test50PercentWindow(Cache<Integer, Integer> cache, CacheContext context) {
         Policy.Eviction<Integer, Integer> eviction = cache.policy().eviction().get();
         eviction.setMaximum(eviction.getMaximum(), .5d);
         for (int counter = 0; counter < 20; ++counter) {
