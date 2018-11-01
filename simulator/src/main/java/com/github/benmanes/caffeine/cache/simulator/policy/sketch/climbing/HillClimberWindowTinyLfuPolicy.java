@@ -114,6 +114,8 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     Node node = data.get(key);
     admittor.record(key);
 
+    climber.doAlways(key); 
+    
     QueueType queue = null;
     if (node == null) {
       onMiss(key);

@@ -249,7 +249,7 @@ public final class WindowTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class WindowTinyLfuSettings extends BasicSettings {
+  public static final class WindowTinyLfuSettings extends BasicSettings {
     public WindowTinyLfuSettings(Config config) {
       super(config);
     }

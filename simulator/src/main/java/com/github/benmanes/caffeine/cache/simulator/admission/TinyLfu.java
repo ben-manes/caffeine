@@ -16,8 +16,9 @@
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.AdaptiveResetCountMin4;
+import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.ClimberResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.IncrementalResetCountMin4;
+import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.IndicatorResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.PeriodicResetCountMin4;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin64.CountMin64TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.admission.perfect.PerfectFrequency;
@@ -49,8 +50,10 @@ public final class TinyLfu implements Admittor {
         return new PeriodicResetCountMin4(config);
       } else if (reset.equalsIgnoreCase("incremental")) {
         return new IncrementalResetCountMin4(config);
-      } else if (reset.equalsIgnoreCase("adaptive")) {
-        return new AdaptiveResetCountMin4(config);
+      } else if (reset.equalsIgnoreCase("climber")) {
+        return new ClimberResetCountMin4(config);
+      } else if (reset.equalsIgnoreCase("indicator")) {
+        return new IndicatorResetCountMin4(config);
       }
     } else if (type.equalsIgnoreCase("count-min-64")) {
       return new CountMin64TinyLfu(config);
