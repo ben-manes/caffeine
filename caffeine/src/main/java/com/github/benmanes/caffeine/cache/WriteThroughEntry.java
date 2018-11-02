@@ -36,6 +36,7 @@ final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
   }
 
   @Override
+  @SuppressWarnings("PMD.LinguisticNaming")
   public V setValue(V value) {
     map.put(getKey(), value);
     return super.setValue(value);

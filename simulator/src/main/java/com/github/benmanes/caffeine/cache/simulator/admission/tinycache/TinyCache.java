@@ -26,18 +26,18 @@ import java.util.Random;
  */
 @SuppressWarnings("PMD.AvoidDollarSigns")
 public final class TinyCache {
-  public final long[] chainIndex;
-  public final long[] isLastIndex;
   private final HashFunctionParser hashFunc;
+  public final long[] chainIndex;
+  public final long[] lastIndex;
   private final int itemsPerSet;
   private final long[] cache;
   private final Random rnd;
 
   public TinyCache(int nrSets, int itemsPerSet, int randomSeed) {
+    lastIndex = new long[nrSets];
     chainIndex = new long[nrSets];
-    isLastIndex = new long[nrSets];
-    hashFunc = new HashFunctionParser(nrSets);
     this.itemsPerSet = itemsPerSet;
+    hashFunc = new HashFunctionParser(nrSets);
     cache = new long[nrSets * itemsPerSet];
     rnd = new Random(randomSeed);
   }
@@ -47,7 +47,7 @@ public final class TinyCache {
     if (!TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], hashFunc.fpaux.chainId)) {
       return false;
     }
-    TinySetIndexing.getChain(hashFunc.fpaux, chainIndex, isLastIndex);
+    TinySetIndexing.getChain(hashFunc.fpaux, chainIndex, lastIndex);
     int offset = this.itemsPerSet * hashFunc.fpaux.set;
     TinySetIndexing.chainStart += offset;
     TinySetIndexing.chainEnd += offset;
@@ -75,9 +75,9 @@ public final class TinyCache {
     byte chainId = fpaux.chainId;
     fpaux.chainId = victim;
     this.cache[bucketStart + removedOffset] = 0;
-    TinySetIndexing.removeItem(fpaux, chainIndex, isLastIndex);
+    TinySetIndexing.removeItem(fpaux, chainIndex, lastIndex);
     fpaux.chainId = chainId;
-    int idxToAdd = TinySetIndexing.addItem(fpaux, chainIndex, isLastIndex);
+    int idxToAdd = TinySetIndexing.addItem(fpaux, chainIndex, lastIndex);
     int delta = (removedOffset < idxToAdd) ? -1 : 1;
     replaceItems(idxToAdd, fpaux.value, bucketStart, delta);
     return removedOffset;
@@ -90,7 +90,7 @@ public final class TinyCache {
       return selectVictim(bucketStart);
 
     }
-    int idxToAdd = TinySetIndexing.addItem(hashFunc.fpaux, chainIndex, isLastIndex);
+    int idxToAdd = TinySetIndexing.addItem(hashFunc.fpaux, chainIndex, lastIndex);
     this.replaceItems(idxToAdd, hashFunc.fpaux.value, bucketStart, 1);
     return false;
   }
@@ -98,7 +98,7 @@ public final class TinyCache {
   private boolean selectVictim(int bucketStart) {
     byte victimOffset = (byte) rnd.nextInt(this.itemsPerSet);
     int victimChain =
-        TinySetIndexing.getChainAtOffset(hashFunc.fpaux, chainIndex, isLastIndex, victimOffset);
+        TinySetIndexing.getChainAtOffset(hashFunc.fpaux, chainIndex, lastIndex, victimOffset);
     // this if is still for debugging and common sense. Should be eliminated for performance once
     // I am sure of the correctness.
     if (TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], victimChain)) {
@@ -109,6 +109,7 @@ public final class TinyCache {
     }
   }
 
+  @SuppressWarnings("PMD.LocalVariableNamingConventions")
   private void replaceItems(final int idx, long value, int start, final int delta) {
     start += idx;
     long $;

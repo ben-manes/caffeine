@@ -262,6 +262,7 @@ public final class AsMapTest {
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void forEach_modify(Map<Integer, Integer> map, CacheContext context) {
     // non-deterministic traversal behavior with modifications, but shouldn't become corrupted
+    @SuppressWarnings("ModifiedButNotUsed")
     List<Integer> modified = new ArrayList<>();
     map.forEach((key, value) -> {
       Integer newKey = context.lastKey() + key;

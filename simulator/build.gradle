@@ -22,9 +22,9 @@ dependencies {
   compile benchmarkLibraries.collision
   compile benchmarkLibraries.slf4jNop
   compile benchmarkLibraries.expiringMap
+  compile benchmarkLibraries.commonsMath3
   compile benchmarkLibraries.elasticSearch
   compile benchmarkLibraries.stream
-  compile benchmarkLibraries.commonsMath3
 
   testCompile testLibraries.testng
 }
@@ -58,7 +58,11 @@ jar.manifest {
     'com.github.benmanes.caffeine.simulator'
 }
 
-compileJava.options.compilerArgs += [ '-Xep:NullAway:OFF' ]
+compileJava {
+  options.errorprone {
+    errorproneArgs << '-Xep:NullAway:OFF'
+  }
+}
 
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')

@@ -116,7 +116,7 @@ public final class ClimberResetCountMin4 extends CountMin4 {
       eventsToCount = period;
 
       // If this configuration is worse than the previous one, switch directions
-      if (misses > (prevMisses)) {
+      if (misses > prevMisses) {
         direction = -1 * direction;
       }
 

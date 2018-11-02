@@ -127,7 +127,8 @@ import junit.framework.TestSuite;
  *
  * </ul>
  */
-@SuppressWarnings({"deprecation", "rawtypes", "serial", "AssertionFailureIgnored"})
+@SuppressWarnings({"deprecation", "rawtypes", "serial",
+  "AssertionFailureIgnored", "DeprecatedThreadMethods", "ThreadPriorityCheck"})
 public class JSR166TestCase extends TestCase {
     private static final boolean useSecurityManager =
         Boolean.getBoolean("jsr166.useSecurityManager");

@@ -116,6 +116,7 @@ public final class BloomFilter implements Membership {
    * @param seedIndex the hash seed index
    * @return if the membership changed as a result of this operation
    */
+  @SuppressWarnings("PMD.LinguisticNaming")
   boolean setAt(int item, int seedIndex) {
     int hash = seeded(item, seedIndex);
     int index = hash >>> tableShift;

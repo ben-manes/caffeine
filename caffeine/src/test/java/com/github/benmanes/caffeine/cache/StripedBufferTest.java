@@ -44,6 +44,7 @@ public final class StripedBufferTest {
   }
 
   @Test(dataProvider = "buffers")
+  @SuppressWarnings("ThreadPriorityCheck")
   public void produce(FakeBuffer<Integer> buffer) {
     ConcurrentTestHarness.timeTasks(10, () -> {
       for (int i = 0; i < 10; i++) {

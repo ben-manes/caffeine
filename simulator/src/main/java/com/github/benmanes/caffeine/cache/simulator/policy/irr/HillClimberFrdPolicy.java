@@ -30,9 +30,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * Hill climber version of FRD
- * 
+ *
  * @author ohadey@gmail.com (Ohad Eytan)
  */
+@SuppressWarnings("PMD.TooManyFields")
 public final class HillClimberFrdPolicy implements Policy {
   final Long2ObjectOpenHashMap<Node> data;
   final PolicyStats policyStats;
@@ -81,7 +82,7 @@ public final class HillClimberFrdPolicy implements Policy {
   @Override
   public void record(long key) {
     policyStats.recordOperation();
-    adapt(key);
+    adapt();
 
     Node node = data.get(key);
     if (node == null) {
@@ -104,7 +105,7 @@ public final class HillClimberFrdPolicy implements Policy {
     }
   }
 
-  private void adapt(long key) {
+  private void adapt() {
     if (sample >= sampleSize) {
       double hitRate = (100d * hitsInSample) / (hitsInSample + missesInSample);
       if (!Double.isNaN(hitRate) && !Double.isInfinite(hitRate) && (previousHitRate != 0.0)) {
@@ -134,9 +135,8 @@ public final class HillClimberFrdPolicy implements Policy {
   }
 
   private void onMiss(Node node) {
-    // Initially, both the filter and reuse distance stacks are filled with newly
-    // arrived blocks
-    // from the reuse distance stack to the filter stack.
+    // Initially, both the filter and reuse distance stacks are filled with newly arrived blocks
+    // from the reuse distance stack to the filter stack
     policyStats.recordMiss();
     missesInSample++;
     sample++;
@@ -157,8 +157,8 @@ public final class HillClimberFrdPolicy implements Policy {
   }
 
   private void adaptMainToFilter(Node node) {
-    // Cache miss and history miss with adaptation: Evict from main stack. Than,
-    // insert to filter stack.
+    // Cache miss and history miss with adaptation:
+    // Evict from main stack. Then, insert to filter stack
     policyStats.recordEviction();
 
     pruneStack();
@@ -175,8 +175,8 @@ public final class HillClimberFrdPolicy implements Policy {
   }
 
   private void adaptFilterToMain(Node node) {
-    // Cache miss and history hit with adaptation: Evict from filter stack. Than,
-    // insert to main stack.
+    // Cache miss and history hit with adaptation:
+    // Evict from filter stack. Then insert to main stack
     policyStats.recordEviction();
     policyStats.recordMiss();
     missesInSample++;
@@ -208,12 +208,9 @@ public final class HillClimberFrdPolicy implements Policy {
   }
 
   private void onFullMiss(Node node) {
-    // Cache miss and history miss: Evict the oldest block in the filter stack.
-    // Then, insert the
-    // missed block into the filter stack and generate a history block for the
-    // missed block. In
-    // addition, insert the history block into the reuse distance stack. No eviction
-    // occurs in the
+    // Cache miss and history miss: Evict the oldest block in the filter stack. Then, insert the
+    // missed block into the filter stack and generate a history block for the missed block. In
+    // addition, insert the history block into the reuse distance stack. No eviction occurs in the
     // reuse distance stack because the history block contains only metadata.
     policyStats.recordEviction();
 
@@ -231,12 +228,9 @@ public final class HillClimberFrdPolicy implements Policy {
   }
 
   private void onFilterHit(Node node) {
-    // Cache hit in the filter stack: Move the corresponding block to the MRU
-    // position of the filter
-    // stack. The associated history block should be updated to maintain reuse
-    // distance order (i.e.,
-    // move its history block in the reuse distance stack to the MRU position of the
-    // reuse distance
+    // Cache hit in the filter stack: Move the corresponding block to the MRU position of the filter
+    // stack. The associated history block should be updated to maintain reuse distance order (i.e.,
+    // move its history block in the reuse distance stack to the MRU position of the reuse distance
     // stack).
     policyStats.recordHit();
     hitsInSample++;
@@ -247,14 +241,10 @@ public final class HillClimberFrdPolicy implements Policy {
   }
 
   private void onMainHit(Node node) {
-    // Cache hit in the reuse distance stack: Move the corresponding block to the
-    // MRU position of
-    // the reuse distance stack. If the corresponding block is in the LRU position
-    // of the reuse
-    // distance stack (i.e., the oldest resident block), the history blocks between
-    // the LRU position
-    // and the 2nd oldest resident block are removed. Otherwise, no history block
-    // removing occurs.
+    // Cache hit in the reuse distance stack: Move the corresponding block to the MRU position of
+    // the reuse distance stack. If the corresponding block is in the LRU position of the reuse
+    // distance stack (i.e., the oldest resident block), the history blocks between the LRU position
+    // and the 2nd oldest resident block are removed. Otherwise, no history block removing occurs.
     policyStats.recordHit();
     hitsInSample++;
     sample++;
@@ -283,12 +273,9 @@ public final class HillClimberFrdPolicy implements Policy {
   }
 
   private void onNonResidentHit(Node node) {
-    // Cache miss but history hit: Remove all history blocks between the 2nd oldest
-    // and the oldest
-    // resident blocks. Next, evict the oldest resident block from the reuse
-    // distance stack. Then,
-    // move the history hit block to the MRU position in the reuse distance stack
-    // and change it to a
+    // Cache miss but history hit: Remove all history blocks between the 2nd oldest and the oldest
+    // resident blocks. Next, evict the oldest resident block from the reuse distance stack. Then,
+    // move the history hit block to the MRU position in the reuse distance stack and change it to a
     // resident block. No insertion or eviction occurs in the filter stack.
     policyStats.recordEviction();
     policyStats.recordMiss();
@@ -327,7 +314,7 @@ public final class HillClimberFrdPolicy implements Policy {
 
   enum StackType {
     FILTER, // holds all of the resident filter blocks
-    MAIN, // holds all of the resident and non-resident blocks
+    MAIN,   // holds all of the resident and non-resident blocks
   }
 
   final class Node {
@@ -408,7 +395,10 @@ public final class HillClimberFrdPolicy implements Policy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this).add("key", key).add("type", status).toString();
+      return MoreObjects.toStringHelper(this)
+          .add("key", key)
+          .add("type", status)
+          .toString();
     }
   }
 

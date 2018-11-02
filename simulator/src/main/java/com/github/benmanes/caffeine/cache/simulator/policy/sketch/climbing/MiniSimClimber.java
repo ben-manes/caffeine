@@ -1,5 +1,17 @@
-/**
- * 
+/*
+ * Copyright 2018 Ohad Eytan. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
@@ -14,21 +26,22 @@ import com.typesafe.config.ConfigFactory;
 
 /**
  * A MinSim version for W-TinyLFU
- * 
+ *
  * @author ohadey@gmail.com (Ohad Eytan)
  */
+@SuppressWarnings("PMD.SuspiciousConstantFieldName")
 public final class MiniSimClimber implements HillClimber {
+  private final WindowTinyLfuPolicy[] minis;
+  private final int cacheSize;
+  private final int R;
 
-  private double prevPercent;
   private int sample;
   private long[] prevMisses;
-  private int cacheSize;
-  private WindowTinyLfuPolicy[] minis;
-  private int R;
+  private double prevPercent;
 
   public MiniSimClimber(Config config) {
     HillClimberWindowTinyLfuSettings settings = new HillClimberWindowTinyLfuSettings(config);
-    R = settings.maximumSize() / 1000 > 100 ? 1000 : settings.maximumSize() / 100;
+    R = (settings.maximumSize() / 1000) > 100 ? 1000 : settings.maximumSize() / 100;
     Config myConfig = ConfigFactory.parseString("maximum-size = " + settings.maximumSize() / R);
     myConfig = myConfig.withFallback(config);
     WindowTinyLfuSettings wsettings = new WindowTinyLfuSettings(myConfig);
@@ -47,19 +60,17 @@ public final class MiniSimClimber implements HillClimber {
     sample++;
     String skey = String.valueOf(key);
     if (Hashing.murmur3_128(0x7f3a2142).hashBytes(skey.getBytes(Charset.defaultCharset())).asLong() % R < 1) {
-      for (int i = 0; i < minis.length; i++) {
-        minis[i].record(key);
+      for (WindowTinyLfuPolicy policy : minis) {
+        policy.record(key);
       }
     }
   }
 
   @Override
-  public void onHit(long key, QueueType queue) {
-  }
+  public void onHit(long key, QueueType queue) {}
 
   @Override
-  public void onMiss(long key) {
-  }
+  public void onMiss(long key) {}
 
   @Override
   public Adaptation adapt(int windowSize, int protectedSize) {

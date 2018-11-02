@@ -51,7 +51,7 @@ public final class TinySetIndexing {
   }
 
   public static int rank(long index, int bitNum) {
-    return Long.bitCount(index & (~(-1L << bitNum)));
+    return Long.bitCount(index & ~(-1L << bitNum));
   }
 
   public static int getChain(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
@@ -95,22 +95,23 @@ public final class TinySetIndexing {
     return (chainIndex | (1L << chainId)) == chainIndex;
   }
 
-  public static int addItem(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
-    int offset = getChainStart(fpaux, chainIndex, isLastIndex);
+  public static int addItem(HashedItem fpaux, long[] chainIndex, long[] lastIndex) {
+    int offset = getChainStart(fpaux, chainIndex, lastIndex);
     long mask = 1L << fpaux.chainId;
-    isLastIndex[fpaux.set] = extendZero(isLastIndex[fpaux.set], offset);
+    lastIndex[fpaux.set] = extendZero(lastIndex[fpaux.set], offset);
 
     // if the item is new...
     if ((mask | chainIndex[fpaux.set]) != chainIndex[fpaux.set]) {
       // add new chain to IO.
       chainIndex[fpaux.set] |= mask;
       // mark item as last in isLastIndex.
-      isLastIndex[fpaux.set] |= (1L << offset);
+      lastIndex[fpaux.set] |= (1L << offset);
     }
 
     return offset;
   }
 
+  @SuppressWarnings("UnnecessaryParentheses")
   private static long extendZero(final long isLastIndex, final int offset) {
     long constantPartMask = (1L << offset) - 1;
     return (isLastIndex & constantPartMask)
@@ -119,6 +120,7 @@ public final class TinySetIndexing {
         & (~(1L << offset)));
   }
 
+  @SuppressWarnings("UnnecessaryParentheses")
   private static long shrinkOffset(long isLastIndex, int offset) {
     long conMask = ((1L << offset) - 1);
     return (isLastIndex & conMask) | (((~conMask) & isLastIndex) >>> 1);

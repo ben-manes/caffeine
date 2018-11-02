@@ -111,10 +111,15 @@ public final class Stresser {
   }
 
   private void status() {
+    int drainStatus;
+    int pendingWrites;
     local.evictionLock.lock();
-    int pendingWrites = local.writeBuffer().size();
-    int drainStatus = local.drainStatus();
-    local.evictionLock.unlock();
+    try {
+      pendingWrites = local.writeBuffer().size();
+      drainStatus = local.drainStatus();
+    } finally {
+      local.evictionLock.unlock();
+    }
 
     LocalTime elapsedTime = LocalTime.ofSecondOfDay(stopwatch.elapsed(TimeUnit.SECONDS));
     System.out.printf("---------- %s ----------%n", elapsedTime);

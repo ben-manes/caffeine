@@ -43,6 +43,7 @@ public final class BufferTest {
   }
 
   @Test(dataProvider = "buffers")
+  @SuppressWarnings("ThreadPriorityCheck")
   public void record(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {
@@ -66,6 +67,7 @@ public final class BufferTest {
   }
 
   @Test(dataProvider = "buffers")
+  @SuppressWarnings("ThreadPriorityCheck")
   public void recordAndDrain(ReadBuffer<Boolean> buffer) {
     ConcurrentTestHarness.timeTasks(100, () -> {
       for (int i = 0; i < 1000; i++) {

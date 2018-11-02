@@ -29,19 +29,20 @@ public final class TinyCacheWithGhostCache {
   private static final int sampleSize = 10;
 
   public final long[] chainIndex;
-  public final long[] isLastIndex;
+  public final long[] lastIndex;
+
   private final HashFunctionParser hashFunc;
+  private final TinyCacheSketch ghostCache;
   private final int itemsPerSet;
   private final long[] cache;
   private final Random rnd;
-  private final TinyCacheSketch ghostCache;
 
   public TinyCacheWithGhostCache(int nrSets, int itemsPerSet, int randomSeed) {
     chainIndex = new long[nrSets];
-    isLastIndex = new long[nrSets];
-    hashFunc = new HashFunctionParser(nrSets);
+    lastIndex = new long[nrSets];
     this.itemsPerSet = itemsPerSet;
     cache = new long[nrSets * itemsPerSet];
+    hashFunc = new HashFunctionParser(nrSets);
     ghostCache = new TinyCacheSketch(nrSets * sampleSize, itemsPerSet, randomSeed + 1);
     rnd = new Random(randomSeed);
   }
@@ -51,7 +52,7 @@ public final class TinyCacheWithGhostCache {
     if (!TinySetIndexing.chainExist(chainIndex[hashFunc.fpaux.set], hashFunc.fpaux.chainId)) {
       return false;
     }
-    TinySetIndexing.getChain(hashFunc.fpaux, chainIndex, isLastIndex);
+    TinySetIndexing.getChain(hashFunc.fpaux, chainIndex, lastIndex);
     int offset = this.itemsPerSet * hashFunc.fpaux.set;
     TinySetIndexing.chainStart += offset;
     TinySetIndexing.chainEnd += offset;
@@ -79,9 +80,9 @@ public final class TinyCacheWithGhostCache {
     byte chainId = fpaux.chainId;
     fpaux.chainId = victim;
     this.cache[bucketStart + removedOffset] = 0;
-    TinySetIndexing.removeItem(fpaux, chainIndex, isLastIndex);
+    TinySetIndexing.removeItem(fpaux, chainIndex, lastIndex);
     fpaux.chainId = chainId;
-    int idxToAdd = TinySetIndexing.addItem(fpaux, chainIndex, isLastIndex);
+    int idxToAdd = TinySetIndexing.addItem(fpaux, chainIndex, lastIndex);
     int delta = (removedOffset < idxToAdd) ? -1 : 1;
     replaceItems(idxToAdd, fpaux.value, bucketStart, delta);
     return removedOffset;
@@ -99,7 +100,7 @@ public final class TinyCacheWithGhostCache {
     if (cache[bucketStart + this.itemsPerSet - 1] != 0) {
       return selectVictim(bucketStart);
     }
-    int idxToAdd = TinySetIndexing.addItem(hashFunc.fpaux, chainIndex, isLastIndex);
+    int idxToAdd = TinySetIndexing.addItem(hashFunc.fpaux, chainIndex, lastIndex);
     this.replaceItems(idxToAdd, hashFunc.fpaux.value, bucketStart, 1);
     return false;
   }
@@ -107,7 +108,7 @@ public final class TinyCacheWithGhostCache {
   private boolean selectVictim(int bucketStart) {
     byte victimOffset = (byte) rnd.nextInt(this.itemsPerSet);
     int victimChain = TinySetIndexing.getChainAtOffset(
-        hashFunc.fpaux, chainIndex, isLastIndex, victimOffset);
+        hashFunc.fpaux, chainIndex, lastIndex, victimOffset);
     long victim = cache[bucketStart + victimOffset];
     // this if is still for debugging and common sense. Should be eliminated for performance once
     // I am sure of the correctness.
@@ -125,6 +126,7 @@ public final class TinyCacheWithGhostCache {
     }
   }
 
+  @SuppressWarnings("PMD.LocalVariableNamingConventions")
   private void replaceItems(final int idx, long value, int start, final int delta) {
     start += idx;
     long $;

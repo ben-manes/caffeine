@@ -38,7 +38,7 @@ public final class HashFunctionParser {
   }
 
   public HashedItem createHash(long item) {
-    long h = (Seed64) ^ (m);
+    long h = (Seed64 ^ m);
     item *= m;
     item ^= item >>> r;
     item *= m;

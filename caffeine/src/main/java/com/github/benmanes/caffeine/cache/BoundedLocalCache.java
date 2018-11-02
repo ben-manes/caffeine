@@ -782,7 +782,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             return n;
           }
         }
-        writer.delete(key, value[0], actualCause[0]);
+
+        if (key != null) {
+          writer.delete(key, value[0], actualCause[0]);
+        }
         makeDead(n);
       }
       removed[0] = true;
@@ -1482,7 +1485,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           cause[0] = RemovalCause.EXPLICIT;
         }
 
-        writer.delete(key, value[0], cause[0]);
+        if (key != null) {
+          writer.delete(key, value[0], cause[0]);
+        }
         makeDead(n);
         return null;
       }

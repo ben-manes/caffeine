@@ -17,6 +17,7 @@ configurations {
 dependencies {
   annotationProcessor annotationProcessors.nullaway
   checkstyleConfig gradlePlugins.checkstyle
+  errorproneJavac libraries.errorProneJavac
   errorprone libraries.errorProneCore
 }
 
@@ -76,28 +77,28 @@ tasks.sonarqube.dependsOn(jacocoMerge)
 tasks.withType(JavaCompile) {
   options.encoding = 'UTF-8'
   options.compilerArgs << '-Xlint:all'
-  options.compilerArgs += [
-    '-Xep:ClassName',
-    '-Xep:ComparisonContractViolated',
-    '-Xep:DepAnn',
-    '-Xep:DivZero',
-    '-Xep:LockMethodChecker',
-    '-Xep:LongLiteralLowerCaseSuffix',
-    '-Xep:NoAllocation',
-    '-Xep:NumericEquality',
-    '-Xep:UnlockMethod',
-    '-Xep:FunctionalInterfaceClash',
-    '-Xep:MissingDefault',
-    '-Xep:RedundantThrows',
-    '-Xep:UnnecessaryDefaultInEnumSwitch',
-    '-Xep:MixedArrayDimensions',
-    '-Xep:RemoveUnusedImports',
-  ]
+  options.errorprone {
+    option('ClassName')
+    option('ComparisonContractViolated')
+    option('DepAnn')
+    option('DivZero')
+    option('LockMethodChecker')
+    option('LongLiteralLowerCaseSuffix')
+    option('NoAllocation')
+    option('NumericEquality')
+    option('UnlockMethod')
+    option('FunctionalInterfaceClash')
+    option('MissingDefault')
+    option('RedundantThrows')
+    option('UnnecessaryDefaultInEnumSwitch')
+    option('MixedArrayDimensions')
+    option('RemoveUnusedImports')
+  }
   if (name == 'compileJava') {
-    options.compilerArgs += [
-      '-XepOpt:NullAway:AnnotatedPackages=com.github.benmanes.caffeine',
-      '-Xep:NullAway:ERROR',
-    ]
+    options.errorprone {
+      option('NullAway', 'ERROR')
+      option('NullAway:AnnotatedPackages', 'com.github.benmanes.caffeine')
+    }
   }
 }
 
@@ -134,10 +135,8 @@ afterEvaluate {
   tasks.findAll { it.name.startsWith('spotbugs') }.each {
     it.enabled = System.properties.containsKey('spotbugs')
     it.group = 'SpotBugs'
-    it.reports {
-      xml.enabled = false
-      html.enabled = true
-    }
+    it.reports.xml.enabled = false
+    it.reports.html.enabled = true
   }
 }
 

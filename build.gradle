@@ -20,8 +20,8 @@ buildscript {
 }
 
 buildScan {
-  licenseAgree = 'yes'
-  licenseAgreementUrl = 'https://gradle.com/terms-of-service'
+  termsOfServiceAgree = 'yes'
+  termsOfServiceUrl = 'https://gradle.com/terms-of-service'
 }
 
 task testReport(type: TestReport, group: 'Build') {

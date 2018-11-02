@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.github.benmanes.caffeine.cache.simulator.admission.countmin4;
 
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
@@ -28,12 +27,9 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  * @author ohadey@gmail.com (Ohad Eytan)
  */
-
-public class IndicatorResetCountMin4 implements Frequency {
+public final class IndicatorResetCountMin4 implements Frequency {
   private final ClimberResetCountMin4 sketch;
 
-  int hintSum;
-  int hintCount;
   int prevHintSum;
   int prevHintCount;
   Indicator indicator;
@@ -87,5 +83,4 @@ public class IndicatorResetCountMin4 implements Frequency {
   public int getHintCount() {
     return prevHintCount;
   }
-
 }

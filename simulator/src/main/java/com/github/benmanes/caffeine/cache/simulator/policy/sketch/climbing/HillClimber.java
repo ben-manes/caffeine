@@ -30,8 +30,7 @@ interface HillClimber {
    *
    * @param key   the key accessed
    */
-  default void doAlways(long key) {
-  };
+  default void doAlways(long key) {};
 
   /**
    * Records that a hit occurred.
@@ -78,5 +77,4 @@ interface HillClimber {
       this.amount = amount;
     }
   }
-
 }

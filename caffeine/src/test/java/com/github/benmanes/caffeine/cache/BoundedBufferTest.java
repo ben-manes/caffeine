@@ -64,6 +64,7 @@ public final class BoundedBufferTest {
   }
 
   @Test(dataProvider = "buffer")
+  @SuppressWarnings("ThreadPriorityCheck")
   public void offerAndDrain(BoundedBuffer<String> buffer) {
     Lock lock = new ReentrantLock();
     AtomicInteger reads = new AtomicInteger();
