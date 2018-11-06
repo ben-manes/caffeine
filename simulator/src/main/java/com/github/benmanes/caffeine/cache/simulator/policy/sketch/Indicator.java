@@ -16,11 +16,13 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.IntStream;
 
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
 import com.clearspring.analytics.stream.StreamSummary;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.countmin4.PeriodicResetCountMin4;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -32,6 +34,7 @@ import com.typesafe.config.ConfigFactory;
  */
 public final class Indicator {
   private final int k;
+  private final int ssSize;
   private final Hinter hinter;
   private final EstSkew estSkew;
   private final PeriodicResetCountMin4 sketch;
@@ -41,10 +44,12 @@ public final class Indicator {
   public Indicator(Config config) {
     this.sketch = new PeriodicResetCountMin4(
         ConfigFactory.parseString("maximum-size = 5000").withFallback(config));
+    IndicatorSettings settings = new IndicatorSettings(config);
+    this.sample = 0;
+    this.k = settings.k();
+    this.ssSize = settings.ssSize();
     this.estSkew = new EstSkew();
     this.hinter = new Hinter();
-    this.sample = 0;
-    this.k = 70;
   }
 
   public void record(long key) {
@@ -103,11 +108,11 @@ public final class Indicator {
     }
   }
 
-  private static class EstSkew {
+  private class EstSkew {
     StreamSummary<Long> stream;
 
     public EstSkew() {
-      this.stream = new StreamSummary<>(1000);
+      this.stream = new StreamSummary<Long>(ssSize);
     }
 
     public void record(long key) {
@@ -115,7 +120,7 @@ public final class Indicator {
     }
 
     public void reset() {
-      this.stream = new StreamSummary<>(1000);
+      this.stream = new StreamSummary<Long>(ssSize);
     }
 
     public IntStream getTopK(int k) {
@@ -132,5 +137,19 @@ public final class Indicator {
 
   public int[] getFreqs() {
     return hinter.getFreq();
+  }
+
+  static final class IndicatorSettings extends BasicSettings {
+    public IndicatorSettings(Config config) {
+      super(config);
+    }
+
+    public int k() {
+      return config().getInt("indicator.k");
+    }
+
+    public int ssSize() {
+      return config().getInt("indicator.ss-size");
+    }  
   }
 }

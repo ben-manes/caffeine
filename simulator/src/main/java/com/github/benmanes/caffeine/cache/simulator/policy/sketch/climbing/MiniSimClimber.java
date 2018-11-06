@@ -16,7 +16,9 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
 import java.nio.charset.Charset;
+import java.util.List;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy.WindowTinyLfuSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy.HillClimberWindowTinyLfuSettings;
@@ -35,12 +37,14 @@ public final class MiniSimClimber implements HillClimber {
   private final int cacheSize;
   private final int R;
 
+  private final int period;
   private int sample;
   private long[] prevMisses;
   private double prevPercent;
 
   public MiniSimClimber(Config config) {
-    HillClimberWindowTinyLfuSettings settings = new HillClimberWindowTinyLfuSettings(config);
+    MiniSimSettings settings = new MiniSimSettings(config);
+    this.period = settings.minisimPeriod();
     R = (settings.maximumSize() / 1000) > 100 ? 1000 : settings.maximumSize() / 100;
     Config myConfig = ConfigFactory.parseString("maximum-size = " + settings.maximumSize() / R);
     myConfig = myConfig.withFallback(config);
@@ -58,8 +62,7 @@ public final class MiniSimClimber implements HillClimber {
   @Override
   public void doAlways(long key) {
     sample++;
-    String skey = String.valueOf(key);
-    if (Hashing.murmur3_128(0x7f3a2142).hashBytes(skey.getBytes(Charset.defaultCharset())).asLong() % R < 1) {
+    if (Math.floorMod(Hashing.murmur3_32(0x7f3a2142).hashLong(key).asInt(), R) < 1) {
       for (WindowTinyLfuPolicy policy : minis) {
         policy.record(key);
       }
@@ -74,7 +77,7 @@ public final class MiniSimClimber implements HillClimber {
 
   @Override
   public Adaptation adapt(int windowSize, int protectedSize) {
-    if (sample > 1000000) {
+    if (sample > period) {
       long[] periodMisses = new long[101];
       for (int i = 0; i < minis.length; i++) {
         periodMisses[i] = minis[i].stats().missCount() - prevMisses[i];
@@ -98,4 +101,19 @@ public final class MiniSimClimber implements HillClimber {
     }
     return Adaptation.HOLD;
   }
+  
+  static final class MiniSimSettings extends BasicSettings {
+    public MiniSimSettings(Config config) {
+      super(config);
+    }
+
+    public List<Double> percentMain() {
+      return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
+    }
+
+    public int minisimPeriod() {
+      return config().getInt("hill-climber-window-tiny-lfu.minisim.period");
+    }
+  }
+
 }
