@@ -37,7 +37,7 @@ public class DelegationBenchmark {
   private static final int MASK = SIZE - 1;
 
   final Map<Integer, Integer> inherit = new InheritMap();
-  final Map<Integer, Integer> delegate = new DelgateMap();
+  final Map<Integer, Integer> delegate = new DelegateMap();
 
   @Setup
   public void setup() {
@@ -72,7 +72,7 @@ public class DelegationBenchmark {
     }
   }
 
-  static final class DelgateMap extends ForwardingMap<Integer, Integer> {
+  static final class DelegateMap extends ForwardingMap<Integer, Integer> {
     final Map<Integer, Integer> delegate = new ConcurrentHashMap<>();
 
     @Override

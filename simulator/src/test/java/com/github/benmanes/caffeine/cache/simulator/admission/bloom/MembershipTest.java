@@ -52,10 +52,10 @@ public class MembershipTest {
       int expectedInsertions = capacity / 2;
 
       Membership filter = filterType.create(expectedInsertions, FPP, CONFIG);
-      int falsePostives = falsePostives(filter, input);
-      double falsePositiveRate = ((double) falsePostives / expectedInsertions);
+      int falsePositives = falsePositives(filter, input);
+      double falsePositiveRate = ((double) falsePositives / expectedInsertions);
       assertThat(filterType.toString(), falsePositiveRate, is(lessThan(FPP + 0.01)));
-      rows.add(row(filterType, expectedInsertions, falsePostives, falsePositiveRate));
+      rows.add(row(filterType, expectedInsertions, falsePositives, falsePositiveRate));
 
       if (display) {
         printTable(rows);
@@ -69,7 +69,7 @@ public class MembershipTest {
   }
 
   /** Returns the false positives based on an input of unique elements. */
-  private int falsePostives(Membership filter, long[] input) {
+  private int falsePositives(Membership filter, long[] input) {
     int falsePositives = 0;
     int truePositives = 0;
     int i = 0;

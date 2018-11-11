@@ -33,7 +33,7 @@ public final class FrequencySketchTest {
   final Integer item = ThreadLocalRandom.current().nextInt();
 
   @Test
-  public void construc() {
+  public void construct() {
     FrequencySketch<Integer> sketch = new FrequencySketch<>();
     assertThat(sketch.table, is(nullValue()));
   }

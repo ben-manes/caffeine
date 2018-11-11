@@ -2174,7 +2174,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * <p>
    * An entry that has expired or been reference collected is evicted and the computation continues
    * as if the entry had not been present. This method does not pre-screen and does not wrap the
-   * remappingFuntion to be statistics aware.
+   * remappingFunction to be statistics aware.
    *
    * @param key key with which the specified value is to be associated
    * @param keyRef the key to associate with or a lookup only key if not <tt>computeIfAbsent</tt>
@@ -2357,7 +2357,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @return an unmodifiable snapshot in a specified order
    */
   @SuppressWarnings("GuardedByChecker")
-  Map<K, V> expireAfterAcessOrder(int limit, Function<V, V> transformer, boolean oldest) {
+  Map<K, V> expireAfterAccessOrder(int limit, Function<V, V> transformer, boolean oldest) {
     if (!evicts()) {
       Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> oldest
           ? accessOrderEdenDeque().iterator()
@@ -3201,10 +3201,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         cache.scheduleAfterWrite();
       }
       @Override public Map<K, V> oldest(int limit) {
-        return cache.expireAfterAcessOrder(limit, transformer, /* oldest */ true);
+        return cache.expireAfterAccessOrder(limit, transformer, /* oldest */ true);
       }
       @Override public Map<K, V> youngest(int limit) {
-        return cache.expireAfterAcessOrder(limit, transformer, /* oldest */ false);
+        return cache.expireAfterAccessOrder(limit, transformer, /* oldest */ false);
       }
     }
 

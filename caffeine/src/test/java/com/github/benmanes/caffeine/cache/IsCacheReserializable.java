@@ -71,7 +71,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
       Cache<Object, Object> syncCache = (Cache<Object, Object>) original;
       @SuppressWarnings("unchecked")
       Cache<Object, Object> syncCopy = (Cache<Object, Object>) copy;
-      checkSyncronousCache(syncCache, syncCopy, desc);
+      checkSynchronousCache(syncCache, syncCopy, desc);
     } else {
       throw new UnsupportedOperationException();
     }
@@ -94,7 +94,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  private static <K, V> void checkSyncronousCache(Cache<K, V> original, Cache<K, V> copy,
+  private static <K, V> void checkSynchronousCache(Cache<K, V> original, Cache<K, V> copy,
       DescriptionBuilder desc) {
     if (!IsValidCache.<K, V>validCache().matchesSafely(copy, desc.getDescription())) {
       desc.expected("valid cache");
@@ -111,7 +111,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
   private static <K, V> void checkIfUnbounded(
       Cache<K, V> original, Cache<K, V> copy, DescriptionBuilder desc) {
     if (original instanceof UnboundedLocalManualCache<?, ?>) {
-      checkUnoundedLocalManualCache(
+      checkUnboundedLocalManualCache(
           (UnboundedLocalManualCache<K, V>) original,
           (UnboundedLocalManualCache<K, V>) copy, desc);
     }
@@ -131,7 +131,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  private static <K, V> void checkUnoundedLocalManualCache(UnboundedLocalManualCache<K, V> original,
+  private static <K, V> void checkUnboundedLocalManualCache(UnboundedLocalManualCache<K, V> original,
       UnboundedLocalManualCache<K, V> copy, DescriptionBuilder desc) {
     checkUnboundedLocalCache(original.cache, copy.cache, desc);
   }

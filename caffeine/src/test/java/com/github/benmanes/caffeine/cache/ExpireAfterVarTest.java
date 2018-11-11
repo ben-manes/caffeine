@@ -301,7 +301,7 @@ public final class ExpireAfterVarTest {
   @CacheSpec(implementation = Implementation.Caffeine, expiryTime = Expire.ONE_MINUTE,
       population = Population.FULL, expiry = CacheExpiry.MOCKITO)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)
-  public void put_insert_replaceExpred_expiryFails(Cache<Integer, Integer> cache,
+  public void put_insert_replaceExpired_expiryFails(Cache<Integer, Integer> cache,
       CacheContext context, VarExpiration<Integer, Integer> expireVariably) {
     OptionalLong duration = expireVariably.getExpiresAfter(context.firstKey(), NANOSECONDS);
     try {

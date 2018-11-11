@@ -112,7 +112,7 @@ public final class CollisionPolicy implements Policy {
     }
     public Stream<Density> density() {
       return config().getStringList("collision.density").stream()
-          .map(denity -> Density.valueOf(denity.toUpperCase(US)));
+          .map(density -> Density.valueOf(density.toUpperCase(US)));
     }
   }
 }

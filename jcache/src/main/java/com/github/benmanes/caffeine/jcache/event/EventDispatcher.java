@@ -57,12 +57,12 @@ public final class EventDispatcher<K, V> {
   static final ThreadLocal<List<CompletableFuture<Void>>> pending =
       ThreadLocal.withInitial(ArrayList::new);
 
-  final Executor exectuor;
+  final Executor executor;
   final Map<Registration<K, V>, CompletableFuture<Void>> dispatchQueues;
 
-  public EventDispatcher(Executor exectuor) {
+  public EventDispatcher(Executor executor) {
     this.dispatchQueues = new ConcurrentHashMap<>();
-    this.exectuor = requireNonNull(exectuor);
+    this.executor = requireNonNull(executor);
   }
 
   /** Returns the cache entry listener registrations. */
@@ -221,7 +221,7 @@ public final class EventDispatcher<K, V> {
       CompletableFuture<Void> future =
           dispatchQueues.computeIfPresent(registration, (k, queue) -> {
             Runnable action = () -> registration.getCacheEntryListener().dispatch(e);
-            return queue.thenRunAsync(action, exectuor);
+            return queue.thenRunAsync(action, executor);
           });
       if ((future != null) && registration.isSynchronous() && !quiet) {
         pending.get().add(future);

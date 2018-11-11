@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  */
 final class BoundedBuffer<E> extends StripedBuffer<E> {
   /*
-   * A circular ring buffer stores the elements being transfered by the producers to the consumer.
+   * A circular ring buffer stores the elements being transferred by the producers to the consumer.
    * The monotonically increasing count of reads and writes allow indexing sequentially to the next
    * element location based upon a power-of-two sizing.
    *
