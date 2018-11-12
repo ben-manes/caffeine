@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.IntStream;
 
 import org.apache.commons.math3.stat.regression.SimpleRegression;
@@ -144,12 +143,13 @@ public final class Indicator {
       super(config);
     }
 
+    @SuppressWarnings("PMD.ShortMethodName")
     public int k() {
       return config().getInt("indicator.k");
     }
 
     public int ssSize() {
       return config().getInt("indicator.ss-size");
-    }  
+    }
   }
 }

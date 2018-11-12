@@ -15,13 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
-import java.nio.charset.Charset;
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy.WindowTinyLfuSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy.HillClimberWindowTinyLfuSettings;
 import com.google.common.hash.Hashing;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -101,7 +99,7 @@ public final class MiniSimClimber implements HillClimber {
     }
     return Adaptation.HOLD;
   }
-  
+
   static final class MiniSimSettings extends BasicSettings {
     public MiniSimSettings(Config config) {
       super(config);
