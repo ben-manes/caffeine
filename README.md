@@ -67,8 +67,9 @@ Powering infrastructure near you:
    * [Add a Boost of Caffeine to Your Java][add-a-boost] at [VOXXED][voxxed]
  * An in-depth description of Caffeine's architecture.
    * [Design of a Modern Cache][modern-cache] ([slides][modern-cache-slides]) at [HighScalability][HighScalability]
- * Caffeine is presented as part of a research paper evaluating its novel eviction policy.
+ * Caffeine is presented as part of research papers evaluating its novel eviction policy.
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
+   * [Adaptive Software Cache Management][adaptive-tinylfu] by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
 
 On the radar,
  * Early discussions with [HBase][hbase], [Solr][solr], and [Play!][play]
@@ -112,6 +113,7 @@ Snapshots of the development version are available in
 [snapshots]: https://oss.sonatype.org/content/repositories/snapshots
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
 [tinylfu]: https://dl.acm.org/authorize?N41277
+[adaptive-tinylfu]: https://dl.acm.org/authorize?N675830
 [add-a-boost]: https://www.voxxed.com/blog/2015/12/add-a-boost-of-caffeine-to-your-java
 [voxxed]: https://www.voxxed.com
 [modern-cache]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
