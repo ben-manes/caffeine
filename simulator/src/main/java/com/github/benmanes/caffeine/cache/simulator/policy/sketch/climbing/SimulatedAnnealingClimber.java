@@ -15,9 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
-import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation.Type.DECREASE_WINDOW;
-import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation.Type.INCREASE_WINDOW;
-
 import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -64,21 +61,28 @@ final class SimulatedAnnealingClimber implements HillClimber {
   }
 
   @Override
-  public void onMiss(long key) {
-    missesInSample++;
-    sample++;
+  public void onMiss(long key, boolean isFull) {
+    if (isFull) {
+      missesInSample++;
+      sample++;
+    }
   }
 
   @Override
-  public void onHit(long key, QueueType queueType) {
-    hitsInSample++;
-    sample++;
+  public void onHit(long key, QueueType queueType, boolean isFull) {
+    if (isFull) {
+      hitsInSample++;
+      sample++;
+    }
   }
 
   @Override
-  public Adaptation adapt(int windowSize, int protectedSize) {
-    Adaptation adaption = Adaptation.HOLD;
+  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
+    if (!isFull) {
+      return Adaptation.hold();
+    }
 
+    Adaptation adaption = Adaptation.hold();
     if (sample >= sampleSize) {
       double hitRate = (100d * hitsInSample) / (hitsInSample + missesInSample);
 
@@ -90,7 +94,6 @@ final class SimulatedAnnealingClimber implements HillClimber {
       hitsInSample = 0;
       sample = 0;
     }
-
     return adaption;
   }
 
@@ -100,14 +103,14 @@ final class SimulatedAnnealingClimber implements HillClimber {
       temperature = 1.0;
     }
 
-    Adaptation.Type adaptionType = Adaptation.Type.HOLD;
+    Adaptation adaption = Adaptation.hold();
     if (temperature > minTemperature) {
       double acceptanceProbability = Math.exp((hitRate - previousHitRate) / (100 * temperature));
       double criteria = random.nextGaussian();
 
       if ((hitRate < previousHitRate) && acceptanceProbability <= criteria) {
         increaseWindow = !increaseWindow;
-        pivot--;
+        pivot = Math.max(pivot - 1, 0);
       }
 
       if ((previousHitRate - hitRate) > coolDownTolerance) {
@@ -115,10 +118,12 @@ final class SimulatedAnnealingClimber implements HillClimber {
         pivot = 1 + (int) (pivot * temperature);
       }
 
-      adaptionType = increaseWindow ? INCREASE_WINDOW : DECREASE_WINDOW;
+      adaption = increaseWindow
+          ? Adaptation.increaseWindow(pivot)
+          : Adaptation.decreaseWindow(pivot);
     }
 
-    return new Adaptation(adaptionType, pivot);
+    return adaption;
   }
 
   static final class SimulatedAnnealingSettings extends BasicSettings {

@@ -19,6 +19,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.Adam;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.AmsGrad;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.Nadam;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient.Stochastic;
 import com.typesafe.config.Config;
 
 /**
@@ -28,10 +32,21 @@ import com.typesafe.config.Config;
  */
 @SuppressWarnings("ImmutableEnumChecker")
 enum HillClimberType {
+  // hill climbing
   SIMPLE(SimpleClimber::new),
-  INDICATOR(IndicatorClimber::new),
+  SIMULATED_ANNEALING(SimulatedAnnealingClimber::new),
+
+  // gradient descent
+  STOCHASTIC_GRADIENT_DESCENT(Stochastic::new),
+  AMSGRAD(AmsGrad::new),
+  NADAM(Nadam::new),
+  ADAM(Adam::new),
+
+  // simulation
   MINISIM(MiniSimClimber::new),
-  SIMULATED_ANNEALING(SimulatedAnnealingClimber::new);
+
+  // inference
+  INDICATOR(IndicatorClimber::new);
 
   private final Function<Config, HillClimber> factory;
 

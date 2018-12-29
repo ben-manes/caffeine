@@ -38,18 +38,22 @@ public final class IndicatorClimber implements HillClimber {
   }
 
   @Override
-  public void onHit(long key, QueueType queue) {
-    indicator.record(key);
+  public void onHit(long key, QueueType queue, boolean isFull) {
+    if (isFull) {
+      indicator.record(key);
+    }
   }
 
   @Override
-  public void onMiss(long key) {
-    indicator.record(key);
+  public void onMiss(long key, boolean isFull) {
+    if (isFull) {
+      indicator.record(key);
+    }
   }
 
   @Override
-  public Adaptation adapt(int windowSize, int protectedSize) {
-    if (indicator.getSample() == 50000) {
+  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
+    if (indicator.getSample() == 50_000) {
       double oldPercent = prevPercent;
       double ind = indicator.getIndicator();
       double newPercent;
@@ -57,12 +61,10 @@ public final class IndicatorClimber implements HillClimber {
 
       indicator.reset();
       if (newPercent > oldPercent) {
-        return new Adaptation(Adaptation.Type.INCREASE_WINDOW,
-            (int) ((newPercent - oldPercent) * cacheSize));
+        return Adaptation.increaseWindow((int) ((newPercent - oldPercent) * cacheSize));
       }
-      return new Adaptation(Adaptation.Type.DECREASE_WINDOW,
-          (int) ((oldPercent - newPercent) * cacheSize));
+      return Adaptation.decreaseWindow((int) ((oldPercent - newPercent) * cacheSize));
     }
-    return Adaptation.HOLD;
+    return Adaptation.hold();
   }
 }

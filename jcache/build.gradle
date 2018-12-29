@@ -30,18 +30,18 @@ dependencies {
 }
 
 jar.manifest {
-  name 'com.github.ben-manes.caffeine.jcache'
-  instruction 'Import-Package',
+  attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.jcache'
+  attributes 'Import-Package': [
     'javax.cache.*',
     'javax.management',
     'com.typesafe.config',
     'com.github.benmanes.caffeine.cache',
-    'com.github.benmanes.caffeine.cache.stats'
-  instruction 'Export-Package',
+    'com.github.benmanes.caffeine.cache.stats'].join(',')
+  attributes 'Export-Package': [
     'com.github.benmanes.caffeine.jcache.spi',
     'com.github.benmanes.caffeine.jcache.copy',
-    'com.github.benmanes.caffeine.jcache.configuration'
-  instruction 'Automatic-Module-Name',
+    'com.github.benmanes.caffeine.jcache.configuration'].join(',')
+  attributes 'Automatic-Module-Name':
     'com.github.benmanes.caffeine.jcache'
 }
 

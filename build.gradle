@@ -41,11 +41,11 @@ allprojects {
 
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
+  apply plugin: 'biz.aQute.bnd.builder'
   apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'eclipse'
   apply plugin: 'java'
   apply plugin: 'idea'
-  apply plugin: 'osgi'
 
   apply from: "${rootDir}/gradle/publish.gradle"
   apply from: "${rootDir}/gradle/codeQuality.gradle"
@@ -78,7 +78,17 @@ subprojects {
   }
 
   configurations {
+    bundleCompile
     testArtifacts
+  }
+
+  sourceSets {
+    bundle
+  }
+
+  task bundle(type: aQute.bnd.gradle.Bundle) {
+    from sourceSets.bundle.output
+    sourceSet = sourceSets.bundle
   }
 
   tasks.withType(Test) {
@@ -128,9 +138,9 @@ task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
   description = 'Generates an aggregate report from all subprojects'
   dependsOn publishedProjects.test, jacocoMerge
 
-  additionalSourceDirs = files(publishedProjects.sourceSets.main.allSource.srcDirs)
-  sourceDirectories = files(publishedProjects.sourceSets.main.allSource.srcDirs)
-  classDirectories = files(publishedProjects.sourceSets.main.output)
+  additionalSourceDirs.from = files(publishedProjects.sourceSets.main.allSource.srcDirs)
+  sourceDirectories.from = files(publishedProjects.sourceSets.main.allSource.srcDirs)
+  classDirectories.from = files(publishedProjects.sourceSets.main.output)
   executionData jacocoMerge.destinationFile
 
   reports {

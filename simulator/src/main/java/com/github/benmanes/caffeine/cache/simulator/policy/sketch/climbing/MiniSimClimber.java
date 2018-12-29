@@ -25,7 +25,11 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 /**
- * A MinSim version for W-TinyLFU
+ * A MinSim version for W-TinyLFU.
+ * <p>
+ * The algorithm is explained by the authors in
+ * <a href="https://www.usenix.org/system/files/conference/atc17/atc17-waldspurger.pdf">Cache
+ * Modeling and Optimization using Miniature Simulation</a>.
  *
  * @author ohadey@gmail.com (Ohad Eytan)
  */
@@ -33,9 +37,9 @@ import com.typesafe.config.ConfigFactory;
 public final class MiniSimClimber implements HillClimber {
   private final WindowTinyLfuPolicy[] minis;
   private final int cacheSize;
+  private final int period;
   private final int R;
 
-  private final int period;
   private int sample;
   private long[] prevMisses;
   private double prevPercent;
@@ -58,8 +62,18 @@ public final class MiniSimClimber implements HillClimber {
   }
 
   @Override
-  public void doAlways(long key) {
+  public void onHit(long key, QueueType queue, boolean isFull) {
+    onAccess(key);
+  }
+
+  @Override
+  public void onMiss(long key, boolean isFull) {
+    onAccess(key);
+  }
+
+  private void onAccess(long key) {
     sample++;
+
     if (Math.floorMod(Hashing.murmur3_32(0x7f3a2142).hashLong(key).asInt(), R) < 1) {
       for (WindowTinyLfuPolicy policy : minis) {
         policy.record(key);
@@ -68,13 +82,7 @@ public final class MiniSimClimber implements HillClimber {
   }
 
   @Override
-  public void onHit(long key, QueueType queue) {}
-
-  @Override
-  public void onMiss(long key) {}
-
-  @Override
-  public Adaptation adapt(int windowSize, int protectedSize) {
+  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
     if (sample > period) {
       long[] periodMisses = new long[101];
       for (int i = 0; i < minis.length; i++) {
@@ -93,25 +101,22 @@ public final class MiniSimClimber implements HillClimber {
 
       sample = 0;
       if (newPercent > oldPercent) {
-        return new Adaptation(Adaptation.Type.INCREASE_WINDOW, (int) ((newPercent - oldPercent) * cacheSize));
+        return Adaptation.increaseWindow((int) ((newPercent - oldPercent) * cacheSize));
       }
-      return new Adaptation(Adaptation.Type.DECREASE_WINDOW, (int) ((oldPercent - newPercent) * cacheSize));
+      return Adaptation.decreaseWindow((int) ((oldPercent - newPercent) * cacheSize));
     }
-    return Adaptation.HOLD;
+    return Adaptation.hold();
   }
 
   static final class MiniSimSettings extends BasicSettings {
     public MiniSimSettings(Config config) {
       super(config);
     }
-
     public List<Double> percentMain() {
       return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
-
     public int minisimPeriod() {
       return config().getInt("hill-climber-window-tiny-lfu.minisim.period");
     }
   }
-
 }

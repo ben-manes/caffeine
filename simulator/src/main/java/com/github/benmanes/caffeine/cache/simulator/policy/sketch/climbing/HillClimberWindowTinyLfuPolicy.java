@@ -51,6 +51,9 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  */
 @SuppressWarnings("PMD.TooManyFields")
 public final class HillClimberWindowTinyLfuPolicy implements Policy {
+  private final double initialPercentMain;
+  private final HillClimberType strategy;
+
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final HillClimber climber;
@@ -72,12 +75,6 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
 
   public HillClimberWindowTinyLfuPolicy(HillClimberType strategy, double percentMain,
       HillClimberWindowTinyLfuSettings settings) {
-    String name = String.format("sketch.HillClimberWindowTinyLfu (%s %.0f%%)",
-        strategy.name().toLowerCase(US), 100 * (1.0 - percentMain));
-
-    this.policyStats = new PolicyStats(name);
-    this.admittor = new TinyLfu(settings.config(), policyStats);
-    this.climber = strategy.create(settings.config());
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
@@ -88,7 +85,19 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     this.headProbation = new Node();
     this.headWindow = new Node();
 
+    this.strategy = strategy;
+    this.initialPercentMain = percentMain;
+    this.policyStats = new PolicyStats(getPolicyName());
+    this.admittor = new TinyLfu(settings.config(), policyStats);
+    this.climber = strategy.create(settings.config());
+
     printSegmentSizes();
+  }
+
+  private String getPolicyName() {
+    return String.format("sketch.HillClimberWindowTinyLfu (%s %.0f%% -> %.0f%%)",
+        strategy.name().toLowerCase(US), 100 * (1.0 - initialPercentMain),
+        (100.0 * maxWindow) / maximumSize);
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -110,12 +119,11 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
 
   @Override
   public void record(long key) {
+    boolean isFull = (data.size() >= maximumSize);
     policyStats.recordOperation();
     Node node = data.get(key);
     admittor.record(key);
 
-    climber.doAlways(key); 
-    
     QueueType queue = null;
     if (node == null) {
       onMiss(key);
@@ -135,7 +143,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
         throw new IllegalStateException();
       }
     }
-    climb(key, queue);
+    climb(key, queue, isFull);
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
@@ -204,16 +212,14 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
   }
 
   /** Performs the hill climbing process. */
-  private void climb(long key, @Nullable QueueType queue) {
-    if (data.size() < maximumSize) {
-      return;
-    } else if (queue == null) {
-      climber.onMiss(key);
+  private void climb(long key, @Nullable QueueType queue, boolean isFull) {
+    if (queue == null) {
+      climber.onMiss(key, isFull);
     } else {
-      climber.onHit(key, queue);
+      climber.onHit(key, queue, isFull);
     }
 
-    Adaptation adaptation = climber.adapt(sizeWindow, sizeProtected);
+    Adaptation adaptation = climber.adapt(sizeWindow, sizeProtected, isFull);
     if (adaptation.type == INCREASE_WINDOW) {
       increaseWindow(adaptation.amount);
     } else if (adaptation.type == DECREASE_WINDOW) {
@@ -277,6 +283,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
 
   @Override
   public void finished() {
+    policyStats.setName(getPolicyName());
     printSegmentSizes();
 
     long windowSize = data.values().stream().filter(n -> n.queue == WINDOW).count();

@@ -25,8 +25,8 @@
  */
 ext {
   versions = [
-    akka: '2.5.17',
-    checkerFramework: '2.5.6',
+    akka: '2.5.19',
+    checkerFramework: '2.5.8',
     commonsCompress: '1.18',
     commonsLang3: '3.8.1',
     config: '1.3.3',
@@ -43,14 +43,14 @@ ext {
     xz: '1.8',
   ]
   testVersions = [
-    awaitility: '3.1.2',
-    easymock: '4.0.1',
+    awaitility: '3.1.5',
+    easymock: '4.0.2',
     hamcrest: '2.0.0.0',
     jcacheTck: '1.1.0',
     jctools: '2.1.2',
     junit: '4.12',
-    mockito: '2.23.0',
-    paxExam: '4.12.0',
+    mockito: '2.23.4',
+    paxExam: '4.13.1',
     testng: '6.14.3',
     truth: '0.24',
   ]
@@ -59,23 +59,24 @@ ext {
     collision: '0.3.3',
     commonsMath3: '3.6.1',
     concurrentlinkedhashmap: '1.4.2',
-    ehcache3: '3.6.1',
-    elasticSearch: '6.4.2',
-    expiringMap: '0.5.8',
-    jackrabbit: '1.9.9',
-    jamm: '0.3.2',
+    ehcache3: '3.6.3',
+    elasticSearch: '7.0.0-alpha2',
+    expiringMap: '0.5.9',
+    jackrabbit: '1.9.13',
+    jamm: '0.3.3',
     javaObjectLayout: '0.9',
     jmh: '1.21',
     koloboke: '0.6.8',
     ohc: '0.6.1',
     slf4j: '1.7.25',
-    tcache: '1.0.5',
+    tcache: '2.0.1',
     stream: '2.9.6',
   ]
   pluginVersions = [
     apt: '0.19',
-    buildscan: '1.16',
-    checkstyle: '8.14',
+    bnd: '4.1.0',
+    buildscan: '2.1',
+    checkstyle: '8.15',
     coveralls: '2.8.2',
     coverity: '1.0.10',
     errorProne: '0.6',
@@ -83,17 +84,17 @@ ext {
     jmh: '0.4.7',
     jmhReport: '0.9.0',
     nexus: '2.3.1',
-    pmd: '6.9.0',
+    pmd: '6.10.0',
     semanticVersioning: '1.1.0',
-    shadow: '4.0.2',
+    shadow: '4.0.3',
     sonarqube: '2.6.2',
     spotbugs: '3.1.8',
-    spotbugsPlugin: '1.6.5',
+    spotbugsPlugin: '1.6.8',
     stats: '0.2.2',
     versions: '0.20.0',
   ]
   annotationProcessorVersions = [
-    nullaway: '0.6.0',
+    nullaway: '0.6.4',
   ]
 
   libraries = [
@@ -177,6 +178,7 @@ ext {
   ]
   gradlePlugins = [
     apt: "net.ltgt.gradle:gradle-apt-plugin:${pluginVersions.apt}",
+    bnd: "biz.aQute.bnd:biz.aQute.bnd.gradle:${pluginVersions.bnd}",
     buildscan: "com.gradle:build-scan-plugin:${pluginVersions.buildscan}",
     checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${pluginVersions.checkstyle}") {
       transitive = false

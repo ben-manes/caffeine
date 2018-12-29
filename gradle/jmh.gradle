@@ -66,4 +66,4 @@ jmhReport {
 }
 
 tasks.jmh.finalizedBy tasks.jmhReport
-tasks.jmh.dependsOn tasks.osgiClasses
+tasks.jmh.dependsOn tasks.bundle

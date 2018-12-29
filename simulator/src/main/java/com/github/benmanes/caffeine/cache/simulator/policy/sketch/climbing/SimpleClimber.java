@@ -15,9 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
-import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation.Type.DECREASE_WINDOW;
-import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation.Type.INCREASE_WINDOW;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.typesafe.config.Config;
 
@@ -48,21 +45,28 @@ final class SimpleClimber implements HillClimber {
   }
 
   @Override
-  public void onMiss(long key) {
-    missesInSample++;
-    sample++;
+  public void onMiss(long key, boolean isFull) {
+    if (isFull) {
+      missesInSample++;
+      sample++;
+    }
   }
 
   @Override
-  public void onHit(long key, QueueType queueType) {
-    hitsInSample++;
-    sample++;
+  public void onHit(long key, QueueType queueType, boolean isFull) {
+    if (isFull) {
+      hitsInSample++;
+      sample++;
+    }
   }
 
   @Override
-  public Adaptation adapt(int windowSize, int protectedSize) {
-    Adaptation adaption = Adaptation.HOLD;
+  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
+    if (!isFull) {
+      return Adaptation.hold();
+    }
 
+    Adaptation adaption = Adaptation.hold();
     if (sample >= sampleSize) {
       double hitRate = (100d * hitsInSample) / (hitsInSample + missesInSample);
 
@@ -75,7 +79,6 @@ final class SimpleClimber implements HillClimber {
       hitsInSample = 0;
       sample = 0;
     }
-
     return adaption;
   }
 
@@ -83,8 +86,9 @@ final class SimpleClimber implements HillClimber {
     if (hitRate < (previousHitRate + tolerance)) {
       increaseWindow = !increaseWindow;
     }
-    Adaptation.Type adaptionType = increaseWindow ? INCREASE_WINDOW : DECREASE_WINDOW;
-    return new Adaptation(adaptionType, pivot);
+    return increaseWindow
+        ? Adaptation.increaseWindow(pivot)
+        : Adaptation.decreaseWindow(pivot);
   }
 
   static final class SimpleClimberSettings extends BasicSettings {

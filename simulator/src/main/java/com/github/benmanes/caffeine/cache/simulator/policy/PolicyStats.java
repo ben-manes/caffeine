@@ -26,9 +26,9 @@ import com.google.common.base.Stopwatch;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class PolicyStats {
-  private final String name;
   private final Stopwatch stopwatch;
 
+  private String name;
   private long hitCount;
   private long missCount;
   private long evictionCount;
@@ -47,6 +47,10 @@ public final class PolicyStats {
 
   public String name() {
     return name;
+  }
+
+  public void setName(String name) {
+    this.name = requireNonNull(name);
   }
 
   public void recordOperation() {

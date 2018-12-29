@@ -15,14 +15,14 @@ dependencies {
 }
 
 jar.manifest {
-  name 'com.github.ben-manes.caffeine.guava'
-  instruction 'Import-Package',
+  attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.guava'
+  attributes 'Import-Package': [
     'com.google.common.cache',
     'com.github.benmanes.caffeine.cache',
-    'com.github.benmanes.caffeine.cache.stats'
-  instruction 'Export-Package',
+    'com.github.benmanes.caffeine.cache.stats'].join(',')
+  attributes 'Export-Package':
     'com.github.benmanes.caffeine.guava'
-  instruction 'Automatic-Module-Name',
+  attributes 'Automatic-Module-Name':
     'com.github.benmanes.caffeine.guava'
 }
 
