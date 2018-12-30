@@ -52,7 +52,7 @@ public final class IndicatorClimber implements HillClimber {
   }
 
   @Override
-  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
+  public Adaptation adapt(int windowSize, int probationSize, int protectedSize, boolean isFull) {
     if (indicator.getSample() == 50_000) {
       double oldPercent = prevPercent;
       double ind = indicator.getIndicator();

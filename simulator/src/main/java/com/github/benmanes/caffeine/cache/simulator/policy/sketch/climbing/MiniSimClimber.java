@@ -82,7 +82,7 @@ public final class MiniSimClimber implements HillClimber {
   }
 
   @Override
-  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
+  public Adaptation adapt(int windowSize, int probationSize, int protectedSize, boolean isFull) {
     if (sample > period) {
       long[] periodMisses = new long[101];
       for (int i = 0; i < minis.length; i++) {

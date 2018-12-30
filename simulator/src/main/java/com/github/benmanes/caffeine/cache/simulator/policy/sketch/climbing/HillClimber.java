@@ -46,11 +46,12 @@ public interface HillClimber {
    * Determines how to adapt the segment sizes.
    *
    * @param windowSize the current window size
+   * @param probationSize the current probation size
    * @param protectedSize the current protected size
    * @param isFull if the cache is fully populated
    * @return the adjustment to the segments
    */
-  Adaptation adapt(int windowSize, int protectedSize, boolean isFull);
+  Adaptation adapt(int windowSize, int probationSize, int protectedSize, boolean isFull);
 
   enum QueueType {
     WINDOW, PROBATION, PROTECTED
@@ -62,12 +63,12 @@ public interface HillClimber {
       HOLD, INCREASE_WINDOW, DECREASE_WINDOW
     }
 
-    private static final Adaptation HOLD = new Adaptation(Type.HOLD, 0);
+    private static final Adaptation HOLD = new Adaptation(0, Type.HOLD);
 
     public final int amount;
     public final Type type;
 
-    private Adaptation(Type type, int amount) {
+    private Adaptation(int amount, Type type) {
       checkArgument(amount >= 0, "Step size %s must be positive", amount);
       this.type = checkNotNull(type);
       this.amount = amount;
@@ -78,20 +79,33 @@ public interface HillClimber {
       if (amount == 0) {
         return hold();
       } else if (amount < 0) {
-        return decreaseWindow(Math.abs((int) Math.floor(amount)));
+        return decreaseWindow(Math.abs(roundToInt(amount)));
       } else {
-        return increaseWindow((int) Math.ceil(amount));
+        return increaseWindow(amount);
       }
+    }
+    public static int roundToInt(double amount) {
+      return (amount < 0) ? (int) Math.floor(amount) : (int) Math.ceil(amount);
     }
 
     public static Adaptation hold() {
       return HOLD;
     }
-    public static Adaptation increaseWindow(int amount) {
-      return new Adaptation(Type.INCREASE_WINDOW, amount);
+    public static Adaptation increaseWindow(double amount) {
+      return new Adaptation(roundToInt(amount), Type.INCREASE_WINDOW);
     }
-    public static Adaptation decreaseWindow(int amount) {
-      return new Adaptation(Type.DECREASE_WINDOW, amount);
+    public static Adaptation decreaseWindow(double amount) {
+      return new Adaptation(roundToInt(amount), Type.DECREASE_WINDOW);
+    }
+
+    @Override
+    public String toString() {
+      switch (type) {
+        case HOLD: return "0";
+        case INCREASE_WINDOW: return "+" + amount;
+        case DECREASE_WINDOW: return "-" + amount;
+        default: throw new IllegalStateException();
+      }
     }
   }
 }

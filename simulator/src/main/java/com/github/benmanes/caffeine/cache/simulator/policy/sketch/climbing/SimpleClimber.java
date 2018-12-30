@@ -61,7 +61,7 @@ final class SimpleClimber implements HillClimber {
   }
 
   @Override
-  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
+  public Adaptation adapt(int windowSize, int probationSize, int protectedSize, boolean isFull) {
     if (!isFull) {
       return Adaptation.hold();
     }

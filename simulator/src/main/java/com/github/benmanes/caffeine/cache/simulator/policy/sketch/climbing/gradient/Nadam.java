@@ -15,12 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient;
 
-import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation.adaptBy;
-
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
 import com.typesafe.config.Config;
 
 /**
@@ -31,16 +28,11 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Nadam implements HillClimber {
-  private final int sampleSize;
+public final class Nadam extends GradientDescent {
   private final int stepSize;
   private final double beta1;
   private final double beta2;
   private final double epsilon;
-
-  private int hitsInSample;
-  private int missesInSample;
-  private double previousHitRate;
 
   private int t;
   private double moment;
@@ -57,45 +49,13 @@ public final class Nadam implements HillClimber {
   }
 
   @Override
-  public void onMiss(long key, boolean isFull) {
-    if (isFull) {
-      missesInSample++;
-    }
-  }
-
-  @Override
-  public void onHit(long key, QueueType queueType, boolean isFull) {
-    if (isFull) {
-      hitsInSample++;
-    }
-  }
-
-  @Override
-  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
-    if (!isFull) {
-      return Adaptation.hold();
-    }
-
-    int sampleCount = (hitsInSample + missesInSample);
-    if (sampleCount < sampleSize) {
-      return Adaptation.hold();
-    }
-
-    double hitRate = (double) hitsInSample / sampleCount;
-    Adaptation adaption = adjust(hitRate);
-    previousHitRate = hitRate;
-    missesInSample = 0;
-    hitsInSample = 0;
+  protected void resetSample(double hitRate) {
+    super.resetSample(hitRate);
     t++;
-
-    return adaption;
   }
 
-  private Adaptation adjust(double hitRate) {
-    if (Double.isNaN(hitRate) || Double.isInfinite(hitRate) || (previousHitRate == 0.0)) {
-      return Adaptation.hold();
-    }
-
+  @Override
+  protected double adjust(double hitRate) {
     double currentMissRate = (1 - hitRate);
     double previousMissRate = (1 - previousHitRate);
     double gradient = currentMissRate - previousMissRate;
@@ -106,10 +66,8 @@ public final class Nadam implements HillClimber {
     // https://towardsdatascience.com/10-gradient-descent-optimisation-algorithms-86989510b5e9#6d4c
     double momentBias = moment / (1 - Math.pow(beta1, t));
     double velocityBias = velocity / (1 - Math.pow(beta2, t));
-    double amount = (stepSize / (Math.sqrt(velocityBias) + epsilon))
+    return (stepSize / (Math.sqrt(velocityBias) + epsilon))
         * ((beta1 * momentBias) + (((1 - beta1) / (1 - Math.pow(beta1, t))) * gradient));
-
-    return adaptBy(amount);
   }
 
   static final class AdamSettings extends BasicSettings {

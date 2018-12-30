@@ -15,13 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.gradient;
 
-import static com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation.adaptBy;
 import static java.util.Locale.US;
 
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
 import com.typesafe.config.Config;
 
 /**
@@ -44,15 +42,10 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Stochastic implements HillClimber {
+public final class Stochastic extends GradientDescent {
   private final Acceleration acceleration;
-  private final int sampleSize;
   private final int stepSize;
   private final double beta;
-
-  private int hitsInSample;
-  private int missesInSample;
-  private double previousHitRate;
 
   private double velocity;
 
@@ -65,59 +58,22 @@ public final class Stochastic implements HillClimber {
   }
 
   @Override
-  public void onMiss(long key, boolean isFull) {
-    if (isFull) {
-      missesInSample++;
-    }
-  }
-
-  @Override
-  public void onHit(long key, QueueType queueType, boolean isFull) {
-    if (isFull) {
-      hitsInSample++;
-    }
-  }
-
-  @Override
-  public Adaptation adapt(int windowSize, int protectedSize, boolean isFull) {
-    if (!isFull) {
-      return Adaptation.hold();
-    }
-
-    int sampleCount = (hitsInSample + missesInSample);
-    if (sampleCount < sampleSize) {
-      return Adaptation.hold();
-    }
-
-    double hitRate = (double) hitsInSample / sampleCount;
-    Adaptation adaption = adjust(hitRate);
-    previousHitRate = hitRate;
-    missesInSample = 0;
-    hitsInSample = 0;
-    return adaption;
-  }
-
-  private Adaptation adjust(double hitRate) {
-    if (Double.isNaN(hitRate) || Double.isInfinite(hitRate) || (previousHitRate == 0.0)) {
-      return Adaptation.hold();
-    }
-
+  protected double adjust(double hitRate) {
     double currentMissRate = (1 - hitRate);
     double previousMissRate = (1 - previousHitRate);
     double gradient = currentMissRate - previousMissRate;
 
     switch (acceleration) {
       case NONE:
-        return adaptBy(stepSize * gradient);
+        return stepSize * gradient;
       case MOMENTUM:
         velocity = (beta * velocity) + (1 - beta) * gradient;
-        return adaptBy(stepSize * velocity);
+        return stepSize * velocity;
       case NESTEROV:
         // http://cs231n.github.io/neural-networks-3/#sgd
         double previousVelocity = velocity;
         velocity = (beta * velocity) + (1 - beta) * gradient;
-        double amount = -(beta * previousVelocity) + ((1 + beta) * velocity);
-        return adaptBy(amount);
+        return -(beta * previousVelocity) + ((1 + beta) * velocity);
     }
     throw new IllegalStateException("Unknown acceleration type: " + acceleration);
   }

@@ -76,7 +76,7 @@ ext {
     apt: '0.19',
     bnd: '4.1.0',
     buildscan: '2.1',
-    checkstyle: '8.15',
+    checkstyle: '8.16',
     coveralls: '2.8.2',
     coverity: '1.0.10',
     errorProne: '0.6',

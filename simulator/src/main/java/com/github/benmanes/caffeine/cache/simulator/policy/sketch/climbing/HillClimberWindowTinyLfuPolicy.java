@@ -53,7 +53,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class HillClimberWindowTinyLfuPolicy implements Policy {
   private final double initialPercentMain;
   private final HillClimberType strategy;
-
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final HillClimber climber;
@@ -67,8 +66,8 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
   private int maxWindow;
   private int maxProtected;
 
-  private int sizeWindow;
-  private int sizeProtected;
+  private int windowSize;
+  private int protectedSize;
 
   static final boolean debug = false;
   static final boolean trace = false;
@@ -151,7 +150,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     Node node = new Node(key, WINDOW);
     node.appendToTail(headWindow);
     data.put(key, node);
-    sizeWindow++;
+    windowSize++;
     evict();
   }
 
@@ -166,17 +165,17 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     node.queue = PROTECTED;
     node.appendToTail(headProtected);
 
-    sizeProtected++;
+    protectedSize++;
     demoteProtected();
   }
 
   private void demoteProtected() {
-    if (sizeProtected > maxProtected) {
+    if (protectedSize > maxProtected) {
       Node demote = headProtected.next;
       demote.remove();
       demote.queue = PROBATION;
       demote.appendToTail(headProbation);
-      sizeProtected--;
+      protectedSize--;
     }
   }
 
@@ -190,12 +189,12 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
    * then the admission candidate and probation's victim are evaluated and one is evicted.
    */
   private void evict() {
-    if (sizeWindow <= maxWindow) {
+    if (windowSize <= maxWindow) {
       return;
     }
 
     Node candidate = headWindow.next;
-    sizeWindow--;
+    windowSize--;
 
     candidate.remove();
     candidate.queue = PROBATION;
@@ -219,7 +218,8 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
       climber.onHit(key, queue, isFull);
     }
 
-    Adaptation adaptation = climber.adapt(sizeWindow, sizeProtected, isFull);
+    int probationSize = maximumSize - windowSize - protectedSize;
+    Adaptation adaptation = climber.adapt(windowSize, probationSize, protectedSize, isFull);
     if (adaptation.type == INCREASE_WINDOW) {
       increaseWindow(adaptation.amount);
     } else if (adaptation.type == DECREASE_WINDOW) {
@@ -235,7 +235,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     int steps = Math.min(amount, maxProtected);
     for (int i = 0; i < steps; i++) {
       maxWindow++;
-      sizeWindow++;
+      windowSize++;
       maxProtected--;
 
       demoteProtected();
@@ -259,7 +259,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     for (int i = 0; i < steps; i++) {
       if (amount > 0) {
         maxWindow--;
-        sizeWindow--;
+        windowSize--;
         maxProtected++;
 
         Node candidate = headWindow.next;
@@ -286,13 +286,14 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     policyStats.setName(getPolicyName());
     printSegmentSizes();
 
-    long windowSize = data.values().stream().filter(n -> n.queue == WINDOW).count();
-    long probationSize = data.values().stream().filter(n -> n.queue == PROBATION).count();
-    long protectedSize = data.values().stream().filter(n -> n.queue == PROTECTED).count();
+    long actualWindowSize = data.values().stream().filter(n -> n.queue == WINDOW).count();
+    long actualProbationSize = data.values().stream().filter(n -> n.queue == PROBATION).count();
+    long actualProtectedSize = data.values().stream().filter(n -> n.queue == PROTECTED).count();
+    long calculatedProbationSize = data.size() - actualWindowSize - actualProtectedSize;
 
-    checkState(windowSize == sizeWindow);
-    checkState(protectedSize == sizeProtected);
-    checkState(probationSize == data.size() - windowSize - protectedSize);
+    checkState(windowSize == actualWindowSize);
+    checkState(protectedSize == actualProtectedSize);
+    checkState(actualProbationSize == calculatedProbationSize);
 
     checkState(data.size() <= maximumSize);
   }
