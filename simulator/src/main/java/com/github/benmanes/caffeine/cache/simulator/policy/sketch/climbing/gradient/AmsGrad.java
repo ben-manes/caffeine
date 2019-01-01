@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.grad
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
 import com.typesafe.config.Config;
 
 /**
@@ -28,7 +29,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AmsGrad extends GradientDescent {
+public final class AmsGrad extends AbstractClimber {
   private final int stepSize;
   private final double beta1;
   private final double beta2;
@@ -39,7 +40,7 @@ public final class AmsGrad extends GradientDescent {
   private double maxVelocity;
 
   public AmsGrad(Config config) {
-    AdamSettings settings = new AdamSettings(config);
+    AmsGradSettings settings = new AmsGradSettings(config);
     sampleSize = (int) (settings.percentSample() * settings.maximumSize());
     stepSize = (int) (settings.percentPivot() * settings.maximumSize());
     epsilon = settings.epsilon();
@@ -60,10 +61,10 @@ public final class AmsGrad extends GradientDescent {
     return (stepSize * moment) / (Math.sqrt(maxVelocity) + epsilon);
   }
 
-  static final class AdamSettings extends BasicSettings {
+  static final class AmsGradSettings extends BasicSettings {
     static final String BASE_PATH = "hill-climber-window-tiny-lfu.amsgrad.";
 
-    public AdamSettings(Config config) {
+    public AmsGradSettings(Config config) {
       super(config);
     }
     public List<Double> percentMain() {

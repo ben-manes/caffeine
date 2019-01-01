@@ -51,7 +51,7 @@ public interface HillClimber {
    * @param isFull if the cache is fully populated
    * @return the adjustment to the segments
    */
-  Adaptation adapt(int windowSize, int probationSize, int protectedSize, boolean isFull);
+  Adaptation adapt(double windowSize, double probationSize, double protectedSize, boolean isFull);
 
   enum QueueType {
     WINDOW, PROBATION, PROTECTED
@@ -65,10 +65,10 @@ public interface HillClimber {
 
     private static final Adaptation HOLD = new Adaptation(0, Type.HOLD);
 
-    public final int amount;
+    public final double amount;
     public final Type type;
 
-    private Adaptation(int amount, Type type) {
+    private Adaptation(double amount, Type type) {
       checkArgument(amount >= 0, "Step size %s must be positive", amount);
       this.type = checkNotNull(type);
       this.amount = amount;
@@ -79,7 +79,7 @@ public interface HillClimber {
       if (amount == 0) {
         return hold();
       } else if (amount < 0) {
-        return decreaseWindow(Math.abs(roundToInt(amount)));
+        return decreaseWindow(Math.abs(amount));
       } else {
         return increaseWindow(amount);
       }
@@ -92,10 +92,10 @@ public interface HillClimber {
       return HOLD;
     }
     public static Adaptation increaseWindow(double amount) {
-      return new Adaptation(roundToInt(amount), Type.INCREASE_WINDOW);
+      return new Adaptation(amount, Type.INCREASE_WINDOW);
     }
     public static Adaptation decreaseWindow(double amount) {
-      return new Adaptation(roundToInt(amount), Type.DECREASE_WINDOW);
+      return new Adaptation(amount, Type.DECREASE_WINDOW);
     }
 
     @Override

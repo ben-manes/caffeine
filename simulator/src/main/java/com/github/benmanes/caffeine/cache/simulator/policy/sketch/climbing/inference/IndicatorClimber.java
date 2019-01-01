@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
+package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.inference;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.Indicator;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy.HillClimberWindowTinyLfuSettings;
 import com.typesafe.config.Config;
 
@@ -52,19 +53,19 @@ public final class IndicatorClimber implements HillClimber {
   }
 
   @Override
-  public Adaptation adapt(int windowSize, int probationSize, int protectedSize, boolean isFull) {
-    if (indicator.getSample() == 50_000) {
-      double oldPercent = prevPercent;
-      double ind = indicator.getIndicator();
-      double newPercent;
-      newPercent = prevPercent = ind * 80 / 100.0;
-
-      indicator.reset();
-      if (newPercent > oldPercent) {
-        return Adaptation.increaseWindow((int) ((newPercent - oldPercent) * cacheSize));
-      }
-      return Adaptation.decreaseWindow((int) ((oldPercent - newPercent) * cacheSize));
+  public Adaptation adapt(double windowSize,
+      double probationSize, double protectedSize, boolean isFull) {
+    if (indicator.getSample() != 50_000) {
+      return Adaptation.hold();
     }
-    return Adaptation.hold();
+
+    double newPercent = (indicator.getIndicator() * 80) / 100.0;
+    double oldPercent = prevPercent;
+    prevPercent = newPercent;
+    indicator.reset();
+
+    return (newPercent > oldPercent)
+        ? Adaptation.increaseWindow((int) ((newPercent - oldPercent) * cacheSize))
+        : Adaptation.decreaseWindow((int) ((oldPercent - newPercent) * cacheSize));
   }
 }

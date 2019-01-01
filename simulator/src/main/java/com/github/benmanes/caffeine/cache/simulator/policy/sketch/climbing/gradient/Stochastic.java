@@ -20,6 +20,7 @@ import static java.util.Locale.US;
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
 import com.typesafe.config.Config;
 
 /**
@@ -42,7 +43,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Stochastic extends GradientDescent {
+public final class Stochastic extends AbstractClimber {
   private final Acceleration acceleration;
   private final int stepSize;
   private final double beta;
@@ -72,7 +73,7 @@ public final class Stochastic extends GradientDescent {
       case NESTEROV:
         // http://cs231n.github.io/neural-networks-3/#sgd
         double previousVelocity = velocity;
-        velocity = (beta * velocity) + (1 - beta) * gradient;
+        velocity = (beta * velocity) + stepSize * gradient;
         return -(beta * previousVelocity) + ((1 + beta) * velocity);
     }
     throw new IllegalStateException("Unknown acceleration type: " + acceleration);

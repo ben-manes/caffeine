@@ -66,8 +66,8 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
   private int maxWindow;
   private int maxProtected;
 
-  private int windowSize;
-  private int protectedSize;
+  private double windowSize;
+  private double protectedSize;
 
   static final boolean debug = false;
   static final boolean trace = false;
@@ -218,7 +218,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
       climber.onHit(key, queue, isFull);
     }
 
-    int probationSize = maximumSize - windowSize - protectedSize;
+    double probationSize = maximumSize - windowSize - protectedSize;
     Adaptation adaptation = climber.adapt(windowSize, probationSize, protectedSize, isFull);
     if (adaptation.type == INCREASE_WINDOW) {
       increaseWindow(adaptation.amount);
@@ -227,15 +227,18 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  private void increaseWindow(int amount) {
+  private void increaseWindow(double amount) {
+    checkState(amount >= 0.0);
     if (maxProtected == 0) {
       return;
     }
 
-    int steps = Math.min(amount, maxProtected);
+    double quota = Math.min(amount, maxProtected);
+    int steps = (int) (windowSize + quota) - (int) windowSize;
+    windowSize += quota;
+
     for (int i = 0; i < steps; i++) {
       maxWindow++;
-      windowSize++;
       maxProtected--;
 
       demoteProtected();
@@ -244,30 +247,37 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
       candidate.queue = WINDOW;
       candidate.appendToTail(headWindow);
     }
+    checkState(windowSize >= 0);
+    checkState(maxWindow >= 0);
+    checkState(maxProtected >= 0);
 
     if (trace) {
       System.out.printf("+%,d (%,d -> %,d)%n", steps, maxWindow - steps, maxWindow);
     }
   }
 
-  private void decreaseWindow(int amount) {
+  private void decreaseWindow(double amount) {
+    checkState(amount >= 0.0);
     if (maxWindow == 0) {
       return;
     }
 
-    int steps = Math.min(amount, maxWindow);
-    for (int i = 0; i < steps; i++) {
-      if (amount > 0) {
-        maxWindow--;
-        windowSize--;
-        maxProtected++;
+    double quota = Math.min(amount, maxWindow);
+    int steps = (int) windowSize - (int) (windowSize - quota);
+    windowSize -= quota;
 
-        Node candidate = headWindow.next;
-        candidate.remove();
-        candidate.queue = PROBATION;
-        candidate.appendToHead(headProbation);
-      }
+    for (int i = 0; i < steps; i++) {
+      maxWindow--;
+      maxProtected++;
+
+      Node candidate = headWindow.next;
+      candidate.remove();
+      candidate.queue = PROBATION;
+      candidate.appendToHead(headProbation);
     }
+    checkState(windowSize >= 0);
+    checkState(maxWindow >= 0);
+    checkState(maxProtected >= 0);
 
     if (trace) {
       System.out.printf("-%,d (%,d -> %,d)%n", steps, maxWindow + steps, maxWindow);
@@ -291,11 +301,13 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     long actualProtectedSize = data.values().stream().filter(n -> n.queue == PROTECTED).count();
     long calculatedProbationSize = data.size() - actualWindowSize - actualProtectedSize;
 
-    checkState(windowSize == actualWindowSize);
-    checkState(protectedSize == actualProtectedSize);
-    checkState(actualProbationSize == calculatedProbationSize);
-
-    checkState(data.size() <= maximumSize);
+    checkState((long) windowSize == actualWindowSize,
+        "Window: %s != %s", (long) windowSize, actualWindowSize);
+    checkState((long) protectedSize == actualProtectedSize,
+        "Protected: %s != %s", (long) protectedSize, actualProtectedSize);
+    checkState(actualProbationSize == calculatedProbationSize,
+        "Probation: %s != %s", actualProbationSize, calculatedProbationSize);
+    checkState(data.size() <= maximumSize, "Maximum: %s > %s", data.size(), maximumSize);
   }
 
   /** A node on the double-linked list. */
@@ -358,7 +370,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     }
   }
 
-  static final class HillClimberWindowTinyLfuSettings extends BasicSettings {
+  public static final class HillClimberWindowTinyLfuSettings extends BasicSettings {
     public HillClimberWindowTinyLfuSettings(Config config) {
       super(config);
     }

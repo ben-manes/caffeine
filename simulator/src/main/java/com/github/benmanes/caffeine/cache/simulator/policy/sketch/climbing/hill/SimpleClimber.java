@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
+package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.hill;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
 import com.typesafe.config.Config;
 
 /**
@@ -23,72 +24,25 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-final class SimpleClimber implements HillClimber {
-  private final int pivot;
-
-  private int sample;
-  private final int sampleSize;
-
-  private int hitsInSample;
-  private int missesInSample;
-  private double previousHitRate;
-
+public final class SimpleClimber extends AbstractClimber {
   private final double tolerance;
+  private final int stepSize;
+
   private boolean increaseWindow;
 
   public SimpleClimber(Config config) {
     SimpleClimberSettings settings = new SimpleClimberSettings(config);
-
     this.sampleSize = (int) (settings.percentSample() * settings.maximumSize());
-    this.pivot = (int) (settings.percentPivot() * settings.maximumSize());
+    this.stepSize = (int) (settings.percentPivot() * settings.maximumSize());
     this.tolerance = 100d * settings.tolerance();
   }
 
   @Override
-  public void onMiss(long key, boolean isFull) {
-    if (isFull) {
-      missesInSample++;
-      sample++;
-    }
-  }
-
-  @Override
-  public void onHit(long key, QueueType queueType, boolean isFull) {
-    if (isFull) {
-      hitsInSample++;
-      sample++;
-    }
-  }
-
-  @Override
-  public Adaptation adapt(int windowSize, int probationSize, int protectedSize, boolean isFull) {
-    if (!isFull) {
-      return Adaptation.hold();
-    }
-
-    Adaptation adaption = Adaptation.hold();
-    if (sample >= sampleSize) {
-      double hitRate = (100d * hitsInSample) / (hitsInSample + missesInSample);
-
-      if (!Double.isNaN(hitRate) && !Double.isInfinite(hitRate) && (previousHitRate != 0.0)) {
-        adaption = adjust(hitRate);
-      }
-      previousHitRate = hitRate;
-
-      missesInSample = 0;
-      hitsInSample = 0;
-      sample = 0;
-    }
-    return adaption;
-  }
-
-  private Adaptation adjust(double hitRate) {
+  protected double adjust(double hitRate) {
     if (hitRate < (previousHitRate + tolerance)) {
       increaseWindow = !increaseWindow;
     }
-    return increaseWindow
-        ? Adaptation.increaseWindow(pivot)
-        : Adaptation.decreaseWindow(pivot);
+    return increaseWindow ? stepSize : -stepSize;
   }
 
   static final class SimpleClimberSettings extends BasicSettings {

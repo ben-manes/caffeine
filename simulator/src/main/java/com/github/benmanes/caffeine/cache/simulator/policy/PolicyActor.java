@@ -60,7 +60,12 @@ public final class PolicyActor extends AbstractActor
   }
 
   private void finish() {
-    policy.finished();
-    sender().tell(policy.stats(), self());
+    try {
+      policy.finished();
+      sender().tell(policy.stats(), self());
+    } catch (Exception e) {
+      sender().tell(ERROR, self());
+      context().system().log().error(e, "");
+    }
   }
 }

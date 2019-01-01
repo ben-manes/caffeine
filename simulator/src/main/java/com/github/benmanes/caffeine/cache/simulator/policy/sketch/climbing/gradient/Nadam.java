@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.grad
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
 import com.typesafe.config.Config;
 
 /**
@@ -28,7 +29,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Nadam extends GradientDescent {
+public final class Nadam extends AbstractClimber {
   private final int stepSize;
   private final double beta1;
   private final double beta2;
@@ -39,7 +40,7 @@ public final class Nadam extends GradientDescent {
   private double velocity;
 
   public Nadam(Config config) {
-    AdamSettings settings = new AdamSettings(config);
+    NadamSettings settings = new NadamSettings(config);
     sampleSize = (int) (settings.percentSample() * settings.maximumSize());
     stepSize = (int) (settings.percentPivot() * settings.maximumSize());
     epsilon = settings.epsilon();
@@ -70,10 +71,10 @@ public final class Nadam extends GradientDescent {
         * ((beta1 * momentBias) + (((1 - beta1) / (1 - Math.pow(beta1, t))) * gradient));
   }
 
-  static final class AdamSettings extends BasicSettings {
+  static final class NadamSettings extends BasicSettings {
     static final String BASE_PATH = "hill-climber-window-tiny-lfu.nadam.";
 
-    public AdamSettings(Config config) {
+    public NadamSettings(Config config) {
       super(config);
     }
     public List<Double> percentMain() {

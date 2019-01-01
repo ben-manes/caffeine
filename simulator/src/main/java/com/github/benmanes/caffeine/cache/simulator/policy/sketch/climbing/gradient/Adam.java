@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.grad
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
 import com.typesafe.config.Config;
 
 /**
@@ -27,7 +28,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Adam extends GradientDescent {
+public final class Adam extends AbstractClimber {
   private final int stepSize;
   private final double beta1;
   private final double beta2;
