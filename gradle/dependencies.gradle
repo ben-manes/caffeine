@@ -39,7 +39,7 @@ ext {
     jcache: '1.1.0',
     jsr330: '1',
     univocityParsers: '2.7.6',
-    ycsb: '0.13.0',
+    ycsb: '0.15.0',
     xz: '1.8',
   ]
   testVersions = [
@@ -113,7 +113,7 @@ ext {
     jcache: "javax.cache:cache-api:${versions.jcache}",
     jsr330: "javax.inject:javax.inject:${versions.jsr330}",
     univocityParsers: "com.univocity:univocity-parsers:${versions.univocityParsers}",
-    ycsb: "com.github.brianfrankcooper.ycsb:core:${versions.ycsb}",
+    ycsb: "com.github.brianfrankcooper.YCSB:core:${versions.ycsb}",    
     xz: "org.tukaani:xz:${versions.xz}",
   ]
   testLibraries = [

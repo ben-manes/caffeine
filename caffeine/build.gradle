@@ -1,3 +1,5 @@
+import org.gradle.plugins.ide.eclipse.model.SourceFolder
+
 apply from: "${rootDir}/gradle/jmh.gradle"
 apply from: "${projectDir}/testing.gradle"
 
@@ -19,6 +21,10 @@ configurations {
 
 idea.module {
   scopes.PROVIDED.plus += [ configurations.javaPoetCompile ]
+}
+
+eclipse.classpath.file.whenMerged {
+  entries.findAll { it instanceof SourceFolder && it.output == 'bin/codeGen' }*.output = 'bin/main'
 }
 
 plugins.withType(EclipsePlugin) {

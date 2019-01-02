@@ -25,15 +25,19 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SimpleClimber extends AbstractClimber {
+  private final double sampleDecayRate;
+  private final double stepDecayRate;
   private final double tolerance;
-  private final int stepSize;
 
   private boolean increaseWindow;
+  private double stepSize;
 
   public SimpleClimber(Config config) {
     SimpleClimberSettings settings = new SimpleClimberSettings(config);
     this.sampleSize = (int) (settings.percentSample() * settings.maximumSize());
     this.stepSize = (int) (settings.percentPivot() * settings.maximumSize());
+    this.sampleDecayRate = settings.sampleDecayRate();
+    this.stepDecayRate = settings.stepDecayRate();
     this.tolerance = 100d * settings.tolerance();
   }
 
@@ -43,6 +47,17 @@ public final class SimpleClimber extends AbstractClimber {
       increaseWindow = !increaseWindow;
     }
     return increaseWindow ? stepSize : -stepSize;
+  }
+
+  @Override
+  protected void resetSample(double hitRate) {
+    super.resetSample(hitRate);
+
+    stepSize *= stepDecayRate;
+    sampleSize = (int) (sampleSize * sampleDecayRate);
+    if ((stepSize <= 0.01) || (sampleSize <= 1)) {
+      sampleSize = Integer.MAX_VALUE;
+    }
   }
 
   static final class SimpleClimberSettings extends BasicSettings {
@@ -59,6 +74,12 @@ public final class SimpleClimber extends AbstractClimber {
     }
     public double tolerance() {
       return config().getDouble(BASE_PATH + "tolerance");
+    }
+    public double stepDecayRate() {
+      return config().getDouble(BASE_PATH + "step-decay-rate");
+    }
+    public double sampleDecayRate() {
+      return config().getDouble(BASE_PATH + "sample-decay-rate");
     }
   }
 }
