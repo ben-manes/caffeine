@@ -140,6 +140,7 @@ public final class SampledPolicy implements Policy {
   /** The algorithms to choose a random sample with. */
   public enum Sample {
     GUESS {
+      @SuppressWarnings("PMD.AvoidReassigningLoopVariables")
       @Override public <E> List<E> sample(E[] elements, E candidate,
           int sampleSize, Random random, PolicyStats policyStats) {
         List<E> sample = new ArrayList<>(sampleSize);

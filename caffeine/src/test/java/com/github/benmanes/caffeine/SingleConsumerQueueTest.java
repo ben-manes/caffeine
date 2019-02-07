@@ -96,7 +96,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.size(), is(equalTo(Iterables.size(queue))));
   }
 
-  /* ---------------- Contains -------------- */
+  /* --------------- Contains --------------- */
 
   @Test(dataProvider = "empty")
   public void contains_withNull(Queue<?> queue) {
@@ -132,7 +132,7 @@ public class SingleConsumerQueueTest {
         ImmutableList.of(-1, -(POPULATED_SIZE / 2), -POPULATED_SIZE)), is(false));
   }
 
-  /* ---------------- Peek -------------- */
+  /* --------------- Peek --------------- */
 
   @Test(dataProvider = "empty")
   public void peek_whenEmpty(Queue<Integer> queue) {
@@ -147,7 +147,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.contains(first), is(true));
   }
 
-  /* ---------------- Element -------------- */
+  /* --------------- Element --------------- */
 
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
   public void element_whenEmpty(Queue<Integer> queue) {
@@ -162,7 +162,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.contains(first), is(true));
   }
 
-  /* ---------------- Offer -------------- */
+  /* --------------- Offer --------------- */
 
   @Test(dataProvider = "empty")
   public void offer_whenEmpty(Queue<Integer> queue) {
@@ -176,7 +176,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, hasSize(POPULATED_SIZE + 1));
   }
 
-  /* ---------------- Add -------------- */
+  /* --------------- Add --------------- */
 
   @Test(dataProvider = "empty")
   public void add_whenEmpty(Queue<Integer> queue) {
@@ -220,7 +220,7 @@ public class SingleConsumerQueueTest {
         elementsEqual(queue.iterator(), expect.iterator()));
   }
 
-  /* ---------------- Poll -------------- */
+  /* --------------- Poll --------------- */
 
   @Test(dataProvider = "empty")
   public void poll_whenEmpty(Queue<Integer> queue) {
@@ -244,7 +244,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, is(deeplyEmpty()));
   }
 
-  /* ---------------- Remove -------------- */
+  /* --------------- Remove --------------- */
 
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
   public void remove_whenEmpty(Queue<Integer> queue) {
@@ -311,7 +311,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, is(deeplyEmpty()));
   }
 
-  /* ---------------- Retain -------------- */
+  /* --------------- Retain --------------- */
 
   @Test(dataProvider = "empty")
   public void retainAll_withEmpty(Queue<Integer> queue) {
@@ -333,7 +333,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, is(deeplyEmpty()));
   }
 
-  /* ---------------- Iterators -------------- */
+  /* --------------- Iterators --------------- */
 
   @Test(dataProvider = "empty", expectedExceptions = NoSuchElementException.class)
   public void iterator_noMoreElements(Queue<Integer> queue) {
@@ -382,7 +382,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, is(deeplyEmpty()));
   }
 
-  /* ---------------- toArray -------------- */
+  /* --------------- toArray --------------- */
 
   @Test(dataProvider = "empty,singleton,populated")
   public void toArray(Queue<Integer> queue) {
@@ -398,7 +398,7 @@ public class SingleConsumerQueueTest {
     assertThat(actual, queue.isEmpty() ? emptyArray() : arrayContaining(expect));
   }
 
-  /* ---------------- toString -------------- */
+  /* --------------- toString --------------- */
 
   @Test(dataProvider = "empty,singleton,populated")
   public void toString(Queue<Integer> queue) {
@@ -407,7 +407,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, hasToString(list.toString()));
   }
 
-  /* ---------------- Serialization -------------- */
+  /* --------------- Serialization --------------- */
 
   @Test(dataProvider = "empty,singleton,populated")
   public void serializable(Queue<Integer> queue) {
@@ -416,7 +416,7 @@ public class SingleConsumerQueueTest {
         elementsEqual(queue.iterator(), copy.iterator()));
   }
 
-  /* ---------------- Concurrency -------------- */
+  /* --------------- Concurrency --------------- */
 
   @Test(dataProvider = "empty")
   public void oneProducer_oneConsumer(Queue<Integer> queue) {
@@ -482,7 +482,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue, is(deeplyEmpty()));
   }
 
-  /* ---------------- Queue providers -------------- */
+  /* --------------- Queue providers --------------- */
 
   @DataProvider(name = "empty")
   public Object[][] providesEmpty() {

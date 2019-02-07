@@ -89,7 +89,7 @@ public final class ReferenceTest {
     assertThat(cache.asMap().containsValue(value), is(false));
   }
 
-  /* ---------------- Cache -------------- */
+  /* --------------- Cache --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(keys = ReferenceType.STRONG, values = {ReferenceType.WEAK, ReferenceType.SOFT},
@@ -374,7 +374,7 @@ public final class ReferenceTest {
     assertThat(cache.asMap().isEmpty(), is(false));
   }
 
-  /* ---------------- LoadingCache -------------- */
+  /* --------------- LoadingCache --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
@@ -491,7 +491,7 @@ public final class ReferenceTest {
     assertThat(cache.asMap().isEmpty(), is(false));
   }
 
-  /* ---------------- AsyncLoadingCache -------------- */
+  /* --------------- AsyncLoadingCache --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
@@ -561,7 +561,7 @@ public final class ReferenceTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
   }
 
-  /* ---------------- Map -------------- */
+  /* --------------- Map --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
@@ -976,7 +976,7 @@ public final class ReferenceTest {
     assertThat(Iterators.size(map.entrySet().iterator()), is(0));
   }
 
-  /* ---------------- Weights -------------- */
+  /* --------------- Weights --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, requiresWeakOrSoft = true,

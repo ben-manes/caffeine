@@ -64,7 +64,7 @@ import com.google.common.collect.ImmutableMap;
 @Test(dataProviderClass = CacheProvider.class)
 public final class ExpireAfterAccessTest {
 
-  /* ---------------- Cache -------------- */
+  /* --------------- Cache --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
@@ -123,7 +123,7 @@ public final class ExpireAfterAccessTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
-  /* ---------------- LoadingCache -------------- */
+  /* --------------- LoadingCache --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE }, expiryTime = Expire.ONE_MINUTE,
@@ -175,7 +175,7 @@ public final class ExpireAfterAccessTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
-  /* ---------------- AsyncLoadingCache -------------- */
+  /* --------------- AsyncLoadingCache --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
@@ -194,7 +194,7 @@ public final class ExpireAfterAccessTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
   }
 
-  /* ---------------- Map -------------- */
+  /* --------------- Map --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(mustExpireWithAnyOf = { AFTER_ACCESS, VARIABLE },
@@ -213,7 +213,7 @@ public final class ExpireAfterAccessTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
-  /* ---------------- Policy -------------- */
+  /* --------------- Policy --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
@@ -278,7 +278,7 @@ public final class ExpireAfterAccessTest {
     Assert.assertFalse(expireAfterAccess.ageOf(context.firstKey()).isPresent());
   }
 
-  /* ---------------- Policy: oldest -------------- */
+  /* --------------- Policy: oldest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
@@ -329,7 +329,7 @@ public final class ExpireAfterAccessTest {
     assertThat(oldest, is(equalTo(context.original())));
   }
 
-  /* ---------------- Policy: youngest -------------- */
+  /* --------------- Policy: youngest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)

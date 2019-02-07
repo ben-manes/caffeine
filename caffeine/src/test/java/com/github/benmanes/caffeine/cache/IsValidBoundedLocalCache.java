@@ -156,15 +156,15 @@ public final class IsValidBoundedLocalCache<K, V>
   private void checkEvictionDeque(BoundedLocalCache<K, V> cache) {
     if (cache.evicts()) {
       ImmutableList<LinkedDeque<Node<K, V>>> deques = ImmutableList.of(
-          cache.accessOrderEdenDeque(),
+          cache.accessOrderWindowDeque(),
           cache.accessOrderProbationDeque(),
           cache.accessOrderProtectedDeque());
       checkLinks(cache, deques, desc);
-      checkDeque(cache.accessOrderEdenDeque(), desc);
+      checkDeque(cache.accessOrderWindowDeque(), desc);
       checkDeque(cache.accessOrderProbationDeque(), desc);
     } else if (cache.expiresAfterAccess()) {
-      checkLinks(cache, ImmutableList.of(cache.accessOrderEdenDeque()), desc);
-      checkDeque(cache.accessOrderEdenDeque(), desc);
+      checkLinks(cache, ImmutableList.of(cache.accessOrderWindowDeque()), desc);
+      checkDeque(cache.accessOrderWindowDeque(), desc);
     }
 
     if (cache.expiresAfterWrite()) {
@@ -195,13 +195,14 @@ public final class IsValidBoundedLocalCache<K, V>
         Sets.difference(seen, ImmutableSet.copyOf(cache.data.values())));
     desc.expectThat(errorMsg, cache.size(), is(seen.size()));
 
-    final long weighted = weightedSize;
     if (cache.evicts()) {
+      long weighted = weightedSize;
+      long expectedWeightedSize = Math.max(0, cache.weightedSize());
       Supplier<String> error = () -> String.format(
           "WeightedSize != link weights [%d vs %d] {%d vs %d}",
-          cache.adjustedWeightedSize(), weighted, seen.size(), cache.size());
+          expectedWeightedSize, weighted, seen.size(), cache.size());
       desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
-      desc.expectThat(error, cache.adjustedWeightedSize(), is(weightedSize));
+      desc.expectThat(error, expectedWeightedSize, is(weightedSize));
     }
   }
 

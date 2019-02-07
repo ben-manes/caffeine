@@ -34,7 +34,6 @@ public abstract class CountMin4 implements Frequency {
   static final long RESET_MASK = 0x7777777777777777L;
 
   protected final boolean conservative;
-  protected final int randomSeed;
 
   protected int tableMask;
   protected long[] table;
@@ -47,8 +46,6 @@ public abstract class CountMin4 implements Frequency {
   protected CountMin4(Config config) {
     BasicSettings settings = new BasicSettings(config);
     conservative = settings.tinyLfu().conservative();
-    checkArgument(settings.randomSeed() != 0);
-    randomSeed = settings.randomSeed();
 
     double countersMultiplier = settings.tinyLfu().countMin4().countersMultiplier();
     long counters = (long) (countersMultiplier * settings.maximumSize());
@@ -197,7 +194,7 @@ public abstract class CountMin4 implements Frequency {
    */
   int spread(int x) {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
-    x = ((x >>> 16) ^ x) * randomSeed;
+    x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;
   }
 

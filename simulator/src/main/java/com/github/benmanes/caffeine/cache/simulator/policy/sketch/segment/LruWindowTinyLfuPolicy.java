@@ -33,7 +33,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * The Window TinyLfu algorithm where the eden and main spaces implement LRU. This simpler version
+ * The Window TinyLfu algorithm where the window and main spaces implement LRU. This simpler version
  * comes at the cost of not capturing recency as effectively as Segmented LRU does.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -42,12 +42,12 @@ public final class LruWindowTinyLfuPolicy implements Policy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final Admittor admittor;
-  private final Node headEden;
+  private final Node headWindow;
   private final Node headMain;
-  private final int maxEden;
+  private final int maxWindow;
   private final int maxMain;
 
-  private int sizeEden;
+  private int sizeWindow;
   private int sizeMain;
 
   public LruWindowTinyLfuPolicy(double percentMain, LruWindowTinyLfuSettings settings) {
@@ -56,9 +56,9 @@ public final class LruWindowTinyLfuPolicy implements Policy {
 
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.maxMain = (int) (settings.maximumSize() * percentMain);
-    this.maxEden = settings.maximumSize() - maxMain;
+    this.maxWindow = settings.maximumSize() - maxMain;
     this.data = new Long2ObjectOpenHashMap<>();
-    this.headEden = new Node();
+    this.headWindow = new Node();
     this.headMain = new Node();
   }
 
@@ -82,15 +82,15 @@ public final class LruWindowTinyLfuPolicy implements Policy {
     admittor.record(key);
 
     if (node == null) {
-      node = new Node(key, Status.EDEN);
-      node.appendToTail(headEden);
+      node = new Node(key, Status.WINDOW);
+      node.appendToTail(headWindow);
       data.put(key, node);
-      sizeEden++;
+      sizeWindow++;
       evict();
 
       policyStats.recordMiss();
-    } else if (node.status == Status.EDEN) {
-      node.moveToTail(headEden);
+    } else if (node.status == Status.WINDOW) {
+      node.moveToTail(headWindow);
       policyStats.recordHit();
     } else if (node.status == Status.MAIN) {
       node.moveToTail(headMain);
@@ -102,13 +102,13 @@ public final class LruWindowTinyLfuPolicy implements Policy {
 
   /** Evicts if the map exceeds the maximum capacity. */
   private void evict() {
-    if (sizeEden <= maxEden) {
+    if (sizeWindow <= maxWindow) {
       return;
     }
 
-    Node candidate = headEden.next;
+    Node candidate = headWindow.next;
     candidate.remove();
-    sizeEden--;
+    sizeWindow--;
 
     candidate.appendToTail(headMain);
     candidate.status = Status.MAIN;
@@ -127,13 +127,13 @@ public final class LruWindowTinyLfuPolicy implements Policy {
 
   @Override
   public void finished() {
-    checkState(data.values().stream().filter(n -> n.status == Status.EDEN).count() == sizeEden);
-    checkState(sizeEden + sizeMain == data.size());
-    checkState(data.size() <= maxEden + maxMain);
+    checkState(data.values().stream().filter(n -> n.status == Status.WINDOW).count() == sizeWindow);
+    checkState(sizeWindow + sizeMain == data.size());
+    checkState(data.size() <= maxWindow + maxMain);
   }
 
   enum Status {
-    EDEN, MAIN
+    WINDOW, MAIN
   }
 
   /** A node on the double-linked list. */

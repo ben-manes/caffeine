@@ -75,7 +75,7 @@ import com.google.common.collect.Maps;
 @Test(dataProviderClass = CacheProvider.class)
 public final class CacheTest {
 
-  /* ---------------- size -------------- */
+  /* --------------- size --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
@@ -84,7 +84,7 @@ public final class CacheTest {
     assertThat(cache.estimatedSize(), is(context.initialSize()));
   }
 
-  /* ---------------- getIfPresent -------------- */
+  /* --------------- getIfPresent --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -114,7 +114,7 @@ public final class CacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- get -------------- */
+  /* --------------- get --------------- */
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
@@ -185,7 +185,7 @@ public final class CacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- getAllPresent -------------- */
+  /* --------------- getAllPresent --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -312,7 +312,7 @@ public final class CacheTest {
     assertThat(result, is(equalTo(ImmutableMap.of(key, value))));
   }
 
-  /* ---------------- put -------------- */
+  /* --------------- put --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -402,7 +402,7 @@ public final class CacheTest {
     }
   }
 
-  /* ---------------- put all -------------- */
+  /* --------------- put all --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -498,7 +498,7 @@ public final class CacheTest {
     }
   }
 
-  /* ---------------- invalidate -------------- */
+  /* --------------- invalidate --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
@@ -542,7 +542,7 @@ public final class CacheTest {
     }
   }
 
-  /* ---------------- invalidateAll -------------- */
+  /* --------------- invalidateAll --------------- */
 
   @CacheSpec
   @Test(dataProvider = "caches")
@@ -623,7 +623,7 @@ public final class CacheTest {
     }
   }
 
-  /* ---------------- cleanup -------------- */
+  /* --------------- cleanup --------------- */
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
@@ -632,7 +632,7 @@ public final class CacheTest {
     cache.cleanUp();
   }
 
-  /* ---------------- stats -------------- */
+  /* --------------- stats --------------- */
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
@@ -645,7 +645,7 @@ public final class CacheTest {
     assertThat(cache.policy().isRecordingStats(), is(context.isRecordingStats()));
   }
 
-  /* ---------------- serialize -------------- */
+  /* --------------- serialize --------------- */
 
   @CheckNoStats
   @Test(dataProvider = "caches")

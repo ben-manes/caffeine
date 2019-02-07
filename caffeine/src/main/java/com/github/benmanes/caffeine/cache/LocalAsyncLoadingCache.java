@@ -223,7 +223,7 @@ abstract class LocalAsyncLoadingCache<K, V>
     }
   }
 
-  /* ---------------- Synchronous views -------------- */
+  /* --------------- Synchronous views --------------- */
 
   static final class LoadingCacheView<K, V>
       extends AbstractCacheView<K, V> implements LoadingCache<K, V> {

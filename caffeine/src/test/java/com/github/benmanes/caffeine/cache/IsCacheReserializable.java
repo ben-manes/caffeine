@@ -105,7 +105,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     checkIfBounded(original, copy, desc);
   }
 
-  /* ---------------- Unbounded -------------- */
+  /* --------------- Unbounded --------------- */
 
   @SuppressWarnings("unchecked")
   private static <K, V> void checkIfUnbounded(
@@ -166,7 +166,7 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  /* ---------------- Bounded -------------- */
+  /* --------------- Bounded --------------- */
 
   @SuppressWarnings("unchecked")
   private static <K, V> void checkIfBounded(
@@ -218,7 +218,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
         copy.nodeFactory, instanceOf(original.nodeFactory.getClass()));
     if (original.evicts()) {
       desc.expectThat("same maximumWeight", copy.maximum(), is(original.maximum()));
-      desc.expectThat("same maximumEdenWeight", copy.edenMaximum(), is(original.edenMaximum()));
+      desc.expectThat("same maximumwindowWeight",
+          copy.windowMaximum(), is(original.windowMaximum()));
     }
 
     if (original.expiresVariable()) {

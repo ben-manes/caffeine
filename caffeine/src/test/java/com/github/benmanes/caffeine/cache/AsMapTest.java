@@ -89,7 +89,7 @@ import com.google.common.testing.SerializableTester;
 public final class AsMapTest {
   // Statistics are recorded only for computing methods for loadSuccess and loadFailure
 
-  /* ---------------- is empty / size / clear -------------- */
+  /* --------------- is empty / size / clear --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
@@ -135,7 +135,7 @@ public final class AsMapTest {
     }
   }
 
-  /* ---------------- contains -------------- */
+  /* --------------- contains --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -185,7 +185,7 @@ public final class AsMapTest {
     assertThat(map.containsValue(context.absentValue()), is(false));
   }
 
-  /* ---------------- get -------------- */
+  /* --------------- get --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -211,7 +211,7 @@ public final class AsMapTest {
     }
   }
 
-  /* ---------------- getOrDefault -------------- */
+  /* --------------- getOrDefault --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -238,7 +238,7 @@ public final class AsMapTest {
     }
   }
 
-  /* ---------------- forEach -------------- */
+  /* --------------- forEach --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -271,7 +271,7 @@ public final class AsMapTest {
     });
   }
 
-  /* ---------------- put -------------- */
+  /* --------------- put --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -371,7 +371,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
-  /* ---------------- putAll -------------- */
+  /* --------------- putAll --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -470,7 +470,7 @@ public final class AsMapTest {
     });
   }
 
-  /* ---------------- putIfAbsent -------------- */
+  /* --------------- putIfAbsent --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -531,7 +531,7 @@ public final class AsMapTest {
     });
   }
 
-  /* ---------------- remove -------------- */
+  /* --------------- remove --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -578,7 +578,7 @@ public final class AsMapTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPLICIT));
   }
 
-  /* ---------------- remove conditionally -------------- */
+  /* --------------- remove conditionally --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -650,7 +650,7 @@ public final class AsMapTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPLICIT));
   }
 
-  /* ---------------- replace -------------- */
+  /* --------------- replace --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -728,7 +728,7 @@ public final class AsMapTest {
     verifyWriter(context, (verifier, writer) -> verifier.writes(count));
   }
 
-  /* ---------------- replace conditionally -------------- */
+  /* --------------- replace conditionally --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -852,7 +852,7 @@ public final class AsMapTest {
     verifyWriter(context, (verifier, writer) -> verifier.writes(count));
   }
 
-  /* ---------------- replaceAll -------------- */
+  /* --------------- replaceAll --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -909,7 +909,7 @@ public final class AsMapTest {
     verifyWriter(context, (verifier, writer) -> verifier.writes(context.original().size()));
   }
 
-  /* ---------------- computeIfAbsent -------------- */
+  /* --------------- computeIfAbsent --------------- */
 
   @CheckNoStats @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1000,7 +1000,7 @@ public final class AsMapTest {
     assertThat(map.size(), is(1 + context.original().size()));
   }
 
-  /* ---------------- computeIfPresent -------------- */
+  /* --------------- computeIfPresent --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1113,7 +1113,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
-  /* ---------------- compute -------------- */
+  /* --------------- compute --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1251,7 +1251,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
-  /* ---------------- merge -------------- */
+  /* --------------- merge --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1393,7 +1393,7 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
-  /* ---------------- equals / hashCode -------------- */
+  /* --------------- equals / hashCode --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
@@ -1459,7 +1459,7 @@ public final class AsMapTest {
     assertThat(map.hashCode(), is(not(equalTo(empty.hashCode()))));
   }
 
-  /* ---------------- toString -------------- */
+  /* --------------- toString --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
@@ -1473,7 +1473,7 @@ public final class AsMapTest {
     }
   }
 
-  /* ---------------- Key Set -------------- */
+  /* --------------- Key Set --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1663,7 +1663,7 @@ public final class AsMapTest {
     assertThat((int) spliterator.estimateSize(), is(map.size()));
   }
 
-  /* ---------------- Values -------------- */
+  /* --------------- Values --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -1878,7 +1878,7 @@ public final class AsMapTest {
     assertThat((int) spliterator.estimateSize(), is(map.size()));
   }
 
-  /* ---------------- Entry Set -------------- */
+  /* --------------- Entry Set --------------- */
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -2108,7 +2108,7 @@ public final class AsMapTest {
     assertThat((int) spliterator.estimateSize(), is(map.size()));
   }
 
-  /* ---------------- WriteThroughEntry -------------- */
+  /* --------------- WriteThroughEntry --------------- */
 
   @CheckNoStats
   @Test(dataProvider = "caches")

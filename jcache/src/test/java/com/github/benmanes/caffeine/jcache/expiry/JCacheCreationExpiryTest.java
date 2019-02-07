@@ -60,7 +60,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     return configuration;
   }
 
-  /* ---------------- get (loading) -------------- */
+  /* --------------- get (loading) --------------- */
 
   @Test
   public void get_loading_absent() {
@@ -89,7 +89,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
-  /* ---------------- getAndPut -------------- */
+  /* --------------- getAndPut --------------- */
 
   @Test
   public void getAndPut_absent() {
@@ -119,7 +119,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
-  /* ---------------- put -------------- */
+  /* --------------- put --------------- */
 
   @Test
   public void put_absent() {
@@ -149,7 +149,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
-  /* ---------------- putAll -------------- */
+  /* --------------- putAll --------------- */
 
   @Test
   public void putAll_absent() {
@@ -185,7 +185,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     }
   }
 
-  /* ---------------- putIfAbsent -------------- */
+  /* --------------- putIfAbsent --------------- */
 
   @Test
   public void putIfAbsent_absent() {
@@ -215,7 +215,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
-  /* ---------------- invoke -------------- */
+  /* --------------- invoke --------------- */
 
   @Test
   public void invoke_absent() {
@@ -256,7 +256,7 @@ public final class JCacheCreationExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(START_TIME_MS + EXPIRY_DURATION));
   }
 
-  /* ---------------- invokeAll -------------- */
+  /* --------------- invokeAll --------------- */
 
   @Test
   public void invokeAll_absent() {

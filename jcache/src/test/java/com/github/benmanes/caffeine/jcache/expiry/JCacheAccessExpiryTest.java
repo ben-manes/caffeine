@@ -78,7 +78,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     return new Object[] { true, false };
   }
 
-  /* ---------------- get -------------- */
+  /* --------------- get --------------- */
 
   @Test
   public void get_absent() {
@@ -100,7 +100,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
-  /* ---------------- get (loading) -------------- */
+  /* --------------- get (loading) --------------- */
 
   @Test
   public void get_loading_absent() {
@@ -124,7 +124,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
-  /* ---------------- getAllPresent -------------- */
+  /* --------------- getAllPresent --------------- */
 
   @Test
   public void getAll_absent() {
@@ -155,7 +155,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     }
   }
 
-  /* ---------------- invoke -------------- */
+  /* --------------- invoke --------------- */
 
   @Test
   public void invoke_absent() {
@@ -178,7 +178,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
-  /* ---------------- invokeAll -------------- */
+  /* --------------- invokeAll --------------- */
 
   @Test
   public void invokeAll_absent() {
@@ -206,7 +206,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     }
   }
 
-  /* ---------------- conditional remove -------------- */
+  /* --------------- conditional remove --------------- */
 
   @Test
   public void removeConditionally() {
@@ -216,7 +216,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     assertThat(expirable.getExpireTimeMS(), is(currentTimeMillis() + EXPIRY_DURATION));
   }
 
-  /* ---------------- conditional replace -------------- */
+  /* --------------- conditional replace --------------- */
 
   @Test
   public void replaceConditionally() {

@@ -43,7 +43,7 @@ import net.jodah.expiringmap.ExpirationPolicy;
  */
 public enum CacheType {
 
-  /* ---------------- Unbounded -------------- */
+  /* --------------- Unbounded --------------- */
 
   ConcurrentHashMapV7 { // see OpenJDK/7u40-b43
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {
@@ -64,7 +64,7 @@ public enum CacheType {
     }
   },
 
-  /* ---------------- Bounded -------------- */
+  /* --------------- Bounded --------------- */
 
   Cache2k {
     @Override public <K, V> BasicCache<K, V> create(int maximumSize) {

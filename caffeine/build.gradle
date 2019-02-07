@@ -33,7 +33,7 @@ plugins.withType(EclipsePlugin) {
 
 dependencies {
   compile libraries.checkerAnnotations
-  compile libraries.errorProneAnnotations
+  compile libraries.errorproneAnnotations
 
   testCompile libraries.ycsb
   testCompile libraries.guava

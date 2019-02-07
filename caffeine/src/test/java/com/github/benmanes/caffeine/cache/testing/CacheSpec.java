@@ -66,7 +66,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
 
-  /* ---------------- Compute -------------- */
+  /* --------------- Compute --------------- */
 
   /**
    * Indicates whether the test supports a cache allowing for asynchronous computations. This is
@@ -82,7 +82,7 @@ public @interface CacheSpec {
     SYNC,
   }
 
-  /* ---------------- Implementation -------------- */
+  /* --------------- Implementation --------------- */
 
   /** The implementation, each resulting in a new combination. */
   Implementation[] implementation() default {
@@ -95,7 +95,7 @@ public @interface CacheSpec {
     Guava
   }
 
-  /* ---------------- Initial capacity -------------- */
+  /* --------------- Initial capacity --------------- */
 
   InitialCapacity[] initialCapacity() default {
     InitialCapacity.DEFAULT
@@ -125,7 +125,7 @@ public @interface CacheSpec {
     }
   }
 
-  /* ---------------- Statistics -------------- */
+  /* --------------- Statistics --------------- */
 
   Stats[] stats() default {
     Stats.ENABLED,
@@ -137,7 +137,7 @@ public @interface CacheSpec {
     DISABLED
   }
 
-  /* ---------------- Maximum size -------------- */
+  /* --------------- Maximum size --------------- */
 
   /** The maximum size, each resulting in a new combination. */
   Maximum[] maximumSize() default {
@@ -172,7 +172,7 @@ public @interface CacheSpec {
     }
   }
 
-  /* ---------------- Weigher -------------- */
+  /* --------------- Weigher --------------- */
 
   /** The weigher, each resulting in a new combination. */
   CacheWeigher[] weigher() default {
@@ -233,7 +233,7 @@ public @interface CacheSpec {
     }
   }
 
-  /* ---------------- Expiration -------------- */
+  /* --------------- Expiration --------------- */
 
   /** Indicates that the combination must have any of the expiration settings. */
   Expiration[] mustExpireWithAnyOf() default {};
@@ -360,7 +360,7 @@ public @interface CacheSpec {
     }
   }
 
-  /* ---------------- Reference-based -------------- */
+  /* --------------- Reference-based --------------- */
 
   /** Indicates that the combination must have a weak or soft reference collection setting. */
   boolean requiresWeakOrSoft() default false;
@@ -393,7 +393,7 @@ public @interface CacheSpec {
     SOFT
   }
 
-  /* ---------------- Removal -------------- */
+  /* --------------- Removal --------------- */
 
   /** The removal listeners, each resulting in a new combination. */
   Listener[] removalListener() default {
@@ -424,7 +424,7 @@ public @interface CacheSpec {
     public abstract <K, V> RemovalListener<K, V> create();
   }
 
-  /* ---------------- CacheLoader -------------- */
+  /* --------------- CacheLoader --------------- */
 
   // FIXME: A hack to allow the NEGATIVE loader's return value to be retained on refresh
   static final ThreadLocal<Interner<Integer>> interner =
@@ -567,7 +567,7 @@ public @interface CacheSpec {
     }
   }
 
-  /* ---------------- CacheWriter -------------- */
+  /* --------------- CacheWriter --------------- */
 
   /** Ignored if weak keys are configured. */
   Writer[] writer() default {
@@ -600,7 +600,7 @@ public @interface CacheSpec {
     public abstract <K, V> CacheWriter<K, V> create();
   }
 
-  /* ---------------- Executor -------------- */
+  /* --------------- Executor --------------- */
 
   /** The executors retrieved from a supplier, each resulting in a new combination. */
   CacheExecutor[] executor() default {
@@ -650,7 +650,7 @@ public @interface CacheSpec {
     public abstract Executor create();
   }
 
-  /* ---------------- Populated -------------- */
+  /* --------------- Populated --------------- */
 
   /**
    * The number of entries to populate the cache with. The keys and values are integers starting

@@ -34,7 +34,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * The Window TinyLfu algorithm where the eden space implements LRU and the main space implements
+ * The Window TinyLfu algorithm where the window space implements LRU and the main space implements
  * S4LRU.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -46,12 +46,12 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   private final Node[] headMainQ;
   private final int maximumSize;
   private final int[] sizeMainQ;
-  private final Node headEden;
+  private final Node headWindow;
+  private final int maxWindow;
   private final int maxMain;
-  private final int maxEden;
   private final int levels;
 
-  private int sizeEden;
+  private int sizeWindow;
 
   public S4WindowTinyLfuPolicy(double percentMain, S4WindowTinyLfuSettings settings) {
     String name = String.format("sketch.S4WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
@@ -60,9 +60,9 @@ public final class S4WindowTinyLfuPolicy implements Policy {
 
     this.maximumSize = settings.maximumSize();
     this.maxMain = (int) (maximumSize * percentMain);
-    this.maxEden = maximumSize - maxMain;
+    this.maxWindow = maximumSize - maxMain;
     this.data = new Long2ObjectOpenHashMap<>();
-    this.headEden = Node.sentinel(-1);
+    this.headWindow = Node.sentinel(-1);
     this.levels = settings.levels();
     this.sizeMainQ = new int[levels];
     this.headMainQ = new Node[levels];
@@ -90,8 +90,8 @@ public final class S4WindowTinyLfuPolicy implements Policy {
     if (node == null) {
       onMiss(key);
       policyStats.recordMiss();
-    } else if (node.status == Status.EDEN) {
-      onEdenHit(node);
+    } else if (node.status == Status.WINDOW) {
+      onWindowHit(node);
       policyStats.recordHit();
     } else if (node.status == Status.MAIN) {
       onMainHit(node);
@@ -103,16 +103,16 @@ public final class S4WindowTinyLfuPolicy implements Policy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    Node node = new Node(key, Status.EDEN);
-    node.appendToTail(headEden);
+    Node node = new Node(key, Status.WINDOW);
+    node.appendToTail(headWindow);
     data.put(key, node);
-    sizeEden++;
+    sizeWindow++;
     evict();
   }
 
   /** Moves the entry to the MRU position in the admission window. */
-  private void onEdenHit(Node node) {
-    node.moveToTail(headEden);
+  private void onWindowHit(Node node) {
+    node.moveToTail(headWindow);
   }
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
@@ -147,13 +147,13 @@ public final class S4WindowTinyLfuPolicy implements Policy {
 
   /** Evicts if the map exceeds the maximum capacity. */
   private void evict() {
-    if (sizeEden <= maxEden) {
+    if (sizeWindow <= maxWindow) {
       return;
     }
 
-    Node candidate = headEden.next;
+    Node candidate = headWindow.next;
     candidate.remove();
-    sizeEden--;
+    sizeWindow--;
 
     candidate.appendToTail(headMainQ[0]);
     candidate.status = Status.MAIN;
@@ -180,12 +180,12 @@ public final class S4WindowTinyLfuPolicy implements Policy {
           .count();
       checkState(count == sizeMainQ[i]);
     }
-    checkState(data.values().stream().filter(n -> n.status == Status.EDEN).count() == sizeEden);
-    checkState(data.size() <= maxEden + maxMain);
+    checkState(data.values().stream().filter(n -> n.status == Status.WINDOW).count() == sizeWindow);
+    checkState(data.size() <= maxWindow + maxMain);
   }
 
   enum Status {
-    EDEN, MAIN
+    WINDOW, MAIN
   }
 
   /** A node on the double-linked list. */

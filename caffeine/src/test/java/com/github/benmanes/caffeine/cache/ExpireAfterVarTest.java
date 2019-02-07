@@ -103,7 +103,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
-  /* ---------------- Create -------------- */
+  /* --------------- Create --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL,
@@ -220,7 +220,7 @@ public final class ExpireAfterVarTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
   }
 
-  /* ---------------- Exceptional -------------- */
+  /* --------------- Exceptional --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.FULL, expiry = CacheExpiry.MOCKITO)
@@ -338,7 +338,7 @@ public final class ExpireAfterVarTest {
     private static final long serialVersionUID = 1L;
   }
 
-  /* ---------------- Policy -------------- */
+  /* --------------- Policy --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
@@ -422,7 +422,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache.estimatedSize(), is(1L));
   }
 
-  /* ---------------- Policy: putIfAbsent -------------- */
+  /* --------------- Policy: putIfAbsent --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -503,7 +503,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache.estimatedSize(), is(0L));
   }
 
-  /* ---------------- Policy: put -------------- */
+  /* --------------- Policy: put --------------- */
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
@@ -584,7 +584,7 @@ public final class ExpireAfterVarTest {
     assertThat(cache.estimatedSize(), is(1L));
   }
 
-  /* ---------------- Policy: oldest -------------- */
+  /* --------------- Policy: oldest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
@@ -635,7 +635,7 @@ public final class ExpireAfterVarTest {
     assertThat(oldest, is(equalTo(context.original())));
   }
 
-  /* ---------------- Policy: youngest -------------- */
+  /* --------------- Policy: youngest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, expiry = CacheExpiry.ACCESS)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)

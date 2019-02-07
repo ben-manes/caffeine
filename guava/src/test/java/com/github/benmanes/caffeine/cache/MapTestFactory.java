@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
 
-import com.google.common.collect.testing.MapTestSuiteBuilder;
+import com.google.common.collect.testing.ConcurrentMapTestSuiteBuilder;
 import com.google.common.collect.testing.TestStringMapGenerator;
 import com.google.common.collect.testing.features.CollectionFeature;
 import com.google.common.collect.testing.features.CollectionSize;
@@ -44,7 +44,7 @@ final class MapTestFactory {
    * @return a suite of tests
    */
   protected static Test suite(String name, Supplier<Map<String, String>> supplier) {
-    return MapTestSuiteBuilder
+    return ConcurrentMapTestSuiteBuilder
         .using(new TestStringMapGenerator() {
           @Override protected Map<String, String> create(Entry<String, String>[] entries) {
             Map<String, String> map = supplier.get();

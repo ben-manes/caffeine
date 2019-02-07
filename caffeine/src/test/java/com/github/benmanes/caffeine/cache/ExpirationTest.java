@@ -91,7 +91,7 @@ public final class ExpirationTest {
     }
   }
 
-  /* ---------------- Cache -------------- */
+  /* --------------- Cache --------------- */
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
@@ -424,7 +424,7 @@ public final class ExpirationTest {
     assertThat(cache.asMap(), equalTo(context.original()));
   }
 
-  /* ---------------- LoadingCache -------------- */
+  /* --------------- LoadingCache --------------- */
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
@@ -498,7 +498,7 @@ public final class ExpirationTest {
     assertThat(cache.asMap(), equalTo(context.original()));
   }
 
-  /* ---------------- AsyncLoadingCache -------------- */
+  /* --------------- AsyncLoadingCache --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, loader = Loader.IDENTITY,
@@ -649,7 +649,7 @@ public final class ExpirationTest {
     verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
-  /* ---------------- Map -------------- */
+  /* --------------- Map --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
@@ -1203,7 +1203,7 @@ public final class ExpirationTest {
     assertThat(Iterators.size(map.entrySet().iterator()), is(0));
   }
 
-  /* ---------------- Weights -------------- */
+  /* --------------- Weights --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,

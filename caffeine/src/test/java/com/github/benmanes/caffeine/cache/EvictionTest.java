@@ -77,7 +77,7 @@ import com.google.common.collect.Maps;
 @Test(dataProviderClass = CacheProvider.class)
 public final class EvictionTest {
 
-  /* ---------------- RemovalListener -------------- */
+  /* --------------- RemovalListener --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.FULL, maximumSize = Maximum.FULL,
@@ -97,7 +97,7 @@ public final class EvictionTest {
     assertThat(removalListener.rejected, is(1));
   }
 
-  /* ---------------- Evict (size/weight) -------------- */
+  /* --------------- Evict (size/weight) --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
@@ -276,7 +276,7 @@ public final class EvictionTest {
     }
   }
 
-  /* ---------------- Weighted -------------- */
+  /* --------------- Weighted --------------- */
 
   @CheckNoWriter
   @CacheSpec(maximumSize = Maximum.FULL,
@@ -485,7 +485,7 @@ public final class EvictionTest {
     assertThat(eviction.weightedSize().getAsLong(), is(0L));
   }
 
-  /* ---------------- Policy: IsWeighted -------------- */
+  /* --------------- Policy: IsWeighted --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
@@ -494,7 +494,7 @@ public final class EvictionTest {
     assertThat(eviction.isWeighted(), is(context.isWeighted()));
   }
 
-  /* ---------------- Policy: WeightOf -------------- */
+  /* --------------- Policy: WeightOf --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
@@ -516,7 +516,7 @@ public final class EvictionTest {
     assertThat(eviction.weightOf(context.absentKey()), is(OptionalInt.empty()));
   }
 
-  /* ---------------- Policy: WeightedSize -------------- */
+  /* --------------- Policy: WeightedSize --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
@@ -531,7 +531,7 @@ public final class EvictionTest {
     assertThat(eviction.weightedSize().getAsLong(), is(10 * cache.estimatedSize()));
   }
 
-  /* ---------------- Policy: MaximumSize -------------- */
+  /* --------------- Policy: MaximumSize --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL,
@@ -600,7 +600,7 @@ public final class EvictionTest {
     assertThat(eviction.getMaximum(), is(Long.MAX_VALUE - Integer.MAX_VALUE)); // impl detail
   }
 
-  /* ---------------- Policy: Coldest -------------- */
+  /* --------------- Policy: Coldest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
@@ -654,7 +654,7 @@ public final class EvictionTest {
     assertThat(coldest, is(equalTo(context.original())));
   }
 
-  /* ---------------- Policy: Hottest -------------- */
+  /* --------------- Policy: Hottest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)

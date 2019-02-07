@@ -49,14 +49,14 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
   private final TinyLfu admittor;
   private final int maximumSize;
 
-  private final Node headEden;
+  private final Node headWindow;
   private final Node headProbation;
   private final Node headProtected;
 
-  private int maxEden;
+  private int maxWindow;
   private int maxProtected;
 
-  private int sizeEden;
+  private int sizeWindow;
   private int sizeProtected;
 
   private int pivot;
@@ -82,14 +82,14 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
-    this.maxEden = Math.min(settings.maximumWindowSize(), settings.maximumSize() - maxMain);
+    this.maxWindow = Math.min(settings.maximumWindowSize(), settings.maximumSize() - maxMain);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headProtected = new Node();
     this.headProbation = new Node();
-    this.headEden = new Node();
+    this.headWindow = new Node();
 
-    pivot = (int) (settings.percentPivot() * maxEden);
+    pivot = (int) (settings.percentPivot() * maxWindow);
     maxPivot = Math.min(settings.maximumWindowSize(), maxProtected);
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
     feedback = settings.membershipFilter().create(sampleSize,
@@ -132,8 +132,8 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
     if (node == null) {
       onMiss(key);
       policyStats.recordMiss();
-    } else if (node.status == Status.EDEN) {
-      onEdenHit(node);
+    } else if (node.status == Status.WINDOW) {
+      onWindowHit(node);
       policyStats.recordHit();
     } else if (node.status == Status.PROBATION) {
       onProbationHit(node);
@@ -148,16 +148,16 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    Node node = new Node(key, Status.EDEN);
-    node.appendToTail(headEden);
+    Node node = new Node(key, Status.WINDOW);
+    node.appendToTail(headWindow);
     data.put(key, node);
-    sizeEden++;
+    sizeWindow++;
     evict();
   }
 
   /** Moves the entry to the MRU position in the admission window. */
-  private void onEdenHit(Node node) {
-    node.moveToTail(headEden);
+  private void onWindowHit(Node node) {
+    node.moveToTail(headWindow);
   }
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
@@ -191,12 +191,12 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
    * then the admission candidate and probation's victim are evaluated and one is evicted.
    */
   private void evict() {
-    if (sizeEden <= maxEden) {
+    if (sizeWindow <= maxWindow) {
       return;
     }
 
-    Node candidate = headEden.next;
-    sizeEden--;
+    Node candidate = headWindow.next;
+    sizeWindow--;
 
     candidate.remove();
     candidate.status = Status.PROBATION;
@@ -233,34 +233,34 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
       if (pivot < maxPivot) {
         pivot++;
 
-        maxEden++;
-        sizeEden++;
+        maxWindow++;
+        sizeWindow++;
         maxProtected--;
 
         demoteProtected();
         candidate.remove();
-        candidate.status = Status.EDEN;
-        candidate.appendToTail(headEden);
+        candidate.status = Status.WINDOW;
+        candidate.appendToTail(headWindow);
 
         int increments = Math.min(pivotIncrement - 1, maxPivot - pivot);
         for (int i = 0; i < increments; i++) {
           if (pivot < maxPivot) {
             pivot++;
 
-            maxEden++;
-            sizeEden++;
+            maxWindow++;
+            sizeWindow++;
             maxProtected--;
 
             demoteProtected();
             candidate = headProbation.next.next;
             candidate.remove();
-            candidate.status = Status.EDEN;
-            candidate.appendToTail(headEden);
+            candidate.status = Status.WINDOW;
+            candidate.appendToTail(headWindow);
           }
         }
 
         if (trace) {
-          System.out.println("↑" + maxEden);
+          System.out.println("↑" + maxWindow);
         }
       }
       return true;
@@ -273,12 +273,12 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
         if (pivot > 0) {
           pivot--;
 
-          maxEden--;
-          sizeEden--;
+          maxWindow--;
+          sizeWindow--;
           maxProtected++;
           decremented = true;
 
-          candidate = headEden.next;
+          candidate = headWindow.next;
           candidate.remove();
           candidate.status = Status.PROBATION;
           candidate.appendToHead(headProbation);
@@ -286,7 +286,7 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
       }
 
       if (trace && decremented) {
-        System.out.println("↓" + maxEden);
+        System.out.println("↓" + maxWindow);
       }
     }
     return false;
@@ -294,8 +294,8 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
 
   void printSegmentSizes() {
     if (debug) {
-      System.out.printf("maxEden=%d, maxProtected=%d, percentEden=%.1f%n",
-          maxEden, maxProtected, (double) (100 * maxEden) / maximumSize);
+      System.out.printf("maxWindow=%d, maxProtected=%d, percentWindow=%.1f%n",
+          maxWindow, maxProtected, (double) (100 * maxWindow) / maximumSize);
     }
   }
 
@@ -303,19 +303,19 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
   public void finished() {
     printSegmentSizes();
 
-    long edenSize = data.values().stream().filter(n -> n.status == Status.EDEN).count();
+    long windowSize = data.values().stream().filter(n -> n.status == Status.WINDOW).count();
     long probationSize = data.values().stream().filter(n -> n.status == Status.PROBATION).count();
     long protectedSize = data.values().stream().filter(n -> n.status == Status.PROTECTED).count();
 
-    checkState(edenSize == sizeEden, "%s != %s", edenSize, sizeEden);
+    checkState(windowSize == sizeWindow, "%s != %s", windowSize, sizeWindow);
     checkState(protectedSize == sizeProtected);
-    checkState(probationSize == data.size() - edenSize - protectedSize);
+    checkState(probationSize == data.size() - windowSize - protectedSize);
 
     checkState(data.size() <= maximumSize, data.size());
   }
 
   enum Status {
-    EDEN, PROBATION, PROTECTED
+    WINDOW, PROBATION, PROTECTED
   }
 
   /** A node on the double-linked list. */

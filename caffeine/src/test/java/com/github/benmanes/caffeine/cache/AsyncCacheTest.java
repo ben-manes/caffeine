@@ -62,7 +62,7 @@ import com.github.benmanes.caffeine.testing.Awaits;
 @SuppressWarnings("FutureReturnValueIgnored")
 public final class AsyncCacheTest {
 
-  /* ---------------- getIfPresent -------------- */
+  /* --------------- getIfPresent --------------- */
 
   @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -94,7 +94,7 @@ public final class AsyncCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- getFunc -------------- */
+  /* --------------- getFunc --------------- */
 
   @CacheSpec
   @CheckNoWriter
@@ -244,7 +244,7 @@ public final class AsyncCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- getBiFunc -------------- */
+  /* --------------- getBiFunc --------------- */
 
   @CacheSpec
   @CheckNoWriter
@@ -372,7 +372,7 @@ public final class AsyncCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- put -------------- */
+  /* --------------- put --------------- */
 
   @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -475,7 +475,7 @@ public final class AsyncCacheTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
 
-  /* ---------------- serialize -------------- */
+  /* --------------- serialize --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(writer = Writer.EXCEPTIONAL)

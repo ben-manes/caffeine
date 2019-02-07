@@ -161,6 +161,7 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
   }
 
   @Override
+  @SuppressWarnings("PMD.AvoidReassigningLoopVariables")
   public void clear() {
     for (E e = first; e != null;) {
       E next = getNext(e);

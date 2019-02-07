@@ -84,7 +84,7 @@ public abstract class AbstractJCacheTest {
   /** The base configuration used by the test. */
   protected abstract CaffeineConfiguration<Integer, Integer> getConfiguration();
 
-  /* ---------------- Utility methods ------------- */
+  /* --------------- Utility methods ------------- */
 
   @Nullable
   protected static Expirable<Integer> getExpirable(

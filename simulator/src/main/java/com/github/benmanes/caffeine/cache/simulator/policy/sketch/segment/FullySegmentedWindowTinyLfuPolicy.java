@@ -34,7 +34,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * The Window TinyLfu algorithm where the eden and main spaces implement {@link SegmentedLruPolicy}.
+ * The Window TinyLfu algorithm where the window and main spaces implement
+ * {@link SegmentedLruPolicy}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -45,17 +46,17 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
   private final Admittor admittor;
   private final int maximumSize;
 
-  private final Node headEdenProbation;
-  private final Node headEdenProtected;
+  private final Node headWindowProbation;
+  private final Node headWindowProtected;
   private final Node headMainProbation;
   private final Node headMainProtected;
 
-  private final int maxEden;
-  private final int maxEdenProtected;
+  private final int maxWindow;
+  private final int maxWindowProtected;
   private final int maxMainProtected;
 
-  private int sizeEden;
-  private int sizeEdenProtected;
+  private int sizeWindow;
+  private int sizeWindowProtected;
   private int sizeMainProtected;
 
   public FullySegmentedWindowTinyLfuPolicy(
@@ -64,14 +65,14 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
         "sketch.FullySegmentedWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
     this.policyStats = new PolicyStats(name);
     int maxMain = (int) (settings.maximumSize() * percentMain);
-    this.maxEden = settings.maximumSize() - maxMain;
+    this.maxWindow = settings.maximumSize() - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());
-    this.maxEdenProtected = (int) (maxEden * settings.percentEdenProtected());
+    this.maxWindowProtected = (int) (maxWindow * settings.percentWindowProtected());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
-    this.headEdenProbation = new Node();
-    this.headEdenProtected = new Node();
+    this.headWindowProbation = new Node();
+    this.headWindowProtected = new Node();
     this.headMainProbation = new Node();
     this.headMainProtected = new Node();
   }
@@ -98,11 +99,11 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     if (node == null) {
       onMiss(key);
       policyStats.recordMiss();
-    } else if (node.status == Status.EDEN_PROBATION) {
-      onEdenProbationHit(node);
+    } else if (node.status == Status.WINDOW_PROBATION) {
+      onWindowProbationHit(node);
       policyStats.recordHit();
-    } else if (node.status == Status.EDEN_PROTECTED) {
-      onEdenProtectedHit(node);
+    } else if (node.status == Status.WINDOW_PROTECTED) {
+      onWindowProtectedHit(node);
       policyStats.recordHit();
     } else if (node.status == Status.MAIN_PROBATION) {
       onMainProbationHit(node);
@@ -117,32 +118,32 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
   /** Adds the entry to the admission window, evicting if necessary. */
   private void onMiss(long key) {
-    Node node = new Node(key, Status.EDEN_PROBATION);
-    node.appendToTail(headEdenProbation);
+    Node node = new Node(key, Status.WINDOW_PROBATION);
+    node.appendToTail(headWindowProbation);
     data.put(key, node);
-    sizeEden++;
+    sizeWindow++;
     evict();
   }
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
-  private void onEdenProbationHit(Node node) {
+  private void onWindowProbationHit(Node node) {
     node.remove();
-    node.status = Status.EDEN_PROTECTED;
-    node.appendToTail(headEdenProtected);
+    node.status = Status.WINDOW_PROTECTED;
+    node.appendToTail(headWindowProtected);
 
-    sizeEdenProtected++;
-    if (sizeEdenProtected > maxEdenProtected) {
-      Node demote = headEdenProtected.next;
+    sizeWindowProtected++;
+    if (sizeWindowProtected > maxWindowProtected) {
+      Node demote = headWindowProtected.next;
       demote.remove();
-      demote.status = Status.EDEN_PROBATION;
-      demote.appendToTail(headEdenProbation);
-      sizeEdenProtected--;
+      demote.status = Status.WINDOW_PROBATION;
+      demote.appendToTail(headWindowProbation);
+      sizeWindowProtected--;
     }
   }
 
   /** Moves the entry to the MRU position in the admission window. */
-  private void onEdenProtectedHit(Node node) {
-    node.moveToTail(headEdenProtected);
+  private void onWindowProtectedHit(Node node) {
+    node.moveToTail(headWindowProtected);
   }
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
@@ -171,13 +172,13 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
    * then the admission candidate and probation's victim are evaluated and one is evicted.
    */
   private void evict() {
-    if (sizeEden <= maxEden) {
+    if (sizeWindow <= maxWindow) {
       return;
     }
 
-    Node candidate = headEdenProbation.next;
+    Node candidate = headWindowProbation.next;
 
-    sizeEden--;
+    sizeWindow--;
     candidate.remove();
     candidate.status = Status.MAIN_PROBATION;
     candidate.appendToTail(headMainProbation);
@@ -194,23 +195,23 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
   @Override
   public void finished() {
-    long edenProbationSize = data.values().stream()
-        .filter(n -> n.status == Status.EDEN_PROBATION).count();
-    long edenProtectedSize = data.values().stream()
-        .filter(n -> n.status == Status.EDEN_PROTECTED).count();
+    long windowProbationSize = data.values().stream()
+        .filter(n -> n.status == Status.WINDOW_PROBATION).count();
+    long windowProtectedSize = data.values().stream()
+        .filter(n -> n.status == Status.WINDOW_PROTECTED).count();
     long mainProtectedSize = data.values().stream()
         .filter(n -> n.status == Status.MAIN_PROTECTED).count();
 
-    checkState(sizeEden <= maxEden);
-    checkState(edenProtectedSize == sizeEdenProtected);
-    checkState(sizeEden == edenProbationSize + sizeEdenProtected);
+    checkState(sizeWindow <= maxWindow);
+    checkState(windowProtectedSize == sizeWindowProtected);
+    checkState(sizeWindow == windowProbationSize + sizeWindowProtected);
 
     checkState(mainProtectedSize == sizeMainProtected);
     checkState(data.size() <= maximumSize);
   }
 
   enum Status {
-    EDEN_PROBATION, EDEN_PROTECTED,
+    WINDOW_PROBATION, WINDOW_PROTECTED,
     MAIN_PROBATION, MAIN_PROTECTED
   }
 
@@ -275,8 +276,8 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
     public double percentMainProtected() {
       return config().getDouble("fully-segmented-window-tiny-lfu.percent-main-protected");
     }
-    public double percentEdenProtected() {
-      return config().getDouble("fully-segmented-window-tiny-lfu.percent-eden-protected");
+    public double percentWindowProtected() {
+      return config().getDouble("fully-segmented-window-tiny-lfu.percent-window-protected");
     }
   }
 }

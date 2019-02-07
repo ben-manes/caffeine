@@ -38,7 +38,7 @@ public final class MpscGrowableArrayQueueTest {
   private static final int POPULATED_SIZE = 10;
   private static final int FULL_SIZE = 32;
 
-  /* ---------------- Size -------------- */
+  /* --------------- Size --------------- */
 
   @Test(dataProvider = "empty")
   public void size_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
@@ -50,7 +50,7 @@ public final class MpscGrowableArrayQueueTest {
     assertThat(buffer.size(), is(POPULATED_SIZE));
   }
 
-  /* ---------------- Offer -------------- */
+  /* --------------- Offer --------------- */
 
   @Test(dataProvider = "empty")
   public void offer_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
@@ -70,7 +70,7 @@ public final class MpscGrowableArrayQueueTest {
     assertThat(buffer.size(), is(FULL_SIZE));
   }
 
-  /* ---------------- Poll -------------- */
+  /* --------------- Poll --------------- */
 
   @Test(dataProvider = "empty")
   public void poll_whenEmpty(MpscGrowableArrayQueue<Integer> buffer) {
@@ -89,7 +89,7 @@ public final class MpscGrowableArrayQueueTest {
     assertThat(buffer.size(), is(0));
   }
 
-  /* ---------------- Concurrency -------------- */
+  /* --------------- Concurrency --------------- */
 
   @Test(dataProvider = "empty")
   public void oneProducer_oneConsumer(MpscGrowableArrayQueue<Integer> buffer) {
@@ -157,7 +157,7 @@ public final class MpscGrowableArrayQueueTest {
     assertThat(buffer.size(), is(0));
   }
 
-  /* ---------------- Providers -------------- */
+  /* --------------- Providers --------------- */
 
   @DataProvider(name = "empty")
   public Object[][] providesEmpty() {

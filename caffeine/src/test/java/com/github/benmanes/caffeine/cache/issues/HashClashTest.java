@@ -71,7 +71,7 @@ public final class HashClashTest {
     }
     printKeys(cache);
 
-    // Now run a repeating sequence which has a longer length than eden space size.
+    // Now run a repeating sequence which has a longer length than window space size.
     for (long i = 0; i < ITERS; i += STEP) {
       cache.get(1L, Function.identity());
       for (long j = 0; j < STEP; ++j) {

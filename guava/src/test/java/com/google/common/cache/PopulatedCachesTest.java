@@ -297,7 +297,7 @@ public class PopulatedCachesTest extends TestCase {
     }
   }
 
-  /* ---------------- Local utilities -------------- */
+  /* --------------- Local utilities --------------- */
 
   /**
    * Most of the tests in this class run against every one of these caches.

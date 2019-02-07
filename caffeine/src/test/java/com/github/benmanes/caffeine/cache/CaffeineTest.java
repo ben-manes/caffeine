@@ -110,14 +110,14 @@ public final class CaffeineTest {
     assertThat(Caffeine.from(""), is(not(nullValue())));
   }
 
-  /* ---------------- loading -------------- */
+  /* --------------- loading --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
   public void loading_nullLoader() {
     Caffeine.newBuilder().build(null);
   }
 
-  /* ---------------- async -------------- */
+  /* --------------- async --------------- */
 
   @Test
   public void async_nullLoader() {
@@ -152,7 +152,7 @@ public final class CaffeineTest {
     Caffeine.newBuilder().writer(writer).buildAsync(loader);
   }
 
-  /* ---------------- initialCapacity -------------- */
+  /* --------------- initialCapacity --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void initialCapacity_negative() {
@@ -179,7 +179,7 @@ public final class CaffeineTest {
     assertThat(builder.initialCapacity, is(Integer.MAX_VALUE));
   }
 
-  /* ---------------- maximumSize -------------- */
+  /* --------------- maximumSize --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void maximumSize_negative() {
@@ -217,7 +217,7 @@ public final class CaffeineTest {
     assertThat(cache.policy().eviction().get().getMaximum(), is((long) Integer.MAX_VALUE));
   }
 
-  /* ---------------- maximumWeight -------------- */
+  /* --------------- maximumWeight --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void maximumWeight_negative() {
@@ -262,7 +262,7 @@ public final class CaffeineTest {
     assertThat(eviction.isWeighted(), is(true));
   }
 
-  /* ---------------- weigher -------------- */
+  /* --------------- weigher --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
   public void weigher_null() {
@@ -292,7 +292,7 @@ public final class CaffeineTest {
     builder.build();
   }
 
-  /* ---------------- expireAfterAccess -------------- */
+  /* --------------- expireAfterAccess --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void expireAfterAccess_negative() {
@@ -327,7 +327,7 @@ public final class CaffeineTest {
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
-  /* ---------------- expireAfterAccess: java.time -------------- */
+  /* --------------- expireAfterAccess: java.time --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void expireAfterAccess_duration_negative() {
@@ -362,7 +362,7 @@ public final class CaffeineTest {
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
-  /* ---------------- expireAfterWrite -------------- */
+  /* --------------- expireAfterWrite --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void expireAfterWrite_negative() {
@@ -397,7 +397,7 @@ public final class CaffeineTest {
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
-  /* ---------------- expireAfterWrite: java.time -------------- */
+  /* --------------- expireAfterWrite: java.time --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void expireAfterWrite_duration_negative() {
@@ -432,7 +432,7 @@ public final class CaffeineTest {
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
-  /* ---------------- expiry -------------- */
+  /* --------------- expiry --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
   public void expireAfter_null() {
@@ -461,7 +461,7 @@ public final class CaffeineTest {
     builder.build();
   }
 
-  /* ---------------- refreshAfterWrite -------------- */
+  /* --------------- refreshAfterWrite --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void refreshAfterWrite_negative() {
@@ -492,7 +492,7 @@ public final class CaffeineTest {
     builder.build(k -> k);
   }
 
-  /* ---------------- refreshAfterWrite: java.time -------------- */
+  /* --------------- refreshAfterWrite: java.time --------------- */
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void refreshAfterWrite_duration_negative() {
@@ -523,7 +523,7 @@ public final class CaffeineTest {
     builder.build(k -> k);
   }
 
-  /* ---------------- weakKeys -------------- */
+  /* --------------- weakKeys --------------- */
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void weakKeys_twice() {
@@ -540,7 +540,7 @@ public final class CaffeineTest {
     Caffeine.newBuilder().weakKeys().build();
   }
 
-  /* ---------------- weakValues -------------- */
+  /* --------------- weakValues --------------- */
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void weakValues_twice() {
@@ -552,7 +552,7 @@ public final class CaffeineTest {
     Caffeine.newBuilder().weakValues().build();
   }
 
-  /* ---------------- softValues -------------- */
+  /* --------------- softValues --------------- */
 
   @Test(expectedExceptions = IllegalStateException.class)
   public void softValues_twice() {
@@ -564,7 +564,7 @@ public final class CaffeineTest {
     Caffeine.newBuilder().softValues().build();
   }
 
-  /* ---------------- executor -------------- */
+  /* --------------- executor --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
   public void executor_null() {
@@ -584,7 +584,7 @@ public final class CaffeineTest {
     builder.build();
   }
 
-  /* ---------------- ticker -------------- */
+  /* --------------- ticker --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
   public void ticker_null() {
@@ -604,7 +604,7 @@ public final class CaffeineTest {
     builder.build();
   }
 
-  /* ---------------- stats -------------- */
+  /* --------------- stats --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
   public void recordStats_null() {
@@ -644,7 +644,7 @@ public final class CaffeineTest {
     builder.build();
   }
 
-  /* ---------------- removalListener -------------- */
+  /* --------------- removalListener --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
   public void removalListener_null() {
@@ -664,7 +664,7 @@ public final class CaffeineTest {
     builder.build();
   }
 
-  /* ---------------- cacheWriter -------------- */
+  /* --------------- cacheWriter --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)
   public void writer_null() {

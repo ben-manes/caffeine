@@ -25,6 +25,7 @@
     <exclude name="ShortClassName"/>
     <exclude name="ConfusingTernary"/>
     <exclude name="DontImportJavaLang"/>
+    <exclude name="UseDiamondOperator"/>
     <exclude name="UselessParentheses"/>
     <exclude name="PrematureDeclaration"/>
     <exclude name="TooManyStaticImports"/>
@@ -50,6 +51,7 @@
     <exclude name="DataClass"/>
     <exclude name="NcssCount"/>
     <exclude name="LawOfDemeter"/>
+    <exclude name="TooManyFields"/>
     <exclude name="TooManyMethods"/>
     <exclude name="NPathComplexity"/>
     <exclude name="ExcessiveImports"/>

@@ -434,7 +434,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     };
   }
 
-  /* ---------------- Serialization Support -------------- */
+  /* --------------- Serialization Support --------------- */
 
   static final long serialVersionUID = 1;
 

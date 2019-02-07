@@ -79,7 +79,7 @@ import com.google.common.primitives.Ints;
 @Test(dataProviderClass = CacheProvider.class)
 public final class LoadingCacheTest {
 
-  /* ---------------- get -------------- */
+  /* --------------- get --------------- */
 
   @CacheSpec
   @CheckNoWriter
@@ -131,7 +131,7 @@ public final class LoadingCacheTest {
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- getAll -------------- */
+  /* --------------- getAll --------------- */
 
   @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -326,7 +326,7 @@ public final class LoadingCacheTest {
     assertThat(result, is(equalTo(ImmutableMap.of(key, value))));
   }
 
-  /* ---------------- refresh -------------- */
+  /* --------------- refresh --------------- */
 
   @CheckNoWriter
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
@@ -489,7 +489,7 @@ public final class LoadingCacheTest {
     await().until(() -> context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- CacheLoader -------------- */
+  /* --------------- CacheLoader --------------- */
 
   @Test(expectedExceptions = UnsupportedOperationException.class)
   public void loadAll() throws Exception {

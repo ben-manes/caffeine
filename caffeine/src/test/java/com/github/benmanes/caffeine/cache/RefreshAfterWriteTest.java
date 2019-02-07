@@ -77,7 +77,7 @@ import com.google.common.collect.ImmutableMap;
 @Test(dataProviderClass = CacheProvider.class)
 public final class RefreshAfterWriteTest {
 
-  /* ---------------- getIfPresent -------------- */
+  /* --------------- getIfPresent --------------- */
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
@@ -107,7 +107,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
-  /* ---------------- getAllPresent -------------- */
+  /* --------------- getAllPresent --------------- */
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
@@ -124,7 +124,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
   }
 
-  /* ---------------- getFunc -------------- */
+  /* --------------- getFunc --------------- */
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
@@ -157,7 +157,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
-  /* ---------------- get -------------- */
+  /* --------------- get --------------- */
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
@@ -259,7 +259,7 @@ public final class RefreshAfterWriteTest {
     await().until(() -> cache.synchronous().getIfPresent(key), is(nullValue()));
   }
 
-  /* ---------------- getAll -------------- */
+  /* --------------- getAll --------------- */
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
@@ -302,7 +302,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }
 
-  /* ---------------- put -------------- */
+  /* --------------- put --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
@@ -335,7 +335,7 @@ public final class RefreshAfterWriteTest {
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- invalidate -------------- */
+  /* --------------- invalidate --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, refreshAfterWrite = Expire.ONE_MINUTE,
@@ -362,7 +362,7 @@ public final class RefreshAfterWriteTest {
     await().until(() -> context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
-  /* ---------------- Policy -------------- */
+  /* --------------- Policy --------------- */
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
@@ -391,7 +391,7 @@ public final class RefreshAfterWriteTest {
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
   }
 
-  /* ---------------- Policy: oldest -------------- */
+  /* --------------- Policy: oldest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
@@ -442,7 +442,7 @@ public final class RefreshAfterWriteTest {
     assertThat(oldest, is(equalTo(context.original())));
   }
 
-  /* ---------------- Policy: youngest -------------- */
+  /* --------------- Policy: youngest --------------- */
 
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)

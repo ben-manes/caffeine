@@ -114,7 +114,7 @@ public class EmptyCachesTest extends TestCase {
     }
   }
 
-  /* ---------------- Key Set -------------- */
+  /* --------------- Key Set --------------- */
 
   public void testKeySet_nullToArray() {
     for (LoadingCache<Object, Object> cache : caches()) {
@@ -191,7 +191,7 @@ public class EmptyCachesTest extends TestCase {
     }
   }
 
-  /* ---------------- Values -------------- */
+  /* --------------- Values --------------- */
 
   public void testValues_nullToArray() {
     for (LoadingCache<Object, Object> cache : caches()) {
@@ -268,7 +268,7 @@ public class EmptyCachesTest extends TestCase {
     }
   }
 
-  /* ---------------- Entry Set -------------- */
+  /* --------------- Entry Set --------------- */
 
   public void testEntrySet_nullToArray() {
     for (LoadingCache<Object, Object> cache : caches()) {
@@ -351,7 +351,7 @@ public class EmptyCachesTest extends TestCase {
     }
   }
 
-  /* ---------------- Local utilities -------------- */
+  /* --------------- Local utilities --------------- */
 
   /**
    * Most of the tests in this class run against every one of these caches.

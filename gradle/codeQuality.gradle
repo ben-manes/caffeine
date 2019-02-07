@@ -17,8 +17,8 @@ configurations {
 dependencies {
   annotationProcessor annotationProcessors.nullaway
   checkstyleConfig gradlePlugins.checkstyle
-  errorproneJavac libraries.errorProneJavac
-  errorprone libraries.errorProneCore
+  errorproneJavac libraries.errorproneJavac
+  errorprone libraries.errorproneCore
 }
 
 javadoc.options.links(
