@@ -18,9 +18,9 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
-import static com.github.benmanes.caffeine.cache.Node.EDEN;
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
 import static com.github.benmanes.caffeine.cache.Node.PROTECTED;
+import static com.github.benmanes.caffeine.cache.Node.WINDOW;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InvalidObjectException;
@@ -93,19 +93,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * This class performs a best-effort bounding of a ConcurrentHashMap using a page-replacement
    * algorithm to determine which entries to evict when the capacity is exceeded.
    *
-   * The page replacement algorithm's data structures are kept eventually consistent with the map.
-   * An update to the map and recording of reads may not be immediately reflected on the algorithm's
-   * data structures. These structures are guarded by a lock and operations are applied in batches
-   * to avoid lock contention. The penalty of applying the batches is spread across threads so that
-   * the amortized cost is slightly higher than performing just the ConcurrentHashMap operation.
+   * Concurrency:
+   * ------------
+   * The page replacement algorithms are kept eventually consistent with the map. An update to the
+   * map and recording of reads may not be immediately reflected on the policy's data structures.
+   * These structures are guarded by a lock and operations are applied in batches to avoid lock
+   * contention. The penalty of applying the batches is spread across threads so that the amortized
+   * cost is slightly higher than performing just the ConcurrentHashMap operation [1].
    *
    * A memento of the reads and writes that were performed on the map are recorded in buffers. These
    * buffers are drained at the first opportunity after a write or when a read buffer is full. The
-   * reads are offered in a buffer that will reject additions if contended on or if it is full and a
-   * draining process is required. Due to the concurrent nature of the read and write operations a
-   * strict policy ordering is not possible, but is observably strict when single threaded. The
-   * buffers are drained asynchronously to minimize the request latency and uses a state machine to
-   * determine when to schedule a task on an executor.
+   * reads are offered to a buffer that will reject additions if contended on or if it is full. Due
+   * to the concurrent nature of the read and write operations a strict policy ordering is not
+   * possible, but may be observably strict when single threaded. The buffers are drained
+   * asynchronously to minimize the request latency and uses a state machine to determine when to
+   * schedule this work on an executor.
    *
    * Due to a lack of a strict ordering guarantee, a task can be executed out-of-order, such as a
    * removal followed by its addition. The state of the entry is encoded using the key field to
@@ -113,27 +115,66 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * replacement policy. It is "retired" if it is not in the hash table and is pending removal from
    * the page replacement policy. Finally an entry transitions to the "dead" state when it is not in
    * the hash table nor the page replacement policy. Both the retired and dead states are
-   * represented by a sentinel key that should not be used for map lookups.
+   * represented by a sentinel key that should not be used for map operations.
    *
+   * Eviction:
+   * ---------
+   * Maximum size is implemented using the Window TinyLfu policy [2] due to its high hit rate, O(1)
+   * time complexity, and small footprint. A new entry starts in the admission window and remains
+   * there as long as it has high temporal locality (recency). Eventually an entry will slip from
+   * the window into the main space. If the main space is already full, then a historic frequency
+   * filter determines whether to evict the newly admitted entry or the victim entry chosen by the
+   * eviction policy. This process ensures that the entries in the window were very recently used
+   * and entries in the main space are accessed very frequently and are moderately recent. The
+   * windowing allows the policy to have a high hit rate when entries exhibit bursty access pattern
+   * while the filter ensures that popular items are retained. The admission window uses LRU and
+   * the main space uses Segmented LRU.
+   *
+   * The optimal size of the window vs main spaces is workload dependent [3]. A large admission
+   * window is favored by recency-biased workloads while a small one favors frequency-biased
+   * workloads. When the window is too small then recent arrivals are prematurely evicted, but when
+   * too large then they pollute the cache and force the eviction of more popular entries. The
+   * configuration is dynamically determined using hill climbing to walk the hit rate curve. This is
+   * done by sampling the hit rate and adjusting the window size in the direction that is improving
+   * (making positive or negative steps). At each interval the step size is decreased until the
+   * climber converges at the optimal setting. The process is restarted when the hit rate changes
+   * over a threshold, indicating that the workload altered and a new setting may be required.
+   *
+   * The historic usage is retained in a compact popularity sketch, which uses hashing to
+   * probabilistically estimate an item's frequency. This exposes a flaw where an adversary could
+   * use hash flooding [4] to artificially raise the frequency of the main space's victim and cause
+   * all candidates to be rejected. In the worst case, by exploiting hash collisions an attacker
+   * could cause the cache to never hit and hold only worthless items, resulting in a
+   * denial-of-service attack against the underlying resource. This is protected against by
+   * introducing jitter so that candidates which are at least moderately popular have a small,
+   * random chance of being admitted. This causes the victim to be evicted, but in a way that
+   * marginally impacts the hit rate.
+   *
+   * Expiration:
+   * -----------
    * Expiration is implemented in O(1) time complexity. The time-to-idle policy uses an access-order
-   * queue, the time-to-live policy uses a write-order queue, and variable expiration uses a timer
-   * wheel. This allows peeking at the oldest entry in the queue to see if it has expired and, if it
-   * has not, then the younger entries must have not too. If a maximum size is set then expiration
-   * will share the queues in order to minimize the per-entry footprint. The expiration updates are
-   * applied in a best effort fashion. The reordering of variable or access-order expiration may be
-   * discarded by the read buffer if full or contended on. Similarly the reordering of write
-   * expiration may be ignored for an entry if the last update was within a short time window in
-   * order to avoid overwhelming the write buffer.
+   * queue, the time-to-live policy uses a write-order queue, and variable expiration uses a
+   * hierarchical timer wheel [5]. The queuing policies allow for peeking at the oldest entry to
+   * see if it has expired and, if it has not, then the younger entries must not have too. If a
+   * maximum size is set then expiration will share the queues so that the per-entry footprint is
+   * minimized. The timer wheel based policy uses hashing and cascading in a manner that amortizes
+   * the penalty of sorting to achieve a similar algorithmic cost.
    *
-   * Maximum size is implemented using the Window TinyLfu policy due to its high hit rate, O(1) time
-   * complexity, and small footprint. A new entry starts in the eden space and remains there as long
-   * as it has high temporal locality. Eventually an entry will slip from the eden space into the
-   * main space. If the main space is already full, then a historic frequency filter determines
-   * whether to evict the newly admitted entry or the victim entry chosen by main space's policy.
-   * This process ensures that the entries in the main space have both a high recency and frequency.
-   * The windowing allows the policy to have a high hit rate when entries exhibit a bursty (high
-   * temporal, low frequency) access pattern. The eden space uses LRU and the main space uses
-   * Segmented LRU.
+   * The expiration updates are applied in a best effort fashion. The reordering of variable or
+   * access-order expiration may be discarded by the read buffer if full or contended on. Similarly
+   * the reordering of write expiration may be ignored for an entry if the last update was within a
+   * short time window in order to avoid overwhelming the write buffer.
+   *
+   * [1] BP-Wrapper: A Framework Making Any Replacement Algorithms (Almost) Lock Contention Free
+   * http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-09-1.pdf
+   * [2] TinyLFU: A Highly Efficient Cache Admission Policy
+   * https://dl.acm.org/citation.cfm?id=3149371
+   * [3] Adaptive Software Cache Management
+   * https://dl.acm.org/citation.cfm?id=3274816
+   * [4] Denial of Service via Algorithmic Complexity Attack
+   * https://www.usenix.org/legacy/events/sec03/tech/full_papers/crosby/crosby.pdf
+   * [5] Hashed and Hierarchical Timing Wheels
+   * http://www.cs.columbia.edu/~nahum/w6998/papers/ton97-timing-wheels.pdf
    */
 
   static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
@@ -152,6 +193,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final double PERCENT_MAIN = 0.99d;
   /** The percent of the maximum weighted capacity dedicated to the main's protected space. */
   static final double PERCENT_MAIN_PROTECTED = 0.80d;
+  /** The difference in hit rates that restarts the climber. */
+  static final double HILL_CLIMBER_RESTART_THRESHOLD = 0.05d;
+  /** The percent of the total size to adapt the window by. */
+  static final double HILL_CLIMBER_STEP_PERCENT = 0.0625d;
+  /** The rate to decrease the step size to adapt by. */
+  static final double HILL_CLIMBER_STEP_DECAY_RATE = 0.98d;
+  /** The maximum number of entries that can be transfered between queues. */
+  static final double QUEUE_TRANSFER_THRESHOLD = 1_000;
   /** The maximum time window between entry updates before the expiration must be reordered. */
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
   /** The maximum duration before an entry expires. */
@@ -192,7 +241,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     accessPolicy = (evicts() || expiresAfterAccess()) ? this::onAccess : e -> {};
 
     if (evicts()) {
-      setMaximum(builder.getMaximum());
+      setMaximumSize(builder.getMaximum());
     }
   }
 
@@ -201,7 +250,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return 1 << -Integer.numberOfLeadingZeros(x - 1);
   }
 
-  /* ---------------- Shared -------------- */
+  /* --------------- Shared --------------- */
 
   /** Returns if the node's value is currently being computed, asynchronously. */
   final boolean isComputingAsync(Node<?, ?> node) {
@@ -209,7 +258,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @GuardedBy("evictionLock")
-  protected AccessOrderDeque<Node<K, V>> accessOrderEdenDeque() {
+  protected AccessOrderDeque<Node<K, V>> accessOrderWindowDeque() {
     throw new UnsupportedOperationException();
   }
 
@@ -247,7 +296,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return (writer != CacheWriter.disabledWriter());
   }
 
-  /* ---------------- Stats Support -------------- */
+  /* --------------- Stats Support --------------- */
 
   @Override
   public boolean isRecordingStats() {
@@ -264,7 +313,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return Ticker.disabledTicker();
   }
 
-  /* ---------------- Removal Listener Support -------------- */
+  /* --------------- Removal Listener Support --------------- */
 
   @Override
   @SuppressWarnings("NullAway")
@@ -295,7 +344,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /* ---------------- Reference Support -------------- */
+  /* --------------- Reference Support --------------- */
 
   /** Returns if the keys are weak reference garbage collected. */
   protected boolean collectKeys() {
@@ -317,7 +366,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return null;
   }
 
-  /* ---------------- Expiration Support -------------- */
+  /* --------------- Expiration Support --------------- */
 
   /** Returns if the cache expires entries after a variable time threshold. */
   protected boolean expiresVariable() {
@@ -385,7 +434,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  /* ---------------- Eviction Support -------------- */
+  /* --------------- Eviction Support --------------- */
 
   /** Returns if the cache evicts entries due to a maximum size or weight threshold. */
   protected boolean evicts() {
@@ -411,8 +460,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  /** Returns the maximum weighted size of the eden space. */
-  protected long edenMaximum() {
+  /** Returns the maximum weighted size of the window space. */
+  protected long windowMaximum() {
     throw new UnsupportedOperationException();
   }
 
@@ -421,55 +470,28 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  @GuardedBy("evictionLock") // must write under lock
-  protected void lazySetMaximum(long maximum) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock") // must write under lock
-  protected void lazySetEdenMaximum(long maximum) {
-    throw new UnsupportedOperationException();
-  }
-
-  @GuardedBy("evictionLock") // must write under lock
-  protected void lazySetMainProtectedMaximum(long maximum) {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Sets the maximum weighted size of the cache. The caller may need to perform a maintenance cycle
-   * to eagerly evicts entries until the cache shrinks to the appropriate size.
-   */
   @GuardedBy("evictionLock")
-  void setMaximum(long maximum) {
-    requireArgument(maximum >= 0);
-
-    long max = Math.min(maximum, MAXIMUM_CAPACITY);
-    long eden = max - (long) (max * PERCENT_MAIN);
-    long mainProtected = (long) ((max - eden) * PERCENT_MAIN_PROTECTED);
-
-    lazySetMaximum(max);
-    lazySetEdenMaximum(eden);
-    lazySetMainProtectedMaximum(mainProtected);
-
-    if ((frequencySketch() != null) && !isWeighted() && (weightedSize() >= (max >>> 1))) {
-      // Lazily initialize when close to the maximum size
-      frequencySketch().ensureCapacity(max);
-    }
+  protected void setMaximum(long maximum) {
+    throw new UnsupportedOperationException();
   }
 
-  /** Returns the combined weight of the values in the cache. */
-  long adjustedWeightedSize() {
-    return Math.max(0, weightedSize());
+  @GuardedBy("evictionLock")
+  protected void setWindowMaximum(long maximum) {
+    throw new UnsupportedOperationException();
   }
 
-  /** Returns the uncorrected combined weight of the values in the cache. */
+  @GuardedBy("evictionLock")
+  protected void setMainProtectedMaximum(long maximum) {
+    throw new UnsupportedOperationException();
+  }
+
+  /** Returns the combined weight of the values in the cache (may be negative). */
   protected long weightedSize() {
     throw new UnsupportedOperationException();
   }
 
-  /** Returns the uncorrected combined weight of the values in the eden space. */
-  protected long edenWeightedSize() {
+  /** Returns the uncorrected combined weight of the values in the window space. */
+  protected long windowWeightedSize() {
     throw new UnsupportedOperationException();
   }
 
@@ -478,19 +500,99 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     throw new UnsupportedOperationException();
   }
 
-  @GuardedBy("evictionLock") // must write under lock
-  protected void lazySetWeightedSize(long weightedSize) {
+  @GuardedBy("evictionLock")
+  protected void setWeightedSize(long weightedSize) {
     throw new UnsupportedOperationException();
   }
 
-  @GuardedBy("evictionLock") // must write under lock
-  protected void lazySetEdenWeightedSize(long weightedSize) {
+  @GuardedBy("evictionLock")
+  protected void setWindowWeightedSize(long weightedSize) {
     throw new UnsupportedOperationException();
   }
 
-  @GuardedBy("evictionLock") // must write under lock
-  protected void lazySetMainProtectedWeightedSize(long weightedSize) {
+  @GuardedBy("evictionLock")
+  protected void setMainProtectedWeightedSize(long weightedSize) {
     throw new UnsupportedOperationException();
+  }
+
+  protected int hitsInSample() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected int missesInSample() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected int sampleCount() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected double stepSize() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected double previousSampleHitRate() {
+    throw new UnsupportedOperationException();
+  }
+
+  protected long adjustment() {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected void setHitsInSample(int hitCount) {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected void setMissesInSample(int missCount) {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected void setSampleCount(int sampleCount) {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected void setStepSize(double stepSize) {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected void setPreviousSampleHitRate(double hitRate) {
+    throw new UnsupportedOperationException();
+  }
+
+  @GuardedBy("evictionLock")
+  protected void setAdjustment(long amount) {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Sets the maximum weighted size of the cache. The caller may need to perform a maintenance cycle
+   * to eagerly evicts entries until the cache shrinks to the appropriate size.
+   */
+  @GuardedBy("evictionLock")
+  void setMaximumSize(long maximum) {
+    requireArgument(maximum >= 0);
+
+    long max = Math.min(maximum, MAXIMUM_CAPACITY);
+    long window = max - (long) (PERCENT_MAIN * max);
+    long mainProtected = (long) (PERCENT_MAIN_PROTECTED * (max - window));
+
+    setMaximum(max);
+    setWindowMaximum(window);
+    setMainProtectedMaximum(mainProtected);
+
+    setHitsInSample(0);
+    setMissesInSample(0);
+    setStepSize(-HILL_CLIMBER_STEP_PERCENT * max);
+
+    if ((frequencySketch() != null) && !isWeighted() && (weightedSize() >= (max >>> 1))) {
+      // Lazily initialize when close to the maximum size
+      frequencySketch().ensureCapacity(max);
+    }
   }
 
   /** Evicts entries if the cache exceeds the maximum. */
@@ -499,20 +601,21 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (!evicts()) {
       return;
     }
-    int candidates = evictFromEden();
+    int candidates = evictFromWindow();
     evictFromMain(candidates);
   }
 
   /**
-   * Evicts entries from the eden space into the main space while the eden size exceeds a maximum.
+   * Evicts entries from the window space into the main space while the window size exceeds a
+   * maximum.
    *
-   * @return the number of candidate entries evicted from the eden space
+   * @return the number of candidate entries evicted from the window space
    */
   @GuardedBy("evictionLock")
-  int evictFromEden() {
+  int evictFromWindow() {
     int candidates = 0;
-    Node<K, V> node = accessOrderEdenDeque().peek();
-    while (edenWeightedSize() > edenMaximum()) {
+    Node<K, V> node = accessOrderWindowDeque().peek();
+    while (windowWeightedSize() > windowMaximum()) {
       // The pending operations will adjust the size to reflect the correct weight
       if (node == null) {
         break;
@@ -521,11 +624,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       Node<K, V> next = node.getNextInAccessOrder();
       if (node.getWeight() != 0) {
         node.makeMainProbation();
-        accessOrderEdenDeque().remove(node);
+        accessOrderWindowDeque().remove(node);
         accessOrderProbationDeque().add(node);
         candidates++;
 
-        lazySetEdenWeightedSize(edenWeightedSize() - node.getPolicyWeight());
+        setWindowWeightedSize(windowWeightedSize() - node.getPolicyWeight());
       }
       node = next;
     }
@@ -535,16 +638,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   /**
    * Evicts entries from the main space if the cache exceeds the maximum capacity. The main space
-   * determines whether admitting an entry (coming from the eden space) is preferable to retaining
+   * determines whether admitting an entry (coming from the window space) is preferable to retaining
    * the eviction policy's victim. This is decision is made using a frequency filter so that the
    * least frequently used entry is removed.
    *
-   * The eden space candidates were previously placed in the MRU position and the eviction policy's
-   * victim is at the LRU position. The two ends of the queue are evaluated while an eviction is
-   * required. The number of remaining candidates is provided and decremented on eviction, so that
-   * when there are no more candidates the victim is evicted.
+   * The window space candidates were previously placed in the MRU position and the eviction
+   * policy's victim is at the LRU position. The two ends of the queue are evaluated while an
+   * eviction is required. The number of remaining candidates is provided and decremented on
+   * eviction, so that when there are no more candidates the victim is evicted.
    *
-   * @param candidates the number of candidate entries evicted from the eden space
+   * @param candidates the number of candidate entries evicted from the window space
    */
   @GuardedBy("evictionLock")
   void evictFromMain(int candidates) {
@@ -557,15 +660,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         candidate = null;
       }
 
-      // Try evicting from the protected and eden queues
+      // Try evicting from the protected and window queues
       if ((candidate == null) && (victim == null)) {
         if (victimQueue == PROBATION) {
           victim = accessOrderProtectedDeque().peekFirst();
           victimQueue = PROTECTED;
           continue;
         } else if (victimQueue == PROTECTED) {
-          victim = accessOrderEdenDeque().peekFirst();
-          victimQueue = EDEN;
+          victim = accessOrderWindowDeque().peekFirst();
+          victimQueue = WINDOW;
           continue;
         }
 
@@ -681,7 +784,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return;
     }
 
-    expireAfterAccessEntries(accessOrderEdenDeque(), now);
+    expireAfterAccessEntries(accessOrderWindowDeque(), now);
     if (evicts()) {
       expireAfterAccessEntries(accessOrderProbationDeque(), now);
       expireAfterAccessEntries(accessOrderProtectedDeque(), now);
@@ -800,8 +903,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     // If the eviction fails due to a concurrent removal of the victim, that removal may cancel out
     // the addition that triggered this eviction. The victim is eagerly unlinked before the removal
     // task so that if an eviction is still required then a new victim will be chosen for removal.
-    if (node.inEden() && (evicts() || expiresAfterAccess())) {
-      accessOrderEdenDeque().remove(node);
+    if (node.inWindow() && (evicts() || expiresAfterAccess())) {
+      accessOrderWindowDeque().remove(node);
     } else if (evicts()) {
       if (node.inMainProbation()) {
         accessOrderProbationDeque().remove(node);
@@ -829,6 +932,151 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     return true;
+  }
+
+  /** Adapts the eviction policy to towards the optimal recency / frequency configuration. */
+  @GuardedBy("evictionLock")
+  void climb() {
+    if (!evicts()) {
+      return;
+    }
+
+    determineAdjustment();
+    demoteFromMainProtected();
+    long amount = adjustment();
+    if (amount == 0) {
+      return;
+    } else if (amount > 0) {
+      increaseWindow();
+    } else {
+      decreaseWindow();
+    }
+  }
+
+  /** Calculates the amount to adapt the window by and sets {@link #adjustment()} accordingly. */
+  @GuardedBy("evictionLock")
+  void determineAdjustment() {
+    if (frequencySketch().isNotInitialized()) {
+      setPreviousSampleHitRate(0.0);
+      setMissesInSample(0);
+      setHitsInSample(0);
+      return;
+    }
+
+    int requestCount = hitsInSample() + missesInSample();
+    if (requestCount < frequencySketch().sampleSize) {
+      return;
+    }
+
+    double hitRate = (double) hitsInSample() / requestCount;
+    double hitRateChange = hitRate - previousSampleHitRate();
+    double amount = (hitRateChange >= 0) ? stepSize() : -stepSize();
+    double nextStepSize = (Math.abs(hitRateChange) < HILL_CLIMBER_RESTART_THRESHOLD)
+        ? HILL_CLIMBER_STEP_DECAY_RATE * amount
+        : HILL_CLIMBER_STEP_PERCENT * maximum();
+    setPreviousSampleHitRate(hitRate);
+    setAdjustment((long) amount);
+    setStepSize(nextStepSize);
+    setMissesInSample(0);
+    setHitsInSample(0);
+  }
+
+  /**
+   * Increases the size of the admission window by shrinking the portion allocated to the main
+   * space. As the main space is partitioned into probation and protected regions (80% / 20%), for
+   * simplicity only the protected is reduced. If the regions exceed their maximums, this may cause
+   * protected items to be demoted to the probation region and probation items to be demoted to the
+   * admission window.
+   */
+  @GuardedBy("evictionLock")
+  void increaseWindow() {
+    if (mainProtectedMaximum() == 0) {
+      return;
+    }
+
+    long quota = Math.min(adjustment(), mainProtectedMaximum());
+    setMainProtectedMaximum(mainProtectedMaximum() - quota);
+    setWindowMaximum(windowMaximum() + quota);
+    demoteFromMainProtected();
+
+    for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
+      Node<K, V> candidate = accessOrderProbationDeque().peek();
+      if (candidate == null) {
+        break;
+      }
+
+      int weight = candidate.getPolicyWeight();
+      if (quota < weight) {
+        break;
+      }
+
+      quota -= weight;
+      setMainProtectedWeightedSize(mainProtectedWeightedSize() - weight);
+      setWindowWeightedSize(windowWeightedSize() + weight);
+      accessOrderProbationDeque().remove(candidate);
+      accessOrderWindowDeque().add(candidate);
+      candidate.makeWindow();
+    }
+
+    setAdjustment(quota);
+  }
+
+  /** Decreases the size of the admission window and increases the main's protected region. */
+  @GuardedBy("evictionLock")
+  void decreaseWindow() {
+    if (windowMaximum() == 0) {
+      return;
+    }
+
+    long quota = Math.min(adjustment(), windowMaximum());
+    setMainProtectedMaximum(mainProtectedMaximum() + quota);
+    setWindowMaximum(windowMaximum() - quota);
+
+    for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
+      Node<K, V> candidate = accessOrderWindowDeque().peek();
+      if (candidate == null) {
+        break;
+      }
+
+      int weight = candidate.getPolicyWeight();
+      if (quota < weight) {
+        break;
+      }
+
+      quota -= weight;
+      setMainProtectedWeightedSize(mainProtectedWeightedSize() + weight);
+      setWindowWeightedSize(windowWeightedSize() - weight);
+      accessOrderWindowDeque().remove(candidate);
+      accessOrderProbationDeque().add(candidate);
+      candidate.makeMainProbation();
+    }
+
+    setAdjustment(-quota);
+  }
+
+  /** Transfers the nodes from the protected to the probation region if it exceeds the maximum. */
+  @GuardedBy("evictionLock")
+  void demoteFromMainProtected() {
+    long mainProtectedMaximum = mainProtectedMaximum();
+    long mainProtectedWeightedSize = mainProtectedWeightedSize();
+    if (mainProtectedWeightedSize <= mainProtectedMaximum) {
+      return;
+    }
+
+    for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
+      if (mainProtectedWeightedSize <= mainProtectedMaximum) {
+        break;
+      }
+
+      Node<K, V> demoted = accessOrderProtectedDeque().poll();
+      if (demoted == null) {
+        break;
+      }
+      demoted.makeMainProbation();
+      accessOrderProbationDeque().add(demoted);
+      mainProtectedWeightedSize -= demoted.getPolicyWeight();
+    }
+    setMainProtectedWeightedSize(mainProtectedWeightedSize);
   }
 
   /**
@@ -1141,6 +1389,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       expireEntries();
       evictEntries();
+
+      climb();
     } finally {
       if ((drainStatus() != PROCESSING_TO_IDLE) || !casDrainStatus(PROCESSING_TO_IDLE, IDLE)) {
         lazySetDrainStatus(REQUIRED);
@@ -1197,15 +1447,16 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return;
       }
       frequencySketch().increment(key);
-      if (node.inEden()) {
-        reorder(accessOrderEdenDeque(), node);
+      if (node.inWindow()) {
+        reorder(accessOrderWindowDeque(), node);
       } else if (node.inMainProbation()) {
         reorderProbation(node);
       } else {
         reorder(accessOrderProtectedDeque(), node);
       }
+      setHitsInSample(hitsInSample() + 1);
     } else if (expiresAfterAccess()) {
-      reorder(accessOrderEdenDeque(), node);
+      reorder(accessOrderWindowDeque(), node);
     }
     if (expiresVariable()) {
       timerWheel().reschedule(node);
@@ -1222,23 +1473,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return;
     }
 
-    long mainProtectedWeightedSize = mainProtectedWeightedSize() + node.getPolicyWeight();
+    // If the protected space exceeds its maximum, the LRU items are demoted to the probation space.
+    // This is deferred to the adaption phase at the end of the maintenance cycle.
+    setMainProtectedWeightedSize(mainProtectedWeightedSize() + node.getPolicyWeight());
     accessOrderProbationDeque().remove(node);
     accessOrderProtectedDeque().add(node);
     node.makeMainProtected();
-
-    long mainProtectedMaximum = mainProtectedMaximum();
-    while (mainProtectedWeightedSize > mainProtectedMaximum) {
-      Node<K, V> demoted = accessOrderProtectedDeque().pollFirst();
-      if (demoted == null) {
-        break;
-      }
-      demoted.makeMainProbation();
-      accessOrderProbationDeque().add(demoted);
-      mainProtectedWeightedSize -= demoted.getPolicyWeight();
-    }
-
-    lazySetMainProtectedWeightedSize(mainProtectedWeightedSize);
+    //logger.info("Promoted " + node.getPolicyWeight());
   }
 
   /** Updates the node's location in the policy's deque. */
@@ -1257,13 +1498,15 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (!buffersWrites()) {
       return;
     }
+
     for (int i = 0; i < WRITE_BUFFER_MAX; i++) {
       Runnable task = writeBuffer().poll();
       if (task == null) {
-        break;
+        return;
       }
       task.run();
     }
+    lazySetDrainStatus(PROCESSING_TO_REQUIRED);
   }
 
   /**
@@ -1282,12 +1525,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         // The node's policy weight may be out of sync due to a pending update waiting to be
         // processed. At this point the node's weight is finalized, so the weight can be safely
         // taken from the node's perspective and the sizes will be adjusted correctly.
-        if (node.inEden()) {
-          lazySetEdenWeightedSize(edenWeightedSize() - node.getWeight());
+        if (node.inWindow()) {
+          setWindowWeightedSize(windowWeightedSize() - node.getWeight());
         } else if (node.inMainProtected()) {
-          lazySetMainProtectedWeightedSize(mainProtectedWeightedSize() - node.getWeight());
+          setMainProtectedWeightedSize(mainProtectedWeightedSize() - node.getWeight());
         }
-        lazySetWeightedSize(weightedSize() - node.getWeight());
+        setWeightedSize(weightedSize() - node.getWeight());
       }
       node.die();
     }
@@ -1310,8 +1553,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (evicts()) {
         node.setPolicyWeight(weight);
         long weightedSize = weightedSize();
-        lazySetWeightedSize(weightedSize + weight);
-        lazySetEdenWeightedSize(edenWeightedSize() + weight);
+        setWeightedSize(weightedSize + weight);
+        setWindowWeightedSize(windowWeightedSize() + weight);
 
         long maximum = maximum();
         if (weightedSize >= (maximum >>> 1)) {
@@ -1324,6 +1567,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (key != null) {
           frequencySketch().increment(key);
         }
+
+        setMissesInSample(missesInSample() + 1);
       }
 
       // ignore out-of-order write operations
@@ -1336,7 +1581,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           writeOrderDeque().add(node);
         }
         if (evicts() || expiresAfterAccess()) {
-          accessOrderEdenDeque().add(node);
+          accessOrderWindowDeque().add(node);
         }
         if (expiresVariable()) {
           timerWheel().schedule(node);
@@ -1369,8 +1614,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       // add may not have been processed yet
-      if (node.inEden() && (evicts() || expiresAfterAccess())) {
-        accessOrderEdenDeque().remove(node);
+      if (node.inWindow() && (evicts() || expiresAfterAccess())) {
+        accessOrderWindowDeque().remove(node);
       } else if (evicts()) {
         if (node.inMainProbation()) {
           accessOrderProbationDeque().remove(node);
@@ -1401,12 +1646,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @GuardedBy("evictionLock")
     public void run() {
       if (evicts()) {
-        if (node.inEden()) {
-          lazySetEdenWeightedSize(edenWeightedSize() + weightDifference);
+        if (node.inWindow()) {
+          setWindowWeightedSize(windowWeightedSize() + weightDifference);
         } else if (node.inMainProtected()) {
-          lazySetMainProtectedWeightedSize(mainProtectedMaximum() + weightDifference);
+          setMainProtectedWeightedSize(mainProtectedMaximum() + weightDifference);
         }
-        lazySetWeightedSize(weightedSize() + weightDifference);
+        setWeightedSize(weightedSize() + weightDifference);
         node.setPolicyWeight(node.getPolicyWeight() + weightDifference);
       }
       if (evicts() || expiresAfterAccess()) {
@@ -1420,7 +1665,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /* ---------------- Concurrent Map Support -------------- */
+  /* --------------- Concurrent Map Support --------------- */
 
   @Override
   public boolean isEmpty() {
@@ -1493,8 +1738,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
     });
 
-    if (node.inEden() && (evicts() || expiresAfterAccess())) {
-      accessOrderEdenDeque().remove(node);
+    if (node.inWindow() && (evicts() || expiresAfterAccess())) {
+      accessOrderWindowDeque().remove(node);
     } else if (evicts()) {
       if (node.inMainProbation()) {
         accessOrderProbationDeque().remove(node);
@@ -2335,11 +2580,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (hottest) {
         PeekingIterator<Node<K, V>> secondary = PeekingIterator.comparing(
             accessOrderProbationDeque().descendingIterator(),
-            accessOrderEdenDeque().descendingIterator(), comparator);
+            accessOrderWindowDeque().descendingIterator(), comparator);
         return PeekingIterator.concat(accessOrderProtectedDeque().descendingIterator(), secondary);
       } else {
         PeekingIterator<Node<K, V>> primary = PeekingIterator.comparing(
-            accessOrderEdenDeque().iterator(), accessOrderProbationDeque().iterator(),
+            accessOrderWindowDeque().iterator(), accessOrderProbationDeque().iterator(),
             comparator.reversed());
         return PeekingIterator.concat(primary, accessOrderProtectedDeque().iterator());
       }
@@ -2360,8 +2605,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   Map<K, V> expireAfterAccessOrder(int limit, Function<V, V> transformer, boolean oldest) {
     if (!evicts()) {
       Supplier<Iterator<Node<K, V>>> iteratorSupplier = () -> oldest
-          ? accessOrderEdenDeque().iterator()
-          : accessOrderEdenDeque().descendingIterator();
+          ? accessOrderWindowDeque().iterator()
+          : accessOrderWindowDeque().descendingIterator();
       return fixedSnapshot(iteratorSupplier, limit, transformer);
     }
 
@@ -2369,12 +2614,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getAccessTime);
         PeekingIterator<Node<K, V>> first, second, third;
         if (oldest) {
-          first = accessOrderEdenDeque().iterator();
+          first = accessOrderWindowDeque().iterator();
           second = accessOrderProbationDeque().iterator();
           third = accessOrderProtectedDeque().iterator();
         } else {
           comparator = comparator.reversed();
-          first = accessOrderEdenDeque().descendingIterator();
+          first = accessOrderWindowDeque().descendingIterator();
           second = accessOrderProbationDeque().descendingIterator();
           third = accessOrderProtectedDeque().descendingIterator();
         }
@@ -3032,7 +3277,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return proxy;
   }
 
-  /* ---------------- Manual Cache -------------- */
+  /* --------------- Manual Cache --------------- */
 
   static class BoundedLocalManualCache<K, V> implements LocalManualCache<K, V>, Serializable {
     private static final long serialVersionUID = 1;
@@ -3151,7 +3396,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (cache.evicts() && isWeighted()) {
           cache.evictionLock.lock();
           try {
-            return OptionalLong.of(cache.adjustedWeightedSize());
+            return OptionalLong.of(Math.max(0, cache.weightedSize()));
           } finally {
             cache.evictionLock.unlock();
           }
@@ -3159,12 +3404,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         return OptionalLong.empty();
       }
       @Override public long getMaximum() {
-        return cache.maximum();
+        cache.evictionLock.lock();
+        try {
+          return cache.maximum();
+        } finally {
+          cache.evictionLock.unlock();
+        }
       }
       @Override public void setMaximum(long maximum) {
         cache.evictionLock.lock();
         try {
-          cache.setMaximum(maximum);
+          cache.setMaximumSize(maximum);
           cache.maintenance(/* ignored */ null);
         } finally {
           cache.evictionLock.unlock();
@@ -3355,7 +3605,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /* ---------------- Loading Cache -------------- */
+  /* --------------- Loading Cache --------------- */
 
   static final class BoundedLocalLoadingCache<K, V>
       extends BoundedLocalManualCache<K, V> implements LocalLoadingCache<K, V> {
@@ -3414,7 +3664,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /* ---------------- Async Cache -------------- */
+  /* --------------- Async Cache --------------- */
 
   static final class BoundedLocalAsyncCache<K, V> implements LocalAsyncCache<K, V>, Serializable {
     private static final long serialVersionUID = 1;
@@ -3469,7 +3719,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
   }
 
-  /* ---------------- Async Loading Cache -------------- */
+  /* --------------- Async Loading Cache --------------- */
 
   static final class BoundedLocalAsyncLoadingCache<K, V>
       extends LocalAsyncLoadingCache<K, V> implements Serializable {

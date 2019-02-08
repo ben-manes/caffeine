@@ -91,7 +91,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   @GuardedBy("evictionLock")
   public void setPolicyWeight(@NonNegative int weight) {}
 
-  /* ---------------- Health -------------- */
+  /* --------------- Health --------------- */
 
   /** If the entry is available in the hash-table and page replacement policy. */
   @GuardedBy("this")
@@ -116,7 +116,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   @GuardedBy("this")
   public abstract void die();
 
-  /* ---------------- Variable order -------------- */
+  /* --------------- Variable order --------------- */
 
   /** Returns the time that this entry was last accessed, in ns. */
   public long getVariableTime() {
@@ -149,15 +149,15 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
     throw new UnsupportedOperationException();
   }
 
-  /* ---------------- Access order -------------- */
+  /* --------------- Access order --------------- */
 
-  public static final int EDEN = 0;
+  public static final int WINDOW = 0;
   public static final  int PROBATION = 1;
   public static final  int PROTECTED = 2;
 
-  /** Returns if the entry is in the Eden or Main space. */
-  public boolean inEden() {
-    return getQueueType() == EDEN;
+  /** Returns if the entry is in the Window or Main space. */
+  public boolean inWindow() {
+    return getQueueType() == WINDOW;
   }
 
   /** Returns if the entry is in the Main space's probation queue. */
@@ -170,6 +170,11 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
     return getQueueType() == PROTECTED;
   }
 
+  /** Sets the status to the Window queue. */
+  public void makeWindow() {
+    setQueueType(WINDOW);
+  }
+
   /** Sets the status to the Main space's probation queue. */
   public void makeMainProbation() {
     setQueueType(PROBATION);
@@ -180,12 +185,12 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
     setQueueType(PROTECTED);
   }
 
-  /** Returns the queue that the entry's resides in (eden, probation, or protected). */
+  /** Returns the queue that the entry's resides in (window, probation, or protected). */
   public int getQueueType() {
-    return EDEN;
+    return WINDOW;
   }
 
-  /** Set queue that the entry resides in (eden, probation, or protected). */
+  /** Set queue that the entry resides in (window, probation, or protected). */
   public void setQueueType(int queueType) {
     throw new UnsupportedOperationException();
   }
@@ -225,7 +230,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
     throw new UnsupportedOperationException();
   }
 
-  /* ---------------- Write order -------------- */
+  /* --------------- Write order --------------- */
 
   /** Returns the time that this entry was last written, in ns. */
   public long getWriteTime() {

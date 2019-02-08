@@ -15,13 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.lang.reflect.Field;
-import java.util.concurrent.ConcurrentMap;
-
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import com.github.benmanes.caffeine.base.UnsafeAccess;
-import com.google.common.base.Throwables;
 
 /**
  * A hook to enforce that a predictable random seed is used by Caffeine's caches.
@@ -37,43 +31,12 @@ public final class RandomSeedEnforcer {
 
   /** Force the random seed to a predictable value. */
   public static void ensureRandomSeed(Cache<?, ?> cache) {
-    BoundedLocalCache<?, ?> map = unwrap(cache);
-    if (map == null) {
-      return;
-    }
-
     resetThreadLocalRandom();
-    if (map.evicts()) {
-      ensureRandomSeed(map.frequencySketch());
-    }
-  }
-
-  /** Returns the underlying bounded cache, or null if not applicable. */
-  private static @Nullable BoundedLocalCache<?, ?> unwrap(Cache<?, ?> cache) {
-    ConcurrentMap<?, ?> map = cache.asMap();
-    if (map instanceof LocalAsyncLoadingCache.AsMapView<?, ?>) {
-      map = ((LocalAsyncLoadingCache.AsMapView<?, ?>) cache.asMap()).delegate;
-    }
-    return (map instanceof BoundedLocalCache<?, ?>)
-        ? (BoundedLocalCache<?, ?>) map
-        : null;
   }
 
   /** Forces the eviction jitter to be predictable. */
   private static void resetThreadLocalRandom() {
     UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), PROBE, 0x9e3779b9);
     UnsafeAccess.UNSAFE.putLong(Thread.currentThread(), SEED, RANDOM_SEED);
-  }
-
-  /** Force the random seed to a predictable value. */
-  public static void ensureRandomSeed(FrequencySketch<?> sketch) {
-    try {
-      Field field = FrequencySketch.class.getDeclaredField("randomSeed");
-      field.setAccessible(true);
-      field.setInt(sketch, RANDOM_SEED);
-    } catch (Exception e) {
-      Throwables.throwIfUnchecked(e);
-      throw new RuntimeException(e);
-    }
   }
 }

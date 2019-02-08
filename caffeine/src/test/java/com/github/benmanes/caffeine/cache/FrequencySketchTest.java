@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.RandomSeedEnforcer.ensureRandomSeed;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -139,7 +138,6 @@ public final class FrequencySketchTest {
   private static <E> FrequencySketch<E> makeSketch(long maximumSize) {
     FrequencySketch<E> sketch = new FrequencySketch<>();
     sketch.ensureCapacity(maximumSize);
-    ensureRandomSeed(sketch);
     return sketch;
   }
 }

@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -48,24 +46,16 @@ final class FrequencySketch<E> {
    * counters found. The O(n) cost of aging is amortized, ideal for hardware prefetching, and uses
    * inexpensive bit manipulations per array location.
    *
-   * A per instance smear is used to help protect against hash flooding [3], which would result
-   * in the admission policy always rejecting new candidates. The use of a pseudo random hashing
-   * function resolves the concern of a denial of service attack by exploiting the hash codes.
-   *
    * [1] An Improved Data Stream Summary: The Count-Min Sketch and its Applications
-   * http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
+   * https://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
    * [2] TinyLFU: A Highly Efficient Cache Admission Policy
-   * http://arxiv.org/pdf/1512.00727.pdf
-   * [3] Denial of Service via Algorithmic Complexity Attack
-   * https://www.usenix.org/legacy/events/sec03/tech/full_papers/crosby/crosby.pdf
+   * https://dl.acm.org/citation.cfm?id=3149371
    */
 
   static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final long RESET_MASK = 0x7777777777777777L;
   static final long ONE_MASK = 0x1111111111111111L;
-
-  final int randomSeed;
 
   int sampleSize;
   int tableMask;
@@ -77,9 +67,7 @@ final class FrequencySketch<E> {
    * when the maximum size of the cache has been determined.
    */
   @SuppressWarnings("NullAway.Init")
-  public FrequencySketch() {
-    this.randomSeed = 1 | ThreadLocalRandom.current().nextInt();
-  }
+  public FrequencySketch() {}
 
   /**
    * Initializes and increases the capacity of this <tt>FrequencySketch</tt> instance, if necessary,
@@ -212,7 +200,7 @@ final class FrequencySketch<E> {
    */
   int spread(int x) {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
-    x = ((x >>> 16) ^ x) * randomSeed;
+    x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;
   }
 

@@ -33,8 +33,8 @@ public final class AddDeques extends NodeRule {
 
   @Override
   protected void execute() {
-    if (!Feature.usesAccessOrderEdenDeque(context.parentFeatures)
-        && Feature.usesAccessOrderEdenDeque(context.generateFeatures)) {
+    if (!Feature.usesAccessOrderWindowDeque(context.parentFeatures)
+        && Feature.usesAccessOrderWindowDeque(context.generateFeatures)) {
       addFieldAndGetter("previousInAccessOrder");
       addFieldAndGetter("nextInAccessOrder");
     }

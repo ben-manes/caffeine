@@ -79,7 +79,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     return false;
   }
 
-  /* ---------------- Cache -------------- */
+  /* --------------- Cache --------------- */
 
   @Override
   public @Nullable V getIfPresent(Object key, boolean recordStats) {
@@ -175,7 +175,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     return ticker;
   }
 
-  /* ---------------- JDK8+ Map extensions -------------- */
+  /* --------------- JDK8+ Map extensions --------------- */
 
   @Override
   public void forEach(BiConsumer<? super K, ? super V> action) {
@@ -321,7 +321,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     return nv;
   }
 
-  /* ---------------- Concurrent Map -------------- */
+  /* --------------- Concurrent Map --------------- */
 
   @Override
   public boolean isEmpty() {
@@ -849,7 +849,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
   }
 
-  /* ---------------- Manual Cache -------------- */
+  /* --------------- Manual Cache --------------- */
 
   static class UnboundedLocalManualCache<K, V> implements LocalManualCache<K, V>, Serializable {
     private static final long serialVersionUID = 1;
@@ -909,7 +909,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
   }
 
-  /* ---------------- Loading Cache -------------- */
+  /* --------------- Loading Cache --------------- */
 
   static final class UnboundedLocalLoadingCache<K, V> extends UnboundedLocalManualCache<K, V>
       implements LocalLoadingCache<K, V> {
@@ -965,7 +965,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
   }
 
-  /* ---------------- Async Cache -------------- */
+  /* --------------- Async Cache --------------- */
 
   static final class UnboundedLocalAsyncCache<K, V> implements LocalAsyncCache<K, V>, Serializable {
     private static final long serialVersionUID = 1;
@@ -1011,7 +1011,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
   }
 
-  /* ---------------- Async Loading Cache -------------- */
+  /* --------------- Async Loading Cache --------------- */
 
   static final class UnboundedLocalAsyncLoadingCache<K, V>
       extends LocalAsyncLoadingCache<K, V> implements Serializable {

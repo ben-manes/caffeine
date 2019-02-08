@@ -138,8 +138,8 @@ public final class LocalCacheFactoryGenerator {
   }
 
   private void addConstants() {
-    List<String> constants = ImmutableList.of("maximum", "edenMaximum", "mainProtectedMaximum",
-        "weightedSize", "edenWeightedSize", "mainProtectedWeightedSize");
+    List<String> constants = ImmutableList.of("maximum", "windowMaximum", "mainProtectedMaximum",
+        "weightedSize", "windowWeightedSize", "mainProtectedWeightedSize");
     for (String constant : constants) {
       String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
       factory.addField(FieldSpec.builder(String.class, name)

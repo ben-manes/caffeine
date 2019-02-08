@@ -37,21 +37,21 @@ public final class AddDeques extends LocalCacheRule {
 
   @Override
   protected void execute() {
-    addAccessOrderEdenDeque();
+    addAccessOrderWindowDeque();
     addAccessOrderMainDeque();
     addWriteOrderDeque();
   }
 
-  private void addAccessOrderEdenDeque() {
-    if (Feature.usesAccessOrderEdenDeque(context.parentFeatures)
-        || !Feature.usesAccessOrderEdenDeque(context.generateFeatures)) {
+  private void addAccessOrderWindowDeque() {
+    if (Feature.usesAccessOrderWindowDeque(context.parentFeatures)
+        || !Feature.usesAccessOrderWindowDeque(context.generateFeatures)) {
       return;
     }
 
     context.constructor.addStatement(
         "this.$L = builder.evicts() || builder.expiresAfterAccess()\n? new $T()\n: null",
-        "accessOrderEdenDeque", ACCESS_ORDER_DEQUE);
-    addFieldAndMethod(ACCESS_ORDER_DEQUE, "accessOrderEdenDeque");
+        "accessOrderWindowDeque", ACCESS_ORDER_DEQUE);
+    addFieldAndMethod(ACCESS_ORDER_DEQUE, "accessOrderWindowDeque");
   }
 
   private void addAccessOrderMainDeque() {

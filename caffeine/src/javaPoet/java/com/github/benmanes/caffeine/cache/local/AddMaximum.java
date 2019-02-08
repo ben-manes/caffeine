@@ -16,9 +16,6 @@
 package com.github.benmanes.caffeine.cache.local;
 
 import static com.github.benmanes.caffeine.cache.Specifications.FREQUENCY_SKETCH;
-import static com.github.benmanes.caffeine.cache.Specifications.UNSAFE_ACCESS;
-import static com.github.benmanes.caffeine.cache.Specifications.newFieldOffset;
-import static com.github.benmanes.caffeine.cache.Specifications.offsetName;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 
 import javax.lang.model.element.Modifier;
@@ -42,12 +39,8 @@ public final class AddMaximum extends LocalCacheRule {
   @Override
   protected void execute() {
     addEvicts();
-    addMaximum("");
-    addMaximum("eden");
-    addMaximum("mainProtected");
-    addWeightedSize("");
-    addWeightedSize("eden");
-    addWeightedSize("mainProtected");
+    addMaximumSize();
+    addHillClimber();
     addFrequencySketch();
   }
 
@@ -59,38 +52,21 @@ public final class AddMaximum extends LocalCacheRule {
         .build());
   }
 
-  private void addMaximum(String prefix) {
-    String varName = prefix.isEmpty() ? "maximum" : prefix + "Maximum";
-    context.cache.addField(FieldSpec.builder(long.class, varName, Modifier.VOLATILE).build());
-    context.cache.addField(newFieldOffset(context.className, varName));
-    context.cache.addMethod(MethodSpec.methodBuilder(varName)
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("return $T.UNSAFE.getLong(this, $N)", UNSAFE_ACCESS, offsetName(varName))
-        .returns(long.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("lazySet" + capitalize(varName))
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName(varName), varName)
-        .addParameter(long.class, varName)
-        .build());
+  private void addMaximumSize() {
+    addField(long.class, "maximum");
+    addField(long.class, "weightedSize");
+    addField(long.class, "windowMaximum");
+    addField(long.class, "windowWeightedSize");
+    addField(long.class, "mainProtectedMaximum");
+    addField(long.class, "mainProtectedWeightedSize");
   }
 
-  private void addWeightedSize(String prefix) {
-    String varName = prefix.isEmpty() ? "weightedSize" : prefix + "WeightedSize";
-    context.cache.addField(FieldSpec.builder(long.class, varName, Modifier.VOLATILE).build());
-    context.cache.addField(newFieldOffset(context.className, varName));
-    context.cache.addMethod(MethodSpec.methodBuilder(varName)
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("return $T.UNSAFE.getLong(this, $N)", UNSAFE_ACCESS, offsetName(varName))
-        .returns(long.class)
-        .build());
-    context.cache.addMethod(MethodSpec.methodBuilder("lazySet" + capitalize(varName))
-        .addModifiers(context.protectedFinalModifiers())
-        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
-            UNSAFE_ACCESS, offsetName(varName), varName)
-        .addParameter(long.class, varName)
-        .build());
+  private void addHillClimber() {
+    addField(double.class, "stepSize");
+    addField(long.class, "adjustment");
+    addField(int.class, "hitsInSample");
+    addField(int.class, "missesInSample");
+    addField(double.class, "previousSampleHitRate");
   }
 
   private void addFrequencySketch() {
@@ -107,6 +83,20 @@ public final class AddMaximum extends LocalCacheRule {
         .addModifiers(context.protectedFinalModifiers())
         .addStatement("return sketch")
         .returns(FREQUENCY_SKETCH)
+        .build());
+  }
+
+  private void addField(Class<?> type, String name) {
+    context.cache.addField(FieldSpec.builder(type, name).build());
+    context.cache.addMethod(MethodSpec.methodBuilder(name)
+        .addModifiers(context.protectedFinalModifiers())
+        .addStatement("return $L", name)
+        .returns(type)
+        .build());
+    context.cache.addMethod(MethodSpec.methodBuilder("set" + capitalize(name))
+        .addModifiers(context.protectedFinalModifiers())
+        .addParameter(type, name)
+        .addStatement("this.$1L = $1L", name)
         .build());
   }
 }

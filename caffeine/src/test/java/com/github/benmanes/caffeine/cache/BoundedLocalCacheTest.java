@@ -165,12 +165,12 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> map = asBoundedLocalCache(cache);
 
     cache.put(1, 1);
-    map.lazySetEdenMaximum(0L);
-    map.lazySetWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
+    map.setWindowMaximum(0L);
+    map.setWeightedSize(BoundedLocalCache.MAXIMUM_CAPACITY);
     cache.put(2, 2);
 
     assertThat(map.size(), is(1));
-    assertThat(map.adjustedWeightedSize(), is(BoundedLocalCache.MAXIMUM_CAPACITY));
+    assertThat(Math.max(0, map.weightedSize()), is(BoundedLocalCache.MAXIMUM_CAPACITY));
   }
 
   @Test(dataProvider = "caches")
@@ -409,7 +409,7 @@ public final class BoundedLocalCacheTest {
   private static Node<Integer, Integer> firstBeforeAccess(
       BoundedLocalCache<Integer, Integer> localCache, CacheContext context) {
     return context.isZeroWeighted()
-        ? localCache.accessOrderEdenDeque().peek()
+        ? localCache.accessOrderWindowDeque().peek()
         : localCache.accessOrderProbationDeque().peek();
   }
 
@@ -421,8 +421,8 @@ public final class BoundedLocalCacheTest {
     cache.maintenance(/* ignored */ null);
 
     if (context.isZeroWeighted()) {
-      assertThat(cache.accessOrderEdenDeque().peekFirst(), is(not(first)));
-      assertThat(cache.accessOrderEdenDeque().peekLast(), is(first));
+      assertThat(cache.accessOrderWindowDeque().peekFirst(), is(not(first)));
+      assertThat(cache.accessOrderWindowDeque().peekLast(), is(first));
     } else {
       assertThat(cache.accessOrderProbationDeque().peekFirst(), is(not(first)));
       assertThat(cache.accessOrderProtectedDeque().peekLast(), is(first));
@@ -533,7 +533,7 @@ public final class BoundedLocalCacheTest {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     cache.put(1, 1);
 
-    int size = localCache.accessOrderEdenDeque().size()
+    int size = localCache.accessOrderWindowDeque().size()
         + localCache.accessOrderProbationDeque().size();
     assertThat(localCache.writeBuffer().size(), is(0));
     assertThat(size, is(1));

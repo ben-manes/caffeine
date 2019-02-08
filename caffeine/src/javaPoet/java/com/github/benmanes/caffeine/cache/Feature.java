@@ -69,7 +69,7 @@ public enum Feature {
     return features.contains(Feature.EXPIRE_WRITE);
   }
 
-  public static boolean usesAccessOrderEdenDeque(Set<Feature> features) {
+  public static boolean usesAccessOrderWindowDeque(Set<Feature> features) {
     return features.contains(Feature.MAXIMUM_SIZE)
         || features.contains(Feature.MAXIMUM_WEIGHT)
         || features.contains(Feature.EXPIRE_ACCESS);
