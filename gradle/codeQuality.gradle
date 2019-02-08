@@ -3,6 +3,7 @@
  */
 apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'com.github.spotbugs'
+apply plugin: 'net.ltgt.errorprone'
 apply plugin: 'org.sonarqube'
 apply plugin: 'net.ltgt.apt'
 apply plugin: 'checkstyle'
@@ -15,10 +16,10 @@ configurations {
 }
 
 dependencies {
-  annotationProcessor annotationProcessors.nullaway
   checkstyleConfig gradlePlugins.checkstyle
   errorproneJavac libraries.errorproneJavac
   errorprone libraries.errorproneCore
+  errorprone gradlePlugins.nullaway
 }
 
 javadoc.options.links(
@@ -77,6 +78,7 @@ tasks.sonarqube.dependsOn(jacocoMerge)
 tasks.withType(JavaCompile) {
   options.encoding = 'UTF-8'
   options.compilerArgs << '-Xlint:all'
+  options.errorprone.errorproneArgs << '-Xep:NullAway:ERROR'
   options.errorprone {
     option('ClassName')
     option('ComparisonContractViolated')
@@ -93,13 +95,12 @@ tasks.withType(JavaCompile) {
     option('UnnecessaryDefaultInEnumSwitch')
     option('MixedArrayDimensions')
     option('RemoveUnusedImports')
+    option('NullAway:AnnotatedPackages', 'com.github.benmanes.caffeine')
   }
-  if (name == 'compileJava') {
-    options.errorprone {
-      option('NullAway', 'ERROR')
-      option('NullAway:AnnotatedPackages', 'com.github.benmanes.caffeine')
-    }
-  }
+}
+
+tasks.named('compileTestJava').configure {
+  options.errorprone.errorproneArgs << '-Xep:NullAway:OFF'
 }
 
 tasks.withType(Test) {

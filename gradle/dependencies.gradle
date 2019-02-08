@@ -38,7 +38,7 @@ ext {
     javapoet: '1.11.1',
     jcache: '1.1.0',
     jsr330: '1',
-    univocityParsers: '2.8.0',
+    univocityParsers: '2.8.1',
     ycsb: '0.15.0',
     xz: '1.8',
   ]
@@ -84,6 +84,7 @@ ext {
     jmh: '0.4.8',
     jmhReport: '0.9.0',
     nexus: '2.3.1',
+    nullaway: '0.6.4',
     pmd: '6.11.0',
     semanticVersioning: '1.1.0',
     shadow: '4.0.4',
@@ -92,9 +93,6 @@ ext {
     spotbugsPlugin: '1.6.9',
     stats: '0.2.2',
     versions: '0.20.0',
-  ]
-  annotationProcessorVersions = [
-    nullaway: '0.6.4',
   ]
 
   libraries = [
@@ -192,14 +190,12 @@ ext {
     ],
     jmhReport: "gradle.plugin.io.morethan.jmhreport:gradle-jmh-report:${pluginVersions.jmhReport}",
     nexus: "com.bmuschko:gradle-nexus-plugin:${pluginVersions.nexus}",
+    nullaway: "com.uber.nullaway:nullaway:${pluginVersions.nullaway}",
     semanticVersioning: "io.ehdev:gradle-semantic-versioning:${pluginVersions.semanticVersioning}",
     shadow: "com.github.jengelman.gradle.plugins:shadow:${pluginVersions.shadow}",
     sonarqube: "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:${pluginVersions.sonarqube}",
     spotbugs: "gradle.plugin.com.github.spotbugs:spotbugs-gradle-plugin:${pluginVersions.spotbugsPlugin}",
     stats: "org.kordamp.gradle:stats-gradle-plugin:${pluginVersions.stats}",
     versions: "com.github.ben-manes:gradle-versions-plugin:${pluginVersions.versions}",
-  ]
-  annotationProcessors = [
-    nullaway: "com.uber.nullaway:nullaway:${annotationProcessorVersions.nullaway}",
   ]
 }

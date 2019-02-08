@@ -42,7 +42,6 @@ allprojects {
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'biz.aQute.bnd.builder'
-  apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'eclipse'
   apply plugin: 'java'
   apply plugin: 'idea'

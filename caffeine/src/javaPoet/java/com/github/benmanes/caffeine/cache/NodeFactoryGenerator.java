@@ -107,6 +107,7 @@ public final class NodeFactoryGenerator {
 
   private final List<TypeSpec> nodeTypes;
 
+  @SuppressWarnings("NullAway.Init")
   public NodeFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
     this.nodeTypes = new ArrayList<>();

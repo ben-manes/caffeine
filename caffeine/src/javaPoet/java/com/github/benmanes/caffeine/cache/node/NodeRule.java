@@ -42,6 +42,9 @@ import com.squareup.javapoet.TypeName;
 public abstract class NodeRule implements Consumer<NodeContext> {
   protected NodeContext context;
 
+  @SuppressWarnings("NullAway.Init")
+  public NodeRule() {}
+
   @Override
   public final void accept(NodeContext context) {
     this.context = context;

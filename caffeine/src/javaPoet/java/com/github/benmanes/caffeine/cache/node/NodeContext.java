@@ -41,6 +41,7 @@ public final class NodeContext {
   public MethodSpec.Builder constructorByKeyRef;
   public MethodSpec. Builder constructorDefault;
 
+  @SuppressWarnings("NullAway.Init")
   public NodeContext(TypeName superClass, String className, boolean isFinal,
       Set<Feature> parentFeatures, Set<Feature> generateFeatures) {
     this.isFinal = isFinal;

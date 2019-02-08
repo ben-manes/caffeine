@@ -89,6 +89,7 @@ public final class LocalCacheFactoryGenerator {
 
   private final List<TypeSpec> factoryTypes;
 
+  @SuppressWarnings("NullAway.Init")
   public LocalCacheFactoryGenerator(Path directory) {
     this.directory = requireNonNull(directory);
     this.factoryTypes = new ArrayList<>();
