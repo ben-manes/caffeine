@@ -22,7 +22,6 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.PrimitiveIterator;
 import java.util.Spliterator;
@@ -39,8 +38,8 @@ import com.google.common.io.Closeables;
  */
 public abstract class BinaryTraceReader extends AbstractTraceReader {
 
-  public BinaryTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public BinaryTraceReader(String filePath) {
+    super(filePath);
   }
 
   @Override

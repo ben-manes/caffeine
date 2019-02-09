@@ -69,7 +69,7 @@ public abstract class AbstractClimber implements HillClimber {
     resetSample(hitRate);
 
     if (debug) {
-      System.out.printf("%.2f\t%.2f%n", windowSize, 100 * hitRate);
+      System.out.printf("%.2f\t%.2f%n", 100 * hitRate, windowSize);
     }
     return adaption;
   }

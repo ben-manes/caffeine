@@ -183,8 +183,7 @@ public class BasicSettings {
       return config().getStringList("files.paths");
     }
     public TraceFormat format() {
-      String format = config().getString("files.format").replace('-', '_').toUpperCase(US);
-      return TraceFormat.valueOf(format);
+      return TraceFormat.named(config().getString("files.format"));
     }
   }
 

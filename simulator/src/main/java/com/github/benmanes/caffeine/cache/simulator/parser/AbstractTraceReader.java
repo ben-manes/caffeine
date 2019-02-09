@@ -16,18 +16,13 @@
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.SequenceInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -43,24 +38,15 @@ import org.tukaani.xz.XZInputStream;
 public abstract class AbstractTraceReader implements TraceReader {
   private static final int BUFFER_SIZE = 1 << 16;
 
-  protected final List<String> filePaths;
+  protected final String filePath;
 
-  public AbstractTraceReader(List<String> filePaths) {
-    this.filePaths = requireNonNull(filePaths);
+  public AbstractTraceReader(String filePath) {
+    this.filePath = filePath.trim();
   }
 
   /** Returns the input stream of the trace data. */
   protected InputStream readFiles() throws IOException {
-    List<InputStream> inputs = new ArrayList<>(filePaths.size());
-    for (String filePath : filePaths) {
-      inputs.add(readFile(filePath));
-    }
-    return new SequenceInputStream(Collections.enumeration(inputs));
-  }
-
-  /** Returns the input stream, decompressing if required. */
-  private InputStream readFile(String filePath) throws IOException {
-    BufferedInputStream input = new BufferedInputStream(openFile(filePath), BUFFER_SIZE);
+    BufferedInputStream input = new BufferedInputStream(openFile(), BUFFER_SIZE);
     input.mark(100);
     try {
       return new XZInputStream(input);
@@ -81,7 +67,7 @@ public abstract class AbstractTraceReader implements TraceReader {
   }
 
   /** Returns the input stream for the raw file. */
-  private InputStream openFile(String filePath) throws IOException {
+  private InputStream openFile() throws IOException {
     Path file = Paths.get(filePath);
     if (Files.exists(file)) {
       return Files.newInputStream(file);

@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser.scarab;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
 
@@ -29,8 +28,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
  */
 public final class ScarabTraceReader extends BinaryTraceReader {
 
-  public ScarabTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public ScarabTraceReader(String filePath) {
+    super(filePath);
   }
 
   @Override

@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser.umass.storage;
 
 import java.io.IOException;
 import java.math.RoundingMode;
-import java.util.List;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -32,8 +31,8 @@ import com.google.common.math.IntMath;
 public final class StorageTraceReader extends TextTraceReader {
   static final int BLOCK_SIZE = 512;
 
-  public StorageTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public StorageTraceReader(String filePath) {
+    super(filePath);
   }
 
   @Override

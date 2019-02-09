@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.List;
 import java.util.stream.Stream;
 
 import com.google.common.io.Closeables;
@@ -34,8 +33,8 @@ import com.google.common.io.Closeables;
  */
 public abstract class TextTraceReader extends AbstractTraceReader implements TraceReader {
 
-  public TextTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public TextTraceReader(String filePath) {
+    super(filePath);
   }
 
   /** Returns a stream of each line in the trace file. */

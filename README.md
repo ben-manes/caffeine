@@ -44,7 +44,10 @@ In addition, Caffeine offers the following extensions:
  * [Simulation][simulator]
 
 Use Caffeine in a community provided integration:
+ * [Play Framework][play]: High velocity web framework
+ * [Micronaut][micronaut]: A modern, full-stack framework
  * [Spring Cache][spring]: As of Spring 4.3 & Boot 1.4
+ * [Akka][akka-http]: Build reactive applications easily
  * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [Camel][camel]: Routing and mediation engine
@@ -52,11 +55,13 @@ Use Caffeine in a community provided integration:
  * [Druid][druid]: Real-time analytics
 
 Powering infrastructure near you:
- * [Cassandra][cassandra]:  Manage massive amounts of data, fast
+ * [Dropwizard][dropwizard]: Ops-friendly, high-performance, RESTful APIs
+ * [Cassandra][cassandra]: Manage massive amounts of data, fast
+ * [Accumulo][accumulo]: A sorted, distributed key/value store
  * [Infinispan][infinispan]: Distributed in-memory data grid
- * [Akka][akka-http]: Build reactive applications easily
  * [Ratpack][ratpack]: Lean & powerful HTTP apps
  * [Corfu][corfu]: A cluster consistency platform
+ * [Grails][grails]: Groovy-based web framework
  * [Orbit][orbit]: Virtual actors on the JVM
  * [Finagle][finagle]: Extensible RPC system
  * [Neo4j][neo4j]: Graphs for Everyone
@@ -72,8 +77,8 @@ Powering infrastructure near you:
    * [Adaptive Software Cache Management][adaptive-tinylfu] by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
 
 On the radar,
- * Early discussions with [HBase][hbase], [Solr][solr], and [Play!][play]
- * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], [transitory][transitory], and [ohc][ohc]
+ * Early discussions with [HBase][hbase] and [Solr][solr]
+ * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], [transitory][transitory], [ohc][ohc], and [OrientDB][orientdb]
 
 ### Download
 
@@ -139,4 +144,9 @@ Snapshots of the development version are available in
 [camel]: https://github.com/apache/camel/blob/master/components/camel-caffeine/src/main/docs/caffeine-cache-component.adoc
 [corfu]: https://github.com/CorfuDB/CorfuDB
 [akka-http]: https://doc.akka.io/docs/akka-http/current/common/caching.html
-[play]: https://github.com/playframework/playframework/pull/8025
+[micronaut]: https://docs.micronaut.io/latest/guide/index.html#caching
+[play]: https://www.playframework.com/documentation/latest/JavaCache
+[accumulo]: https://accumulo.apache.org
+[dropwizard]: https://www.dropwizard.io
+[orientdb]: https://orientdb.com
+[grails]: https://grails.org

@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser.gradle;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.List;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -29,8 +28,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
  */
 public final class GradleTraceReader extends TextTraceReader {
 
-  public GradleTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public GradleTraceReader(String filePath) {
+    super(filePath);
   }
 
   @Override

@@ -200,7 +200,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   /** The rate to decrease the step size to adapt by. */
   static final double HILL_CLIMBER_STEP_DECAY_RATE = 0.98d;
   /** The maximum number of entries that can be transfered between queues. */
-  static final double QUEUE_TRANSFER_THRESHOLD = 1_000;
+  static final int QUEUE_TRANSFER_THRESHOLD = 1_000;
   /** The maximum time window between entry updates before the expiration must be reordered. */
   static final long EXPIRE_WRITE_TOLERANCE = TimeUnit.SECONDS.toNanos(1);
   /** The maximum duration before an entry expires. */
@@ -971,9 +971,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     double hitRate = (double) hitsInSample() / requestCount;
     double hitRateChange = hitRate - previousSampleHitRate();
     double amount = (hitRateChange >= 0) ? stepSize() : -stepSize();
-    double nextStepSize = (Math.abs(hitRateChange) < HILL_CLIMBER_RESTART_THRESHOLD)
-        ? HILL_CLIMBER_STEP_DECAY_RATE * amount
-        : HILL_CLIMBER_STEP_PERCENT * maximum();
+    double nextStepSize = (Math.abs(hitRateChange) >= HILL_CLIMBER_RESTART_THRESHOLD)
+        ? HILL_CLIMBER_STEP_PERCENT * maximum() * (amount >= 0 ? 1 : -1)
+        : HILL_CLIMBER_STEP_DECAY_RATE * amount;
     setPreviousSampleHitRate(hitRate);
     setAdjustment((long) amount);
     setStepSize(nextStepSize);
@@ -1001,6 +1001,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     for (int i = 0; i < QUEUE_TRANSFER_THRESHOLD; i++) {
       Node<K, V> candidate = accessOrderProbationDeque().peek();
+      boolean probation = true;
+      if ((candidate == null) || (quota < candidate.getPolicyWeight())) {
+        candidate = accessOrderProtectedDeque().peek();
+        probation = false;
+      }
       if (candidate == null) {
         break;
       }
@@ -1011,24 +1016,30 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
 
       quota -= weight;
-      setMainProtectedWeightedSize(mainProtectedWeightedSize() - weight);
+      if (probation) {
+        setMainProtectedWeightedSize(mainProtectedWeightedSize() - weight);
+        accessOrderProbationDeque().remove(candidate);
+      } else {
+        accessOrderProtectedDeque().remove(candidate);
+      }
       setWindowWeightedSize(windowWeightedSize() + weight);
-      accessOrderProbationDeque().remove(candidate);
       accessOrderWindowDeque().add(candidate);
       candidate.makeWindow();
     }
 
+    setMainProtectedMaximum(mainProtectedMaximum() + quota);
+    setWindowMaximum(windowMaximum() - quota);
     setAdjustment(quota);
   }
 
   /** Decreases the size of the admission window and increases the main's protected region. */
   @GuardedBy("evictionLock")
   void decreaseWindow() {
-    if (windowMaximum() == 0) {
+    if (windowMaximum() <= 1) {
       return;
     }
 
-    long quota = Math.min(adjustment(), windowMaximum());
+    long quota = Math.min(-adjustment(), Math.max(0, windowMaximum() - 1));
     setMainProtectedMaximum(mainProtectedMaximum() + quota);
     setWindowMaximum(windowMaximum() - quota);
 
@@ -1051,6 +1062,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       candidate.makeMainProbation();
     }
 
+    setMainProtectedMaximum(mainProtectedMaximum() - quota);
+    setWindowMaximum(windowMaximum() + quota);
     setAdjustment(-quota);
   }
 
@@ -1479,7 +1492,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     accessOrderProbationDeque().remove(node);
     accessOrderProtectedDeque().add(node);
     node.makeMainProtected();
-    //logger.info("Promoted " + node.getPolicyWeight());
   }
 
   /** Updates the node's location in the policy's deque. */

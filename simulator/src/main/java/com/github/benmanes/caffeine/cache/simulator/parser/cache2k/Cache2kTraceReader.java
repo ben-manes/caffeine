@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser.cache2k;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
 
@@ -29,8 +28,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
  */
 public final class Cache2kTraceReader extends BinaryTraceReader {
 
-  public Cache2kTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public Cache2kTraceReader(String filePath) {
+    super(filePath);
   }
 
   @Override

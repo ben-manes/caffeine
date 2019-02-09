@@ -16,13 +16,11 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.wikipedia;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.LongStream;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.google.common.hash.Hashing;
@@ -41,8 +39,8 @@ public final class WikipediaTraceReader extends TextTraceReader {
   private static final String[] SEARCH_LIST = { "%2F", "%20", "&amp;", "%3A" };
   private static final String[] REPLACEMENT_LIST = { "/", " ", "&", ":" };
 
-  public WikipediaTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public WikipediaTraceReader(String filePath) {
+    super(filePath);
   }
 
   @Override

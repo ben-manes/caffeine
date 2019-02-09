@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.umass.network;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -30,8 +29,8 @@ import com.google.common.hash.Hashing;
  */
 public final class YoutubeTraceReader extends TextTraceReader {
 
-  public YoutubeTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public YoutubeTraceReader(String filePath) {
+    super(filePath);
   }
 
   @Override

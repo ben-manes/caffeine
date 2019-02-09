@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.address;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -29,8 +28,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
  */
 public final class AddressTraceReader extends TextTraceReader {
 
-  public AddressTraceReader(List<String> filePaths) {
-    super(filePaths);
+  public AddressTraceReader(String filePath) {
+    super(filePath);
   }
 
   @Override
