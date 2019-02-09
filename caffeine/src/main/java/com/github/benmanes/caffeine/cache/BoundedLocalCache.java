@@ -189,7 +189,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   static final int WRITE_BUFFER_RETRIES = 100;
   /** The maximum weighted capacity of the map. */
   static final long MAXIMUM_CAPACITY = Long.MAX_VALUE - Integer.MAX_VALUE;
-  /** The percent of the maximum weighted capacity dedicated to the main space. */
+  /** The initial percent of the maximum weighted capacity dedicated to the main space. */
   static final double PERCENT_MAIN = 0.99d;
   /** The percent of the maximum weighted capacity dedicated to the main's protected space. */
   static final double PERCENT_MAIN_PROTECTED = 0.80d;
@@ -576,6 +576,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @GuardedBy("evictionLock")
   void setMaximumSize(long maximum) {
     requireArgument(maximum >= 0);
+    if (maximum == maximum()) {
+      return;
+    }
 
     long max = Math.min(maximum, MAXIMUM_CAPACITY);
     long window = max - (long) (PERCENT_MAIN * max);
@@ -1017,9 +1020,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
       quota -= weight;
       if (probation) {
-        setMainProtectedWeightedSize(mainProtectedWeightedSize() - weight);
         accessOrderProbationDeque().remove(candidate);
       } else {
+        setMainProtectedWeightedSize(mainProtectedWeightedSize() - weight);
         accessOrderProtectedDeque().remove(candidate);
       }
       setWindowWeightedSize(windowWeightedSize() + weight);

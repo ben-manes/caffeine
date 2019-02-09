@@ -47,7 +47,7 @@ final class FrequencySketch<E> {
    * inexpensive bit manipulations per array location.
    *
    * [1] An Improved Data Stream Summary: The Count-Min Sketch and its Applications
-   * https://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
+   * http://dimacs.rutgers.edu/~graham/pubs/papers/cm-full.pdf
    * [2] TinyLFU: A Highly Efficient Cache Admission Policy
    * https://dl.acm.org/citation.cfm?id=3149371
    */
