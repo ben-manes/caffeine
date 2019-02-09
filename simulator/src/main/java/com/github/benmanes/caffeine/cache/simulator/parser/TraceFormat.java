@@ -24,6 +24,7 @@ import java.util.stream.LongStream;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
@@ -48,7 +49,8 @@ public enum TraceFormat {
   UMASS_YOUTUBE(YoutubeTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new),
   CACHE2K(Cache2kTraceReader::new),
-  SCARAB(ScarabTraceReader::new);
+  SCARAB(ScarabTraceReader::new),
+  CORDA(CordaTraceReader::new);
 
   private final Function<String, TraceReader> factory;
 
