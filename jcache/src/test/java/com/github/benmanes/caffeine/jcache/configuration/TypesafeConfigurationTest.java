@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.Cache;
@@ -47,9 +48,10 @@ public final class TypesafeConfigurationTest {
   public void defaults() {
     CaffeineConfiguration<Integer, Integer> defaults =
         TypesafeConfigurator.defaults(ConfigFactory.load());
-    assertThat(defaults.getMaximumSize(), is(OptionalLong.of(500)));
     assertThat(defaults.getKeyType(), is(Object.class));
     assertThat(defaults.getValueType(), is(Object.class));
+    assertThat(defaults.getExecutorFactory().create(), is(ForkJoinPool.commonPool()));
+    assertThat(defaults.getMaximumSize(), is(OptionalLong.of(500)));
   }
 
   @Test
@@ -71,6 +73,7 @@ public final class TypesafeConfigurationTest {
 
     assertThat(config2.get().getKeyType(), is(String.class));
     assertThat(config2.get().getValueType(), is(Integer.class));
+    assertThat(config2.get().getExecutorFactory().create(), is(ForkJoinPool.commonPool()));
   }
 
   @Test
@@ -91,9 +94,9 @@ public final class TypesafeConfigurationTest {
 
     assertThat(config.getKeyType(), is(Object.class));
     assertThat(config.getValueType(), is(Object.class));
-    assertThat(config.getCacheLoaderFactory().create(),
-        instanceOf(TestCacheLoader.class));
-    assertThat(config.getCacheWriter(), instanceOf(TestCacheWriter.class));
+    assertThat(config.getExecutorFactory().create(), is(instanceOf(TestExecutor.class)));
+    assertThat(config.getCacheLoaderFactory().create(), is(instanceOf(TestCacheLoader.class)));
+    assertThat(config.getCacheWriter(), is(instanceOf(TestCacheWriter.class)));
     assertThat(config.isStatisticsEnabled(), is(true));
     assertThat(config.isManagementEnabled(), is(true));
 

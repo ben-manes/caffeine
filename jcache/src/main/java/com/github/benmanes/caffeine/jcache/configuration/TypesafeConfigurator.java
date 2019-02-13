@@ -27,7 +27,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
@@ -37,6 +36,8 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.inject.Inject;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.jcache.expiry.JCacheExpiryPolicy;
 import com.typesafe.config.Config;
@@ -130,6 +131,7 @@ public final class TypesafeConfigurator {
     CaffeineConfiguration<K, V> configure() {
       addKeyValueTypes();
       addStoreByValue();
+      addExecutor();
       addListeners();
       addReadThrough();
       addWriteThrough();
@@ -161,6 +163,13 @@ public final class TypesafeConfigurator {
       if (isSet("store-by-value.strategy")) {
         configuration.setCopierFactory(factoryCreator.factoryOf(
             merged.getString("store-by-value.strategy")));
+      }
+    }
+
+    /** Adds the executor settings. */
+    public void addExecutor() {
+      if (isSet("executor")) {
+        configuration.setExecutorFactory(factoryCreator.factoryOf(merged.getString("executor")));
       }
     }
 
