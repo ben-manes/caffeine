@@ -25,7 +25,10 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class SimpleClimber extends AbstractClimber {
+  private final double restartThreshold;
+  private final double initialStepSize;
   private final double sampleDecayRate;
+  private final int initialSampleSize;
   private final double stepDecayRate;
   private final double tolerance;
 
@@ -34,17 +37,24 @@ public final class SimpleClimber extends AbstractClimber {
 
   public SimpleClimber(Config config) {
     SimpleClimberSettings settings = new SimpleClimberSettings(config);
-    this.sampleSize = (int) (settings.percentSample() * settings.maximumSize());
-    this.stepSize = (int) (settings.percentPivot() * settings.maximumSize());
+    this.initialSampleSize = (int) (settings.percentSample() * settings.maximumSize());
+    this.initialStepSize = settings.percentPivot() * settings.maximumSize();
+    this.restartThreshold = settings.restartThreshold();
     this.sampleDecayRate = settings.sampleDecayRate();
     this.stepDecayRate = settings.stepDecayRate();
     this.tolerance = 100d * settings.tolerance();
+    this.sampleSize = initialSampleSize;
+    this.stepSize = initialStepSize;
   }
 
   @Override
   protected double adjust(double hitRate) {
     if (hitRate < (previousHitRate + tolerance)) {
       increaseWindow = !increaseWindow;
+    }
+    if (Math.abs(hitRate - previousHitRate) >= restartThreshold) {
+      sampleSize = initialSampleSize;
+      stepSize = initialStepSize;
     }
     return increaseWindow ? stepSize : -stepSize;
   }
@@ -80,6 +90,9 @@ public final class SimpleClimber extends AbstractClimber {
     }
     public double sampleDecayRate() {
       return config().getDouble(BASE_PATH + "sample-decay-rate");
+    }
+    public double restartThreshold() {
+      return config().getDouble(BASE_PATH + "restart-threshold");
     }
   }
 }
