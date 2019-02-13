@@ -288,6 +288,21 @@ public final class AsyncLoadingCacheTest {
   @CheckNoWriter
   @Test(dataProvider = "caches")
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
+      population = { Population.SINGLETON, Population.PARTIAL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_ordered_partial(
+      AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.original().keySet());
+    keys.addAll(context.absentKeys());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys).join().keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllPresent_ordered_present(
@@ -297,6 +312,20 @@ public final class AsyncLoadingCacheTest {
 
     List<Integer> result = new ArrayList<>(cache.getAll(keys).join().keySet());
     assertThat(result, is(equalTo(keys)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAllPresent_ordered_exceeds(
+      AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.original().keySet());
+    keys.addAll(context.absentKeys());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys).join().keySet());
+    assertThat(result.subList(0, keys.size()), is(equalTo(keys)));
   }
 
   @CheckNoWriter

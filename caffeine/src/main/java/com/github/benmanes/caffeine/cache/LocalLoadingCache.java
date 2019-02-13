@@ -98,18 +98,20 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   /** Batch loads the missing entries. */
   default Map<K, V> loadInBulk(Iterable<? extends K> keys) {
-    Map<K, V> found = cache().getAllPresent(keys);
     Set<K> keysToLoad = new LinkedHashSet<>();
+    Map<K, V> found = cache().getAllPresent(keys);
+    Map<K, V> result = new LinkedHashMap<>(found.size());
     for (K key : keys) {
-      if (!found.containsKey(key)) {
+      V value = found.get(key);
+      if (value == null) {
         keysToLoad.add(key);
       }
+      result.put(key, value);
     }
     if (keysToLoad.isEmpty()) {
       return found;
     }
 
-    Map<K, V> result = new LinkedHashMap<>(found);
     bulkLoad(keysToLoad, result);
     return Collections.unmodifiableMap(result);
   }
@@ -129,7 +131,9 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
       });
       for (K key : keysToLoad) {
         V value = loaded.get(key);
-        if (value != null) {
+        if (value == null) {
+          result.remove(key);
+        } else {
           result.put(key, value);
         }
       }

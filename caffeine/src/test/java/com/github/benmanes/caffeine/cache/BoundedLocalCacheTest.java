@@ -620,13 +620,7 @@ public final class BoundedLocalCacheTest {
     long windowSize = localCache.windowWeightedSize();
     long windowMaximum = localCache.windowMaximum();
 
-    localCache.setPreviousSampleHitRate(0.80);
-    localCache.setMissesInSample(sampleSize / 2);
-    localCache.setHitsInSample(sampleSize - localCache.missesInSample());
-    localCache.climb();
-
-    // Fill main protected space
-    cache.asMap().keySet().stream().forEach(cache::getIfPresent);
+    adapt(cache, localCache, sampleSize);
 
     assertThat(localCache.mainProtectedMaximum(),
         is(either(lessThan(protectedMaximum)).or(is(0L))));
@@ -650,13 +644,7 @@ public final class BoundedLocalCacheTest {
     long windowSize = localCache.windowWeightedSize();
     long windowMaximum = localCache.windowMaximum();
 
-    localCache.setPreviousSampleHitRate(0.80);
-    localCache.setMissesInSample(sampleSize / 2);
-    localCache.setHitsInSample(sampleSize - localCache.missesInSample());
-    localCache.climb();
-
-    // Fill main protected space
-    cache.asMap().keySet().stream().forEach(cache::getIfPresent);
+    adapt(cache, localCache, sampleSize);
 
     assertThat(localCache.mainProtectedMaximum(), is(greaterThan(protectedMaximum)));
     assertThat(localCache.mainProtectedWeightedSize(), is(greaterThan(protectedSize)));
@@ -679,5 +667,16 @@ public final class BoundedLocalCacheTest {
     cache.asMap().keySet().stream().forEach(cache::getIfPresent);
     cache.asMap().keySet().stream().forEach(cache::getIfPresent);
     return localCache;
+  }
+
+  private void adapt(Cache<Integer, Integer> cache,
+      BoundedLocalCache<Integer, Integer> localCache, int sampleSize) {
+    localCache.setPreviousSampleHitRate(0.80);
+    localCache.setMissesInSample(sampleSize / 2);
+    localCache.setHitsInSample(sampleSize - localCache.missesInSample());
+    localCache.climb();
+
+    // Fill main protected space
+    cache.asMap().keySet().stream().forEach(cache::getIfPresent);
   }
 }
