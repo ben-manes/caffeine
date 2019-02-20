@@ -95,7 +95,8 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Override
   default @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-    return compute(key, remappingFunction, /* recordMiss */ false, /* recordLoad */ true);
+    return compute(key, remappingFunction, /* recordMiss */ false,
+        /* recordLoad */ true, /* recordLoadFailure */ true);
   }
 
   /**
@@ -103,7 +104,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * whether to record miss and load statistics based on the success of this operation.
    */
   @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean recordMiss, boolean recordLoad);
+      boolean recordMiss, boolean recordLoad, boolean recordLoadFailure);
 
   @Override
   default @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
@@ -158,13 +159,14 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Decorates the remapping function to record statistics if enabled. */
   default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction) {
-    return statsAware(remappingFunction, /* recordMiss */ true, /* recordLoad */ true);
+    return statsAware(remappingFunction, /* recordMiss */ true,
+        /* recordLoad */ true, /* recordLoadFailure */ true);
   }
 
   /** Decorates the remapping function to record statistics if enabled. */
   default <T, U, R> BiFunction<? super T, ? super U, ? extends R> statsAware(
       BiFunction<? super T, ? super U, ? extends R> remappingFunction,
-      boolean recordMiss, boolean recordLoad) {
+      boolean recordMiss, boolean recordLoad, boolean recordLoadFailure) {
     if (!isRecordingStats()) {
       return remappingFunction;
     }
@@ -177,7 +179,9 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
       try {
         result = remappingFunction.apply(t, u);
       } catch (RuntimeException | Error e) {
-        statsCounter().recordLoadFailure(statsTicker().read() - startTime);
+        if (recordLoadFailure) {
+          statsCounter().recordLoadFailure(statsTicker().read() - startTime);
+        }
         throw e;
       }
       long loadTime = statsTicker().read() - startTime;

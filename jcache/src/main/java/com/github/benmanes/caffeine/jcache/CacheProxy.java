@@ -767,7 +767,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         statistics.recordMisses(1L);
         value = null;
       } else {
-        value = expirable.get();
+        value = copyValue(expirable);
         statistics.recordHits(1L);
       }
       EntryProcessorEntry<K, V> entry = new EntryProcessorEntry<>(key, value,

@@ -318,7 +318,7 @@ abstract class LocalAsyncLoadingCache<K, V>
             }
             discard[0] = true;
             return currentValue;
-          }, /* recordMiss */ false, /* recordLoad */ false);
+          }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
 
           if (discard[0] && asyncCache.cache().hasRemovalListener()) {
             asyncCache.cache().notifyRemoval(key, refreshFuture, RemovalCause.REPLACED);

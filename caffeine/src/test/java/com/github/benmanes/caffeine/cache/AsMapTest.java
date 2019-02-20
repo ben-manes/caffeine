@@ -39,6 +39,7 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -342,9 +343,9 @@ public final class AsMapTest {
       assertThat(map.put(key, value), is(value));
       assertThat(map.get(key), is(value));
     }
-    int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size()));
     if (context.isGuava() || context.isAsync()) {
+      int count = context.firstMiddleLastKeys().size();
       assertThat(map, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
     } else {
       assertThat(context.consumedNotifications(), hasSize(0));
@@ -409,7 +410,7 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void putAll_empty(Map<Integer, Integer> map, CacheContext context) {
-    map.putAll(new HashMap<>());
+    map.putAll(Collections.emptyMap());
     assertThat(map.size(), is(context.original().size()));
   }
 
@@ -1257,14 +1258,14 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void merge_nullKey(Map<Integer, Integer> map, CacheContext context) {
-    map.merge(null, 1, (key, value) -> -key);
+    map.merge(null, 1, (oldValue, value) -> -oldValue);
   }
 
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void merge_nullValue(Map<Integer, Integer> map, CacheContext context) {
-    map.merge(1, null, (key, value) -> -key);
+    map.merge(1, null, (oldValue, value) -> -oldValue);
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1280,7 +1281,7 @@ public final class AsMapTest {
   public void merge_remove(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       Integer value = context.original().get(key);
-      assertThat(map.merge(key, value, (k, v) -> null), is(nullValue()));
+      assertThat(map.merge(key, value, (oldValue, v) -> null), is(nullValue()));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
@@ -1296,8 +1297,8 @@ public final class AsMapTest {
   public void merge_recursive(Map<Integer, Integer> map, CacheContext context) {
     BiFunction<Integer, Integer, Integer> mappingFunction =
         new BiFunction<Integer, Integer, Integer>() {
-          @Override public Integer apply(Integer key, Integer value) {
-            return map.merge(key, -key, this);
+          @Override public Integer apply(Integer oldValue, Integer value) {
+            return map.merge(oldValue, -oldValue, this);
           }
         };
     Integer firstValue = context.original().get(context.firstKey());
@@ -1316,7 +1317,7 @@ public final class AsMapTest {
         new BiFunction<Integer, Integer, Integer>() {
           int recursed;
 
-          @Override public Integer apply(Integer key, Integer value) {
+          @Override public Integer apply(Integer oldValue, Integer value) {
             if (++recursed == 2) {
               throw new StackOverflowError();
             }
@@ -1328,13 +1329,12 @@ public final class AsMapTest {
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Guava,
-      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void merge_error(Map<Integer, Integer> map, CacheContext context) {
     try {
       map.merge(context.firstKey(), context.original().get(context.firstKey()),
-          (key, value) -> { throw new Error(); });
+          (oldValue, value) -> { throw new Error(); });
     } catch (Error e) {}
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -1345,7 +1345,8 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void merge_absent(Map<Integer, Integer> map, CacheContext context) {
-    Integer result = map.merge(context.absentKey(), context.absentValue(), (key, value) -> value);
+    Integer result = map.merge(context.absentKey(),
+        context.absentValue(), (oldValue, value) -> value);
     assertThat(result, is(context.absentValue()));
 
     assertThat(map.get(context.absentKey()), is(context.absentValue()));
@@ -1358,7 +1359,7 @@ public final class AsMapTest {
   public void merge_sameValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       Integer value = context.original().get(key);
-      assertThat(map.merge(key, -key, (k, v) -> k), is(value));
+      assertThat(map.merge(key, -key, (oldValue, v) -> oldValue), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
@@ -1380,7 +1381,7 @@ public final class AsMapTest {
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void merge_differentValue(Map<Integer, Integer> map, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
-      assertThat(map.merge(key, key, (k, v) -> k + v), is(0));
+      assertThat(map.merge(key, key, (oldValue, v) -> oldValue + v), is(0));
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
@@ -2056,8 +2057,9 @@ public final class AsMapTest {
         assertThat(entry, is(instanceOf(WriteThroughEntry.class)));
       }
       count[0]++;
+      assertThat(context.original(), hasEntry(entry.getKey(), entry.getValue()));
     });
-    assertThat(count[0], is(map.size()));
+    assertThat(count[0], is(context.original().size()));
   }
 
   @CacheSpec

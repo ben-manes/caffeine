@@ -15,6 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.MapTestFactory.asynchronousGenerator;
+import static com.github.benmanes.caffeine.cache.MapTestFactory.synchronousGenerator;
+
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 
 import junit.framework.Test;
@@ -37,39 +40,49 @@ public final class CaffeineMapTests extends TestCase {
   }
 
   private static void addUnboundedTests(TestSuite suite) throws Exception {
-    suite.addTest(MapTestFactory.suite("UnboundedCache", () -> {
+    suite.addTest(MapTestFactory.suite("UnboundedCache", synchronousGenerator(() -> {
       Cache<String, String> cache = Caffeine.newBuilder().build();
       return cache.asMap();
-    }));
-    suite.addTest(MapTestFactory.suite("UnboundedAsyncCache", () -> {
+    })));
+    suite.addTest(MapTestFactory.suite("UnboundedAsyncCache", synchronousGenerator(() -> {
       AsyncLoadingCache<String, String> cache = Caffeine.newBuilder().buildAsync(key -> null);
       return cache.synchronous().asMap();
-    }));
+    })));
+    suite.addTest(MapTestFactory.suite("UnboundedAsyncCache", asynchronousGenerator(() -> {
+      AsyncLoadingCache<String, String> cache = Caffeine.newBuilder().buildAsync(key -> null);
+      return cache.asMap();
+    })));
   }
 
   private static void addBoundedTests(TestSuite suite) throws Exception {
-    suite.addTest(MapTestFactory.suite("BoundedCache", () -> {
+    suite.addTest(MapTestFactory.suite("BoundedCache", synchronousGenerator(() -> {
       Cache<String, String> cache = Caffeine.newBuilder().maximumSize(Long.MAX_VALUE).build();
       return cache.asMap();
-    }));
-    suite.addTest(MapTestFactory.suite("BoundedAsyncCache", () -> {
+    })));
+    suite.addTest(MapTestFactory.suite("BoundedAsyncCache", synchronousGenerator(() -> {
       AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
           .maximumSize(Long.MAX_VALUE)
           .buildAsync(key -> null);
       return cache.synchronous().asMap();
-    }));
+    })));
+    suite.addTest(MapTestFactory.suite("BoundedAsyncCache", asynchronousGenerator(() -> {
+      AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
+          .maximumSize(Long.MAX_VALUE)
+          .buildAsync(key -> null);
+      return cache.asMap();
+    })));
   }
 
   private static void addGuavaViewTests(TestSuite suite) throws Exception {
-    suite.addTest(MapTestFactory.suite("GuavaView", () -> {
+    suite.addTest(MapTestFactory.suite("GuavaView", synchronousGenerator(() -> {
       com.google.common.cache.Cache<String, String> cache = CaffeinatedGuava.build(
           Caffeine.newBuilder().maximumSize(Long.MAX_VALUE));
       return cache.asMap();
-    }));
-    suite.addTest(MapTestFactory.suite("GuavaLoadingView", () -> {
+    })));
+    suite.addTest(MapTestFactory.suite("GuavaLoadingView", synchronousGenerator(() -> {
       com.google.common.cache.Cache<String, String> cache = CaffeinatedGuava.build(
           Caffeine.newBuilder().maximumSize(Long.MAX_VALUE), key -> null);
       return cache.asMap();
-    }));
+    })));
   }
 }

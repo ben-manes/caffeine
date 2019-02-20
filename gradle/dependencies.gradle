@@ -25,7 +25,7 @@
  */
 ext {
   versions = [
-    akka: '2.5.20',
+    akka: '2.5.21',
     checkerFramework: '2.6.0',
     commonsCompress: '1.18',
     commonsLang3: '3.8.1',
@@ -49,7 +49,7 @@ ext {
     jcacheTck: '1.1.0',
     jctools: '2.1.2',
     junit: '4.12',
-    mockito: '2.24.0',
+    mockito: '2.24.5',
     paxExam: '4.13.1',
     testng: '6.14.3',
     truth: '0.24',
@@ -60,7 +60,7 @@ ext {
     commonsMath3: '3.6.1',
     concurrentlinkedhashmap: '1.4.2',
     ehcache3: '3.6.3',
-    elasticSearch: '7.0.0-alpha2',
+    elasticSearch: '7.0.0-beta1',
     expiringMap: '0.5.9',
     jackrabbit: '1.10.0',
     jamm: '0.3.3',
@@ -84,13 +84,13 @@ ext {
     jmh: '0.4.8',
     jmhReport: '0.9.0',
     nexus: '2.3.1',
-    nullaway: '0.6.4',
+    nullaway: '0.6.5',
     pmd: '6.11.0',
     semanticVersioning: '1.1.0',
     shadow: '4.0.4',
     sonarqube: '2.7.0.1622',
-    spotbugs: '3.1.8',
-    spotbugsPlugin: '1.6.9',
+    spotbugs: '3.1.11',
+    spotbugsPlugin: '1.6.10',
     stats: '0.2.2',
     versions: '0.20.0',
   ]
@@ -194,7 +194,10 @@ ext {
     semanticVersioning: "io.ehdev:gradle-semantic-versioning:${pluginVersions.semanticVersioning}",
     shadow: "com.github.jengelman.gradle.plugins:shadow:${pluginVersions.shadow}",
     sonarqube: "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:${pluginVersions.sonarqube}",
-    spotbugs: "gradle.plugin.com.github.spotbugs:spotbugs-gradle-plugin:${pluginVersions.spotbugsPlugin}",
+    spotbugs: [
+      "gradle.plugin.com.github.spotbugs:spotbugs-gradle-plugin:${pluginVersions.spotbugsPlugin}",
+      libraries.guava // https://github.com/spotbugs/spotbugs-gradle-plugin/issues/119
+    ],
     stats: "org.kordamp.gradle:stats-gradle-plugin:${pluginVersions.stats}",
     versions: "com.github.ben-manes:gradle-versions-plugin:${pluginVersions.versions}",
   ]

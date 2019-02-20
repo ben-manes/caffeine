@@ -90,25 +90,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return requireNonNull(result[0]);
     }, recordStats, /* recordLoad */ false);
     if (result[0] != null) {
-      AtomicBoolean completed = new AtomicBoolean();
-      result[0].whenComplete((value, error) -> {
-        if (!completed.compareAndSet(false, true)) {
-          // Ignore multiple invocations due to ForkJoinPool retrying on delays
-          return;
-        }
-        long loadTime = cache().statsTicker().read() - startTime;
-        if (value == null) {
-          if (error != null) {
-            logger.log(Level.WARNING, "Exception thrown during asynchronous load", error);
-          }
-          cache().statsCounter().recordLoadFailure(loadTime);
-          cache().remove(key, result[0]);
-        } else {
-          // update the weight and expiration timestamps
-          cache().replace(key, result[0], result[0]);
-          cache().statsCounter().recordLoadSuccess(loadTime);
-        }
-      });
+      handleCompletion(key, result[0], startTime, /* recordMiss */ false);
     }
     return future;
   }
@@ -122,9 +104,15 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       cache().remove(key);
       return;
     }
-    AtomicBoolean completed = new AtomicBoolean();
     long startTime = cache().statsTicker().read();
     cache().put(key, valueFuture);
+    handleCompletion(key, valueFuture, startTime, /* recordMiss */ false);
+  }
+
+  @SuppressWarnings("FutureReturnValueIgnored")
+  default void handleCompletion(K key, CompletableFuture<V> valueFuture,
+      long startTime, boolean recordMiss) {
+    AtomicBoolean completed = new AtomicBoolean();
     valueFuture.whenComplete((value, error) -> {
       if (!completed.compareAndSet(false, true)) {
         // Ignore multiple invocations due to ForkJoinPool retrying on delays
@@ -137,16 +125,185 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
         cache().remove(key, valueFuture);
         cache().statsCounter().recordLoadFailure(loadTime);
+        if (recordMiss) {
+          cache().statsCounter().recordMisses(1);
+        }
       } else {
         // update the weight and expiration timestamps
         cache().replace(key, valueFuture, valueFuture);
         cache().statsCounter().recordLoadSuccess(loadTime);
+        if (recordMiss) {
+          cache().statsCounter().recordMisses(1);
+        }
       }
     });
   }
 
-  /* --------------- Synchronous views --------------- */
+  /* --------------- Asynchronous view --------------- */
+  final class AsyncAsMapView<K, V> implements ConcurrentMap<K, CompletableFuture<V>> {
+    final LocalAsyncCache<K, V> asyncCache;
 
+    AsyncAsMapView(LocalAsyncCache<K, V> asyncCache) {
+      this.asyncCache = requireNonNull(asyncCache);
+    }
+    @Override public boolean isEmpty() {
+      return asyncCache.cache().isEmpty();
+    }
+    @Override public int size() {
+      return asyncCache.cache().size();
+    }
+    @Override public void clear() {
+      asyncCache.cache().clear();
+    }
+    @Override public boolean containsKey(Object key) {
+      return asyncCache.cache().containsKey(key);
+    }
+    @Override public boolean containsValue(Object value) {
+      return asyncCache.cache().containsValue(value);
+    }
+    @Override public @Nullable CompletableFuture<V> get(Object key) {
+      return asyncCache.cache().get(key);
+    }
+    @Override public CompletableFuture<V> putIfAbsent(K key, CompletableFuture<V> value) {
+      CompletableFuture<V> prior = asyncCache.cache().putIfAbsent(key, value);
+      long startTime = asyncCache.cache().statsTicker().read();
+      if (prior == null) {
+        asyncCache.handleCompletion(key, value, startTime, /* recordMiss */ false);
+      }
+      return prior;
+    }
+    @Override public CompletableFuture<V> put(K key, CompletableFuture<V> value) {
+      CompletableFuture<V> prior = asyncCache.cache().put(key, value);
+      long startTime = asyncCache.cache().statsTicker().read();
+      asyncCache.handleCompletion(key, value, startTime, /* recordMiss */ false);
+      return prior;
+    }
+    @SuppressWarnings("FutureReturnValueIgnored")
+    @Override public void putAll(Map<? extends K, ? extends CompletableFuture<V>> map) {
+      map.forEach(this::put);
+    }
+    @Override public CompletableFuture<V> replace(K key, CompletableFuture<V> value) {
+      CompletableFuture<V> prior = asyncCache.cache().replace(key, value);
+      long startTime = asyncCache.cache().statsTicker().read();
+      if (prior != null) {
+        asyncCache.handleCompletion(key, value, startTime, /* recordMiss */ false);
+      }
+      return prior;
+    }
+    @Override
+    public boolean replace(K key, CompletableFuture<V> oldValue, CompletableFuture<V> newValue) {
+      boolean replaced = asyncCache.cache().replace(key, oldValue, newValue);
+      long startTime = asyncCache.cache().statsTicker().read();
+      if (replaced) {
+        asyncCache.handleCompletion(key, newValue, startTime, /* recordMiss */ false);
+      }
+      return replaced;
+    }
+    @Override public CompletableFuture<V> remove(Object key) {
+      return asyncCache.cache().remove(key);
+    }
+    @Override public boolean remove(Object key, Object value) {
+      return asyncCache.cache().remove(key, value);
+    }
+    @SuppressWarnings("FutureReturnValueIgnored")
+    @Override public @Nullable CompletableFuture<V> computeIfAbsent(K key,
+        Function<? super K, ? extends CompletableFuture<V>> mappingFunction) {
+      requireNonNull(mappingFunction);
+      @SuppressWarnings({"rawtypes", "unchecked"})
+      CompletableFuture<V>[] result = new CompletableFuture[1];
+      long startTime = asyncCache.cache().statsTicker().read();
+      CompletableFuture<V> future = asyncCache.cache().computeIfAbsent(key, k -> {
+        result[0] = mappingFunction.apply(k);
+        return result[0];
+      }, /* recordStats */ false, /* recordLoad */ false);
+
+      if (result[0] == null) {
+        if ((future != null) && asyncCache.cache().isRecordingStats()) {
+          future.whenComplete((r, e) -> {
+            if ((r != null) || (e == null)) {
+              asyncCache.cache().statsCounter().recordHits(1);
+            }
+          });
+        }
+      } else {
+        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss */ true);
+      }
+      return future;
+    }
+    @Override public CompletableFuture<V> computeIfPresent(K key, BiFunction<? super K,
+        ? super CompletableFuture<V>, ? extends CompletableFuture<V>> remappingFunction) {
+      requireNonNull(remappingFunction);
+
+      @SuppressWarnings({"rawtypes", "unchecked"})
+      CompletableFuture<V>[] result = new CompletableFuture[1];
+      long startTime = asyncCache.cache().statsTicker().read();
+      asyncCache.cache().compute(key, (k, oldValue) -> {
+        result[0] = (oldValue == null) ? null : remappingFunction.apply(k, oldValue);
+        return result[0];
+      }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+      if (result[0] != null) {
+        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss */ false);
+      }
+      return result[0];
+    }
+    @Override public CompletableFuture<V> compute(K key, BiFunction<? super K,
+        ? super CompletableFuture<V>, ? extends CompletableFuture<V>> remappingFunction) {
+      requireNonNull(remappingFunction);
+
+      @SuppressWarnings({"rawtypes", "unchecked"})
+      CompletableFuture<V>[] result = new CompletableFuture[1];
+      long startTime = asyncCache.cache().statsTicker().read();
+      asyncCache.cache().compute(key, (k, oldValue) -> {
+        result[0] = remappingFunction.apply(k, oldValue);
+        return result[0];
+      }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+      if (result[0] != null) {
+        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss */ false);
+      }
+      return result[0];
+    }
+    @Override public CompletableFuture<V> merge(K key, CompletableFuture<V> value,
+        BiFunction<? super CompletableFuture<V>, ? super CompletableFuture<V>,
+            ? extends CompletableFuture<V>> remappingFunction) {
+      requireNonNull(value);
+      requireNonNull(remappingFunction);
+
+      @SuppressWarnings({"rawtypes", "unchecked"})
+      CompletableFuture<V>[] result = new CompletableFuture[1];
+      long startTime = asyncCache.cache().statsTicker().read();
+      asyncCache.cache().compute(key, (k, oldValue) -> {
+        result[0] = (oldValue == null) ? value : remappingFunction.apply(oldValue, value);
+        return result[0];
+      }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+      if (result[0] != null) {
+        asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss */ false);
+      }
+      return result[0];
+    }
+    @Override public Set<K> keySet() {
+      return asyncCache.cache().keySet();
+    }
+    @Override public Collection<CompletableFuture<V>> values() {
+      return asyncCache.cache().values();
+    }
+    @Override public Set<Entry<K, CompletableFuture<V>>> entrySet() {
+      return asyncCache.cache().entrySet();
+    }
+    @Override public boolean equals(Object o) {
+      return asyncCache.cache().equals(o);
+    }
+    @Override public int hashCode() {
+      return asyncCache.cache().hashCode();
+    }
+    @Override public String toString() {
+      return asyncCache.cache().toString();
+    }
+  }
+
+  /* --------------- Synchronous view --------------- */
   final class CacheView<K, V> extends AbstractCacheView<K, V> {
     private static final long serialVersionUID = 1L;
 
@@ -365,7 +522,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           done[0] = true;
           removed[0] = value.equals(oldValue);
           return removed[0] ? null : oldValueFuture;
-        }, /* recordStats */ false, /* recordLoad */ false);
+        }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
         if (done[0]) {
           return removed[0];
         }
@@ -396,7 +553,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       delegate.compute(castedKey, (k, value) -> {
         replaced[0] = oldValue.equals(Async.getWhenSuccessful(value));
         return replaced[0] ? CompletableFuture.completedFuture(newValue) : value;
-      }, /* recordStats */ false, /* recordLoad */ false);
+      }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
       return replaced[0];
     }
 
@@ -457,7 +614,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           }
           delegate.statsCounter().recordLoadSuccess(loadTime);
           return CompletableFuture.completedFuture(newValue);
-        }, /* recordMiss */ false, /* recordLoad */ false);
+        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
         if (computed[0]) {
           return Async.getWhenSuccessful(valueFuture);
         }

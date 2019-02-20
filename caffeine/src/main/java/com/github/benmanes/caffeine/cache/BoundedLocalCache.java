@@ -50,6 +50,7 @@ import java.util.Spliterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
@@ -1179,7 +1180,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             }
             discard[0] = true;
             return currentValue;
-          }, /* recordMiss */ false, /* recordLoad */ false);
+          }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
 
           if (discard[0] && hasRemovalListener()) {
             notifyRemoval(key, value, RemovalCause.REPLACED);
@@ -2277,7 +2278,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           setAccessTime(node, now);
         }
 
-        afterRead(node, now, /* recordHit */ true);
+        afterRead(node, now, /* recordHit */ recordStats);
         return value;
       }
     }
@@ -2285,12 +2286,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       mappingFunction = statsAware(mappingFunction, recordLoad);
     }
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
-    return doComputeIfAbsent(key, keyRef, mappingFunction, new long[] { now });
+    return doComputeIfAbsent(key, keyRef, mappingFunction, new long[] { now }, recordStats);
   }
 
   /** Returns the current value from a computeIfAbsent invocation. */
   @Nullable V doComputeIfAbsent(K key, Object keyRef,
-      Function<? super K, ? extends V> mappingFunction, long[/* 1 */] now) {
+      Function<? super K, ? extends V> mappingFunction, long[/* 1 */] now, boolean recordStats) {
     @SuppressWarnings("unchecked")
     V[] oldValue = (V[]) new Object[1];
     @SuppressWarnings("unchecked")
@@ -2365,7 +2366,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         setAccessTime(node, now[0]);
       }
 
-      afterRead(node, now[0], /* recordHit */ true);
+      afterRead(node, now[0], /* recordHit */ recordStats);
       return oldValue[0];
     }
     if ((oldValue[0] == null) && (cause[0] == null)) {
@@ -2396,21 +2397,22 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
-        statsAware(remappingFunction, /* recordMiss */ false, /* recordLoad */ true);
+        statsAware(remappingFunction, /* recordMiss */ false,
+            /* recordLoad */ true, /* recordLoadFailure */ true);
     return remap(key, lookupKey, statsAwareRemappingFunction,
         new long[] { now }, /* computeIfAbsent */ false);
   }
 
   @Override
   public @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean recordMiss, boolean recordLoad) {
+      boolean recordMiss, boolean recordLoad, boolean recordLoadFailure) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
     long[] now = { expirationTicker().read() };
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
-        statsAware(remappingFunction, recordMiss, recordLoad);
+        statsAware(remappingFunction, recordMiss, recordLoad, recordLoadFailure);
     return remap(key, keyRef, statsAwareRemappingFunction, now, /* computeIfAbsent */ true);
   }
 
@@ -3687,6 +3689,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     final BoundedLocalCache<K, CompletableFuture<V>> cache;
     final boolean isWeighted;
 
+    @Nullable ConcurrentMap<K, CompletableFuture<V>> mapView;
     @Nullable CacheView<K, V> cacheView;
     @Nullable Policy<K, V> policy;
 
@@ -3700,6 +3703,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public BoundedLocalCache<K, CompletableFuture<V>> cache() {
       return cache;
+    }
+
+    @Override
+    public ConcurrentMap<K, CompletableFuture<V>> asMap() {
+      return (mapView == null) ? (mapView = new AsyncAsMapView<>(this)) : mapView;
     }
 
     @Override
@@ -3743,6 +3751,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     final BoundedLocalCache<K, CompletableFuture<V>> cache;
     final boolean isWeighted;
 
+    @Nullable ConcurrentMap<K, CompletableFuture<V>> mapView;
     @Nullable Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
@@ -3756,6 +3765,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override
     public BoundedLocalCache<K, CompletableFuture<V>> cache() {
       return cache;
+    }
+
+    @Override
+    public ConcurrentMap<K, CompletableFuture<V>> asMap() {
+      return (mapView == null) ? (mapView = new AsyncAsMapView<>(this)) : mapView;
     }
 
     @Override

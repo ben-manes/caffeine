@@ -34,6 +34,7 @@ import java.util.Spliterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -257,8 +258,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     V[] oldValue = (V[]) new Object[1];
     RemovalCause[] cause = new RemovalCause[1];
     V nv = data.computeIfPresent(key, (K k, V value) -> {
-      BiFunction<? super K, ? super V, ? extends V> function =
-          statsAware(remappingFunction, /* recordMiss */ false, /* recordLoad */ true);
+      BiFunction<? super K, ? super V, ? extends V> function = statsAware(remappingFunction,
+          /* recordMiss */ false, /* recordLoad */ true, /* recordLoadFailure */ true);
       V newValue = function.apply(k, value);
 
       cause[0] = (newValue == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
@@ -276,9 +277,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean recordMiss, boolean recordLoad) {
+      boolean recordMiss, boolean recordLoad, boolean recordLoadFailure) {
     requireNonNull(remappingFunction);
-    return remap(key, statsAware(remappingFunction, recordMiss, recordLoad));
+    return remap(key, statsAware(remappingFunction, recordMiss, recordLoad, recordLoadFailure));
   }
 
   @Override
@@ -762,9 +763,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Spliterator<Entry<K, V>> spliterator() {
-      return (cache.writer == CacheWriter.disabledWriter())
-          ? cache.data.entrySet().spliterator()
-          : new EntrySpliterator<>(cache);
+      return new EntrySpliterator<>(cache);
     }
   }
 
@@ -972,6 +971,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     final UnboundedLocalCache<K, CompletableFuture<V>> cache;
 
+    @Nullable ConcurrentMap<K, CompletableFuture<V>> mapView;
     @Nullable CacheView<K, V> cacheView;
     @Nullable Policy<K, V> policy;
 
@@ -984,6 +984,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public UnboundedLocalCache<K, CompletableFuture<V>> cache() {
       return cache;
+    }
+
+    @Override
+    public ConcurrentMap<K, CompletableFuture<V>> asMap() {
+      return (mapView == null) ? (mapView = new AsyncAsMapView<>(this)) : mapView;
     }
 
     @Override
@@ -1019,6 +1024,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     final UnboundedLocalCache<K, CompletableFuture<V>> cache;
 
+    @Nullable ConcurrentMap<K, CompletableFuture<V>> mapView;
     @Nullable Policy<K, V> policy;
 
     @SuppressWarnings("unchecked")
@@ -1031,6 +1037,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     @Override
     public LocalCache<K, CompletableFuture<V>> cache() {
       return cache;
+    }
+
+    @Override
+    public ConcurrentMap<K, CompletableFuture<V>> asMap() {
+      return (mapView == null) ? (mapView = new AsyncAsMapView<>(this)) : mapView;
     }
 
     @Override
