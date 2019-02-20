@@ -1,5 +1,6 @@
 bin
 build
+build-cache
 test-output
 jitwatch.out
 .java-version

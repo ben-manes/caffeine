@@ -37,6 +37,7 @@ testNames.each { testName ->
       systemProperties['values'] = strength[1]
       systemProperties['compute'] = isAsync ? 'async' : 'sync'
       systemProperties['stats'] = hasStats ? 'enabled' : 'disabled'
+
     }
     systemProperties['implementation'] = implementation
 
@@ -69,12 +70,14 @@ tasks.withType(Test) {
   if (options instanceof TestNGOptions) {
     if (name.startsWith('slow')) {
       maxParallelForks = 2
+      jvmArgs '-XX:+UseParallelGC'
       options.includeGroups = ['slow']
     } else if (name.startsWith('isolated')) {
       options.includeGroups = ['isolated']
     } else {
       options {
         excludeGroups = ['slow', 'isolated']
+        jvmArgs '-XX:+UseG1GC'
         parallel = 'methods'
         threadCount = 6
       }

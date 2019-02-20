@@ -77,7 +77,7 @@ tasks.sonarqube.dependsOn(jacocoMerge)
 
 tasks.withType(JavaCompile) {
   options.encoding = 'UTF-8'
-  options.compilerArgs << '-Xlint:all'
+  options.compilerArgs << '-Xlint:all,-auxiliaryclass'
   options.errorprone.errorproneArgs << '-Xep:NullAway:ERROR'
   options.errorprone {
     option('ClassName')
@@ -108,7 +108,7 @@ tasks.withType(Test) {
     jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
   }
   options {
-    jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=0', '-XX:+UseParallelGC', '-noverify'
+    jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=0', '-noverify'
   }
   if (System.env.'CI') {
     maxHeapSize = '512m'

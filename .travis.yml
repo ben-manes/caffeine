@@ -37,7 +37,8 @@ before_cache:
   - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 cache:
   directories:
+    - build-cache
     - $HOME/.m2
     - $HOME/.sonar/cache
-    - $HOME/.gradle/caches/
-    - $HOME/.gradle/wrapper/
+    - $HOME/.gradle/caches
+    - $HOME/.gradle/wrapper

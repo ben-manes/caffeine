@@ -103,6 +103,7 @@ task generateLocalCaches(type: JavaExec) {
 
   outputs.upToDateWhen { !tasks.compileJavaPoetJava.didWork }
   outputs.dir "${buildDir}/generated-sources/"
+  outputs.cacheIf { true }
 }
 compileJava.dependsOn(generateLocalCaches)
 
@@ -114,6 +115,7 @@ task generateNodes(type: JavaExec) {
 
   outputs.upToDateWhen { !tasks.compileJavaPoetJava.didWork }
   outputs.dir "${buildDir}/generated-sources/"
+  outputs.cacheIf { true }
 }
 compileJava.dependsOn(generateNodes)
 

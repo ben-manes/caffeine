@@ -41,6 +41,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -51,6 +52,11 @@ import com.google.common.collect.Sets;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class CacheGenerator {
+  // Integer caches the object identity semantics of autoboxing for values between
+  // -128 and 127 (inclusive) as required by JLS (assuming default setting)
+  private static final List<Entry<Integer, Integer>> INTS = makeInts();
+  private static final int BASE = 1_000;
+
   private final Options options;
   private final CacheSpec cacheSpec;
   private final boolean isAsyncOnly;
@@ -207,20 +213,18 @@ final class CacheGenerator {
       return;
     }
 
-    // Integer caches the object identity semantics of autoboxing for values between
-    // -128 and 127 (inclusive) as required by JLS
-    int base = 1000;
-
     int maximum = (int) Math.min(context.maximumSize(), context.population.size());
-    int first = base + (int) Math.min(1, context.population.size());
-    int last = base + maximum;
-    int middle = Math.max(first, base + ((last - first) / 2));
+    int first = BASE + (int) Math.min(0, context.population.size());
+    int last = BASE + maximum - 1;
+    int middle = Math.max(first, BASE + ((last - first) / 2));
 
     context.disableRejectingCacheWriter();
-    for (int i = 1; i <= maximum; i++) {
+    for (int i = 0; i < maximum; i++) {
+      Entry<Integer, Integer> entry = INTS.get(i);
+
       // Reference caching (weak, soft) require unique instances for identity comparison
-      Integer key = new Integer(base + i);
-      Integer value = new Integer(-key);
+      Integer key = context.isStrongKeys() ? entry.getKey() : new Integer(BASE + i);
+      Integer value = context.isStrongValues() ? entry.getValue() : new Integer(-key);
 
       if (key == first) {
         context.firstKey = key;
@@ -239,5 +243,19 @@ final class CacheGenerator {
     if (context.writer() == Writer.MOCKITO) {
       reset(context.cacheWriter());
     }
+  }
+
+  /** Returns a cache of integers and their negation. */
+  @SuppressWarnings("BoxedPrimitiveConstructor")
+  private static List<Entry<Integer, Integer>> makeInts() {
+    int size = Stream.of(CacheSpec.Population.values())
+        .mapToInt(population -> Math.toIntExact(population.size()))
+        .max().getAsInt();
+    ImmutableList.Builder<Entry<Integer, Integer>> builder = ImmutableList.builder();
+    for (int i = 0; i < size; i++) {
+      int value = BASE + i;
+      builder.add(Maps.immutableEntry(new Integer(value), new Integer(-value)));
+    }
+    return builder.build();
   }
 }

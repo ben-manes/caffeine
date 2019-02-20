@@ -25,9 +25,9 @@ case "${1:?''}" in
     run "sh -c 'cd examples/write-behind-rxjava && mvn test'"
     ;;
   tests)
-    run "./gradlew check --scan --console plain"
-    runSlow "./gradlew :caffeine:slowCaffeineTest --scan --console plain"
-    runSlow "./gradlew :caffeine:slowGuavaTest --scan --console plain"
+    run "./gradlew check --console plain"
+    runSlow "./gradlew :caffeine:slowCaffeineTest --console plain"
+    runSlow "./gradlew :caffeine:slowGuavaTest --console plain"
     run "./gradlew coveralls uploadArchives --console plain"
     runSlow "./gradlew sonarqube --console plain"
     ;;

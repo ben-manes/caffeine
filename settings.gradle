@@ -4,3 +4,12 @@ include 'caffeine'
 include 'guava'
 include 'jcache'
 include 'simulator'
+
+buildCache {
+  local.enabled = true
+  
+  local(DirectoryBuildCache) {
+    directory = new File(rootDir, 'build-cache')
+    removeUnusedEntriesAfterDays = 30
+  }
+}
