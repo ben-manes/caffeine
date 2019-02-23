@@ -86,17 +86,28 @@ public final class AddExpiration extends NodeRule {
   private void addVariableTime(String varName) {
     MethodSpec getter = MethodSpec.methodBuilder("getVariableTime")
         .addModifiers(Modifier.PUBLIC)
-        .addStatement("return $N", varName)
+        .addStatement("return $T.UNSAFE.getLong(this, $N)",
+            UNSAFE_ACCESS, offsetName(varName))
         .returns(long.class)
         .build();
     MethodSpec setter = MethodSpec.methodBuilder("setVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(long.class, varName)
-        .addStatement("this.$N = $N", varName, varName)
+        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
+            UNSAFE_ACCESS, offsetName(varName), varName)
+        .build();
+    MethodSpec cas = MethodSpec.methodBuilder("casVariableTime")
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(long.class, "expect")
+        .addParameter(long.class, "update")
+        .returns(boolean.class)
+        .addStatement("return ($N == $N)\n&& $T.UNSAFE.compareAndSwapLong(this, $N, $N, $N)",
+            varName, "expect", UNSAFE_ACCESS, offsetName(varName), "expect", "update")
         .build();
     context.nodeSubtype
         .addMethod(getter)
-        .addMethod(setter);
+        .addMethod(setter)
+        .addMethod(cas);
   }
 
   private void addAccessExpiration() {
@@ -132,8 +143,8 @@ public final class AddExpiration extends NodeRule {
         .addParameter(long.class, "expect")
         .addParameter(long.class, "update")
         .returns(boolean.class)
-        .addStatement("return $T.UNSAFE.compareAndSwapLong(this, $N, $N, $N)",
-            UNSAFE_ACCESS, offsetName("writeTime"), "expect", "update")
+        .addStatement("return ($N == $N)\n&& $T.UNSAFE.compareAndSwapLong(this, $N, $N, $N)",
+            "writeTime", "expect", UNSAFE_ACCESS, offsetName("writeTime"), "expect", "update")
         .build());
   }
 

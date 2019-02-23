@@ -129,6 +129,14 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
    */
   public void setVariableTime(long time) {}
 
+  /**
+   * Atomically sets the variable time to the given updated value if the current value equals the
+   * expected value and returns if the update was successful.
+   */
+  public boolean casVariableTime(long expect, long update) {
+    throw new UnsupportedOperationException();
+  }
+
   @GuardedBy("evictionLock")
   public Node<K, V> getPreviousInVariableOrder() {
     throw new UnsupportedOperationException();
