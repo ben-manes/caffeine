@@ -6,8 +6,8 @@ include 'jcache'
 include 'simulator'
 
 buildCache {
-  local.enabled = true
-  
+  local.enabled = false
+
   local(DirectoryBuildCache) {
     directory = new File(rootDir, 'build-cache')
     removeUnusedEntriesAfterDays = 30
