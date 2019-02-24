@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -101,6 +102,7 @@ public final class NodeFactoryGenerator {
   final Feature[] featureByIndex = new Feature[] { null, null,
       Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
       Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
+  final ZoneId timeZone = ZoneId.of("America/Los_Angeles");
   final Path directory;
 
   TypeSpec.Builder nodeFactory;
@@ -128,14 +130,14 @@ public final class NodeFactoryGenerator {
   private void writeJavaFile() throws IOException {
     String header = Resources.toString(Resources.getResource("license.txt"), UTF_8).trim();
     JavaFile.builder(getClass().getPackage().getName(), nodeFactory.build())
-        .addFileComment(header, Year.now())
+        .addFileComment(header, Year.now(timeZone))
         .indent("  ")
         .build()
         .writeTo(directory);
 
     for (TypeSpec node : nodeTypes) {
       JavaFile.builder(getClass().getPackage().getName(), node)
-              .addFileComment(header, Year.now())
+              .addFileComment(header, Year.now(timeZone))
               .indent("  ")
               .build()
               .writeTo(directory);

@@ -86,6 +86,7 @@ public final class Issue298Test {
   }
 
   @Test
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void readDuringCreate() {
     // Loaded value and waiting at expireAfterCreate (expire: infinite)
     cache.get(key);

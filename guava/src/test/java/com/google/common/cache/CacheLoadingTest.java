@@ -86,6 +86,7 @@ public class CacheLoadingTest extends TestCase {
     assertTrue(logHandler.getStoredLogRecords().isEmpty());
   }
 
+  @SuppressWarnings("UnusedVariable")
   private void checkLoggedCause(Throwable t) {
     //assertSame(t, popLoggedThrowable().getCause());
   }

@@ -442,6 +442,7 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     return new SerializationProxy<>(this);
   }
 
+  @SuppressWarnings("UnusedVariable")
   private void readObject(ObjectInputStream stream) throws InvalidObjectException {
     throw new InvalidObjectException("Proxy required");
   }

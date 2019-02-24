@@ -110,7 +110,7 @@ public final class IsEmptyIterable<E> extends TypeSafeDiagnosingMatcher<Iterable
       DescriptionBuilder builder, Runnable method) {
     try {
       method.run();
-      builder.expected("element");
+      builder.expected(label);
     } catch (NoSuchElementException e) {}
   }
 

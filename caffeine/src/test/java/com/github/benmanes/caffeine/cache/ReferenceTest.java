@@ -604,6 +604,7 @@ public final class ReferenceTest {
   }
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("UnusedVariable")
   @CacheSpec(requiresWeakOrSoft = true, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, maximumSize = Maximum.DISABLED,
       weigher = CacheWeigher.DEFAULT, population = Population.FULL, stats = Stats.ENABLED,

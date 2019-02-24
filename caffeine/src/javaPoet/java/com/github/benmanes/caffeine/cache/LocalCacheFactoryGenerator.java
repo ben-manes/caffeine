@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -83,6 +84,7 @@ public final class LocalCacheFactoryGenerator {
       new AddExpirationTicker(), new AddMaximum(), new AddFastPath(), new AddDeques(),
       new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
       new AddWriteBuffer(), new Finalize());
+  final ZoneId timeZone = ZoneId.of("America/Los_Angeles");
   final Path directory;
 
   TypeSpec.Builder factory;
@@ -124,14 +126,14 @@ public final class LocalCacheFactoryGenerator {
   private void writeJavaFile() throws IOException {
     String header = Resources.toString(Resources.getResource("license.txt"), UTF_8).trim();
     JavaFile.builder(getClass().getPackage().getName(), factory.build())
-        .addFileComment(header, Year.now())
+        .addFileComment(header, Year.now(timeZone))
         .indent("  ")
         .build()
         .writeTo(directory);
 
     for (TypeSpec typeSpec : factoryTypes) {
       JavaFile.builder(getClass().getPackage().getName(), typeSpec)
-              .addFileComment(header, Year.now())
+              .addFileComment(header, Year.now(timeZone))
               .indent("  ")
               .build()
               .writeTo(directory);

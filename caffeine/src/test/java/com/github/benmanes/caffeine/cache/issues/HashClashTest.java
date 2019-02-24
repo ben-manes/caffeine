@@ -50,7 +50,7 @@ public final class HashClashTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, maximumSize = Maximum.ONE_FIFTY, stats = Stats.ENABLED)
-  private void testCache(Cache<Long, Long> cache, CacheContext context) {
+  public void testCache(Cache<Long, Long> cache, CacheContext context) {
     for (long j = 0; j < 300; ++j) {
       cache.get(1L, Function.identity());
       cache.get(j, Function.identity());

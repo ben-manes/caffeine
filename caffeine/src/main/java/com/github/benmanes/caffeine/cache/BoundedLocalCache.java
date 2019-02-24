@@ -3354,6 +3354,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           : policy;
     }
 
+    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -3694,6 +3695,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return hasBulkLoader;
     }
 
+    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -3757,6 +3759,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return policy;
     }
 
+    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -3814,6 +3817,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       return policy;
     }
 
+    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }

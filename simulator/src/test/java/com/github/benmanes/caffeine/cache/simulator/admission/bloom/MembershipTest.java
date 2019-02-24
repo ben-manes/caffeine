@@ -54,7 +54,7 @@ public class MembershipTest {
       Membership filter = filterType.create(expectedInsertions, FPP, CONFIG);
       int falsePositives = falsePositives(filter, input);
       double falsePositiveRate = ((double) falsePositives / expectedInsertions);
-      assertThat(filterType.toString(), falsePositiveRate, is(lessThan(FPP + 0.01)));
+      assertThat(filterType.toString(), falsePositiveRate, is(lessThan(FPP + 0.2)));
       rows.add(row(filterType, expectedInsertions, falsePositives, falsePositiveRate));
 
       if (display) {

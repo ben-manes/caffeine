@@ -369,6 +369,7 @@ public final class GuavaCacheFromContext {
           return cache.asMap();
         }
 
+        @SuppressWarnings("UnusedVariable")
         private void readObject(ObjectInputStream stream) throws InvalidObjectException {
           statsCounter = new SimpleStatsCounter();
         }

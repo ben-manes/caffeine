@@ -870,6 +870,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
     }
 
+    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -959,6 +960,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return proxy;
     }
 
+    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -1001,6 +1003,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
     }
 
+    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }
@@ -1049,6 +1052,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
     }
 
+    @SuppressWarnings("UnusedVariable")
     private void readObject(ObjectInputStream stream) throws InvalidObjectException {
       throw new InvalidObjectException("Proxy required");
     }

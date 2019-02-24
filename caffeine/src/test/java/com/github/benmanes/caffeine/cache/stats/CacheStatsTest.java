@@ -100,6 +100,7 @@ public final class CacheStatsTest {
     assertThat(stats.loadSuccessCount(), is(loadSuccessCount));
     assertThat(stats.loadFailureCount(), is(loadFailureCount));
     assertThat(stats.loadFailureRate(), is(loadExceptionRate));
+    assertThat(stats.loadCount(), is(loadCount));
     assertThat(stats.totalLoadTime(), is(totalLoadTime));
     assertThat(stats.averageLoadPenalty(), is(averageLoadPenalty));
     assertThat(stats.evictionCount(), is(evictionCount));
