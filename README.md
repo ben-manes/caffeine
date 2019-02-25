@@ -71,7 +71,7 @@ Powering infrastructure near you:
  * A short look at what Caffeine brings to your applications.
    * [Add a Boost of Caffeine to Your Java][add-a-boost] at [VOXXED][voxxed]
  * An in-depth description of Caffeine's architecture.
-   * [Design of a Modern Cache][modern-cache] ([slides][modern-cache-slides]) at [HighScalability][HighScalability]
+   * [Design of a Modern Cache: part #1][modern-cache-1], [part #2][modern-cache-2] ([slides][modern-cache-slides]) at [HighScalability][HighScalability]
  * Caffeine is presented as part of research papers evaluating its novel eviction policy.
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
    * [Adaptive Software Cache Management][adaptive-tinylfu] by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
@@ -121,7 +121,8 @@ Snapshots of the development version are available in
 [adaptive-tinylfu]: https://dl.acm.org/authorize?N675830
 [add-a-boost]: https://www.voxxed.com/blog/2015/12/add-a-boost-of-caffeine-to-your-java
 [voxxed]: https://www.voxxed.com
-[modern-cache]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
+[modern-cache-1]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
+[modern-cache-2]: http://highscalability.com/blog/2019/2/25/design-of-a-modern-cachepart-deux.html
 [modern-cache-slides]: https://docs.google.com/presentation/d/1NlDxyXsUG1qlVHMl4vsUUBQfAJ2c2NsFPNPr2qymIBs
 [highscalability]: http://highscalability.com
 [spring]: http://docs.spring.io/spring/docs/current/spring-framework-reference/html/cache.html#cache-store-configuration-caffeine
