@@ -53,7 +53,7 @@ task unzipJCacheJavaDoc(type: Copy, group: 'Build', description: 'Unzips the JCa
 javadoc.dependsOn(unzipJCacheJavaDoc)
 javadoc.options.addStringOption('Xdoclint:none', '-quiet')
 javadoc.options.linksOffline(
-  "http://static.javadoc.io/javax.cache/cache-api/${versions.jcache}/",
+  "https://static.javadoc.io/javax.cache/cache-api/${versions.jcache}/",
   "${buildDir}/jcache-docs",
 )
 

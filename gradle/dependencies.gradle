@@ -21,7 +21,7 @@
  *     exclude group:  "org.unwanted'                // by artifact group
  *   }
  *
- * @see http://gradle.org/docs/current/javadoc/org/gradle/api/artifacts/dsl/DependencyHandler.html
+ * @see https://gradle.org/docs/current/javadoc/org/gradle/api/artifacts/dsl/DependencyHandler.html
  */
 ext {
   versions = [

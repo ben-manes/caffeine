@@ -1,7 +1,7 @@
 /**
  * Configures the project in Eclipse.
  *
- * @see http://gradle.org/docs/current/userguide/eclipse_plugin.html
+ * @see https://gradle.org/docs/current/userguide/eclipse_plugin.html
  */
 apply plugin: 'eclipse'
 

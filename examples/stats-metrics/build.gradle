@@ -8,7 +8,7 @@ repositories {
 }
 
 dependencies {
-  compile 'com.github.ben-manes.caffeine:caffeine:2.6.2'
+  compile 'com.github.ben-manes.caffeine:caffeine:2.7.0'
   compile 'io.dropwizard.metrics:metrics-core:4.0.2'
 
   testCompile 'org.testng:testng:6.14.3'
