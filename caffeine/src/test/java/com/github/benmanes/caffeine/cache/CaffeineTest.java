@@ -639,8 +639,8 @@ public final class CaffeineTest {
   public void recordStats_custom() {
     Supplier<StatsCounter> supplier = () -> statsCounter;
     Caffeine<?, ?> builder = Caffeine.newBuilder().recordStats(supplier);
-    builder.statsCounterSupplier.get().recordEviction(1);
-    verify(statsCounter).recordEviction(1);
+    builder.statsCounterSupplier.get().recordEviction(1, RemovalCause.SIZE);
+    verify(statsCounter).recordEviction(1, RemovalCause.SIZE);
     builder.build();
   }
 

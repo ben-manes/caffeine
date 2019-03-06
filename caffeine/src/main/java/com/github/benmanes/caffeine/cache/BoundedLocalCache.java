@@ -923,7 +923,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     if (removed[0]) {
-      statsCounter().recordEviction(node.getWeight());
+      statsCounter().recordEviction(node.getWeight(), actualCause[0]);
       if (hasRemovalListener()) {
         // Notify the listener only if the entry was evicted. This must be performed as the last
         // step during eviction to safe guard against the executor rejecting the notification task.
@@ -2387,7 +2387,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (hasRemovalListener()) {
         notifyRemoval(nodeKey[0], oldValue[0], cause[0]);
       }
-      statsCounter().recordEviction(weight[0]);
+      statsCounter().recordEviction(weight[0], cause[0]);
     }
     if (newValue[0] == null) {
       if (!isComputingAsync(node)) {
@@ -2556,7 +2556,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     if (cause[0] != null) {
       if (cause[0].wasEvicted()) {
-        statsCounter().recordEviction(weight[0]);
+        statsCounter().recordEviction(weight[0], cause[0]);
       }
       if (hasRemovalListener()) {
         notifyRemoval(nodeKey[0], oldValue[0], cause[0]);

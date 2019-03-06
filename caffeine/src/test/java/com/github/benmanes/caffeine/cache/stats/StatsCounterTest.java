@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 
 /**
@@ -39,6 +41,9 @@ public final class StatsCounterTest {
     StatsCounter counter = DisabledStatsCounter.INSTANCE;
     counter.recordHits(1);
     counter.recordMisses(1);
+    counter.recordEviction();
+    counter.recordEviction(10);
+    counter.recordEviction(1, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
     assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0, 0)));
@@ -56,15 +61,16 @@ public final class StatsCounterTest {
     counter.recordMisses(1);
     counter.recordEviction();
     counter.recordEviction(10);
+    counter.recordEviction(1, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 2, 10);
+    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 3, 11);
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));
 
     counter.incrementBy(counter);
-    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 4, 20)));
+    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 6, 22)));
   }
 
   @Test
@@ -88,9 +94,10 @@ public final class StatsCounterTest {
     counter.recordMisses(1);
     counter.recordEviction();
     counter.recordEviction(10);
+    counter.recordEviction(1, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 2, 10);
+    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 3, 11);
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));
@@ -103,7 +110,7 @@ public final class StatsCounterTest {
     doThrow(NullPointerException.class).when(statsCounter).recordEviction();
     doThrow(NullPointerException.class).when(statsCounter).recordHits(anyInt());
     doThrow(NullPointerException.class).when(statsCounter).recordMisses(anyInt());
-    doThrow(NullPointerException.class).when(statsCounter).recordEviction(anyInt());
+    doThrow(NullPointerException.class).when(statsCounter).recordEviction(anyInt(), any());
     doThrow(NullPointerException.class).when(statsCounter).recordLoadSuccess(anyLong());
     doThrow(NullPointerException.class).when(statsCounter).recordLoadFailure(anyLong());
 
@@ -112,6 +119,7 @@ public final class StatsCounterTest {
     guarded.recordMisses(1);
     guarded.recordEviction();
     guarded.recordEviction(10);
+    guarded.recordEviction(1, RemovalCause.SIZE);
     guarded.recordLoadSuccess(1);
     guarded.recordLoadFailure(1);
     assertThat(guarded.snapshot(), is(CacheStats.empty()));
@@ -120,6 +128,7 @@ public final class StatsCounterTest {
     verify(statsCounter).recordMisses(1);
     verify(statsCounter).recordEviction();
     verify(statsCounter).recordEviction(10);
+    verify(statsCounter).recordEviction(1, RemovalCause.SIZE);
     verify(statsCounter).recordLoadSuccess(1);
     verify(statsCounter).recordLoadFailure(1);
   }

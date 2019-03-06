@@ -21,6 +21,7 @@ import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 
 /**
  * Accumulates statistics during the operation of a {@link Cache} for presentation by
@@ -75,8 +76,8 @@ public interface StatsCounter {
    * evicted due to the cache's eviction strategy, and not as a result of manual
    * {@link Cache#invalidate invalidations}.
    *
-   * @deprecated Use {@link StatsCounter#recordEviction(int)} instead. This method is scheduled for
-   *     removal in version <tt>3.0.0</tt>.
+   * @deprecated Use {@link StatsCounter#recordEviction(int, RemovalCause)} instead. This method is
+   *     scheduled for removal in version <tt>3.0.0</tt>.
    */
   @Deprecated
   void recordEviction();
@@ -87,10 +88,25 @@ public interface StatsCounter {
    * {@link Cache#invalidate invalidations}.
    *
    * @param weight the weight of the evicted entry
+   * @deprecated Use {@link StatsCounter#recordEviction(int, RemovalCause)} instead. This method is
+   *     scheduled for removal in version <tt>3.0.0</tt>.
    */
+  @Deprecated
   default void recordEviction(@NonNegative int weight) {
-    // This method will be abstract in version 3.0.0
     recordEviction();
+  }
+
+  /**
+   * Records the eviction of an entry from the cache. This should only been called when an entry is
+   * evicted due to the cache's eviction strategy, and not as a result of manual
+   * {@link Cache#invalidate invalidations}.
+   *
+   * @param weight the weight of the evicted entry
+   * @param cause the reason for which the entry was removed
+   */
+  default void recordEviction(@NonNegative int weight, RemovalCause cause) {
+    // This method will be abstract in version 3.0.0
+    recordEviction(weight);
   }
 
   /**

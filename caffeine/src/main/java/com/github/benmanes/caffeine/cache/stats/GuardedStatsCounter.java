@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.github.benmanes.caffeine.cache.RemovalCause;
+
 /**
  * A {@link StatsCounter} implementation that suppresses and logs any exception thrown by the
  * delegate <tt>statsCounter</tt>.
@@ -83,9 +85,19 @@ final class GuardedStatsCounter implements StatsCounter {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public void recordEviction(int weight) {
     try {
       delegate.recordEviction(weight);
+    } catch (Throwable t) {
+      logger.log(Level.WARNING, "Exception thrown by stats counter", t);
+    }
+  }
+
+  @Override
+  public void recordEviction(int weight, RemovalCause cause) {
+    try {
+      delegate.recordEviction(weight, cause);
     } catch (Throwable t) {
       logger.log(Level.WARNING, "Exception thrown by stats counter", t);
     }

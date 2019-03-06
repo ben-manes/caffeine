@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.LongAdder;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 
 /**
  * A thread-safe {@link StatsCounter} implementation for use by {@link Cache} implementors.
@@ -77,7 +78,14 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public void recordEviction(int weight) {
+    evictionCount.increment();
+    evictionWeight.add(weight);
+  }
+
+  @Override
+  public void recordEviction(int weight, RemovalCause cause) {
     evictionCount.increment();
     evictionWeight.add(weight);
   }
