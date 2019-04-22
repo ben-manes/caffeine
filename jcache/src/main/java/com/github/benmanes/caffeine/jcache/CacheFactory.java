@@ -21,13 +21,14 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.configuration.Factory;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
@@ -139,6 +140,7 @@ final class CacheFactory {
       this.expiryPolicy = config.getExpiryPolicyFactory().create();
       this.dispatcher = new EventDispatcher<>(executor);
 
+      caffeine.ticker(ticker);
       caffeine.executor(executor);
       config.getCacheEntryListenerConfigurations().forEach(dispatcher::register);
     }
@@ -233,7 +235,7 @@ final class CacheFactory {
       return config.getExpireAfterAccess().isPresent();
     }
 
-    /** Configures the write expiration and returns if set. */
+    /** Configures the custom expiration and returns if set. */
     private boolean configureExpireVariably() {
       config.getExpiryFactory().ifPresent(factory -> {
         Expiry<K, V> expiry = factory.create();
