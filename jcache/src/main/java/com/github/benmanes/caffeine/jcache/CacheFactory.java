@@ -139,6 +139,7 @@ final class CacheFactory {
       this.expiryPolicy = config.getExpiryPolicyFactory().create();
       this.dispatcher = new EventDispatcher<>(executor);
 
+	  caffeine.ticker(ticker);
       caffeine.executor(executor);
       config.getCacheEntryListenerConfigurations().forEach(dispatcher::register);
     }
