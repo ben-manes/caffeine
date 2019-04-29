@@ -398,7 +398,7 @@ public interface Policy<K, V> {
      * @param value value to be associated with the specified key
      * @param duration the length of time from now when the entry should be automatically removed
      * @param unit the unit that {@code duration} is expressed in
-     * @return <tt>true</tt> if this cache did not already contain the specified entry
+     * @return {@code true} if this cache did not already contain the specified entry
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     default boolean putIfAbsent(@NonNull K key, @NonNull V value,
@@ -416,7 +416,7 @@ public interface Policy<K, V> {
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
      * @param duration the length of time from now when the entry should be automatically removed
-     * @return <tt>true</tt> if this cache did not already contain the specified entry
+     * @return {@code true} if this cache did not already contain the specified entry
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     default boolean putIfAbsent(@NonNull K key, @NonNull V value, @NonNull Duration duration) {

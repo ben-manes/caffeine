@@ -25,7 +25,7 @@ import sun.misc.Unsafe;
  * Static access to {@link Unsafe} and convenient utility methods for performing low-level, unsafe
  * operations.
  * <p>
- * <b>Warning:</b> This class is scheduled for removal in version <tt>3.0.0</tt>.
+ * <b>Warning:</b> This class is scheduled for removal in version 3.0.0.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

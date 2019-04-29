@@ -47,6 +47,7 @@ public final class Cache2kPolicy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     cache = Cache2kBuilder.of(Object.class, Object.class)
         .entryCapacity(settings.maximumSize())
+        .strictEviction(true)
         .eternal(true)
         .build();
     maximumSize = settings.maximumSize();

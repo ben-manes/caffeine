@@ -69,5 +69,5 @@ tasks.jmh.finalizedBy tasks.jmhReport
 tasks.jmh.dependsOn tasks.bundle
 
 tasks.named('compileJmhJava').configure {
-  options.errorprone.errorproneArgs << '-Xep:NullAway:OFF'
+  options.errorprone.disable('NullAway')
 }

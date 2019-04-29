@@ -48,7 +48,7 @@ public final class ClimberResetCountMin4 extends CountMin4 {
       FilterType filterType = settings.membershipFilter();
       double expectedInsertionsMultiplier = doorkeeperSettings.expectedInsertionsMultiplier();
       long expectedInsertions = (long) (expectedInsertionsMultiplier * settings.maximumSize());
-      doorkeeper = filterType.create(expectedInsertions, doorkeeperSettings.fpp(), config);
+      doorkeeper = filterType.create(expectedInsertions, doorkeeperSettings.fpp());
     } else {
       doorkeeper = Membership.disabled();
     }

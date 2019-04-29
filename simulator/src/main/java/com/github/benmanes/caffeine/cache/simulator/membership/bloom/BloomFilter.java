@@ -38,8 +38,6 @@ public final class BloomFilter implements Membership {
   static final int BITS_PER_LONG_SHIFT = 6; // 64-bits
   static final int BITS_PER_LONG_MASK = Long.SIZE - 1;
 
-  final int randomSeed;
-
   int tableShift;
   long[] table;
 
@@ -49,11 +47,8 @@ public final class BloomFilter implements Membership {
    *
    * @param expectedInsertions the number of expected insertions
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0
-   * @param randomSeed the smear to protect against hash flooding, adjusted to an odd value
    */
-  public BloomFilter(@NonNegative long expectedInsertions,
-      @NonNegative double fpp, int randomSeed) {
-    this.randomSeed = ((randomSeed & 1) == 0) ? randomSeed + 1 : randomSeed;
+  public BloomFilter(@NonNegative long expectedInsertions, @NonNegative double fpp) {
     ensureCapacity(expectedInsertions, fpp);
   }
 
@@ -131,7 +126,7 @@ public final class BloomFilter implements Membership {
    */
   int spread(int x) {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
-    x = ((x >>> 16) ^ x) * randomSeed;
+    x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;
   }
 
@@ -144,7 +139,7 @@ public final class BloomFilter implements Membership {
    */
   static int seeded(int item, int i) {
     long hash = SEED[i] * item;
-    hash += hash >> 32;
+    hash += hash >>> 32;
     return (int) hash;
   }
 

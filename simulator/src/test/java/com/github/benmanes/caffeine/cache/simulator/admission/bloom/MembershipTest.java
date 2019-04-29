@@ -29,8 +29,6 @@ import org.testng.annotations.Test;
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.jakewharton.fliptables.FlipTable;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
 /**
  * @author ashish0x90 (Ashish Yadav)
@@ -40,7 +38,6 @@ public class MembershipTest {
   static final double FPP = 0.03;
   static final int SEED = 1033096058;
   static final String[] HEADERS = { "Type", "Insertions", "False Positives" };
-  static final Config CONFIG = ConfigFactory.parseString("random-seed=" + SEED);
 
   static final boolean display = false;
 
@@ -51,7 +48,7 @@ public class MembershipTest {
       List<String[]> rows = new ArrayList<>();
       int expectedInsertions = capacity / 2;
 
-      Membership filter = filterType.create(expectedInsertions, FPP, CONFIG);
+      Membership filter = filterType.create(expectedInsertions, FPP);
       int falsePositives = falsePositives(filter, input);
       double falsePositiveRate = ((double) falsePositives / expectedInsertions);
       assertThat(filterType.toString(), falsePositiveRate, is(lessThan(FPP + 0.2)));

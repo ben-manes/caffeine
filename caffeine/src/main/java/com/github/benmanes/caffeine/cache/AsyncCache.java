@@ -99,6 +99,68 @@ public interface AsyncCache<K, V> {
       @NonNull BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction);
 
   /**
+   * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
+   * those values if necessary. The returned map contains entries that were already cached, combined
+   * with newly loaded entries; it will never contain null keys or values. If the any of the
+   * asynchronous computations fail, those entries will be automatically removed from this cache.
+   * <p>
+   * A single request to the {@code mappingFunction} is performed for all keys which are not already
+   * present in the cache. If another call to {@link #get} tries to load the value for a key in
+   * {@code keys}, that thread retrieves a future that is completed by this bulk computation. Note
+   * that multiple threads can concurrently load values for distinct keys.
+   * <p>
+   * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
+   * ignored.
+   *
+   * @param keys the keys whose associated values are to be returned
+   * @param mappingFunction the function to asynchronously compute the values
+   * @return the future containing an unmodifiable mapping of keys to values for the specified keys
+   *         in this cache
+   * @throws NullPointerException if the specified collection is null or contains a null element, or
+   *         if the future returned by the {@link AsyncCacheLoader} is null
+   * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
+   *         {@link CacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing the
+   *         future, in which case the mapping is left unestablished
+   */
+  @NonNull
+  default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
+      @NonNull Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction) {
+    // This method was added & implemented in version 2.8.0
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
+   * those values if necessary. The returned map contains entries that were already cached, combined
+   * with newly loaded entries; it will never contain null keys or values. If the any of the
+   * asynchronous computations fail, those entries will be automatically removed from this cache.
+   * <p>
+   * A single request to the {@code mappingFunction} is performed for all keys which are not already
+   * present in the cache. If another call to {@link #get} tries to load the value for a key in
+   * {@code keys}, that thread retrieves a future that is completed by this bulk computation. Note
+   * that multiple threads can concurrently load values for distinct keys.
+   * <p>
+   * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
+   * ignored.
+   *
+   * @param keys the keys whose associated values are to be returned
+   * @param mappingFunction the function to asynchronously compute the values
+   * @return the future containing an unmodifiable mapping of keys to values for the specified keys
+   *         in this cache
+   * @throws NullPointerException if the specified collection is null or contains a null element, or
+   *         if the future returned by the {@link AsyncCacheLoader} is null
+   * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
+   *         {@link CacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing the
+   *         future, in which case the mapping is left unestablished
+   */
+  @NonNull
+  default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
+      @NonNull BiFunction<Iterable<? extends @NonNull K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
+    // This method was added & implemented in version 2.8.0
+    throw new UnsupportedOperationException();
+  }
+
+  /**
    * Associates {@code value} with {@code key} in this cache. If the cache previously contained a
    * value associated with {@code key}, the old value is replaced by {@code value}. If the
    * asynchronous computation fails, the entry will be automatically removed.

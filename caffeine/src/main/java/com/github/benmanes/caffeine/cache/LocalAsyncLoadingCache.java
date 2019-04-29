@@ -18,16 +18,12 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -88,7 +84,7 @@ abstract class LocalAsyncLoadingCache<K, V>
   @Override
   public CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys) {
     if (canBulkLoad) {
-      return getAllBulk(keys);
+      return getAll(keys, loader::asyncLoadAll);
     }
 
     Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
@@ -100,127 +96,9 @@ abstract class LocalAsyncLoadingCache<K, V>
     return composeResult(result);
   }
 
-  /** Computes all of the missing entries in a single {@link CacheLoader#asyncLoadAll} call. */
-  @SuppressWarnings("FutureReturnValueIgnored")
-  private CompletableFuture<Map<K, V>> getAllBulk(Iterable<? extends K> keys) {
-    Map<K, CompletableFuture<V>> futures = new LinkedHashMap<>();
-    Map<K, CompletableFuture<V>> proxies = new HashMap<>();
-
-    for (K key : keys) {
-      if (futures.containsKey(key)) {
-        continue;
-      }
-      CompletableFuture<V> future = cache().getIfPresent(key, /* recordStats */ false);
-      if (future == null) {
-        CompletableFuture<V> proxy = new CompletableFuture<>();
-        future = cache().putIfAbsent(key, proxy);
-        if (future == null) {
-          future = proxy;
-          proxies.put(key, proxy);
-        }
-      }
-      futures.put(key, future);
-    }
-    cache().statsCounter().recordMisses(proxies.size());
-    cache().statsCounter().recordHits(futures.size() - proxies.size());
-    if (proxies.isEmpty()) {
-      return composeResult(futures);
-    }
-
-    AsyncBulkCompleter completer = new AsyncBulkCompleter(proxies);
-    try {
-      loader.asyncLoadAll(proxies.keySet(), cache().executor()).whenComplete(completer);
-      return composeResult(futures);
-    } catch (Throwable t) {
-      completer.accept(/* result */ null, t);
-      throw t;
-    }
-  }
-
-  /**
-   * Returns a future that waits for all of the dependent futures to complete and returns the
-   * combined mapping if successful. If any future fails then it is automatically removed from
-   * the cache if still present.
-   */
-  private CompletableFuture<Map<K, V>> composeResult(Map<K, CompletableFuture<V>> futures) {
-    if (futures.isEmpty()) {
-      return CompletableFuture.completedFuture(Collections.emptyMap());
-    }
-    @SuppressWarnings("rawtypes")
-    CompletableFuture<?>[] array = futures.values().toArray(new CompletableFuture[0]);
-    return CompletableFuture.allOf(array).thenApply(ignored -> {
-      Map<K, V> result = new LinkedHashMap<>(futures.size());
-      futures.forEach((key, future) -> {
-        V value = future.getNow(null);
-        if (value != null) {
-          result.put(key, value);
-        }
-      });
-      return Collections.unmodifiableMap(result);
-    });
-  }
-
   @Override
   public LoadingCache<K, V> synchronous() {
     return (cacheView == null) ? (cacheView = new LoadingCacheView<>(this)) : cacheView;
-  }
-
-  /** A function executed asynchronously after a bulk load completes. */
-  private final class AsyncBulkCompleter implements BiConsumer<Map<K, V>, Throwable> {
-    private final Map<K, CompletableFuture<V>> proxies;
-    private final long startTime;
-
-    AsyncBulkCompleter(Map<K, CompletableFuture<V>> proxies) {
-      this.startTime = cache().statsTicker().read();
-      this.proxies = proxies;
-    }
-
-    @Override
-    public void accept(@Nullable Map<K, V> result, @Nullable Throwable error) {
-      long loadTime = cache().statsTicker().read() - startTime;
-
-      if (result == null) {
-        if (error == null) {
-          error = new CompletionException("null map", null);
-        }
-        for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
-          cache().remove(entry.getKey(), entry.getValue());
-          entry.getValue().obtrudeException(error);
-        }
-        cache().statsCounter().recordLoadFailure(loadTime);
-        logger.log(Level.WARNING, "Exception thrown during asynchronous load", error);
-      } else {
-        fillProxies(result);
-        addNewEntries(result);
-        cache().statsCounter().recordLoadSuccess(loadTime);
-      }
-    }
-
-    /** Populates the proxies with the computed result. */
-    private void fillProxies(Map<K, V> result) {
-      proxies.forEach((key, future) -> {
-        V value = result.get(key);
-        future.obtrudeValue(value);
-        if (value == null) {
-          cache().remove(key, future);
-        } else {
-          // update the weight and expiration timestamps
-          cache().replace(key, future, future);
-        }
-      });
-    }
-
-    /** Adds to the cache any extra entries computed that were not requested. */
-    private void addNewEntries(Map<K, V> result) {
-      if (proxies.size() == result.size()) {
-        return;
-      }
-      result.forEach((key, value) -> {
-        if (!proxies.containsKey(key)) {
-          cache().put(key, CompletableFuture.completedFuture(value));
-        }
-      });
-    }
   }
 
   /* --------------- Synchronous views --------------- */

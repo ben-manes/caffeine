@@ -36,8 +36,8 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
-   * {@link CacheLoader#asyncLoad} if necessary. If the asynchronous computation fails, the entry
-   * will be automatically removed from this cache.
+   * {@link AsyncCacheLoader#asyncLoad} if necessary. If the asynchronous computation fails, the
+   * entry will be automatically removed from this cache.
    * <p>
    * If the specified key is not already associated with a value, attempts to compute its value
    * asynchronously and enters it into this cache unless {@code null}. The entire method invocation
@@ -47,8 +47,8 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    * @return the current (existing or computed) future value associated with the specified key
    * @throws NullPointerException if the specified key is null or if the future returned by the
    *         {@link AsyncCacheLoader} is null
-   * @throws RuntimeException or Error if the {@link CacheLoader} does when constructing the future,
-   *         in which case the mapping is left unestablished
+   * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does when constructing the
+   *         future, in which case the mapping is left unestablished
    */
   @NonNull
   CompletableFuture<V> get(@NonNull K key);
@@ -59,12 +59,12 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    * with newly loaded entries; it will never contain null keys or values. If the any of the
    * asynchronous computations fail, those entries will be automatically removed from this cache.
    * <p>
-   * Caches loaded by a {@link CacheLoader} supporting bulk loading will issue a single request to
-   * {@link CacheLoader#asyncLoadAll} for all keys which are not already present in the cache. If
-   * another call to {@link #get} tries to load the value for a key in {@code keys}, that thread
-   * simply waits for this computation to finish and returns the loaded value. Caches that do not
-   * use a {@link CacheLoader} with an optimized bulk load implementation will sequentially load
-   * each key by making individual {@link CacheLoader#asyncLoad} calls. Note that multiple threads
+   * Caches loaded by a {@link AsyncCacheLoader} supporting bulk loading will issue a single request
+   * to {@link AsyncCacheLoader#asyncLoadAll} for all keys which are not already present in the
+   * cache. If another call to {@link #get} tries to load the value for a key in {@code keys}, that
+   * thread retrieves a future that is completed by this bulk computation. Caches that do not use a
+   * {@link AsyncCacheLoader} with an optimized bulk load implementation will sequentially load each
+   * key by making individual {@link AsyncCacheLoader#asyncLoad} calls. Note that multiple threads
    * can concurrently load values for distinct keys.
    * <p>
    * Note that duplicate elements in {@code keys}, as determined by {@link Object#equals}, will be
@@ -75,9 +75,9 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *         in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
    *         if the future returned by the {@link AsyncCacheLoader} is null
-   * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
-   *         {@link CacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing the
-   *         future, in which case the mapping is left unestablished
+   * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does so, if
+   *         {@link AsyncCacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing
+   *         the future, in which case the mapping is left unestablished
    */
   @NonNull
   CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys);

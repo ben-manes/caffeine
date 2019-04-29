@@ -15,10 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.membership;
 
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.GuavaBloomFilter;
-import com.typesafe.config.Config;
 
 /**
  * The membership filters.
@@ -27,16 +25,15 @@ import com.typesafe.config.Config;
  */
 public enum FilterType {
   CAFFEINE {
-    @Override public Membership create(long expectedInsertions, double fpp, Config config) {
-      int randomSeed = new BasicSettings(config).randomSeed();
-      return new BloomFilter(expectedInsertions, fpp, randomSeed);
+    @Override public Membership create(long expectedInsertions, double fpp) {
+      return new BloomFilter(expectedInsertions, fpp);
     }
     @Override public String toString() {
       return "Caffeine";
     }
   },
   GUAVA {
-    @Override public Membership create(long expectedInsertions, double fpp, Config config) {
+    @Override public Membership create(long expectedInsertions, double fpp) {
       return new GuavaBloomFilter(expectedInsertions, fpp);
     }
     @Override public String toString() {
@@ -49,8 +46,7 @@ public enum FilterType {
    *
    * @param expectedInsertions the number of expected insertions
    * @param fpp the desired false positive probability
-   * @param config the simulator's configuration
    * @return a membership filter
    */
-  public abstract Membership create(long expectedInsertions, double fpp, Config config);
+  public abstract Membership create(long expectedInsertions, double fpp);
 }

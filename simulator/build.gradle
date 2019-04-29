@@ -59,9 +59,7 @@ jar.manifest {
 }
 
 compileJava {
-  options.errorprone {
-    errorproneArgs << '-Xep:NullAway:OFF'
-  }
+  options.errorprone.disable('NullAway')
 }
 
 tasks.withType(Javadoc) {

@@ -23,12 +23,12 @@
     <Bug code="NP"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncLoadingCache$AsyncBulkCompleter"/>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter"/>
     <Method name="accept"/>
     <Bug code="NP"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncLoadingCache$AsyncBulkCompleter"/>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter"/>
     <Method name="lambda$fillProxies$0"/>
     <Bug code="RCN"/>
   </Match>

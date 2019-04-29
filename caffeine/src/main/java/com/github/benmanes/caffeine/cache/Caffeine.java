@@ -168,7 +168,7 @@ public final class Caffeine<K, V> {
   private Caffeine() {}
 
   /** Ensures that the argument expression is true. */
-  static void requireArgument(boolean expression, String template, Object... args) {
+  static void requireArgument(boolean expression, String template, @Nullable Object... args) {
     if (!expression) {
       throw new IllegalArgumentException(String.format(template, args));
     }
@@ -189,7 +189,7 @@ public final class Caffeine<K, V> {
   }
 
   /** Ensures that the state expression is true. */
-  static void requireState(boolean expression, String template, Object... args) {
+  static void requireState(boolean expression, String template, @Nullable Object... args) {
     if (!expression) {
       throw new IllegalStateException(String.format(template, args));
     }

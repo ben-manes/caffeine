@@ -77,7 +77,7 @@ public final class CacheStats {
    * @param loadFailureCount the number of failed cache loads
    * @param totalLoadTime the total load time (success and failure)
    * @param evictionCount the number of entries evicted from the cache
-   * @deprecated This constructor is scheduled for removal in version <tt>3.0.0</tt>.
+   * @deprecated This constructor is scheduled for removal in version 3.0.0.
    */
   @Deprecated
   public CacheStats(@NonNegative long hitCount, @NonNegative long missCount,

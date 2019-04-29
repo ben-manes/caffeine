@@ -78,7 +78,6 @@ tasks.sonarqube.dependsOn(jacocoMerge)
 tasks.withType(JavaCompile) {
   options.encoding = 'UTF-8'
   options.compilerArgs << '-Xlint:all,-auxiliaryclass'
-  options.errorprone.errorproneArgs << '-Xep:NullAway:ERROR'
   options.errorprone {
     option('ClassName')
     option('ComparisonContractViolated')
@@ -96,11 +95,12 @@ tasks.withType(JavaCompile) {
     option('MixedArrayDimensions')
     option('RemoveUnusedImports')
     option('NullAway:AnnotatedPackages', 'com.github.benmanes.caffeine')
+    error('NullAway')
   }
 }
 
 tasks.named('compileTestJava').configure {
-  options.errorprone.errorproneArgs << '-Xep:NullAway:OFF'
+  options.errorprone.disable('NullAway')
 }
 
 tasks.withType(Test) {

@@ -77,7 +77,7 @@ public interface StatsCounter {
    * {@link Cache#invalidate invalidations}.
    *
    * @deprecated Use {@link StatsCounter#recordEviction(int, RemovalCause)} instead. This method is
-   *     scheduled for removal in version <tt>3.0.0</tt>.
+   *     scheduled for removal in version 3.0.0.
    */
   @Deprecated
   void recordEviction();
@@ -89,7 +89,7 @@ public interface StatsCounter {
    *
    * @param weight the weight of the evicted entry
    * @deprecated Use {@link StatsCounter#recordEviction(int, RemovalCause)} instead. This method is
-   *     scheduled for removal in version <tt>3.0.0</tt>.
+   *     scheduled for removal in version 3.0.0.
    */
   @Deprecated
   default void recordEviction(@NonNegative int weight) {
@@ -129,7 +129,7 @@ public interface StatsCounter {
 
   /**
    * Returns an accumulator that suppresses and logs any exception thrown by the delegate
-   * <tt>statsCounter</tt>.
+   * {@code statsCounter}.
    *
    * @param statsCounter the accumulator to delegate to
    * @return an accumulator that suppresses and logs any exception thrown by the delegate

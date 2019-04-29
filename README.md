@@ -58,6 +58,7 @@ Powering infrastructure near you:
  * [Dropwizard][dropwizard]: Ops-friendly, high-performance, RESTful APIs
  * [Cassandra][cassandra]: Manage massive amounts of data, fast
  * [Accumulo][accumulo]: A sorted, distributed key/value store
+ * [HBase][hbase]: A distributed, scalable, big data store
  * [Infinispan][infinispan]: Distributed in-memory data grid
  * [Ratpack][ratpack]: Lean & powerful HTTP apps
  * [Corfu][corfu]: A cluster consistency platform
@@ -68,17 +69,11 @@ Powering infrastructure near you:
 
 ### In the News
 
- * A short look at what Caffeine brings to your applications.
-   * [Add a Boost of Caffeine to Your Java][add-a-boost] at [VOXXED][voxxed]
  * An in-depth description of Caffeine's architecture.
    * [Design of a Modern Cache: part #1][modern-cache-1], [part #2][modern-cache-2] ([slides][modern-cache-slides]) at [HighScalability][HighScalability]
  * Caffeine is presented as part of research papers evaluating its novel eviction policy.
    * [TinyLFU: A Highly Efficient Cache Admission Policy][tinylfu] by Gil Einziger, Roy Friedman, Ben Manes
    * [Adaptive Software Cache Management][adaptive-tinylfu] by Gil Einziger, Ohad Eytan, Roy Friedman, Ben Manes
-
-On the radar,
- * Early discussions with [HBase][hbase] and [Solr][solr]
- * W-TinyLfu implemented by [go-tinylfu][go-tinylfu], [mango-cache][mango-cache], [transitory][transitory], [ohc][ohc], and [OrientDB][orientdb]
 
 ### Download
 
@@ -128,15 +123,11 @@ Snapshots of the development version are available in
 [spring]: https://docs.spring.io/spring/docs/current/spring-framework-reference/integration.html#cache-store-configuration-caffeine
 [scala-cache]: https://github.com/cb372/scalacache
 [scaffeine]: https://github.com/blemale/scaffeine
-[hbase]: https://issues.apache.org/jira/browse/HBASE-15560
+[hbase]: https://hbase.apache.org
 [cassandra]: http://cassandra.apache.org
 [solr]: https://issues.apache.org/jira/browse/SOLR-8241
 [infinispan]: http://infinispan.org/docs/stable/user_guide/user_guide.html#eviction_strategy
 [neo4j]: https://github.com/neo4j/neo4j
-[ohc]: https://github.com/snazy/ohc
-[go-tinylfu]: https://github.com/dgryski/go-tinylfu
-[mango-cache]: https://github.com/goburrow/cache
-[transitory]: https://github.com/aholstenson/transitory
 [ratpack]: https://github.com/ratpack/ratpack
 [finagle]: https://github.com/twitter/finagle
 [druid]: http://druid.io/docs/latest/development/extensions-core/caffeine-cache.html
@@ -149,5 +140,4 @@ Snapshots of the development version are available in
 [play]: https://www.playframework.com/documentation/latest/JavaCache
 [accumulo]: https://accumulo.apache.org
 [dropwizard]: https://www.dropwizard.io
-[orientdb]: https://orientdb.com
 [grails]: https://grails.org

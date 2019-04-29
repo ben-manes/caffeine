@@ -92,8 +92,7 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
     pivot = (int) (settings.percentPivot() * maxWindow);
     maxPivot = Math.min(settings.maximumWindowSize(), maxProtected);
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
-    feedback = settings.membershipFilter().create(sampleSize,
-        settings.adaptiveFpp(), settings.config());
+    feedback = settings.membershipFilter().create(sampleSize, settings.adaptiveFpp());
 
     checkState(settings.pivotIncrement() > 0, "Must increase by at least 1");
     checkState(settings.pivotDecrement() > 0, "Must decrease by at least 1");

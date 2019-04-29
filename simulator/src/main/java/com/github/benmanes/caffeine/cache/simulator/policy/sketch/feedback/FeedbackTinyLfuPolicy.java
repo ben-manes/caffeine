@@ -69,7 +69,7 @@ public final class FeedbackTinyLfuPolicy implements Policy {
 
     maxGain = Math.min(15, settings.maximumInsertionGain());
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
-    feedback = settings.membershipFilter().create(sampleSize, settings.adaptiveFpp(), config);
+    feedback = settings.membershipFilter().create(sampleSize, settings.adaptiveFpp());
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
