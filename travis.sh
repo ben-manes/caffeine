@@ -24,6 +24,7 @@ case "${1:?''}" in
     run "./gradlew spotbugsJavaPoet spotbugsMain spotbugsJmh -Dspotbugs --console plain"
     run "sh -c 'cd examples/stats-metrics && ./gradlew test --console plain --no-daemon'"
     run "sh -c 'cd examples/write-behind-rxjava && mvn test'"
+    run "sh -c 'cd examples/coalescing-bulkloader && mvn test'"
     ;;
   tests)
     run "./gradlew check --console plain"
