@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.membership;
 
+import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BlockedBloom;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.GuavaBloomFilter;
 
@@ -39,7 +40,16 @@ public enum FilterType {
     @Override public String toString() {
       return "Guava";
     }
-  };
+  },
+  BLOCKED_BLOOM {
+      @Override public Membership create(long expectedInsertions, double fpp) {
+        return new BlockedBloom(expectedInsertions, fpp);
+      }
+      @Override public String toString() {
+        return "BlockedBloom";
+      }
+    };
+  
 
   /**
    * Returns a new membership filter.
