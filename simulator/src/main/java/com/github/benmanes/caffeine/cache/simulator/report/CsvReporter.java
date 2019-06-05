@@ -41,7 +41,7 @@ public final class CsvReporter extends TextReporter {
     CsvWriter writer = new CsvWriter(output, new CsvWriterSettings());
     writer.writeHeaders(headers());
     for (PolicyStats policyStats : results) {
-      Object[] data = new Object[] {
+      Object[] data = {
           policyStats.name(),
           String.format("%.2f", 100 * policyStats.hitRate()),
           policyStats.hitCount(),

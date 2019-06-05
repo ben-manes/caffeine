@@ -34,7 +34,7 @@ public final class JCacheEntryEventTest {
   @SuppressWarnings("unchecked")
   Cache<Integer, Integer> cache = Mockito.mock(Cache.class);
   JCacheEntryEvent<Integer, Integer> event = new JCacheEntryEvent<>(
-      cache, EventType.CREATED, 1, 2, 3);
+      cache, EventType.CREATED, 1, true, 2, 3);
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void unwrap_fail() {
@@ -49,7 +49,7 @@ public final class JCacheEntryEventTest {
   @Test
   public void isOldValueAvailable_false() {
     JCacheEntryEvent<Integer, Integer> e =
-        new JCacheEntryEvent<>(cache, EventType.CREATED, 1, null, 3);
+        new JCacheEntryEvent<>(cache, EventType.CREATED, 1, false, null, 3);
     assertThat(e.isOldValueAvailable(), is(false));
   }
 

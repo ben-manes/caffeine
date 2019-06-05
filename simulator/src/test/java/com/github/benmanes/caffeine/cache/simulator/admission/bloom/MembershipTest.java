@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.lessThan;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.testng.annotations.DataProvider;
@@ -28,16 +29,19 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
+import com.google.common.collect.ImmutableMap;
 import com.jakewharton.fliptables.FlipTable;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * @author ashish0x90 (Ashish Yadav)
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class MembershipTest {
-  static final double FPP = 0.03;
-  static final int SEED = 1033096058;
   static final String[] HEADERS = { "Type", "Insertions", "False Positives" };
+  static final double EXPECTED_INSERTIONS_MULTIPLIER = 0.5;
+  static final double FPP = 0.03;
 
   static final boolean display = false;
 
@@ -45,11 +49,12 @@ public class MembershipTest {
   public void bloomFilterTest(FilterType filterType) {
     for (int capacity = 2 << 10; capacity < (2 << 22); capacity = capacity << 2) {
       long[] input = new Random().longs(capacity).distinct().toArray();
+      Config config = getConfig(filterType, capacity);
       List<String[]> rows = new ArrayList<>();
-      int expectedInsertions = capacity / 2;
 
-      Membership filter = filterType.create(expectedInsertions, FPP);
+      Membership filter = filterType.create(config);
       int falsePositives = falsePositives(filter, input);
+      int expectedInsertions = (int) (capacity * EXPECTED_INSERTIONS_MULTIPLIER);
       double falsePositiveRate = ((double) falsePositives / expectedInsertions);
       assertThat(filterType.toString(), falsePositiveRate, is(lessThan(FPP + 0.2)));
       rows.add(row(filterType, expectedInsertions, falsePositives, falsePositiveRate));
@@ -87,6 +92,16 @@ public class MembershipTest {
       falsePositives += filter.mightContain(input[i]) ? 1 : 0;
     }
     return falsePositives;
+  }
+
+  private Config getConfig(FilterType filterType, int capacity) {
+    Map<String, Object> properties = ImmutableMap.of(
+        "membership.expected-insertions-multiplier", EXPECTED_INSERTIONS_MULTIPLIER,
+        "membership.filter", filterType.name(),
+        "maximum-size", capacity,
+        "membership.fpp", FPP);
+    return ConfigFactory.parseMap(properties)
+        .withFallback(ConfigFactory.load().getConfig("caffeine.simulator"));
   }
 
   /** Returns a table row for printing the false positive rates of an implementation. */

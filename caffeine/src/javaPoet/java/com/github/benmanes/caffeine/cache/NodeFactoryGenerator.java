@@ -99,9 +99,8 @@ public final class NodeFactoryGenerator {
   final List<NodeRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructors(),
       new AddKey(), new AddValue(), new AddMaximum(), new AddExpiration(), new AddDeques(),
       new AddFactoryMethods(),  new AddHealth(), new Finalize());
-  final Feature[] featureByIndex = new Feature[] { null, null,
-      Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
-      Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
+  final Feature[] featureByIndex = { null, null, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE,
+      Feature.REFRESH_WRITE, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT };
   final ZoneId timeZone = ZoneId.of("America/Los_Angeles");
   final Path directory;
 

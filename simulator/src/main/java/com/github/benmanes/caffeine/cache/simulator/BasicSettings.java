@@ -27,6 +27,7 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.report.ReportFormat;
+import com.google.common.base.CaseFormat;
 import com.typesafe.config.Config;
 
 /**
@@ -67,8 +68,8 @@ public class BasicSettings {
         .collect(toSet());
   }
 
-  public FilterType membershipFilter() {
-    return FilterType.valueOf(config.getString("membership-filter").toUpperCase(US));
+  public MembershipSettings membership() {
+    return new MembershipSettings();
   }
 
   public TinyLfuSettings tinyLfu() {
@@ -114,6 +115,20 @@ public class BasicSettings {
     }
     public String output() {
       return config().getString("report.output").trim();
+    }
+  }
+
+  public final class MembershipSettings {
+    public FilterType filter() {
+      String type = config().getString("membership.filter");
+      return FilterType.valueOf(CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_UNDERSCORE, type));
+    }
+    public long expectedInsertions() {
+      double multiplier = config().getDouble("membership.expected-insertions-multiplier");
+      return (long) (maximumSize() * multiplier);
+    }
+    public double fpp() {
+      return config().getDouble("membership.fpp");
     }
   }
 
@@ -164,16 +179,8 @@ public class BasicSettings {
       }
     }
     public final class DoorkeeperSettings {
-      private static final String basePath = "tiny-lfu.count-min-4.periodic";
-
       public boolean enabled() {
-        return config().getBoolean(basePath + ".doorkeeper.enabled");
-      }
-      public double fpp() {
-        return config().getDouble(basePath + ".doorkeeper.fpp");
-      }
-      public double expectedInsertionsMultiplier() {
-        return config().getDouble(basePath + ".doorkeeper.expected-insertions-multiplier");
+        return config().getBoolean("tiny-lfu.count-min-4.periodic.doorkeeper.enabled");
       }
     }
   }

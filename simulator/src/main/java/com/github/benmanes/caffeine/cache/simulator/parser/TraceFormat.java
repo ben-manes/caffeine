@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReade
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
@@ -43,14 +44,15 @@ import com.google.common.collect.Iterables;
 public enum TraceFormat {
   ADDRESS(AddressTraceReader::new),
   ARC(ArcTraceReader::new),
+  CACHE2K(Cache2kTraceReader::new),
+  CORDA(CordaTraceReader::new),
   GRADLE(GradleTraceReader::new),
   LIRS(LirsTraceReader::new),
+  SCARAB(ScarabTraceReader::new),
+  SNIA_CAMBRIDGE(CambridgeTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
   UMASS_YOUTUBE(YoutubeTraceReader::new),
-  WIKIPEDIA(WikipediaTraceReader::new),
-  CACHE2K(Cache2kTraceReader::new),
-  SCARAB(ScarabTraceReader::new),
-  CORDA(CordaTraceReader::new);
+  WIKIPEDIA(WikipediaTraceReader::new);
 
   private final Function<String, TraceReader> factory;
 

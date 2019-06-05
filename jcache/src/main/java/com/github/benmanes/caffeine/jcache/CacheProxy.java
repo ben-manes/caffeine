@@ -839,7 +839,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       case DELETED:
         statistics.recordRemovals(1L);
         publishToCacheWriter(writer::delete, entry::getKey);
-        dispatcher.publishRemoved(this, entry.getKey(), entry.getValue());
+        if (expirable != null) {
+          dispatcher.publishRemoved(this, entry.getKey(), expirable.get());
+        }
         return null;
     }
     throw new IllegalStateException("Unknown state: " + entry.getAction());

@@ -20,10 +20,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.EventType;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A cache event dispatched to a listener.
@@ -35,13 +36,15 @@ final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V>
   private static final long serialVersionUID = 1L;
 
   private final K key;
+  private final boolean hasOldValue;
   private final @Nullable V oldValue;
   private final @Nullable V newValue;
 
   JCacheEntryEvent(Cache<K, V> source, EventType eventType,
-      K key, @Nullable V oldValue, @Nullable V newValue) {
+      K key, boolean hasOldValue, @Nullable V oldValue, @Nullable V newValue) {
     super(source, eventType);
     this.key = requireNonNull(key);
+    this.hasOldValue = hasOldValue;
     this.oldValue = oldValue;
     this.newValue = newValue;
   }
@@ -63,7 +66,7 @@ final class JCacheEntryEvent<K, V> extends CacheEntryEvent<K, V>
 
   @Override
   public boolean isOldValueAvailable() {
-    return (oldValue != null);
+    return hasOldValue;
   }
 
   @Override

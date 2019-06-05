@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.Map;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -25,8 +26,10 @@ import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -69,7 +72,7 @@ public final class FeedbackTinyLfuPolicy implements Policy {
 
     maxGain = Math.min(15, settings.maximumInsertionGain());
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
-    feedback = settings.membershipFilter().create(sampleSize, settings.adaptiveFpp());
+    feedback = settings.membership().filter().create(settings.filterConfig(sampleSize));
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -239,6 +242,12 @@ public final class FeedbackTinyLfuPolicy implements Policy {
     }
     public double adaptiveFpp() {
       return config().getDouble("feedback-tiny-lfu.adaptive-fpp");
+    }
+    public Config filterConfig(int sampleSize) {
+      Map<String, Object> properties = ImmutableMap.of(
+          "membership.fpp", adaptiveFpp(),
+          "maximum-size", sampleSize);
+      return ConfigFactory.parseMap(properties).withFallback(config());
     }
   }
 }

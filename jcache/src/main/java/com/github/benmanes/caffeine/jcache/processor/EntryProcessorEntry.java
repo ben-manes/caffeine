@@ -19,10 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.integration.CacheLoader;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * An entry that is consumed by an {@link EntryProcessor}. The updates to the entry are replayed
@@ -75,7 +76,9 @@ public final class EntryProcessorEntry<K, V> implements MutableEntry<K, V> {
   @Override
   public void remove() {
     action = (action == Action.CREATED) ? Action.NONE : Action.DELETED;
-    value = null;
+    if (value != null) {
+      value = null;
+    }
   }
 
   @Override

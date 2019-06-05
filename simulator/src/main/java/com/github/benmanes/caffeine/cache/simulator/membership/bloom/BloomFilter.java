@@ -21,7 +21,10 @@ import java.util.Arrays;
 
 import org.checkerframework.checker.index.qual.NonNegative;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.MembershipSettings;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
+import com.typesafe.config.Config;
 
 /**
  * A Bloom filter is a space and time efficient probabilistic data structure that is used to test
@@ -33,7 +36,7 @@ import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class BloomFilter implements Membership {
-  static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
+  static final long[] SEED = { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final int BITS_PER_LONG_SHIFT = 6; // 64-bits
   static final int BITS_PER_LONG_MASK = Long.SIZE - 1;
@@ -48,8 +51,9 @@ public final class BloomFilter implements Membership {
    * @param expectedInsertions the number of expected insertions
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    */
-  public BloomFilter(@NonNegative long expectedInsertions, @NonNegative double fpp) {
-    ensureCapacity(expectedInsertions, fpp);
+  public BloomFilter(Config config) {
+    MembershipSettings settings = new BasicSettings(config).membership();
+    ensureCapacity(settings.expectedInsertions(), settings.fpp());
   }
 
   /**

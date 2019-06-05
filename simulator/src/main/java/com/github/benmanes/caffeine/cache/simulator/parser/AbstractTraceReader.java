@@ -45,7 +45,7 @@ public abstract class AbstractTraceReader implements TraceReader {
   }
 
   /** Returns the input stream of the trace data. */
-  protected InputStream readFiles() throws IOException {
+  protected InputStream readFile() throws IOException {
     BufferedInputStream input = new BufferedInputStream(openFile(), BUFFER_SIZE);
     input.mark(100);
     try {

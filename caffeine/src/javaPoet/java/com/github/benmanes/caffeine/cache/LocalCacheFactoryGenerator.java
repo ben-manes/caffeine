@@ -76,8 +76,8 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
-  final Feature[] featureByIndex = new Feature[] {null, null, Feature.LISTENING,
-      Feature.STATS, Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
+  final Feature[] featureByIndex = { null, null, Feature.LISTENING, Feature.STATS,
+      Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
       Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
   final List<LocalCacheRule> rules = ImmutableList.of(new AddSubtype(), new AddConstructor(),
       new AddKeyValueStrength(), new AddRemovalListener(), new AddStats(),

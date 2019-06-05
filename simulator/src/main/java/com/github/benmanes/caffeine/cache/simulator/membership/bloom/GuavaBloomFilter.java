@@ -15,9 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.membership.bloom;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.MembershipSettings;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
+import com.typesafe.config.Config;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
@@ -28,11 +31,11 @@ public final class GuavaBloomFilter implements Membership {
 
   private BloomFilter<Long> bloomFilter;
 
-  public GuavaBloomFilter(long expectedInsertions, double fpp) {
-    this.expectedInsertions = expectedInsertions;
-    this.fpp = fpp;
-
-    bloomFilter = makeBloomFilter();
+  public GuavaBloomFilter(Config config) {
+    MembershipSettings settings = new BasicSettings(config).membership();
+    this.expectedInsertions = settings.expectedInsertions();
+    this.fpp = settings.fpp();
+    reset();
   }
 
   @Override
@@ -42,7 +45,7 @@ public final class GuavaBloomFilter implements Membership {
 
   @Override
   public void clear() {
-    bloomFilter = makeBloomFilter();
+    reset();
   }
 
   @Override
@@ -50,7 +53,7 @@ public final class GuavaBloomFilter implements Membership {
     return bloomFilter.put(e);
   }
 
-  private BloomFilter<Long> makeBloomFilter() {
-    return BloomFilter.create(Funnels.longFunnel(), expectedInsertions, fpp);
+  private void reset() {
+    bloomFilter = BloomFilter.create(Funnels.longFunnel(), expectedInsertions, fpp);
   }
 }

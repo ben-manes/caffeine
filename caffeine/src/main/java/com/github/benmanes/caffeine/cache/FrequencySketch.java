@@ -52,7 +52,7 @@ final class FrequencySketch<E> {
    * https://dl.acm.org/citation.cfm?id=3149371
    */
 
-  static final long[] SEED = new long[] { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
+  static final long[] SEED = { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
       0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
   static final long RESET_MASK = 0x7777777777777777L;
   static final long ONE_MASK = 0x1111111111111111L;
@@ -190,7 +190,7 @@ final class FrequencySketch<E> {
    */
   int indexOf(int item, int i) {
     long hash = SEED[i] * item;
-    hash += hash >> 32;
+    hash += hash >>> 32;
     return ((int) hash) & tableMask;
   }
 

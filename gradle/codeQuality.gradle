@@ -4,6 +4,7 @@
 apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'com.github.spotbugs'
 apply plugin: 'net.ltgt.errorprone'
+apply plugin: 'net.ltgt.nullaway'
 apply plugin: 'org.sonarqube'
 apply plugin: 'net.ltgt.apt'
 apply plugin: 'checkstyle'
@@ -19,7 +20,7 @@ dependencies {
   checkstyleConfig gradlePlugins.checkstyle
   errorproneJavac libraries.errorproneJavac
   errorprone libraries.errorproneCore
-  errorprone gradlePlugins.nullaway
+  errorprone libraries.nullaway
 }
 
 javadoc.options.links(
@@ -94,8 +95,11 @@ tasks.withType(JavaCompile) {
     option('UnnecessaryDefaultInEnumSwitch')
     option('MixedArrayDimensions')
     option('RemoveUnusedImports')
-    option('NullAway:AnnotatedPackages', 'com.github.benmanes.caffeine')
     error('NullAway')
+
+    nullaway {
+      annotatedPackages.add('com.github.benmanes.caffeine')
+    }
   }
 }
 

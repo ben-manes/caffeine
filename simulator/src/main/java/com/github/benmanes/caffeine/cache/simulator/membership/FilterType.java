@@ -15,38 +15,31 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.membership;
 
+import java.util.function.Function;
+
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
+import com.github.benmanes.caffeine.cache.simulator.membership.bloom.FastFilter;
 import com.github.benmanes.caffeine.cache.simulator.membership.bloom.GuavaBloomFilter;
+import com.typesafe.config.Config;
 
 /**
  * The membership filters.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("ImmutableEnumChecker")
 public enum FilterType {
-  CAFFEINE {
-    @Override public Membership create(long expectedInsertions, double fpp) {
-      return new BloomFilter(expectedInsertions, fpp);
-    }
-    @Override public String toString() {
-      return "Caffeine";
-    }
-  },
-  GUAVA {
-    @Override public Membership create(long expectedInsertions, double fpp) {
-      return new GuavaBloomFilter(expectedInsertions, fpp);
-    }
-    @Override public String toString() {
-      return "Guava";
-    }
-  };
+  CAFFEINE(BloomFilter::new),
+  FAST_FILTER(FastFilter::new),
+  GUAVA(GuavaBloomFilter::new);
 
-  /**
-   * Returns a new membership filter.
-   *
-   * @param expectedInsertions the number of expected insertions
-   * @param fpp the desired false positive probability
-   * @return a membership filter
-   */
-  public abstract Membership create(long expectedInsertions, double fpp);
+  private final Function<Config, Membership> factory;
+
+  FilterType(Function<Config, Membership> factory) {
+    this.factory = factory;
+  }
+
+  public Membership create(Config config) {
+    return factory.apply(config);
+  }
 }

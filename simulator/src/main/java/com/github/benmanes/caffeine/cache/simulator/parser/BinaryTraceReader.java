@@ -44,7 +44,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
 
   @Override
   public LongStream events() throws IOException {
-    DataInputStream input = new DataInputStream(new BufferedInputStream(readFiles()));
+    DataInputStream input = new DataInputStream(new BufferedInputStream(readFile()));
     LongStream stream = StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
         new TraceIterator(input), Spliterator.ORDERED), /* parallel */ false);
     return stream.onClose(() -> Closeables.closeQuietly(input));

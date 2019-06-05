@@ -101,10 +101,6 @@ public final class Indicator {
     public double getAverage() {
       return ((double) sum) / ((double) count);
     }
-
-    public int[] getFreq() {
-      return freq;
-    }
   }
 
   private class EstSkew {
@@ -135,7 +131,7 @@ public final class Indicator {
   }
 
   public int[] getFreqs() {
-    return hinter.getFreq();
+    return hinter.freq;
   }
 
   static final class IndicatorSettings extends BasicSettings {

@@ -29,12 +29,13 @@ import java.util.concurrent.Executor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.Cache;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListener;
 import javax.cache.event.EventType;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A dispatcher that publishes cache events to listeners for asynchronous execution.
@@ -111,7 +112,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishCreated(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.CREATED, key, /* newValue */ null, value, /* quiet */ false);
+    publish(cache, EventType.CREATED, key, /* hasOldValue */ false,
+        /* oldValue */ null, /* newValue */ value, /* quiet */ false);
   }
 
   /**
@@ -123,7 +125,8 @@ public final class EventDispatcher<K, V> {
    * @param newValue the entry's new value
    */
   public void publishUpdated(Cache<K, V> cache, K key, V oldValue, V newValue) {
-    publish(cache, EventType.UPDATED, key, oldValue, newValue, /* quiet */ false);
+    publish(cache, EventType.UPDATED, key, /* hasOldValue */ true,
+        oldValue, newValue, /* quiet */ false);
   }
 
   /**
@@ -134,7 +137,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemoved(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.REMOVED, key, /* oldValue */ null, value, /* quiet */ false);
+    publish(cache, EventType.REMOVED, key, /* hasOldValue */ true,
+        /* oldValue */ value, /* newValue */ value, /* quiet */ false);
   }
 
   /**
@@ -146,7 +150,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishRemovedQuietly(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.REMOVED, key, /* oldValue */ null, value, /* quiet */ true);
+    publish(cache, EventType.REMOVED, key, /* hasOldValue */ true,
+        /* oldValue */ value, /* newValue */ value, /* quiet */ true);
   }
 
   /**
@@ -157,7 +162,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpired(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.EXPIRED, key, value, /* newValue */ null, /* quiet */ false);
+    publish(cache, EventType.EXPIRED, key, /* hasOldValue */ true,
+        /* oldValue */ value, /* newValue */ value, /* quiet */ false);
   }
 
   /**
@@ -169,7 +175,8 @@ public final class EventDispatcher<K, V> {
    * @param value the entry's value
    */
   public void publishExpiredQuietly(Cache<K, V> cache, K key, V value) {
-    publish(cache, EventType.EXPIRED, key, value, /* newValue */ null, /* quiet */ true);
+    publish(cache, EventType.EXPIRED, key, /* hasOldValue */ true,
+        /* oldValue */ value, /* newValue */ value, /* quiet */ true);
   }
 
   /**
@@ -199,8 +206,8 @@ public final class EventDispatcher<K, V> {
   }
 
   /** Broadcasts the event to all of the interested listener's dispatch queues. */
-  private void publish(Cache<K, V> cache, EventType eventType,
-      K key, @Nullable V oldValue, @Nullable V newValue, boolean quiet) {
+  private void publish(Cache<K, V> cache, EventType eventType, K key,
+      boolean hasOldValue, @Nullable V oldValue, @Nullable V newValue, boolean quiet) {
     if (dispatchQueues.isEmpty()) {
       return;
     }
@@ -211,7 +218,7 @@ public final class EventDispatcher<K, V> {
         continue;
       }
       if (event == null) {
-        event = new JCacheEntryEvent<>(cache, eventType, key, oldValue, newValue);
+        event = new JCacheEntryEvent<>(cache, eventType, key, hasOldValue, oldValue, newValue);
       }
       if (!registration.getCacheEntryFilter().evaluate(event)) {
         continue;

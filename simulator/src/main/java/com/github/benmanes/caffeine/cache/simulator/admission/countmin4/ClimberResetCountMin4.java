@@ -16,8 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.admission.countmin4;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings.TinyLfuSettings.DoorkeeperSettings;
-import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.typesafe.config.Config;
 
@@ -43,15 +41,9 @@ public final class ClimberResetCountMin4 extends CountMin4 {
   public ClimberResetCountMin4(Config config) {
     super(config);
     BasicSettings settings = new BasicSettings(config);
-    DoorkeeperSettings doorkeeperSettings = settings.tinyLfu().countMin4().periodic().doorkeeper();
-    if (doorkeeperSettings.enabled()) {
-      FilterType filterType = settings.membershipFilter();
-      double expectedInsertionsMultiplier = doorkeeperSettings.expectedInsertionsMultiplier();
-      long expectedInsertions = (long) (expectedInsertionsMultiplier * settings.maximumSize());
-      doorkeeper = filterType.create(expectedInsertions, doorkeeperSettings.fpp());
-    } else {
-      doorkeeper = Membership.disabled();
-    }
+    doorkeeper = settings.tinyLfu().countMin4().periodic().doorkeeper().enabled()
+        ? settings.membership().filter().create(config)
+        : Membership.disabled();
   }
 
   @Override
@@ -70,7 +62,7 @@ public final class ClimberResetCountMin4 extends CountMin4 {
     if (doorkeeper.mightContain(e)) {
       count++;
     }
-    return count;
+    return Math.min(count, 15);
   }
 
   @Override

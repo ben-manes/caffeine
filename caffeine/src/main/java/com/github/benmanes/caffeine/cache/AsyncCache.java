@@ -25,6 +25,8 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.errorprone.annotations.CompatibleWith;
+
 /**
  * A semi-persistent mapping from keys to values. Cache entries are manually added using
  * {@link #get(Object, Function)} or {@link #put(Object, CompletableFuture)}, and are stored in the
@@ -49,7 +51,7 @@ public interface AsyncCache<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
-  CompletableFuture<V> getIfPresent(@NonNull Object key);
+  CompletableFuture<V> getIfPresent(@NonNull @CompatibleWith("K") Object key);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from
@@ -118,9 +120,9 @@ public interface AsyncCache<K, V> {
    *         in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
    *         if the future returned by the {@link AsyncCacheLoader} is null
-   * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
-   *         {@link CacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing the
-   *         future, in which case the mapping is left unestablished
+   * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does so, if
+   *         {@link AsyncCacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing
+   *         the future, in which case the mapping is left unestablished
    */
   @NonNull
   default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
@@ -149,9 +151,9 @@ public interface AsyncCache<K, V> {
    *         in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
    *         if the future returned by the {@link AsyncCacheLoader} is null
-   * @throws RuntimeException or Error if the {@link CacheLoader} does so, if
-   *         {@link CacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing the
-   *         future, in which case the mapping is left unestablished
+   * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does so, if
+   *         {@link AsyncCacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing
+   *         the future, in which case the mapping is left unestablished
    */
   @NonNull
   default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,

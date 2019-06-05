@@ -1,4 +1,6 @@
 /** Cache simulator using tracing data and a family of eviction policy options. */
+import net.ltgt.gradle.errorprone.CheckSeverity
+
 apply plugin:'application'
 
 mainClassName = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
@@ -24,6 +26,7 @@ dependencies {
   compile benchmarkLibraries.expiringMap
   compile benchmarkLibraries.commonsMath3
   compile benchmarkLibraries.elasticSearch
+  compile benchmarkLibraries.fastfilter
   compile benchmarkLibraries.stream
 
   testCompile testLibraries.testng
@@ -58,8 +61,10 @@ jar.manifest {
     'com.github.benmanes.caffeine.simulator'
 }
 
-compileJava {
-  options.errorprone.disable('NullAway')
+tasks.withType(JavaCompile) {
+  options.errorprone.nullaway {
+    severity = CheckSeverity.OFF
+  }
 }
 
 tasks.withType(Javadoc) {

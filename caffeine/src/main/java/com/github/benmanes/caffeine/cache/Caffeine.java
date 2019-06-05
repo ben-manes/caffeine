@@ -46,8 +46,8 @@ import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
 /**
- * A builder of {@link AsyncLoadingCache}, {@link LoadingCache}, and {@link Cache} instances
- * having a combination of the following features:
+ * A builder of {@link Cache}, {@link LoadingCache}, {@link AsyncCache}, and
+ * {@link AsyncLoadingCache} instances having a combination of the following features:
  * <ul>
  *   <li>automatic loading of entries into the cache, optionally asynchronously
  *   <li>size-based eviction when a maximum is exceeded based on frequency and recency
@@ -263,12 +263,12 @@ public final class Caffeine<K, V> {
   /**
    * Specifies the executor to use when running asynchronous tasks. The executor is delegated to
    * when sending removal notifications, when asynchronous computations are performed by
-   * {@link AsyncLoadingCache} or {@link LoadingCache#refresh} or {@link #refreshAfterWrite}, or
-   * when performing periodic maintenance. By default, {@link ForkJoinPool#commonPool()} is used.
+   * {@link AsyncCache} or {@link LoadingCache#refresh} or {@link #refreshAfterWrite}, or when
+   * performing periodic maintenance. By default, {@link ForkJoinPool#commonPool()} is used.
    * <p>
-   * The primary intent of this method is to facilitate testing of caches which have been
-   * configured with {@link #removalListener} or utilize asynchronous computations. A test may
-   * instead prefer to configure the cache to execute tasks directly on the same thread.
+   * The primary intent of this method is to facilitate testing of caches which have been configured
+   * with {@link #removalListener} or utilize asynchronous computations. A test may instead prefer
+   * to configure the cache to execute tasks directly on the same thread.
    * <p>
    * Beware that configuring a cache with an executor that throws {@link RejectedExecutionException}
    * may experience non-deterministic behavior.

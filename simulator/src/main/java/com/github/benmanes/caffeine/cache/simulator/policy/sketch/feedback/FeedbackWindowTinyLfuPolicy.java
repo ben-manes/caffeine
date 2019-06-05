@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -27,7 +28,9 @@ import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -75,9 +78,8 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
   boolean trace;
 
   public FeedbackWindowTinyLfuPolicy(double percentMain, FeedbackWindowTinyLfuSettings settings) {
-    String name = String.format("sketch.FeedbackWindowTinyLfu "
-        + "(%.0f%%)", 100 * (1.0d - percentMain));
-    this.policyStats = new PolicyStats(name);
+    this.policyStats = new PolicyStats(String.format(
+        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)));
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
@@ -92,7 +94,7 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
     pivot = (int) (settings.percentPivot() * maxWindow);
     maxPivot = Math.min(settings.maximumWindowSize(), maxProtected);
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
-    feedback = settings.membershipFilter().create(sampleSize, settings.adaptiveFpp());
+    feedback = settings.membership().filter().create(settings.filterConfig(sampleSize));
 
     checkState(settings.pivotIncrement() > 0, "Must increase by at least 1");
     checkState(settings.pivotDecrement() > 0, "Must decrease by at least 1");
@@ -404,6 +406,12 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
     }
     public double adaptiveFpp() {
       return config().getDouble("feedback-window-tiny-lfu.adaptive-fpp");
+    }
+    public Config filterConfig(int sampleSize) {
+      Map<String, Object> properties = ImmutableMap.of(
+          "membership.fpp", adaptiveFpp(),
+          "maximum-size", sampleSize);
+      return ConfigFactory.parseMap(properties).withFallback(config());
     }
   }
 }
