@@ -1596,10 +1596,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @SuppressWarnings("FutureReturnValueIgnored")
     public void run() {
       if (evicts()) {
-        node.setPolicyWeight(weight);
         long weightedSize = weightedSize();
         setWeightedSize(weightedSize + weight);
         setWindowWeightedSize(windowWeightedSize() + weight);
+        node.setPolicyWeight(node.getPolicyWeight() + weight);
 
         long maximum = maximum();
         if (weightedSize >= (maximum >>> 1)) {

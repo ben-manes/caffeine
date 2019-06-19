@@ -213,8 +213,9 @@ public final class IsValidBoundedLocalCache<K, V>
     for (Node<K, V> node : deque) {
       Supplier<String> errorMsg = () -> String.format(
           "Loop detected: %s, saw %s in %s", node, seen, cache);
-      desc.expectThat("wrong previous", deque.getPrevious(node), is(prev));
       desc.expectThat(errorMsg, seen.add(node), is(true));
+      desc.expectThat("wrong previous", deque.getPrevious(node), is(prev));
+      desc.expectThat("policyWeight != weight", node.getPolicyWeight(), is(node.getWeight()));
       weightedSize += node.getWeight();
       prev = node;
     }

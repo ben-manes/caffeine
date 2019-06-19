@@ -25,14 +25,14 @@
  */
 ext {
   versions = [
-    akka: '2.5.22',
+    akka: '2.6.0-M3',
     checkerFramework: '2.8.2',
     commonsCompress: '1.18',
     commonsLang3: '3.9',
     config: '1.3.4',
     errorprone: '2.3.3',
     errorproneJavac: '9+181-r4173-1',
-    fastutil: '8.2.2',
+    fastutil: '8.2.3',
     flipTables: '1.0.2',
     guava: '27.0-jre',
     javapoet: '1.11.1',
@@ -56,7 +56,7 @@ ext {
     truth: '0.24',
   ]
   benchmarkVersions = [
-    cache2k: '1.2.1.Final',
+    cache2k: '1.2.2.Final',
     collision: '0.3.3',
     commonsMath3: '3.6.1',
     concurrentlinkedhashmap: '1.4.2',
@@ -64,7 +64,7 @@ ext {
     elasticSearch: '7.1.1',
     expiringMap: '0.5.9',
     fastfilter: 'bf0b02297f',
-    jackrabbit: '1.12.0',
+    jackrabbit: '1.14.0',
     jamm: '0.3.3',
     javaObjectLayout: '0.9',
     jmh: '1.21',
