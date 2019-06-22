@@ -25,9 +25,14 @@ dependencies {
 
 javadoc.options.links(
   'https://lightbend.github.io/config/latest/api/',
-  "https://google.github.io/guava/releases/${versions.guava}/api/docs/",
-  "https://docs.oracle.com/javase/${JavaVersion.current().majorVersion}/docs/api/",
-  )
+  "https://google.github.io/guava/releases/${versions.guava}/api/docs/")
+def majorVersion = JavaVersion.current().majorVersion
+if (JavaVersion.current().isJava11Compatible()) {
+  javadoc.options.links("https://docs.oracle.com/en/java/javase/${majorVersion}/docs/api/")
+} else {
+  javadoc.options.links("https://docs.oracle.com/javase/${majorVersion}/docs/api/")
+}
+
 
 checkstyle {
   showViolations = true

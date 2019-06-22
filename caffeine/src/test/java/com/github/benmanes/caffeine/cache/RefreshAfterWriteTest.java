@@ -388,7 +388,8 @@ public final class RefreshAfterWriteTest {
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
-    assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
+    assertThat(refreshAfterWrite.ageOf(
+        context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
   }
 
   /* --------------- Policy: oldest --------------- */

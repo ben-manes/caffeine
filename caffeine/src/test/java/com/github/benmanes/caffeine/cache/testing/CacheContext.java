@@ -190,7 +190,7 @@ public final class CacheContext {
   }
 
   public void clear() {
-    CacheSpec.interner.remove();
+    CacheSpec.interner.get().clear();
     initialSize();
     original.clear();
     absent = null;

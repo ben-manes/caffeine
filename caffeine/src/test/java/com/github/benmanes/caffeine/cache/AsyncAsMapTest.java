@@ -353,25 +353,26 @@ public final class AsyncAsMapTest {
     assertThat(cache, hasRemovalNotifications(context, entries.size(), RemovalCause.REPLACED));
   }
 
-//  @CheckNoStats
-//  @Test(dataProvider = "caches")
-//  @CacheSpec(population = { Population.PARTIAL, Population.FULL },
-//      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
-//  public void putAll_mixed(AsyncCache<Integer, Integer> cache, CacheContext context) {
-//    Map<Integer, CompletableFuture<Integer>> entries = new HashMap<>();
-//    Map<Integer, CompletableFuture<Integer>> replaced = new HashMap<>();
-//    context.original().forEach((key, value) -> {
-//      if ((key % 2) == 0) {
-//        value++;
-//        replaced.put(key, value);
-//      }
-//      entries.put(key, value);
-//    });
-//
-//    cache.asMap().putAll(entries);
-//    assertThat(cache, is(equalTo(entries)));
-//    assertThat(cache, hasRemovalNotifications(context, replaced.size(), RemovalCause.REPLACED));
-//  }
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+  public void putAll_mixed(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, CompletableFuture<Integer>> entries = new HashMap<>();
+    Map<Integer, CompletableFuture<Integer>> replaced = new HashMap<>();
+    context.original().forEach((key, value) -> {
+      if ((key % 2) == 0) {
+        value++;
+        entries.put(key, CompletableFuture.completedFuture(value));
+        replaced.put(key, CompletableFuture.completedFuture(value));
+      } else {
+        entries.put(key, cache.asMap().get(key));
+      }
+    });
+
+    cache.asMap().putAll(entries);
+    assertThat(cache.asMap(), is(equalTo(entries)));
+    assertThat(cache, hasRemovalNotifications(context, replaced.size(), RemovalCause.REPLACED));
+  }
 
   /* ---------------- putIfAbsent -------------- */
 
@@ -1310,7 +1311,7 @@ public final class AsyncAsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void keySetToArray_null(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    cache.asMap().keySet().toArray(null);
+    cache.asMap().keySet().toArray((Integer[]) null);
   }
 
   @CheckNoStats
@@ -1469,7 +1470,7 @@ public final class AsyncAsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void valuesToArray_null(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    cache.asMap().values().toArray(null);
+    cache.asMap().values().toArray((CompletableFuture<Integer>[]) null);
   }
 
   @CheckNoStats
@@ -1604,7 +1605,8 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void valueSpliterator_forEachRemaining(AsyncCache<Integer, Integer> cache, CacheContext context) {
+  public void valueSpliterator_forEachRemaining(
+      AsyncCache<Integer, Integer> cache, CacheContext context) {
     int[] count = new int[1];
     cache.asMap().values().spliterator().forEachRemaining(value -> count[0]++);
     assertThat(count[0], is(cache.asMap().size()));
@@ -1661,7 +1663,7 @@ public final class AsyncAsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void entrySetToArray_null(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    cache.asMap().entrySet().toArray(null);
+    cache.asMap().entrySet().toArray((Entry<?, ?>[]) null);
   }
 
   @CheckNoStats
@@ -1829,7 +1831,8 @@ public final class AsyncAsMapTest {
   @CacheSpec
   @CheckNoStats
   @Test(dataProvider = "caches")
-  public void entrySpliterator_tryAdvance(AsyncCache<Integer, Integer> cache, CacheContext context) {
+  public void entrySpliterator_tryAdvance(
+      AsyncCache<Integer, Integer> cache, CacheContext context) {
     Spliterator<Entry<Integer, CompletableFuture<Integer>>> spliterator =
         cache.asMap().entrySet().spliterator();
     int[] count = new int[1];

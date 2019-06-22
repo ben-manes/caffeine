@@ -32,14 +32,20 @@ import static org.hamcrest.Matchers.nullValue;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
 import org.testng.ITestResult;
 
+import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Policy.Eviction;
+import com.github.benmanes.caffeine.cache.Policy.Expiration;
+import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 
 /**
@@ -48,6 +54,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheValidationListener implements IInvokedMethodListener {
+  private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
+  private static final AtomicBoolean failed = new AtomicBoolean();
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
@@ -81,6 +89,9 @@ public final class CacheValidationListener implements IInvokedMethodListener {
           checkExecutor(testResult, context);
         }
       } else {
+        if (!failed.get()) {
+          failed.set(true);
+        }
         testResult.setThrowable(new AssertionError(getTestName(method), testResult.getThrowable()));
       }
     } catch (Throwable caught) {
@@ -150,13 +161,25 @@ public final class CacheValidationListener implements IInvokedMethodListener {
     Object[] params = testResult.getParameters();
     for (int i = 0; i < params.length; i++) {
       Object param = params[i];
-      if ((param instanceof AsyncLoadingCache<?, ?>) || (param instanceof Cache<?, ?>)
-          || (param instanceof Map<?, ?>)) {
-        params[i] = param.getClass().getSimpleName();
+      if ((param instanceof AsyncCache<?, ?>) || (param instanceof Cache<?, ?>)
+          || (param instanceof Map<?, ?>) || (param instanceof Eviction<?, ?>)
+          || (param instanceof Expiration<?, ?>) || (param instanceof VarExpiration<?, ?>)
+          || ((param instanceof CacheContext) && !failed.get())) {
+        params[i] = simpleNames.get(param.getClass(), key -> ((Class<?>) key).getSimpleName());
+      } else if (param instanceof CacheContext) {
+        params[i] = simpleNames.get(param.toString(), Object::toString);
       } else {
         params[i] = Objects.toString(param);
       }
     }
-    CacheSpec.interner.remove();
+
+    /*
+    // Enable when TestNG 7.0 is out of beta
+    if ((testResult.getName() != null) && !failed.get()) {
+      testResult.setTestName(simpleNames.get(testResult.getName(), Object::toString));
+    }
+    */
+
+    CacheSpec.interner.get().clear();
   }
 }

@@ -246,7 +246,7 @@ final class CacheGenerator {
   }
 
   /** Returns a cache of integers and their negation. */
-  @SuppressWarnings("BoxedPrimitiveConstructor")
+  @SuppressWarnings({"BoxedPrimitiveConstructor", "deprecation"})
   private static List<Entry<Integer, Integer>> makeInts() {
     int size = Stream.of(CacheSpec.Population.values())
         .mapToInt(population -> Math.toIntExact(population.size()))

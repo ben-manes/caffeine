@@ -76,10 +76,10 @@ tasks.withType(Test) {
       options.includeGroups = ['isolated']
     } else {
       options {
+        threadCount = Math.max(6, Runtime.getRuntime().availableProcessors() - 1)
         excludeGroups = ['slow', 'isolated']
         jvmArgs '-XX:+UseG1GC'
         parallel = 'methods'
-        threadCount = 6
       }
     }
   }

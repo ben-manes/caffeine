@@ -131,7 +131,8 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
     }
   }
 
-  private static <K, V> void checkUnboundedLocalManualCache(UnboundedLocalManualCache<K, V> original,
+  private static <K, V> void checkUnboundedLocalManualCache(
+      UnboundedLocalManualCache<K, V> original,
       UnboundedLocalManualCache<K, V> copy, DescriptionBuilder desc) {
     checkUnboundedLocalCache(original.cache, copy.cache, desc);
   }

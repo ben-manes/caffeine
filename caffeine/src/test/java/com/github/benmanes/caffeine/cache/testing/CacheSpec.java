@@ -50,9 +50,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -427,8 +425,7 @@ public @interface CacheSpec {
   /* --------------- CacheLoader --------------- */
 
   // FIXME: A hack to allow the NEGATIVE loader's return value to be retained on refresh
-  static final ThreadLocal<Interner<Integer>> interner =
-      ThreadLocal.withInitial(Interners::newStrongInterner);
+  static final ThreadLocal<Map<Integer, Integer>> interner = ThreadLocal.withInitial(HashMap::new);
 
   Loader[] loader() default {
     Loader.NEGATIVE,
@@ -452,7 +449,7 @@ public @interface CacheSpec {
     /** A loader that returns the key's negation. */
     NEGATIVE {
       @Override public Integer load(Integer key) {
-        return interner.get().intern(-key);
+        return interner.get().computeIfAbsent(key, k -> -k);
       }
     },
     /** A loader that always throws an exception. */
@@ -476,8 +473,10 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-        Map<Integer, Integer> result = new HashMap<>();
-        keys.forEach(key -> result.put(key, key));
+        Map<Integer, Integer> result = new HashMap<>(Iterables.size(keys));
+        for (Integer key : keys) {
+          result.put(key, key);
+        }
         return result;
       }
     },
@@ -486,8 +485,10 @@ public @interface CacheSpec {
         throw new UnsupportedOperationException();
       }
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
-        Map<Integer, Integer> result = new HashMap<>();
-        keys.forEach(key -> result.put(key, interner.get().intern(-key)));
+        Map<Integer, Integer> result = new HashMap<>(Iterables.size(keys));
+        for (Integer key : keys) {
+          result.put(key, interner.get().computeIfAbsent(key, k -> -k));
+        }
         return result;
       }
     },
@@ -498,7 +499,8 @@ public @interface CacheSpec {
       }
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys)
           throws Exception {
-        List<Integer> moreKeys = new ArrayList<>(ImmutableList.copyOf(keys));
+        List<Integer> moreKeys = new ArrayList<>(Iterables.size(keys) + 10);
+        Iterables.addAll(moreKeys, keys);
         for (int i = 0; i < 10; i++) {
           moreKeys.add(ThreadLocalRandom.current().nextInt());
         }

@@ -98,7 +98,6 @@ public class CacheLoadingTest extends TestCase {
   public void testLoad() throws ExecutionException {
     LoadingCache<Object, Object> cache = CaffeinatedGuava.build(Caffeine.newBuilder()
         .recordStats().executor(MoreExecutors.directExecutor()), identityLoader());
-    //LoadingCache<Object, Object> cache = CacheBuilder.newBuilder().recordStats().build(identityLoader());
     CacheStats stats = cache.stats();
     assertEquals(0, stats.missCount());
     assertEquals(0, stats.loadSuccessCount());
@@ -2071,7 +2070,8 @@ public class CacheLoadingTest extends TestCase {
       @Override
       public String load(String key) {
         getStartedSignal.countDown();
-        assertTrue(Uninterruptibles.awaitUninterruptibly(letGetFinishSignal, 300, TimeUnit.SECONDS));
+        assertTrue(Uninterruptibles.awaitUninterruptibly(
+            letGetFinishSignal, 300, TimeUnit.SECONDS));
         return key + suffix;
       }
     };
@@ -2113,7 +2113,7 @@ public class CacheLoadingTest extends TestCase {
   }
 
   // ConcurrentHashMap does not support this, as it must return back the removed entry
-  public void disabled_testInvalidateDuringLoading() throws InterruptedException, ExecutionException {
+  public void disabled_testInvalidateDuringLoading() throws InterruptedException {
     // computation starts; invalidate() is called on the key being computed, computation finishes
     final CountDownLatch computationStarted = new CountDownLatch(2);
     final CountDownLatch letGetFinishSignal = new CountDownLatch(1);
@@ -2126,7 +2126,8 @@ public class CacheLoadingTest extends TestCase {
       @Override
       public String load(String key) {
         computationStarted.countDown();
-        assertTrue(Uninterruptibles.awaitUninterruptibly(letGetFinishSignal, 300, TimeUnit.SECONDS));
+        assertTrue(Uninterruptibles.awaitUninterruptibly(
+            letGetFinishSignal, 300, TimeUnit.SECONDS));
         return key + suffix;
       }
     };
@@ -2178,7 +2179,8 @@ public class CacheLoadingTest extends TestCase {
       @Override
       public String load(String key) {
         computationStarted.countDown();
-        assertTrue(Uninterruptibles.awaitUninterruptibly(letGetFinishSignal, 300, TimeUnit.SECONDS));
+        assertTrue(Uninterruptibles.awaitUninterruptibly(
+            letGetFinishSignal, 300, TimeUnit.SECONDS));
         return key + suffix;
       }
     };

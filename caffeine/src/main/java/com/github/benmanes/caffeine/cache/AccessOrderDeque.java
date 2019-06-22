@@ -82,8 +82,8 @@ final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeq
   interface AccessOrder<T extends AccessOrder<T>> {
 
     /**
-     * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
-     * element on the deque.
+     * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the
+     * first element on the deque.
      */
     @Nullable T getPreviousInAccessOrder();
 

@@ -377,7 +377,8 @@ public final class BoundedLocalCacheTest {
   public void updateRecency_onPutIfAbsent(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
     Node<Integer, Integer> first = firstBeforeAccess(localCache, context);
-    updateRecency(localCache, context, () -> localCache.putIfAbsent(first.getKey(), first.getKey()));
+    updateRecency(localCache, context, () ->
+        localCache.putIfAbsent(first.getKey(), first.getKey()));
   }
 
   @Test(dataProvider = "caches")
@@ -455,7 +456,8 @@ public final class BoundedLocalCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = Maximum.FULL)
-  public void exceedsMaximumBufferSize_onWrite(Cache<Integer, Integer> cache, CacheContext context) {
+  public void exceedsMaximumBufferSize_onWrite(
+      Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
 
     boolean[] ran = new boolean[1];

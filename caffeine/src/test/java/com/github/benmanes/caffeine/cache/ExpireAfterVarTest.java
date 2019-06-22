@@ -77,6 +77,7 @@ import com.google.common.collect.Iterables;
 public final class ExpireAfterVarTest {
 
   @Test(dataProvider = "caches")
+  @SuppressWarnings("deprecation")
   @CacheSpec(expiryTime = Expire.FOREVER,
       expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS })
   public void expiry_bounds(Cache<Integer, Integer> cache, CacheContext context) {

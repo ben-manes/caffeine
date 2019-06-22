@@ -40,7 +40,8 @@ public final class DescriptionBuilder {
     this.matches = true;
   }
 
-  public <T> DescriptionBuilder expectThat(Supplier<String> reason, T actual, Matcher<? super T> matcher) {
+  public <T> DescriptionBuilder expectThat(
+      Supplier<String> reason, T actual, Matcher<? super T> matcher) {
     if (!matcher.matches(actual)) {
       addError(reason.get(), actual, matcher);
     }

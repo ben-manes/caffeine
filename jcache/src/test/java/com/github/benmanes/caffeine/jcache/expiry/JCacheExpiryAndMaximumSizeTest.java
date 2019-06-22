@@ -23,24 +23,27 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.github.benmanes.caffeine.cache.Expiry;
-import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
-import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
-import com.google.common.util.concurrent.MoreExecutors;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
 import javax.cache.event.CacheEntryRemovedListener;
+
 import org.mockito.Mockito;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.Expiry;
+import com.github.benmanes.caffeine.jcache.AbstractJCacheTest;
+import com.github.benmanes.caffeine.jcache.configuration.CaffeineConfiguration;
+import com.google.common.util.concurrent.MoreExecutors;
+
 /**
- * The test cases that ensures the <tt>variable expiry</tt> policy and <tt>maximum size</tt> settings
- * are set simultaneously.
+ * The test cases that ensures the <tt>variable expiry</tt> policy and <tt>maximum size</tt>
+ * settings are set simultaneously.
  *
  * @author github.com/kdombeck (Ken Dombeck)
  */

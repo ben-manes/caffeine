@@ -25,8 +25,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import junit.framework.TestCase;
-
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.guava.CaffeinatedGuava;
 import com.google.common.base.Function;
@@ -37,6 +35,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.testing.EqualsTester;
+
+import junit.framework.TestCase;
 
 /**
  * {@link LoadingCache} tests that deal with empty caches.
@@ -120,7 +120,7 @@ public class EmptyCachesTest extends TestCase {
     for (LoadingCache<Object, Object> cache : caches()) {
       Set<Object> keys = cache.asMap().keySet();
       try {
-        keys.toArray(null);
+        keys.toArray((Object[]) null);
         fail();
       } catch (NullPointerException e) {
         // expected
@@ -197,7 +197,7 @@ public class EmptyCachesTest extends TestCase {
     for (LoadingCache<Object, Object> cache : caches()) {
       Collection<Object> values = cache.asMap().values();
       try {
-        values.toArray(null);
+        values.toArray((Object[]) null);
         fail();
       } catch (NullPointerException e) {
         // expected
@@ -274,7 +274,7 @@ public class EmptyCachesTest extends TestCase {
     for (LoadingCache<Object, Object> cache : caches()) {
       Set<Entry<Object, Object>> entries = cache.asMap().entrySet();
       try {
-        entries.toArray(null);
+        entries.toArray((Entry<?, ?>[]) null);
         fail();
       } catch (NullPointerException e) {
         // expected

@@ -39,7 +39,6 @@ import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -93,14 +92,19 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkCache(BoundedLocalCache<K, V> cache) {
-    try {
-      if (cache.evictionLock.tryLock(5, TimeUnit.SECONDS)) {
-        cache.evictionLock.unlock();
-      } else {
-        desc.expected("Maintenance lock can be acquired");
+    for (;;) {
+      long remainingNanos = TimeUnit.SECONDS.toNanos(5);
+      long end = System.nanoTime() + remainingNanos;
+      try {
+        if (cache.evictionLock.tryLock(remainingNanos, TimeUnit.NANOSECONDS)) {
+          cache.evictionLock.unlock();
+        } else {
+          desc.expected("Maintenance lock cannot be acquired");
+        }
+        break;
+      } catch (InterruptedException ignored) {
+        remainingNanos = end - System.nanoTime();
       }
-    } catch (InterruptedException e) {
-      desc.expected("Maintenance lock can be acquired: " + Throwables.getStackTraceAsString(e));
     }
 
     desc.expectThat("Inconsistent size", cache.data.size(), is(cache.size()));

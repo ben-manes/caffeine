@@ -755,28 +755,32 @@ public final class AsMapTest {
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void replaceConditionally_nullKeyAndOldValue(Map<Integer, Integer> map, CacheContext context) {
+  public void replaceConditionally_nullKeyAndOldValue(
+      Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, null, 1);
   }
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void replaceConditionally_nullKeyAndNewValue(Map<Integer, Integer> map, CacheContext context) {
+  public void replaceConditionally_nullKeyAndNewValue(
+      Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, 1, null);
   }
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void replaceConditionally_nullOldAndNewValue(Map<Integer, Integer> map, CacheContext context) {
+  public void replaceConditionally_nullOldAndNewValue(
+      Map<Integer, Integer> map, CacheContext context) {
     map.replace(1, null, null);
   }
 
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void replaceConditionally_nullKeyAndValues(Map<Integer, Integer> map, CacheContext context) {
+  public void replaceConditionally_nullKeyAndValues(
+      Map<Integer, Integer> map, CacheContext context) {
     map.replace(null, null, null);
   }
 
@@ -1013,7 +1017,8 @@ public final class AsMapTest {
   @CheckNoWriter @CheckNoStats
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
-  public void computeIfPresent_nullMappingFunction(Map<Integer, Integer> map, CacheContext context) {
+  public void computeIfPresent_nullMappingFunction(
+      Map<Integer, Integer> map, CacheContext context) {
     map.computeIfPresent(1, null);
   }
 
@@ -1480,7 +1485,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void keySetToArray_null(Map<Integer, Integer> map, CacheContext context) {
-    map.keySet().toArray(null);
+    map.keySet().toArray((Integer[]) null);
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1554,7 +1559,8 @@ public final class AsMapTest {
       assertThat(keys.contains(key), is(false));
     }
     assertThat(map, is(emptyMap()));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1570,7 +1576,8 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1670,7 +1677,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void valuesToArray_null(Map<Integer, Integer> map, CacheContext context) {
-    map.values().toArray(null);
+    map.values().toArray((Integer[]) null);
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1769,7 +1776,8 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -1785,7 +1793,8 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1885,7 +1894,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void entrySetToArray_null(Map<Integer, Integer> map, CacheContext context) {
-    map.entrySet().toArray(null);
+    map.entrySet().toArray((Entry<?, ?>[]) null);
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1987,7 +1996,8 @@ public final class AsMapTest {
     assertThat(map, is(emptyMap()));
     int count = context.original().size();
     assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CacheSpec
@@ -2004,7 +2014,8 @@ public final class AsMapTest {
     assertThat(map, hasRemovalNotifications(context, iterations, RemovalCause.EXPLICIT));
     assertThat(iterations, is(context.original().size()));
     assertThat(map, is(emptyMap()));
-    verifyWriter(context, (verifier, writer) -> verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter @CheckNoStats

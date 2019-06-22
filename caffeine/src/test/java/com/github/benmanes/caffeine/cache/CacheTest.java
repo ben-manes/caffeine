@@ -22,6 +22,7 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.google.common.base.Predicates.in;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
@@ -58,7 +59,6 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.WriteException;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -574,7 +574,7 @@ public final class CacheTest {
     assertThat(cache, hasRemovalNotifications(context, keys.size(), RemovalCause.EXPLICIT));
 
     verifyWriter(context, (verifier, writer) -> {
-      verifier.deletedAll(Maps.filterKeys(context.original(), Predicates.in(keys)), RemovalCause.EXPLICIT);
+      verifier.deletedAll(Maps.filterKeys(context.original(), in(keys)), RemovalCause.EXPLICIT);
     });
   }
 
@@ -602,7 +602,8 @@ public final class CacheTest {
   @CacheSpec(implementation = Implementation.Caffeine, keys = ReferenceType.STRONG,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
-  public void invalidateAll_partial_writerFails(Cache<Integer, Integer> cache, CacheContext context) {
+  public void invalidateAll_partial_writerFails(
+      Cache<Integer, Integer> cache, CacheContext context) {
     try {
       cache.invalidateAll(context.firstMiddleLastKeys());
     } finally {
