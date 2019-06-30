@@ -112,6 +112,10 @@ public interface StatsCounter {
   /**
    * Returns a snapshot of this counter's values. Note that this may be an inconsistent view, as it
    * may be interleaved with update operations.
+   * <p>
+   * <b>Note:</b> the values of the metrics are undefined in case of overflow (though it is
+   * guaranteed not to throw an exception). If you require specific handling, we recommend
+   * implementing your own stats collector.
    *
    * @return a snapshot of this counter's values
    */

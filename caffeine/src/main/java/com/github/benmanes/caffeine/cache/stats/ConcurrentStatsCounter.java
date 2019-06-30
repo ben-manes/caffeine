@@ -93,13 +93,17 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   @Override
   public CacheStats snapshot() {
     return new CacheStats(
-        hitCount.sum(),
-        missCount.sum(),
-        loadSuccessCount.sum(),
-        loadFailureCount.sum(),
-        totalLoadTime.sum(),
-        evictionCount.sum(),
-        evictionWeight.sum());
+        saturated(hitCount.sum()),
+        saturated(missCount.sum()),
+        saturated(loadSuccessCount.sum()),
+        saturated(loadFailureCount.sum()),
+        saturated(totalLoadTime.sum()),
+        saturated(evictionCount.sum()),
+        saturated(evictionWeight.sum()));
+  }
+
+  private static long saturated(long count) {
+    return (count >= 0) ? count : Long.MAX_VALUE;
   }
 
   /**

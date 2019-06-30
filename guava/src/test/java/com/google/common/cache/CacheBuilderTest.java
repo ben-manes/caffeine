@@ -211,24 +211,12 @@ public class CacheBuilderTest extends TestCase {
   }
 
   @GwtIncompatible // java.time.Duration
-  public void testLargeDurations() {
+  public void testLargeDurationsAreOk() {
     java.time.Duration threeHundredYears = java.time.Duration.ofDays(365 * 300);
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
-    try {
-      builder.expireAfterWrite(threeHundredYears);
-      fail();
-    } catch (ArithmeticException expected) {
-    }
-    try {
-      builder.expireAfterAccess(threeHundredYears);
-      fail();
-    } catch (ArithmeticException expected) {
-    }
-    try {
-      builder.refreshAfterWrite(threeHundredYears);
-      fail();
-    } catch (ArithmeticException expected) {
-    }
+    Caffeine.newBuilder()
+        .expireAfterWrite(threeHundredYears)
+        .expireAfterAccess(threeHundredYears)
+        .refreshAfterWrite(threeHundredYears);
   }
 
   public void testTimeToLive_negative() {

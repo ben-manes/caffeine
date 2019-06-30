@@ -528,7 +528,7 @@ public final class Caffeine<K, V> {
    */
   @NonNull
   public Caffeine<K, V> expireAfterWrite(@NonNull Duration duration) {
-    return expireAfterWrite(duration.toNanos(), TimeUnit.NANOSECONDS);
+    return expireAfterWrite(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
   }
 
   /**
@@ -587,7 +587,7 @@ public final class Caffeine<K, V> {
    */
   @NonNull
   public Caffeine<K, V> expireAfterAccess(@NonNull Duration duration) {
-    return expireAfterAccess(duration.toNanos(), TimeUnit.NANOSECONDS);
+    return expireAfterAccess(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
   }
 
   /**
@@ -694,7 +694,7 @@ public final class Caffeine<K, V> {
    */
   @NonNull
   public Caffeine<K, V> refreshAfterWrite(@NonNull Duration duration) {
-    return refreshAfterWrite(duration.toNanos(), TimeUnit.NANOSECONDS);
+    return refreshAfterWrite(saturatedToNanos(duration), TimeUnit.NANOSECONDS);
   }
 
   /**
@@ -1066,6 +1066,23 @@ public final class Caffeine<K, V> {
       requireState(maximumWeight != UNSET_INT, "weigher requires maximumWeight");
     } else if (maximumWeight == UNSET_INT) {
       logger.log(Level.WARNING, "ignoring weigher specified without maximumWeight");
+    }
+  }
+
+  /**
+   * Returns the number of nanoseconds of the given duration without throwing or overflowing.
+   * <p>
+   * Instead of throwing {@link ArithmeticException}, this method silently saturates to either
+   * {@link Long#MAX_VALUE} or {@link Long#MIN_VALUE}. This behavior can be useful when decomposing
+   * a duration in order to call a legacy API which requires a {@code long, TimeUnit} pair.
+   */
+  private static long saturatedToNanos(Duration duration) {
+    // Using a try/catch seems lazy, but the catch block will rarely get invoked (except for
+    // durations longer than approximately +/- 292 years).
+    try {
+      return duration.toNanos();
+    } catch (ArithmeticException tooBig) {
+      return duration.isNegative() ? Long.MIN_VALUE : Long.MAX_VALUE;
     }
   }
 

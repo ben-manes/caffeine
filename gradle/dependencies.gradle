@@ -38,7 +38,7 @@ ext {
     javapoet: '1.11.1',
     jcache: '1.1.1',
     jsr330: '1',
-    nullaway: '0.7.3',
+    nullaway: '0.7.5',
     univocityParsers: '2.8.2',
     ycsb: '0.15.0',
     xz: '1.8',
@@ -46,7 +46,7 @@ ext {
   testVersions = [
     awaitility: '3.1.6',
     easymock: '4.0.2',
-    hamcrest: '2.0.0.0',
+    hamcrest: '2.1',
     jcacheTck: '1.1.1',
     jctools: '2.1.2',
     junit: '4.12',
@@ -61,7 +61,7 @@ ext {
     commonsMath3: '3.6.1',
     concurrentlinkedhashmap: '1.4.2',
     ehcache3: '3.7.1',
-    elasticSearch: '7.1.1',
+    elasticSearch: '7.2.0',
     expiringMap: '0.5.9',
     fastfilter: 'bf0b02297f',
     jackrabbit: '1.14.0',
@@ -83,7 +83,7 @@ ext {
     coverity: '1.0.10',
     errorprone: '0.8.1',
     jacoco: '0.8.4',
-    jmh: '0.4.8',
+    jmh: '0.5.0-rc-1',
     jmhReport: '0.9.0',
     nexus: '2.3.1',
     nullaway: '0.2',
@@ -118,23 +118,19 @@ ext {
     xz: "org.tukaani:xz:${versions.xz}",
   ]
   testLibraries = [
-    awaitility: dependencies.create("org.awaitility:awaitility:${testVersions.awaitility}") {
-      exclude group: 'org.hamcrest'
-    },
+    awaitility: "org.awaitility:awaitility:${testVersions.awaitility}",
     easymock: "org.easymock:easymock:${testVersions.easymock}",
     guavaTestLib: dependencies.create("com.google.guava:guava-testlib:${versions.guava}") {
       exclude group: 'com.google.truth'
       exclude group: 'junit'
     },
-    hamcrest: "org.hamcrest:java-hamcrest:${testVersions.hamcrest}",
+    hamcrest: "org.hamcrest:hamcrest:${testVersions.hamcrest}",
     jcacheGuice: "org.jsr107.ri:cache-annotations-ri-guice:${versions.jcache}",
     jcacheTck: "javax.cache:cache-tests:${testVersions.jcacheTck}",
     jcacheTckTests: "javax.cache:cache-tests:${testVersions.jcacheTck}:tests",
     jctools: "org.jctools:jctools-core:${testVersions.jctools}",
     junit: "junit:junit:${testVersions.junit}",
-    mockito: dependencies.create("org.mockito:mockito-core:${testVersions.mockito}") {
-      exclude group: 'org.hamcrest'
-    },
+    mockito: "org.mockito:mockito-core:${testVersions.mockito}",
     osgiCompile: [
       'org.apache.felix:org.apache.felix.framework:6.0.3',
       "org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}",

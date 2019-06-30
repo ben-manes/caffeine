@@ -130,12 +130,16 @@ public final class CacheStats {
   /**
    * Returns the number of times {@link Cache} lookup methods have returned either a cached or
    * uncached value. This is defined as {@code hitCount + missCount}.
+   * <p>
+   * <b>Note:</b> the values of the metrics are undefined in case of overflow (though it is
+   * guaranteed not to throw an exception). If you require specific handling, we recommend
+   * implementing your own stats collector.
    *
    * @return the {@code hitCount + missCount}
    */
   @NonNegative
   public long requestCount() {
-    return hitCount + missCount;
+    return saturatedAdd(hitCount, missCount);
   }
 
   /**
@@ -196,12 +200,16 @@ public final class CacheStats {
    * Returns the total number of times that {@link Cache} lookup methods attempted to load new
    * values. This includes both successful load operations, as well as those that threw exceptions.
    * This is defined as {@code loadSuccessCount + loadFailureCount}.
+   * <p>
+   * <b>Note:</b> the values of the metrics are undefined in case of overflow (though it is
+   * guaranteed not to throw an exception). If you require specific handling, we recommend
+   * implementing your own stats collector.
    *
    * @return the {@code loadSuccessCount + loadFailureCount}
    */
   @NonNegative
   public long loadCount() {
-    return loadSuccessCount + loadFailureCount;
+    return saturatedAdd(loadSuccessCount, loadFailureCount);
   }
 
   /**
@@ -236,15 +244,17 @@ public final class CacheStats {
    * Returns the ratio of cache loading attempts which threw exceptions. This is defined as
    * {@code loadFailureCount / (loadSuccessCount + loadFailureCount)}, or {@code 0.0} when
    * {@code loadSuccessCount + loadFailureCount == 0}.
+   * <p>
+   * <b>Note:</b> the values of the metrics are undefined in case of overflow (though it is
+   * guaranteed not to throw an exception). If you require specific handling, we recommend
+   * implementing your own stats collector.
    *
    * @return the ratio of cache loading attempts which threw exceptions
    */
   @NonNegative
   public double loadFailureRate() {
-    long totalLoadCount = loadSuccessCount + loadFailureCount;
-    return (totalLoadCount == 0)
-        ? 0.0
-        : (double) loadFailureCount / totalLoadCount;
+    long totalLoadCount = saturatedAdd(loadSuccessCount, loadFailureCount);
+    return (totalLoadCount == 0) ? 0.0 : (double) loadFailureCount / totalLoadCount;
   }
 
   /**
@@ -262,15 +272,17 @@ public final class CacheStats {
   /**
    * Returns the average time spent loading new values. This is defined as
    * {@code totalLoadTime / (loadSuccessCount + loadFailureCount)}.
+   * <p>
+   * <b>Note:</b> the values of the metrics are undefined in case of overflow (though it is
+   * guaranteed not to throw an exception). If you require specific handling, we recommend
+   * implementing your own stats collector.
    *
    * @return the average time spent loading new values
    */
   @NonNegative
   public double averageLoadPenalty() {
-    long totalLoadCount = loadSuccessCount + loadFailureCount;
-    return (totalLoadCount == 0)
-        ? 0.0
-        : (double) totalLoadTime / totalLoadCount;
+    long totalLoadCount = saturatedAdd(loadSuccessCount, loadFailureCount);
+    return (totalLoadCount == 0) ? 0.0 : (double) totalLoadTime / totalLoadCount;
   }
 
   /**
@@ -306,18 +318,22 @@ public final class CacheStats {
   @NonNull
   public CacheStats minus(@NonNull CacheStats other) {
     return new CacheStats(
-        Math.max(0L, hitCount - other.hitCount),
-        Math.max(0L, missCount - other.missCount),
-        Math.max(0L, loadSuccessCount - other.loadSuccessCount),
-        Math.max(0L, loadFailureCount - other.loadFailureCount),
-        Math.max(0L, totalLoadTime - other.totalLoadTime),
-        Math.max(0L, evictionCount - other.evictionCount),
-        Math.max(0L, evictionWeight - other.evictionWeight));
+        Math.max(0L, saturatedSubtract(hitCount, other.hitCount)),
+        Math.max(0L, saturatedSubtract(missCount, other.missCount)),
+        Math.max(0L, saturatedSubtract(loadSuccessCount, other.loadSuccessCount)),
+        Math.max(0L, saturatedSubtract(loadFailureCount, other.loadFailureCount)),
+        Math.max(0L, saturatedSubtract(totalLoadTime, other.totalLoadTime)),
+        Math.max(0L, saturatedSubtract(evictionCount, other.evictionCount)),
+        Math.max(0L, saturatedSubtract(evictionWeight, other.evictionWeight)));
   }
 
   /**
    * Returns a new {@code CacheStats} representing the sum of this {@code CacheStats} and
    * {@code other}.
+   * <p>
+   * <b>Note:</b> the values of the metrics are undefined in case of overflow (though it is
+   * guaranteed not to throw an exception). If you require specific handling, we recommend
+   * implementing your own stats collector.
    *
    * @param other the statistics to add with
    * @return the sum of the statistics
@@ -325,13 +341,43 @@ public final class CacheStats {
   @NonNull
   public CacheStats plus(@NonNull CacheStats other) {
     return new CacheStats(
-        hitCount + other.hitCount,
-        missCount + other.missCount,
-        loadSuccessCount + other.loadSuccessCount,
-        loadFailureCount + other.loadFailureCount,
-        totalLoadTime + other.totalLoadTime,
-        evictionCount + other.evictionCount,
-        evictionWeight + other.evictionWeight);
+        saturatedAdd(hitCount, other.hitCount),
+        saturatedAdd(missCount, other.missCount),
+        saturatedAdd(loadSuccessCount, other.loadSuccessCount),
+        saturatedAdd(loadFailureCount, other.loadFailureCount),
+        saturatedAdd(totalLoadTime, other.totalLoadTime),
+        saturatedAdd(evictionCount, other.evictionCount),
+        saturatedAdd(evictionWeight, other.evictionWeight));
+  }
+
+  /**
+   * Returns the difference of {@code a} and {@code b} unless it would overflow or underflow in
+   * which case {@code Long.MAX_VALUE} or {@code Long.MIN_VALUE} is returned, respectively.
+   */
+  private static long saturatedSubtract(long a, long b) {
+    long naiveDifference = a - b;
+    if ((a ^ b) >= 0 | (a ^ naiveDifference) >= 0) {
+      // If a and b have the same signs or a has the same sign as the result then there was no
+      // overflow, return.
+      return naiveDifference;
+    }
+    // we did over/under flow
+    return Long.MAX_VALUE + ((naiveDifference >>> (Long.SIZE - 1)) ^ 1);
+  }
+
+  /**
+   * Returns the sum of {@code a} and {@code b} unless it would overflow or underflow in which case
+   * {@code Long.MAX_VALUE} or {@code Long.MIN_VALUE} is returned, respectively.
+   */
+  private static long saturatedAdd(long a, long b) {
+    long naiveSum = a + b;
+    if ((a ^ b) < 0 | (a ^ naiveSum) >= 0) {
+      // If a and b have different signs or a has the same sign as the result then there was no
+      // overflow, return.
+      return naiveSum;
+    }
+    // we did over/under flow, if the sign is negative we should return MAX otherwise MIN
+    return Long.MAX_VALUE + ((naiveSum >>> (Long.SIZE - 1)) ^ 1);
   }
 
   @Override

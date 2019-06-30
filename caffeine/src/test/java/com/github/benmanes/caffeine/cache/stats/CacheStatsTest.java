@@ -77,6 +77,7 @@ public final class CacheStatsTest {
     assertThat(one.minus(two), is(CacheStats.empty()));
   }
 
+  @Test
   public void plus() {
     CacheStats one = new CacheStats(11, 13, 15, 13, 11, 9, 18);
     CacheStats two = new CacheStats(53, 47, 41, 39, 37, 35, 70);
@@ -88,9 +89,18 @@ public final class CacheStatsTest {
     assertThat(sum, is(one.plus(two)));
   }
 
+  @Test
+  public void overflow() {
+    CacheStats max = new CacheStats(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE,
+        Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
+    checkStats(max.plus(max), Long.MAX_VALUE, Long.MAX_VALUE, 1.0, Long.MAX_VALUE, 1.0,
+        Long.MAX_VALUE, Long.MAX_VALUE, 1.0, Long.MAX_VALUE, Long.MAX_VALUE, 1.0,
+        Long.MAX_VALUE, Long.MAX_VALUE);
+  }
+
   private static void checkStats(CacheStats stats, long requestCount, long hitCount,
       double hitRate, long missCount, double missRate, long loadSuccessCount,
-      long loadFailureCount, double loadExceptionRate, long loadCount, long totalLoadTime,
+      long loadFailureCount, double loadFailureRate, long loadCount, long totalLoadTime,
       double averageLoadPenalty, long evictionCount, long evictionWeight) {
     assertThat(stats.requestCount(), is(requestCount));
     assertThat(stats.hitCount(), is(hitCount));
@@ -99,7 +109,7 @@ public final class CacheStatsTest {
     assertThat(stats.missRate(), is(missRate));
     assertThat(stats.loadSuccessCount(), is(loadSuccessCount));
     assertThat(stats.loadFailureCount(), is(loadFailureCount));
-    assertThat(stats.loadFailureRate(), is(loadExceptionRate));
+    assertThat(stats.loadFailureRate(), is(loadFailureRate));
     assertThat(stats.loadCount(), is(loadCount));
     assertThat(stats.totalLoadTime(), is(totalLoadTime));
     assertThat(stats.averageLoadPenalty(), is(averageLoadPenalty));
