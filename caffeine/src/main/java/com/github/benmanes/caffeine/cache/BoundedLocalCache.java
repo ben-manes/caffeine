@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
+import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
+import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static com.github.benmanes.caffeine.cache.Node.PROBATION;
 import static com.github.benmanes.caffeine.cache.Node.PROTECTED;
 import static com.github.benmanes.caffeine.cache.Node.WINDOW;
@@ -48,7 +50,6 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -3658,25 +3659,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       extends BoundedLocalManualCache<K, V> implements LocalLoadingCache<K, V> {
     private static final long serialVersionUID = 1;
 
-    final boolean hasBulkLoader;
     final Function<K, V> mappingFunction;
+    @Nullable final Function<Iterable<? extends K>, Map<K, V>> bulkMappingFunction;
 
     BoundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder, loader);
       requireNonNull(loader);
-      hasBulkLoader = hasLoadAll(loader);
-      mappingFunction = key -> {
-        try {
-          return loader.load(key);
-        } catch (RuntimeException e) {
-          throw e;
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new CompletionException(e);
-        } catch (Exception e) {
-          throw new CompletionException(e);
-        }
-      };
+      mappingFunction = newMappingFunction(loader);
+      bulkMappingFunction = newBulkMappingFunction(loader);
     }
 
     @Override
@@ -3691,8 +3681,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     @Override
-    public boolean hasBulkLoader() {
-      return hasBulkLoader;
+    public @Nullable Function<Iterable<? extends K>, Map<K, V>> bulkMappingFunction() {
+      return bulkMappingFunction;
     }
 
     @SuppressWarnings("UnusedVariable")

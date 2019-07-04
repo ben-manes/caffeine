@@ -25,12 +25,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.Configuration;
 import javax.cache.spi.CachingProvider;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -40,6 +41,7 @@ import com.typesafe.config.ConfigFactory;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PMD.CloseResource")
 public final class CacheManagerImpl implements CacheManager {
   private final WeakReference<ClassLoader> classLoaderReference;
   private final Map<String, CacheProxy<?, ?>> caches;

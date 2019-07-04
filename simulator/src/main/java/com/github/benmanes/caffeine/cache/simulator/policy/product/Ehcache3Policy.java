@@ -37,14 +37,16 @@ import com.typesafe.config.Config;
  */
 public final class Ehcache3Policy implements Policy {
   private final Cache<Object, Object> cache;
+  private final CacheManager cacheManager;
   private final PolicyStats policyStats;
   private final int maximumSize;
   private int size;
 
+  @SuppressWarnings("PMD.CloseResource")
   public Ehcache3Policy(Config config) {
     policyStats = new PolicyStats("product.Ehcache3");
     BasicSettings settings = new BasicSettings(config);
-    CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
+    cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = cacheManager.createCache("ehcache3",
         CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,
             ResourcePoolsBuilder.newResourcePoolsBuilder()
@@ -76,5 +78,10 @@ public final class Ehcache3Policy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
+  }
+
+  @Override
+  public void finished() {
+    cacheManager.close();
   }
 }

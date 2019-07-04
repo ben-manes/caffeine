@@ -76,6 +76,7 @@ public final class EventDispatcher<K, V> {
    *
    * @param configuration the listener's configuration.
    */
+  @SuppressWarnings("PMD.CloseResource")
   public void register(CacheEntryListenerConfiguration<K, V> configuration) {
     if (configuration.getCacheEntryListenerFactory() == null) {
       return;

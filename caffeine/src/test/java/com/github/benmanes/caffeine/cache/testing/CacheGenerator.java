@@ -141,7 +141,7 @@ final class CacheGenerator {
           ? ImmutableSet.of(type.get())
           : ImmutableSet.of();
     }
-    return ImmutableSet.copyOf(Arrays.asList(options));
+    return ImmutableSet.copyOf(options);
   }
 
   /** Returns a new cache context based on the combination. */

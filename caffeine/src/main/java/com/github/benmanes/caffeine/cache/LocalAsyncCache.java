@@ -46,6 +46,7 @@ import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
 /**
@@ -232,7 +233,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       if (result == null) {
         if (error == null) {
-          error = new CompletionException("null map", null);
+          error = new NullMapCompletionException();
         }
         for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
           cache.remove(entry.getKey(), entry.getValue());
@@ -271,6 +272,14 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           cache.put(key, CompletableFuture.completedFuture(value));
         }
       });
+    }
+
+    static final class NullMapCompletionException extends CompletionException {
+      private static final long serialVersionUID = 1L;
+
+      public NullMapCompletionException() {
+        super("null map", null);
+      }
     }
   }
 
@@ -491,15 +500,24 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    @SuppressWarnings("PMD.PreserveStackTrace")
     public V get(K key, Function<? super K, ? extends V> mappingFunction) {
-      requireNonNull(mappingFunction);
-      CompletableFuture<V> future = asyncCache().get(key, (k, executor) ->
-          CompletableFuture.supplyAsync(() -> mappingFunction.apply(key), executor));
+      return resolve(asyncCache().get(key, mappingFunction));
+    }
+
+    @Override
+    public Map<K, V> getAll(Iterable<? extends K> keys,
+        Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
+      return resolve(asyncCache().getAll(keys, mappingFunction));
+    }
+
+    @SuppressWarnings({"PMD.AvoidThrowingNullPointerException", "PMD.PreserveStackTrace"})
+    protected static <T> T resolve(CompletableFuture<T> future) throws Error {
       try {
         return future.get();
       } catch (ExecutionException e) {
-        if (e.getCause() instanceof RuntimeException) {
+        if (e.getCause() instanceof NullMapCompletionException) {
+          throw new NullPointerException(e.getCause().getMessage());
+        } else if (e.getCause() instanceof RuntimeException) {
           throw (RuntimeException) e.getCause();
         } else if (e.getCause() instanceof Error) {
           throw (Error) e.getCause();

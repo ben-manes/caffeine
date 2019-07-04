@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.cache.BasicCache;
 public final class Ehcache3<K, V> implements BasicCache<K, V> {
   private final Cache<K, V> cache;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "PMD.CloseResource"})
   public Ehcache3(int maximumSize) {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = (Cache<K, V>) cacheManager.createCache("benchmark",

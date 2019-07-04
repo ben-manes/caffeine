@@ -102,6 +102,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
   }
 
   @Override
+  @SuppressWarnings("PMD.CloseResource")
   public void close(ClassLoader classLoader) {
     synchronized (cacheManagers) {
       ClassLoader managerClassLoader = getManagerClassLoader(classLoader);
@@ -115,6 +116,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
   }
 
   @Override
+  @SuppressWarnings("PMD.CloseResource")
   public void close(URI uri, ClassLoader classLoader) {
     synchronized (cacheManagers) {
       ClassLoader managerClassLoader = getManagerClassLoader(classLoader);

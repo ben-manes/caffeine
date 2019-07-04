@@ -76,4 +76,9 @@ public final class Cache2kPolicy implements Policy {
   public PolicyStats stats() {
     return policyStats;
   }
+
+  @Override
+  public void finished() {
+    cache.close();
+  }
 }

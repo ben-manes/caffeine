@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
+import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newMappingFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InvalidObjectException;
@@ -32,7 +34,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -915,26 +916,15 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       implements LocalLoadingCache<K, V> {
     private static final long serialVersionUID = 1;
 
-    final CacheLoader<? super K, V> loader;
     final Function<K, V> mappingFunction;
-    final boolean hasBulkLoader;
+    final CacheLoader<? super K, V> loader;
+    @Nullable final Function<Iterable<? extends K>, Map<K, V>> bulkMappingFunction;
 
     UnboundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder);
       this.loader = loader;
-      this.hasBulkLoader = hasLoadAll(loader);
-      this.mappingFunction = key -> {
-        try {
-          return loader.load(key);
-        } catch (RuntimeException e) {
-          throw e;
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new CompletionException(e);
-        } catch (Exception e) {
-          throw new CompletionException(e);
-        }
-      };
+      this.mappingFunction = newMappingFunction(loader);
+      this.bulkMappingFunction = newBulkMappingFunction(loader);
     }
 
     @Override
@@ -948,8 +938,8 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public boolean hasBulkLoader() {
-      return hasBulkLoader;
+    public @Nullable Function<Iterable<? extends K>, Map<K, V>>  bulkMappingFunction() {
+      return bulkMappingFunction;
     }
 
     @Override

@@ -15,6 +15,12 @@
     <Bug code="SP"/>
   </Match>
   <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.profiler.SingleConsumerQueueProfiler"/>
+    </Or>
+    <Bug code="ST"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.CaffeineSpec"/>
     <Or>
       <Method name="parseDuration"/>
@@ -23,8 +29,8 @@
     <Bug code="NP"/>
   </Match>
   <Match>
-    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter"/>
-    <Method name="accept"/>
+    <Class name="com.github.benmanes.caffeine.cache.LocalAsyncCache$AsyncBulkCompleter$NullMapCompletionException"/>
+    <Method name="&lt;init&gt;"/>
     <Bug code="NP"/>
   </Match>
   <Match>

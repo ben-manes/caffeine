@@ -43,23 +43,11 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   /** Returns the {@link CacheLoader} used by this cache. */
   CacheLoader<? super K, V> cacheLoader();
 
-  /** Returns the {@link CacheLoader} as a mapping function. */
+  /** Returns the {@link CacheLoader#load} as a mapping function. */
   Function<K, V> mappingFunction();
 
-  /** Returns whether the cache loader supports bulk loading. */
-  boolean hasBulkLoader();
-
-  /** Returns whether the supplied cache loader has bulk load functionality. */
-  default boolean hasLoadAll(CacheLoader<? super K, V> loader) {
-    try {
-      Method classLoadAll = loader.getClass().getMethod("loadAll", Iterable.class);
-      Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Iterable.class);
-      return !classLoadAll.equals(defaultLoadAll);
-    } catch (NoSuchMethodException | SecurityException e) {
-      logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
-      return false;
-    }
-  }
+  /** Returns the {@link CacheLoader#loadAll} as a mapping function, if implemented. */
+  @Nullable Function<Iterable<? extends K>, Map<K, V>> bulkMappingFunction();
 
   @Override
   default @Nullable V get(K key) {
@@ -68,7 +56,9 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   @Override
   default Map<K, V> getAll(Iterable<? extends K> keys) {
-    return hasBulkLoader() ? loadInBulk(keys) : loadSequentially(keys);
+    return (bulkMappingFunction() == null)
+        ? loadSequentially(keys)
+        : getAll(keys, bulkMappingFunction());
   }
 
   /** Sequentially loads each missing entry. */
@@ -94,62 +84,6 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
       throw t;
     }
     return Collections.unmodifiableMap(result);
-  }
-
-  /** Batch loads the missing entries. */
-  default Map<K, V> loadInBulk(Iterable<? extends K> keys) {
-    Set<K> keysToLoad = new LinkedHashSet<>();
-    Map<K, V> found = cache().getAllPresent(keys);
-    Map<K, V> result = new LinkedHashMap<>(found.size());
-    for (K key : keys) {
-      V value = found.get(key);
-      if (value == null) {
-        keysToLoad.add(key);
-      }
-      result.put(key, value);
-    }
-    if (keysToLoad.isEmpty()) {
-      return found;
-    }
-
-    bulkLoad(keysToLoad, result);
-    return Collections.unmodifiableMap(result);
-  }
-
-  /**
-   * Performs a non-blocking bulk load of the missing keys. Any missing entry that materializes
-   * during the load are replaced when the loaded entries are inserted into the cache.
-   */
-  default void bulkLoad(Set<K> keysToLoad, Map<K, V> result) {
-    boolean success = false;
-    long startTime = cache().statsTicker().read();
-    try {
-      @SuppressWarnings("unchecked")
-      Map<K, V> loaded = (Map<K, V>) cacheLoader().loadAll(keysToLoad);
-      loaded.forEach((key, value) -> {
-        cache().put(key, value, /* notifyWriter */ false);
-      });
-      for (K key : keysToLoad) {
-        V value = loaded.get(key);
-        if (value == null) {
-          result.remove(key);
-        } else {
-          result.put(key, value);
-        }
-      }
-      success = !loaded.isEmpty();
-    } catch (RuntimeException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new CompletionException(e);
-    } finally {
-      long loadTime = cache().statsTicker().read() - startTime;
-      if (success) {
-        cache().statsCounter().recordLoadSuccess(loadTime);
-      } else {
-        cache().statsCounter().recordLoadFailure(loadTime);
-      }
-    }
   }
 
   @Override
@@ -197,5 +131,55 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         cache().statsCounter().recordLoadSuccess(loadTime);
       }
     });
+  }
+
+  /** Returns a mapping function that adapts to {@link CacheLoader#load}. */
+  static <K, V> Function<K, V> newMappingFunction(CacheLoader<? super K, V> cacheLoader) {
+    return key -> {
+      try {
+        return cacheLoader.load(key);
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CompletionException(e);
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
+    };
+  }
+
+  /** Returns a mapping function that adapts to {@link CacheLoader#loadAll}, if implemented. */
+  static <K, V> @Nullable Function<Iterable<? extends K>, Map<K, V>> newBulkMappingFunction(
+      CacheLoader<? super K, V> cacheLoader) {
+    if (!hasLoadAll(cacheLoader)) {
+      return null;
+    }
+    return keysToLoad -> {
+      try {
+        @SuppressWarnings("unchecked")
+        Map<K, V> loaded = (Map<K, V>) cacheLoader.loadAll(keysToLoad);
+        return loaded;
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CompletionException(e);
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
+    };
+  }
+
+  /** Returns whether the supplied cache loader has bulk load functionality. */
+  static boolean hasLoadAll(CacheLoader<?, ?> loader) {
+    try {
+      Method classLoadAll = loader.getClass().getMethod("loadAll", Iterable.class);
+      Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Iterable.class);
+      return !classLoadAll.equals(defaultLoadAll);
+    } catch (NoSuchMethodException | SecurityException e) {
+      logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
+      return false;
+    }
   }
 }

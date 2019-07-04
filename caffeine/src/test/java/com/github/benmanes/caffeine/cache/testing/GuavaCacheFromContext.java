@@ -21,9 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -52,6 +55,8 @@ import com.google.common.cache.RemovalNotification;
 import com.google.common.cache.Weigher;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ExecutionError;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
@@ -177,9 +182,44 @@ public final class GuavaCacheFromContext {
 
     @Override
     public Map<K, V> getAllPresent(Iterable<?> keys) {
-      requireNonNull(keys);
+      return cache.getAllPresent(ImmutableSet.copyOf(keys));
+    }
+
+    @Override
+    public Map<K, V> getAll(Iterable<? extends K> keys,
+        Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
       keys.forEach(Objects::requireNonNull);
-      return cache.getAllPresent(keys);
+      requireNonNull(mappingFunction);
+
+      Map<K, V> found = getAllPresent(keys);
+      Set<K> keysToLoad = Sets.difference(ImmutableSet.copyOf(keys), found.keySet());
+      if (keysToLoad.isEmpty()) {
+        return found;
+      }
+
+      long start = ticker.read();
+      try {
+        Map<K, V> loaded = mappingFunction.apply(keysToLoad);
+        loaded.forEach(cache::put);
+        long end = ticker.read();
+        statsCounter.recordLoadSuccess(end - start);
+
+        Map<K, V> result = new LinkedHashMap<>();
+        for (K key : keys) {
+          V value = found.get(key);
+          if (value == null) {
+            value = loaded.get(key);
+          }
+          if (value != null) {
+            result.put(key, value);
+          }
+        }
+        return Collections.unmodifiableMap(result);
+      } catch (Throwable t) {
+        long end = ticker.read();
+        statsCounter.recordLoadException(end - start);
+        throw t;
+      }
     }
 
     @Override

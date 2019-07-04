@@ -38,6 +38,7 @@ public abstract class TextTraceReader extends AbstractTraceReader implements Tra
   }
 
   /** Returns a stream of each line in the trace file. */
+  @SuppressWarnings("PMD.CloseResource")
   protected Stream<String> lines() throws IOException {
     InputStream input = readFile();
     Reader reader = new InputStreamReader(input, UTF_8);

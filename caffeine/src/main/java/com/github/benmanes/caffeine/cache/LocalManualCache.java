@@ -15,10 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -57,6 +63,62 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
   @Override
   default Map<K, V> getAllPresent(Iterable<?> keys) {
     return cache().getAllPresent(keys);
+  }
+
+  @Override
+  default Map<K, V> getAll(Iterable<? extends K> keys,
+      Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
+    Set<K> keysToLoad = new LinkedHashSet<>();
+    Map<K, V> found = getAllPresent(keys);
+    Map<K, V> result = new LinkedHashMap<>(found.size());
+    for (K key : keys) {
+      V value = found.get(key);
+      if (value == null) {
+        keysToLoad.add(key);
+      }
+      result.put(key, value);
+    }
+    if (keysToLoad.isEmpty()) {
+      return found;
+    }
+
+    bulkLoad(keysToLoad, result, mappingFunction);
+    return Collections.unmodifiableMap(result);
+  }
+
+  /**
+   * Performs a non-blocking bulk load of the missing keys. Any missing entry that materializes
+   * during the load are replaced when the loaded entries are inserted into the cache.
+   */
+  default void bulkLoad(Set<K> keysToLoad, Map<K, V> result,
+      Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction) {
+    boolean success = false;
+    long startTime = cache().statsTicker().read();
+    try {
+      Map<K, V> loaded = mappingFunction.apply(keysToLoad);
+      loaded.forEach((key, value) ->
+          cache().put(key, value, /* notifyWriter */ false));
+      for (K key : keysToLoad) {
+        V value = loaded.get(key);
+        if (value == null) {
+          result.remove(key);
+        } else {
+          result.put(key, value);
+        }
+      }
+      success = !loaded.isEmpty();
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new CompletionException(e);
+    } finally {
+      long loadTime = cache().statsTicker().read() - startTime;
+      if (success) {
+        cache().statsCounter().recordLoadSuccess(loadTime);
+      } else {
+        cache().statsCounter().recordLoadFailure(loadTime);
+      }
+    }
   }
 
   @Override

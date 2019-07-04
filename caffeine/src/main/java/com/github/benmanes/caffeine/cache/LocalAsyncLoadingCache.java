@@ -21,8 +21,6 @@ import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -121,35 +119,13 @@ abstract class LocalAsyncLoadingCache<K, V>
     @Override
     @SuppressWarnings("PMD.PreserveStackTrace")
     public V get(K key) {
-      try {
-        return asyncCache.get(key).get();
-      } catch (ExecutionException e) {
-        if (e.getCause() instanceof RuntimeException) {
-          throw (RuntimeException) e.getCause();
-        } else if (e.getCause() instanceof Error) {
-          throw (Error) e.getCause();
-        }
-        throw new CompletionException(e.getCause());
-      } catch (InterruptedException e) {
-        throw new CompletionException(e);
-      }
+      return resolve(asyncCache.get(key));
     }
 
     @Override
     @SuppressWarnings("PMD.PreserveStackTrace")
     public Map<K, V> getAll(Iterable<? extends K> keys) {
-      try {
-        return asyncCache.getAll(keys).get();
-      } catch (ExecutionException e) {
-        if (e.getCause() instanceof RuntimeException) {
-          throw (RuntimeException) e.getCause();
-        } else if (e.getCause() instanceof Error) {
-          throw (Error) e.getCause();
-        }
-        throw new CompletionException(e.getCause());
-      } catch (InterruptedException e) {
-        throw new CompletionException(e);
-      }
+      return resolve(asyncCache.getAll(keys));
     }
 
     @Override

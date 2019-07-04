@@ -23,7 +23,10 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailure
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static com.google.common.base.Predicates.in;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -37,6 +40,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -61,8 +65,11 @@ import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteExc
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.WriteException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Streams;
+import com.google.common.primitives.Ints;
 
 /**
  * The test cases for the {@link Cache} interface that simulate the most generic usages. These
@@ -152,7 +159,7 @@ public final class CacheTest {
   @CacheSpec
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  public void get_absent_null(LoadingCache<Integer, Integer> cache, CacheContext context) {
+  public void get_absent_null(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey(), k -> null), is(nullValue()));
     assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
@@ -266,12 +273,6 @@ public final class CacheTest {
 
     int misses = context.absentKeys().size();
     int hits = context.original().keySet().size();
-    if (context.isGuava()) {
-      // does not filter duplicate queries
-      misses += misses;
-      hits += hits;
-    }
-
     assertThat(result, is(equalTo(context.original())));
     assertThat(context, both(hasMissCount(misses)).and(hasHitCount(hits)));
     assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
@@ -310,6 +311,208 @@ public final class CacheTest {
     Map<Object, Integer> result = cache.getAllPresent(keys);
     assertThat(result.values(), not(hasItem(nullValue())));
     assertThat(result, is(equalTo(ImmutableMap.of(key, value))));
+  }
+
+  /* --------------- getAll --------------- */
+
+  @CheckNoWriter
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getAll_iterable_null(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.getAll(null, keys -> { throw new AssertionError(); });
+  }
+
+  @CheckNoWriter
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getAll_iterable_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.getAll(Collections.singletonList(null), keys -> { throw new AssertionError(); });
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_iterable_empty(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> result = cache.getAll(ImmutableList.of(),
+        keys -> { throw new AssertionError(); });
+    assertThat(result.size(), is(0));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+  }
+
+  @CheckNoWriter
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getAll_function_null(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.getAll(context.absentKeys(), null);
+  }
+
+  @CheckNoWriter
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getAll_function_nullValue(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.getAll(context.absentKeys(), keys -> null);
+  }
+
+  @CacheSpec
+  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
+  public void getAll_immutable(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> result = cache.getAll(context.absentKeys(), bulkMappingFunction());
+    result.clear();
+  }
+
+  @CacheSpec
+  @CheckNoWriter
+  @Test(dataProvider = "caches", expectedExceptions = IllegalStateException.class)
+  public void getAll_absent_failure(Cache<Integer, Integer> cache, CacheContext context) {
+    try {
+      cache.getAll(context.absentKeys(), keys -> { throw new IllegalStateException(); });
+    } finally {
+      int misses = context.absentKeys().size();
+      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
+      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    }
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_absent(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> result = cache.getAll(context.absentKeys(), bulkMappingFunction());
+
+    int count = context.absentKeys().size();
+    assertThat(result, aMapWithSize(count));
+    assertThat(context, both(hasMissCount(count)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_present_partial(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> expect = new HashMap<>();
+    expect.put(context.firstKey(), -context.firstKey());
+    expect.put(context.middleKey(), -context.middleKey());
+    expect.put(context.lastKey(), -context.lastKey());
+    Map<Integer, Integer> result = cache.getAll(expect.keySet(), bulkMappingFunction());
+
+    assertThat(result, is(equalTo(expect)));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(expect.size())));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_present_full(Cache<Integer, Integer> cache, CacheContext context) {
+    Map<Integer, Integer> result = cache.getAll(context.original().keySet(), bulkMappingFunction());
+    assertThat(result, is(equalTo(context.original())));
+    assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      implementation = Implementation.Guava)
+  public void getAll_duplicates(Cache<Integer, Integer> cache, CacheContext context) {
+    Set<Integer> absentKeys = ImmutableSet.copyOf(Iterables.limit(context.absentKeys(),
+        Ints.saturatedCast(context.maximum().max() - context.initialSize())));
+    Iterable<Integer> keys = Iterables.concat(absentKeys, absentKeys,
+        context.original().keySet(), context.original().keySet());
+    Map<Integer, Integer> result = cache.getAll(keys, bulkMappingFunction());
+
+    assertThat(context, hasMissCount(absentKeys.size()));
+    assertThat(context, hasHitCount(context.initialSize()));
+    assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_present_ordered_absent(
+      Cache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.absentKeys());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys, bulkMappingFunction()).keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_present_ordered_partial(
+      Cache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.original().keySet());
+    keys.addAll(context.absentKeys());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys, bulkMappingFunction()).keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_present_ordered_present(
+      Cache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.original().keySet());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys, bulkMappingFunction()).keySet());
+    assertThat(result, is(equalTo(keys)));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getAll_present_ordered_exceeds(
+      Cache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> keys = new ArrayList<>(context.original().keySet());
+    keys.addAll(context.absentKeys());
+    Collections.shuffle(keys);
+
+    List<Integer> result = new ArrayList<>(cache.getAll(keys, bulkMappingFunction()).keySet());
+    assertThat(result.subList(0, keys.size()), is(equalTo(keys)));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      keys = ReferenceType.STRONG, writer = Writer.DISABLED)
+  public void getAll_jdk8186171(CacheContext context) {
+    class Key {
+      @Override public int hashCode() {
+        return 0; // to put keys in one bucket
+      }
+    }
+    Cache<Object, Integer> cache = context.build(key -> null);
+
+    List<Key> keys = new ArrayList<>();
+    for (int i = 0; i < Population.FULL.size(); i++) {
+      keys.add(new Key());
+    }
+    Key key = Iterables.getLast(keys);
+    Integer value = context.absentValue();
+    cache.put(key, value);
+
+    Map<Object, Integer> result = cache.getAll(keys, keysToLoad -> ImmutableMap.of());
+    assertThat(result.values(), not(hasItem(nullValue())));
+    assertThat(result, is(equalTo(ImmutableMap.of(key, value))));
+  }
+
+  static Function<Iterable<? extends Integer>, Map<Integer, Integer>> bulkMappingFunction() {
+    return keys -> {
+      Map<Integer, Integer> result = Streams.stream(keys).collect(toMap(identity(), key -> -key));
+      CacheSpec.interner.get().putAll(result);
+      return result;
+    };
   }
 
   /* --------------- put --------------- */

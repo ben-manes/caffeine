@@ -279,7 +279,7 @@ public final class LoadingCacheTest {
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_ordered_absent(
+  public void getAll_present_ordered_absent(
       LoadingCache<Integer, Integer> cache, CacheContext context) {
     List<Integer> keys = new ArrayList<>(context.absentKeys());
     Collections.shuffle(keys);
@@ -293,7 +293,7 @@ public final class LoadingCacheTest {
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_ordered_partial(
+  public void getAll_present_ordered_partial(
       LoadingCache<Integer, Integer> cache, CacheContext context) {
     List<Integer> keys = new ArrayList<>(context.original().keySet());
     keys.addAll(context.absentKeys());
@@ -308,7 +308,7 @@ public final class LoadingCacheTest {
   @CacheSpec(loader = { Loader.NEGATIVE, Loader.BULK_NEGATIVE },
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_ordered_present(
+  public void getAll_present_ordered_present(
       LoadingCache<Integer, Integer> cache, CacheContext context) {
     List<Integer> keys = new ArrayList<>(context.original().keySet());
     Collections.shuffle(keys);
@@ -321,7 +321,7 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(loader = Loader.BULK_NEGATIVE_EXCEEDS,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void getAllPresent_ordered_exceeds(
+  public void getAll_present_ordered_exceeds(
       LoadingCache<Integer, Integer> cache, CacheContext context) {
     List<Integer> keys = new ArrayList<>(context.original().keySet());
     keys.addAll(context.absentKeys());

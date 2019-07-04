@@ -358,12 +358,12 @@ public final class AsyncAsMapTest {
       removalListener = { Listener.DEFAULT, Listener.CONSUMING })
   public void putAll_mixed(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, CompletableFuture<Integer>> entries = new HashMap<>();
-    Map<Integer, CompletableFuture<Integer>> replaced = new HashMap<>();
+    List<Integer> replaced = new ArrayList<>();
     context.original().forEach((key, value) -> {
       if ((key % 2) == 0) {
         value++;
+        replaced.add(key);
         entries.put(key, CompletableFuture.completedFuture(value));
-        replaced.put(key, CompletableFuture.completedFuture(value));
       } else {
         entries.put(key, cache.asMap().get(key));
       }
