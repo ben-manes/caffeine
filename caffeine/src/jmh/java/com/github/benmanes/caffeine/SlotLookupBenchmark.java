@@ -18,16 +18,17 @@ package com.github.benmanes.caffeine;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 
-import net.openhft.koloboke.collect.impl.hash.LHashSeparateKVLongIntMapFactoryImpl;
-import net.openhft.koloboke.collect.map.hash.HashLongIntMap;
-import net.openhft.koloboke.collect.map.hash.HashLongIntMapFactory;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.infra.Blackhole;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
+
+import net.openhft.koloboke.collect.impl.hash.LHashSeparateKVLongIntMapFactoryImpl;
+import net.openhft.koloboke.collect.map.hash.HashLongIntMap;
+import net.openhft.koloboke.collect.map.hash.HashLongIntMapFactory;
 
 /**
  * A comparison of different lookup approaches for indexes for a slot in a fixed-sized shared array.
@@ -153,11 +154,11 @@ public class SlotLookupBenchmark {
   }
 
   @Benchmark
-  public long striped64() {
+  public long striped64(Blackhole blackhole) {
     // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
     int hash = getProbe();
     if (hash == 0) {
-      ThreadLocalRandom.current(); // force initialization
+      blackhole.consume(ThreadLocalRandom.current()); // force initialization
       hash = getProbe();
     }
     advanceProbe(hash);

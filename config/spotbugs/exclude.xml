@@ -54,6 +54,11 @@
     </Or>
     <Bug code="UuF"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.DelegationBenchmark$DelegateMap"/>
+    <Method name="get"/>
+    <Bug code="NP"/>
+  </Match>
 
   <!-- Guava -->
   <Match>
