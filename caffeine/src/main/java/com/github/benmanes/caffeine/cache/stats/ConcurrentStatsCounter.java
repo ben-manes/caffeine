@@ -71,13 +71,13 @@ public final class ConcurrentStatsCounter implements StatsCounter {
     totalLoadTime.add(loadTime);
   }
 
-  @Override
+  @Override @Deprecated
   @SuppressWarnings("deprecation")
   public void recordEviction() {
     evictionCount.increment();
   }
 
-  @Override
+  @Override @Deprecated
   @SuppressWarnings("deprecation")
   public void recordEviction(int weight) {
     evictionCount.increment();
@@ -93,17 +93,18 @@ public final class ConcurrentStatsCounter implements StatsCounter {
   @Override
   public CacheStats snapshot() {
     return new CacheStats(
-        saturated(hitCount.sum()),
-        saturated(missCount.sum()),
-        saturated(loadSuccessCount.sum()),
-        saturated(loadFailureCount.sum()),
-        saturated(totalLoadTime.sum()),
-        saturated(evictionCount.sum()),
-        saturated(evictionWeight.sum()));
+        negativeToMaxValue(hitCount.sum()),
+        negativeToMaxValue(missCount.sum()),
+        negativeToMaxValue(loadSuccessCount.sum()),
+        negativeToMaxValue(loadFailureCount.sum()),
+        negativeToMaxValue(totalLoadTime.sum()),
+        negativeToMaxValue(evictionCount.sum()),
+        negativeToMaxValue(evictionWeight.sum()));
   }
 
-  private static long saturated(long count) {
-    return (count >= 0) ? count : Long.MAX_VALUE;
+  /** Returns {@code value}, if non-negative. Otherwise, returns {@link Long#MAX_VALUE}. */
+  private static long negativeToMaxValue(long value) {
+    return (value >= 0) ? value : Long.MAX_VALUE;
   }
 
   /**

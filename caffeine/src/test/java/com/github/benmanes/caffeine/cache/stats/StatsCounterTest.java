@@ -132,4 +132,22 @@ public final class StatsCounterTest {
     verify(statsCounter).recordLoadSuccess(1);
     verify(statsCounter).recordLoadFailure(1);
   }
+
+  @Test
+  public void overflow_loadSuccess() {
+    StatsCounter counter = new ConcurrentStatsCounter();
+    counter.recordLoadSuccess(Long.MAX_VALUE);
+    counter.recordLoadSuccess(1);
+    CacheStats stats = counter.snapshot();
+    assertThat(stats.totalLoadTime(), is(Long.MAX_VALUE));
+  }
+
+  @Test
+  public void overflow_loadFailure() {
+    StatsCounter counter = new ConcurrentStatsCounter();
+    counter.recordLoadFailure(Long.MAX_VALUE);
+    counter.recordLoadFailure(1);
+    CacheStats stats = counter.snapshot();
+    assertThat(stats.totalLoadTime(), is(Long.MAX_VALUE));
+  }
 }

@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -68,8 +70,10 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
   @Override
   default Map<K, V> getAll(Iterable<? extends K> keys,
       Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
+    requireNonNull(mappingFunction);
+
     Set<K> keysToLoad = new LinkedHashSet<>();
-    Map<K, V> found = getAllPresent(keys);
+    Map<K, V> found = cache().getAllPresent(keys);
     Map<K, V> result = new LinkedHashMap<>(found.size());
     for (K key : keys) {
       V value = found.get(key);
