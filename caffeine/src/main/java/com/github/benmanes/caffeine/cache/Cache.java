@@ -202,6 +202,11 @@ public interface Cache<K, V> {
    * Returns a view of the entries stored in this cache as a thread-safe map. Modifications made to
    * the map directly affect the cache.
    * <p>
+   * A computation operation, such as {@link ConcurrentMap#compute}, performs the entire method
+   * invocation atomically, so the function is applied at most once per key. Some attempted update
+   * operations by other threads may be blocked while computation is in progress. The computation
+   * must not attempt to update any other mappings of this cache.
+   * <p>
    * Iterators from the returned map are at least <i>weakly consistent</i>: they are safe for
    * concurrent use, but if the cache is modified (including by eviction) after the iterator is
    * created, it is undefined which of the changes (if any) will be reflected in that iterator.
