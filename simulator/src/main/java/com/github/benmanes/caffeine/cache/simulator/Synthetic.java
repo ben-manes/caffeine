@@ -44,7 +44,7 @@ public final class Synthetic {
     int events = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter":
-        return counter(settings.synthetic().counter().start(), events);
+        return generateNumbers(settings.synthetic().counter().start(), events);
       case "exponential":
         return exponential(settings.synthetic().exponential().mean(), events);
       case "hotspot":
@@ -70,11 +70,10 @@ public final class Synthetic {
 
   /**
    * Returns a sequence of unique integers.
-   *
-   * @param start the number that the counter starts from
+   *  @param start the number that the counter starts from
    * @param events the number of events in the distribution
    */
-  public static LongStream counter(int start, int events) {
+  public static LongStream generateNumbers(int start, int events) {
     return generate(new CounterGenerator(start), events);
   }
 
