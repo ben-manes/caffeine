@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -97,8 +98,8 @@ final class TimerWheel<K, V> {
     try {
       nanos = currentTimeNanos;
       for (int i = 0; i < SHIFT.length; i++) {
-        long previousTicks = (previousTimeNanos >> SHIFT[i]);
-        long currentTicks = (currentTimeNanos >> SHIFT[i]);
+        long previousTicks = (previousTimeNanos >>> SHIFT[i]);
+        long currentTicks = (currentTimeNanos >>> SHIFT[i]);
         if ((currentTicks - previousTicks) <= 0L) {
           break;
         }
@@ -205,8 +206,8 @@ final class TimerWheel<K, V> {
     int length = wheel.length - 1;
     for (int i = 0; i < length; i++) {
       if (duration < SPANS[i + 1]) {
-        int ticks = (int) (time >> SHIFT[i]);
-        int index = ticks & (wheel[i].length - 1);
+        long ticks = (time >>> SHIFT[i]);
+        int index = (int) (ticks & (wheel[i].length - 1));
         return wheel[i][index];
       }
     }
@@ -232,6 +233,28 @@ final class TimerWheel<K, V> {
     }
   }
 
+  /** Returns the duration until the next bucket expires, or {@link Long.MAX_VALUE} if none. */
+  public long getExpirationDelay() {
+    for (int i = 0; i < SHIFT.length; i++) {
+      Node<K, V>[] timerWheel = wheel[i];
+      long ticks = (nanos >>> SHIFT[i]);
+
+      long spanMask = SPANS[i] - 1;
+      int start = (int) (ticks & spanMask);
+      int end = start + timerWheel.length;
+      int mask = timerWheel.length - 1;
+      for (int j = start; j < end; j++) {
+        Node<K, V> sentinel = timerWheel[(j & mask)];
+        Node<K, V> next = sentinel.getNextInVariableOrder();
+        if (sentinel != next) {
+          long delay = ((j - start) * SPANS[i]) - (nanos & spanMask);
+          return (delay > 0) ? delay : (next.getVariableTime() - nanos);
+        }
+      }
+    }
+    return Long.MAX_VALUE;
+  }
+
   /**
    * Returns an unmodifiable snapshot map roughly ordered by the expiration time. The wheels are
    * evaluated in order, but the timers that fall within the bucket's range are not sorted. Beware
@@ -251,7 +274,7 @@ final class TimerWheel<K, V> {
       int indexOffset = ascending ? i : -i;
       int index = startLevel + indexOffset;
 
-      int ticks = (int) (nanos >> SHIFT[index]);
+      int ticks = (int) (nanos >>> SHIFT[index]);
       int bucketMask = (wheel[index].length - 1);
       int startBucket = (ticks & bucketMask) + (ascending ? 1 : 0);
       for (int j = 0; j < wheel[index].length; j++) {
@@ -334,10 +357,5 @@ final class TimerWheel<K, V> {
     @Override public boolean isDead() { return false; }
     @Override public void retire() {}
     @Override public void die() {}
-  }
-
-  static long ceilingPowerOfTwo(long x) {
-    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1L << -Long.numberOfLeadingZeros(x - 1);
   }
 }

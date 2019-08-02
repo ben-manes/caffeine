@@ -44,10 +44,12 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration;
@@ -81,6 +83,7 @@ public final class CacheContext {
   final Expiry<Integer, Integer> expiry;
   final Map<Integer, Integer> original;
   final Implementation implementation;
+  final CacheScheduler cacheScheduler;
   final Listener removalListenerType;
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
@@ -89,6 +92,7 @@ public final class CacheContext {
   final Population population;
   final CacheWeigher weigher;
   final Maximum maximumSize;
+  final Scheduler scheduler;
   final Expire afterAccess;
   final Expire afterWrite;
   final Expire expiryTime;
@@ -122,9 +126,9 @@ public final class CacheContext {
   public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
       Expire refresh, Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
-      CacheExecutor cacheExecutor, Listener removalListenerType, Population population,
-      boolean isLoading, boolean isAsyncLoading, Compute compute, Loader loader, Writer writer,
-      Implementation implementation, CacheSpec cacheSpec) {
+      CacheExecutor cacheExecutor, CacheScheduler cacheScheduler, Listener removalListenerType,
+      Population population, boolean isLoading, boolean isAsyncLoading, Compute compute,
+      Loader loader, Writer writer, Implementation implementation, CacheSpec cacheSpec) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = requireNonNull(weigher);
@@ -137,6 +141,8 @@ public final class CacheContext {
     this.valueStrength = requireNonNull(valueStrength);
     this.cacheExecutor = requireNonNull(cacheExecutor);
     this.executor = cacheExecutor.create();
+    this.cacheScheduler = requireNonNull(cacheScheduler);
+    this.scheduler = cacheScheduler.create();
     this.removalListenerType = removalListenerType;
     this.removalListener = removalListenerType.create();
     this.population = requireNonNull(population);
@@ -456,6 +462,10 @@ public final class CacheContext {
     return executor;
   }
 
+  public Scheduler scheduler() {
+    return scheduler;
+  }
+
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
@@ -474,6 +484,7 @@ public final class CacheContext {
         .add("isAsyncLoading", isAsyncLoading)
         .add("writer", writer)
         .add("cacheExecutor", cacheExecutor)
+        .add("cacheScheduler", cacheScheduler)
         .add("removalListener", removalListenerType)
         .add("initialCapacity", initialCapacity)
         .add("stats", stats)

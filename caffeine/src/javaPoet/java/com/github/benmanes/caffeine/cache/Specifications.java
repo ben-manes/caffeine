@@ -88,6 +88,7 @@ public final class Specifications {
   public static final TypeName STATS_COUNTER =
       ClassName.get(PACKAGE_NAME + ".stats", "StatsCounter");
   public static final TypeName TICKER = ClassName.get(PACKAGE_NAME, "Ticker");
+  public static final TypeName PACER = ClassName.get(PACKAGE_NAME, "Pacer");
 
   public static final TypeName ACCESS_ORDER_DEQUE =
       ParameterizedTypeName.get(ClassName.get(PACKAGE_NAME, "AccessOrderDeque"), NODE);

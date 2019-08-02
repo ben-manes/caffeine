@@ -86,6 +86,11 @@
 
   <!-- Simulator -->
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.Simulator"/>
+    <Method name="broadcast"/>
+    <Bug code="RCN"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader"/>
     <Method name="lines"/>
     <Bug code="OS"/>

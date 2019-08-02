@@ -49,6 +49,7 @@ spotbugs {
 pmd {
   ruleSets = []
   toolVersion = pluginVersions.pmd
+  incrementalAnalysis = !System.env.'CI'
   ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
 }
 

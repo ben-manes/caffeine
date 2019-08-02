@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Pacer.TOLERANCE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_ACCESS;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AFTER_WRITE;
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
@@ -22,10 +23,22 @@ import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.ver
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anEmptyMap;
+import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atMostOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +47,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.mockito.ArgumentCaptor;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -41,6 +55,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
@@ -89,6 +104,55 @@ public final class ExpirationTest {
         verifier.deleted(context.absentKey(), context.absentValue(), RemovalCause.EXPIRED);
       });
     }
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, compute = Compute.SYNC,
+      scheduler = CacheScheduler.MOCK)
+  public void schedule(Cache<Integer, Integer> cache, CacheContext context) {
+    ArgumentCaptor<Long> delay = ArgumentCaptor.forClass(long.class);
+    ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+    doReturn(DisabledFuture.INSTANCE).when(context.scheduler()).schedule(
+        eq(context.executor()), task.capture(), delay.capture(), eq(TimeUnit.NANOSECONDS));
+
+    cache.put(context.absentKey(), context.absentValue());
+
+    long minError = TimeUnit.MINUTES.toNanos(1) - TOLERANCE;
+    long maxError = TimeUnit.MINUTES.toNanos(1) + TOLERANCE;
+    assertThat(delay.getValue(), is(both(greaterThan(minError)).and(lessThan(maxError))));
+
+    context.ticker().advance(delay.getValue());
+    task.getValue().run();
+
+    if (context.expiresVariably()) {
+      // scheduled a timerWheel cascade, run next schedule
+      assertThat(delay.getAllValues(), hasSize(2));
+      context.ticker().advance(delay.getValue());
+      task.getValue().run();
+    }
+
+    assertThat(cache.asMap(), is(anEmptyMap()));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, compute = Compute.SYNC,
+      scheduler = CacheScheduler.MOCK)
+  public void schedule_immediate(Cache<Integer, Integer> cache, CacheContext context) {
+    doAnswer(invocation -> {
+      ((Runnable) invocation.getArgument(1)).run();
+      return DisabledFuture.INSTANCE;
+    }).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
+
+    cache.put(context.absentKey(), context.absentValue());
+    verify(context.scheduler(), atMostOnce()).schedule(any(), any(), anyLong(), any());
   }
 
   /* --------------- Cache --------------- */

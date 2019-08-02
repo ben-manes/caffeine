@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.RandomSeedEnforcer;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
@@ -88,6 +89,9 @@ public final class CaffeineCacheFromContext {
     if (context.cacheExecutor != CacheExecutor.DEFAULT) {
       builder.executor(context.executor);
     }
+    if (context.cacheScheduler != CacheScheduler.DEFAULT) {
+      builder.scheduler(context.scheduler);
+    }
     if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
     }
@@ -110,7 +114,7 @@ public final class CaffeineCacheFromContext {
 
     @SuppressWarnings("unchecked")
     Cache<K, V> castedCache = (Cache<K, V>) context.cache;
-    RandomSeedEnforcer.ensureRandomSeed(castedCache);
+    RandomSeedEnforcer.resetThreadLocalRandom();
     return castedCache;
   }
 }

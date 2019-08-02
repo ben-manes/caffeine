@@ -1,9 +1,10 @@
 language: java
 sudo: required
+dist: xenial
 
 jdk:
-  - oraclejdk8
-  - oraclejdk9
+  - openjdk8
+  - openjdk11
 
 env:
   global:
@@ -17,16 +18,7 @@ install: true
 script:
   - ./travis.sh $GROUP
 
-matrix:
-  allow_failures:
-    - jdk: oraclejdk9
-  fast_finish: true
-
 addons:
-  apt:
-    packages:
-      - oracle-java8-installer
-      - oracle-java9-installer
   sonarcloud:
     organization: caffeine
     token:

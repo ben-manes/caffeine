@@ -564,6 +564,27 @@ public final class CaffeineTest {
     Caffeine.newBuilder().softValues().build();
   }
 
+  /* --------------- scheduler --------------- */
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void scheduler_null() {
+    Caffeine.newBuilder().scheduler(null);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void scheduler_twice() {
+    Caffeine.newBuilder().scheduler(Scheduler.disabledScheduler())
+        .scheduler(Scheduler.disabledScheduler());
+  }
+
+  @Test
+  public void scheduler() {
+    Scheduler scheduler = (executor, task, delay, unit) -> DisabledFuture.INSTANCE;
+    Caffeine<?, ?> builder = Caffeine.newBuilder().scheduler(scheduler);
+    assertThat(((GuardedScheduler) builder.getScheduler()).delegate, is(scheduler));
+    builder.build();
+  }
+
   /* --------------- executor --------------- */
 
   @Test(expectedExceptions = NullPointerException.class)

@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
@@ -124,6 +125,7 @@ final class CacheGenerator {
         ImmutableSet.copyOf(keys),
         ImmutableSet.copyOf(values),
         ImmutableSet.copyOf(cacheSpec.executor()),
+        ImmutableSet.copyOf(cacheSpec.scheduler()),
         ImmutableSet.copyOf(cacheSpec.removalListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
         ImmutableSet.of(true, isLoadingOnly),
@@ -160,6 +162,7 @@ final class CacheGenerator {
         (ReferenceType) combination.get(index++),
         (ReferenceType) combination.get(index++),
         (CacheExecutor) combination.get(index++),
+        (CacheScheduler) combination.get(index++),
         (Listener) combination.get(index++),
         (Population) combination.get(index++),
         (Boolean) combination.get(index++),
@@ -187,11 +190,14 @@ final class CacheGenerator {
             || (context.expireAfterWrite() != Expire.DISABLED));
     boolean expirationIncompatible = (cacheSpec.mustExpireWithAnyOf().length > 0)
         && !Arrays.stream(cacheSpec.mustExpireWithAnyOf()).anyMatch(context::expires);
+    boolean schedulerIgnored = (context.cacheScheduler != CacheScheduler.DEFAULT)
+        && !context.expires();
 
     boolean skip = asyncIncompatible || asyncLoaderIncompatible
         || refreshIncompatible || weigherIncompatible
         || expiryIncompatible || expirationIncompatible
-        || referenceIncompatible;
+        || referenceIncompatible
+        || schedulerIgnored;
     return !skip;
   }
 

@@ -55,7 +55,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
  */
 public final class CacheValidationListener implements IInvokedMethodListener {
   private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
-  private static final AtomicBoolean failed = new AtomicBoolean();
+  private static final AtomicBoolean detailedParams = new AtomicBoolean();
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
@@ -64,33 +64,10 @@ public final class CacheValidationListener implements IInvokedMethodListener {
   public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
     try {
       if (testResult.isSuccess()) {
-        boolean foundCache = false;
-        CacheContext context = null;
-        for (Object param : testResult.getParameters()) {
-          if (param instanceof Cache<?, ?>) {
-            foundCache = true;
-            assertThat((Cache<?, ?>) param, is(validCache()));
-          } else if (param instanceof AsyncLoadingCache<?, ?>) {
-            foundCache = true;
-            assertThat((AsyncLoadingCache<?, ?>) param, is(validAsyncCache()));
-          } else if (param instanceof Map<?, ?>) {
-            foundCache = true;
-            assertThat((Map<?, ?>) param, is(validAsMap()));
-          } else if (param instanceof CacheContext) {
-            context = (CacheContext) param;
-          }
-        }
-        if (context != null) {
-          if (!foundCache) {
-            assertThat(context.cache, is(validCache()));
-          }
-          checkWriter(testResult, context);
-          checkNoStats(testResult, context);
-          checkExecutor(testResult, context);
-        }
+        validate(testResult);
       } else {
-        if (!failed.get()) {
-          failed.set(true);
+        if (!detailedParams.get()) {
+          detailedParams.set(true);
         }
         testResult.setThrowable(new AssertionError(getTestName(method), testResult.getThrowable()));
       }
@@ -99,6 +76,34 @@ public final class CacheValidationListener implements IInvokedMethodListener {
       testResult.setThrowable(new AssertionError(getTestName(method), caught));
     } finally {
       cleanUp(testResult);
+    }
+  }
+
+  /** Validates the internal state of the cache. */
+  private void validate(ITestResult testResult) {
+    boolean foundCache = false;
+    CacheContext context = null;
+    for (Object param : testResult.getParameters()) {
+      if (param instanceof Cache<?, ?>) {
+        foundCache = true;
+        assertThat((Cache<?, ?>) param, is(validCache()));
+      } else if (param instanceof AsyncLoadingCache<?, ?>) {
+        foundCache = true;
+        assertThat((AsyncLoadingCache<?, ?>) param, is(validAsyncCache()));
+      } else if (param instanceof Map<?, ?>) {
+        foundCache = true;
+        assertThat((Map<?, ?>) param, is(validAsMap()));
+      } else if (param instanceof CacheContext) {
+        context = (CacheContext) param;
+      }
+    }
+    if (context != null) {
+      if (!foundCache) {
+        assertThat(context.cache, is(validCache()));
+      }
+      checkWriter(testResult, context);
+      checkNoStats(testResult, context);
+      checkExecutor(testResult, context);
     }
   }
 
@@ -164,7 +169,7 @@ public final class CacheValidationListener implements IInvokedMethodListener {
       if ((param instanceof AsyncCache<?, ?>) || (param instanceof Cache<?, ?>)
           || (param instanceof Map<?, ?>) || (param instanceof Eviction<?, ?>)
           || (param instanceof Expiration<?, ?>) || (param instanceof VarExpiration<?, ?>)
-          || ((param instanceof CacheContext) && !failed.get())) {
+          || ((param instanceof CacheContext) && !detailedParams.get())) {
         params[i] = simpleNames.get(param.getClass(), key -> ((Class<?>) key).getSimpleName());
       } else if (param instanceof CacheContext) {
         params[i] = simpleNames.get(param.toString(), Object::toString);

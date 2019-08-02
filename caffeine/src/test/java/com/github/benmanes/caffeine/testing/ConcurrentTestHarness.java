@@ -21,6 +21,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -41,8 +43,11 @@ import com.google.common.util.concurrent.Uninterruptibles;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ConcurrentTestHarness {
-  private static final Executor executor = Executors.newCachedThreadPool(
-      new ThreadFactoryBuilder().setPriority(Thread.MIN_PRIORITY).setDaemon(true).build());
+  private static final ThreadFactory DAEMON_FACTORY = new ThreadFactoryBuilder()
+      .setPriority(Thread.MIN_PRIORITY).setDaemon(true).build();
+  public static final ScheduledExecutorService scheduledExecutor =
+      Executors.newSingleThreadScheduledExecutor(DAEMON_FACTORY);
+  public static final Executor executor = Executors.newCachedThreadPool(DAEMON_FACTORY);
 
   private ConcurrentTestHarness() {}
 

@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Async.ASYNC_EXPIRY;
+import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static com.github.benmanes.caffeine.cache.LocalLoadingCache.newBulkMappingFunction;
@@ -30,6 +31,7 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -234,7 +236,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     writer = builder.getCacheWriter();
     evictionLock = new ReentrantLock();
     weigher = builder.getWeigher(isAsync);
-    drainBuffersTask = new PerformCleanupTask();
+    drainBuffersTask = new PerformCleanupTask(this);
     nodeFactory = NodeFactory.newFactory(builder, isAsync);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     readBuffer = evicts() || collectKeys() || collectValues() || expiresAfterAccess()
@@ -245,11 +247,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (evicts()) {
       setMaximumSize(builder.getMaximum());
     }
-  }
-
-  static int ceilingPowerOfTwo(int x) {
-    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1 << -Integer.numberOfLeadingZeros(x - 1);
   }
 
   /* --------------- Shared --------------- */
@@ -339,7 +336,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
     };
     try {
-      executor().execute(task);
+      executor.execute(task);
     } catch (Throwable t) {
       logger.log(Level.SEVERE, "Exception thrown when submitting removal listener", t);
       task.run();
@@ -369,6 +366,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /* --------------- Expiration Support --------------- */
+
+  /** Returns the {@link Pacer} used to schedule the maintenance task. */
+  protected @Nullable Pacer pacer() {
+    return null;
+  }
 
   /** Returns if the cache expires entries after a variable time threshold. */
   protected boolean expiresVariable() {
@@ -780,6 +782,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     expireAfterAccessEntries(now);
     expireAfterWriteEntries(now);
     expireVariableEntries(now);
+
+    if (pacer() != null) {
+      long delay = getExpirationDelay(now);
+      if (delay != Long.MAX_VALUE) {
+        pacer().schedule(executor, drainBuffersTask, now, delay);
+      }
+    }
   }
 
   /** Expires entries in the access-order queue. */
@@ -831,6 +840,38 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (expiresVariable()) {
       timerWheel().advance(now);
     }
+  }
+
+  /** Returns the duration until the next item expires, or {@link Long.MAX_VALUE} if none. */
+  @GuardedBy("evictionLock")
+  private long getExpirationDelay(long now) {
+    long delay = Long.MAX_VALUE;
+    if (expiresAfterAccess()) {
+      Node<K, V> node = accessOrderWindowDeque().peekFirst();
+      if (node != null) {
+        delay = Math.min(delay, now - node.getAccessTime() + expiresAfterAccessNanos());
+      }
+      if (evicts()) {
+        node = accessOrderProbationDeque().peekFirst();
+        if (node != null) {
+          delay = Math.min(delay, now - node.getAccessTime() + expiresAfterAccessNanos());
+        }
+        node = accessOrderProtectedDeque().peekFirst();
+        if (node != null) {
+          delay = Math.min(delay, now - node.getAccessTime() + expiresAfterAccessNanos());
+        }
+      }
+    }
+    if (expiresAfterWrite()) {
+      Node<K, V> node = writeOrderDeque().peekFirst();
+      if (node != null) {
+        delay = Math.min(delay, now - node.getWriteTime() + expiresAfterWriteNanos());
+      }
+    }
+    if (expiresVariable()) {
+      delay = Math.min(delay, timerWheel().getExpirationDelay());
+    }
+    return delay;
   }
 
   /** Returns if the entry has expired. */
@@ -1375,7 +1416,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           return;
         }
         lazySetDrainStatus(PROCESSING_TO_IDLE);
-        executor().execute(drainBuffersTask);
+        executor.execute(drainBuffersTask);
       } catch (Throwable t) {
         logger.log(Level.WARNING, "Exception thrown when submitting maintenance task", t);
         maintenance(/* ignored */ null);
@@ -3259,8 +3300,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   /** A reusable task that performs the maintenance work; used to avoid wrapping by ForkJoinPool. */
-  final class PerformCleanupTask extends ForkJoinTask<Void> implements Runnable {
+  static final class PerformCleanupTask extends ForkJoinTask<Void> implements Runnable {
     private static final long serialVersionUID = 1L;
+
+    final WeakReference<BoundedLocalCache<?, ?>> reference;
+
+    PerformCleanupTask(BoundedLocalCache<?, ?> cache) {
+      reference = new WeakReference<BoundedLocalCache<?,?>>(cache);
+    }
 
     @Override
     public boolean exec() {
@@ -3276,7 +3323,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public void run() {
-      performCleanUp(/* ignored */ null);
+      BoundedLocalCache<?, ?> cache = reference.get();
+      if (cache != null) {
+        cache.performCleanUp(/* ignored */ null);
+      }
     }
 
     /**

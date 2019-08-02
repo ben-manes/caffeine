@@ -50,6 +50,7 @@ import com.github.benmanes.caffeine.cache.local.AddKeyValueStrength;
 import com.github.benmanes.caffeine.cache.local.AddMaximum;
 import com.github.benmanes.caffeine.cache.local.AddRefreshAfterWrite;
 import com.github.benmanes.caffeine.cache.local.AddRemovalListener;
+import com.github.benmanes.caffeine.cache.local.AddPacer;
 import com.github.benmanes.caffeine.cache.local.AddStats;
 import com.github.benmanes.caffeine.cache.local.AddSubtype;
 import com.github.benmanes.caffeine.cache.local.AddWriteBuffer;
@@ -83,7 +84,7 @@ public final class LocalCacheFactoryGenerator {
       new AddKeyValueStrength(), new AddRemovalListener(), new AddStats(),
       new AddExpirationTicker(), new AddMaximum(), new AddFastPath(), new AddDeques(),
       new AddExpireAfterAccess(), new AddExpireAfterWrite(), new AddRefreshAfterWrite(),
-      new AddWriteBuffer(), new Finalize());
+      new AddWriteBuffer(), new AddPacer(), new Finalize());
   final ZoneId timeZone = ZoneId.of("America/Los_Angeles");
   final Path directory;
 

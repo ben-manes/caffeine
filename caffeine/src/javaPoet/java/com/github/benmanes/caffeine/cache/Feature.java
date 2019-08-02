@@ -99,6 +99,11 @@ public enum Feature {
         || features.contains(Feature.REFRESH_WRITE);
   }
 
+  public static boolean usesExpiration(Set<Feature> features) {
+    return features.contains(Feature.EXPIRE_ACCESS)
+        || features.contains(Feature.EXPIRE_WRITE);
+  }
+
   public static boolean usesMaximum(Set<Feature> features) {
     return features.contains(Feature.MAXIMUM_SIZE)
         || features.contains(Feature.MAXIMUM_WEIGHT);

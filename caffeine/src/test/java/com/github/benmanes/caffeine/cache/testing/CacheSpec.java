@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.scheduledExecutor;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.Objects.requireNonNull;
@@ -39,6 +40,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.mockito.Mockito;
 
@@ -48,6 +50,7 @@ import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.google.common.collect.Iterables;
@@ -650,6 +653,31 @@ public @interface CacheSpec {
     };
 
     public abstract Executor create();
+  }
+
+  /* --------------- Scheduler --------------- */
+
+  /** The executors retrieved from a supplier, each resulting in a new combination. */
+  CacheScheduler[] scheduler() default {
+    CacheScheduler.DEFAULT,
+  };
+
+  /** The scheduler that the cache can be configured with. */
+  enum CacheScheduler {
+    DEFAULT(() -> null), // disabled
+    SYSTEM(Scheduler::systemScheduler),
+    THREADED(() -> Scheduler.forScheduledExecutorService(scheduledExecutor)),
+    MOCK(() -> Mockito.mock(Scheduler.class));
+
+    private final Supplier<Scheduler> scheduler;
+
+    private CacheScheduler(Supplier<Scheduler> scheduler) {
+      this.scheduler = requireNonNull(scheduler);
+    }
+
+    public Scheduler create() {
+      return scheduler.get();
+    }
   }
 
   /* --------------- Populated --------------- */

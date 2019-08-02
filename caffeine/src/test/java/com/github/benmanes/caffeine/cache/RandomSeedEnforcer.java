@@ -25,18 +25,18 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
 public final class RandomSeedEnforcer {
   static final long PROBE = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
   static final long SEED = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomSeed");
+  static final int RANDOM_PROBE = 0x9e3779b9;
   static final int RANDOM_SEED = 1033096058;
 
   private RandomSeedEnforcer() {}
 
-  /** Force the random seed to a predictable value. */
-  public static void ensureRandomSeed(Cache<?, ?> cache) {
-    resetThreadLocalRandom();
+  /** Forces the eviction jitter to be predictable. */
+  public static void resetThreadLocalRandom() {
+    setThreadLocalRandom(RANDOM_PROBE, RANDOM_SEED);
   }
 
-  /** Forces the eviction jitter to be predictable. */
-  private static void resetThreadLocalRandom() {
-    UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), PROBE, 0x9e3779b9);
-    UnsafeAccess.UNSAFE.putLong(Thread.currentThread(), SEED, RANDOM_SEED);
+  public static void setThreadLocalRandom(int probe, int seed) {
+    UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), PROBE, probe);
+    UnsafeAccess.UNSAFE.putLong(Thread.currentThread(), SEED, seed);
   }
 }

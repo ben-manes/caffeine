@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -98,10 +99,11 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * <p>
  * If {@linkplain #expireAfter(Expiry) expireAfter},
  * {@linkplain #expireAfterWrite expireAfterWrite}, or
- * {@linkplain #expireAfterAccess expireAfterAccess} is requested entries may be evicted on each
- * cache modification, on occasional cache accesses, or on calls to {@link Cache#cleanUp}. Expired
- * entries may be counted by {@link Cache#estimatedSize()}, but will never be visible to read or
- * write operations.
+ * {@linkplain #expireAfterAccess expireAfterAccess} is requested then entries may be evicted on
+ * each cache modification, on occasional cache accesses, or on calls to {@link Cache#cleanUp}. A
+ * {@linkplain #scheduler(Scheduler)} may be specified to provide prompt removal of expired entries
+ * rather than waiting until activity triggers the periodic maintenance. Expired entries may be
+ * counted by {@link Cache#estimatedSize()}, but will never be visible to read or write operations.
  * <p>
  * If {@linkplain #weakKeys weakKeys}, {@linkplain #weakValues weakValues}, or
  * {@linkplain #softValues softValues} are requested, it is possible for a key or value present in
@@ -159,6 +161,7 @@ public final class Caffeine<K, V> {
   @Nullable CacheWriter<? super K, ? super V> writer;
   @Nullable Weigher<? super K, ? super V> weigher;
   @Nullable Expiry<? super K, ? super V> expiry;
+  @Nullable Scheduler scheduler;
   @Nullable Executor executor;
   @Nullable Ticker ticker;
 
@@ -193,6 +196,18 @@ public final class Caffeine<K, V> {
     if (!expression) {
       throw new IllegalStateException(String.format(template, args));
     }
+  }
+
+  /** Returns the smallest power of two greater than or equal to {@code x}. */
+  static int ceilingPowerOfTwo(int x) {
+    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
+    return 1 << -Integer.numberOfLeadingZeros(x - 1);
+  }
+
+  /** Returns the smallest power of two greater than or equal to {@code x}. */
+  static long ceilingPowerOfTwo(long x) {
+    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
+    return 1L << -Long.numberOfLeadingZeros(x - 1);
   }
 
   /**
@@ -287,6 +302,43 @@ public final class Caffeine<K, V> {
   @NonNull
   Executor getExecutor() {
     return (executor == null) ? ForkJoinPool.commonPool() : executor;
+  }
+
+  /**
+   * Specifies the scheduler to use when scheduling routine maintenance based on an expiration
+   * event. This augments the periodic maintenance that occurs during normal cache operations to
+   * allow for the promptly removal of expired entries regardless of whether any cache activity is
+   * occurring at that time. By default, {@link Scheduler#disabledScheduler()} is used.
+   * <p>
+   * The scheduling between expiration events is paced to exploit batching and to minimize
+   * executions in short succession. This minimum difference between the scheduled executions is
+   * implementation-specific, currently at ~1 second (2^30 ns). In addition, the provided scheduler
+   * may not offer real-time guarantees (including {@link ThreadPoolExecutor}). The scheduling is
+   * best-effort and does not make any hard guarantees of when an expired entry will be removed.
+   * <p>
+   * <b>Note for Java 9 and later:</b> consider using {@link Scheduler#systemScheduler()} to
+   * leverage the dedicated, system-wide scheduling thread.
+   *
+   * @param scheduler the scheduler that submits a task to the {@link #executor(Executor)} after a
+   *        given delay
+   * @return this {@code Caffeine} instance (for chaining)
+   * @throws NullPointerException if the specified scheduler is null
+   */
+  @NonNull
+  public Caffeine<K, V> scheduler(@NonNull Scheduler scheduler) {
+    requireState(this.scheduler == null, "scheduler was already set to %s", this.scheduler);
+    this.scheduler = requireNonNull(scheduler);
+    return this;
+  }
+
+  @NonNull
+  Scheduler getScheduler() {
+    if ((scheduler == null) || (scheduler == Scheduler.disabledScheduler())) {
+      return Scheduler.disabledScheduler();
+    } else if (scheduler == Scheduler.systemScheduler()) {
+      return scheduler;
+    }
+    return Scheduler.guardedScheduler(scheduler);
   }
 
   /**

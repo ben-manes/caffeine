@@ -50,19 +50,16 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause);
 
   /** Returns the {@link Executor} used by this cache. */
-  @NonNull
-  Executor executor();
+  @NonNull Executor executor();
 
   /** Returns whether the cache captures the write time of the entry. */
   boolean hasWriteTime();
 
   /** Returns the {@link Ticker} used by this cache for expiration. */
-  @NonNull
-  Ticker expirationTicker();
+  @NonNull Ticker expirationTicker();
 
   /** Returns the {@link Ticker} used by this cache for statistics. */
-  @NonNull
-  Ticker statsTicker();
+  @NonNull Ticker statsTicker();
 
   /** See {@link Cache#estimatedSize()}. */
   long estimatedSize();

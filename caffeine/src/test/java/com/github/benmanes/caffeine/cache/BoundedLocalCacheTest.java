@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -48,6 +47,7 @@ import org.mockito.Mockito;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.BoundedLocalCache.PerformCleanupTask;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
@@ -70,7 +70,7 @@ import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.testing.GcFinalization;
 
 /**
  * The test cases for the implementation details of {@link BoundedLocalCache}.
@@ -80,11 +80,21 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class BoundedLocalCacheTest {
-  final Executor executor = Executors.newCachedThreadPool(
-      new ThreadFactoryBuilder().setDaemon(true).build());
 
   static BoundedLocalCache<Integer, Integer> asBoundedLocalCache(Cache<Integer, Integer> cache) {
     return (BoundedLocalCache<Integer, Integer>) cache.asMap();
+  }
+
+  @Test
+  @SuppressWarnings("UnusedVariable")
+  public void cleanupTask_allowGc() {
+    BoundedLocalCache<?, ?> cache = new BoundedLocalCache<Object, Object>(
+        Caffeine.newBuilder(), /* loader */ null, /* async */ false) {};
+    PerformCleanupTask task = cache.drainBuffersTask;
+    cache = null;
+
+    GcFinalization.awaitClear(task.reference);
+    task.run();
   }
 
   @Test
@@ -596,7 +606,7 @@ public final class BoundedLocalCacheTest {
     ReentrantLock lock = localCache.evictionLock;
     lock.lock();
     try {
-      executor.execute(() -> {
+      ConcurrentTestHarness.execute(() -> {
         localCache.lazySetDrainStatus(REQUIRED);
         task.run();
         done.set(true);
