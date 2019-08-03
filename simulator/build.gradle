@@ -57,8 +57,7 @@ sonarqube {
 
 jar.manifest {
   attributes 'Bundle-SymbolicName': 'com.github.benmanes.caffeine.simulator'
-  attributes 'Automatic-Module-Name':
-    'com.github.benmanes.caffeine.simulator'
+  attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.simulator'
 }
 
 tasks.withType(JavaCompile) {

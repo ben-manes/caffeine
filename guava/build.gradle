@@ -20,10 +20,8 @@ jar.manifest {
     'com.google.common.cache',
     'com.github.benmanes.caffeine.cache',
     'com.github.benmanes.caffeine.cache.stats'].join(',')
-  attributes 'Export-Package':
-    'com.github.benmanes.caffeine.guava'
-  attributes 'Automatic-Module-Name':
-    'com.github.benmanes.caffeine.guava'
+  attributes 'Export-Package': 'com.github.benmanes.caffeine.guava'
+  attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.guava'
 }
 
 tasks.withType(Javadoc) {

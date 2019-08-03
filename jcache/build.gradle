@@ -41,8 +41,7 @@ jar.manifest {
     'com.github.benmanes.caffeine.jcache.spi',
     'com.github.benmanes.caffeine.jcache.copy',
     'com.github.benmanes.caffeine.jcache.configuration'].join(',')
-  attributes 'Automatic-Module-Name':
-    'com.github.benmanes.caffeine.jcache'
+  attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.jcache'
 }
 
 task unzipJCacheJavaDoc(type: Copy, group: 'Build', description: 'Unzips the JCache JavaDoc') {

@@ -33,6 +33,12 @@ if (JavaVersion.current().isJava11Compatible()) {
   javadoc.options.links("https://docs.oracle.com/javase/${majorVersion}/docs/api/")
 }
 
+jar {
+  manifest.attributes 'Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0'
+  metaInf {
+    from "${rootDir}/LICENSE"
+  }
+}
 
 checkstyle {
   showViolations = true
