@@ -307,7 +307,7 @@ public final class Caffeine<K, V> {
   /**
    * Specifies the scheduler to use when scheduling routine maintenance based on an expiration
    * event. This augments the periodic maintenance that occurs during normal cache operations to
-   * allow for the promptly removal of expired entries regardless of whether any cache activity is
+   * allow for the prompt removal of expired entries regardless of whether any cache activity is
    * occurring at that time. By default, {@link Scheduler#disabledScheduler()} is used.
    * <p>
    * The scheduling between expiration events is paced to exploit batching and to minimize

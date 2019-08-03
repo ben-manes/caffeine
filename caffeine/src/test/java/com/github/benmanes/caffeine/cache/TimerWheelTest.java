@@ -120,7 +120,7 @@ public final class TimerWheelTest {
     checkTimerWheel(nanos);
   }
 
-  @Test(dataProvider = "fuzzySchedule")
+  @Test(dataProvider = "fuzzySchedule", invocationCount = 25)
   public void getExpirationDelay(long clock, long nanos, long[] times) {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
@@ -134,10 +134,9 @@ public final class TimerWheelTest {
     int minBucket = Integer.MAX_VALUE;
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
-        Node<?, ?> sentinel = timerWheel.wheel[i][j];
-        Node<?, ?> next = sentinel.getNextInVariableOrder();
-        if (sentinel != next) {
-          long delay = next.getVariableTime() - nanos;
+        LongArrayList timers = getTimers(timerWheel.wheel[i][j]);
+        for (int k = 0; k < timers.size(); k++) {
+          long delay = timers.getLong(k);
           if (delay < minDelay) {
             minDelay = delay;
             minBucket = j;

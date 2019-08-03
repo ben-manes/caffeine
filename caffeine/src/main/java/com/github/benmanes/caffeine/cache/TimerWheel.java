@@ -248,7 +248,7 @@ final class TimerWheel<K, V> {
         Node<K, V> next = sentinel.getNextInVariableOrder();
         if (sentinel != next) {
           long delay = ((j - start) * SPANS[i]) - (nanos & spanMask);
-          return (delay > 0) ? delay : (next.getVariableTime() - nanos);
+          return (delay > 0) ? delay : SPANS[i];
         }
       }
     }

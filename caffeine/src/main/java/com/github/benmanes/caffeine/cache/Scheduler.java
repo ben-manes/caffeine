@@ -30,11 +30,12 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.checkerframework.checker.index.qual.Positive;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A scheduler that submit a task to an executor after a given delay.
+ * A scheduler that submits a task to an executor after a given delay.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -51,7 +52,7 @@ public interface Scheduler {
    * @return a scheduled future representing pending completion of the task
    */
   @NonNull Future<?> schedule(@NonNull Executor executor,
-      @NonNull Runnable command, long delay, @NonNull TimeUnit unit);
+      @NonNull Runnable command, @Positive long delay, @NonNull TimeUnit unit);
 
   /**
    * Returns a scheduler that always returns a successfully completed future.
