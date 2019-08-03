@@ -38,7 +38,6 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -130,36 +129,35 @@ public final class TimerWheelTest {
     }
     timerWheel.advance(nanos);
 
-    long[] minDelay = { Long.MAX_VALUE };
-    int[] minSpan = { Integer.MAX_VALUE };
-    int[] minBucket = { Integer.MAX_VALUE };
+    long minDelay = Long.MAX_VALUE;
+    int minSpan = Integer.MAX_VALUE;
+    int minBucket = Integer.MAX_VALUE;
     for (int i = 0; i < timerWheel.wheel.length; i++) {
       for (int j = 0; j < timerWheel.wheel[i].length; j++) {
         Node<?, ?> sentinel = timerWheel.wheel[i][j];
         Node<?, ?> next = sentinel.getNextInVariableOrder();
         if (sentinel != next) {
           long delay = next.getVariableTime() - nanos;
-          if (delay < minDelay[0]) {
-            minDelay[0] = delay;
-            minBucket[0] = j;
-            minSpan[0] = i;
+          if (delay < minDelay) {
+            minDelay = delay;
+            minBucket = j;
+            minSpan = i;
           }
         }
       }
     }
 
     long delay = timerWheel.getExpirationDelay();
-    Supplier<String> msg = () -> String.format(
-        "delay=%d but minDelay=%d, minSpan=%d, minBucket=%d",
-        delay, minDelay[0], minSpan[0], minBucket[0]);
-    if (minDelay[0] == Long.MAX_VALUE) {
-      assertThat(msg.get(), delay, is(Long.MAX_VALUE));
+    String msg = String.format("delay=%d but minDelay=%d, minSpan=%d, minBucket=%d",
+        delay, minDelay, minSpan, minBucket);
+    if (minDelay == Long.MAX_VALUE) {
+      assertThat(msg, delay, is(Long.MAX_VALUE));
       return;
     }
 
-    long maxError = minDelay[0] + SPANS[minSpan[0]];
+    long maxError = minDelay + SPANS[minSpan];
     if (maxError > delay) {
-      assertThat(msg.get(), delay, is(lessThan(maxError)));
+      assertThat(msg, delay, is(lessThan(maxError)));
     }
   }
 
