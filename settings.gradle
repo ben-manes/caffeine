@@ -50,4 +50,6 @@ if (actualSha512 != expectedSha512) {
   )
 }
 
-apply plugin: 'com.github.vlsi.checksum-dependency'
+if (System.env.'CI') {
+  apply plugin: 'com.github.vlsi.checksum-dependency'
+}
