@@ -153,7 +153,7 @@ public interface Cache<K, V> {
 
   /**
    * Discards any cached value for the {@code key}. The behavior of this operation is undefined for
-   * an entry that is being loaded and is otherwise not present.
+   * an entry that is being loaded (or reloaded) and is otherwise not present.
    *
    * @param key the key whose mapping is to be removed from the cache
    * @throws NullPointerException if the specified key is null
@@ -162,7 +162,7 @@ public interface Cache<K, V> {
 
   /**
    * Discards any cached values for the {@code keys}. The behavior of this operation is undefined
-   * for an entry that is being loaded and is otherwise not present.
+   * for an entry that is being loaded (or reloaded) and is otherwise not present.
    *
    * @param keys the keys whose associated values are to be removed
    * @throws NullPointerException if the specified collection is null or contains a null element
@@ -171,7 +171,7 @@ public interface Cache<K, V> {
 
   /**
    * Discards all entries in the cache. The behavior of this operation is undefined for an entry
-   * that is being loaded and is otherwise not present.
+   * that is being loaded (or reloaded) and is otherwise not present.
    */
   void invalidateAll();
 
