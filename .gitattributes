@@ -2,5 +2,3 @@
 gradlew text eol=lf
 gradlew.bat text eol=crlf
 mvnw.cmd text eol=crlf
-*.gz filter=lfs diff=lfs merge=lfs -text
-*.xz filter=lfs diff=lfs merge=lfs -text
