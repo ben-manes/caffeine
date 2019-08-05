@@ -234,6 +234,7 @@ final class TimerWheel<K, V> {
   }
 
   /** Returns the duration until the next bucket expires, or {@link Long.MAX_VALUE} if none. */
+  @SuppressWarnings("IntLongMath")
   public long getExpirationDelay() {
     for (int i = 0; i < SHIFT.length; i++) {
       Node<K, V>[] timerWheel = wheel[i];
@@ -247,7 +248,8 @@ final class TimerWheel<K, V> {
         Node<K, V> sentinel = timerWheel[(j & mask)];
         Node<K, V> next = sentinel.getNextInVariableOrder();
         if (sentinel != next) {
-          long delay = ((j - start) * SPANS[i]) - (nanos & spanMask);
+          long buckets = (j - start);
+          long delay = (buckets << SHIFT[i]) - (nanos & spanMask);
           return (delay > 0) ? delay : SPANS[i];
         }
       }

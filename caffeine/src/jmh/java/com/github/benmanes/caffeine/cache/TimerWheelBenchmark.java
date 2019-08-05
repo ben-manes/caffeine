@@ -80,6 +80,11 @@ public class TimerWheelBenchmark {
     timerWheel.schedule(timer);
   }
 
+  @Benchmark
+  public long getExpirationDelay() {
+    return timerWheel.getExpirationDelay();
+  }
+
   static final class Timer extends Node<Integer, Integer> {
     Node<Integer, Integer> prev;
     Node<Integer, Integer> next;
