@@ -47,9 +47,6 @@ public final class BloomFilter implements Membership {
   /**
    * Creates a membership sketch based on the expected number of insertions and the false positive
    * probability.
-   *
-   * @param expectedInsertions the number of expected insertions
-   * @param fpp the false positive probability, where 0.0 > fpp < 1.0
    */
   public BloomFilter(Config config) {
     MembershipSettings settings = new BasicSettings(config).membership();
