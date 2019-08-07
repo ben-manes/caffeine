@@ -66,13 +66,13 @@ public interface Scheduler {
   /**
    * Returns a scheduler that uses the system-wide scheduling thread if available, or else returns
    * {@link #disabledScheduler()} if not present. This scheduler is provided in Java 9 or above
-   * by using {@code CompletableFuture} {@code delayedExecutor}.
+   * by using {@link CompletableFuture} {@code delayedExecutor}.
    *
    * @return a scheduler that uses the system-wide scheduling thread if available, or else a
    *         disabled scheduler
    */
   static @NonNull Scheduler systemScheduler() {
-    return SystemScheduler.isPresent() ? SystemScheduler.INSTANCE : disabledScheduler() ;
+    return SystemScheduler.isPresent() ? SystemScheduler.INSTANCE : disabledScheduler();
   }
 
   /**
