@@ -39,7 +39,7 @@ ext {
     jcache: '1.1.1',
     jsr330: '1',
     nullaway: '0.7.5',
-    univocityParsers: '2.8.2',
+    univocityParsers: '2.8.3',
     ycsb: '0.15.0',
     xz: '1.8',
   ]
@@ -56,7 +56,7 @@ ext {
     truth: '0.24',
   ]
   benchmarkVersions = [
-    cache2k: '1.2.2.Final',
+    cache2k: '1.2.3.Final',
     collision: '0.3.3',
     commonsMath3: '3.6.1',
     concurrentlinkedhashmap: '1.4.2',
@@ -77,7 +77,7 @@ ext {
   pluginVersions = [
     apt: '0.21',
     bnd: '4.2.0',
-    buildscan: '2.3',
+    buildscan: '2.4',
     checkstyle: '8.23',
     coveralls: '2.8.3',
     coverity: '1.0.10',
@@ -94,7 +94,7 @@ ext {
     spotbugs: '3.1.12',
     spotbugsPlugin: '2.0.0',
     stats: '0.2.2',
-    versions: '0.21.0',
+    versions: '0.22.0',
   ]
 
   libraries = [

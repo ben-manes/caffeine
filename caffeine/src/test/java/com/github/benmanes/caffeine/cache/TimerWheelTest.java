@@ -20,6 +20,7 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.ref.ReferenceQueue;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -120,8 +122,57 @@ public final class TimerWheelTest {
     checkTimerWheel(nanos);
   }
 
+  @Test
+  public void getExpirationDelay_empty() {
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+    timerWheel.nanos = NOW;
+
+    assertThat(timerWheel.getExpirationDelay(), is(Long.MAX_VALUE));
+  }
+
+  @Test
+  public void getExpirationDelay_firstWheel() {
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+    timerWheel.nanos = NOW;
+
+    long delay = Duration.ofSeconds(1).toNanos();
+    timerWheel.schedule(new Timer(NOW + delay));
+    assertThat(timerWheel.getExpirationDelay(), is(lessThanOrEqualTo(SPANS[0])));
+  }
+
+  @Test
+  public void getExpirationDelay_lastWheel() {
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+    timerWheel.nanos = NOW;
+
+    long delay = Duration.ofDays(14).toNanos();
+    timerWheel.schedule(new Timer(NOW + delay));
+    assertThat(timerWheel.getExpirationDelay(), is(lessThanOrEqualTo(delay)));
+  }
+
+  @Test
+  public void getExpirationDelay_hierarchy() {
+    when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
+    timerWheel.nanos = NOW;
+
+    long t15 = NOW + Duration.ofSeconds(15).toNanos(); // in wheel[0]
+    long t80 = NOW + Duration.ofSeconds(80).toNanos(); // in wheel[1]
+    timerWheel.schedule(new Timer(t15));
+    timerWheel.schedule(new Timer(t80));
+
+    long t45 = NOW + Duration.ofSeconds(45).toNanos(); // discard T15, T80 in wheel[1]
+    timerWheel.advance(t45);
+
+    long t95 = NOW + Duration.ofSeconds(95).toNanos(); // in wheel[0], but expires after T80
+    timerWheel.schedule(new Timer(t95));
+
+    long expectedDelay = (t80 - t45);
+    long delay = timerWheel.getExpirationDelay();
+    assertThat(delay, is(lessThan(expectedDelay + SPANS[0]))); // cascaded T80 in wheel[1]
+  }
+
   @Test(dataProvider = "fuzzySchedule", invocationCount = 25)
-  public void getExpirationDelay(long clock, long nanos, long[] times) {
+  public void getExpirationDelay_fuzzy(long clock, long nanos, long[] times) {
     when(cache.evictEntry(any(), any(), anyLong())).thenReturn(true);
     timerWheel.nanos = clock;
     for (long timeout : times) {

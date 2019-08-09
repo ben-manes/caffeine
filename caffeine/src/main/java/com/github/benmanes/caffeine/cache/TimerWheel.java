@@ -247,14 +247,37 @@ final class TimerWheel<K, V> {
       for (int j = start; j < end; j++) {
         Node<K, V> sentinel = timerWheel[(j & mask)];
         Node<K, V> next = sentinel.getNextInVariableOrder();
-        if (sentinel != next) {
-          long buckets = (j - start);
-          long delay = (buckets << SHIFT[i]) - (nanos & spanMask);
-          return (delay > 0) ? delay : SPANS[i];
+        if (next == sentinel) {
+          continue;
         }
+        long buckets = (j - start);
+        long delay = (buckets << SHIFT[i]) - (nanos & spanMask);
+        delay = (delay > 0) ? delay : SPANS[i];
+
+        for (int k = i + 1; k < SHIFT.length; k++) {
+          long nextDelay = peekAhead(k);
+          delay = Math.min(delay, nextDelay);
+        }
+
+        return delay;
       }
     }
     return Long.MAX_VALUE;
+  }
+
+  /**
+   * Returns the duration when the wheel's next bucket expires, or {@link Long.MAX_VALUE} if empty.
+   */
+  long peekAhead(int i) {
+    long ticks = (nanos >>> SHIFT[i]);
+    Node<K, V>[] timerWheel = wheel[i];
+
+    long spanMask = SPANS[i] - 1;
+    int mask = timerWheel.length - 1;
+    int probe = (int) ((ticks  + 1) & mask);
+    Node<K, V> sentinel = timerWheel[probe];
+    Node<K, V> next = sentinel.getNextInVariableOrder();
+    return (next == sentinel) ? Long.MAX_VALUE : (SPANS[i] - (nanos & spanMask));
   }
 
   /**
