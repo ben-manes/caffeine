@@ -44,20 +44,20 @@ dependencies {
   testCompile libraries.commonsLang3
   testCompile testLibraries.guavaTestLib
 
-  javaAgent benchmarkLibraries.jamm
+  javaAgent libraries.jamm
 
+  jmh libraries.jamm
+  jmh libraries.tcache
+  jmh libraries.cache2k
+  jmh libraries.ehcache3
+  jmh libraries.koloboke
+  jmh libraries.slf4jNop
+  jmh libraries.collision
   jmh libraries.flipTables
-  jmh benchmarkLibraries.jamm
-  jmh benchmarkLibraries.tcache
-  jmh benchmarkLibraries.cache2k
-  jmh benchmarkLibraries.ehcache3
-  jmh benchmarkLibraries.koloboke
-  jmh benchmarkLibraries.slf4jNop
-  jmh benchmarkLibraries.collision
-  jmh benchmarkLibraries.jackrabbit
-  jmh benchmarkLibraries.expiringMap
-  jmh benchmarkLibraries.elasticSearch
-  jmh benchmarkLibraries.concurrentlinkedhashmap
+  jmh libraries.jackrabbit
+  jmh libraries.expiringMap
+  jmh libraries.elasticSearch
+  jmh libraries.concurrentlinkedhashmap
 
   javaPoetCompile libraries.guava
   javaPoetCompile libraries.javapoet

@@ -56,6 +56,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
 public final class CacheValidationListener implements IInvokedMethodListener {
   private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
   private static final AtomicBoolean detailedParams = new AtomicBoolean();
+  private static final Object[] EMPTY_PARAMS = {};
 
   @Override
   public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
@@ -163,13 +164,20 @@ public final class CacheValidationListener implements IInvokedMethodListener {
 
   /** Free memory by clearing unused resources after test execution. */
   private void cleanUp(ITestResult testResult) {
+    boolean briefParams = !detailedParams.get();
+
+    if (testResult.isSuccess() && briefParams) {
+      testResult.setParameters(EMPTY_PARAMS);
+      testResult.setThrowable(null);
+    }
+
     Object[] params = testResult.getParameters();
     for (int i = 0; i < params.length; i++) {
       Object param = params[i];
       if ((param instanceof AsyncCache<?, ?>) || (param instanceof Cache<?, ?>)
           || (param instanceof Map<?, ?>) || (param instanceof Eviction<?, ?>)
           || (param instanceof Expiration<?, ?>) || (param instanceof VarExpiration<?, ?>)
-          || ((param instanceof CacheContext) && !detailedParams.get())) {
+          || ((param instanceof CacheContext) && briefParams)) {
         params[i] = simpleNames.get(param.getClass(), key -> ((Class<?>) key).getSimpleName());
       } else if (param instanceof CacheContext) {
         params[i] = simpleNames.get(param.toString(), Object::toString);
@@ -179,8 +187,8 @@ public final class CacheValidationListener implements IInvokedMethodListener {
     }
 
     /*
-    // Enable when TestNG 7.0 is out of beta
-    if ((testResult.getName() != null) && !failed.get()) {
+    // Enable in TestNG 7.0
+    if ((testResult.getName() != null) && briefParams) {
       testResult.setTestName(simpleNames.get(testResult.getName(), Object::toString));
     }
     */

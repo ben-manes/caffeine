@@ -127,4 +127,9 @@
     <Method name="process"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
   </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.parser.rewrite.Rewriter"/>
+    <Method name="run"/>
+    <Bug code="RCN"/>
+  </Match>
 </FindBugsFilter>

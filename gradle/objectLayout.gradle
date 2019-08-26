@@ -6,7 +6,7 @@ configurations {
 }
 
 dependencies {
-  objectLayout benchmarkLibraries.javaObjectLayout
+  objectLayout libraries.javaObjectLayout
 }
 
 task footprint(type: JavaExec,

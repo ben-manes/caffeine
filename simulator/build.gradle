@@ -9,25 +9,26 @@ dependencies {
   compile project(':caffeine')
 
   compile libraries.xz
+  compile libraries.ohc
   compile libraries.akka
   compile libraries.ycsb
   compile libraries.guava
+  compile libraries.stream
+  compile libraries.tcache
+  compile libraries.cache2k
+  compile libraries.ehcache3
   compile libraries.fastutil
+  compile libraries.slf4jNop
+  compile libraries.collision
+  compile libraries.fastfilter
   compile libraries.flipTables
-  compile benchmarkLibraries.ohc
+  compile libraries.jcommander
+  compile libraries.expiringMap
   compile libraries.commonsLang3
+  compile libraries.commonsMath3
+  compile libraries.elasticSearch
   compile libraries.commonsCompress
-  compile benchmarkLibraries.tcache
   compile libraries.univocityParsers
-  compile benchmarkLibraries.cache2k
-  compile benchmarkLibraries.ehcache3
-  compile benchmarkLibraries.collision
-  compile benchmarkLibraries.slf4jNop
-  compile benchmarkLibraries.expiringMap
-  compile benchmarkLibraries.commonsMath3
-  compile benchmarkLibraries.elasticSearch
-  compile benchmarkLibraries.fastfilter
-  compile benchmarkLibraries.stream
 
   testCompile testLibraries.testng
 }
@@ -75,5 +76,20 @@ tasks.withType(Javadoc) {
 run {
   systemProperties System.properties.findAll {
     it.getKey().startsWith('akka') || it.getKey().startsWith('caffeine')
+  }
+}
+
+task rewrite(type: JavaExec) {
+  main = 'com.github.benmanes.caffeine.cache.simulator.parser.rewrite.Rewriter'
+  classpath = sourceSets.main.runtimeClasspath
+
+  def arguments = ['inputFiles', 'outputFile', 'outputFormat']
+  for (def argument : arguments) {
+    if (project.hasProperty(argument)) {
+      args "--${argument}", project.property(argument)
+    }
+  }
+  if (args.isEmpty()) {
+    args '--help'
   }
 }

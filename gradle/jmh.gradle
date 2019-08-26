@@ -29,7 +29,7 @@ jmhJar {
 }
 
 jmh {
-  jmhVersion = benchmarkVersions.jmh
+  jmhVersion = versions.jmh
 
   if (project.hasProperty('includePattern')) {
     include = project.includePattern
