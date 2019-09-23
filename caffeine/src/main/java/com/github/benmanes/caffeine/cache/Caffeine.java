@@ -740,7 +740,7 @@ public final class Caffeine<K, V> {
    * @param duration the length of time after an entry is created that it should be considered
    *     stale, and thus eligible for refresh
    * @return this {@code Caffeine} instance (for chaining)
-   * @throws IllegalArgumentException if {@code duration} is negative
+   * @throws IllegalArgumentException if {@code duration} is zero or negative
    * @throws IllegalStateException if the refresh interval was already set
    * @throws ArithmeticException for durations greater than +/- approximately 292 years
    */
