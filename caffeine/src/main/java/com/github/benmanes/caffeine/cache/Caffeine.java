@@ -350,6 +350,8 @@ public final class Caffeine<K, V> {
    * <p>
    * When {@code size} is zero, elements will be evicted immediately after being loaded into the
    * cache. This can be useful in testing, or to disable caching temporarily without a code change.
+   * As eviction is scheduled on the configured {@link #executor}, tests may instead prefer
+   * to configure the cache to execute tasks directly on the same thread.
    * <p>
    * This feature cannot be used in conjunction with {@link #maximumWeight}.
    *
@@ -381,8 +383,9 @@ public final class Caffeine<K, V> {
    * because it hasn't been used recently or very often.
    * <p>
    * When {@code maximumWeight} is zero, elements will be evicted immediately after being loaded
-   * into cache. This can be useful in testing, or to disable caching temporarily without a code
-   * change.
+   * into the cache. This can be useful in testing, or to disable caching temporarily without a code
+   * change. As eviction is scheduled on the configured {@link #executor}, tests may instead prefer
+   * to configure the cache to execute tasks directly on the same thread.
    * <p>
    * Note that weight is only used to determine whether the cache is over capacity; it has no effect
    * on selecting which entry should be evicted next.
