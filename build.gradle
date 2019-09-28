@@ -170,3 +170,7 @@ tasks.coveralls {
   dependsOn jacocoRootReport
   onlyIf { System.env.'CI' && !JavaVersion.current().isJava9Compatible() }
 }
+
+dependencyUpdates.resolutionStrategy {
+  force testLibraries.truth
+}
