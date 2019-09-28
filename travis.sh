@@ -29,8 +29,10 @@ case "${1:?''}" in
     run "./gradlew check --console plain"
     runSlow "./gradlew :caffeine:slowCaffeineTest --console plain"
     runSlow "./gradlew :caffeine:slowGuavaTest --console plain"
-    run "./gradlew coveralls uploadArchives --console plain"
-    runSlow "./gradlew sonarqube --console plain"
+    if [ ${CI:-false} == "true" ]; then
+      run "./gradlew coveralls uploadArchives --console plain"
+      runSlow "./gradlew sonarqube --console plain"
+    fi
     ;;
   *)
     echo $"Usage: $0 {analysis|tests}"
