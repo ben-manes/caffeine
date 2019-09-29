@@ -57,7 +57,6 @@ def violations =
     .findAll { !expectedSha512.containsKey(it.value) }
     .collect { file, sha512 ->  "SHA-512(${file.name}) = $sha512 ($file)" }
     .join("\n  ")
-println(violations)
 
 if (!violations.isBlank()) {
   throw new GradleException("Buildscript classpath has non-whitelisted files:\n  $violations")

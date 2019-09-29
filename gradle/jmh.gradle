@@ -13,6 +13,10 @@ plugins.withType(EclipsePlugin) {
   project.eclipse.classpath.plusConfigurations += [ configurations.jmh ]
 }
 
+eclipse.classpath.file.whenMerged {
+  entries.find { it.path == 'src/jmh/java' }.entryAttributes['test'] = 'true'
+}
+
 dependencies {
   afterEvaluate {
     jmh configurations.testCompile.allDependencies

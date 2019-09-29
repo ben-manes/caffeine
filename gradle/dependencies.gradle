@@ -54,7 +54,7 @@ ext {
     koloboke: '0.6.8',
     nullaway: '0.7.8',
     ohc: '0.6.1',
-    slf4j: '1.7.25',
+    slf4j: '1.7.28',
     tcache: '2.0.1',
     stream: '2.9.8',
     univocityParsers: '2.8.3',

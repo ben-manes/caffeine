@@ -118,7 +118,8 @@ public final class TypesafeConfigurator {
 
   /**
    * Specifies how the {@link Config} instance should be loaded. The default strategy uses
-   * {@link ConfigFactory#load()}.
+   * {@link ConfigFactory#load()}. The configuration is retrieved on-demand, allowing for it to be
+   * reloaded, and it is assumed that the source caches it as needed.
    *
    * @param configSource the strategy for loading the configuration
    */
