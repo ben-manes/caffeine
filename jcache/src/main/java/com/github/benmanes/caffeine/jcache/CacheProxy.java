@@ -829,6 +829,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       case UPDATED: {
         statistics.recordPuts(1L);
         publishToCacheWriter(writer::write, () -> entry);
+        requireNonNull(expirable, "Expected a previous value but was null");
         dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), entry.getValue());
         long expireTimeMS = getWriteExpireTimeMS(/* created */ false);
         if (expireTimeMS == Long.MIN_VALUE) {
