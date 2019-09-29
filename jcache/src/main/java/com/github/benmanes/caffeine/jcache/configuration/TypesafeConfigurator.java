@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,6 +43,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import com.github.benmanes.caffeine.jcache.expiry.JCacheExpiryPolicy;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * Static utility methods pertaining to externalized {@link CaffeineConfiguration} entries using the
@@ -54,6 +56,7 @@ public final class TypesafeConfigurator {
   static final Logger logger = Logger.getLogger(TypesafeConfigurator.class.getName());
 
   static FactoryCreator factoryCreator = FactoryBuilder::factoryOf;
+  static Supplier<Config> configSource = ConfigFactory::load;
 
   private TypesafeConfigurator() {}
 
@@ -111,6 +114,21 @@ public final class TypesafeConfigurator {
   @Inject
   public static void setFactoryCreator(FactoryCreator factoryCreator) {
     TypesafeConfigurator.factoryCreator = requireNonNull(factoryCreator);
+  }
+
+  /**
+   * Specifies how the {@link Config} instance should be loaded. The default strategy uses
+   * {@link ConfigFactory#load()}.
+   *
+   * @param configSource the strategy for loading the configuration
+   */
+  public static void setConfigSource(Supplier<Config> configSource) {
+    TypesafeConfigurator.configSource = requireNonNull(configSource);
+  }
+
+  /** Returns the strategy for loading the configuration. */
+  public static Supplier<Config> configSource() {
+    return TypesafeConfigurator.configSource;
   }
 
   /** A one-shot builder for creating a configuration instance. */

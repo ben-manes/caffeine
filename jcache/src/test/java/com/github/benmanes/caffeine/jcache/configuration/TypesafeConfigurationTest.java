@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import javax.cache.Cache;
 import javax.cache.Caching;
@@ -37,12 +38,21 @@ import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
 import com.google.common.collect.Iterables;
+import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TypesafeConfigurationTest {
+
+  @Test
+  public void configSource() {
+    Config config = ConfigFactory.load();
+    Supplier<Config> configSource = () -> config;
+    TypesafeConfigurator.setConfigSource(configSource);
+    assertThat(TypesafeConfigurator.configSource(), is(configSource));
+  }
 
   @Test
   public void defaults() {

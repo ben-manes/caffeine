@@ -33,9 +33,6 @@ import javax.cache.spi.CachingProvider;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-
 /**
  * An implementation of JSR-107 {@link CacheManager} that manages Caffeine-based caches.
  *
@@ -46,21 +43,14 @@ public final class CacheManagerImpl implements CacheManager {
   private final WeakReference<ClassLoader> classLoaderReference;
   private final Map<String, CacheProxy<?, ?>> caches;
   private final CachingProvider cacheProvider;
-  private final CacheFactory cacheFactory;
   private final Properties properties;
   private final URI uri;
 
   private volatile boolean closed;
 
-  public CacheManagerImpl(CachingProvider cacheProvider, URI uri, ClassLoader classLoader,
-      Properties properties) {
-    this(cacheProvider, uri, classLoader, properties, ConfigFactory.load());
-  }
-
-  public CacheManagerImpl(CachingProvider cacheProvider, URI uri, ClassLoader classLoader,
-      Properties properties, Config rootConfig) {
+  public CacheManagerImpl(CachingProvider cacheProvider,
+      URI uri, ClassLoader classLoader, Properties properties) {
     this.classLoaderReference = new WeakReference<>(requireNonNull(classLoader));
-    this.cacheFactory = new CacheFactory(this, rootConfig);
     this.cacheProvider = requireNonNull(cacheProvider);
     this.properties = requireNonNull(properties);
     this.caches = new ConcurrentHashMap<>();
@@ -96,10 +86,10 @@ public final class CacheManagerImpl implements CacheManager {
     CacheProxy<?, ?> cache = caches.compute(cacheName, (name, existing) -> {
       if ((existing != null) && !existing.isClosed()) {
         throw new CacheException("Cache " + cacheName + " already exists");
-      } else if (cacheFactory.isDefinedExternally(cacheName)) {
+      } else if (CacheFactory.isDefinedExternally(cacheName)) {
         throw new CacheException("Cache " + cacheName + " is configured externally");
       }
-      return cacheFactory.createCache(cacheName, configuration);
+      return CacheFactory.createCache(this, cacheName, configuration);
     });
     enableManagement(cache.getName(), cache.getConfiguration().isManagementEnabled());
     enableStatistics(cache.getName(), cache.getConfiguration().isStatisticsEnabled());
@@ -136,7 +126,7 @@ public final class CacheManagerImpl implements CacheManager {
     requireNotClosed();
 
     CacheProxy<?, ?> cache = caches.computeIfAbsent(cacheName, name -> {
-      CacheProxy<?, ?> created = cacheFactory.tryToCreateFromExternalSettings(name);
+      CacheProxy<?, ?> created = CacheFactory.tryToCreateFromExternalSettings(this, name);
       if (created != null) {
         created.enableManagement(created.getConfiguration().isManagementEnabled());
         created.enableStatistics(created.getConfiguration().isStatisticsEnabled());
@@ -192,7 +182,7 @@ public final class CacheManagerImpl implements CacheManager {
     if (isClosed()) {
       return;
     }
-    synchronized (cacheFactory) {
+    synchronized (this) {
       if (!isClosed()) {
         cacheProvider.close(uri, classLoaderReference.get());
         for (Cache<?, ?> cache : caches.values()) {

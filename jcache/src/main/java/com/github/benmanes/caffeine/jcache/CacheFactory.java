@@ -48,13 +48,8 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class CacheFactory {
-  final Config rootConfig;
-  final CacheManager cacheManager;
 
-  public CacheFactory(CacheManager cacheManager, Config rootConfig) {
-    this.cacheManager = requireNonNull(cacheManager);
-    this.rootConfig = requireNonNull(rootConfig);
-  }
+  private CacheFactory() {}
 
   /**
    * Returns a if the cache definition is found in the external settings file.
@@ -62,43 +57,52 @@ final class CacheFactory {
    * @param cacheName the name of the cache
    * @return {@code true} if a definition exists
    */
-  public boolean isDefinedExternally(String cacheName) {
-    return TypesafeConfigurator.cacheNames(rootConfig).contains(cacheName);
+  public static boolean isDefinedExternally(String cacheName) {
+    return TypesafeConfigurator.cacheNames(rootConfig()).contains(cacheName);
   }
 
   /**
    * Returns a newly created cache instance if a definition is found in the external settings file.
    *
+   * @param cacheManager the owner of the cache instance
    * @param cacheName the name of the cache
    * @return a new cache instance or null if the named cache is not defined in the settings file
    */
-  public @Nullable <K, V> CacheProxy<K, V> tryToCreateFromExternalSettings(String cacheName) {
-    Optional<CaffeineConfiguration<K, V>> configuration =
-        TypesafeConfigurator.from(rootConfig, cacheName);
-    return configuration.isPresent() ? createCache(cacheName, configuration.get()) : null;
+  public static @Nullable <K, V> CacheProxy<K, V> tryToCreateFromExternalSettings(
+      CacheManager cacheManager, String cacheName) {
+    return TypesafeConfigurator.<K, V>from(rootConfig(), cacheName)
+        .map(configuration -> createCache(cacheManager, cacheName, configuration))
+        .orElse(null);
   }
 
   /**
    * Returns a fully constructed cache based on the cache
    *
+   * @param cacheManager the owner of the cache instance
    * @param cacheName the name of the cache
    * @param configuration the full cache definition
    * @return a newly constructed cache instance
    */
-  public <K, V> CacheProxy<K, V> createCache(String cacheName, Configuration<K, V> configuration) {
+  public static <K, V> CacheProxy<K, V> createCache(CacheManager cacheManager,
+      String cacheName, Configuration<K, V> configuration) {
     CaffeineConfiguration<K, V> config = resolveConfigurationFor(configuration);
-    return new Builder<>(cacheName, config).build();
+    return new Builder<>(cacheManager, cacheName, config).build();
+  }
+
+  /** Returns the resolved configuration. */
+  private static Config rootConfig() {
+    return requireNonNull(TypesafeConfigurator.configSource().get());
   }
 
   /** Copies the configuration and overlays it on top of the default settings. */
   @SuppressWarnings("PMD.AccessorMethodGeneration")
-  private <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
+  private static <K, V> CaffeineConfiguration<K, V> resolveConfigurationFor(
       Configuration<K, V> configuration) {
     if (configuration instanceof CaffeineConfiguration<?, ?>) {
       return new CaffeineConfiguration<>((CaffeineConfiguration<K, V>) configuration);
     }
 
-    CaffeineConfiguration<K, V> template = TypesafeConfigurator.defaults(rootConfig);
+    CaffeineConfiguration<K, V> template = TypesafeConfigurator.defaults(rootConfig());
     if (configuration instanceof CompleteConfiguration<?, ?>) {
       CompleteConfiguration<K, V> complete = (CompleteConfiguration<K, V>) configuration;
       template.setReadThrough(complete.isReadThrough());
@@ -120,19 +124,21 @@ final class CacheFactory {
   }
 
   /** A one-shot builder for creating a cache instance. */
-  private final class Builder<K, V> {
+  private static final class Builder<K, V> {
     final Ticker ticker;
     final String cacheName;
     final Executor executor;
+    final CacheManager cacheManager;
     final ExpiryPolicy expiryPolicy;
     final EventDispatcher<K, V> dispatcher;
     final JCacheStatisticsMXBean statistics;
     final Caffeine<Object, Object> caffeine;
     final CaffeineConfiguration<K, V> config;
 
-    Builder(String cacheName, CaffeineConfiguration<K, V> config) {
+    Builder(CacheManager cacheManager, String cacheName, CaffeineConfiguration<K, V> config) {
       this.config = config;
       this.cacheName = cacheName;
+      this.cacheManager = cacheManager;
       this.caffeine = Caffeine.newBuilder();
       this.statistics = new JCacheStatisticsMXBean();
       this.ticker = config.getTickerFactory().create();
