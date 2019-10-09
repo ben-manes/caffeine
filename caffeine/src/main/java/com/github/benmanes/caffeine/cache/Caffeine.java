@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -313,8 +313,9 @@ public final class Caffeine<K, V> {
    * The scheduling between expiration events is paced to exploit batching and to minimize
    * executions in short succession. This minimum difference between the scheduled executions is
    * implementation-specific, currently at ~1 second (2^30 ns). In addition, the provided scheduler
-   * may not offer real-time guarantees (including {@link ThreadPoolExecutor}). The scheduling is
-   * best-effort and does not make any hard guarantees of when an expired entry will be removed.
+   * may not offer real-time guarantees (including {@link ScheduledThreadPoolExecutor}). The
+   * scheduling is best-effort and does not make any hard guarantees of when an expired entry will
+   * be removed.
    * <p>
    * <b>Note for Java 9 and later:</b> consider using {@link Scheduler#systemScheduler()} to
    * leverage the dedicated, system-wide scheduling thread.

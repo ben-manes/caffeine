@@ -48,10 +48,11 @@ Use Caffeine in a community provided integration:
  * [Micronaut][micronaut]: A modern, full-stack framework
  * [Spring Cache][spring]: As of Spring 4.3 & Boot 1.4
  * [Akka][akka-http]: Build reactive applications easily
+ * [Quarkus][quarkus]: Supersonic Subatomic Java
  * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [Camel][camel]: Routing and mediation engine
- * [jooby][jooby]: Modular micro framework
+ * [JHipster][jhipster]: Generate, develop, deploy
  * [Druid][druid]: Real-time analytics
 
 Powering infrastructure near you:
@@ -59,8 +60,8 @@ Powering infrastructure near you:
  * [Cassandra][cassandra]: Manage massive amounts of data, fast
  * [Accumulo][accumulo]: A sorted, distributed key/value store
  * [HBase][hbase]: A distributed, scalable, big data store
+ * [Apache Solr][solr]: Blazingly fast enterprise search
  * [Infinispan][infinispan]: Distributed in-memory data grid
- * [Ratpack][ratpack]: Lean & powerful HTTP apps
  * [Corfu][corfu]: A cluster consistency platform
  * [Grails][grails]: Groovy-based web framework
  * [Orbit][orbit]: Virtual actors on the JVM
@@ -114,8 +115,6 @@ Snapshots of the development version are available in
 [efficiency]: https://github.com/ben-manes/caffeine/wiki/Efficiency
 [tinylfu]: https://dl.acm.org/authorize?N41277
 [adaptive-tinylfu]: https://dl.acm.org/authorize?N675830
-[add-a-boost]: https://www.voxxed.com/blog/2015/12/add-a-boost-of-caffeine-to-your-java
-[voxxed]: https://www.voxxed.com
 [modern-cache-1]: http://highscalability.com/blog/2016/1/25/design-of-a-modern-cache.html
 [modern-cache-2]: http://highscalability.com/blog/2019/2/25/design-of-a-modern-cachepart-deux.html
 [modern-cache-slides]: https://docs.google.com/presentation/d/1NlDxyXsUG1qlVHMl4vsUUBQfAJ2c2NsFPNPr2qymIBs
@@ -125,13 +124,12 @@ Snapshots of the development version are available in
 [scaffeine]: https://github.com/blemale/scaffeine
 [hbase]: https://hbase.apache.org
 [cassandra]: http://cassandra.apache.org
-[solr]: https://issues.apache.org/jira/browse/SOLR-8241
+[solr]: https://lucene.apache.org/solr
 [infinispan]: http://infinispan.org/docs/stable/user_guide/user_guide.html#eviction_strategy
 [neo4j]: https://github.com/neo4j/neo4j
-[ratpack]: https://github.com/ratpack/ratpack
 [finagle]: https://github.com/twitter/finagle
-[druid]: http://druid.io/docs/latest/development/extensions-core/caffeine-cache.html
-[jooby]: http://jooby.org/doc/caffeine
+[druid]: https://druid.apache.org/docs/latest/configuration/index.html#cache-configuration
+[jhipster]: https://www.jhipster.tech/
 [orbit]: https://github.com/orbit/orbit
 [camel]: https://github.com/apache/camel/blob/master/components/camel-caffeine/src/main/docs/caffeine-cache-component.adoc
 [corfu]: https://github.com/CorfuDB/CorfuDB
@@ -141,3 +139,4 @@ Snapshots of the development version are available in
 [accumulo]: https://accumulo.apache.org
 [dropwizard]: https://www.dropwizard.io
 [grails]: https://grails.org
+[quarkus]: https://quarkus.io

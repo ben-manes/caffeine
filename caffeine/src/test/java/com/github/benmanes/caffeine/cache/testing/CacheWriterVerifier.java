@@ -44,7 +44,7 @@ public final class CacheWriterVerifier {
 
   /** Checks that neither writes nor deletes occurred. */
   public void zeroInteractions() {
-    Mockito.verifyZeroInteractions(context.cacheWriter());
+    Mockito.verifyNoInteractions(context.cacheWriter());
   }
 
   /** Checks that the expected number of write operations occurred. */

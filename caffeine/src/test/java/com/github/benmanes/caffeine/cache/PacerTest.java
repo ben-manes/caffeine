@@ -20,8 +20,8 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.util.Random;
 import java.util.concurrent.Executor;
@@ -67,7 +67,7 @@ public final class PacerTest {
 
     assertThat(pacer.future, is(future));
     assertThat(pacer.nextFireTime, is(expectedNextFireTime));
-    verifyZeroInteractions(scheduler, executor, command, future);
+    verifyNoInteractions(scheduler, executor, command, future);
   }
 
   @Test
@@ -82,7 +82,7 @@ public final class PacerTest {
 
     assertThat(pacer.future, is(future));
     assertThat(pacer.nextFireTime, is(expectedNextFireTime));
-    verifyZeroInteractions(scheduler, executor, command, future);
+    verifyNoInteractions(scheduler, executor, command, future);
   }
 
   @Test
@@ -101,7 +101,7 @@ public final class PacerTest {
     verify(future).cancel(anyBoolean());
     verify(scheduler).schedule(executor, command, Pacer.TOLERANCE, TimeUnit.NANOSECONDS);
 
-    verifyZeroInteractions(executor, command);
+    verifyNoInteractions(executor, command);
     verifyNoMoreInteractions(scheduler, future);
   }
 
@@ -121,7 +121,7 @@ public final class PacerTest {
     verify(future).cancel(anyBoolean());
     verify(scheduler).schedule(executor, command, delay, TimeUnit.NANOSECONDS);
 
-    verifyZeroInteractions(executor, command);
+    verifyNoInteractions(executor, command);
     verifyNoMoreInteractions(scheduler, future);
   }
 }
