@@ -30,8 +30,8 @@ import org.openjdk.jmh.annotations.Threads;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
-import com.yahoo.ycsb.generator.NumberGenerator;
-import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
+import site.ycsb.generator.NumberGenerator;
+import site.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)

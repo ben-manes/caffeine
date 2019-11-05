@@ -19,8 +19,8 @@ import java.util.Random;
 
 import com.github.benmanes.caffeine.cache.BasicCache;
 import com.github.benmanes.caffeine.cache.CacheType;
-import com.yahoo.ycsb.generator.NumberGenerator;
-import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
+import site.ycsb.generator.NumberGenerator;
+import site.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * A hook for profiling caches.

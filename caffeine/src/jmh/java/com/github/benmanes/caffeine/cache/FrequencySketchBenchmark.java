@@ -20,8 +20,8 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import com.yahoo.ycsb.generator.NumberGenerator;
-import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
+import site.ycsb.generator.NumberGenerator;
+import site.ycsb.generator.ScrambledZipfianGenerator;
 
 /**
  * <pre>{@code

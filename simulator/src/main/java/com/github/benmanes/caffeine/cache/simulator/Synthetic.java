@@ -21,14 +21,14 @@ import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.UniformSettings;
-import com.yahoo.ycsb.generator.CounterGenerator;
-import com.yahoo.ycsb.generator.ExponentialGenerator;
-import com.yahoo.ycsb.generator.HotspotIntegerGenerator;
-import com.yahoo.ycsb.generator.NumberGenerator;
-import com.yahoo.ycsb.generator.ScrambledZipfianGenerator;
-import com.yahoo.ycsb.generator.SkewedLatestGenerator;
-import com.yahoo.ycsb.generator.UniformLongGenerator;
-import com.yahoo.ycsb.generator.ZipfianGenerator;
+import site.ycsb.generator.CounterGenerator;
+import site.ycsb.generator.ExponentialGenerator;
+import site.ycsb.generator.HotspotIntegerGenerator;
+import site.ycsb.generator.NumberGenerator;
+import site.ycsb.generator.ScrambledZipfianGenerator;
+import site.ycsb.generator.SkewedLatestGenerator;
+import site.ycsb.generator.UniformLongGenerator;
+import site.ycsb.generator.ZipfianGenerator;
 
 /**
  * A generator of synthetic cache events to simulate different caching patterns.
