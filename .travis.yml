@@ -9,6 +9,9 @@ jdk:
 env:
   global:
     - TERM=dumb
+    - ORG_GRADLE_PROJECT_checksumFailOn=build_finish
+    - ORG_GRADLE_PROJECT_checksumPrint=true
+    - ORG_GRADLE_PROJECT_checksumIgnore=false
   matrix:
     - GROUP=analysis
     - GROUP=tests
