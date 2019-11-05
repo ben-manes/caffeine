@@ -78,7 +78,7 @@ ext {
     bnd: '4.3.0',
     buildscan: '2.4.2',
     checkstyle: '8.26',
-    coveralls: '2.8.3',
+    coveralls: '2.8.4',
     coverity: '1.0.10',
     errorprone: '1.1.1',
     jacoco: '0.8.4',
@@ -86,7 +86,7 @@ ext {
     jmhReport: '0.9.0',
     nexus: '2.3.1',
     nullaway: '1.0.1',
-    pmd: '6.17.0',
+    pmd: '6.19.0',
     semanticVersioning: '1.1.0',
     shadow: '5.1.0',
     sonarqube: '2.8',
@@ -179,7 +179,7 @@ ext {
     checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${pluginVersions.checkstyle}") {
       transitive = false
     },
-    coveralls: "org.kt3k.gradle.plugin:coveralls-gradle-plugin:${pluginVersions.coveralls}",
+    coveralls: "gradle.plugin.com.github.kt3k.coveralls:coveralls-gradle-plugin:${pluginVersions.coveralls}",
     coverity: "gradle.plugin.com.github.mjdetullio.gradle:coverity-plugin:${pluginVersions.coverity}",
     errorprone: "net.ltgt.gradle:gradle-errorprone-plugin:${pluginVersions.errorprone}",
     jmh: [

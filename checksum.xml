@@ -185,6 +185,9 @@
     <dependency group='com.gradle' module='build-scan-plugin' version='2.4.2'>
       <sha512>6263B511BFAC9A83B3EA02F740B9A9A61639621AB27B722632322144009FD50139291AEBC4F0D29409BEFBBF8597252E66407289CFE5E0199E54B6D1E0830400</sha512>
     </dependency>
+    <dependency group='gradle.plugin.com.github.kt3k.coveralls' module='coveralls-gradle-plugin' version='2.8.4'>
+      <sha512>CEAA0F67FB9D04CDC125BC25694B4C412BFC0AFFC6ACC641C8E24E9E276E1990FF995B6A2A64DB896E4CF7E1BAD96682FBFC97DE95587C4313D6D8A958035E3C</sha512>
+    </dependency>
     <dependency group='gradle.plugin.com.github.mjdetullio.gradle' module='coverity-plugin' version='1.0.10'>
       <sha512>D046D70ABBD137039F917CCD3786F5B3FCABA0FBAC3AE1C7597A77FA84BC75466F48A40DA53ADA6C45F05F77AF952D5EA82A9B0F873C53DF894DE0E15DB6D8AA</sha512>
     </dependency>
