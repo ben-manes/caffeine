@@ -26,9 +26,9 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 
-import net.openhft.koloboke.collect.impl.hash.LHashSeparateKVLongIntMapFactoryImpl;
-import net.openhft.koloboke.collect.map.hash.HashLongIntMap;
-import net.openhft.koloboke.collect.map.hash.HashLongIntMapFactory;
+import com.koloboke.collect.impl.hash.LHashSeparateKVLongIntMapFactoryImpl;
+import com.koloboke.collect.map.hash.HashLongIntMap;
+import com.koloboke.collect.map.hash.HashLongIntMapFactory;
 
 /**
  * A comparison of different lookup approaches for indexes for a slot in a fixed-sized shared array.

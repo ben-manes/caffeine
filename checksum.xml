@@ -5,7 +5,6 @@
     <ignored-key id='ac5ec74981f9cda6' />
   </ignored-keys>
   <trusted-keys>
-    <trusted-key id='e65e11d40d80db7c' group='site.ycsb' />
     <trusted-key id='36feecf06c2da10b' group='biz.aQute.bnd' />
     <trusted-key id='52e6585e0102b84d' group='biz.aQute.bnd' />
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools' />
@@ -44,6 +43,7 @@
     <trusted-key id='72475fd306b9cab7' group='com.googlecode.javaewah' />
     <trusted-key id='80c08b1c29100955' group='com.jakewharton.fliptables' />
     <trusted-key id='a50569c7ca7fa1f0' group='com.jcraft' />
+    <trusted-key id='52931f4b72b4f54c' group='com.koloboke' />
     <trusted-key id='1063fe98bcecb758' group='com.puppycrawl.tools' />
     <trusted-key id='80c08b1c29100955' group='com.squareup' />
     <trusted-key id='8671a8df71296252' group='com.squareup' />
@@ -80,7 +80,6 @@
     <trusted-key id='bb2914c1fa0811c3' group='net.bytebuddy' />
     <trusted-key id='75bf031b7c94e183' group='net.java.dev.jna' />
     <trusted-key id='243fbb4d5814c621' group='net.jodah' />
-    <trusted-key id='52931f4b72b4f54c' group='net.openhft' />
     <trusted-key id='0da8a5ec02d11ead' group='net.sf.jopt-simple' />
     <trusted-key id='be096e29edb8d141' group='net.sf.proguard' />
     <trusted-key id='1d185615d0a84648' group='net.sf.saxon' />
@@ -146,6 +145,7 @@
     <trusted-key id='9440c8d6decafa12' group='org.testng' />
     <trusted-key id='38ee757d69184620' group='org.tukaani' />
     <trusted-key id='55c7e5e701832382' group='org.yaml' />
+    <trusted-key id='e65e11d40d80db7c' group='site.ycsb' />
     <trusted-key id='a840320c83d56348' group='systems.comodal' />
   </trusted-keys>
   <dependencies>
