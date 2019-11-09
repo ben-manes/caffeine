@@ -81,7 +81,8 @@ public final class NodeSelectorCode {
     block
         .beginControlFlow("if (builder.evicts())")
             .addStatement("sb.append('M')")
-            .beginControlFlow("if ((isAsync && builder.evicts()) || builder.isWeighted())")
+            .beginControlFlow("if (isAsync "
+                + "|| (builder.isWeighted() && (builder.weigher != Weigher.singletonWeigher())))")
                 .addStatement("sb.append('W')")
             .nextControlFlow("else")
                 .addStatement("sb.append('S')")
