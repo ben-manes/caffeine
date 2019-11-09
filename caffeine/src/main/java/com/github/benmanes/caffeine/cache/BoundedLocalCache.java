@@ -783,10 +783,11 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     expireAfterWriteEntries(now);
     expireVariableEntries(now);
 
-    if (pacer() != null) {
+    Pacer pacer = pacer();
+    if (pacer != null) {
       long delay = getExpirationDelay(now);
       if (delay != Long.MAX_VALUE) {
-        pacer().schedule(executor, drainBuffersTask, now, delay);
+        pacer.schedule(executor, drainBuffersTask, now, delay);
       }
     }
   }

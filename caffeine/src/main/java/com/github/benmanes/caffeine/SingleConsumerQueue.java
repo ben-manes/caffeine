@@ -303,7 +303,9 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
             return;
           }
           Node<E> next = first.getNextRelaxed();
-          if (next.value == null) {
+          if (next == null) {
+            return;
+          } else if (next.value == null) {
             first.next = null; // reduce nepotism
           }
           first = next;

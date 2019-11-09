@@ -4,14 +4,14 @@
  * The tests are forked from Guava commit e370dde.
  */
 dependencies {
-  compile project(':caffeine')
-  compile libraries.guava
+  api project(':caffeine')
+  api libraries.guava
 
-  testCompile testLibraries.junit
-  testCompile testLibraries.truth
-  testCompile testLibraries.jctools
-  testCompile testLibraries.easymock
-  testCompile testLibraries.guavaTestLib
+  testImplementation testLibraries.junit
+  testImplementation testLibraries.truth
+  testImplementation testLibraries.jctools
+  testImplementation testLibraries.easymock
+  testImplementation testLibraries.guavaTestLib
 }
 
 jar.manifest {

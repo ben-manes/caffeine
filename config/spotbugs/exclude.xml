@@ -48,6 +48,11 @@
     <Bug code="Eq"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.GuardedScheduler"/>
+    <Method name="schedule"/>
+    <Bug code="RCN"/>
+  </Match>
+  <Match>
     <Or>
       <Class name="~.*Mpsc.*"/>
       <Class name="~.*Header.*"/>
@@ -81,7 +86,17 @@
   <Match>
     <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
     <Method name="postProcess"/>
+    <Bug code="NP"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.CacheProxy"/>
+    <Method name="postProcess"/>
     <Bug code="SF"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator$Configurator"/>
+    <Method name="addLazyExpiration"/>
+    <Bug code="NP"/>
   </Match>
 
   <!-- Simulator -->

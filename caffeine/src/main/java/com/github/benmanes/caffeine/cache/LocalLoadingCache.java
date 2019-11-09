@@ -56,9 +56,10 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   @Override
   default Map<K, V> getAll(Iterable<? extends K> keys) {
-    return (bulkMappingFunction() == null)
+    Function<Iterable<? extends K>, Map<K, V>> mappingFunction = bulkMappingFunction();
+    return (mappingFunction == null)
         ? loadSequentially(keys)
-        : getAll(keys, bulkMappingFunction());
+        : getAll(keys, mappingFunction);
   }
 
   /** Sequentially loads each missing entry. */

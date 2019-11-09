@@ -25,7 +25,7 @@
  */
 ext {
   versions = [
-    akka: '2.6.0-RC2',
+    akka: '2.6.0',
     cache2k: '1.3.1.Alpha',
     checkerFramework: '3.0.0',
     collision: '0.3.3',
@@ -76,7 +76,6 @@ ext {
   pluginVersions = [
     apt: '0.21',
     bnd: '4.3.0',
-    buildscan: '2.4.2',
     checkstyle: '8.26',
     coveralls: '2.8.4',
     coverity: '1.0.10',
@@ -90,8 +89,8 @@ ext {
     semanticVersioning: '1.1.0',
     shadow: '5.1.0',
     sonarqube: '2.8',
-    spotbugs: '3.1.12',
-    spotbugsPlugin: '2.0.0',
+    spotbugs: '4.0.0-beta4',
+    spotbugsPlugin: '2.0.1',
     stats: '0.2.2',
     versions: '0.27.0',
   ]
@@ -175,7 +174,6 @@ ext {
   gradlePlugins = [
     apt: "net.ltgt.gradle:gradle-apt-plugin:${pluginVersions.apt}",
     bnd: "biz.aQute.bnd:biz.aQute.bnd.gradle:${pluginVersions.bnd}",
-    buildscan: "com.gradle:build-scan-plugin:${pluginVersions.buildscan}",
     checkstyle: dependencies.create("com.puppycrawl.tools:checkstyle:${pluginVersions.checkstyle}") {
       transitive = false
     },
@@ -193,7 +191,7 @@ ext {
     shadow: "com.github.jengelman.gradle.plugins:shadow:${pluginVersions.shadow}",
     sonarqube: "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:${pluginVersions.sonarqube}",
     spotbugs: [
-      "gradle.plugin.com.github.spotbugs:spotbugs-gradle-plugin:${pluginVersions.spotbugsPlugin}",
+      "com.github.spotbugs:spotbugs-gradle-plugin:${pluginVersions.spotbugsPlugin}",
       libraries.guava // https://github.com/spotbugs/spotbugs-gradle-plugin/issues/119
     ],
     stats: "org.kordamp.gradle:stats-gradle-plugin:${pluginVersions.stats}",

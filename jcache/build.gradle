@@ -7,20 +7,20 @@ configurations {
 }
 
 dependencies {
-  compile project(':caffeine')
-  compile libraries.jcache
-  compile libraries.config
-  compile libraries.jsr330
+  api project(':caffeine')
+  api libraries.jcache
+  api libraries.config
+  api libraries.jsr330
 
-  testCompile libraries.guava
-  testCompile testLibraries.junit
-  testCompile testLibraries.testng
-  testCompile testLibraries.mockito
-  testCompile testLibraries.hamcrest
-  testCompile testLibraries.jcacheTck
-  testCompile testLibraries.jcacheTckTests
-  testCompile testLibraries.jcacheGuice
-  testCompile testLibraries.guavaTestLib
+  testImplementation libraries.guava
+  testImplementation testLibraries.junit
+  testImplementation testLibraries.testng
+  testImplementation testLibraries.mockito
+  testImplementation testLibraries.hamcrest
+  testImplementation testLibraries.jcacheTck
+  testImplementation testLibraries.jcacheTckTests
+  testImplementation testLibraries.jcacheGuice
+  testImplementation testLibraries.guavaTestLib
 
   tck dependencies.create(testLibraries.jcacheTckTests) {
     transitive = false

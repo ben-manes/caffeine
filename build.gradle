@@ -3,7 +3,6 @@ import net.ltgt.gradle.errorprone.CheckSeverity
 apply plugin: 'com.github.mjdetullio.gradle.coverity'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'com.github.kt3k.coveralls'
-apply plugin: 'com.gradle.build-scan'
 apply plugin: 'jacoco'
 
 buildscript {
@@ -44,8 +43,8 @@ allprojects {
 subprojects {
   apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'biz.aQute.bnd.builder'
+  apply plugin: 'java-library'
   apply plugin: 'eclipse'
-  apply plugin: 'java'
   apply plugin: 'idea'
 
   apply from: "${rootDir}/gradle/publish.gradle"
@@ -69,13 +68,13 @@ subprojects {
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
 
   dependencies {
-    testCompile libraries.guava
-    testCompile testLibraries.mockito
-    testCompile testLibraries.hamcrest
-    testCompile testLibraries.awaitility
-    testCompile testLibraries.osgiCompile
+    testImplementation libraries.guava
+    testImplementation testLibraries.mockito
+    testImplementation testLibraries.hamcrest
+    testImplementation testLibraries.awaitility
+    testImplementation testLibraries.osgiCompile
 
-    testRuntime testLibraries.osgiRuntime
+    testRuntimeOnly testLibraries.osgiRuntime
   }
 
   configurations {
@@ -114,7 +113,7 @@ subprojects {
 
   task testJar(type: Jar, group: 'Build') {
     description = 'Assembles a jar archive containing the test classes.'
-    baseName = "${archivesBaseName}-test"
+    archiveBaseName = "${archivesBaseName}-test"
     from sourceSets.test.output
   }
 

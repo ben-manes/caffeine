@@ -6,31 +6,31 @@ apply plugin:'application'
 mainClassName = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
 
 dependencies {
-  compile project(':caffeine')
+  implementation project(':caffeine')
 
-  compile libraries.xz
-  compile libraries.ohc
-  compile libraries.akka
-  compile libraries.ycsb
-  compile libraries.guava
-  compile libraries.stream
-  compile libraries.tcache
-  compile libraries.cache2k
-  compile libraries.ehcache3
-  compile libraries.fastutil
-  compile libraries.slf4jNop
-  compile libraries.collision
-  compile libraries.fastfilter
-  compile libraries.flipTables
-  compile libraries.jcommander
-  compile libraries.expiringMap
-  compile libraries.commonsLang3
-  compile libraries.commonsMath3
-  compile libraries.elasticSearch
-  compile libraries.commonsCompress
-  compile libraries.univocityParsers
+  implementation libraries.xz
+  implementation libraries.ohc
+  implementation libraries.akka
+  implementation libraries.ycsb
+  implementation libraries.guava
+  implementation libraries.stream
+  implementation libraries.tcache
+  implementation libraries.cache2k
+  implementation libraries.ehcache3
+  implementation libraries.fastutil
+  implementation libraries.slf4jNop
+  implementation libraries.collision
+  implementation libraries.fastfilter
+  implementation libraries.flipTables
+  implementation libraries.jcommander
+  implementation libraries.expiringMap
+  implementation libraries.commonsLang3
+  implementation libraries.commonsMath3
+  implementation libraries.elasticSearch
+  implementation libraries.commonsCompress
+  implementation libraries.univocityParsers
 
-  testCompile testLibraries.testng
+  testImplementation testLibraries.testng
 }
 
 test {

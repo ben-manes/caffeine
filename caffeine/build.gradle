@@ -32,17 +32,17 @@ plugins.withType(EclipsePlugin) {
 }
 
 dependencies {
-  compile libraries.checkerAnnotations
-  compile libraries.errorproneAnnotations
+  api libraries.checkerAnnotations
+  api libraries.errorproneAnnotations
 
-  testCompile libraries.ycsb
-  testCompile libraries.guava
-  testCompile libraries.fastutil
-  testCompile testLibraries.junit
-  testCompile testLibraries.testng
-  testCompile testLibraries.jctools
-  testCompile libraries.commonsLang3
-  testCompile testLibraries.guavaTestLib
+  testImplementation libraries.ycsb
+  testImplementation libraries.guava
+  testImplementation libraries.fastutil
+  testImplementation testLibraries.junit
+  testImplementation testLibraries.testng
+  testImplementation testLibraries.jctools
+  testImplementation libraries.commonsLang3
+  testImplementation testLibraries.guavaTestLib
 
   javaAgent libraries.jamm
 
@@ -59,9 +59,9 @@ dependencies {
   jmh libraries.elasticSearch
   jmh libraries.concurrentlinkedhashmap
 
-  javaPoetCompile libraries.guava
-  javaPoetCompile libraries.javapoet
-  javaPoetCompile libraries.commonsLang3
+  javaPoetImplementation libraries.guava
+  javaPoetImplementation libraries.javapoet
+  javaPoetImplementation libraries.commonsLang3
 }
 
 compileCodeGenJava {
