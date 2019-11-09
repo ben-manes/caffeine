@@ -58,6 +58,7 @@
     <trusted-key id='eb9d04a9a679fe18' group='com.uber.nullaway' />
     <trusted-key id='d0d1b9a54efd603d' group='com.univocity' />
     <trusted-key id='1861c322c56014b2' group='commons-beanutils' />
+    <trusted-key id='3faad2cd5ecbb314' group='commons-beanutils' />
     <trusted-key id='411063a3a0ffd119' group='commons-beanutils' />
     <trusted-key id='3faad2cd5ecbb314' group='commons-codec' />
     <trusted-key id='86fdc7e2a11262cb' group='commons-codec' />
