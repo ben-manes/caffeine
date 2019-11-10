@@ -65,10 +65,7 @@ subprojects {
     patch = 1 // backwards-compatible bug fixes
     releaseBuild = rootProject.hasProperty('release')
   }
-
-  if (!archivesBaseName.startsWith(rootProject.name)) {
-    archivesBaseName = rootProject.name + path.replaceAll(':', '-').toLowerCase()
-  }
+  archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
 
   dependencies {
     testImplementation libraries.guava
