@@ -28,7 +28,7 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements maintained by this buffer
  */
-final class BoundedBuffer<E> extends StripedBuffer<E> {
+public final class BoundedBuffer<E> extends StripedBuffer<E> {
   /*
    * A circular ring buffer stores the elements being transferred by the producers to the consumer.
    * The monotonically increasing count of reads and writes allow indexing sequentially to the next
