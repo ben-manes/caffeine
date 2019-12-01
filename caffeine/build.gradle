@@ -20,7 +20,7 @@ configurations {
 }
 
 idea.module {
-  scopes.PROVIDED.plus += [ configurations.javaPoetCompile ]
+  scopes.PROVIDED.plus += [ configurations.javaPoetCompileClasspath ]
 }
 
 eclipse.classpath.file.whenMerged {
@@ -28,7 +28,7 @@ eclipse.classpath.file.whenMerged {
 }
 
 plugins.withType(EclipsePlugin) {
-  project.eclipse.classpath.plusConfigurations += [ configurations.javaPoetCompile ]
+  project.eclipse.classpath.plusConfigurations += [ configurations.javaPoetCompileClasspath ]
 }
 
 dependencies {

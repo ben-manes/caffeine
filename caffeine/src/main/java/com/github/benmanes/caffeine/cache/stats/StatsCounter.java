@@ -139,6 +139,8 @@ public interface StatsCounter {
    * @return an accumulator that suppresses and logs any exception thrown by the delegate
    */
   static @NonNull StatsCounter guardedStatsCounter(@NonNull StatsCounter statsCounter) {
-    return new GuardedStatsCounter(statsCounter);
+    return (statsCounter instanceof GuardedStatsCounter)
+        ? statsCounter
+        : new GuardedStatsCounter(statsCounter);
   }
 }
