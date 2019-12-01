@@ -1,10 +1,9 @@
 language: java
 sudo: required
-dist: xenial
+dist: bionic
 
 jdk:
-  - openjdk8
-  - openjdk11
+  - openjdk13
 
 env:
   global:

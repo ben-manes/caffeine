@@ -8,9 +8,9 @@
 <img align="right" height="90px" src="https://raw.githubusercontent.com/ben-manes/caffeine/master/wiki/logo.png">
 </a>
 
-Caffeine is a [high performance][benchmarks], [near optimal][efficiency] caching library based on
-Java 8. For more details, see our [user's guide][users-guide] and browse the [API docs][javadoc] for
-the latest release.
+Caffeine is a [high performance][benchmarks], [near optimal][efficiency] caching library. For more
+details, see our [user's guide][users-guide] and browse the [API docs][javadoc] for the latest
+release.
 
 ### Cache
 

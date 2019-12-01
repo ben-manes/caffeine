@@ -13,7 +13,7 @@ extraArchive.tests = true
 modifyPom {
   project {
     name 'Caffeine cache'
-    description 'A high performance caching library for Java 8+'
+    description 'A high performance caching library'
     url 'https://github.com/ben-manes/caffeine'
     inceptionYear '2014'
 

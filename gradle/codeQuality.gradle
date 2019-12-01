@@ -25,13 +25,8 @@ dependencies {
 
 javadoc.options.links(
   'https://lightbend.github.io/config/latest/api/',
-  "https://google.github.io/guava/releases/${versions.guava}/api/docs/")
-def majorVersion = JavaVersion.current().majorVersion
-if (JavaVersion.current().isJava11Compatible()) {
-  javadoc.options.links("https://docs.oracle.com/en/java/javase/${majorVersion}/docs/api/")
-} else {
-  javadoc.options.links("https://docs.oracle.com/javase/${majorVersion}/docs/api/")
-}
+  "https://guava.dev/releases/${versions.guava}/api/docs/",
+  "https://docs.oracle.com/en/java/javase/${JavaVersion.current().majorVersion}/docs/api/")
 
 jar {
   manifest.attributes 'Bundle-License': 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -113,6 +108,10 @@ tasks.withType(JavaCompile) {
     nullaway {
       annotatedPackages.add('com.github.benmanes.caffeine')
     }
+
+    // Disabled due to incompatibility; fixed in
+    // https://github.com/google/error-prone/issues/1106
+    enabled = false
   }
 }
 
@@ -125,7 +124,7 @@ tasks.withType(Test) {
     jvmArgs '-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
   }
   options {
-    jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=0', '-noverify'
+    jvmArgs '-XX:SoftRefLRUPolicyMSPerMB=0'
   }
   if (System.env.'CI') {
     maxHeapSize = '512m'
