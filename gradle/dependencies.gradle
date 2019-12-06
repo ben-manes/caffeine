@@ -43,7 +43,7 @@ ext {
     fastutil: '8.3.0',
     flipTables: '1.0.2',
     guava: '28.1-jre',
-    jackrabbit: '1.18.0',
+    jackrabbit: '1.20.0',
     jamm: '0.3.3',
     javaObjectLayout: '0.9',
     javapoet: '1.11.1',
@@ -52,7 +52,7 @@ ext {
     jmh: '1.22',
     jsr330: '1',
     koloboke: '1.0.0',
-    nullaway: '0.7.8',
+    nullaway: '0.7.9',
     ohc: '0.6.1',
     slf4j: '1.7.29',
     tcache: '2.0.1',
@@ -63,20 +63,20 @@ ext {
   ]
   testVersions = [
     awaitility: '4.0.1',
-    easymock: '4.0.2',
+    easymock: '4.1',
     hamcrest: '2.2',
     jcacheTck: '1.1.1',
     jctools: '2.1.2',
     junit: '4.12',
-    mockito: '3.1.0',
+    mockito: '3.2.0',
     paxExam: '4.13.1',
     testng: '7.0.0',
     truth: '0.24',
   ]
   pluginVersions = [
     apt: '0.21',
-    bnd: '4.3.0',
-    checkstyle: '8.26',
+    bnd: '4.3.1',
+    checkstyle: '8.27',
     coveralls: '2.8.4',
     coverity: '1.0.10',
     errorprone: '1.1.1',
@@ -85,12 +85,12 @@ ext {
     jmhReport: '0.9.0',
     nexus: '2.3.1',
     nullaway: '1.0.1',
-    pmd: '6.19.0',
+    pmd: '6.20.0',
     semanticVersioning: '1.1.0',
-    shadow: '5.1.0',
-    sonarqube: '2.8',
+    shadow: '5.2.0',
+    sonarqube: '2.8.0.1969',
     spotbugs: '4.0.0-beta4',
-    spotbugsPlugin: '2.0.1',
+    spotbugsPlugin: '3.0.0',
     stats: '0.2.2',
     versions: '0.27.0',
   ]
@@ -160,7 +160,7 @@ ext {
     osgiRuntime: [
       "org.ops4j.pax.exam:pax-exam-container-native:${testVersions.paxExam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${testVersions.paxExam}",
-      "org.ops4j.pax.url:pax-url-aether:2.6.1",
+      "org.ops4j.pax.url:pax-url-aether:2.6.2",
     ],
     testng: [
       dependencies.create("org.testng:testng:${testVersions.testng}") {

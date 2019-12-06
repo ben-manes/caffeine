@@ -2,8 +2,8 @@
 <dependency-verification version='1'>
   <trust-requirement pgp='GROUP' checksum='NONE' />
   <ignored-keys>
-    <ignored-key id='ac5ec74981f9cda6' />
     <ignored-key id='44ce7bf2825ea2cd' />
+    <ignored-key id='ac5ec74981f9cda6' />
   </ignored-keys>
   <trusted-keys>
     <trusted-key id='36feecf06c2da10b' group='biz.aQute.bnd' />
@@ -79,6 +79,7 @@
     <trusted-key id='72385ff0af338d52' group='joda-time' />
     <trusted-key id='85911f425ec61b51' group='junit' />
     <trusted-key id='efe8086f9e93774e' group='junit' />
+    <trusted-key id='7999befba1039e8b' group='net.bytebuddy' />
     <trusted-key id='bb2914c1fa0811c3' group='net.bytebuddy' />
     <trusted-key id='75bf031b7c94e183' group='net.java.dev.jna' />
     <trusted-key id='243fbb4d5814c621' group='net.jodah' />
@@ -160,9 +161,6 @@
     <dependency group='com.beust' module='jcommander' version='1.78'>
       <sha512>5EE2EF4C12888A48D7C830189D06EE8A653C7664A53C9B6FA935D4E7866B0454111F8092D7ECE086EC80C61EDAB2856187A1E247873E5C8E4724EFB02C37504B</sha512>
     </dependency>
-    <dependency group='com.ibm.icu' module='icu4j' version='63.1'>
-      <sha512>E0E647F10A79E91B88A0F2EA12460E7F004E97EFFC6788ED03574283CE566C828023CE68613A5CC2E68013D9D23783F0BA1A27093DBE6C2844FB1DDA801FC7AA</sha512>
-    </dependency>
     <dependency group='com.github.FastFilter' module='fastfilter_java' version='bf0b02297f'>
       <sha512>1E637F7546DDA1EDD3EB74B181B918137776611EB703ED90A91B3845DD7D2615D40A0A586DCAA4E494EB097D2E2E05511D0DCFEAD47416AE7622EBA05EFBF7C</sha512>
     </dependency>
@@ -184,14 +182,23 @@
     <dependency group='com.github.jengelman.gradle.plugins' module='shadow' version='5.1.0'>
       <sha512>7D41E58487E4EAE601BAA6F42EDACD2F903AC04DBD12AC2A9784FABF0A8DCE8A416C18C452D14B1D1608938F19518E87536986387AAAE9737FE736E82BDE94E2</sha512>
     </dependency>
+    <dependency group='com.github.jengelman.gradle.plugins' module='shadow' version='5.2.0'>
+      <sha512>39308A31635C2B4728354CC79A1EA2F0DE10F7F80BAE0205E3D960A92A42A25E55E0B4ABD18960502B22E5467474DCC8E35079A6866742773D47A3D2D1A206FB</sha512>
+    </dependency>
     <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.1'>
       <sha512>2C09B102601DF179B615EF37F5E56B9AA1100BB2A17D742B8CB452C1A193C44ED3EBE029FEAFB9822D55A680D99B682184C733D56F835874DD01B02209AFA13D</sha512>
+    </dependency>
+    <dependency group='com.github.spotbugs' module='spotbugs-gradle-plugin' version='3.0.0'>
+      <sha512>5E0AAF09AE8E6BA8C6653E79C098520B5CC82B7953E5902528C638097A25EE6020C160A63D4D45EE4A367C66B50128A8D8A19B992B54C5A948FB44A1E7567C11</sha512>
     </dependency>
     <dependency group='com.gradle' module='build-scan-plugin' version='2.4.1'>
       <sha512>347F865BD5B9310D6972BDA95AB089D2BA911C4EA897A1E4E316465077A0153609E31DFFD3C2D61DEEA7E54C07D7D36D5807F9B24F3111A97553DFD260A205F1</sha512>
     </dependency>
     <dependency group='com.gradle' module='build-scan-plugin' version='2.4.2'>
       <sha512>6263B511BFAC9A83B3EA02F740B9A9A61639621AB27B722632322144009FD50139291AEBC4F0D29409BEFBBF8597252E66407289CFE5E0199E54B6D1E0830400</sha512>
+    </dependency>
+    <dependency group='com.ibm.icu' module='icu4j' version='63.1'>
+      <sha512>E0E647F10A79E91B88A0F2EA12460E7F004E97EFFC6788ED03574283CE566C828023CE68613A5CC2E68013D9D23783F0BA1A27093DBE6C2844FB1DDA801FC7AA</sha512>
     </dependency>
     <dependency group='gradle.plugin.com.github.kt3k.coveralls' module='coveralls-gradle-plugin' version='2.8.4'>
       <sha512>CEAA0F67FB9D04CDC125BC25694B4C412BFC0AFFC6ACC641C8E24E9E276E1990FF995B6A2A64DB896E4CF7E1BAD96682FBFC97DE95587C4313D6D8A958035E3C</sha512>

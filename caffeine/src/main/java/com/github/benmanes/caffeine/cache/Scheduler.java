@@ -94,7 +94,7 @@ public interface Scheduler {
    * @return an scheduler that suppresses and logs any exception thrown by the delegate
    */
   static @NonNull Scheduler guardedScheduler(@NonNull Scheduler scheduler) {
-    return new GuardedScheduler(scheduler);
+    return (scheduler instanceof GuardedScheduler) ? scheduler : new GuardedScheduler(scheduler);
   }
 }
 
