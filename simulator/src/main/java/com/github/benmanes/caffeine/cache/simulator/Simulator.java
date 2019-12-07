@@ -21,10 +21,11 @@ import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.STA
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
-import java.util.PrimitiveIterator;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -40,8 +41,7 @@ import akka.routing.ActorRefRoutee;
 import akka.routing.BroadcastRoutingLogic;
 import akka.routing.Routee;
 import akka.routing.Router;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 /**
  * A simulator that broadcasts the recorded cache events to each policy and generates an aggregated
  * report. See <tt>reference.conf</tt> for details on the configuration.
@@ -100,13 +100,13 @@ public final class Simulator extends AbstractActor {
 
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() {
-    try (LongStream events = eventStream()) {
-      LongArrayList batch = new LongArrayList(batchSize);
-      for (PrimitiveIterator.OfLong i = events.iterator(); i.hasNext();) {
-        batch.add(i.nextLong());
+    try (Stream<AccessEvent> events = eventStream()) {
+      ObjectArrayList<AccessEvent> batch = new ObjectArrayList<>(batchSize);
+      for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
+        batch.add(i.next());
         if (batch.size() == batchSize) {
           router.route(batch, self());
-          batch = new LongArrayList(batchSize);
+          batch = new ObjectArrayList<>(batchSize);
         }
       }
       router.route(batch, self());
@@ -118,7 +118,7 @@ public final class Simulator extends AbstractActor {
   }
 
   /** Returns a stream of trace events. */
-  private LongStream eventStream() throws IOException {
+  private Stream<AccessEvent> eventStream() throws IOException {
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings);
     }
