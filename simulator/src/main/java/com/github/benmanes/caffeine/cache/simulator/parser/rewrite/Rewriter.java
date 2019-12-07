@@ -21,11 +21,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.PrimitiveIterator;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.google.common.base.Stopwatch;
 
@@ -59,9 +60,9 @@ public final class Rewriter {
   public void run() throws IOException {
     int count = 0;
     Stopwatch stopwatch = Stopwatch.createStarted();
-    try (LongStream events = inputFormat.readFiles(inputFiles).events();
+    try (Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
          BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
-      for (PrimitiveIterator.OfLong i = events.iterator(); i.hasNext();) {
+      for (BinaryTraceReader.TraceIterator i = (BinaryTraceReader.TraceIterator)events.iterator(); i.hasNext();) {
         outputFormat.write(writer, i.nextLong());
         count++;
       }

@@ -16,8 +16,9 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
 
 import java.io.IOException;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
 /**
@@ -32,10 +33,10 @@ public final class LirsTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     return lines()
         .filter(line -> !line.isEmpty())
         .filter(line -> !line.equals("*"))
-        .mapToLong(Long::parseLong);
+        .map(key -> new AccessEvent.AccessEventBuilder(Long.parseLong(key)).build());
   }
 }

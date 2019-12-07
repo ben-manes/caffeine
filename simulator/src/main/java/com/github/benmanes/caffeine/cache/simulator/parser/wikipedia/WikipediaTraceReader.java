@@ -17,8 +17,9 @@ package com.github.benmanes.caffeine.cache.simulator.parser.wikipedia;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -44,11 +45,11 @@ public final class WikipediaTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     return lines()
         .map(this::parseRequest)
         .filter(Objects::nonNull)
-        .mapToLong(path -> Hashing.murmur3_128().hashUnencodedChars(path).asLong());
+        .map(path -> new AccessEvent.AccessEventBuilder(Hashing.murmur3_128().hashUnencodedChars(path).asLong()).build());
   }
 
   /**

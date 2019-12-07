@@ -52,7 +52,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
   /** Returns the next event from the input stream. */
   protected abstract long readLong(DataInputStream input) throws IOException;
 
-  private final class TraceIterator implements PrimitiveIterator<AccessEvent, LongConsumer> {
+  public final class TraceIterator implements PrimitiveIterator<AccessEvent, LongConsumer> {
     final DataInputStream input;
     boolean ready;
     long nextKey;
@@ -82,7 +82,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
       return new AccessEvent.AccessEventBuilder(nextKey).build();
     }
 
-    private long nextLong() {
+    public long nextLong() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }

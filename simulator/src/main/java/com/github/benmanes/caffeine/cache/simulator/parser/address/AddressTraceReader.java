@@ -17,7 +17,9 @@ package com.github.benmanes.caffeine.cache.simulator.parser.address;
 
 import java.io.IOException;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
 /**
@@ -33,10 +35,10 @@ public final class AddressTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     return lines()
         .map(line -> line.split(" ", 3)[1])
         .map(address -> address.substring(2))
-        .mapToLong(address -> Long.parseLong(address, 16));
+        .map(address -> new AccessEvent.AccessEventBuilder(Long.parseLong(address, 16)).build());
   }
 }

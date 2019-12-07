@@ -16,8 +16,9 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge;
 
 import java.io.IOException;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
 /**
@@ -33,9 +34,9 @@ public final class CambridgeTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     return lines()
         .map(line -> line.split(",", 6))
-        .mapToLong(array -> Long.parseLong(array[4]));
+        .map(array -> new AccessEvent.AccessEventBuilder(Long.parseLong(array[4])).build());
   }
 }

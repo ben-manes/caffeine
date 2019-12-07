@@ -16,8 +16,9 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.umass.network;
 
 import java.io.IOException;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.google.common.hash.Hashing;
 
@@ -34,10 +35,10 @@ public final class YoutubeTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     return lines()
         .map(line -> line.split(" "))
         .filter(array -> array[3].equals("GETVIDEO"))
-        .mapToLong(array -> Hashing.murmur3_128().hashUnencodedChars(array[4]).asLong());
+        .map(array -> new AccessEvent.AccessEventBuilder(Hashing.murmur3_128().hashUnencodedChars(array[4]).asLong()).build());
   }
 }

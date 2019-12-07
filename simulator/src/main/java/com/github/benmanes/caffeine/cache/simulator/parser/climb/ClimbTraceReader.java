@@ -17,15 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator.parser.climb;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.PrimitiveIterator;
-import java.util.Scanner;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.LongStream;
+import java.io.*;
+import java.util.*;
+import java.util.function.LongConsumer;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
 /**
@@ -40,18 +38,21 @@ public final class ClimbTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     TraceIterator iterator = new TraceIterator(readFile());
-    return StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
+    return StreamSupport.stream(Spliterators.spliteratorUnknownSize(
         iterator, Spliterator.ORDERED), /* parallel */ false).onClose(iterator::close);
   }
 
-  private static final class TraceIterator implements PrimitiveIterator.OfLong {
+
+  private static final class TraceIterator implements PrimitiveIterator<AccessEvent, LongConsumer> {
     private final Scanner scanner;
+    long nextKey;
 
     TraceIterator(InputStream input) {
       scanner = new Scanner(input, UTF_8.name());
     }
+
 
     @Override
     public boolean hasNext() {
@@ -59,8 +60,25 @@ public final class ClimbTraceReader extends TextTraceReader {
     }
 
     @Override
+    public AccessEvent next() {
+      return new AccessEvent.AccessEventBuilder(nextKey).build();
+    }
+
     public long nextLong() {
-      return scanner.nextLong();
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      nextKey = scanner.nextLong();
+      return nextKey;
+    }
+
+    @Override
+    public void forEachRemaining(LongConsumer longConsumer) {
+      Objects.requireNonNull(longConsumer);
+
+      while(this.hasNext()) {
+        longConsumer.accept(this.nextLong());
+      }
     }
 
     public void close() {
@@ -68,3 +86,6 @@ public final class ClimbTraceReader extends TextTraceReader {
     }
   }
 }
+
+
+
