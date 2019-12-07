@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 import static java.util.Locale.US;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -90,7 +91,7 @@ public enum TraceFormat {
 
       @Override
       public Set<Characteristics> getCharacteristicsSet() {
-        Set<Characteristics> characteristicsSet = ImmutableSet.of();
+        Set<Characteristics> characteristicsSet = new HashSet<>();
         for (String path : filePaths) {
           List<String> parts = Splitter.on(':').limit(2).splitToList(path);
           TraceFormat format = (parts.size() == 1) ? self : named(parts.get(0));
@@ -101,7 +102,7 @@ public enum TraceFormat {
             return null;
           }
         }
-        return characteristicsSet;
+        return ImmutableSet.copyOf(characteristicsSet);
       }
     };
     return traceReader;

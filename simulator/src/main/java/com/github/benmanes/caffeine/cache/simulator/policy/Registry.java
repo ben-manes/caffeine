@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -28,6 +29,8 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
@@ -66,6 +69,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.Tiny
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.WindowTinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
@@ -94,8 +98,12 @@ public final class Registry {
 
   /** Returns all of the policies that have been configured for simulation. */
   public static Set<Policy> policies(BasicSettings settings) {
+    List<String> filePaths = settings.traceFiles().paths();
+    TraceFormat format = settings.traceFiles().format();
+    Set<Characteristics> traceReaderCharacteristics = format.readFiles(filePaths).getCharacteristicsSet();
     return settings.policies().stream()
         .flatMap(name -> policy(settings, name).stream())
+        .filter(policy -> ((ImmutableSet)traceReaderCharacteristics).equals((ImmutableSet)policy.getCharacteristicsSet()))
         .collect(toSet());
   }
 
