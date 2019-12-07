@@ -16,10 +16,13 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.umass.network;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.Hashing;
 
 /**
@@ -40,5 +43,10 @@ public final class YoutubeTraceReader extends TextTraceReader {
         .map(line -> line.split(" "))
         .filter(array -> array[3].equals("GETVIDEO"))
         .map(array -> new AccessEvent.AccessEventBuilder(Hashing.murmur3_128().hashUnencodedChars(array[4]).asLong()).build());
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

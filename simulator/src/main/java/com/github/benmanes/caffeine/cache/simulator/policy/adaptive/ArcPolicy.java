@@ -20,6 +20,8 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -89,7 +91,8 @@ public final class ArcPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
@@ -280,5 +283,10 @@ public final class ArcPolicy implements Policy {
           .add("type", type)
           .toString();
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

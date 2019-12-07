@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.inference;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.Indicator;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy.HillClimberWindowTinyLfuSettings;
@@ -39,16 +40,16 @@ public final class IndicatorClimber implements HillClimber {
   }
 
   @Override
-  public void onHit(long key, QueueType queue, boolean isFull) {
+  public void onHit(AccessEvent entry, QueueType queue, boolean isFull) {
     if (isFull) {
-      indicator.record(key);
+      indicator.record(entry.getKey());
     }
   }
 
   @Override
-  public void onMiss(long key, boolean isFull) {
+  public void onMiss(AccessEvent entry, boolean isFull) {
     if (isFull) {
-      indicator.record(key);
+      indicator.record(entry.getKey());
     }
   }
 

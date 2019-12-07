@@ -15,6 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+
+import java.util.Set;
+
 /**
  * A cache that implements a page replacement policy.
  *
@@ -23,11 +28,14 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 public interface Policy {
 
   /** Records that the entry was accessed. */
-  void record(long key);
+  void record(AccessEvent entry);
 
   /** Indicates that the recording has completed. */
   default void finished() {}
 
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
+
+  /** Returns the policy's set of supported characteristics. */
+  Set<Characteristics> getCharacteristicsSet();
 }

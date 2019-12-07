@@ -22,11 +22,14 @@ import java.util.Random;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -77,11 +80,12 @@ public final class RandomWindowTinyLfuPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Node node = data.get(key);
-    admittor.record(key);
+    admittor.record(entry);
     if (node == null) {
-      node = new Node(key, windowSize);
+      node = new Node(entry, windowSize);
       policyStats.recordOperation();
       policyStats.recordMiss();
       window[node.index] = node;
@@ -110,7 +114,7 @@ public final class RandomWindowTinyLfuPolicy implements Policy {
 
     if (data.size() > maximumSize) {
       Node victim = main[random.nextInt(main.length)];
-      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
+      Node evict = admittor.admit(candidate.entry, victim.entry) ? victim : candidate;
       removeFromTable(main, evict);
       data.remove(evict.key);
       mainSize--;
@@ -129,13 +133,15 @@ public final class RandomWindowTinyLfuPolicy implements Policy {
 
   /** A node on the double-linked list. */
   static final class Node {
+    final AccessEvent entry;
     final long key;
     int index;
 
     /** Creates a new node. */
-    public Node(long key, int index) {
+    public Node(AccessEvent entry, int index) {
       this.index = index;
-      this.key = key;
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     @Override
@@ -154,5 +160,10 @@ public final class RandomWindowTinyLfuPolicy implements Policy {
     public List<Double> percentMain() {
       return config().getDoubleList("random-window-tiny-lfu.percent-main");
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.sim;
 import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.WindowTinyLfuPolicy.WindowTinyLfuSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
@@ -67,21 +68,21 @@ public final class MiniSimClimber implements HillClimber {
   }
 
   @Override
-  public void onHit(long key, QueueType queue, boolean isFull) {
-    onAccess(key);
+  public void onHit(AccessEvent entry, QueueType queue, boolean isFull) {
+    onAccess(entry);
   }
 
   @Override
-  public void onMiss(long key, boolean isFull) {
-    onAccess(key);
+  public void onMiss(AccessEvent entry, boolean isFull) {
+    onAccess(entry);
   }
 
-  private void onAccess(long key) {
+  private void onAccess(AccessEvent entry) {
     sample++;
-
+    long key = entry.getKey();
     if (Math.floorMod(hasher.hashLong(key).asInt(), R) < 1) {
       for (WindowTinyLfuPolicy policy : minis) {
-        policy.record(key);
+        policy.record(entry);
       }
     }
   }

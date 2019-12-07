@@ -21,8 +21,10 @@ import java.util.Map;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -86,7 +88,8 @@ public final class FeedbackTinyLfuPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     if ((sample % sampleSize) == 0) {
       sampled++;
     }
@@ -95,11 +98,11 @@ public final class FeedbackTinyLfuPolicy implements Policy {
     }
     sample++;
 
-    admittor.record(key);
+    admittor.record(entry);
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
       policyStats.recordMiss();
     } else {
       onHit(node);
@@ -108,12 +111,13 @@ public final class FeedbackTinyLfuPolicy implements Policy {
   }
 
   /** Adds the entry, evicting if necessary. */
-  private void onMiss(long key) {
+  private void onMiss(AccessEvent entry) {
+    long key = entry.getKey();
     for (int i = 0; i < gain; i++) {
-      admittor.record(key);
+      admittor.record(entry);
     }
 
-    Node node = new Node(key);
+    Node node = new Node(entry);
     node.appendToTail(head);
     data.put(key, node);
     evict(node);
@@ -132,7 +136,7 @@ public final class FeedbackTinyLfuPolicy implements Policy {
     if (data.size() > maximumSize) {
       Node evict;
       Node victim = head.next;
-      if (admittor.admit(candidate.key, victim.key)) {
+      if (admittor.admit(candidate.entry, victim.entry)) {
         evict = victim;
       } else if (adapt(candidate)) {
         evict = victim;
@@ -185,20 +189,22 @@ public final class FeedbackTinyLfuPolicy implements Policy {
   /** A node on the double-linked list. */
   static final class Node {
     final long key;
-
+    final AccessEvent entry;
     Node prev;
     Node next;
 
     /** Creates a new sentinel node. */
     public Node() {
+      this.entry = null;
       this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(long key) {
-      this.key = key;
+    public Node(AccessEvent entry) {
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     public void moveToTail(Node head) {
@@ -249,5 +255,10 @@ public final class FeedbackTinyLfuPolicy implements Policy {
           "maximum-size", sampleSize);
       return ConfigFactory.parseMap(properties).withFallback(config());
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

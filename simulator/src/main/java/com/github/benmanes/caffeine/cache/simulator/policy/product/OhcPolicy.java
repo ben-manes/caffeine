@@ -25,6 +25,9 @@ import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.google.common.collect.ImmutableSet;
 import org.caffinitas.ohc.CacheSerializer;
 import org.caffinitas.ohc.Eviction;
 import org.caffinitas.ohc.OHCache;
@@ -67,7 +70,8 @@ public final class OhcPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Object value = cache.get(key);
     if (value == null) {
       cache.put(key, key);
@@ -129,4 +133,9 @@ public final class OhcPolicy implements Policy {
       return Long.BYTES;
     }
   };
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
+  }
 }

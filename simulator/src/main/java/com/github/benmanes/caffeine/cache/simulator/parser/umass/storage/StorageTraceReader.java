@@ -17,11 +17,14 @@ package com.github.benmanes.caffeine.cache.simulator.parser.umass.storage;
 
 import java.io.IOException;
 import java.math.RoundingMode;
+import java.util.Set;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.math.IntMath;
 
 /**
@@ -52,5 +55,10 @@ public final class StorageTraceReader extends TextTraceReader {
           ? Stream.empty()
           : LongStream.range(startBlock, startBlock + sequence).mapToObj(key -> new AccessEvent.AccessEventBuilder(key).build());
     });
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

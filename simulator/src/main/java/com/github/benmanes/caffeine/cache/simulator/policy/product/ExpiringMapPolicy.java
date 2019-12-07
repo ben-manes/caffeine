@@ -20,6 +20,8 @@ import static java.util.Locale.US;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
@@ -52,7 +54,8 @@ public final class ExpiringMapPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Object value = cache.get(key);
     if (value == null) {
       if (cache.size() == cache.getMaxSize()) {
@@ -86,4 +89,10 @@ public final class ExpiringMapPolicy implements Policy {
       }
     }
   }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
+  }
+
 }

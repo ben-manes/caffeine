@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -91,12 +94,13 @@ public final class SampledPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Node node = data.get(key);
-    admittor.record(key);
+    admittor.record(entry);
     long now = ++tick;
     if (node == null) {
-      node = new Node(key, data.size(), now);
+      node = new Node(entry, data.size(), now);
       policyStats.recordOperation();
       policyStats.recordMiss();
       table[node.index] = node;
@@ -119,7 +123,7 @@ public final class SampledPolicy implements Policy {
       Node victim = policy.select(sample, random, tick);
       policyStats.recordEviction();
 
-      if (admittor.admit(candidate.key, victim.key)) {
+      if (admittor.admit(candidate.entry, victim.entry)) {
         removeFromTable(victim);
         data.remove(victim.key);
       } else {
@@ -269,17 +273,19 @@ public final class SampledPolicy implements Policy {
 
   static final class Node {
     final long key;
+    final AccessEvent entry;
     final long insertionTime;
 
     long accessTime;
     int frequency;
     int index;
 
-    public Node(long key, int index, long tick) {
+    public Node(AccessEvent entry, int index, long tick) {
       this.insertionTime = tick;
       this.accessTime = tick;
       this.index = index;
-      this.key = key;
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     @Override
@@ -301,5 +307,10 @@ public final class SampledPolicy implements Policy {
     public Sample sampleStrategy() {
       return Sample.valueOf(config().getString("sampled.strategy").toUpperCase(US));
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

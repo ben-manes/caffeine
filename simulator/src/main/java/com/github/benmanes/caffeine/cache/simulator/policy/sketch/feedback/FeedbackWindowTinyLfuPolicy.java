@@ -23,12 +23,15 @@ import java.util.Map;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -118,7 +121,8 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     if ((sample % sampleSize) == 0) {
       sampled++;
     }
@@ -127,11 +131,11 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
     }
     sample++;
 
-    admittor.record(key);
+    admittor.record(entry);
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
       policyStats.recordMiss();
     } else if (node.status == Status.WINDOW) {
       onWindowHit(node);
@@ -148,8 +152,9 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
-  private void onMiss(long key) {
-    Node node = new Node(key, Status.WINDOW);
+  private void onMiss(AccessEvent entry) {
+    long key = entry.getKey();
+    Node node = new Node(entry, Status.WINDOW);
     node.appendToTail(headWindow);
     data.put(key, node);
     sizeWindow++;
@@ -183,7 +188,7 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
 
   /** Moves the entry to the MRU position. */
   private void onProtectedHit(Node node) {
-    admittor.record(node.key);
+    admittor.record(node.entry);
     node.moveToTail(headProtected);
   }
 
@@ -206,7 +211,7 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
     if (data.size() > maximumSize) {
       Node evict;
       Node victim = headProbation.next;
-      if (admittor.admit(candidate.key, victim.key)) {
+      if (admittor.admit(candidate.entry, victim.entry)) {
         evict = victim;
       } else if (adapt(candidate)) {
         evict = victim;
@@ -321,6 +326,7 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
 
   /** A node on the double-linked list. */
   static final class Node {
+    final AccessEvent entry;
     final long key;
 
     Status status;
@@ -329,15 +335,17 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
 
     /** Creates a new sentinel node. */
     public Node() {
+      this.entry = null;
       this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(long key, Status status) {
+    public Node(AccessEvent entry, Status status) {
+      this.entry = entry;
       this.status = status;
-      this.key = key;
+      this.key = entry.getKey();
     }
 
     public void moveToTail(Node head) {
@@ -413,5 +421,10 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
           "maximum-size", sampleSize);
       return ConfigFactory.parseMap(properties).withFallback(config());
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

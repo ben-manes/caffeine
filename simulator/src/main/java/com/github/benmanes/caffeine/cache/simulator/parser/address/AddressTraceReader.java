@@ -16,11 +16,14 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.address;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the trace files of application address instructions, provided by
@@ -40,5 +43,10 @@ public final class AddressTraceReader extends TextTraceReader {
         .map(line -> line.split(" ", 3)[1])
         .map(address -> address.substring(2))
         .map(address -> new AccessEvent.AccessEventBuilder(Long.parseLong(address, 16)).build());
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

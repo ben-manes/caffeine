@@ -22,11 +22,14 @@ import java.util.Arrays;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -75,12 +78,12 @@ public final class S4LruPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
     policyStats.recordOperation();
-    Node node = data.get(key);
-    admittor.record(key);
+    Node node = data.get(entry.getKey());
+    admittor.record(entry);
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
       policyStats.recordMiss();
     } else {
       onHit(node);
@@ -102,9 +105,9 @@ public final class S4LruPolicy implements Policy {
     adjust();
   }
 
-  private void onMiss(long key) {
-    Node node = new Node(key);
-    data.put(key, node);
+  private void onMiss(AccessEvent entry) {
+    Node node = new Node(entry);
+    data.put(entry.getKey(), node);
     node.appendToTail(headQ[0]);
     sizeQ[0]++;
 
@@ -132,7 +135,7 @@ public final class S4LruPolicy implements Policy {
       policyStats.recordEviction();
 
       Node victim = headQ[0].next;
-      boolean admit = admittor.admit(candidate.key, victim.key);
+      boolean admit = admittor.admit(candidate.entry, victim.entry);
       if (admit) {
         evictEntry(victim);
         sizeQ[0]--;
@@ -163,18 +166,20 @@ public final class S4LruPolicy implements Policy {
   }
 
   static final class Node {
+    final AccessEvent entry;
     final long key;
 
     Node prev;
     Node next;
     int level;
 
-    Node(long key) {
-      this.key = key;
+    Node(AccessEvent entry) {
+      this.key = entry == null ? Long.MIN_VALUE : entry.getKey();
+      this.entry = entry;
     }
 
     static Node sentinel(int level) {
-      Node node = new Node(Long.MIN_VALUE);
+      Node node = new Node(null);
       node.level = level;
       node.prev = node;
       node.next = node;
@@ -215,5 +220,10 @@ public final class S4LruPolicy implements Policy {
     public int levels() {
       return config().getInt("s4lru.levels");
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

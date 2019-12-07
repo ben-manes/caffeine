@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+
 /**
  * An admission policy to the cache. A page replacement policy always admits new entries and chooses
  * a victim to remove if the cache exceeds a maximum size. An admission policy augments the eviction
@@ -26,17 +28,17 @@ package com.github.benmanes.caffeine.cache.simulator.admission;
 public interface Admittor {
 
   /** Records the access to the entry. */
-  void record(long key);
+  void record(AccessEvent entry);
 
   /**
    * Returns if the candidate should be added to the cache and the page replacement policy's chosen
    * victim should be removed.
    *
-   * @param candidateKey the key to the newly added entry
-   * @param victimKey the key to the entry the policy recommends removing
+   * @param candidate the AccessEvent of the newly added entry
+   * @param victim the AccessEvent of the entry the policy recommends removing
    * @return if the candidate should be added and the victim removed due to eviction
    */
-  boolean admit(long candidateKey, long victimKey);
+  boolean admit(AccessEvent candidate, AccessEvent victim);
 
   /** Returns an admittor that admits every candidate. */
   static Admittor always() {
@@ -48,10 +50,10 @@ enum AlwaysAdmit implements Admittor {
   INSTANCE;
 
   @Override
-  public void record(long key) {}
+  public void record(AccessEvent entry) {}
 
   @Override
-  public boolean admit(long candidateKey, long victimKey) {
+  public boolean admit(AccessEvent candidateKey, AccessEvent victimKey) {
     return true;
   }
 }

@@ -1,7 +1,5 @@
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
-import java.util.stream.Stream;
-
 /**
  * An Immutable class to describe an Access event in trace.
  *

@@ -23,8 +23,10 @@ import java.util.function.LongConsumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the trace files provided by the authors of the AdaptiveClimb algorithm.
@@ -84,6 +86,11 @@ public final class ClimbTraceReader extends TextTraceReader {
     public void close() {
       scanner.close();
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }
 

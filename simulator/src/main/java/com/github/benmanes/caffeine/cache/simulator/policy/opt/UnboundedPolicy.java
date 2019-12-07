@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
@@ -51,12 +53,17 @@ public final class UnboundedPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
     policyStats.recordOperation();
-    if (data.add(key)) {
+    if (data.add(entry.getKey())) {
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

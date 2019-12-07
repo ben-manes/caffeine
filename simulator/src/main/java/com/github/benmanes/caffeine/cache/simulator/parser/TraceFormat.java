@@ -17,11 +17,14 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import static java.util.Locale.US;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
@@ -35,6 +38,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.Youtube
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 /**
@@ -70,16 +74,37 @@ public enum TraceFormat {
    * @return a reader for streaming the events from the file
    */
   public TraceReader readFiles(List<String> filePaths) {
-    return () -> {
-      Stream<AccessEvent> events = Stream.empty();
-      for (String path : filePaths) {
-        List<String> parts = Splitter.on(':').limit(2).splitToList(path);
-        TraceFormat format = (parts.size() == 1) ? this : named(parts.get(0));
-        Stream<AccessEvent> next = format.factory.apply(Iterables.getLast(parts)).events();
-        events = Stream.concat(events, next);
+    TraceFormat self = this;
+    TraceReader traceReader = new TraceReader() {
+      @Override
+      public Stream<AccessEvent> events() throws IOException {
+        Stream<AccessEvent> events = Stream.empty();
+        for (String path : filePaths) {
+          List<String> parts = Splitter.on(':').limit(2).splitToList(path);
+          TraceFormat format = (parts.size() == 1) ? self : named(parts.get(0));
+          Stream<AccessEvent> next = format.factory.apply(Iterables.getLast(parts)).events();
+          events = Stream.concat(events, next);
+        }
+        return events;
       }
-      return events;
+
+      @Override
+      public Set<Characteristics> getCharacteristicsSet() {
+        Set<Characteristics> characteristicsSet = ImmutableSet.of();
+        for (String path : filePaths) {
+          List<String> parts = Splitter.on(':').limit(2).splitToList(path);
+          TraceFormat format = (parts.size() == 1) ? self : named(parts.get(0));
+          Set<Characteristics> next = format.factory.apply(Iterables.getLast(parts)).getCharacteristicsSet();
+          if(characteristicsSet.size() == 0){
+            characteristicsSet.addAll(next);
+          }else if(!characteristicsSet.equals(next)){
+            return null;
+          }
+        }
+        return characteristicsSet;
+      }
     };
+    return traceReader;
   }
 
   /** Returns the format based on its configuration name. */

@@ -16,11 +16,14 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.arc;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the trace files provided by the authors of the ARC algorithm. See
@@ -42,5 +45,10 @@ public final class ArcTraceReader extends TextTraceReader {
       int sequence = Integer.parseInt(array[1]);
       return LongStream.range(startBlock, startBlock + sequence).mapToObj(key -> new AccessEvent.AccessEventBuilder(key).build());
     });
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

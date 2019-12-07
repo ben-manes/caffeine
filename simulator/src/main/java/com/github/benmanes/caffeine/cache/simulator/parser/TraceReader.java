@@ -13,7 +13,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+
 import java.io.IOException;
+import java.util.Set;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
@@ -34,5 +37,8 @@ public interface TraceReader {
    * @return a lazy stream of cache events
    */
   Stream<AccessEvent> events() throws IOException;
+
+  /** Returns the trace reader's set of supported characteristics. */
+  Set<Characteristics> getCharacteristicsSet();
 }
 

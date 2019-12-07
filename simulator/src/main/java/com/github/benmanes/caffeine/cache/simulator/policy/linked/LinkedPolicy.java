@@ -21,6 +21,9 @@ import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -33,6 +36,7 @@ import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import org.checkerframework.checker.units.qual.K;
 
 /**
  * A cache that uses a linked list, in either insertion or access order, to implement simple
@@ -72,11 +76,12 @@ public final class LinkedPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Node old = data.get(key);
-    admittor.record(key);
+    admittor.record(entry);
     if (old == null) {
-      Node node = new Node(key, sentinel);
+      Node node = new Node(entry, sentinel);
       policyStats.recordMiss();
       data.put(key, node);
       node.appendToTail();
@@ -93,7 +98,7 @@ public final class LinkedPolicy implements Policy {
       Node victim = policy.findVictim(sentinel, policyStats);
       policyStats.recordEviction();
 
-      boolean admit = admittor.admit(candidate.key, victim.key);
+      boolean admit = admittor.admit(candidate.entry, victim.entry);
       if (admit) {
         evictEntry(victim);
       } else {
@@ -191,19 +196,22 @@ public final class LinkedPolicy implements Policy {
     Node prev;
     Node next;
     long key;
+    AccessEvent entry;
 
     /** Creates a new sentinel node. */
     public Node() {
       this.key = Long.MIN_VALUE;
+      this.entry = null;
       this.sentinel = this;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(long key, Node sentinel) {
+    public Node(AccessEvent entry, Node sentinel) {
       this.sentinel = sentinel;
-      this.key = key;
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     /** Appends the node to the tail of the list. */
@@ -245,5 +253,10 @@ public final class LinkedPolicy implements Policy {
           .add("marked", marked)
           .toString();
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

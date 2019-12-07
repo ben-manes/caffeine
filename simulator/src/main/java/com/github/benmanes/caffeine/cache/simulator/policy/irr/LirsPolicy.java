@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -94,11 +96,12 @@ public final class LirsPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      node = new Node(key);
+      node = new Node(entry);
       data.put(key,node);
       onNonResidentHir(node);
     } else if (node.status == Status.LIR) {
@@ -363,6 +366,7 @@ public final class LirsPolicy implements Policy {
   // indicating whether or not the block resides in the cache.
   final class Node {
     final long key;
+    final AccessEvent entry;
 
     Status status;
 
@@ -379,13 +383,15 @@ public final class LirsPolicy implements Policy {
 
     Node() {
       key = Long.MIN_VALUE;
+      entry = null;
       prevS = nextS = this;
       prevQ = nextQ = this;
       prevNR = nextNR = this;
     }
 
-    Node(long key) {
-      this.key = key;
+    Node(AccessEvent entry) {
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     public boolean isInStack(StackType stackType) {
@@ -493,5 +499,10 @@ public final class LirsPolicy implements Policy {
     public double nonResidentMultiplier() {
       return config().getDouble("lirs.non-resident-multiplier");
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

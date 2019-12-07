@@ -22,7 +22,9 @@ import static java.util.Objects.requireNonNull;
 import akka.actor.AbstractActor;
 import akka.dispatch.BoundedMessageQueueSemantics;
 import akka.dispatch.RequiresMessageQueue;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 /**
  * An actor that proxies to the page replacement policy.
@@ -37,19 +39,20 @@ public final class PolicyActor extends AbstractActor
     this.policy = requireNonNull(policy);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Receive createReceive() {
     return receiveBuilder()
-        .match(LongArrayList.class, this::process)
+        .match(ObjectArrayList.class, this::process)
         .matchEquals(FINISH, msg -> finish())
         .build();
   }
 
-  private void process(LongArrayList events) {
+  private void process(ObjectArrayList<AccessEvent> events) {
     try {
       policy.stats().stopwatch().start();
       for (int i = 0; i < events.size(); i++) {
-        policy.record(events.getLong(i));
+        policy.record(events.get(i));
       }
     } catch (Exception e) {
       sender().tell(ERROR, self());

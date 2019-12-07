@@ -18,7 +18,9 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheWithGhostCache;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
@@ -44,7 +46,8 @@ public final class TinyCacheWithGhostCachePolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     if (tinyCache.contains(key)) {
       tinyCache.recordItem(key);
       policyStats.recordHit();
@@ -61,5 +64,10 @@ public final class TinyCacheWithGhostCachePolicy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

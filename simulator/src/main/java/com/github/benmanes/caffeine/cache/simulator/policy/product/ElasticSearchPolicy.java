@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import org.elasticsearch.common.cache.Cache;
 import org.elasticsearch.common.cache.Cache.CacheStats;
 import org.elasticsearch.common.cache.CacheBuilder;
@@ -54,7 +56,8 @@ public final class ElasticSearchPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Object value = cache.get(key);
     if (value == null) {
       if (cache.count() == maximumSize) {
@@ -78,5 +81,10 @@ public final class ElasticSearchPolicy implements Policy {
     checkState(policyStats.hitCount() == stats.getHits());
     checkState(policyStats.missCount() == stats.getMisses());
     checkState(policyStats.evictionCount() == stats.getEvictions());
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

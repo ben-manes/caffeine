@@ -19,6 +19,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
 
@@ -59,7 +61,8 @@ public final class Cache2kPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Object value = cache.peek(key);
     if (value == null) {
       policyStats.recordMiss();
@@ -80,5 +83,10 @@ public final class Cache2kPolicy implements Policy {
   @Override
   public void finished() {
     cache.close();
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

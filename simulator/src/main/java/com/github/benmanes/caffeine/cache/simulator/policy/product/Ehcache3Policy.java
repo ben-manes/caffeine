@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
@@ -61,7 +63,8 @@ public final class Ehcache3Policy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Object value = cache.putIfAbsent(key, key);
     if (value == null) {
       size++;
@@ -83,5 +86,10 @@ public final class Ehcache3Policy implements Policy {
   @Override
   public void finished() {
     cacheManager.close();
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

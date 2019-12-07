@@ -17,10 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator.parser.gradle;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Set;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the Gradle Build Cache trace files provided by the Gradle team.
@@ -38,5 +41,10 @@ public final class GradleTraceReader extends TextTraceReader {
     return lines()
         .map(uuid -> new BigInteger(uuid, 16))
         .map(num -> new AccessEvent.AccessEventBuilder(num.shiftRight(64).longValue() ^ num.longValue()).build());
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

@@ -21,11 +21,14 @@ import static java.util.stream.Collectors.toSet;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -83,12 +86,13 @@ public final class SegmentedLruPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
+    admittor.record(entry);
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
     } else {
       onHit(node);
     }
@@ -113,9 +117,9 @@ public final class SegmentedLruPolicy implements Policy {
     policyStats.recordHit();
   }
 
-  private void onMiss(long key) {
-    Node node = new Node(key);
-    data.put(key, node);
+  private void onMiss(AccessEvent entry) {
+    Node node = new Node(entry);
+    data.put(entry.getKey(), node);
     policyStats.recordMiss();
     node.appendToTail(headProbation);
     node.type = QueueType.PROBATION;
@@ -129,7 +133,7 @@ public final class SegmentedLruPolicy implements Policy {
           : headProbation.next;
       policyStats.recordEviction();
 
-      boolean admit = admittor.admit(candidate.key, victim.key);
+      boolean admit = admittor.admit(candidate.entry, victim.entry);
       if (admit) {
         evictEntry(victim);
       } else {
@@ -155,19 +159,22 @@ public final class SegmentedLruPolicy implements Policy {
 
   static final class Node {
     final long key;
+    final AccessEvent entry;
 
     Node prev;
     Node next;
     QueueType type;
 
     Node() {
+      this.entry = null;
       this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
-    Node(long key) {
-      this.key = key;
+    Node(AccessEvent entry) {
+      this.entry = entry;
+      this.key = entry.getKey();
       this.prev = UNLINKED;
       this.next = UNLINKED;
     }
@@ -221,5 +228,10 @@ public final class SegmentedLruPolicy implements Policy {
     public double percentProtected() {
       return config().getDouble("segmented-lru.percent-protected");
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

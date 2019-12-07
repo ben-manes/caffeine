@@ -16,10 +16,13 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.lirs;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the trace files provided by the authors of the LIRS algorithm.
@@ -38,5 +41,10 @@ public final class LirsTraceReader extends TextTraceReader {
         .filter(line -> !line.isEmpty())
         .filter(line -> !line.equals("*"))
         .map(key -> new AccessEvent.AccessEventBuilder(Long.parseLong(key)).build());
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

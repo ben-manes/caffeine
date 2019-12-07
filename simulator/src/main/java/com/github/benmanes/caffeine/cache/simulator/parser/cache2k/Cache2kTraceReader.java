@@ -17,8 +17,11 @@ package com.github.benmanes.caffeine.cache.simulator.parser.cache2k;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the trace files provided by the author of cache2k. See
@@ -35,5 +38,10 @@ public final class Cache2kTraceReader extends BinaryTraceReader {
   @Override
   protected long readLong(DataInputStream input) throws IOException {
     return input.readInt();
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

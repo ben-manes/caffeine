@@ -20,6 +20,8 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -80,7 +82,8 @@ public final class TwoQueuePolicy implements Policy {
 
   @Override
   @SuppressWarnings({"PMD.ConfusingTernary", "PMD.SwitchStmtsShouldHaveDefault"})
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     // On accessing a page X :
     //   if X is in Am then
     //     move X to the head of Am
@@ -181,6 +184,11 @@ public final class TwoQueuePolicy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 
   enum QueueType {

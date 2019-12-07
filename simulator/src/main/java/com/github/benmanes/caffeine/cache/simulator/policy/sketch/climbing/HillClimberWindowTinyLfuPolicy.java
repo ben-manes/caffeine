@@ -28,6 +28,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.google.common.collect.ImmutableSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -117,15 +120,16 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     boolean isFull = (data.size() >= maximumSize);
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
+    admittor.record(entry);
 
     QueueType queue = null;
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
       policyStats.recordMiss();
     } else {
       queue = node.queue;
@@ -142,14 +146,14 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
         throw new IllegalStateException();
       }
     }
-    climb(key, queue, isFull);
+    climb(entry, queue, isFull);
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
-  private void onMiss(long key) {
-    Node node = new Node(key, WINDOW);
+  private void onMiss(AccessEvent entry) {
+    Node node = new Node(entry, WINDOW);
     node.appendToTail(headWindow);
-    data.put(key, node);
+    data.put(entry.getKey(), node);
     windowSize++;
     evict();
   }
@@ -202,7 +206,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
 
     if (data.size() > maximumSize) {
       Node victim = headProbation.next;
-      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
+      Node evict = admittor.admit(candidate.entry, victim.entry) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
 
@@ -211,11 +215,11 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
   }
 
   /** Performs the hill climbing process. */
-  private void climb(long key, @Nullable QueueType queue, boolean isFull) {
+  private void climb(AccessEvent entry, @Nullable QueueType queue, boolean isFull) {
     if (queue == null) {
-      climber.onMiss(key, isFull);
+      climber.onMiss(entry, isFull);
     } else {
-      climber.onHit(key, queue, isFull);
+      climber.onHit(entry, queue, isFull);
     }
 
     double probationSize = maximumSize - windowSize - protectedSize;
@@ -313,6 +317,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
   /** A node on the double-linked list. */
   static final class Node {
     final long key;
+    final AccessEvent entry;
 
     QueueType queue;
     Node prev;
@@ -320,15 +325,17 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
 
     /** Creates a new sentinel node. */
     public Node() {
+      this.entry = null;
       this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(long key, QueueType queue) {
+    public Node(AccessEvent entry, QueueType queue) {
       this.queue = queue;
-      this.key = key;
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     public void moveToTail(Node head) {
@@ -387,5 +394,10 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
           .collect(toSet());
     }
 
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

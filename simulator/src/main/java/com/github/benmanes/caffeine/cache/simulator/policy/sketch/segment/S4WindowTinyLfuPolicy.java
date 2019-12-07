@@ -23,11 +23,14 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -83,12 +86,13 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(key);
+    admittor.record(entry);
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
       policyStats.recordMiss();
     } else if (node.status == Status.WINDOW) {
       onWindowHit(node);
@@ -102,8 +106,9 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
-  private void onMiss(long key) {
-    Node node = new Node(key, Status.WINDOW);
+  private void onMiss(AccessEvent entry) {
+    long key = entry.getKey();
+    Node node = new Node(entry, Status.WINDOW);
     node.appendToTail(headWindow);
     data.put(key, node);
     sizeWindow++;
@@ -161,7 +166,7 @@ public final class S4WindowTinyLfuPolicy implements Policy {
 
     if (data.size() > maximumSize) {
       Node victim = headMainQ[0].next;
-      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
+      Node evict = admittor.admit(candidate.entry, victim.entry) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
       sizeMainQ[0]--;
@@ -191,21 +196,22 @@ public final class S4WindowTinyLfuPolicy implements Policy {
   /** A node on the double-linked list. */
   static final class Node {
     final long key;
-
+    final AccessEvent entry;
     Status status;
     Node prev;
     Node next;
     int level;
 
     /** Creates a new, unlinked node. */
-    public Node(long key, Status status) {
+    public Node(AccessEvent entry, Status status) {
+      this.entry = entry;
       this.status = status;
-      this.key = key;
+      this.key = entry == null ? Integer.MIN_VALUE : entry.getKey();
     }
 
     /** Creates a new sentinel node. */
     static Node sentinel(int level) {
-      Node node = new Node(Long.MIN_VALUE, null);
+      Node node = new Node(null, null);
       node.level = level;
       node.prev = node;
       node.next = node;
@@ -252,5 +258,10 @@ public final class S4WindowTinyLfuPolicy implements Policy {
     public List<Double> percentMain() {
       return config().getDoubleList("s4-window-tiny-lfu.percent-main");
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -83,14 +85,15 @@ public final class MultiQueuePolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
       policyStats.recordMiss();
       node = out.remove(key);
       if (node == null) {
-        node = new Node(key);
+        node = new Node(entry);
       }
       data.put(key, node);
       if (data.size() > maximumSize) {
@@ -157,6 +160,7 @@ public final class MultiQueuePolicy implements Policy {
 
   static final class Node {
     final long key;
+    final AccessEvent entry;
 
     Node prev;
     Node next;
@@ -164,12 +168,13 @@ public final class MultiQueuePolicy implements Policy {
     int queueIndex;
     long expireTime;
 
-    Node(long key) {
-      this.key = key;
+    Node(AccessEvent entry) {
+      this.key = entry == null ? Long.MIN_VALUE : entry.getKey();
+      this.entry = entry;
     }
 
     static Node sentinel(int queueIndex) {
-      Node node = new Node(Long.MIN_VALUE);
+      Node node = new Node(null);
       node.expireTime = Long.MAX_VALUE;
       node.queueIndex = queueIndex;
       node.prev = node;
@@ -221,5 +226,10 @@ public final class MultiQueuePolicy implements Policy {
     public double percentOut() {
       return config().getDouble("multi-queue.percent-out");
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

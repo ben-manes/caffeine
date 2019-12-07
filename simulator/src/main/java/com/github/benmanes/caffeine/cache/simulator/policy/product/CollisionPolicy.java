@@ -21,6 +21,9 @@ import static java.util.stream.Collectors.toSet;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -72,7 +75,8 @@ public final class CollisionPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
+    long key = entry.getKey();
     Object value = cache.getIfPresent(key);
     if (value == null) {
       if (trackedSize == maximumSize) {
@@ -114,5 +118,10 @@ public final class CollisionPolicy implements Policy {
       return config().getStringList("collision.density").stream()
           .map(density -> Density.valueOf(density.toUpperCase(US)));
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

@@ -21,6 +21,9 @@ import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
@@ -72,12 +75,12 @@ public final class FrequentlyUsedPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent entry) {
     policyStats.recordOperation();
-    Node node = data.get(key);
-    admittor.record(key);
+    Node node = data.get(entry.getKey());
+    admittor.record(entry);
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
     } else {
       onHit(node);
     }
@@ -100,13 +103,13 @@ public final class FrequentlyUsedPolicy implements Policy {
   }
 
   /** Adds the entry, creating an initial frequency list of 1 if necessary, and evicts if needed. */
-  private void onMiss(long key) {
+  private void onMiss(AccessEvent entry) {
     FrequencyNode freq1 = (freq0.next.count == 1)
         ? freq0.next
         : new FrequencyNode(1, freq0);
-    Node node = new Node(key, freq1);
+    Node node = new Node(entry, freq1);
     policyStats.recordMiss();
-    data.put(key, node);
+    data.put(entry.getKey(), node);
     node.append();
     evict(node);
   }
@@ -115,7 +118,7 @@ public final class FrequentlyUsedPolicy implements Policy {
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
       Node victim = nextVictim(candidate);
-      boolean admit = admittor.admit(candidate.key, victim.key);
+      boolean admit = admittor.admit(candidate.entry, victim.entry);
       if (admit) {
         evictEntry(victim);
       } else {
@@ -209,6 +212,7 @@ public final class FrequentlyUsedPolicy implements Policy {
   /** A cache entry on the frequency node's chain. */
   static final class Node {
     final long key;
+    final AccessEvent entry;
 
     FrequencyNode freq;
     Node prev;
@@ -216,16 +220,18 @@ public final class FrequentlyUsedPolicy implements Policy {
 
     public Node(FrequencyNode freq) {
       this.key = Long.MIN_VALUE;
+      this.entry = null;
       this.freq = freq;
       this.prev = this;
       this.next = this;
     }
 
-    public Node(long key, FrequencyNode freq) {
+    public Node(AccessEvent entry, FrequencyNode freq) {
       this.next = null;
       this.prev = null;
       this.freq = freq;
-      this.key = key;
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     /** Appends the node to the tail of the list. */
@@ -250,5 +256,10 @@ public final class FrequentlyUsedPolicy implements Policy {
           .add("freq", freq)
           .toString();
     }
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

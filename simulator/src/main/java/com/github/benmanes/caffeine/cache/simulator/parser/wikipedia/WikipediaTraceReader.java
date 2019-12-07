@@ -17,9 +17,12 @@ package com.github.benmanes.caffeine.cache.simulator.parser.wikipedia;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -126,5 +129,10 @@ public final class WikipediaTraceReader extends TextTraceReader {
       }
     }
     return true;
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }

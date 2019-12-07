@@ -17,8 +17,11 @@ package com.github.benmanes.caffeine.cache.simulator.parser.corda;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the trace files provided by <a href="https://www.r3.com">R3</a>.
@@ -34,5 +37,10 @@ public final class CordaTraceReader extends BinaryTraceReader {
   @Override
   protected long readLong(DataInputStream input) throws IOException {
     return input.readLong();
+  }
+
+  @Override
+  public Set<Characteristics> getCharacteristicsSet() {
+    return ImmutableSet.of(Characteristics.KEY);
   }
 }
