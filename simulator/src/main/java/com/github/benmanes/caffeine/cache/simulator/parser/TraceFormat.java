@@ -20,6 +20,7 @@ import static java.util.Locale.US;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
@@ -70,12 +71,12 @@ public enum TraceFormat {
    */
   public TraceReader readFiles(List<String> filePaths) {
     return () -> {
-      LongStream events = LongStream.empty();
+      Stream<AccessEvent> events = Stream.empty();
       for (String path : filePaths) {
         List<String> parts = Splitter.on(':').limit(2).splitToList(path);
         TraceFormat format = (parts.size() == 1) ? this : named(parts.get(0));
-        LongStream next = format.factory.apply(Iterables.getLast(parts)).events();
-        events = LongStream.concat(events, next);
+        Stream<AccessEvent> next = format.factory.apply(Iterables.getLast(parts)).events();
+        events = Stream.concat(events, next);
       }
       return events;
     };
