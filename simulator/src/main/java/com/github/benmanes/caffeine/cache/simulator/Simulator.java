@@ -119,7 +119,6 @@ public final class Simulator extends AbstractActor {
 
   /** Returns a stream of trace events. */
   private Stream<AccessEvent> eventStream() throws IOException {
-    System.out.println("readers");
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings);
     }
@@ -130,7 +129,6 @@ public final class Simulator extends AbstractActor {
 
   /** Returns the actors to broadcast trace events to. */
   private List<Routee> makeRoutes() {
-    System.out.println("policies");
     return Registry.policies(settings).stream().map(policy -> {
       ActorRef actorRef = context().actorOf(Props.create(PolicyActor.class, policy));
       context().watch(actorRef);

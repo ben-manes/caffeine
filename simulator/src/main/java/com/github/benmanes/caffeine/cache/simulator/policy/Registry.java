@@ -103,7 +103,7 @@ public final class Registry {
     Set<Characteristics> traceReaderCharacteristics = format.readFiles(filePaths).getCharacteristicsSet();
     return settings.policies().stream()
         .flatMap(name -> policy(settings, name).stream())
-        .filter(policy -> (traceReaderCharacteristics).equals(policy.getCharacteristicsSet()))
+        .filter(policy -> traceReaderCharacteristics.equals(policy.getCharacteristicsSet()))
         .collect(toSet());
   }
 
