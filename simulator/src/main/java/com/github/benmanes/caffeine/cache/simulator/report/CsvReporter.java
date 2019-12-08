@@ -46,14 +46,15 @@ public final class CsvReporter extends TextReporter {
     writer.writeHeaders(headers());
     boolean mpFlag = hasMissPenalty();
     boolean hpFlag = hasHitPenalty();
+    Object[] empty = {};
     for (PolicyStats policyStats : results) {
-      Object[] mpData = mpFlag ? new Object[] {
+      Object[] mpData = {
               (policyStats.missCount() == 0) ? null : String.format("%.4f %s", policyStats.avgMissLatency(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgTotalLatency(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgMissLatencyAFS(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgTotalLatencyAFS(),getTimeUnit())
-      } : new Object[] {};
-      Object[] hpData = hpFlag ? new Object[] { policyStats.hitCount() == 0 ? null : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit())} : new Object[] {};
+      };
+      Object[] hpData = { policyStats.hitCount() == 0 ? null : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit())};
       Object[] mainData = {
               policyStats.name(),
               String.format("%.2f", 100 * policyStats.hitRate()),
@@ -65,7 +66,7 @@ public final class CsvReporter extends TextReporter {
               (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),
               policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS)
       };
-      Object[] data = mergeData(mainData,hpData,mpData);
+      Object[] data = mergeData(mainData,hpFlag ? hpData : empty,mpFlag ? mpData : empty);
       writer.writeRow(data);
     }
     writer.close();

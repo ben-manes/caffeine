@@ -43,16 +43,17 @@ public final class TableReporter extends TextReporter {
     String[][] data = new String[results.size()][headers().length];
     boolean mpFlag = hasMissPenalty();
     boolean hpFlag = hasHitPenalty();
+    String[] empty = {};
     for (int i = 0; i < results.size(); i++) {
       PolicyStats policyStats = results.get(i);
-      String[] mpData = mpFlag ? new String[] {
+      String[] mpData = {
               policyStats.missCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgMissLatency(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgTotalLatency(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgMissLatencyAFS(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgTotalLatencyAFS(),getTimeUnit())
-      } : new String[] {};
-      String[] hpData = hpFlag ? new String[] { policyStats.hitCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit())} : new String[] {};
-      String[] mainData = new String[] {
+      };
+      String[] hpData = { policyStats.hitCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit())};
+      String[] mainData = {
           policyStats.name(),
           String.format("%.2f %%", 100 * policyStats.hitRate()),
           String.format("%,d", policyStats.hitCount()),
@@ -64,7 +65,7 @@ public final class TableReporter extends TextReporter {
           policyStats.stopwatch().toString()
       };
 
-      data[i] = mergeStringData(mainData,hpData,mpData);
+      data[i] = mergeStringData(mainData,hpFlag ? hpData : empty, mpFlag ? mpData : empty);
 
     }
     return FlipTable.of(headers(), data);
