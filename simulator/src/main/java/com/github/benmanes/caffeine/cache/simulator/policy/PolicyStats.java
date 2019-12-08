@@ -42,9 +42,9 @@ public final class PolicyStats {
   private long admittedCount;
   private long rejectedCount;
   private long operationCount;
-  private long missLatency;
-  private long hitLatency;
-  private long missLatencyAFS;
+  private double missLatency;
+  private double hitLatency;
+  private double missLatencyAFS;
   private long missCountAFS;
   private HashSet<Long> seen;
 
@@ -81,7 +81,7 @@ public final class PolicyStats {
 
   public void recordHit(AccessEvent entry) {
     hitCount++;
-    long hp = getPenalty(entry,true);
+    double hp = getPenalty(entry,true);
     if(hp >= 0){
       hitLatency += hp;
     }
@@ -97,7 +97,7 @@ public final class PolicyStats {
 
   public void recordMiss(AccessEvent entry) {
     missCount++;
-    long mp = getPenalty(entry,false);
+    double mp = getPenalty(entry,false);
     if(mp >= 0) {
       if (this.seen.contains(entry.getKey())) {
         missLatencyAFS += mp;
@@ -108,7 +108,7 @@ public final class PolicyStats {
     }
   }
 
-  private long getPenalty(AccessEvent entry, boolean isHit){
+  private double getPenalty(AccessEvent entry, boolean isHit){
     if(isHit){
       if(policyCharacteristics.contains(Characteristics.HIT_PENALTY)){
         return entry.getHitPenalty();
@@ -191,36 +191,36 @@ public final class PolicyStats {
 
   public double missRateAFS() {
     long requestCount = requestCount() - Math.abs(missCount-missCountAFS);
-    return (requestCount == 0) ? 0.0 : (double) missCountAFS / requestCount;
+    return (requestCount == 0) ? 0.0 : missCountAFS /  (double)requestCount;
   }
 
-  public long totalLatency() {
+  public double totalLatency() {
     return hitLatency + missLatency;
   }
 
-  public long totalLatencyAFS() {
+  public double totalLatencyAFS() {
     return hitLatency + missLatencyAFS;
   }
   public double avgTotalLatencyAFS(){
     long reqCount = requestCount() - Math.abs(missCount-missCountAFS);
-    return (reqCount == 0) ? 0.0 : (double) totalLatencyAFS() / reqCount;
+    return (reqCount == 0) ? 0.0 : totalLatencyAFS() / reqCount;
   }
 
   public double avgTotalLatency(){
     long reqCount = requestCount();
-    return (reqCount == 0) ? 0.0 : (double) totalLatency() / reqCount;
+    return (reqCount == 0) ? 0.0 : totalLatency() / reqCount;
   }
 
   public double avgHitLatency(){
-    return (hitCount == 0) ? 0.0 : (double) hitLatency / hitCount;
+    return (hitCount == 0) ? 0.0 :  hitLatency / hitCount;
   }
 
   public double avgMissLatency(){
-    return (missCount == 0) ? 0.0 : (double) missLatency / missCount;
+    return (missCount == 0) ? 0.0 : missLatency / missCount;
   }
 
   public double avgMissLatencyAFS(){
-    return (missCountAFS == 0) ? 0.0 : (double) missLatencyAFS / missCountAFS;
+    return (missCountAFS == 0) ? 0.0 : missLatencyAFS / missCountAFS;
   }
 
   @Override

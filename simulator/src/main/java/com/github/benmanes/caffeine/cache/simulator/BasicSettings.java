@@ -106,6 +106,10 @@ public class BasicSettings {
             .collect(toSet());
   }
 
+  public String timeUnit() {
+    return config().getString("time-unit");
+  }
+
   /** Returns the config resolved at the simulator's path. */
   public Config config() {
     return config;

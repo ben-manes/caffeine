@@ -40,12 +40,12 @@ public class AccessEvent {
         return missReadRate;
     }
 
-    public long calcMissPenalty() {
-        return size/missPenalty;
+    public double calcMissPenalty() {
+        return (double) size/missReadRate;
     }
 
-    public long calcHitPenalty() {
-        return size/hitPenalty;
+    public double calcHitPenalty() {
+        return (double) size/cacheReadRate;
     }
 
     private AccessEvent(AccessEventBuilder builder) {

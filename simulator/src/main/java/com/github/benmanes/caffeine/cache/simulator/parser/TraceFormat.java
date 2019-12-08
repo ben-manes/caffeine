@@ -36,6 +36,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReade
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.penalties.gradle.GradlePenaltiesTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.rrs.address.AddressRRSTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
@@ -65,6 +66,7 @@ public enum TraceFormat {
   WIKIPEDIA(WikipediaTraceReader::new),
   MP_ADDRESS(AddressMPTraceReader::new),
   PEN_ADDRESS(AddressPenaltiesTraceReader::new),
+  RRS_ADDRESS(AddressRRSTraceReader::new),
   MP_GRADLE(GradleMPTraceReader::new),
   PEN_GRADLE(GradlePenaltiesTraceReader::new);
 

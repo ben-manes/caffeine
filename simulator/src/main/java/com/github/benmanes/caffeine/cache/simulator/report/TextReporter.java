@@ -44,10 +44,12 @@ public abstract class TextReporter implements Reporter {
 
   private final List<PolicyStats> results;
   private final BasicSettings settings;
+  private final String timeUnit;
 
   public TextReporter(Config config) {
     settings = new BasicSettings(config);
     results = new ArrayList<>();
+    timeUnit = settings.timeUnit();
     String[] mainHeaders = {
             "Policy", "Hit rate", "Hits", "Misses", "Requests",
             "Evictions", "Admit rate", "Steps", "Time"};
@@ -90,15 +92,20 @@ public abstract class TextReporter implements Reporter {
     return settings.report().ascending() ? comparator : comparator.reversed();
   }
 
-  protected boolean hasMissPenalty(){
+  boolean hasMissPenalty(){
     Set<Characteristics> characteristicsSet = settings.traceCharacteristics();
     return characteristicsSet.contains(Characteristics.MISS_PENALTY) || characteristicsSet.containsAll(ImmutableSet.of(Characteristics.SIZE,Characteristics.MISS_READ_RATE));
   }
 
-  protected boolean hasHitPenalty(){
+  boolean hasHitPenalty(){
     Set<Characteristics> characteristicsSet = settings.traceCharacteristics();
     return characteristicsSet.contains(Characteristics.HIT_PENALTY) || characteristicsSet.containsAll(ImmutableSet.of(Characteristics.SIZE,Characteristics.CACHE_READ_RATE));
   }
+
+  String getTimeUnit(){
+    return timeUnit;
+  }
+
 
   private Comparator<PolicyStats> makeComparator() {
     switch (settings.report().sortBy().toLowerCase(US)) {

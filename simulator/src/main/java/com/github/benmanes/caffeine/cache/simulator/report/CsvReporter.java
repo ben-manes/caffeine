@@ -48,12 +48,12 @@ public final class CsvReporter extends TextReporter {
     boolean hpFlag = hasHitPenalty();
     for (PolicyStats policyStats : results) {
       Object[] mpData = mpFlag ? new Object[] {
-              (policyStats.missCount() == 0) ? null : String.format("%.2f ms", policyStats.avgMissLatency()),
-              String.format("%.2f ms", policyStats.avgTotalLatency()),
-              String.format("%.2f ms", policyStats.avgMissLatencyAFS()),
-              String.format("%.2f ms", policyStats.avgTotalLatencyAFS())
+              (policyStats.missCount() == 0) ? null : String.format("%.4f %s", policyStats.avgMissLatency(),getTimeUnit()),
+              String.format("%.4f %s", policyStats.avgTotalLatency(),getTimeUnit()),
+              String.format("%.4f %s", policyStats.avgMissLatencyAFS(),getTimeUnit()),
+              String.format("%.4f %s", policyStats.avgTotalLatencyAFS(),getTimeUnit())
       } : new Object[] {};
-      Object[] hpData = hpFlag ? new Object[] { policyStats.hitCount() == 0 ? null : String.format("%.2f ms", policyStats.avgHitLatency())} : new Object[] {};
+      Object[] hpData = hpFlag ? new Object[] { policyStats.hitCount() == 0 ? null : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit())} : new Object[] {};
       Object[] mainData = {
               policyStats.name(),
               String.format("%.2f", 100 * policyStats.hitRate()),

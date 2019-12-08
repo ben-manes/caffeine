@@ -46,12 +46,12 @@ public final class TableReporter extends TextReporter {
     for (int i = 0; i < results.size(); i++) {
       PolicyStats policyStats = results.get(i);
       String[] mpData = mpFlag ? new String[] {
-              policyStats.missCount() == 0 ? "?" : String.format("%.2f ms", policyStats.avgMissLatency()),
-              String.format("%.2f ms", policyStats.avgTotalLatency()),
-              String.format("%.2f ms", policyStats.avgMissLatencyAFS()),
-              String.format("%.2f ms", policyStats.avgTotalLatencyAFS())
+              policyStats.missCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgMissLatency(),getTimeUnit()),
+              String.format("%.4f %s", policyStats.avgTotalLatency(),getTimeUnit()),
+              String.format("%.4f %s", policyStats.avgMissLatencyAFS(),getTimeUnit()),
+              String.format("%.4f %s", policyStats.avgTotalLatencyAFS(),getTimeUnit())
       } : new String[] {};
-      String[] hpData = hpFlag ? new String[] { policyStats.hitCount() == 0 ? "?" : String.format("%.2f ms", policyStats.avgHitLatency())} : new String[] {};
+      String[] hpData = hpFlag ? new String[] { policyStats.hitCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit())} : new String[] {};
       String[] mainData = new String[] {
           policyStats.name(),
           String.format("%.2f %%", 100 * policyStats.hitRate()),
