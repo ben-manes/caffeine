@@ -35,7 +35,7 @@ public final class TinyCacheWithGhostCachePolicy implements Policy {
 
   public TinyCacheWithGhostCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("sketch.TinyCache_GhostCache");
+    this.policyStats = new PolicyStats("sketch.TinyCache_GhostCache",settings.traceCharacteristics());
     tinyCache = new TinyCacheWithGhostCache((int) Math.ceil(settings.maximumSize() / 64.0),
         64, settings.randomSeed());
   }

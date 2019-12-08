@@ -98,9 +98,7 @@ public final class Registry {
 
   /** Returns all of the policies that have been configured for simulation. */
   public static Set<Policy> policies(BasicSettings settings) {
-    List<String> filePaths = settings.traceFiles().paths();
-    TraceFormat format = settings.traceFiles().format();
-    Set<Characteristics> traceReaderCharacteristics = format.readFiles(filePaths).getCharacteristicsSet();
+    Set<Characteristics> traceReaderCharacteristics = settings.traceCharacteristics();
     return settings.policies().stream()
         .flatMap(name -> policy(settings, name).stream())
         .filter(policy -> traceReaderCharacteristics.equals(policy.getCharacteristicsSet()))

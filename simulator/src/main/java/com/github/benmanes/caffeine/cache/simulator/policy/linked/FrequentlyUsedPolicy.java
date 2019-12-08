@@ -52,9 +52,9 @@ public final class FrequentlyUsedPolicy implements Policy {
   final int maximumSize;
 
   public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
-    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
-    this.admittor = admission.from(config, policyStats);
     BasicSettings settings = new BasicSettings(config);
+    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()),settings.traceCharacteristics());
+    this.admittor = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policy = requireNonNull(policy);

@@ -37,7 +37,7 @@ public final class WindowTinyCachePolicy implements Policy {
 
   public WindowTinyCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("sketch.WindowTinyCache");
+    this.policyStats = new PolicyStats("sketch.WindowTinyCache",settings.traceCharacteristics());
     int maxSize = settings.maximumSize();
     if (maxSize <= 64) {
       window = null;

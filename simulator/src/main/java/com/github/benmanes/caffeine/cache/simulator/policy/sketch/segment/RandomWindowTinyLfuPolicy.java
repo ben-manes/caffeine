@@ -54,7 +54,7 @@ public final class RandomWindowTinyLfuPolicy implements Policy {
 
   public RandomWindowTinyLfuPolicy(double percentMain, RandomWindowTinyLfuSettings settings) {
     String name = String.format("sketch.RandomWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
-    policyStats = new PolicyStats(name);
+    policyStats = new PolicyStats(name,settings.traceCharacteristics());
 
     admittor = new TinyLfu(settings.config(), policyStats);
     random = new Random(settings.randomSeed());

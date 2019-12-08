@@ -55,7 +55,7 @@ public final class LruWindowTinyLfuPolicy implements Policy {
 
   public LruWindowTinyLfuPolicy(double percentMain, LruWindowTinyLfuSettings settings) {
     String name = String.format("sketch.LruWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
-    this.policyStats = new PolicyStats(name);
+    this.policyStats = new PolicyStats(name,settings.traceCharacteristics());
 
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.maxMain = (int) (settings.maximumSize() * percentMain);

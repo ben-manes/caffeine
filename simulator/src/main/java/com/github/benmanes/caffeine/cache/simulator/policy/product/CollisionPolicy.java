@@ -48,7 +48,7 @@ public final class CollisionPolicy implements Policy {
 
   public CollisionPolicy(CollisionSettings settings, Density density) {
     policyStats = new PolicyStats(String.format("product.Collision (%s)",
-        StringUtils.capitalize(density.name().toLowerCase(US))));
+        StringUtils.capitalize(density.name().toLowerCase(US))),settings.traceCharacteristics());
     maximumSize = settings.maximumSize();
 
     CollisionBuilder<Object> builder = CollisionCache

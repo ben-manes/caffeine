@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.Characteristics;
@@ -39,7 +38,6 @@ import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.Youtube
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 /**
@@ -72,9 +70,10 @@ public enum TraceFormat {
    * Returns a new reader for streaming the events from the trace file.
    *
    * @param filePaths the path to the files in the trace's format
-   * @return a reader for streaming the events from the file
+   * @param characteristics the set of minimal required characteristics
+   * @return a reader for streaming the events from the file, not including the ones that don't have all the characteristics
    */
-  public TraceReader readFiles(List<String> filePaths) {
+  public TraceReader readFiles(List<String> filePaths, Set<Characteristics> characteristics) {
     TraceFormat self = this;
     TraceReader traceReader = new TraceReader() {
       @Override
@@ -83,7 +82,8 @@ public enum TraceFormat {
         for (String path : filePaths) {
           List<String> parts = Splitter.on(':').limit(2).splitToList(path);
           TraceFormat format = (parts.size() == 1) ? self : named(parts.get(0));
-          Stream<AccessEvent> next = format.factory.apply(Iterables.getLast(parts)).events();
+          Set<Characteristics> currCharacteristics = format.factory.apply(Iterables.getLast(parts)).getCharacteristicsSet();
+          Stream<AccessEvent> next = currCharacteristics.containsAll(characteristics) ? format.factory.apply(Iterables.getLast(parts)).events() : Stream.empty();
           events = Stream.concat(events, next);
         }
         return events;
@@ -91,23 +91,20 @@ public enum TraceFormat {
 
       @Override
       public Set<Characteristics> getCharacteristicsSet() {
-        Set<Characteristics> characteristicsSet = new HashSet<>();
-        for (String path : filePaths) {
-          List<String> parts = Splitter.on(':').limit(2).splitToList(path);
-          TraceFormat format = (parts.size() == 1) ? self : named(parts.get(0));
-          Set<Characteristics> next = format.factory.apply(Iterables.getLast(parts)).getCharacteristicsSet();
-          if(characteristicsSet.size() == 0){
-            characteristicsSet.addAll(next);
-          }else if(!characteristicsSet.equals(next)){
-            return null;
-          }
-        }
-        return ImmutableSet.copyOf(characteristicsSet);
+        return characteristics;
       }
     };
     return traceReader;
   }
-
+  /**
+   * Returns a new reader for streaming the events from the trace file, this version is to be used by rewrite
+   *
+   * @param filePaths the path to the files in the trace's format
+   * @return a reader for streaming the events from the file
+   */
+  public TraceReader readFiles(List<String> filePaths) {
+    return readFiles(filePaths,new HashSet<>());
+  }
   /** Returns the format based on its configuration name. */
   public static TraceFormat named(String name) {
     return TraceFormat.valueOf(name.replace('-', '_').toUpperCase(US));

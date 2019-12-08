@@ -89,7 +89,7 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
 
     this.strategy = strategy;
     this.initialPercentMain = percentMain;
-    this.policyStats = new PolicyStats(getPolicyName());
+    this.policyStats = new PolicyStats(getPolicyName(),settings.traceCharacteristics());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.climber = strategy.create(settings.config());
 

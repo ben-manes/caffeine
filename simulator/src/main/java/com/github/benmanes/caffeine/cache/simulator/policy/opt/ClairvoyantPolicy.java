@@ -51,7 +51,7 @@ public final class ClairvoyantPolicy implements Policy {
 
   public ClairvoyantPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("opt.Clairvoyant");
+    policyStats = new PolicyStats("opt.Clairvoyant",settings.traceCharacteristics());
     accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
     maximumSize = settings.maximumSize();

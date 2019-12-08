@@ -58,7 +58,7 @@ public final class S4WindowTinyLfuPolicy implements Policy {
 
   public S4WindowTinyLfuPolicy(double percentMain, S4WindowTinyLfuSettings settings) {
     String name = String.format("sketch.S4WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
-    this.policyStats = new PolicyStats(name);
+    this.policyStats = new PolicyStats(name,settings.traceCharacteristics());
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     this.maximumSize = settings.maximumSize();

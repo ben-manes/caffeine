@@ -76,7 +76,7 @@ public final class ArcPolicy implements Policy {
 
   public ArcPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("adaptive.Arc");
+    this.policyStats = new PolicyStats("adaptive.Arc",settings.traceCharacteristics());
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
     this.headT1 = new Node();

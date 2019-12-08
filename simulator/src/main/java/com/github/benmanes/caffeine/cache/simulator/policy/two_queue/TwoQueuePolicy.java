@@ -71,7 +71,7 @@ public final class TwoQueuePolicy implements Policy {
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
     this.maxIn = (int) (maximumSize * settings.percentIn());
-    this.policyStats = new PolicyStats("two-queue.TwoQueue");
+    this.policyStats = new PolicyStats("two-queue.TwoQueue",settings.traceCharacteristics());
     this.maxOut = (int) (maximumSize * settings.percentOut());
   }
 

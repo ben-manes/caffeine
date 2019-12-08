@@ -37,8 +37,8 @@ public final class GuavaPolicy implements Policy {
   private final PolicyStats policyStats;
 
   public GuavaPolicy(Config config) {
-    policyStats = new PolicyStats("product.Guava");
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("product.Guava",settings.traceCharacteristics());
     cache = CacheBuilder.newBuilder()
         .maximumSize(settings.maximumSize())
         .initialCapacity(settings.maximumSize())

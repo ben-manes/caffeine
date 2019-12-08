@@ -53,9 +53,9 @@ public final class LinkedPolicy implements Policy {
   final Node sentinel;
 
   public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
-    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
-    this.admittor = admission.from(config, policyStats);
     BasicSettings settings = new BasicSettings(config);
+    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()),settings.traceCharacteristics());
+    this.admittor = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.sentinel = new Node();

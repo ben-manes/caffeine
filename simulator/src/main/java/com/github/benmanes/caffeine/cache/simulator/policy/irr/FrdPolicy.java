@@ -65,7 +65,7 @@ public final class FrdPolicy implements Policy {
     FrdSettings settings = new FrdSettings(config);
     this.maximumMainResidentSize = (int) (settings.maximumSize() * settings.percentMain());
     this.maximumFilterSize = settings.maximumSize() - maximumMainResidentSize;
-    this.policyStats = new PolicyStats("irr.Frd");
+    this.policyStats = new PolicyStats("irr.Frd",settings.traceCharacteristics());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headFilter = new Node();

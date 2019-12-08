@@ -43,7 +43,7 @@ public final class TCachePolicy implements Policy {
 
   public TCachePolicy(Config config) {
     TCacheSettings settings = new TCacheSettings(config);
-    policyStats = new PolicyStats("product.TCache");
+    policyStats = new PolicyStats("product.TCache",settings.traceCharacteristics());
     cache = TCacheFactory.standardFactory().builder()
         .setMaxElements(settings.maximumSize())
         .setEvictionClass(settings.policy())

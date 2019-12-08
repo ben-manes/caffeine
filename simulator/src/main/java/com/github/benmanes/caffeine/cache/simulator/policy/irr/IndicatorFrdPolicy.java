@@ -57,7 +57,7 @@ public final class IndicatorFrdPolicy implements Policy {
     this.period = settings.period();
     this.maximumMainResidentSize = (int) (settings.maximumSize() * settings.percentMain());
     this.maximumFilterSize = settings.maximumSize() - maximumMainResidentSize;
-    this.policyStats = new PolicyStats("irr.AdaptiveFrd");
+    this.policyStats = new PolicyStats("irr.AdaptiveFrd",settings.traceCharacteristics());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headFilter = new Node();

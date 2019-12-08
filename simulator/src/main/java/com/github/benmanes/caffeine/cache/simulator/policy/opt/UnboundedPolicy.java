@@ -15,8 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
+import java.util.Base64;
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -37,14 +39,15 @@ public final class UnboundedPolicy implements Policy {
   private final PolicyStats policyStats;
   private final LongOpenHashSet data;
 
-  public UnboundedPolicy() {
-    this.policyStats = new PolicyStats("opt.Unbounded");
+  public UnboundedPolicy(Config config) {
+    BasicSettings settings = new BasicSettings(config);
+    this.policyStats = new PolicyStats("opt.Unbounded",settings.traceCharacteristics());
     this.data = new LongOpenHashSet();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new UnboundedPolicy());
+    return ImmutableSet.of(new UnboundedPolicy(config));
   }
 
   @Override

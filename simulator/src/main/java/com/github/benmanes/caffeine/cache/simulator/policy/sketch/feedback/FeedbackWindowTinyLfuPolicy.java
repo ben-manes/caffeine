@@ -82,7 +82,7 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
 
   public FeedbackWindowTinyLfuPolicy(double percentMain, FeedbackWindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(String.format(
-        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)));
+        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)),settings.traceCharacteristics());
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);

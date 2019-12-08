@@ -78,7 +78,7 @@ public class TuQueuePolicy implements Policy {
     this.headCold = new Node();
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
-    this.policyStats = new PolicyStats("two-queue.TuQueue");
+    this.policyStats = new PolicyStats("two-queue.TuQueue",settings.traceCharacteristics());
     this.maxHot = (int) (maximumSize * settings.percentHot());
     this.maxWarm = (int) (maximumSize * settings.percentWarm());
   }

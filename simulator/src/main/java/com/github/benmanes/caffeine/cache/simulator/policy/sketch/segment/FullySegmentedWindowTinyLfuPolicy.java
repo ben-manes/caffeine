@@ -66,7 +66,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
       double percentMain, FullySegmentedWindowTinyLfuSettings settings) {
     String name = String.format(
         "sketch.FullySegmentedWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
-    this.policyStats = new PolicyStats(name);
+    this.policyStats = new PolicyStats(name,settings.traceCharacteristics());
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxWindow = settings.maximumSize() - maxMain;
     this.maxMainProtected = (int) (maxMain * settings.percentMainProtected());

@@ -66,10 +66,10 @@ public final class SegmentedLruPolicy implements Policy {
   int sizeProtected;
 
   public SegmentedLruPolicy(Admission admission, Config config) {
-    this.policyStats = new PolicyStats(admission.format("linked.SegmentedLru"));
+    SegmentedLruSettings settings = new SegmentedLruSettings(config);
+    this.policyStats = new PolicyStats(admission.format("linked.SegmentedLru"),settings.traceCharacteristics());
     this.admittor = admission.from(config, policyStats);
 
-    SegmentedLruSettings settings = new SegmentedLruSettings(config);
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.maximumSize = settings.maximumSize();

@@ -40,8 +40,8 @@ public final class ExpiringMapPolicy implements Policy {
   private final PolicyStats policyStats;
 
   public ExpiringMapPolicy(Config config) {
-    policyStats = new PolicyStats("product.ExpiringMap");
     ExpiringMapSettings settings = new ExpiringMapSettings(config);
+    policyStats = new PolicyStats("product.ExpiringMap",settings.traceCharacteristics());
     cache = ExpiringMap.builder()
         .expirationPolicy(settings.policy())
         .maxSize(settings.maximumSize())

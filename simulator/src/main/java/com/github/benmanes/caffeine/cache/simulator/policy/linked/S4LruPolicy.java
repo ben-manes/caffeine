@@ -57,9 +57,9 @@ public final class S4LruPolicy implements Policy {
   private final int levels;
 
   public S4LruPolicy(Admission admission, Config config) {
-    this.policyStats = new PolicyStats(admission.format("linked.S4Lru"));
-    this.admittor = admission.from(config, policyStats);
     S4LruSettings settings = new S4LruSettings(config);
+    this.policyStats = new PolicyStats(admission.format("linked.S4Lru"),settings.traceCharacteristics());
+    this.admittor = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.levels = settings.levels();

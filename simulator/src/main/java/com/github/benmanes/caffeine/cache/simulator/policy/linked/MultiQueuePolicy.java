@@ -66,7 +66,7 @@ public final class MultiQueuePolicy implements Policy {
 
   public MultiQueuePolicy(Config config) {
     MultiQueueSettings settings = new MultiQueueSettings(config);
-    policyStats = new PolicyStats("linked.MultiQueue");
+    policyStats = new PolicyStats("linked.MultiQueue",settings.traceCharacteristics());
     threshold = new long[settings.numberOfQueues()];
     headQ = new Node[settings.numberOfQueues()];
     out = new Long2ObjectLinkedOpenHashMap<>();

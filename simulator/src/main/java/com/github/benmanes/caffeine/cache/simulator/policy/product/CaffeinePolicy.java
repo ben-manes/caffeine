@@ -38,8 +38,8 @@ public final class CaffeinePolicy implements Policy {
   private final int maximumSize;
 
   public CaffeinePolicy(Config config) {
-    policyStats = new PolicyStats("product.Caffeine");
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("product.Caffeine",settings.traceCharacteristics());
     maximumSize = settings.maximumSize();
     cache = Caffeine.newBuilder()
         .initialCapacity(maximumSize)

@@ -81,7 +81,7 @@ public final class LirsPolicy implements Policy {
     LirsSettings settings = new LirsSettings(config);
     this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
     this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
-    this.policyStats = new PolicyStats("irr.Lirs");
+    this.policyStats = new PolicyStats("irr.Lirs",settings.traceCharacteristics());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.evicted = new ArrayList<>();

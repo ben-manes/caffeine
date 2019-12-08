@@ -124,7 +124,7 @@ public final class Simulator extends AbstractActor {
     }
     List<String> filePaths = settings.traceFiles().paths();
     TraceFormat format = settings.traceFiles().format();
-    return format.readFiles(filePaths).events();
+    return format.readFiles(filePaths,settings.traceCharacteristics()).events();
   }
 
   /** Returns the actors to broadcast trace events to. */

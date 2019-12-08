@@ -62,7 +62,7 @@ public final class CarPolicy implements Policy {
 
   public CarPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("adaptive.Car");
+    this.policyStats = new PolicyStats("adaptive.Car",settings.traceCharacteristics());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headT1 = new Node();

@@ -46,8 +46,8 @@ public final class Ehcache3Policy implements Policy {
 
   @SuppressWarnings("PMD.CloseResource")
   public Ehcache3Policy(Config config) {
-    policyStats = new PolicyStats("product.Ehcache3");
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("product.Ehcache3",settings.traceCharacteristics());
     cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = cacheManager.createCache("ehcache3",
         CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,

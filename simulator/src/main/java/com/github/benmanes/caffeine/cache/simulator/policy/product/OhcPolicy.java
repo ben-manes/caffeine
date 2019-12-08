@@ -58,7 +58,7 @@ public final class OhcPolicy implements Policy {
         .eviction(policy)
         .build();
     policyStats = new PolicyStats(String.format("product.OHC (%s)",
-        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"));
+        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"),settings.traceCharacteristics());
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */

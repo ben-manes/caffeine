@@ -87,7 +87,7 @@ public final class ClockProPolicy implements Policy {
 
   public ClockProPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("irr.ClockPro");
+    policyStats = new PolicyStats("irr.ClockPro",settings.traceCharacteristics());
     maximumColdSize = settings.maximumSize();
     data = new Long2ObjectOpenHashMap<>();
     maximumSize = settings.maximumSize();

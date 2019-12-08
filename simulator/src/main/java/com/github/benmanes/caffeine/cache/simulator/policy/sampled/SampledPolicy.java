@@ -67,10 +67,10 @@ public final class SampledPolicy implements Policy {
   long tick;
 
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
-    this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
+    SampledSettings settings = new SampledSettings(config);
+    this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()),settings.traceCharacteristics());
     this.admittor = admission.from(config, policyStats);
 
-    SampledSettings settings = new SampledSettings(config);
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
     this.data = new Long2ObjectOpenHashMap<>();

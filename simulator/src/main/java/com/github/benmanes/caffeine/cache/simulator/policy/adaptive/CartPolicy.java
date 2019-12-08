@@ -66,7 +66,7 @@ public final class CartPolicy implements Policy {
 
   public CartPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("adaptive.Cart");
+    this.policyStats = new PolicyStats("adaptive.Cart",settings.traceCharacteristics());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headT1 = new Node();

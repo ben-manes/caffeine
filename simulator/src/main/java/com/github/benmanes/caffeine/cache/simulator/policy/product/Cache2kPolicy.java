@@ -45,8 +45,8 @@ public final class Cache2kPolicy implements Policy {
   public Cache2kPolicy(Config config) {
     logger.setLevel(Level.WARNING);
 
-    policyStats = new PolicyStats("product.Cache2k");
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("product.Cache2k",settings.traceCharacteristics());
     cache = Cache2kBuilder.of(Object.class, Object.class)
         .entryCapacity(settings.maximumSize())
         .strictEviction(true)

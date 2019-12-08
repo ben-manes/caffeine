@@ -42,8 +42,8 @@ public final class ElasticSearchPolicy implements Policy {
   private final int maximumSize;
 
   public ElasticSearchPolicy(Config config) {
-    policyStats = new PolicyStats("product.ElasticSearch");
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("product.ElasticSearch",settings.traceCharacteristics());
     maximumSize = settings.maximumSize();
     cache = CacheBuilder.builder()
         .setMaximumWeight(maximumSize)

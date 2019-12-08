@@ -17,8 +17,11 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
+
+import java.util.Set;
 
 /**
  * Statistics gathered by a policy execution.
@@ -27,6 +30,7 @@ import com.google.common.base.Stopwatch;
  */
 public final class PolicyStats {
   private final Stopwatch stopwatch;
+  private final Set<Characteristics> policyCharacteristics;
 
   private String name;
   private long hitCount;
@@ -36,9 +40,10 @@ public final class PolicyStats {
   private long rejectedCount;
   private long operationCount;
 
-  public PolicyStats(String name) {
+  public PolicyStats(String name, Set<Characteristics> policyCharacteristics) {
     this.name = requireNonNull(name);
     this.stopwatch = Stopwatch.createUnstarted();
+    this.policyCharacteristics = policyCharacteristics;
   }
 
   public Stopwatch stopwatch() {
@@ -139,6 +144,10 @@ public final class PolicyStats {
   public double complexity() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
+  }
+
+  public Set<Characteristics> getPolicyCharacteristics() {
+    return policyCharacteristics;
   }
 
   @Override

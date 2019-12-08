@@ -98,6 +98,14 @@ public class BasicSettings {
     return new SyntheticSettings();
   }
 
+  public Set<Characteristics> traceCharacteristics() {
+    return config().getStringList("trace-characteristics").stream()
+            .map(String::toUpperCase)
+            .map(name -> name.replaceAll("-","_"))
+            .map(Characteristics::valueOf)
+            .collect(toSet());
+  }
+
   /** Returns the config resolved at the simulator's path. */
   public Config config() {
     return config;

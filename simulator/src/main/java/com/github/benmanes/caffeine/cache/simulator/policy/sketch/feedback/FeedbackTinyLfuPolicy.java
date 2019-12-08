@@ -66,7 +66,7 @@ public final class FeedbackTinyLfuPolicy implements Policy {
 
   public FeedbackTinyLfuPolicy(Config config) {
     FeedbackTinyLfuSettings settings = new FeedbackTinyLfuSettings(config);
-    this.policyStats = new PolicyStats("sketch.FeedbackTinyLfu");
+    this.policyStats = new PolicyStats("sketch.FeedbackTinyLfu",settings.traceCharacteristics());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();

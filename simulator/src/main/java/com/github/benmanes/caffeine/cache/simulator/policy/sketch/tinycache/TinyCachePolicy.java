@@ -35,7 +35,7 @@ public final class TinyCachePolicy implements Policy {
 
   public TinyCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("sketch.TinyCache");
+    this.policyStats = new PolicyStats("sketch.TinyCache",settings.traceCharacteristics());
     tinyCache = new TinyCache((int) Math.ceil(settings.maximumSize() / 64.0),
         64, settings.randomSeed());
   }
