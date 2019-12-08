@@ -25,6 +25,9 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.mp.address.AddressMPTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.mp.gradle.GradleMPTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.penalties.address.AddressPenaltiesTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
@@ -32,6 +35,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceReade
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.penalties.gradle.GradlePenaltiesTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
@@ -58,7 +62,11 @@ public enum TraceFormat {
   SNIA_CAMBRIDGE(CambridgeTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
   UMASS_YOUTUBE(YoutubeTraceReader::new),
-  WIKIPEDIA(WikipediaTraceReader::new);
+  WIKIPEDIA(WikipediaTraceReader::new),
+  MP_ADDRESS(AddressMPTraceReader::new),
+  PEN_ADDRESS(AddressPenaltiesTraceReader::new),
+  MP_GRADLE(GradleMPTraceReader::new),
+  PEN_GRADLE(GradlePenaltiesTraceReader::new);
 
   private final Function<String, TraceReader> factory;
 

@@ -105,7 +105,6 @@ public final class Simulator extends AbstractActor {
       if(remaining == 0){
         throw new Exception("No policies that match the given trace-characteristics");
       }
-      System.out.println("events created");
       ObjectArrayList<AccessEvent> batch = new ObjectArrayList<>(batchSize);
       for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
         batch.add(i.next());

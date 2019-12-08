@@ -54,7 +54,7 @@ public abstract class TextReporter implements Reporter {
     String[] hpHeaders = {"Avg. Hit Penalty"};
     String[] mpHeaders = {"Avg. Miss Penalty","Avg. Total Penalty","Avg. Miss Penalty (AFS)","Avg. Total Penalty (AFS)"};
     String[] empty = {};
-    HEADERS = mergeStringData(mainHeaders,hasHitPenalty()?hpHeaders:empty,hasMissPenalty()?mpHeaders:empty);
+    HEADERS = mergeStringData(mainHeaders,hasHitPenalty() ? hpHeaders : empty,hasMissPenalty() ? mpHeaders : empty);
   }
 
   /** Returns the column headers. */

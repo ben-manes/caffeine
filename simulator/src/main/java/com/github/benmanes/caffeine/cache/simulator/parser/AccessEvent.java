@@ -9,7 +9,7 @@ public class AccessEvent {
     //required fields
     private long key;
 
-    //optional fields
+    //optional fields - size is in bytes, and read rates are in bytes per ms
     private long missPenalty;
     private long hitPenalty;
     private long size;

@@ -119,7 +119,7 @@ public final class PolicyStats {
       if (policyCharacteristics.contains(Characteristics.MISS_PENALTY)) {
         return entry.getMissPenalty();
       } else if (policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE, Characteristics.MISS_READ_RATE))) {
-       return entry.calcHitPenalty();
+       return entry.calcMissPenalty();
       }
     }
     return -1;
