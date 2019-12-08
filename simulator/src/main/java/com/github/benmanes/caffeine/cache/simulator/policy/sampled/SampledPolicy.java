@@ -102,13 +102,13 @@ public final class SampledPolicy implements Policy {
     if (node == null) {
       node = new Node(entry, data.size(), now);
       policyStats.recordOperation();
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       table[node.index] = node;
       data.put(key, node);
       evict(node);
     } else {
       policyStats.recordOperation();
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
       node.accessTime = now;
       node.frequency++;
     }

@@ -49,10 +49,10 @@ public final class TinyCachePolicy implements Policy {
   public void record(AccessEvent entry) {
     long key = entry.getKey();
     if (tinyCache.contains(key)) {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else {
       boolean evicted = tinyCache.addItem(key);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       if (evicted) {
         policyStats.recordEviction();
       }

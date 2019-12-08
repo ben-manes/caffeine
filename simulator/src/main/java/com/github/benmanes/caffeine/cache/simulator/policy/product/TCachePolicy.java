@@ -61,10 +61,10 @@ public final class TCachePolicy implements Policy {
     long key = entry.getKey();
     Object value = cache.get(key);
     if (value == null) {
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       cache.put(key, key);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

@@ -17,9 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator.report;
 
 import java.io.StringWriter;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
@@ -40,21 +44,37 @@ public final class CsvReporter extends TextReporter {
     StringWriter output = new StringWriter();
     CsvWriter writer = new CsvWriter(output, new CsvWriterSettings());
     writer.writeHeaders(headers());
+    boolean mpFlag = hasMissPenalty();
+    boolean hpFlag = hasHitPenalty();
     for (PolicyStats policyStats : results) {
-      Object[] data = {
-          policyStats.name(),
-          String.format("%.2f", 100 * policyStats.hitRate()),
-          policyStats.hitCount(),
-          policyStats.missCount(),
-          policyStats.requestCount(),
-          policyStats.evictionCount(),
-          String.format("%.2f", 100 * policyStats.admissionRate()),
-          (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),
-          policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS)
+      Object[] mpData = mpFlag ? new Object[] {
+              (policyStats.missCount() == 0) ? null : String.format("%.2f ms", policyStats.avgMissLatency()),
+              String.format("%.2f ms", policyStats.avgTotalLatency()),
+              String.format("%.2f ms", policyStats.avgMissLatencyAFS()),
+              String.format("%.2f ms", policyStats.avgTotalLatencyAFS())
+      } : new Object[] {};
+      Object[] hpData = hpFlag ? new Object[] { policyStats.hitCount() == 0 ? null : String.format("%.2f ms", policyStats.avgHitLatency())} : new Object[] {};
+      Object[] mainData = {
+              policyStats.name(),
+              String.format("%.2f", 100 * policyStats.hitRate()),
+              policyStats.hitCount(),
+              policyStats.missCount(),
+              policyStats.requestCount(),
+              policyStats.evictionCount(),
+              String.format("%.2f", 100 * policyStats.admissionRate()),
+              (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),
+              policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS)
       };
+      Object[] data = mergeData(mainData,hpData,mpData);
       writer.writeRow(data);
     }
     writer.close();
     return output.toString();
+  }
+
+  private static Object[] mergeData(Object[] ...arrays) {
+    return Stream.of(arrays)
+            .flatMap(Stream::of)
+            .toArray(Object[]::new);
   }
 }

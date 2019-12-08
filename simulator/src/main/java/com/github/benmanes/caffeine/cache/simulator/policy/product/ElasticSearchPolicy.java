@@ -64,9 +64,9 @@ public final class ElasticSearchPolicy implements Policy {
         policyStats.recordEviction();
       }
       cache.put(key, key);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

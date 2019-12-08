@@ -94,10 +94,10 @@ public class TuQueuePolicy implements Policy {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       onMiss(key);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
       onHit(node);
     }
   }

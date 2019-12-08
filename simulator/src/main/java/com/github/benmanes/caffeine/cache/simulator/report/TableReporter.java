@@ -16,8 +16,12 @@
 package com.github.benmanes.caffeine.cache.simulator.report;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;
 
@@ -37,9 +41,18 @@ public final class TableReporter extends TextReporter {
   @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   protected String assemble(List<PolicyStats> results) {
     String[][] data = new String[results.size()][headers().length];
+    boolean mpFlag = hasMissPenalty();
+    boolean hpFlag = hasHitPenalty();
     for (int i = 0; i < results.size(); i++) {
       PolicyStats policyStats = results.get(i);
-      data[i] = new String[] {
+      String[] mpData = mpFlag ? new String[] {
+              policyStats.missCount() == 0 ? "?" : String.format("%.2f ms", policyStats.avgMissLatency()),
+              String.format("%.2f ms", policyStats.avgTotalLatency()),
+              String.format("%.2f ms", policyStats.avgMissLatencyAFS()),
+              String.format("%.2f ms", policyStats.avgTotalLatencyAFS())
+      } : new String[] {};
+      String[] hpData = hpFlag ? new String[] { policyStats.hitCount() == 0 ? "?" : String.format("%.2f ms", policyStats.avgHitLatency())} : new String[] {};
+      String[] mainData = new String[] {
           policyStats.name(),
           String.format("%.2f %%", 100 * policyStats.hitRate()),
           String.format("%,d", policyStats.hitCount()),
@@ -50,6 +63,9 @@ public final class TableReporter extends TextReporter {
           steps(policyStats),
           policyStats.stopwatch().toString()
       };
+
+      data[i] = mergeStringData(mainData,hpData,mpData);
+
     }
     return FlipTable.of(headers(), data);
   }
@@ -59,4 +75,6 @@ public final class TableReporter extends TextReporter {
     long complexity = (long) (100 * policyStats.complexity());
     return (operations == 0) ? "?" : String.format("%,d (%,d %%)", operations, complexity);
   }
+
+
 }

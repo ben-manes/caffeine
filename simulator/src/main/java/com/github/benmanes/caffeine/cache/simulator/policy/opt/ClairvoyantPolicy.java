@@ -31,7 +31,7 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
+import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
 
 /**
  * <pre>Bélády's</pre> optimal page replacement policy. The upper bound of the hit rate is estimated
@@ -41,7 +41,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
  */
 public final class ClairvoyantPolicy implements Policy {
   private final Long2ObjectMap<IntPriorityQueue> accessTimes;
-  private final LongArrayFIFOQueue future;
+  private final ObjectArrayFIFOQueue<AccessEvent> future;
   private final PolicyStats policyStats;
   private final IntSortedSet data;
   private final int maximumSize;
@@ -55,7 +55,7 @@ public final class ClairvoyantPolicy implements Policy {
     accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
     maximumSize = settings.maximumSize();
-    future = new LongArrayFIFOQueue();
+    future = new ObjectArrayFIFOQueue<AccessEvent>();
     data = new IntRBTreeSet();
   }
 
@@ -66,9 +66,9 @@ public final class ClairvoyantPolicy implements Policy {
 
   @Override
   public void record(AccessEvent entry) {
-    long key= entry.getKey();
+    long key = entry.getKey();
     tick++;
-    future.enqueue(key);
+    future.enqueue(entry);
     IntPriorityQueue times = accessTimes.get(key);
     if (times == null) {
       times = new IntArrayFIFOQueue();
@@ -86,13 +86,14 @@ public final class ClairvoyantPolicy implements Policy {
   public void finished() {
     policyStats.stopwatch().start();
     while (!future.isEmpty()) {
-      process(future.dequeueLong());
+      process(future.dequeue());
     }
     policyStats.stopwatch().stop();
   }
 
   /** Performs the cache operations for the given key. */
-  private void process(long key) {
+  private void process(AccessEvent entry) {
+    long key = entry.getKey();
     IntPriorityQueue times = accessTimes.get(key);
 
     int lastAccess = times.dequeueInt();
@@ -105,9 +106,9 @@ public final class ClairvoyantPolicy implements Policy {
       data.add(times.firstInt());
     }
     if (found) {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else {
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       if (data.size() > maximumSize) {
         evict();
       }

@@ -81,10 +81,10 @@ public final class CarPolicy implements Policy {
     long key = entry.getKey();
     Node node = data.get(key);
     if (isHit(node)) {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
       onHit(node);
     } else {
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       onMiss(key, node);
     }
   }

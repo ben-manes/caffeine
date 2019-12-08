@@ -76,6 +76,7 @@ public final class Simulator extends AbstractActor {
     settings = new BasicSettings(config);
 
     List<Routee> routes = makeRoutes();
+
     router = new Router(new BroadcastRoutingLogic(), routes);
     remaining = routes.size();
 
@@ -101,6 +102,10 @@ public final class Simulator extends AbstractActor {
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() {
     try (Stream<AccessEvent> events = eventStream()) {
+      if(remaining == 0){
+        throw new Exception("No policies that match the given trace-characteristics");
+      }
+      System.out.println("events created");
       ObjectArrayList<AccessEvent> batch = new ObjectArrayList<>(batchSize);
       for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
         batch.add(i.next());
@@ -139,7 +144,7 @@ public final class Simulator extends AbstractActor {
   /** Add the stats to the reporter, print if completed, and stop the simulator. */
   private void reportStats(PolicyStats stats) throws IOException {
     reporter.add(stats);
-    if (--remaining == 0) {
+    if (--remaining <= 0) {
       reporter.print();
       context().stop(self());
       System.out.println("Executed in " + stopwatch);

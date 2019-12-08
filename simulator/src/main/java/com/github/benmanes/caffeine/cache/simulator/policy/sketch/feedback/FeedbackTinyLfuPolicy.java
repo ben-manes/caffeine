@@ -103,10 +103,10 @@ public final class FeedbackTinyLfuPolicy implements Policy {
     Node node = data.get(key);
     if (node == null) {
       onMiss(entry);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else {
       onHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

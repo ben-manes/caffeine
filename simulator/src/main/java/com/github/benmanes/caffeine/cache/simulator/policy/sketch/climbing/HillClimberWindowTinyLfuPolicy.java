@@ -130,18 +130,18 @@ public final class HillClimberWindowTinyLfuPolicy implements Policy {
     QueueType queue = null;
     if (node == null) {
       onMiss(entry);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else {
       queue = node.queue;
       if (queue == WINDOW) {
         onWindowHit(node);
-        policyStats.recordHit();
+        policyStats.recordHit(entry);
       } else if (queue == PROBATION) {
         onProbationHit(node);
-        policyStats.recordHit();
+        policyStats.recordHit(entry);
       } else if (queue == PROTECTED) {
         onProtectedHit(node);
-        policyStats.recordHit();
+        policyStats.recordHit(entry);
       } else {
         throw new IllegalStateException();
       }

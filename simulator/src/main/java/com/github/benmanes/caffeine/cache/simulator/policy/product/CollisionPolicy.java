@@ -84,10 +84,10 @@ public final class CollisionPolicy implements Policy {
         trackedSize--;
       }
       cache.putIfAbsent(key, key);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       trackedSize++;
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

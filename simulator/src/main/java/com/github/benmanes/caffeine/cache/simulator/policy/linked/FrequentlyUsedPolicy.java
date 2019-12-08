@@ -88,7 +88,7 @@ public final class FrequentlyUsedPolicy implements Policy {
 
   /** Moves the entry to the next higher frequency list, creating it if necessary. */
   private void onHit(Node node) {
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
 
     int newCount = node.freq.count + 1;
     FrequencyNode freqN = (node.freq.next.count == newCount)
@@ -108,7 +108,7 @@ public final class FrequentlyUsedPolicy implements Policy {
         ? freq0.next
         : new FrequencyNode(1, freq0);
     Node node = new Node(entry, freq1);
-    policyStats.recordMiss();
+    policyStats.recordMiss(entry);
     data.put(entry.getKey(), node);
     node.append();
     evict(node);

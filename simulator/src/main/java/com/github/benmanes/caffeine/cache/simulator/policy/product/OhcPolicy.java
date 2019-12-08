@@ -75,9 +75,9 @@ public final class OhcPolicy implements Policy {
     Object value = cache.get(key);
     if (value == null) {
       cache.put(key, key);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

@@ -24,10 +24,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
@@ -36,9 +40,7 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public abstract class TextReporter implements Reporter {
-  private static final String[] HEADERS = {
-      "Policy", "Hit rate", "Hits", "Misses", "Requests",
-      "Evictions", "Admit rate", "Steps", "Time"};
+  private final String[] HEADERS;
 
   private final List<PolicyStats> results;
   private final BasicSettings settings;
@@ -46,6 +48,13 @@ public abstract class TextReporter implements Reporter {
   public TextReporter(Config config) {
     settings = new BasicSettings(config);
     results = new ArrayList<>();
+    String[] mainHeaders = {
+            "Policy", "Hit rate", "Hits", "Misses", "Requests",
+            "Evictions", "Admit rate", "Steps", "Time"};
+    String[] hpHeaders = {"Avg. Hit Penalty"};
+    String[] mpHeaders = {"Avg. Miss Penalty","Avg. Total Penalty","Avg. Miss Penalty (AFS)","Avg. Total Penalty (AFS)"};
+    String[] empty = {};
+    HEADERS = mergeStringData(mainHeaders,hasHitPenalty()?hpHeaders:empty,hasMissPenalty()?mpHeaders:empty);
   }
 
   /** Returns the column headers. */
@@ -81,6 +90,16 @@ public abstract class TextReporter implements Reporter {
     return settings.report().ascending() ? comparator : comparator.reversed();
   }
 
+  protected boolean hasMissPenalty(){
+    Set<Characteristics> characteristicsSet = settings.traceCharacteristics();
+    return characteristicsSet.contains(Characteristics.MISS_PENALTY) || characteristicsSet.containsAll(ImmutableSet.of(Characteristics.SIZE,Characteristics.MISS_READ_RATE));
+  }
+
+  protected boolean hasHitPenalty(){
+    Set<Characteristics> characteristicsSet = settings.traceCharacteristics();
+    return characteristicsSet.contains(Characteristics.HIT_PENALTY) || characteristicsSet.containsAll(ImmutableSet.of(Characteristics.SIZE,Characteristics.CACHE_READ_RATE));
+  }
+
   private Comparator<PolicyStats> makeComparator() {
     switch (settings.report().sortBy().toLowerCase(US)) {
       case "policy":
@@ -102,5 +121,11 @@ public abstract class TextReporter implements Reporter {
       default:
         throw new IllegalArgumentException("Unknown sort order: " + settings.report().sortBy());
     }
+  }
+
+  protected static String[] mergeStringData(String[] ...arrays) {
+    return Stream.of(arrays)
+            .flatMap(Stream::of)
+            .toArray(String[]::new);
   }
 }

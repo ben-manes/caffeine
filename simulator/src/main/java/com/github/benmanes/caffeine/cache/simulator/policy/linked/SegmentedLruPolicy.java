@@ -114,13 +114,13 @@ public final class SegmentedLruPolicy implements Policy {
       node.type = QueueType.PROTECTED;
       node.appendToTail(headProtected);
     }
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
   }
 
   private void onMiss(AccessEvent entry) {
     Node node = new Node(entry);
     data.put(entry.getKey(), node);
-    policyStats.recordMiss();
+    policyStats.recordMiss(entry);
     node.appendToTail(headProbation);
     node.type = QueueType.PROBATION;
     evict(node);

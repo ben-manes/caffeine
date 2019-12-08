@@ -107,7 +107,7 @@ public final class ClockProPolicy implements Policy {
     Node node = data.get(key);
 
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
     } else if (node.status == Status.TEST) {
       onNonResidentHit(node);
     } else {
@@ -115,12 +115,11 @@ public final class ClockProPolicy implements Policy {
     }
   }
 
-  private void onMiss(long key) {
+  private void onMiss(AccessEvent entry) {
     policyStats.recordOperation();
-    policyStats.recordMiss();
-
-    Node node = new Node(key);
-    data.put(key, node);
+    policyStats.recordMiss(entry);
+    Node node = new Node(entry);
+    data.put(entry.getKey(), node);
     add(node);
     sizeCold++;
 
@@ -129,7 +128,7 @@ public final class ClockProPolicy implements Policy {
 
   private void onNonResidentHit(Node node) {
     policyStats.recordOperation();
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
 
     if (maximumColdSize < maximumSize) {
       maximumColdSize++;
@@ -147,7 +146,7 @@ public final class ClockProPolicy implements Policy {
 
   private void onHit(Node node) {
     policyStats.recordOperation();
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
     node.marked = true;
   }
 
@@ -315,15 +314,17 @@ public final class ClockProPolicy implements Policy {
 
   private static final class Node {
     final long key;
+    final AccessEvent entry;
     boolean marked;
     Status status;
 
     Node prev;
     Node next;
 
-    public Node(long key) {
+    public Node(AccessEvent entry) {
       status = Status.COLD;
-      this.key = key;
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     /** Removes the node from the list. */

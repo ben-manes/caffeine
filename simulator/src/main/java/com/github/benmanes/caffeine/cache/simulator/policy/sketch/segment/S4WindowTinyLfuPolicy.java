@@ -93,13 +93,13 @@ public final class S4WindowTinyLfuPolicy implements Policy {
     admittor.record(entry);
     if (node == null) {
       onMiss(entry);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else if (node.status == Status.WINDOW) {
       onWindowHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else if (node.status == Status.MAIN) {
       onMainHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else {
       throw new IllegalStateException();
     }

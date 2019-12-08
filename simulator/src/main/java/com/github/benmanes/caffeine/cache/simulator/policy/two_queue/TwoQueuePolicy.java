@@ -103,7 +103,7 @@ public final class TwoQueuePolicy implements Policy {
       switch (node.type) {
         case MAIN:
           node.moveToTail(headMain);
-          policyStats.recordHit();
+          policyStats.recordHit(entry);
           return;
         case OUT:
           node.remove();
@@ -115,11 +115,11 @@ public final class TwoQueuePolicy implements Policy {
           node.type = QueueType.MAIN;
           sizeMain++;
 
-          policyStats.recordMiss();
+          policyStats.recordMiss(entry);
           return;
         case IN:
           // do nothing
-          policyStats.recordHit();
+          policyStats.recordHit(entry);
           return;
       }
     } else {
@@ -130,7 +130,7 @@ public final class TwoQueuePolicy implements Policy {
       node.appendToTail(headIn);
       sizeIn++;
 
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     }
   }
 

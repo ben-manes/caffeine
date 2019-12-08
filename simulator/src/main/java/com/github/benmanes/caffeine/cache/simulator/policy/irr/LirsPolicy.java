@@ -121,7 +121,7 @@ public final class LirsPolicy implements Policy {
     // it to the top of stack S. If the LIR block is originally located at the bottom of the
     // stack, we conduct a stack pruning. This case is illustrated in the transition from state
     // (a) to state (b) in Fig. 2.
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
 
     boolean wasBottom = (headS.prevS == node);
     node.moveToTop(StackType.S);
@@ -138,7 +138,7 @@ public final class LirsPolicy implements Policy {
     // stack pruning is then conducted. This case is illustrated in the transition from state (a)
     // to state (c) in Fig. 2. b) If X is not in stack S, we leave its status unchanged and move
     // it to the top of stack Q.
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
 
     boolean isInStack = node.isInStack(StackType.S);
     boolean isTop = node.isStackTop(StackType.S);
@@ -167,7 +167,7 @@ public final class LirsPolicy implements Policy {
     // size reaches Llirs. After that, HIR status is given to any blocks that are accessed for the
     // first time and to blocks that have not been accessed for a long time so that currently they
     // are not in stack S.
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
 
     if (sizeHot < maximumHotSize) {
       onLirWarmupMiss(node);

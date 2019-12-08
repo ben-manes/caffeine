@@ -136,16 +136,16 @@ public final class FeedbackWindowTinyLfuPolicy implements Policy {
     Node node = data.get(key);
     if (node == null) {
       onMiss(entry);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else if (node.status == Status.WINDOW) {
       onWindowHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else if (node.status == Status.PROBATION) {
       onProbationHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else if (node.status == Status.PROTECTED) {
       onProtectedHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else {
       throw new IllegalStateException();
     }

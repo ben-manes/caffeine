@@ -50,11 +50,11 @@ public final class TinyCacheWithGhostCachePolicy implements Policy {
     long key = entry.getKey();
     if (tinyCache.contains(key)) {
       tinyCache.recordItem(key);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else {
       boolean evicted = tinyCache.addItem(key);
       tinyCache.recordItem(key);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       if (evicted) {
         policyStats.recordEviction();
       }

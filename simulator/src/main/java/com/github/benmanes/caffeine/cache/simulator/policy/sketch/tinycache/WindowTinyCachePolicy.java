@@ -59,14 +59,14 @@ public final class WindowTinyCachePolicy implements Policy {
     long key = entry.getKey();
     if (tinyCache.contains(key) || ((window != null) && window.contains(key))) {
       tinyCache.recordItem(key);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else {
       boolean evicted = tinyCache.addItem(key);
       if (!evicted && (window != null)) {
         evicted = window.addItem(key);
       }
       tinyCache.recordItem(key);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       if (evicted) {
         policyStats.recordEviction();
       }

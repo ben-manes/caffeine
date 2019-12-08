@@ -83,7 +83,7 @@ public final class FrdPolicy implements Policy {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      node = new Node(key);
+      node = new Node(entry);
       data.put(key,node);
       onMiss(node);
     } else if (node.status == Status.FILTER) {
@@ -100,7 +100,7 @@ public final class FrdPolicy implements Policy {
   private void onMiss(Node node) {
     // Initially, both the filter and reuse distance stacks are filled with newly arrived blocks
     // from the reuse distance stack to the filter stack.
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
 
     if (residentSize < maximumMainResidentSize) {
       onMainWarmupMiss(node);
@@ -148,7 +148,7 @@ public final class FrdPolicy implements Policy {
     // stack. The associated history block should be updated to maintain reuse distance order (i.e.,
     // move its history block in the reuse distance stack to the MRU position of the reuse distance
     // stack).
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
 
     node.moveToTop(StackType.FILTER);
     node.moveToTop(StackType.MAIN);
@@ -159,7 +159,7 @@ public final class FrdPolicy implements Policy {
     // the reuse distance stack. If the corresponding block is in the LRU position of the reuse
     // distance stack (i.e., the oldest resident block), the history blocks between the LRU position
     // and the 2nd oldest resident block are removed. Otherwise, no history block removing occurs.
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
 
     boolean wasBottom = (headMain.prevMain == node);
     node.moveToTop(StackType.MAIN);
@@ -190,7 +190,7 @@ public final class FrdPolicy implements Policy {
     // move the history hit block to the MRU position in the reuse distance stack and change it to a
     // resident block. No insertion or eviction occurs in the filter stack.
     policyStats.recordEviction();
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
 
     pruneStack();
     Node victim = headMain.prevMain;
@@ -236,6 +236,7 @@ public final class FrdPolicy implements Policy {
 
   final class Node {
     final long key;
+    final AccessEvent entry;
 
     Status status;
 
@@ -251,10 +252,12 @@ public final class FrdPolicy implements Policy {
       key = Long.MIN_VALUE;
       prevMain = nextMain = this;
       prevFilter = nextFilter = this;
+      entry = null;
     }
 
-    Node(long key) {
-      this.key = key;
+    Node(AccessEvent entry) {
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     public boolean isInStack(StackType stackType) {

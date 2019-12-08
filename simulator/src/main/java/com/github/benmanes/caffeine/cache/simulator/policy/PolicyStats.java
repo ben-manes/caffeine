@@ -18,9 +18,12 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 import static java.util.Objects.requireNonNull;
 
 import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableSet;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -39,11 +42,17 @@ public final class PolicyStats {
   private long admittedCount;
   private long rejectedCount;
   private long operationCount;
+  private long missLatency;
+  private long hitLatency;
+  private long missLatencyAFS;
+  private long missCountAFS;
+  private HashSet<Long> seen;
 
   public PolicyStats(String name, Set<Characteristics> policyCharacteristics) {
     this.name = requireNonNull(name);
     this.stopwatch = Stopwatch.createUnstarted();
     this.policyCharacteristics = policyCharacteristics;
+    this.seen = new HashSet<>();
   }
 
   public Stopwatch stopwatch() {
@@ -70,8 +79,12 @@ public final class PolicyStats {
     operationCount += operations;
   }
 
-  public void recordHit() {
+  public void recordHit(AccessEvent entry) {
     hitCount++;
+    long hp = getPenalty(entry,true);
+    if(hp >= 0){
+      hitLatency += hp;
+    }
   }
 
   public long hitCount() {
@@ -82,8 +95,34 @@ public final class PolicyStats {
     hitCount += hits;
   }
 
-  public void recordMiss() {
+  public void recordMiss(AccessEvent entry) {
     missCount++;
+    long mp = getPenalty(entry,false);
+    if(mp >= 0) {
+      if (this.seen.contains(entry.getKey())) {
+        missLatencyAFS += mp;
+        missCountAFS++;
+      }
+      this.seen.add(entry.getKey());
+      missLatency += mp;
+    }
+  }
+
+  private long getPenalty(AccessEvent entry, boolean isHit){
+    if(isHit){
+      if(policyCharacteristics.contains(Characteristics.HIT_PENALTY)){
+        return entry.getHitPenalty();
+      }else if(policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE,Characteristics.CACHE_READ_RATE))){
+        return entry.calcHitPenalty();
+      }
+    }else {
+      if (policyCharacteristics.contains(Characteristics.MISS_PENALTY)) {
+        return entry.getMissPenalty();
+      } else if (policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE, Characteristics.MISS_READ_RATE))) {
+       return entry.calcHitPenalty();
+      }
+    }
+    return -1;
   }
 
   public long missCount() {
@@ -148,6 +187,40 @@ public final class PolicyStats {
 
   public Set<Characteristics> getPolicyCharacteristics() {
     return policyCharacteristics;
+  }
+
+  public double missRateAFS() {
+    long requestCount = requestCount() - Math.abs(missCount-missCountAFS);
+    return (requestCount == 0) ? 0.0 : (double) missCountAFS / requestCount;
+  }
+
+  public long totalLatency() {
+    return hitLatency + missLatency;
+  }
+
+  public long totalLatencyAFS() {
+    return hitLatency + missLatencyAFS;
+  }
+  public double avgTotalLatencyAFS(){
+    long reqCount = requestCount() - Math.abs(missCount-missCountAFS);
+    return (reqCount == 0) ? 0.0 : (double) totalLatencyAFS() / reqCount;
+  }
+
+  public double avgTotalLatency(){
+    long reqCount = requestCount();
+    return (reqCount == 0) ? 0.0 : (double) totalLatency() / reqCount;
+  }
+
+  public double avgHitLatency(){
+    return (hitCount == 0) ? 0.0 : (double) hitLatency / hitCount;
+  }
+
+  public double avgMissLatency(){
+    return (missCount == 0) ? 0.0 : (double) missLatency / missCount;
+  }
+
+  public double avgMissLatencyAFS(){
+    return (missCountAFS == 0) ? 0.0 : (double) missLatencyAFS / missCountAFS;
   }
 
   @Override

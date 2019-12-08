@@ -90,7 +90,7 @@ public final class MultiQueuePolicy implements Policy {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       node = out.remove(key);
       if (node == null) {
         node = new Node(entry);
@@ -101,7 +101,7 @@ public final class MultiQueuePolicy implements Policy {
         evict();
       }
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
       node.remove();
     }
     node.reference++;

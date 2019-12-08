@@ -65,13 +65,13 @@ public final class Cache2kPolicy implements Policy {
     long key = entry.getKey();
     Object value = cache.peek(key);
     if (value == null) {
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       if (cache.asMap().size() == maximumSize) {
         policyStats.recordEviction();
       }
       cache.put(key, key);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

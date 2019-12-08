@@ -68,13 +68,13 @@ public final class Ehcache3Policy implements Policy {
     Object value = cache.putIfAbsent(key, key);
     if (value == null) {
       size++;
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       if (size > maximumSize) {
         policyStats.recordEviction();
         size--;
       }
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

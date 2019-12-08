@@ -101,7 +101,7 @@ public final class Registry {
     Set<Characteristics> traceReaderCharacteristics = settings.traceCharacteristics();
     return settings.policies().stream()
         .flatMap(name -> policy(settings, name).stream())
-        .filter(policy -> traceReaderCharacteristics.equals(policy.getCharacteristicsSet()))
+        .filter(policy -> traceReaderCharacteristics.containsAll(policy.getCharacteristicsSet()))
         .collect(toSet());
   }
 

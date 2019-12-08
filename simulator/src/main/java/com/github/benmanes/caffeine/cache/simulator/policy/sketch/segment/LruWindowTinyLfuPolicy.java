@@ -92,13 +92,13 @@ public final class LruWindowTinyLfuPolicy implements Policy {
       sizeWindow++;
       evict();
 
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else if (node.status == Status.WINDOW) {
       node.moveToTail(headWindow);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else if (node.status == Status.MAIN) {
       node.moveToTail(headMain);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else {
       throw new IllegalStateException();
     }

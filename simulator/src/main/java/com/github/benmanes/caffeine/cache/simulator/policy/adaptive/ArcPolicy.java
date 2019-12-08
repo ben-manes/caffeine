@@ -96,7 +96,7 @@ public final class ArcPolicy implements Policy {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      onMiss(key);
+      onMiss(entry);
     } else if (node.type == QueueType.B1) {
       onHitB1(node);
     } else if (node.type == QueueType.B2) {
@@ -116,7 +116,7 @@ public final class ArcPolicy implements Policy {
     node.remove();
     node.type = QueueType.T2;
     node.appendToTail(headT2);
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
   }
 
   private void onHitB1(Node node) {
@@ -132,7 +132,7 @@ public final class ArcPolicy implements Policy {
     node.remove();
     node.type = QueueType.T2;
     node.appendToTail(headT2);
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
   }
 
   private void onHitB2(Node node) {
@@ -148,10 +148,10 @@ public final class ArcPolicy implements Policy {
     node.remove();
     node.type = QueueType.T2;
     node.appendToTail(headT2);
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
   }
 
-  private void onMiss(long key) {
+  private void onMiss(AccessEvent entry) {
     // x ∈ L1 ∪ L2 (a miss in DBL(2c) and ARC(c)):
     // case (i) |L1| = c:
     //   If |T1| < c then delete the LRU page of B1 and REPLACE(p).
@@ -160,8 +160,8 @@ public final class ArcPolicy implements Policy {
     //   if |L1| + |L2|= 2c then delete the LRU page of B2.
     //   REPLACE(p) .
     // Put x at the top of T1 and place it in the cache.
-
-    Node node = new Node(key);
+    long key = entry.getKey();
+    Node node = new Node(entry);
     node.type = QueueType.T1;
 
     int sizeL1 = (sizeT1 + sizeB1);
@@ -194,7 +194,7 @@ public final class ArcPolicy implements Policy {
     data.put(key, node);
     node.appendToTail(headT1);
 
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
   }
 
   /** Evicts while the map exceeds the maximum capacity. */
@@ -243,7 +243,7 @@ public final class ArcPolicy implements Policy {
 
   static final class Node {
     final long key;
-
+    final AccessEvent entry;
     Node prev;
     Node next;
     QueueType type;
@@ -252,10 +252,12 @@ public final class ArcPolicy implements Policy {
       this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
+      this.entry = null;
     }
 
-    Node(long key) {
-      this.key = key;
+    Node(AccessEvent entry) {
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     /** Appends the node to the tail of the list. */

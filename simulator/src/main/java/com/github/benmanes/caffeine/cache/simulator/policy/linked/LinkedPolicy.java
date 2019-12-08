@@ -82,12 +82,12 @@ public final class LinkedPolicy implements Policy {
     admittor.record(entry);
     if (old == null) {
       Node node = new Node(entry, sentinel);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       data.put(key, node);
       node.appendToTail();
       evict(node);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
       policy.onAccess(old, policyStats);
     }
   }

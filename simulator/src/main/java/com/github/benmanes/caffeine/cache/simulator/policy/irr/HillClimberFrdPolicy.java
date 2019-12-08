@@ -89,7 +89,7 @@ public final class HillClimberFrdPolicy implements Policy {
 
     Node node = data.get(key);
     if (node == null) {
-      node = new Node(key);
+      node = new Node(entry);
       data.put(key, node);
       onMiss(node);
     } else if (node.status == Status.FILTER) {
@@ -141,7 +141,7 @@ public final class HillClimberFrdPolicy implements Policy {
      * Initially, both the filter and reuse distance stacks are filled with newly arrived blocks
      * from the reuse distance stack to the filter stack
      */
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
     missesInSample++;
     sample++;
 
@@ -186,7 +186,7 @@ public final class HillClimberFrdPolicy implements Policy {
      * Evict from filter stack. Then insert to main stack
      */
     policyStats.recordEviction();
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
     missesInSample++;
     sample++;
 
@@ -244,7 +244,7 @@ public final class HillClimberFrdPolicy implements Policy {
      * move its history block in the reuse distance stack to the MRU position of the reuse distance
      * stack).
      */
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
     hitsInSample++;
     sample++;
 
@@ -259,7 +259,7 @@ public final class HillClimberFrdPolicy implements Policy {
      * distance stack (i.e., the oldest resident block), the history blocks between the LRU position
      * and the 2nd oldest resident block are removed. Otherwise, no history block removing occurs.
      */
-    policyStats.recordHit();
+    policyStats.recordHit(node.entry);
     hitsInSample++;
     sample++;
 
@@ -294,7 +294,7 @@ public final class HillClimberFrdPolicy implements Policy {
      * resident block. No insertion or eviction occurs in the filter stack.
      */
     policyStats.recordEviction();
-    policyStats.recordMiss();
+    policyStats.recordMiss(node.entry);
     missesInSample++;
     sample++;
 
@@ -335,6 +335,7 @@ public final class HillClimberFrdPolicy implements Policy {
 
   final class Node {
     final long key;
+    final AccessEvent entry;
 
     Status status;
 
@@ -350,10 +351,12 @@ public final class HillClimberFrdPolicy implements Policy {
       key = Long.MIN_VALUE;
       prevMain = nextMain = this;
       prevFilter = nextFilter = this;
+      entry = null;
     }
 
-    Node(long key) {
-      this.key = key;
+    Node(AccessEvent entry) {
+      this.key = entry.getKey();
+      this.entry = entry;
     }
 
     public boolean isInStack(StackType stackType) {

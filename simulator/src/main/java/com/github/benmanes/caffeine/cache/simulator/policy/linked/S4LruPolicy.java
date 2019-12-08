@@ -84,10 +84,10 @@ public final class S4LruPolicy implements Policy {
     admittor.record(entry);
     if (node == null) {
       onMiss(entry);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else {
       onHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

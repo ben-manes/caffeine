@@ -59,9 +59,9 @@ public final class UnboundedPolicy implements Policy {
   public void record(AccessEvent entry) {
     policyStats.recordOperation();
     if (data.add(entry.getKey())) {
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

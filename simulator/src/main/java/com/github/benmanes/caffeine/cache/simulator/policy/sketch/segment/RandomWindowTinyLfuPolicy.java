@@ -87,14 +87,14 @@ public final class RandomWindowTinyLfuPolicy implements Policy {
     if (node == null) {
       node = new Node(entry, windowSize);
       policyStats.recordOperation();
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
       window[node.index] = node;
       data.put(key, node);
       windowSize++;
       evict();
     } else {
       policyStats.recordOperation();
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     }
   }
 

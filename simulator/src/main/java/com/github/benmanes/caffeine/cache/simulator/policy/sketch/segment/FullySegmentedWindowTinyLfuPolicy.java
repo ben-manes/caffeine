@@ -102,19 +102,19 @@ public final class FullySegmentedWindowTinyLfuPolicy implements Policy {
 
     if (node == null) {
       onMiss(entry);
-      policyStats.recordMiss();
+      policyStats.recordMiss(entry);
     } else if (node.status == Status.WINDOW_PROBATION) {
       onWindowProbationHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else if (node.status == Status.WINDOW_PROTECTED) {
       onWindowProtectedHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else if (node.status == Status.MAIN_PROBATION) {
       onMainProbationHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else if (node.status == Status.MAIN_PROTECTED) {
       onMainProtectedHit(node);
-      policyStats.recordHit();
+      policyStats.recordHit(entry);
     } else {
       throw new IllegalStateException();
     }
