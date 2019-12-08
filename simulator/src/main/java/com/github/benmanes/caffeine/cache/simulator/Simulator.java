@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.STA
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.PrimitiveIterator;
@@ -104,12 +105,12 @@ public final class Simulator extends AbstractActor {
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() {
     try (Stream<AccessEvent> events = eventStream()) {
-      LongArrayList batch = new LongArrayList(batchSize);
+      ArrayList<AccessEvent> batch = new ArrayList<AccessEvent>(batchSize);
       for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
-        batch.add(i.next().getKey());
+        batch.add(i.next());
         if (batch.size() == batchSize) {
           router.route(batch, self());
-          batch = new LongArrayList(batchSize);
+          batch = new ArrayList<AccessEvent>(batchSize);
         }
       }
       router.route(batch, self());

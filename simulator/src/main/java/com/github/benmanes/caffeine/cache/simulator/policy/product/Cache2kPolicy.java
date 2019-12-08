@@ -23,6 +23,7 @@ import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
@@ -59,7 +60,8 @@ public final class Cache2kPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent event) {
+    final long key = event.getKey();
     Object value = cache.peek(key);
     if (value == null) {
       policyStats.recordMiss();

@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
+
 /**
  * A cache that implements a page replacement policy.
  *
@@ -23,7 +25,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 public interface Policy {
 
   /** Records that the entry was accessed. */
-  void record(long key);
+  void record(AccessEvent event);
 
   /** Indicates that the recording has completed. */
   default void finished() {}

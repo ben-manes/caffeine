@@ -20,6 +20,7 @@ import static java.util.Locale.US;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
@@ -55,7 +56,8 @@ public final class TCachePolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent event) {
+    final long key = event.getKey();
     Object value = cache.get(key);
     if (value == null) {
       policyStats.recordMiss();

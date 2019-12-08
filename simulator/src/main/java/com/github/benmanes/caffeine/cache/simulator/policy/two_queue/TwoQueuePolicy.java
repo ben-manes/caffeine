@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -80,7 +81,8 @@ public final class TwoQueuePolicy implements Policy {
 
   @Override
   @SuppressWarnings({"PMD.ConfusingTernary", "PMD.SwitchStmtsShouldHaveDefault"})
-  public void record(long key) {
+  public void record(AccessEvent event) {
+    final long key = event.getKey();
     // On accessing a page X :
     //   if X is in Am then
     //     move X to the head of Am

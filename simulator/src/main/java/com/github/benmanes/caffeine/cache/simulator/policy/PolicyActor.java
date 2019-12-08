@@ -19,6 +19,10 @@ import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.ERR
 import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.FINISH;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
+
 import akka.actor.AbstractActor;
 import akka.dispatch.BoundedMessageQueueSemantics;
 import akka.dispatch.RequiresMessageQueue;
@@ -40,16 +44,16 @@ public final class PolicyActor extends AbstractActor
   @Override
   public Receive createReceive() {
     return receiveBuilder()
-        .match(LongArrayList.class, this::process)
+        .match(ArrayList.class, this::process)
         .matchEquals(FINISH, msg -> finish())
         .build();
   }
 
-  private void process(LongArrayList events) {
+  private void process(ArrayList<AccessEvent> events) {
     try {
       policy.stats().stopwatch().start();
       for (int i = 0; i < events.size(); i++) {
-        policy.record(events.getLong(i));
+        policy.record(events.get(i));
       }
     } catch (Exception e) {
       sender().tell(ERROR, self());

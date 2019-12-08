@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
@@ -72,7 +73,8 @@ public final class LinkedPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent event) {
+    final long key = event.getKey();
     Node old = data.get(key);
     admittor.record(key);
     if (old == null) {

@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.cache.Cache;
@@ -50,7 +51,8 @@ public final class GuavaPolicy implements Policy {
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent event) {
+    final long key = event.getKey();
     Object value = cache.getIfPresent(key);
     if (value == null) {
       cache.put(key, key);
