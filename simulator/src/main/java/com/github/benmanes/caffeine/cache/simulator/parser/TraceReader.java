@@ -14,7 +14,9 @@
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import java.io.IOException;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
+
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 
 /**
  * A reader to an access trace.
@@ -32,5 +34,5 @@ public interface TraceReader {
    *
    * @return a lazy stream of cache events
    */
-  LongStream events() throws IOException;
+  Stream<AccessEvent> events() throws IOException;
 }

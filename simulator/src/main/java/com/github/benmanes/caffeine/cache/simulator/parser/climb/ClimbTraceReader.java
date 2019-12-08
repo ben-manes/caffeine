@@ -23,9 +23,10 @@ import java.util.PrimitiveIterator;
 import java.util.Scanner;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 
 /**
@@ -40,10 +41,11 @@ public final class ClimbTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     TraceIterator iterator = new TraceIterator(readFile());
     return StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
-        iterator, Spliterator.ORDERED), /* parallel */ false).onClose(iterator::close);
+        iterator, Spliterator.ORDERED), /* parallel */ false).onClose(iterator::close)
+        .mapToObj(num -> new AccessEvent(num));
   }
 
   private static final class TraceIterator implements PrimitiveIterator.OfLong {

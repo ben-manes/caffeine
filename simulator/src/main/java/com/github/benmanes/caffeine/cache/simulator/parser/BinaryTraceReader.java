@@ -27,8 +27,10 @@ import java.util.PrimitiveIterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.google.common.io.Closeables;
 
 /**
@@ -44,11 +46,11 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
 
   @Override
   @SuppressWarnings("PMD.CloseResource")
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     DataInputStream input = new DataInputStream(new BufferedInputStream(readFile()));
     LongStream stream = StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
         new TraceIterator(input), Spliterator.ORDERED), /* parallel */ false);
-    return stream.onClose(() -> Closeables.closeQuietly(input));
+    return stream.onClose(() -> Closeables.closeQuietly(input)).mapToObj(num -> new AccessEvent(num));
   }
 
   /** Returns the next event from the input stream. */

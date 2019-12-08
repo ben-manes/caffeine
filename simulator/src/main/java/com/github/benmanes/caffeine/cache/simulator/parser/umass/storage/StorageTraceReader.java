@@ -18,7 +18,9 @@ package com.github.benmanes.caffeine.cache.simulator.parser.umass.storage;
 import java.io.IOException;
 import java.math.RoundingMode;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.google.common.math.IntMath;
 
@@ -36,19 +38,19 @@ public final class StorageTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
-    return lines().flatMapToLong(line -> {
+  public Stream<AccessEvent> events() throws IOException {
+    return lines().flatMap(line -> {
       String[] array = line.split(",", 5);
       if (array.length <= 4) {
-        return LongStream.empty();
+        return Stream.empty();
       }
       long startBlock = Long.parseLong(array[1]);
       int size = Integer.parseInt(array[2]);
       int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
       char readWrite = Character.toLowerCase(array[3].charAt(0));
       return (readWrite == 'w')
-          ? LongStream.empty()
-          : LongStream.range(startBlock, startBlock + sequence);
+          ? Stream.empty()
+          : LongStream.range(startBlock, startBlock + sequence).mapToObj(num -> new AccessEvent(num));
     });
   }
 }

@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache.simulator.parser.rewrite;
 import java.io.BufferedWriter;
 import java.io.IOException;
 
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
+
 /**
  * The trace output format.
  *
@@ -25,11 +27,11 @@ import java.io.IOException;
  */
 public enum OutputFormat {
   CLIMB {
-    @Override public void write(BufferedWriter writer, long event) throws IOException {
-      writer.write(Long.toString(event));
+    @Override public void write(BufferedWriter writer, AccessEvent accessEvent) throws IOException {
+      writer.write(Long.toString(accessEvent.getKey()));
       writer.newLine();
     }
   };
 
-  public abstract void write(BufferedWriter writer, long event) throws IOException;
+  public abstract void write(BufferedWriter writer, AccessEvent accessEvent) throws IOException;
 }

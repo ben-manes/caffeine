@@ -18,9 +18,12 @@ package com.github.benmanes.caffeine.cache.simulator;
 import static java.util.Locale.US;
 
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.UniformSettings;
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
+
 import site.ycsb.generator.CounterGenerator;
 import site.ycsb.generator.ExponentialGenerator;
 import site.ycsb.generator.HotspotIntegerGenerator;
@@ -40,7 +43,13 @@ public final class Synthetic {
   private Synthetic() {}
 
   /** Returns a sequence of events based on the setting's distribution. */
-  public static LongStream generate(BasicSettings settings) {
+  public static Stream<AccessEvent> generate(BasicSettings settings) {
+    return generateKeys(settings).mapToObj(num -> new AccessEvent(num));
+
+  }
+
+  /** Returns a sequence of keys based on the setting's distribution. */
+  public static LongStream generateKeys(BasicSettings settings) {
     int events = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter":
@@ -68,6 +77,7 @@ public final class Synthetic {
     }
   }
 
+  
   /**
    * Returns a sequence of unique integers.
    *

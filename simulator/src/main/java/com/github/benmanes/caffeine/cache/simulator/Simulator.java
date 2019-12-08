@@ -21,10 +21,13 @@ import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.STA
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.PrimitiveIterator;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.simulator.event.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -100,10 +103,10 @@ public final class Simulator extends AbstractActor {
 
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() {
-    try (LongStream events = eventStream()) {
+    try (Stream<AccessEvent> events = eventStream()) {
       LongArrayList batch = new LongArrayList(batchSize);
-      for (PrimitiveIterator.OfLong i = events.iterator(); i.hasNext();) {
-        batch.add(i.nextLong());
+      for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
+        batch.add(i.next().getKey());
         if (batch.size() == batchSize) {
           router.route(batch, self());
           batch = new LongArrayList(batchSize);
@@ -118,7 +121,7 @@ public final class Simulator extends AbstractActor {
   }
 
   /** Returns a stream of trace events. */
-  private LongStream eventStream() throws IOException {
+  private Stream<AccessEvent> eventStream() throws IOException {
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings);
     }
