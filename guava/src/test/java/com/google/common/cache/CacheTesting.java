@@ -37,7 +37,7 @@ import com.google.common.testing.FakeTicker;
  *
  * @author mike nonemacher
  */
-@SuppressWarnings("GuardedByChecker")
+@SuppressWarnings({"GuardedByChecker", "PreferJavaTimeOverload"})
 class CacheTesting {
 
   /**

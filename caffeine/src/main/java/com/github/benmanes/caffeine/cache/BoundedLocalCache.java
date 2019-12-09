@@ -629,7 +629,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
 
       Node<K, V> next = node.getNextInAccessOrder();
-      if (node.getWeight() != 0) {
+      if (node.getPolicyWeight() != 0) {
         node.makeMainProbation();
         accessOrderWindowDeque().remove(node);
         accessOrderProbationDeque().add(node);
@@ -3527,6 +3527,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
     }
 
+    @SuppressWarnings("PreferJavaTimeOverload")
     final class BoundedExpireAfterAccess implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
         requireNonNull(key);
@@ -3557,6 +3558,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
     }
 
+    @SuppressWarnings("PreferJavaTimeOverload")
     final class BoundedExpireAfterWrite implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
         requireNonNull(key);
@@ -3587,6 +3589,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
     }
 
+    @SuppressWarnings("PreferJavaTimeOverload")
     final class BoundedVarExpiration implements VarExpiration<K, V> {
       @Override public OptionalLong getExpiresAfter(K key, TimeUnit unit) {
         requireNonNull(key);
@@ -3661,6 +3664,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
     }
 
+    @SuppressWarnings("PreferJavaTimeOverload")
     final class BoundedRefreshAfterWrite implements Expiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
         requireNonNull(key);

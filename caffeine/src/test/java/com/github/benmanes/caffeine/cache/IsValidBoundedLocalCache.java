@@ -48,6 +48,7 @@ import com.google.common.collect.Sets;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("GuardedBy")
 public final class IsValidBoundedLocalCache<K, V>
     extends TypeSafeDiagnosingMatcher<BoundedLocalCache<K, V>> {
   DescriptionBuilder desc;

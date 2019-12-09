@@ -19,8 +19,9 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -36,12 +37,12 @@ public final class ScarabTraceReader extends BinaryTraceReader {
   }
 
   @Override
-  protected long readLong(DataInputStream input) throws IOException {
-    return input.readLong();
+  public Set<Characteristic> characteristics() {
+    return ImmutableSet.of();
   }
 
   @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
+  protected AccessEvent readEvent(DataInputStream input) throws IOException {
+    return AccessEvent.forKey(input.readLong());
   }
 }

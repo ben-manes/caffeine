@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -84,7 +83,7 @@ public final class StripedBufferTest {
     int drains = 0;
 
     FakeBuffer(int result) {
-      this.result = requireNonNull(result);
+      this.result = result;
     }
 
     @Override protected Buffer<E> create(E e) {

@@ -19,12 +19,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.integration.CacheLoader;
 import javax.cache.spi.CachingProvider;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -43,6 +43,7 @@ import com.google.common.testing.FakeTicker;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(singleThreaded = true)
+@SuppressWarnings("PreferJavaTimeOverload")
 public abstract class AbstractJCacheTest {
   protected static final long START_TIME_MS = System.currentTimeMillis();
   protected static final long EXPIRY_DURATION = TimeUnit.MINUTES.toMillis(1);

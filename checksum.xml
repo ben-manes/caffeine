@@ -22,6 +22,7 @@
     <trusted-key id='62ee8529396cdc00' group='com.clearspring.analytics' />
     <trusted-key id='c9fbaa83a8753994' group='com.fasterxml.jackson.core' />
     <trusted-key id='c9fbaa83a8753994' group='com.fasterxml.jackson.dataformat' />
+    <trusted-key id='3c0a8f4744f37328' group='com.github.ben-manes.caffeine' />
     <trusted-key id='53dfc5afe188b729' group='com.github.jbellis' />
     <trusted-key id='218fa0f6a941a037' group='com.github.kevinstern' />
     <trusted-key id='1756b920eecf0e90' group='com.github.spotbugs' />
@@ -30,6 +31,7 @@
     <trusted-key id='353a436e043e3145' group='com.google.code.findbugs' />
     <trusted-key id='59a252fb1199d873' group='com.google.code.findbugs' />
     <trusted-key id='7a01b0f236e5430f' group='com.google.code.gson' />
+    <trusted-key id='1669c4bb543e0445' group='com.google.errorprone' />
     <trusted-key id='912d2c0eccda55c0' group='com.google.errorprone' />
     <trusted-key id='9a259c7ee636c5ed' group='com.google.errorprone' />
     <trusted-key id='abe9f3126bb741c1' group='com.google.guava' />
@@ -56,6 +58,7 @@
     <trusted-key id='0753c4188493fd20' group='com.typesafe' />
     <trusted-key id='e735df276c508071' group='com.typesafe' />
     <trusted-key id='2b183b279dfd639e' group='com.typesafe.akka' />
+    <trusted-key id='c7d0ad0d36477196' group='com.typesafe.akka' />
     <trusted-key id='eb9d04a9a679fe18' group='com.uber.nullaway' />
     <trusted-key id='d0d1b9a54efd603d' group='com.univocity' />
     <trusted-key id='1861c322c56014b2' group='commons-beanutils' />
@@ -140,6 +143,7 @@
     <trusted-key id='734aef3d43509290' group='org.osgi' />
     <trusted-key id='5f69ad087600b22c' group='org.ow2.asm' />
     <trusted-key id='2be5d98f751f4136' group='org.pcollections' />
+    <trusted-key id='03a0e85480e2c433' group='org.plumelib' />
     <trusted-key id='c03ef1d7d692bcff' group='org.scala-lang' />
     <trusted-key id='64163449a529ab1e' group='org.scala-lang.modules' />
     <trusted-key id='2c7b12f2a511e325' group='org.slf4j' />

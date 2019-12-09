@@ -18,11 +18,11 @@ package com.github.benmanes.caffeine.cache.simulator;
 import static java.util.Locale.US;
 
 import java.util.stream.LongStream;
-import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.UniformSettings;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+
 import site.ycsb.generator.CounterGenerator;
 import site.ycsb.generator.ExponentialGenerator;
 import site.ycsb.generator.HotspotIntegerGenerator;
@@ -42,28 +42,28 @@ public final class Synthetic {
   private Synthetic() {}
 
   /** Returns a sequence of events based on the setting's distribution. */
-  public static Stream<AccessEvent> generate(BasicSettings settings) {
+  public static KeyOnlyTraceReader generate(BasicSettings settings) {
     int events = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter":
-        return counter(settings.synthetic().counter().start(), events);
+        return () -> counter(settings.synthetic().counter().start(), events);
       case "exponential":
-        return exponential(settings.synthetic().exponential().mean(), events);
+        return () -> exponential(settings.synthetic().exponential().mean(), events);
       case "hotspot":
         HotspotSettings hotspot = settings.synthetic().hotspot();
-        return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
+        return () -> Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
             hotspot.hotOpnFraction(), hotspot.hotsetFraction(), events);
       case "zipfian":
-        return zipfian(settings.synthetic().zipfian().items(),
+        return () -> zipfian(settings.synthetic().zipfian().items(),
             settings.synthetic().zipfian().constant(), events);
       case "scrambled-zipfian":
-        return scrambledZipfian(settings.synthetic().zipfian().items(),
+        return () -> scrambledZipfian(settings.synthetic().zipfian().items(),
             settings.synthetic().zipfian().constant(), events);
       case "skewed-zipfian-latest":
-        return skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
+        return () -> skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
       case "uniform":
         UniformSettings uniform = settings.synthetic().uniform();
-        return uniform(uniform.lowerBound(), uniform.upperBound(), events);
+        return () -> uniform(uniform.lowerBound(), uniform.upperBound(), events);
       default:
         throw new IllegalStateException("Unknown distribution: "
             + settings.synthetic().distribution());
@@ -76,7 +76,7 @@ public final class Synthetic {
    * @param start the number that the counter starts from
    * @param events the number of events in the distribution
    */
-  public static Stream<AccessEvent> counter(int start, int events) {
+  public static LongStream counter(int start, int events) {
     return generate(new CounterGenerator(start), events);
   }
 
@@ -87,7 +87,7 @@ public final class Synthetic {
    * @param mean mean arrival rate of gamma (a half life of 1/gamma)
    * @param events the number of events in the distribution
    */
-  public static Stream<AccessEvent> exponential(double mean, int events) {
+  public static LongStream exponential(double mean, int events) {
     return generate(new ExponentialGenerator(mean), events);
   }
 
@@ -104,7 +104,7 @@ public final class Synthetic {
    * @param hotOpnFraction percentage of operations accessing the hot set
    * @param events the number of events in the distribution
    */
-  public static Stream<AccessEvent> hotspot(int lowerBound, int upperBound,
+  public static LongStream hotspot(int lowerBound, int upperBound,
       double hotsetFraction, double hotOpnFraction, int events) {
     return generate(new HotspotIntegerGenerator(lowerBound,
         upperBound, hotsetFraction, hotOpnFraction), events);
@@ -120,7 +120,7 @@ public final class Synthetic {
    * @param constant the skew factor for the distribution
    * @param events the number of events in the distribution
    */
-  public static Stream<AccessEvent> scrambledZipfian(int items, double constant, int events) {
+  public static LongStream scrambledZipfian(int items, double constant, int events) {
     return generate(new ScrambledZipfianGenerator(0, items - 1, constant), events);
   }
 
@@ -131,7 +131,7 @@ public final class Synthetic {
    * @param items the number of items in the distribution
    * @param events the number of events in the distribution
    */
-  public static Stream<AccessEvent> skewedZipfianLatest(int items, int events) {
+  public static LongStream skewedZipfianLatest(int items, int events) {
     return generate(new SkewedLatestGenerator(new CounterGenerator(items)), events);
   }
 
@@ -143,7 +143,7 @@ public final class Synthetic {
    * @param constant the skew factor for the distribution
    * @param events the number of events in the distribution
    */
-  public static Stream<AccessEvent> zipfian(int items, double constant, int events) {
+  public static LongStream zipfian(int items, double constant, int events) {
     return generate(new ZipfianGenerator(items, constant), events);
   }
 
@@ -156,12 +156,12 @@ public final class Synthetic {
    * @param events the number of events in the distribution
    * @return a stream of cache events
    */
-  public static Stream<AccessEvent> uniform(int lowerBound, int upperBound, int events) {
+  public static LongStream uniform(int lowerBound, int upperBound, int events) {
     return generate(new UniformLongGenerator(lowerBound, upperBound), events);
   }
 
   /** Returns a sequence of items constructed by the generator. */
-  private static Stream<AccessEvent> generate(NumberGenerator generator, long count) {
-    return LongStream.range(0, count).map(ignored -> generator.nextValue().longValue()).mapToObj(key -> new AccessEvent.AccessEventBuilder(key).build());
+  private static LongStream generate(NumberGenerator generator, long count) {
+    return LongStream.range(0, count).map(ignored -> generator.nextValue().longValue());
   }
 }

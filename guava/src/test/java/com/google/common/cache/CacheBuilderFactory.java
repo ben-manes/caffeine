@@ -18,8 +18,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
@@ -111,19 +109,9 @@ class CacheBuilderFactory {
         });
   }
 
-  private static final Function<Object, Optional<?>> NULLABLE_TO_OPTIONAL =
-      new Function<Object, Optional<?>>() {
-        @Override public Optional<?> apply(@Nullable Object obj) {
-          return Optional.fromNullable(obj);
-        }
-      };
+  private static final Function<Object, Optional<?>> NULLABLE_TO_OPTIONAL = Optional::fromNullable;
 
-  private static final Function<Optional<?>, Object> OPTIONAL_TO_NULLABLE =
-      new Function<Optional<?>, Object>() {
-        @Override public Object apply(Optional<?> optional) {
-          return optional.orNull();
-        }
-      };
+  private static final Function<Optional<?>, Object> OPTIONAL_TO_NULLABLE = Optional::orNull;
 
   /**
    * Sets.cartesianProduct doesn't allow sets that contain null, but we want null to mean

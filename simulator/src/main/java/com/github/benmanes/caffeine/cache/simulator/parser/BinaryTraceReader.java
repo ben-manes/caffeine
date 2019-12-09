@@ -22,11 +22,14 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.*;
-import java.util.function.LongConsumer;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.io.Closeables;
 
 /**
@@ -50,12 +53,12 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
   }
 
   /** Returns the next event from the input stream. */
-  protected abstract long readLong(DataInputStream input) throws IOException;
+  protected abstract AccessEvent readEvent(DataInputStream input) throws IOException;
 
-  public final class TraceIterator implements PrimitiveIterator<AccessEvent, LongConsumer> {
+  private final class TraceIterator implements Iterator<AccessEvent> {
     final DataInputStream input;
+    AccessEvent next;
     boolean ready;
-    long nextKey;
 
     TraceIterator(DataInputStream input) {
       this.input = requireNonNull(input);
@@ -67,7 +70,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
         return true;
       }
       try {
-        nextKey = readLong(input);
+        next = readEvent(input);
         ready = true;
         return true;
       } catch (EOFException e) {
@@ -79,24 +82,11 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
 
     @Override
     public AccessEvent next() {
-      return new AccessEvent.AccessEventBuilder(nextKey).build();
-    }
-
-    public long nextLong() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
       ready = false;
-      return nextKey;
-    }
-
-    @Override
-    public void forEachRemaining(LongConsumer longConsumer) {
-      Objects.requireNonNull(longConsumer);
-
-      while(this.hasNext()) {
-        longConsumer.accept(this.nextLong());
-      }
+      return next;
     }
   }
 }

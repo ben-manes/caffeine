@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheWithGhostCache;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
@@ -29,7 +30,7 @@ import com.typesafe.config.Config;
 /**
  * @author gilga1983@gmail.com (Gil Einziger)
  */
-public final class TinyCacheWithGhostCachePolicy implements Policy {
+public final class TinyCacheWithGhostCachePolicy implements KeyOnlyPolicy {
   private final TinyCacheWithGhostCache tinyCache;
   private final PolicyStats policyStats;
 

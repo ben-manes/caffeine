@@ -73,7 +73,7 @@ import com.google.common.primitives.Ints;
  */
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
-@SuppressWarnings("FutureReturnValueIgnored")
+@SuppressWarnings({"FutureReturnValueIgnored", "PreferJavaTimeOverload"})
 public final class AsyncLoadingCacheTest {
 
   /* --------------- get --------------- */

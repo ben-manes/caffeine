@@ -45,6 +45,7 @@ import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.google.errorprone.annotations.FormatMethod;
 
 /**
  * A builder of {@link Cache}, {@link LoadingCache}, {@link AsyncCache}, and
@@ -171,6 +172,7 @@ public final class Caffeine<K, V> {
   private Caffeine() {}
 
   /** Ensures that the argument expression is true. */
+  @FormatMethod
   static void requireArgument(boolean expression, String template, @Nullable Object... args) {
     if (!expression) {
       throw new IllegalArgumentException(String.format(template, args));
@@ -192,6 +194,7 @@ public final class Caffeine<K, V> {
   }
 
   /** Ensures that the state expression is true. */
+  @FormatMethod
   static void requireState(boolean expression, String template, @Nullable Object... args) {
     if (!expression) {
       throw new IllegalStateException(String.format(template, args));

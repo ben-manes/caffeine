@@ -34,6 +34,7 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
+@SuppressWarnings("PreferJavaTimeOverload")
 public class NullCacheTest extends TestCase {
   QueuingRemovalListener<Object, Object> listener;
 

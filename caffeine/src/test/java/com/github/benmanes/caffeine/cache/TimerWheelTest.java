@@ -60,6 +60,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(singleThreaded = true)
+@SuppressWarnings("GuardedBy")
 public final class TimerWheelTest {
   private static final Random random = new Random();
   private static final long NOW = random.nextLong();

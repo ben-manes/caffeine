@@ -21,10 +21,8 @@ import static org.openjdk.jmh.annotations.Scope.Benchmark;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
@@ -32,6 +30,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
 import com.typesafe.config.ConfigFactory;
@@ -59,7 +58,7 @@ public class TraceBenchmark {
   @Setup
   public void setup() throws IOException {
     settings = new BasicSettings(ConfigFactory.load().getConfig("caffeine.simulator"));
-    events = (AccessEvent[])readEventStream(settings).toArray();
+    events = readEventStream(settings).toArray(AccessEvent[]::new);
   }
 
   @Benchmark
@@ -83,10 +82,10 @@ public class TraceBenchmark {
 
   private Stream<AccessEvent> readEventStream(BasicSettings settings) throws IOException {
     if (settings.isSynthetic()) {
-      return Synthetic.generate(settings);
+      return Synthetic.generate(settings).events();
     }
     List<String> filePaths = settings.traceFiles().paths();
     TraceFormat format = settings.traceFiles().format();
-    return format.readFiles(filePaths,settings.traceCharacteristics()).events();
+    return format.readFiles(filePaths).events();
   }
 }

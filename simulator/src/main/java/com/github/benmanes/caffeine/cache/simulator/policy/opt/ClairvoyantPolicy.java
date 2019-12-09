@@ -21,6 +21,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
@@ -39,7 +40,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ClairvoyantPolicy implements Policy {
+public final class ClairvoyantPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<IntPriorityQueue> accessTimes;
   private final ObjectArrayFIFOQueue<AccessEvent> future;
   private final PolicyStats policyStats;

@@ -15,19 +15,22 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
+import org.cache2k.event.CacheEntryEvictedListener;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -38,17 +41,21 @@ import com.typesafe.config.Config;
 public final class Cache2kPolicy implements Policy {
   private static final Logger logger = Logger.getLogger("org.cache2k");
 
-  private final Cache<Object, Object> cache;
+  private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
   private final int maximumSize;
 
   public Cache2kPolicy(Config config) {
     logger.setLevel(Level.WARNING);
 
+    policyStats = new PolicyStats("product.Cache2k");
+    CacheEntryEvictedListener<Long, AccessEvent> listener =
+        (cache, entry) -> policyStats.recordEviction();
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("product.Cache2k",settings.traceCharacteristics());
-    cache = Cache2kBuilder.of(Object.class, Object.class)
-        .entryCapacity(settings.maximumSize())
+    cache = Cache2kBuilder.of(Long.class, AccessEvent.class)
+        .weigher((Long key, AccessEvent value) -> value.weight())
+        .maximumWeight(settings.maximumSize())
+        .addListener(listener)
         .strictEviction(true)
         .eternal(true)
         .build();
@@ -60,18 +67,21 @@ public final class Cache2kPolicy implements Policy {
     return ImmutableSet.of(new Cache2kPolicy(config));
   }
 
+  @Override public Set<Characteristic> characteristics() {
+    return Sets.immutableEnumSet(WEIGHTED);
+  }
+
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
-    Object value = cache.peek(key);
+  public void record(AccessEvent event) {
+    Object value = cache.peek(event.key());
     if (value == null) {
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss();
       if (cache.asMap().size() == maximumSize) {
         policyStats.recordEviction();
       }
-      cache.put(key, key);
+      cache.put(event.key(), event);
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit();
     }
   }
 
@@ -83,10 +93,5 @@ public final class Cache2kPolicy implements Policy {
   @Override
   public void finished() {
     cache.close();
-  }
-
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
   }
 }

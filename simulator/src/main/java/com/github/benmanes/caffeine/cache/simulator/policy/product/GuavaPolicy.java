@@ -15,16 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -33,15 +35,16 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class GuavaPolicy implements Policy {
-  private final Cache<Object, Object> cache;
+  private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
   public GuavaPolicy(Config config) {
+    policyStats = new PolicyStats("product.Guava");
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("product.Guava",settings.traceCharacteristics());
     cache = CacheBuilder.newBuilder()
-        .maximumSize(settings.maximumSize())
+        .maximumWeight(settings.maximumSize())
         .initialCapacity(settings.maximumSize())
+        .weigher((Long key, AccessEvent value) -> value.weight())
         .removalListener(notification -> policyStats.recordEviction())
         .build();
   }
@@ -51,25 +54,23 @@ public final class GuavaPolicy implements Policy {
     return ImmutableSet.of(new GuavaPolicy(config));
   }
 
+  @Override public Set<Characteristic> characteristics() {
+    return Sets.immutableEnumSet(WEIGHTED);
+  }
+
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
-    Object value = cache.getIfPresent(key);
+  public void record(AccessEvent event) {
+    Object value = cache.getIfPresent(event.key());
     if (value == null) {
-      cache.put(key, key);
-      policyStats.recordMiss(entry);
+      cache.put(event.key(), event);
+      policyStats.recordMiss();
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit();
     }
   }
 
   @Override
   public PolicyStats stats() {
     return policyStats;
-  }
-
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
   }
 }

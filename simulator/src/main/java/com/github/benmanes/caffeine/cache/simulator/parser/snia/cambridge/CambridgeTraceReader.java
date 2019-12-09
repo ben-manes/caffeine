@@ -16,13 +16,10 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge;
 
 import java.io.IOException;
-import java.util.Set;
-import java.util.stream.Stream;
+import java.util.stream.LongStream;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
-import com.google.common.collect.ImmutableSet;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
  * A reader for the SNIA MSR Cambridge trace files provided by
@@ -30,22 +27,16 @@ import com.google.common.collect.ImmutableSet;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CambridgeTraceReader extends TextTraceReader {
+public final class CambridgeTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
 
   public CambridgeTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public Stream<AccessEvent> events() throws IOException {
+  public LongStream keys() throws IOException {
     return lines()
         .map(line -> line.split(",", 6))
-        .map(array -> new AccessEvent.AccessEventBuilder(Long.parseLong(array[4])).build());
+        .mapToLong(array -> Long.parseLong(array[4]));
   }
-
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
-
 }

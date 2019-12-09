@@ -52,6 +52,7 @@ import com.google.common.collect.Sets;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PreferJavaTimeOverload")
 final class CacheGenerator {
   // Integer caches the object identity semantics of autoboxing for values between
   // -128 and 127 (inclusive) as required by JLS (assuming default setting)

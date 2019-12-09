@@ -16,18 +16,15 @@
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import static java.util.Locale.US;
+import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.mp.address.AddressMPTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.mp.gradle.GradleMPTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.penalties.address.AddressPenaltiesTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.adapt_size.AdaptSizeReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
@@ -35,15 +32,16 @@ import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceReade
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.penalties.gradle.GradlePenaltiesTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.rrs.address.AddressRRSTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 /**
  * The trace file formats.
@@ -53,6 +51,7 @@ import com.google.common.collect.Iterables;
 @SuppressWarnings("ImmutableEnumChecker")
 public enum TraceFormat {
   ADDRESS(AddressTraceReader::new),
+  ADAPT_SIZE(AdaptSizeReader::new),
   ARC(ArcTraceReader::new),
   CACHE2K(Cache2kTraceReader::new),
   CLIMB(ClimbTraceReader::new),
@@ -63,12 +62,7 @@ public enum TraceFormat {
   SNIA_CAMBRIDGE(CambridgeTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
   UMASS_YOUTUBE(YoutubeTraceReader::new),
-  WIKIPEDIA(WikipediaTraceReader::new),
-  MP_ADDRESS(AddressMPTraceReader::new),
-  PEN_ADDRESS(AddressPenaltiesTraceReader::new),
-  RRS_ADDRESS(AddressRRSTraceReader::new),
-  MP_GRADLE(GradleMPTraceReader::new),
-  PEN_GRADLE(GradlePenaltiesTraceReader::new);
+  WIKIPEDIA(WikipediaTraceReader::new);
 
   private final Function<String, TraceReader> factory;
 
@@ -80,41 +74,35 @@ public enum TraceFormat {
    * Returns a new reader for streaming the events from the trace file.
    *
    * @param filePaths the path to the files in the trace's format
-   * @param characteristics the set of minimal required characteristics
-   * @return a reader for streaming the events from the file, not including the ones that don't have all the characteristics
+   * @return a reader for streaming the events from the file
    */
-  public TraceReader readFiles(List<String> filePaths, Set<Characteristics> characteristics) {
-    TraceFormat self = this;
-    TraceReader traceReader = new TraceReader() {
-      @Override
-      public Stream<AccessEvent> events() throws IOException {
+  public TraceReader readFiles(List<String> filePaths) {
+    return new TraceReader() {
+
+      @Override public Set<Characteristic> characteristics() {
+        return readers().stream()
+            .flatMap(reader -> reader.characteristics().stream())
+            .collect(Sets.toImmutableEnumSet());
+      }
+
+      @Override public Stream<AccessEvent> events() throws IOException {
         Stream<AccessEvent> events = Stream.empty();
-        for (String path : filePaths) {
-          List<String> parts = Splitter.on(':').limit(2).splitToList(path);
-          TraceFormat format = (parts.size() == 1) ? self : named(parts.get(0));
-          Set<Characteristics> currCharacteristics = format.factory.apply(Iterables.getLast(parts)).getCharacteristicsSet();
-          Stream<AccessEvent> next = currCharacteristics.containsAll(characteristics) ? format.factory.apply(Iterables.getLast(parts)).events() : Stream.empty();
-          events = Stream.concat(events, next);
+        for (TraceReader reader : readers()) {
+          events = Stream.concat(events, reader.events());
         }
         return events;
       }
 
-      @Override
-      public Set<Characteristics> getCharacteristicsSet() {
-        return characteristics;
+      private List<TraceReader> readers() {
+        return filePaths.stream().map(path -> {
+          List<String> parts = Splitter.on(':').limit(2).splitToList(path);
+          TraceFormat format = (parts.size() == 1) ? TraceFormat.this : named(parts.get(0));
+          return format.factory.apply(Iterables.getLast(parts));
+        }).collect(toList());
       }
     };
-    return traceReader;
   }
-  /**
-   * Returns a new reader for streaming the events from the trace file, this version is to be used by rewrite
-   *
-   * @param filePaths the path to the files in the trace's format
-   * @return a reader for streaming the events from the file
-   */
-  public TraceReader readFiles(List<String> filePaths) {
-    return readFiles(filePaths,new HashSet<>());
-  }
+
   /** Returns the format based on its configuration name. */
   public static TraceFormat named(String name) {
     return TraceFormat.valueOf(name.replace('-', '_').toUpperCase(US));

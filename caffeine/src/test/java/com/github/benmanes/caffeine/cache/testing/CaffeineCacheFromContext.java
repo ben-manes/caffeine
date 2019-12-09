@@ -37,6 +37,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PreferJavaTimeOverload")
 public final class CaffeineCacheFromContext {
   interface SerializableTicker extends Ticker, Serializable {}
 

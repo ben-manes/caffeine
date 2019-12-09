@@ -138,6 +138,10 @@
     <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent$WeightedAccessEvent"/>
+    <Bug code="Eq"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor"/>
     <Method name="process"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED"/>

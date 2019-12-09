@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Ben Manes. All Rights Reserved.
+ * Copyright 2019 Ben Manes. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,36 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.parser.cache2k;
+package com.github.benmanes.caffeine.cache.simulator.parser.adapt_size;
 
-import java.io.DataInputStream;
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+
 import java.io.IOException;
 import java.util.Set;
+import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 /**
- * A reader for the trace files provided by the author of cache2k. See
- * <a href="https://github.com/cache2k/cache2k-benchmark">traces</a>.
+ * A reader for the trace files provided by the authors of the AdaptSize algorithm. See
+ * <a href="https://github.com/dasebe/webcachesim#how-to-get-traces">traces</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Cache2kTraceReader extends BinaryTraceReader {
+public final class AdaptSizeReader extends TextTraceReader {
 
-  public Cache2kTraceReader(String filePath) {
+  public AdaptSizeReader(String filePath) {
     super(filePath);
   }
 
   @Override
   public Set<Characteristic> characteristics() {
-    return ImmutableSet.of();
+    return Sets.immutableEnumSet(WEIGHTED);
   }
 
   @Override
-  protected AccessEvent readEvent(DataInputStream input) throws IOException {
-    return AccessEvent.forKey(input.readInt());
+  public Stream<AccessEvent> events() throws IOException {
+    return lines()
+        .map(line -> line.split(" ", 3))
+        .map(array -> AccessEvent.forKeyAndWeight(
+            Long.parseLong(array[1]), Integer.parseInt(array[2])));
   }
 }

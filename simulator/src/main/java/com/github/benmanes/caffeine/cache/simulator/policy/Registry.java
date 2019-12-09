@@ -21,7 +21,6 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -29,15 +28,14 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.FrdPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.irr.IndicatorFrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.HillClimberFrdPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.irr.IndicatorFrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.LirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
@@ -69,7 +67,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.Tiny
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.WindowTinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
-import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
@@ -96,12 +93,14 @@ public final class Registry {
         toMap(entry -> entry.getKey().toLowerCase(US), Entry::getValue));
   }
 
-  /** Returns all of the policies that have been configured for simulation. */
-  public static Set<Policy> policies(BasicSettings settings) {
-    Set<Characteristics> traceReaderCharacteristics = settings.traceCharacteristics();
+  /**
+   * Returns all of the policies that have been configured for simulation and that meet a minimal
+   * set of supported characteristics.
+   */
+  public static Set<Policy> policies(BasicSettings settings, Set<Characteristic> characteristics) {
     return settings.policies().stream()
         .flatMap(name -> policy(settings, name).stream())
-        .filter(policy -> traceReaderCharacteristics.containsAll(policy.getCharacteristicsSet()))
+        .filter(policy -> policy.characteristics().containsAll(characteristics))
         .collect(toSet());
   }
 
@@ -163,8 +162,8 @@ public final class Registry {
 
   private static void registerIrr(Map<String, Function<Config, Set<Policy>>> factories) {
     factories.put("irr.Frd", FrdPolicy::policies);
-    factories.put("irr.IndicatorFrd", IndicatorFrdPolicy::policies); 
-    factories.put("irr.ClimberFrd", HillClimberFrdPolicy::policies); 
+    factories.put("irr.IndicatorFrd", IndicatorFrdPolicy::policies);
+    factories.put("irr.ClimberFrd", HillClimberFrdPolicy::policies);
     factories.put("irr.Lirs", LirsPolicy::policies);
     factories.put("irr.ClockPro", ClockProPolicy::policies);
   }

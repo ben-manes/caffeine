@@ -16,14 +16,10 @@
 package com.github.benmanes.caffeine.cache.simulator.parser.arc;
 
 import java.io.IOException;
-import java.util.Set;
 import java.util.stream.LongStream;
-import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
-import com.google.common.collect.ImmutableSet;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
  * A reader for the trace files provided by the authors of the ARC algorithm. See
@@ -31,24 +27,19 @@ import com.google.common.collect.ImmutableSet;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ArcTraceReader extends TextTraceReader {
+public final class ArcTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
 
   public ArcTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public Stream<AccessEvent> events() throws IOException {
-    return lines().flatMap(line -> {
+  public LongStream keys() throws IOException {
+    return lines().flatMapToLong(line -> {
       String[] array = line.split(" ", 3);
       long startBlock = Long.parseLong(array[0]);
       int sequence = Integer.parseInt(array[1]);
-      return LongStream.range(startBlock, startBlock + sequence).mapToObj(key -> new AccessEvent.AccessEventBuilder(key).build());
+      return LongStream.range(startBlock, startBlock + sequence);
     });
-  }
-
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
   }
 }

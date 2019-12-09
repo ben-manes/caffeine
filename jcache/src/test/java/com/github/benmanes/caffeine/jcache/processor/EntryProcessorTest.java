@@ -46,6 +46,7 @@ import com.google.common.collect.Streams;
  * @author chrisstockton (Chris Stockton)
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PreferJavaTimeOverload")
 public final class EntryProcessorTest extends AbstractJCacheTest {
   private final Map<Integer, Integer> map = new HashMap<>();
 

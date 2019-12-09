@@ -17,44 +17,42 @@ package com.github.benmanes.caffeine.cache.simulator.parser.climb;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.io.*;
-import java.util.*;
-import java.util.function.LongConsumer;
-import java.util.stream.Stream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.PrimitiveIterator;
+import java.util.Scanner;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.LongStream;
 import java.util.stream.StreamSupport;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
-import com.google.common.collect.ImmutableSet;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
  * A reader for the trace files provided by the authors of the AdaptiveClimb algorithm.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ClimbTraceReader extends TextTraceReader {
+public final class ClimbTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
 
   public ClimbTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public Stream<AccessEvent> events() throws IOException {
+  public LongStream keys() throws IOException {
     TraceIterator iterator = new TraceIterator(readFile());
-    return StreamSupport.stream(Spliterators.spliteratorUnknownSize(
+    return StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
         iterator, Spliterator.ORDERED), /* parallel */ false).onClose(iterator::close);
   }
 
-
-  private static final class TraceIterator implements PrimitiveIterator<AccessEvent, LongConsumer> {
+  private static final class TraceIterator implements PrimitiveIterator.OfLong {
     private final Scanner scanner;
-    long nextKey;
 
     TraceIterator(InputStream input) {
       scanner = new Scanner(input, UTF_8.name());
     }
-
 
     @Override
     public boolean hasNext() {
@@ -62,37 +60,12 @@ public final class ClimbTraceReader extends TextTraceReader {
     }
 
     @Override
-    public AccessEvent next() {
-      return new AccessEvent.AccessEventBuilder(nextKey).build();
-    }
-
     public long nextLong() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      nextKey = scanner.nextLong();
-      return nextKey;
-    }
-
-    @Override
-    public void forEachRemaining(LongConsumer longConsumer) {
-      Objects.requireNonNull(longConsumer);
-
-      while(this.hasNext()) {
-        longConsumer.accept(this.nextLong());
-      }
+      return scanner.nextLong();
     }
 
     public void close() {
       scanner.close();
     }
   }
-
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
 }
-
-
-

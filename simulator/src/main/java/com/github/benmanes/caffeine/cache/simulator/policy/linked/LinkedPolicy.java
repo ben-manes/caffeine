@@ -16,7 +16,6 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static java.util.Locale.US;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
@@ -30,6 +29,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
@@ -44,7 +44,7 @@ import org.checkerframework.checker.units.qual.K;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LinkedPolicy implements Policy {
+public final class LinkedPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final EvictionPolicy policy;
@@ -233,8 +233,6 @@ public final class LinkedPolicy implements Policy {
 
     /** Moves the node to the tail. */
     public void moveToTail() {
-      requireNonNull(key);
-
       // unlink
       prev.next = next;
       next.prev = prev;

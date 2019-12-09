@@ -23,6 +23,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.Indicator;
 import com.google.common.base.MoreObjects;
@@ -36,7 +37,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ohadey@gmail.com (Ohad Eytan)
  */
-public final class IndicatorFrdPolicy implements Policy {
+public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
   final Long2ObjectOpenHashMap<Node> data;
   final PolicyStats policyStats;
   final Indicator indicator;

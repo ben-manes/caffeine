@@ -77,6 +77,7 @@ import com.google.common.testing.GcFinalization;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("GuardedBy")
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class BoundedLocalCacheTest {

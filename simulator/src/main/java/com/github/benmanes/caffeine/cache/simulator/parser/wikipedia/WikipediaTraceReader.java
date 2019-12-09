@@ -17,16 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator.parser.wikipedia;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Stream;
+import java.util.stream.LongStream;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 import com.google.common.hash.Hashing;
 
 /**
@@ -35,7 +32,7 @@ import com.google.common.hash.Hashing;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class WikipediaTraceReader extends TextTraceReader {
+public final class WikipediaTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
   private static final String[] CONTAINS_FILTER = {"?search=", "&search=", "User+talk", "User_talk",
       "User:", "Talk:", "&diff=", "&action=rollback", "Special:Watchlist"};
   private static final String[] STARTS_WITH_FILTER = {"wiki/Special:Search", "w/query.php",
@@ -48,11 +45,11 @@ public final class WikipediaTraceReader extends TextTraceReader {
   }
 
   @Override
-  public Stream<AccessEvent> events() throws IOException {
+  public LongStream keys() throws IOException {
     return lines()
         .map(this::parseRequest)
         .filter(Objects::nonNull)
-        .map(path -> new AccessEvent.AccessEventBuilder(Hashing.murmur3_128().hashUnencodedChars(path).asLong()).build());
+        .mapToLong(path -> Hashing.murmur3_128().hashUnencodedChars(path).asLong());
   }
 
   /**
@@ -129,10 +126,5 @@ public final class WikipediaTraceReader extends TextTraceReader {
       }
     }
     return true;
-  }
-
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
   }
 }

@@ -22,6 +22,7 @@ import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
@@ -35,7 +36,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class UnboundedPolicy implements Policy {
+public final class UnboundedPolicy implements KeyOnlyPolicy {
   private final PolicyStats policyStats;
   private final LongOpenHashSet data;
 
