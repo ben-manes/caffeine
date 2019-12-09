@@ -196,17 +196,17 @@ public final class BoundedLocalCacheTest {
     Entry<Integer, Integer> oldEntry = Iterables.get(context.absent().entrySet(), 0);
     Entry<Integer, Integer> newEntry = Iterables.get(context.absent().entrySet(), 1);
 
-    localCache.put(oldentry.key(), oldEntry.getValue());
+    localCache.put(oldEntry.getKey(), oldEntry.getValue());
     localCache.evictionLock.lock();
     try {
-      Object lookupKey = localCache.nodeFactory.newLookupKey(oldentry.key());
+      Object lookupKey = localCache.nodeFactory.newLookupKey(oldEntry.getKey());
       Node<Integer, Integer> node = localCache.data.get(lookupKey);
       checkStatus(node, Status.ALIVE);
       ConcurrentTestHarness.execute(() -> {
-        localCache.put(newentry.key(), newEntry.getValue());
-        assertThat(localCache.remove(oldentry.key()), is(oldEntry.getValue()));
+        localCache.put(newEntry.getKey(), newEntry.getValue());
+        assertThat(localCache.remove(oldEntry.getKey()), is(oldEntry.getValue()));
       });
-      await().until(() -> localCache.containsKey(oldentry.key()), is(false));
+      await().until(() -> localCache.containsKey(oldEntry.getKey()), is(false));
       await().until(() -> {
         synchronized (node) {
           return !node.isAlive();
@@ -216,7 +216,7 @@ public final class BoundedLocalCacheTest {
       localCache.cleanUp();
 
       checkStatus(node, Status.DEAD);
-      assertThat(localCache.containsKey(newentry.key()), is(true));
+      assertThat(localCache.containsKey(newEntry.getKey()), is(true));
       await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
     } finally {
       localCache.evictionLock.unlock();

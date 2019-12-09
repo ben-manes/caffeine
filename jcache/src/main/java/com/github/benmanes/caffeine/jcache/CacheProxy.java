@@ -214,9 +214,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         millis[0] = currentTimeMillis();
       }
       if (entry.getValue().hasExpired(millis[0])) {
-        cache.asMap().computeIfPresent(entry.key(), (k, expirable) -> {
+        cache.asMap().computeIfPresent(entry.getKey(), (k, expirable) -> {
           if (expirable == entry.getValue()) {
-            dispatcher.publishExpired(this, entry.key(), entry.getValue().get());
+            dispatcher.publishExpired(this, entry.getKey(), entry.getValue().get());
             expired[0]++;
             return null;
           }
@@ -272,7 +272,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     int[] ignored = { 0 };
     Map<K, V> loaded = cacheLoader.get().loadAll(keys);
     for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
-      putNoCopyOrAwait(entry.key(), entry.getValue(), /* publishToWriter */ false, ignored);
+      putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false, ignored);
     }
   }
 
@@ -283,8 +283,8 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         .collect(toList());
     Map<K, V> result = cacheLoader.get().loadAll(keysToLoad);
     for (Map.Entry<K, V> entry : result.entrySet()) {
-      if ((entry.key() != null) && (entry.getValue() != null)) {
-        putIfAbsentNoAwait(entry.key(), entry.getValue(), /* publishToWriter */ false);
+      if ((entry.getKey() != null) && (entry.getValue() != null)) {
+        putIfAbsentNoAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false);
       }
     }
   }
@@ -382,13 +382,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     long start = statsEnabled ? ticker.read() : 0L;
 
     for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      requireNonNull(entry.key());
+      requireNonNull(entry.getKey());
       requireNonNull(entry.getValue());
     }
     int[] puts = { 0 };
     CacheWriterException e = writeAllToCacheWriter(map);
     for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      putNoCopyOrAwait(entry.key(), entry.getValue(), /* publishToWriter */ false, puts);
+      putNoCopyOrAwait(entry.getKey(), entry.getValue(), /* publishToWriter */ false, puts);
     }
     dispatcher.awaitSynchronous();
 
@@ -810,7 +810,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
           currentTimeMS = currentTimeMillis();
         }
         if (expirable.hasExpired(currentTimeMS)) {
-          dispatcher.publishExpired(this, entry.key(), expirable.get());
+          dispatcher.publishExpired(this, entry.getKey(), expirable.get());
           statistics.recordEvictions(1);
           return null;
         }
@@ -824,13 +824,13 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         // fall through
       case LOADED:
         statistics.recordPuts(1L);
-        dispatcher.publishCreated(this, entry.key(), entry.getValue());
+        dispatcher.publishCreated(this, entry.getKey(), entry.getValue());
         return new Expirable<>(entry.getValue(), getWriteExpireTimeMS(/* created */ true));
       case UPDATED: {
         statistics.recordPuts(1L);
         publishToCacheWriter(writer::write, () -> entry);
         requireNonNull(expirable, "Expected a previous value but was null");
-        dispatcher.publishUpdated(this, entry.key(), expirable.get(), entry.getValue());
+        dispatcher.publishUpdated(this, entry.getKey(), expirable.get(), entry.getValue());
         long expireTimeMS = getWriteExpireTimeMS(/* created */ false);
         if (expireTimeMS == Long.MIN_VALUE) {
           expireTimeMS = expirable.getExpireTimeMS();
@@ -841,7 +841,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
         statistics.recordRemovals(1L);
         publishToCacheWriter(writer::delete, entry::getKey);
         if (expirable != null) {
-          dispatcher.publishRemoved(this, entry.key(), expirable.get());
+          dispatcher.publishRemoved(this, entry.getKey(), expirable.get());
         }
         return null;
     }
@@ -1013,19 +1013,19 @@ public class CacheProxy<K, V> implements Cache<K, V> {
       return null;
     }
     List<Cache.Entry<? extends K, ? extends V>> entries = map.entrySet().stream()
-        .map(entry -> new EntryProxy<>(entry.key(), entry.getValue()))
+        .map(entry -> new EntryProxy<>(entry.getKey(), entry.getValue()))
         .collect(toList());
     try {
       writer.writeAll(entries);
       return null;
     } catch (CacheWriterException e) {
       entries.forEach(entry -> {
-        map.remove(entry.key());
+        map.remove(entry.getKey());
       });
       throw e;
     } catch (RuntimeException e) {
       entries.forEach(entry -> {
-        map.remove(entry.key());
+        map.remove(entry.getKey());
       });
       return new CacheWriterException("Exception in CacheWriter", e);
     }
@@ -1095,7 +1095,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   protected final Map<K, V> copyMap(Map<K, Expirable<V>> map) {
     ClassLoader classLoader = cacheManager.getClassLoader();
     return map.entrySet().stream().collect(toMap(
-        entry -> copier.copy(entry.key(), classLoader),
+        entry -> copier.copy(entry.getKey(), classLoader),
         entry -> copier.copy(entry.getValue().get(), classLoader)));
   }
 

@@ -72,10 +72,10 @@ public class PopulatedCachesTest extends TestCase {
       List<Entry<Object, Object>> warmed = warmUp(cache);
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
         Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
-        assertTrue(cache.asMap().containsKey(entry.key()));
+        assertTrue(cache.asMap().containsKey(entry.getKey()));
         assertTrue(cache.asMap().containsValue(entry.getValue()));
         // this getUnchecked() call shouldn't be a cache miss; verified below
-        assertEquals(entry.getValue(), cache.getUnchecked(entry.key()));
+        assertEquals(entry.getValue(), cache.getUnchecked(entry.getKey()));
       }
       assertEquals(WARMUP_SIZE, cache.stats().missCount());
       checkValidState(cache);
@@ -89,13 +89,13 @@ public class PopulatedCachesTest extends TestCase {
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
         Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
         Object newValue = new Object();
-        assertSame(entry.getValue(), cache.asMap().put(entry.key(), newValue));
+        assertSame(entry.getValue(), cache.asMap().put(entry.getKey(), newValue));
         // don't let the new entry get GCed
-        warmed.add(entryOf(entry.key(), newValue));
+        warmed.add(entryOf(entry.getKey(), newValue));
         Object newKey = new Object();
         assertNull(cache.asMap().put(newKey, entry.getValue()));
         // this getUnchecked() call shouldn't be a cache miss; verified below
-        assertEquals(newValue, cache.getUnchecked(entry.key()));
+        assertEquals(newValue, cache.getUnchecked(entry.getKey()));
         assertEquals(entry.getValue(), cache.getUnchecked(newKey));
         // don't let the new entry get GCed
         warmed.add(entryOf(newKey, entry.getValue()));
@@ -112,11 +112,11 @@ public class PopulatedCachesTest extends TestCase {
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
         Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
         Object newValue = new Object();
-        assertSame(entry.getValue(), cache.asMap().putIfAbsent(entry.key(), newValue));
+        assertSame(entry.getValue(), cache.asMap().putIfAbsent(entry.getKey(), newValue));
         Object newKey = new Object();
         assertNull(cache.asMap().putIfAbsent(newKey, entry.getValue()));
         // this getUnchecked() call shouldn't be a cache miss; verified below
-        assertEquals(entry.getValue(), cache.getUnchecked(entry.key()));
+        assertEquals(entry.getValue(), cache.getUnchecked(entry.getKey()));
         assertEquals(entry.getValue(), cache.getUnchecked(newKey));
         // don't let the new entry get GCed
         warmed.add(entryOf(newKey, entry.getValue()));
@@ -148,13 +148,13 @@ public class PopulatedCachesTest extends TestCase {
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
         Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
         Object newValue = new Object();
-        assertSame(entry.getValue(), cache.asMap().replace(entry.key(), newValue));
-        assertTrue(cache.asMap().replace(entry.key(), newValue, entry.getValue()));
+        assertSame(entry.getValue(), cache.asMap().replace(entry.getKey(), newValue));
+        assertTrue(cache.asMap().replace(entry.getKey(), newValue, entry.getValue()));
         Object newKey = new Object();
         assertNull(cache.asMap().replace(newKey, entry.getValue()));
         assertFalse(cache.asMap().replace(newKey, entry.getValue(), newValue));
         // this getUnchecked() call shouldn't be a cache miss; verified below
-        assertEquals(entry.getValue(), cache.getUnchecked(entry.key()));
+        assertEquals(entry.getValue(), cache.getUnchecked(entry.getKey()));
         assertFalse(cache.asMap().containsKey(newKey));
       }
       assertEquals(WARMUP_SIZE, cache.stats().missCount());
@@ -168,7 +168,7 @@ public class PopulatedCachesTest extends TestCase {
       List<Entry<Object, Object>> warmed = warmUp(cache);
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
         Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
-        Object key = entry.key();
+        Object key = entry.getKey();
         assertEquals(entry.getValue(), cache.asMap().remove(key));
         assertNull(cache.asMap().remove(key));
         assertFalse(cache.asMap().containsKey(key));

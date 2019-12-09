@@ -230,7 +230,7 @@ final class CacheGenerator {
       Entry<Integer, Integer> entry = INTS.get(i);
 
       // Reference caching (weak, soft) require unique instances for identity comparison
-      Integer key = context.isStrongKeys() ? entry.key() : new Integer(BASE + i);
+      Integer key = context.isStrongKeys() ? entry.getKey() : new Integer(BASE + i);
       Integer value = context.isStrongValues() ? entry.getValue() : new Integer(-key);
 
       if (key == first) {

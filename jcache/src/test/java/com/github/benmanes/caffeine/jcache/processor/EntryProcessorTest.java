@@ -112,7 +112,7 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
     @Override
     public void write(Entry<? extends Integer, ? extends Integer> entry) {
       writes++;
-      map.put(entry.key(), entry.getValue());
+      map.put(entry.getKey(), entry.getValue());
     }
 
     @Override
