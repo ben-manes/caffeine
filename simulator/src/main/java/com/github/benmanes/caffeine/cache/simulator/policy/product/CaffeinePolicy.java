@@ -38,18 +38,16 @@ import com.typesafe.config.Config;
 public final class CaffeinePolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
-  private final int maximumSize;
 
   public CaffeinePolicy(Config config) {
     policyStats = new PolicyStats("product.Caffeine");
     BasicSettings settings = new BasicSettings(config);
-    maximumSize = settings.maximumSize();
     cache = Caffeine.newBuilder()
         .removalListener((Long key, AccessEvent value, RemovalCause cause) ->
             policyStats.recordEviction())
         .weigher((key, value) -> value.weight())
-        .initialCapacity(maximumSize)
-        .maximumWeight(maximumSize)
+        .initialCapacity(settings.maximumSize())
+        .maximumWeight(settings.maximumSize())
         .executor(Runnable::run)
         .build();
   }
