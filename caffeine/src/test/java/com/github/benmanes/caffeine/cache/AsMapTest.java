@@ -2007,7 +2007,7 @@ public final class AsMapTest {
     int iterations = 0;
     for (Iterator<Entry<Integer, Integer>> i = map.entrySet().iterator(); i.hasNext();) {
       Entry<Integer, Integer> entry = i.next();
-      assertThat(map, hasEntry(entry.key.getKey(), entry.getValue()));
+      assertThat(map, hasEntry(entry.getKey(), entry.getValue()));
       iterations++;
       i.remove();
     }
@@ -2068,7 +2068,7 @@ public final class AsMapTest {
         assertThat(entry, is(instanceOf(WriteThroughEntry.class)));
       }
       count[0]++;
-      assertThat(context.original(), hasEntry(entry.key.getKey(), entry.getValue()));
+      assertThat(context.original(), hasEntry(entry.getKey(), entry.getValue()));
     });
     assertThat(count[0], is(context.original().size()));
   }
@@ -2131,10 +2131,10 @@ public final class AsMapTest {
     Entry<Integer, Integer> entry = map.entrySet().iterator().next();
 
     entry.setValue(3);
-    assertThat(map.get(entry.key.getKey()), is(3));
+    assertThat(map.get(entry.getKey()), is(3));
     assertThat(map.size(), is(context.original().size()));
     assertThat(map, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
-    verifyWriter(context, (verifier, writer) -> verifier.wrote(entry.key.getKey(), 3));
+    verifyWriter(context, (verifier, writer) -> verifier.wrote(entry.getKey(), 3));
   }
 
   @CheckNoWriter @CheckNoStats
