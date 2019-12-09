@@ -496,6 +496,7 @@ public final class CacheContext {
   static final class SerializableFakeTicker extends FakeTicker implements Serializable {
     private static final long START_TIME = new Random().nextLong();
 
+    @SuppressWarnings("PreferJavaTimeOverload")
     public SerializableFakeTicker() {
       advance(START_TIME);
     }

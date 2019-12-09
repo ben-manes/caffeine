@@ -44,6 +44,7 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
+@SuppressWarnings("PreferJavaTimeOverload")
 public class CacheExpirationTest extends TestCase {
 
   private static final long EXPIRING_TIME = 1000;

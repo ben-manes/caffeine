@@ -51,7 +51,7 @@ final class SerializationProxy<K, V> implements Serializable {
   @Nullable AsyncCacheLoader<?, ?> loader;
   @Nullable RemovalListener<?, ?> removalListener;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "PreferJavaTimeOverload"})
   Caffeine<Object, Object> recreateCaffeine() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (ticker != null) {

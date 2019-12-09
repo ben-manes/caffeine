@@ -30,6 +30,7 @@ import junit.framework.TestCase;
 /**
  * Test Java8 map.compute in concurrent cache context.
  */
+@SuppressWarnings("PreferJavaTimeOverload")
 public class LocalCacheMapComputeTest extends TestCase {
   final int count = 10000;
   final String delimiter = "-";

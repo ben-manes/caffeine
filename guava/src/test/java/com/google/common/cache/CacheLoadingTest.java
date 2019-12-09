@@ -62,7 +62,7 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
-@SuppressWarnings("ThreadPriorityCheck")
+@SuppressWarnings({"ThreadPriorityCheck", "PreferJavaTimeOverload"})
 public class CacheLoadingTest extends TestCase {
   Logger logger = Logger.getLogger("com.github.benmanes.caffeine.cache.BoundedLocalCache");
   TestLogHandler logHandler;

@@ -25,9 +25,9 @@
  */
 ext {
   versions = [
-    akka: '2.6.0',
+    akka: '2.6.1',
     cache2k: '1.3.1.Alpha',
-    checkerFramework: '3.0.0',
+    checkerFramework: '3.0.1',
     collision: '0.3.3',
     commonsCompress: '1.19',
     commonsLang3: '3.9',
@@ -37,7 +37,7 @@ ext {
     ehcache3: '3.8.1',
     errorprone: '2.3.3',
     errorproneJavac: '9+181-r4173-1',
-    elasticSearch: '7.4.2',
+    elasticSearch: '7.5.0',
     expiringMap: '0.5.9',
     fastfilter: 'bf0b02297f',
     fastutil: '8.3.0',
@@ -57,7 +57,7 @@ ext {
     slf4j: '1.7.29',
     tcache: '2.0.1',
     stream: '2.9.8',
-    univocityParsers: '2.8.3',
+    univocityParsers: '2.8.4',
     ycsb: '0.17.0',
     xz: '1.8',
   ]

@@ -31,6 +31,7 @@ import junit.framework.TestCase;
  *
  * @author Adam Winer
  */
+@SuppressWarnings("PreferJavaTimeOverload")
 public class CaffeineSpecGuavaTest extends TestCase {
 
   public void testParse_empty() {

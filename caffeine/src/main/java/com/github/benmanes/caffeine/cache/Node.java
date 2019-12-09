@@ -94,7 +94,6 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
   /* --------------- Health --------------- */
 
   /** If the entry is available in the hash-table and page replacement policy. */
-  @GuardedBy("this")
   public abstract boolean isAlive();
 
   /**

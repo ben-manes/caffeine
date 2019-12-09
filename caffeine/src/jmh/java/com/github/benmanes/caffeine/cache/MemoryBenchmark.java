@@ -43,6 +43,7 @@ import com.jakewharton.fliptables.FlipTable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("PreferJavaTimeOverload")
 public final class MemoryBenchmark {
   // The number of entries added to minimize skew due to non-entry factors
   static final int FUZZY_SIZE = 25_000;

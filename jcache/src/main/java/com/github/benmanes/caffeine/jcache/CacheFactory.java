@@ -226,6 +226,7 @@ final class CacheFactory {
     }
 
     /** Configures the write expiration and returns if set. */
+    @SuppressWarnings("PreferJavaTimeOverload")
     private boolean configureExpireAfterWrite() {
       if (config.getExpireAfterWrite().isPresent()) {
         caffeine.expireAfterWrite(config.getExpireAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
@@ -234,6 +235,7 @@ final class CacheFactory {
     }
 
     /** Configures the access expiration and returns if set. */
+    @SuppressWarnings("PreferJavaTimeOverload")
     private boolean configureExpireAfterAccess() {
       if (config.getExpireAfterAccess().isPresent()) {
         caffeine.expireAfterAccess(config.getExpireAfterAccess().getAsLong(), TimeUnit.NANOSECONDS);
@@ -262,6 +264,7 @@ final class CacheFactory {
       return config.getExpireAfterWrite().isPresent();
     }
 
+    @SuppressWarnings("PreferJavaTimeOverload")
     private void configureRefreshAfterWrite() {
       if (config.getRefreshAfterWrite().isPresent()) {
         caffeine.refreshAfterWrite(config.getRefreshAfterWrite().getAsLong(), TimeUnit.NANOSECONDS);
