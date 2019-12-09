@@ -21,6 +21,7 @@ import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
@@ -44,7 +45,9 @@ public final class CaffeinePolicy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     maximumSize = settings.maximumSize();
     cache = Caffeine.newBuilder()
-        .weigher((Long key, AccessEvent value) -> value.weight())
+        .removalListener((Long key, AccessEvent value, RemovalCause cause) ->
+            policyStats.recordEviction())
+        .weigher((key, value) -> value.weight())
         .initialCapacity(maximumSize)
         .maximumWeight(maximumSize)
         .executor(Runnable::run)
@@ -64,9 +67,6 @@ public final class CaffeinePolicy implements Policy {
   public void record(AccessEvent event) {
     Object value = cache.getIfPresent(event.key());
     if (value == null) {
-      if (cache.estimatedSize() == maximumSize) {
-        policyStats.recordEviction();
-      }
       cache.put(event.key(), event);
       policyStats.recordMiss();
     } else {

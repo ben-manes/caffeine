@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
+import org.cache2k.event.CacheEntryEvictedListener;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
@@ -48,10 +49,13 @@ public final class Cache2kPolicy implements Policy {
     logger.setLevel(Level.WARNING);
 
     policyStats = new PolicyStats("product.Cache2k");
+    CacheEntryEvictedListener<Long, AccessEvent> listener =
+        (cache, entry) -> policyStats.recordEviction();
     BasicSettings settings = new BasicSettings(config);
     cache = Cache2kBuilder.of(Long.class, AccessEvent.class)
         .weigher((Long key, AccessEvent value) -> value.weight())
         .maximumWeight(settings.maximumSize())
+        .addListener(listener)
         .strictEviction(true)
         .eternal(true)
         .build();
