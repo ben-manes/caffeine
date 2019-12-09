@@ -20,20 +20,21 @@ import java.math.BigInteger;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
  * A reader for the Gradle Build Cache trace files provided by the Gradle team.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class GradleTraceReader extends TextTraceReader {
+public final class GradleTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
 
   public GradleTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public LongStream keys() throws IOException {
     return lines()
         .map(uuid -> new BigInteger(uuid, 16))
         .mapToLong(num -> num.shiftRight(64).longValue() ^ num.longValue());

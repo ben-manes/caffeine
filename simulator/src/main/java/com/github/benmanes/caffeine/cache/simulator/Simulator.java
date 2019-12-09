@@ -22,15 +22,17 @@ import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.PrimitiveIterator;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyActor;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
 import com.github.benmanes.caffeine.cache.simulator.report.Reporter;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Iterators;
 import com.typesafe.config.Config;
 
 import akka.actor.AbstractActor;
@@ -40,7 +42,6 @@ import akka.routing.ActorRefRoutee;
 import akka.routing.BroadcastRoutingLogic;
 import akka.routing.Routee;
 import akka.routing.Router;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 /**
  * A simulator that broadcasts the recorded cache events to each policy and generates an aggregated
@@ -64,6 +65,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 public final class Simulator extends AbstractActor {
   public enum Message { START, FINISH, ERROR }
 
+  private final TraceReader traceReader;
   private final BasicSettings settings;
   private final Stopwatch stopwatch;
   private final Reporter reporter;
@@ -74,6 +76,7 @@ public final class Simulator extends AbstractActor {
   public Simulator() {
     Config config = context().system().settings().config().getConfig("caffeine.simulator");
     settings = new BasicSettings(config);
+    traceReader = makeTraceReader();
 
     List<Routee> routes = makeRoutes();
     router = new Router(new BroadcastRoutingLogic(), routes);
@@ -100,16 +103,9 @@ public final class Simulator extends AbstractActor {
 
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() {
-    try (LongStream events = eventStream()) {
-      LongArrayList batch = new LongArrayList(batchSize);
-      for (PrimitiveIterator.OfLong i = events.iterator(); i.hasNext();) {
-        batch.add(i.nextLong());
-        if (batch.size() == batchSize) {
-          router.route(batch, self());
-          batch = new LongArrayList(batchSize);
-        }
-      }
-      router.route(batch, self());
+    try (Stream<AccessEvent> events = traceReader.events()) {
+      Iterators.partition(events.iterator(), batchSize)
+          .forEachRemaining(batch -> router.route(batch, self()));
       router.route(FINISH, self());
     } catch (Exception e) {
       context().system().log().error(e, "");
@@ -117,19 +113,19 @@ public final class Simulator extends AbstractActor {
     }
   }
 
-  /** Returns a stream of trace events. */
-  private LongStream eventStream() throws IOException {
+  /** Returns a trace reader for the access events. */
+  private TraceReader makeTraceReader() {
     if (settings.isSynthetic()) {
       return Synthetic.generate(settings);
     }
     List<String> filePaths = settings.traceFiles().paths();
     TraceFormat format = settings.traceFiles().format();
-    return format.readFiles(filePaths).events();
+    return format.readFiles(filePaths);
   }
 
   /** Returns the actors to broadcast trace events to. */
   private List<Routee> makeRoutes() {
-    return Registry.policies(settings).stream().map(policy -> {
+    return Registry.policies(settings, traceReader.characteristics()).stream().map(policy -> {
       ActorRef actorRef = context().actorOf(Props.create(PolicyActor.class, policy));
       context().watch(actorRef);
       return new ActorRefRoutee(actorRef);

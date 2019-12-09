@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 import com.google.common.hash.Hashing;
 
 /**
@@ -31,7 +32,7 @@ import com.google.common.hash.Hashing;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class WikipediaTraceReader extends TextTraceReader {
+public final class WikipediaTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
   private static final String[] CONTAINS_FILTER = {"?search=", "&search=", "User+talk", "User_talk",
       "User:", "Talk:", "&diff=", "&action=rollback", "Special:Watchlist"};
   private static final String[] STARTS_WITH_FILTER = {"wiki/Special:Search", "w/query.php",
@@ -44,7 +45,7 @@ public final class WikipediaTraceReader extends TextTraceReader {
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public LongStream keys() throws IOException {
     return lines()
         .map(this::parseRequest)
         .filter(Objects::nonNull)

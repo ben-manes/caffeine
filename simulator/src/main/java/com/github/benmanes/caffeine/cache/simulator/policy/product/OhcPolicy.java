@@ -32,6 +32,7 @@ import org.caffinitas.ohc.OHCacheBuilder;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
@@ -40,7 +41,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class OhcPolicy implements Policy {
+public final class OhcPolicy implements KeyOnlyPolicy {
   private static final long ENTRY_SIZE = 80;
 
   private final OHCache<Long, Long> cache;

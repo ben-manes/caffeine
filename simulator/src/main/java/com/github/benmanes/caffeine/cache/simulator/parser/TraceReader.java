@@ -14,7 +14,13 @@
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
+
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader to an access trace.
@@ -23,14 +29,31 @@ import java.util.stream.LongStream;
  */
 public interface TraceReader {
 
+  /** The event features that this trace supports. */
+  Set<Characteristic> characteristics();
+
   /**
-   * Creates a {@link LongStream} that lazily reads the trace source.
+   * Creates a stream that lazily reads the trace source.
    * <p>
    * If timely disposal of underlying resources is required, the try-with-resources construct should
-   * be used to ensure that the stream's {@link java.util.stream.Stream#close close} method is
-   * invoked after the stream operations are completed.
+   * be used to ensure that the stream's {@link Stream#close close} method is invoked after the
+   * stream operations are completed.
    *
    * @return a lazy stream of cache events
    */
-  LongStream events() throws IOException;
+  Stream<AccessEvent> events() throws IOException;
+
+  /** A trace reader that that does not contain external event metadata. */
+  interface KeyOnlyTraceReader extends TraceReader {
+
+    @Override default Set<Characteristic> characteristics() {
+      return ImmutableSet.of();
+    }
+
+    @Override default Stream<AccessEvent> events() throws IOException {
+      return keys().mapToObj(AccessEvent::forKey);
+    }
+
+    LongStream keys() throws IOException;
+  }
 }

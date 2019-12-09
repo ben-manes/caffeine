@@ -19,10 +19,11 @@ import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.ERR
 import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.FINISH;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+
 import akka.actor.AbstractActor;
 import akka.dispatch.BoundedMessageQueueSemantics;
 import akka.dispatch.RequiresMessageQueue;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 /**
  * An actor that proxies to the page replacement policy.
@@ -40,16 +41,16 @@ public final class PolicyActor extends AbstractActor
   @Override
   public Receive createReceive() {
     return receiveBuilder()
-        .match(LongArrayList.class, this::process)
         .matchEquals(FINISH, msg -> finish())
+        .matchUnchecked(List.class, () -> true, this::process)
         .build();
   }
 
-  private void process(LongArrayList events) {
+  private void process(List<AccessEvent> events) {
     try {
       policy.stats().stopwatch().start();
-      for (int i = 0; i < events.size(); i++) {
-        policy.record(events.getLong(i));
+      for (AccessEvent event : events) {
+        policy.record(event);
       }
     } catch (Exception e) {
       sender().tell(ERROR, self());

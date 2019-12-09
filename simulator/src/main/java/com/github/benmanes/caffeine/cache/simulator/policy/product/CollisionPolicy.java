@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
@@ -36,7 +37,7 @@ import systems.comodal.collision.cache.CollisionCache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CollisionPolicy implements Policy {
+public final class CollisionPolicy implements KeyOnlyPolicy {
   private final CollisionCache<Object, Object> cache;
   private final PolicyStats policyStats;
   private final int maximumSize;

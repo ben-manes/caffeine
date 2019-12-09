@@ -15,19 +15,43 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
+
 /**
  * A cache that implements a page replacement policy.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Policy {
+  enum Characteristic {
+    WEIGHTED
+  }
+
+  /** The event features that this policy supports. */
+  Set<Characteristic> characteristics();
 
   /** Records that the entry was accessed. */
-  void record(long key);
+  void record(AccessEvent event);
 
   /** Indicates that the recording has completed. */
   default void finished() {}
 
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
+
+  /** A policy that does not exploit external event metadata. */
+  interface KeyOnlyPolicy extends Policy {
+
+    @Override default Set<Characteristic> characteristics() {
+      return ImmutableSet.of();
+    }
+
+    @Override default void record(AccessEvent event) {
+      record(event.key());
+    }
+
+    void record(long key);
+  }
 }

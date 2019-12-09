@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Set;
@@ -24,9 +25,11 @@ import org.elasticsearch.common.cache.Cache.CacheStats;
 import org.elasticsearch.common.cache.CacheBuilder;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -35,16 +38,16 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ElasticSearchPolicy implements Policy {
-  private final Cache<Object, Object> cache;
+  private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
-  private final int maximumSize;
 
   public ElasticSearchPolicy(Config config) {
     policyStats = new PolicyStats("product.ElasticSearch");
     BasicSettings settings = new BasicSettings(config);
-    maximumSize = settings.maximumSize();
-    cache = CacheBuilder.builder()
-        .setMaximumWeight(maximumSize)
+    cache = CacheBuilder.<Long, AccessEvent>builder()
+        .removalListener(notification -> policyStats.recordEviction())
+        .setMaximumWeight(settings.maximumSize())
+        .weigher((key, value) -> value.weight())
         .build();
   }
 
@@ -53,14 +56,15 @@ public final class ElasticSearchPolicy implements Policy {
     return ImmutableSet.of(new ElasticSearchPolicy(config));
   }
 
+  @Override public Set<Characteristic> characteristics() {
+    return Sets.immutableEnumSet(WEIGHTED);
+  }
+
   @Override
-  public void record(long key) {
-    Object value = cache.get(key);
+  public void record(AccessEvent event) {
+    Object value = cache.get(event.key());
     if (value == null) {
-      if (cache.count() == maximumSize) {
-        policyStats.recordEviction();
-      }
-      cache.put(key, key);
+      cache.put(event.key(), event);
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();

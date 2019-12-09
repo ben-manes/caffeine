@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
  * A reader for the trace files of application address instructions, provided by
@@ -26,14 +27,14 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AddressTraceReader extends TextTraceReader {
+public final class AddressTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
 
   public AddressTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public LongStream keys() throws IOException {
     return lines()
         .map(line -> line.split(" ", 3)[1])
         .map(address -> address.substring(2))

@@ -27,20 +27,21 @@ import java.util.stream.LongStream;
 import java.util.stream.StreamSupport;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
  * A reader for the trace files provided by the authors of the AdaptiveClimb algorithm.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ClimbTraceReader extends TextTraceReader {
+public final class ClimbTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
 
   public ClimbTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public LongStream keys() throws IOException {
     TraceIterator iterator = new TraceIterator(readFile());
     return StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
         iterator, Spliterator.ORDERED), /* parallel */ false).onClose(iterator::close);

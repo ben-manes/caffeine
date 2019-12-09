@@ -26,6 +26,7 @@ import org.ehcache.config.units.EntryUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
@@ -35,7 +36,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class Ehcache3Policy implements Policy {
+public final class Ehcache3Policy implements KeyOnlyPolicy {
   private final Cache<Object, Object> cache;
   private final CacheManager cacheManager;
   private final PolicyStats policyStats;

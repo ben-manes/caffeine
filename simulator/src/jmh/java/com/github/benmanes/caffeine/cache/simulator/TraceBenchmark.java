@@ -21,7 +21,7 @@ import static org.openjdk.jmh.annotations.Scope.Benchmark;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
@@ -30,6 +30,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
 import com.typesafe.config.ConfigFactory;
@@ -52,18 +53,18 @@ public class TraceBenchmark {
   int missPenalty;
 
   BasicSettings settings;
-  long[] events;
+  AccessEvent[] events;
 
   @Setup
   public void setup() throws IOException {
     settings = new BasicSettings(ConfigFactory.load().getConfig("caffeine.simulator"));
-    events = readEventStream(settings).toArray();
+    events = readEventStream(settings).toArray(AccessEvent[]::new);
   }
 
   @Benchmark
   public Policy trace() {
     Policy policy = makePolicy();
-    for (long event : events) {
+    for (AccessEvent event : events) {
       policy.record(event);
     }
     Blackhole.consumeCPU(missPenalty * policy.stats().missCount());
@@ -79,9 +80,9 @@ public class TraceBenchmark {
     return policies.iterator().next();
   }
 
-  private LongStream readEventStream(BasicSettings settings) throws IOException {
+  private Stream<AccessEvent> readEventStream(BasicSettings settings) throws IOException {
     if (settings.isSynthetic()) {
-      return Synthetic.generate(settings);
+      return Synthetic.generate(settings).events();
     }
     List<String> filePaths = settings.traceFiles().paths();
     TraceFormat format = settings.traceFiles().format();

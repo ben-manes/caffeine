@@ -22,13 +22,14 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.PrimitiveIterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.io.Closeables;
 
 /**
@@ -44,20 +45,20 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
 
   @Override
   @SuppressWarnings("PMD.CloseResource")
-  public LongStream events() throws IOException {
+  public Stream<AccessEvent> events() throws IOException {
     DataInputStream input = new DataInputStream(new BufferedInputStream(readFile()));
-    LongStream stream = StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
+    Stream<AccessEvent> stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
         new TraceIterator(input), Spliterator.ORDERED), /* parallel */ false);
     return stream.onClose(() -> Closeables.closeQuietly(input));
   }
 
   /** Returns the next event from the input stream. */
-  protected abstract long readLong(DataInputStream input) throws IOException;
+  protected abstract AccessEvent readEvent(DataInputStream input) throws IOException;
 
-  private final class TraceIterator implements PrimitiveIterator.OfLong {
+  private final class TraceIterator implements Iterator<AccessEvent> {
     final DataInputStream input;
+    AccessEvent next;
     boolean ready;
-    long next;
 
     TraceIterator(DataInputStream input) {
       this.input = requireNonNull(input);
@@ -69,7 +70,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
         return true;
       }
       try {
-        next = readLong(input);
+        next = readEvent(input);
         ready = true;
         return true;
       } catch (EOFException e) {
@@ -80,7 +81,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
     }
 
     @Override
-    public long nextLong() {
+    public AccessEvent next() {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }

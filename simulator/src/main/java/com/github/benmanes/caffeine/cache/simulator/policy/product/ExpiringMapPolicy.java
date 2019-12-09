@@ -21,6 +21,7 @@ import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
@@ -33,7 +34,7 @@ import net.jodah.expiringmap.ExpiringMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ExpiringMapPolicy implements Policy {
+public final class ExpiringMapPolicy implements KeyOnlyPolicy {
   private final ExpiringMap<Object, Object> cache;
   private final PolicyStats policyStats;
 

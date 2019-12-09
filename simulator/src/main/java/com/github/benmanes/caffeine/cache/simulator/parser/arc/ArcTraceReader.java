@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
  * A reader for the trace files provided by the authors of the ARC algorithm. See
@@ -26,14 +27,14 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ArcTraceReader extends TextTraceReader {
+public final class ArcTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
 
   public ArcTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public LongStream events() throws IOException {
+  public LongStream keys() throws IOException {
     return lines().flatMapToLong(line -> {
       String[] array = line.split(" ", 3);
       long startBlock = Long.parseLong(array[0]);

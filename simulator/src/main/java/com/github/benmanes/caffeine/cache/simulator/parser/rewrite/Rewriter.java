@@ -20,13 +20,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.PrimitiveIterator;
-import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.base.Stopwatch;
 
 /**
@@ -56,13 +57,14 @@ public final class Rewriter {
   @Parameter(names = "--help", help = true, hidden = true)
   private boolean help;
 
+  @SuppressWarnings("PMD.ForLoopCanBeForeach")
   public void run() throws IOException {
     int count = 0;
     Stopwatch stopwatch = Stopwatch.createStarted();
-    try (LongStream events = inputFormat.readFiles(inputFiles).events();
+    try (Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
          BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
-      for (PrimitiveIterator.OfLong i = events.iterator(); i.hasNext();) {
-        outputFormat.write(writer, i.nextLong());
+      for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
+        outputFormat.write(writer, i.next().key());
         count++;
       }
     }

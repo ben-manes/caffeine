@@ -21,6 +21,8 @@ import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.UniformSettings;
+import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+
 import site.ycsb.generator.CounterGenerator;
 import site.ycsb.generator.ExponentialGenerator;
 import site.ycsb.generator.HotspotIntegerGenerator;
@@ -40,28 +42,28 @@ public final class Synthetic {
   private Synthetic() {}
 
   /** Returns a sequence of events based on the setting's distribution. */
-  public static LongStream generate(BasicSettings settings) {
+  public static KeyOnlyTraceReader generate(BasicSettings settings) {
     int events = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter":
-        return counter(settings.synthetic().counter().start(), events);
+        return () -> counter(settings.synthetic().counter().start(), events);
       case "exponential":
-        return exponential(settings.synthetic().exponential().mean(), events);
+        return () -> exponential(settings.synthetic().exponential().mean(), events);
       case "hotspot":
         HotspotSettings hotspot = settings.synthetic().hotspot();
-        return Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
+        return () -> Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
             hotspot.hotOpnFraction(), hotspot.hotsetFraction(), events);
       case "zipfian":
-        return zipfian(settings.synthetic().zipfian().items(),
+        return () -> zipfian(settings.synthetic().zipfian().items(),
             settings.synthetic().zipfian().constant(), events);
       case "scrambled-zipfian":
-        return scrambledZipfian(settings.synthetic().zipfian().items(),
+        return () -> scrambledZipfian(settings.synthetic().zipfian().items(),
             settings.synthetic().zipfian().constant(), events);
       case "skewed-zipfian-latest":
-        return skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
+        return () -> skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
       case "uniform":
         UniformSettings uniform = settings.synthetic().uniform();
-        return uniform(uniform.lowerBound(), uniform.upperBound(), events);
+        return () -> uniform(uniform.lowerBound(), uniform.upperBound(), events);
       default:
         throw new IllegalStateException("Unknown distribution: "
             + settings.synthetic().distribution());

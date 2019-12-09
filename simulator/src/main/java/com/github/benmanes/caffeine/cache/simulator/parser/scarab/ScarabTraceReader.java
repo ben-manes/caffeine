@@ -17,8 +17,12 @@ package com.github.benmanes.caffeine.cache.simulator.parser.scarab;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.BinaryTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A reader for the trace files provided by
@@ -33,7 +37,12 @@ public final class ScarabTraceReader extends BinaryTraceReader {
   }
 
   @Override
-  protected long readLong(DataInputStream input) throws IOException {
-    return input.readLong();
+  public Set<Characteristic> characteristics() {
+    return ImmutableSet.of();
+  }
+
+  @Override
+  protected AccessEvent readEvent(DataInputStream input) throws IOException {
+    return AccessEvent.forKey(input.readLong());
   }
 }
