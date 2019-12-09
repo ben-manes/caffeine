@@ -27,7 +27,7 @@ import com.google.common.base.MoreObjects;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class AccessEvent {
-    private final long key;
+    private final Long key;
 
     private AccessEvent(long key) {
         this.key = key;
