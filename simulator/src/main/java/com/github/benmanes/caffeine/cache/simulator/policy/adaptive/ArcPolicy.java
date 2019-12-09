@@ -20,8 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -77,7 +76,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
 
   public ArcPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("adaptive.Arc",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("adaptive.Arc",settings.report().characteristics());
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
     this.headT1 = new Node();
@@ -92,12 +91,12 @@ public final class ArcPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      onMiss(entry);
+      onMiss(event);
     } else if (node.type == QueueType.B1) {
       onHitB1(node);
     } else if (node.type == QueueType.B2) {
@@ -117,7 +116,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     node.remove();
     node.type = QueueType.T2;
     node.appendToTail(headT2);
-    policyStats.recordHit(node.entry);
+    policyStats.recordHit(node.event);
   }
 
   private void onHitB1(Node node) {
@@ -133,7 +132,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     node.remove();
     node.type = QueueType.T2;
     node.appendToTail(headT2);
-    policyStats.recordMiss(node.entry);
+    policyStats.recordMiss(node.event);
   }
 
   private void onHitB2(Node node) {
@@ -149,10 +148,10 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     node.remove();
     node.type = QueueType.T2;
     node.appendToTail(headT2);
-    policyStats.recordMiss(node.entry);
+    policyStats.recordMiss(node.event);
   }
 
-  private void onMiss(AccessEvent entry) {
+  private void onMiss(AccessEvent event) {
     // x ∈ L1 ∪ L2 (a miss in DBL(2c) and ARC(c)):
     // case (i) |L1| = c:
     //   If |T1| < c then delete the LRU page of B1 and REPLACE(p).
@@ -161,8 +160,8 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     //   if |L1| + |L2|= 2c then delete the LRU page of B2.
     //   REPLACE(p) .
     // Put x at the top of T1 and place it in the cache.
-    long key = entry.getKey();
-    Node node = new Node(entry);
+    long key = event.key();
+    Node node = new Node(event);
     node.type = QueueType.T1;
 
     int sizeL1 = (sizeT1 + sizeB1);
@@ -195,7 +194,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     data.put(key, node);
     node.appendToTail(headT1);
 
-    policyStats.recordMiss(node.entry);
+    policyStats.recordMiss(node.event);
   }
 
   /** Evicts while the map exceeds the maximum capacity. */
@@ -244,7 +243,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
 
   static final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
     Node prev;
     Node next;
     QueueType type;
@@ -253,12 +252,12 @@ public final class ArcPolicy implements KeyOnlyPolicy {
       this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
-      this.entry = null;
+      this.event = null;
     }
 
-    Node(AccessEvent entry) {
-      this.key = entry.getKey();
-      this.entry = entry;
+    Node(AccessEvent event) {
+      this.key = event.key();
+      this.event = event;
     }
 
     /** Appends the node to the tail of the list. */
@@ -288,8 +287,5 @@ public final class ArcPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

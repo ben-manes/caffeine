@@ -17,8 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
@@ -48,7 +47,7 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
   @SuppressWarnings("PMD.CloseResource")
   public Ehcache3Policy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("product.Ehcache3",settings.traceCharacteristics());
+    policyStats = new PolicyStats("product.Ehcache3",settings.report().characteristics());
     cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = cacheManager.createCache("ehcache3",
         CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,
@@ -64,18 +63,18 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     Object value = cache.putIfAbsent(key, key);
     if (value == null) {
       size++;
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       if (size > maximumSize) {
         policyStats.recordEviction();
         size--;
       }
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
@@ -89,8 +88,5 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
     cacheManager.close();
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.report;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.US;
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.PENALTIES;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,9 +30,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
 /**
@@ -45,23 +45,29 @@ public abstract class TextReporter implements Reporter {
   private final List<PolicyStats> results;
   private final BasicSettings settings;
   private final String timeUnit;
+  private final Set<Characteristic> characteristics;
 
   public TextReporter(Config config) {
     settings = new BasicSettings(config);
     results = new ArrayList<>();
-    timeUnit = settings.timeUnit();
-    String[] mainHeaders = {
+    timeUnit = settings.report().timeUnit();
+    characteristics = settings.report().characteristics();
+    String[] basicHeaders = {
             "Policy", "Hit rate", "Hits", "Misses", "Requests",
             "Evictions", "Admit rate", "Steps", "Time"};
-    String[] hpHeaders = {"Avg. Hit Penalty"};
-    String[] mpHeaders = {"Avg. Miss Penalty","Avg. Total Penalty","Avg. Miss Penalty (AFS)","Avg. Total Penalty (AFS)"};
+    String[] penaltyHeaders = {"Avg. Hit Penalty","Avg. Miss Penalty","Avg. Total Penalty","Avg. Miss Penalty (AFS)","Avg. Total Penalty (AFS)"};
     String[] empty = {};
-    HEADERS = mergeStringData(mainHeaders,hasHitPenalty() ? hpHeaders : empty,hasMissPenalty() ? mpHeaders : empty);
+    HEADERS = mergeStringData(basicHeaders,characteristics.contains(PENALTIES) ? penaltyHeaders : empty);
   }
 
   /** Returns the column headers. */
   protected String[] headers() {
     return HEADERS.clone();
+  }
+
+  /** Returns the column headers. */
+  protected Set<Characteristic> characteristics() {
+    return characteristics;
   }
 
   /** Adds the result of a policy simulation. */
@@ -92,15 +98,6 @@ public abstract class TextReporter implements Reporter {
     return settings.report().ascending() ? comparator : comparator.reversed();
   }
 
-  boolean hasMissPenalty(){
-    Set<Characteristics> characteristicsSet = settings.traceCharacteristics();
-    return characteristicsSet.contains(Characteristics.MISS_PENALTY) || characteristicsSet.containsAll(ImmutableSet.of(Characteristics.SIZE,Characteristics.MISS_READ_RATE));
-  }
-
-  boolean hasHitPenalty(){
-    Set<Characteristics> characteristicsSet = settings.traceCharacteristics();
-    return characteristicsSet.contains(Characteristics.HIT_PENALTY) || characteristicsSet.containsAll(ImmutableSet.of(Characteristics.SIZE,Characteristics.CACHE_READ_RATE));
-  }
 
   String getTimeUnit(){
     return timeUnit;

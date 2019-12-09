@@ -18,8 +18,7 @@ package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -52,7 +51,7 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
 
   public ClairvoyantPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("opt.Clairvoyant",settings.traceCharacteristics());
+    policyStats = new PolicyStats("opt.Clairvoyant",settings.report().characteristics());
     accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
     maximumSize = settings.maximumSize();
@@ -66,10 +65,10 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     tick++;
-    future.enqueue(entry);
+    future.enqueue(event);
     IntPriorityQueue times = accessTimes.get(key);
     if (times == null) {
       times = new IntArrayFIFOQueue();
@@ -93,8 +92,8 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
   }
 
   /** Performs the cache operations for the given key. */
-  private void process(AccessEvent entry) {
-    long key = entry.getKey();
+  private void process(AccessEvent event) {
+    long key = event.key();
     IntPriorityQueue times = accessTimes.get(key);
 
     int lastAccess = times.dequeueInt();
@@ -107,9 +106,9 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
       data.add(times.firstInt());
     }
     if (found) {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     } else {
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       if (data.size() > maximumSize) {
         evict();
       }
@@ -122,8 +121,5 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
     policyStats.recordEviction();
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

@@ -27,7 +27,9 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.report.ReportFormat;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.base.CaseFormat;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -98,18 +100,6 @@ public class BasicSettings {
     return new SyntheticSettings();
   }
 
-  public Set<Characteristics> traceCharacteristics() {
-    return config().getStringList("trace-characteristics").stream()
-            .map(String::toUpperCase)
-            .map(name -> name.replaceAll("-","_"))
-            .map(Characteristics::valueOf)
-            .collect(toSet());
-  }
-
-  public String timeUnit() {
-    return config().getString("time-unit");
-  }
-
   /** Returns the config resolved at the simulator's path. */
   public Config config() {
     return config;
@@ -128,6 +118,16 @@ public class BasicSettings {
     public String output() {
       return config().getString("report.output").trim();
     }
+    public Set<Characteristic> characteristics() {
+      return config().getStringList("report.characteristics").stream()
+              .map(String::toUpperCase)
+              .map(Characteristic::valueOf)
+              .collect(Sets.toImmutableEnumSet());
+    }
+    public String timeUnit() {
+      return config().getString("report.time-unit");
+    }
+
   }
 
   public final class MembershipSettings {

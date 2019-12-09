@@ -20,13 +20,13 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -72,7 +72,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
     this.maxIn = (int) (maximumSize * settings.percentIn());
-    this.policyStats = new PolicyStats("two-queue.TwoQueue",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("two-queue.TwoQueue",characteristics());
     this.maxOut = (int) (maximumSize * settings.percentOut());
   }
 
@@ -83,8 +83,8 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
 
   @Override
   @SuppressWarnings({"PMD.ConfusingTernary", "PMD.SwitchStmtsShouldHaveDefault"})
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     // On accessing a page X :
     //   if X is in Am then
     //     move X to the head of Am
@@ -104,7 +104,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
       switch (node.type) {
         case MAIN:
           node.moveToTail(headMain);
-          policyStats.recordHit(entry);
+          policyStats.recordHit(event);
           return;
         case OUT:
           node.remove();
@@ -116,11 +116,11 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
           node.type = QueueType.MAIN;
           sizeMain++;
 
-          policyStats.recordMiss(entry);
+          policyStats.recordMiss(event);
           return;
         case IN:
           // do nothing
-          policyStats.recordHit(entry);
+          policyStats.recordHit(event);
           return;
       }
     } else {
@@ -131,7 +131,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
       node.appendToTail(headIn);
       sizeIn++;
 
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
     }
   }
 
@@ -185,11 +185,6 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
   @Override
   public PolicyStats stats() {
     return policyStats;
-  }
-
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
   }
 
   enum QueueType {

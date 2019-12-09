@@ -22,8 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -82,7 +81,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     LirsSettings settings = new LirsSettings(config);
     this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
     this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
-    this.policyStats = new PolicyStats("irr.Lirs",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("irr.Lirs",settings.report().characteristics());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.evicted = new ArrayList<>();
@@ -97,12 +96,12 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      node = new Node(entry);
+      node = new Node(event);
       data.put(key,node);
       onNonResidentHir(node);
     } else if (node.status == Status.LIR) {
@@ -122,7 +121,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // it to the top of stack S. If the LIR block is originally located at the bottom of the
     // stack, we conduct a stack pruning. This case is illustrated in the transition from state
     // (a) to state (b) in Fig. 2.
-    policyStats.recordHit(node.entry);
+    policyStats.recordHit(node.event);
 
     boolean wasBottom = (headS.prevS == node);
     node.moveToTop(StackType.S);
@@ -139,7 +138,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // stack pruning is then conducted. This case is illustrated in the transition from state (a)
     // to state (c) in Fig. 2. b) If X is not in stack S, we leave its status unchanged and move
     // it to the top of stack Q.
-    policyStats.recordHit(node.entry);
+    policyStats.recordHit(node.event);
 
     boolean isInStack = node.isInStack(StackType.S);
     boolean isTop = node.isStackTop(StackType.S);
@@ -168,7 +167,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // size reaches Llirs. After that, HIR status is given to any blocks that are accessed for the
     // first time and to blocks that have not been accessed for a long time so that currently they
     // are not in stack S.
-    policyStats.recordMiss(node.entry);
+    policyStats.recordMiss(node.event);
 
     if (sizeHot < maximumHotSize) {
       onLirWarmupMiss(node);
@@ -367,7 +366,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   // indicating whether or not the block resides in the cache.
   final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
 
     Status status;
 
@@ -384,15 +383,15 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
     Node() {
       key = Long.MIN_VALUE;
-      entry = null;
+      event = null;
       prevS = nextS = this;
       prevQ = nextQ = this;
       prevNR = nextNR = this;
     }
 
-    Node(AccessEvent entry) {
-      this.key = entry.getKey();
-      this.entry = entry;
+    Node(AccessEvent event) {
+      this.key = event.key();
+      this.event = event;
     }
 
     public boolean isInStack(StackType stackType) {
@@ -502,8 +501,5 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

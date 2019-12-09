@@ -67,7 +67,7 @@ final class MapTestFactory {
       @Override protected Map<String, String> create(Entry<String, String>[] entries) {
         Map<String, String> map = supplier.get();
         for (Entry<String, String> entry : entries) {
-          map.put(entry.getKey(), entry.getValue());
+          map.put(entry.key(), entry.getValue());
         }
         return map;
       }
@@ -82,7 +82,7 @@ final class MapTestFactory {
           Entry<String, CompletableFuture<String>>[] entries) {
         Map<String, CompletableFuture<String>> map = supplier.get();
         for (Entry<String, CompletableFuture<String>> entry : entries) {
-          map.put(entry.getKey(), entry.getValue());
+          map.put(entry.key(), entry.getValue());
         }
         return map;
       }

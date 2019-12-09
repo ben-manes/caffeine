@@ -21,10 +21,9 @@ import static java.util.stream.Collectors.toSet;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -68,7 +67,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   public SegmentedLruPolicy(Admission admission, Config config) {
     SegmentedLruSettings settings = new SegmentedLruSettings(config);
-    this.policyStats = new PolicyStats(admission.format("linked.SegmentedLru"),settings.traceCharacteristics());
+    this.policyStats = new PolicyStats(admission.format("linked.SegmentedLru"),settings.report().characteristics());
     this.admittor = admission.from(config, policyStats);
 
     this.headProtected = new Node();
@@ -87,13 +86,13 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(entry);
+    admittor.record(event);
     if (node == null) {
-      onMiss(entry);
+      onMiss(event);
     } else {
       onHit(node);
     }
@@ -115,13 +114,13 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
       node.type = QueueType.PROTECTED;
       node.appendToTail(headProtected);
     }
-    policyStats.recordHit(node.entry);
+    policyStats.recordHit(node.event);
   }
 
-  private void onMiss(AccessEvent entry) {
-    Node node = new Node(entry);
-    data.put(entry.getKey(), node);
-    policyStats.recordMiss(entry);
+  private void onMiss(AccessEvent event) {
+    Node node = new Node(event);
+    data.put(event.key(), node);
+    policyStats.recordMiss(event);
     node.appendToTail(headProbation);
     node.type = QueueType.PROBATION;
     evict(node);
@@ -134,7 +133,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
           : headProbation.next;
       policyStats.recordEviction();
 
-      boolean admit = admittor.admit(candidate.entry, victim.entry);
+      boolean admit = admittor.admit(candidate.event, victim.event);
       if (admit) {
         evictEntry(victim);
       } else {
@@ -160,22 +159,22 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   static final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
 
     Node prev;
     Node next;
     QueueType type;
 
     Node() {
-      this.entry = null;
+      this.event = null;
       this.key = Long.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
-    Node(AccessEvent entry) {
-      this.entry = entry;
-      this.key = entry.getKey();
+    Node(AccessEvent event) {
+      this.event = event;
+      this.key = event.key();
       this.prev = UNLINKED;
       this.next = UNLINKED;
     }
@@ -231,8 +230,5 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

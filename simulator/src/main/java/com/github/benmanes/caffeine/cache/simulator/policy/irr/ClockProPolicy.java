@@ -21,8 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -88,7 +87,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   public ClockProPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("irr.ClockPro",settings.traceCharacteristics());
+    policyStats = new PolicyStats("irr.ClockPro",settings.report().characteristics());
     maximumColdSize = settings.maximumSize();
     data = new Long2ObjectOpenHashMap<>();
     maximumSize = settings.maximumSize();
@@ -103,12 +102,12 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     Node node = data.get(key);
 
     if (node == null) {
-      onMiss(entry);
+      onMiss(event);
     } else if (node.status == Status.TEST) {
       onNonResidentHit(node);
     } else {
@@ -116,11 +115,11 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     }
   }
 
-  private void onMiss(AccessEvent entry) {
+  private void onMiss(AccessEvent event) {
     policyStats.recordOperation();
-    policyStats.recordMiss(entry);
-    Node node = new Node(entry);
-    data.put(entry.getKey(), node);
+    policyStats.recordMiss(event);
+    Node node = new Node(event);
+    data.put(event.key(), node);
     add(node);
     sizeCold++;
 
@@ -129,7 +128,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   private void onNonResidentHit(Node node) {
     policyStats.recordOperation();
-    policyStats.recordMiss(node.entry);
+    policyStats.recordMiss(node.event);
 
     if (maximumColdSize < maximumSize) {
       maximumColdSize++;
@@ -147,7 +146,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   private void onHit(Node node) {
     policyStats.recordOperation();
-    policyStats.recordHit(node.entry);
+    policyStats.recordHit(node.event);
     node.marked = true;
   }
 
@@ -315,17 +314,17 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   private static final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
     boolean marked;
     Status status;
 
     Node prev;
     Node next;
 
-    public Node(AccessEvent entry) {
+    public Node(AccessEvent event) {
       status = Status.COLD;
-      this.key = entry.getKey();
-      this.entry = entry;
+      this.key = event.key();
+      this.event = event;
     }
 
     /** Removes the node from the list. */
@@ -336,8 +335,5 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

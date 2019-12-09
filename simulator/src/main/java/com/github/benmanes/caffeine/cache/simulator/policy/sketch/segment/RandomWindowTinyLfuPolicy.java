@@ -22,10 +22,9 @@ import java.util.Random;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -55,7 +54,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public RandomWindowTinyLfuPolicy(double percentMain, RandomWindowTinyLfuSettings settings) {
     String name = String.format("sketch.RandomWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
-    policyStats = new PolicyStats(name,settings.traceCharacteristics());
+    policyStats = new PolicyStats(name,settings.report().characteristics());
 
     admittor = new TinyLfu(settings.config(), policyStats);
     random = new Random(settings.randomSeed());
@@ -81,21 +80,21 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     Node node = data.get(key);
-    admittor.record(entry);
+    admittor.record(event);
     if (node == null) {
-      node = new Node(entry, windowSize);
+      node = new Node(event, windowSize);
       policyStats.recordOperation();
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       window[node.index] = node;
       data.put(key, node);
       windowSize++;
       evict();
     } else {
       policyStats.recordOperation();
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
@@ -115,7 +114,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (data.size() > maximumSize) {
       Node victim = main[random.nextInt(main.length)];
-      Node evict = admittor.admit(candidate.entry, victim.entry) ? victim : candidate;
+      Node evict = admittor.admit(candidate.event, victim.event) ? victim : candidate;
       removeFromTable(main, evict);
       data.remove(evict.key);
       mainSize--;
@@ -134,15 +133,15 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    final AccessEvent entry;
+    final AccessEvent event;
     final long key;
     int index;
 
     /** Creates a new node. */
-    public Node(AccessEvent entry, int index) {
+    public Node(AccessEvent event, int index) {
       this.index = index;
-      this.key = entry.getKey();
-      this.entry = entry;
+      this.key = event.key();
+      this.event = event;
     }
 
     @Override
@@ -163,8 +162,5 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

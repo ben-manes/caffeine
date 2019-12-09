@@ -60,7 +60,7 @@ public final class CacheWriterVerifier {
   /** Checks that only these entries were written. */
   public void wroteAll(Map<Integer, Integer> map) {
     map.entrySet().forEach(entry -> {
-      wrote(entry.getKey(), entry.getValue());
+      wrote(entry.key(), entry.getValue());
     });
     verify(context.cacheWriter(), times(map.size())).write(any(), any());
   }
@@ -77,7 +77,7 @@ public final class CacheWriterVerifier {
 
   /** Checks that the entry was deleted for the specified reason. */
   public void deleted(Entry<Integer, Integer> entry, RemovalCause cause) {
-    deleted(entry.getKey(), entry.getValue(), cause);
+    deleted(entry.key(), entry.getValue(), cause);
   }
 
   /** Checks that the key and value were deleted for the specified reason. */

@@ -18,9 +18,8 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheWithGhostCache;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -36,7 +35,7 @@ public final class TinyCacheWithGhostCachePolicy implements KeyOnlyPolicy {
 
   public TinyCacheWithGhostCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("sketch.TinyCache_GhostCache",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("sketch.TinyCache_GhostCache",settings.report().characteristics());
     tinyCache = new TinyCacheWithGhostCache((int) Math.ceil(settings.maximumSize() / 64.0),
         64, settings.randomSeed());
   }
@@ -47,15 +46,15 @@ public final class TinyCacheWithGhostCachePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     if (tinyCache.contains(key)) {
       tinyCache.recordItem(key);
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     } else {
       boolean evicted = tinyCache.addItem(key);
       tinyCache.recordItem(key);
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       if (evicted) {
         policyStats.recordEviction();
       }
@@ -67,8 +66,5 @@ public final class TinyCacheWithGhostCachePolicy implements KeyOnlyPolicy {
     return policyStats;
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

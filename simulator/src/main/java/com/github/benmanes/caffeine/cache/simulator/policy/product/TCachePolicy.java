@@ -20,8 +20,7 @@ import static java.util.Locale.US;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -44,7 +43,7 @@ public final class TCachePolicy implements KeyOnlyPolicy {
 
   public TCachePolicy(Config config) {
     TCacheSettings settings = new TCacheSettings(config);
-    policyStats = new PolicyStats("product.TCache",settings.traceCharacteristics());
+    policyStats = new PolicyStats("product.TCache",settings.report().characteristics());
     cache = TCacheFactory.standardFactory().builder()
         .setMaxElements(settings.maximumSize())
         .setEvictionClass(settings.policy())
@@ -58,14 +57,14 @@ public final class TCachePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     Object value = cache.get(key);
     if (value == null) {
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       cache.put(key, key);
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
@@ -97,8 +96,5 @@ public final class TCachePolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

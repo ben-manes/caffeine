@@ -26,7 +26,8 @@ import com.google.common.collect.ImmutableSet;
  */
 public interface Policy {
   enum Characteristic {
-    WEIGHTED
+    WEIGHTED,
+    PENALTIES
   }
 
   /** The event features that this policy supports. */
@@ -48,10 +49,7 @@ public interface Policy {
       return ImmutableSet.of();
     }
 
-    @Override default void record(AccessEvent event) {
-      record(event.key());
-    }
-
-    void record(long key);
   }
+
+
 }

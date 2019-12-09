@@ -22,8 +22,7 @@ import java.util.Arrays;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -67,7 +66,7 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
   public MultiQueuePolicy(Config config) {
     MultiQueueSettings settings = new MultiQueueSettings(config);
-    policyStats = new PolicyStats("linked.MultiQueue",settings.traceCharacteristics());
+    policyStats = new PolicyStats("linked.MultiQueue",settings.report().characteristics());
     threshold = new long[settings.numberOfQueues()];
     headQ = new Node[settings.numberOfQueues()];
     out = new Long2ObjectLinkedOpenHashMap<>();
@@ -86,15 +85,15 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       node = out.remove(key);
       if (node == null) {
-        node = new Node(entry);
+        node = new Node(event);
       }
       data.put(key, node);
       if (data.size() > maximumSize) {
@@ -102,7 +101,7 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
         evict();
       }
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
       node.remove();
     }
     node.reference++;
@@ -161,7 +160,7 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
   static final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
 
     Node prev;
     Node next;
@@ -169,9 +168,9 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
     int queueIndex;
     long expireTime;
 
-    Node(AccessEvent entry) {
-      this.key = entry == null ? Long.MIN_VALUE : entry.getKey();
-      this.entry = entry;
+    Node(AccessEvent event) {
+      this.key = event == null ? Long.MIN_VALUE : event.key();
+      this.event = event;
     }
 
     static Node sentinel(int queueIndex) {
@@ -229,8 +228,5 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

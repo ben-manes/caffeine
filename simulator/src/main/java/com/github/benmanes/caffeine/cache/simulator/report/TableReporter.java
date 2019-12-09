@@ -15,13 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report;
 
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.PENALTIES;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
+import java.util.List;
+
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
 import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;
 
@@ -41,19 +40,17 @@ public final class TableReporter extends TextReporter {
   @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   protected String assemble(List<PolicyStats> results) {
     String[][] data = new String[results.size()][headers().length];
-    boolean mpFlag = hasMissPenalty();
-    boolean hpFlag = hasHitPenalty();
     String[] empty = {};
     for (int i = 0; i < results.size(); i++) {
       PolicyStats policyStats = results.get(i);
-      String[] mpData = {
+      String[] penaltiesData = {
+              policyStats.hitCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit()),
               policyStats.missCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgMissLatency(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgTotalLatency(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgMissLatencyAFS(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgTotalLatencyAFS(),getTimeUnit())
       };
-      String[] hpData = { policyStats.hitCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit())};
-      String[] mainData = {
+      String[] basicData = {
           policyStats.name(),
           String.format("%.2f %%", 100 * policyStats.hitRate()),
           String.format("%,d", policyStats.hitCount()),
@@ -65,7 +62,7 @@ public final class TableReporter extends TextReporter {
           policyStats.stopwatch().toString()
       };
 
-      data[i] = mergeStringData(mainData,hpFlag ? hpData : empty, mpFlag ? mpData : empty);
+      data[i] = mergeStringData(basicData, characteristics().contains(PENALTIES) ? penaltiesData : empty);
 
     }
     return FlipTable.of(headers(), data);

@@ -42,8 +42,8 @@ public final class ElasticSearchPolicy implements Policy {
   private final PolicyStats policyStats;
 
   public ElasticSearchPolicy(Config config) {
-    policyStats = new PolicyStats("product.ElasticSearch");
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("product.ElasticSearch",settings.report().characteristics());
     cache = CacheBuilder.<Long, AccessEvent>builder()
         .removalListener(notification -> policyStats.recordEviction())
         .setMaximumWeight(settings.maximumSize())
@@ -65,9 +65,9 @@ public final class ElasticSearchPolicy implements Policy {
     Object value = cache.get(event.key());
     if (value == null) {
       cache.put(event.key(), event);
-      policyStats.recordMiss();
+      policyStats.recordMiss(event);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(event);
     }
   }
 

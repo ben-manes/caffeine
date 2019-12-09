@@ -20,8 +20,7 @@ import static java.util.Locale.US;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -42,7 +41,7 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
 
   public ExpiringMapPolicy(Config config) {
     ExpiringMapSettings settings = new ExpiringMapSettings(config);
-    policyStats = new PolicyStats("product.ExpiringMap",settings.traceCharacteristics());
+    policyStats = new PolicyStats("product.ExpiringMap",settings.report().characteristics());
     cache = ExpiringMap.builder()
         .expirationPolicy(settings.policy())
         .maxSize(settings.maximumSize())
@@ -55,17 +54,17 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     Object value = cache.get(key);
     if (value == null) {
       if (cache.size() == cache.getMaxSize()) {
         policyStats.recordEviction();
       }
       cache.put(key, key);
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
@@ -91,9 +90,6 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 
 }

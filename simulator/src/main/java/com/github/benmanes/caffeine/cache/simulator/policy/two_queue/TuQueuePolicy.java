@@ -20,8 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -79,7 +78,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     this.headCold = new Node();
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
-    this.policyStats = new PolicyStats("two-queue.TuQueue",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("two-queue.TuQueue",settings.report().characteristics());
     this.maxHot = (int) (maximumSize * settings.percentHot());
     this.maxWarm = (int) (maximumSize * settings.percentWarm());
   }
@@ -90,15 +89,15 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       onMiss(key);
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
       onHit(node);
     }
   }
@@ -167,10 +166,6 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     return policyStats;
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
 
   @Override
   public void finished() {

@@ -25,8 +25,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
@@ -69,7 +68,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
     SampledSettings settings = new SampledSettings(config);
-    this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()),settings.traceCharacteristics());
+    this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()),settings.report().characteristics());
     this.admittor = admission.from(config, policyStats);
 
     this.sampleStrategy = settings.sampleStrategy();
@@ -95,21 +94,21 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     Node node = data.get(key);
-    admittor.record(entry);
+    admittor.record(event);
     long now = ++tick;
     if (node == null) {
-      node = new Node(entry, data.size(), now);
+      node = new Node(event, data.size(), now);
       policyStats.recordOperation();
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       table[node.index] = node;
       data.put(key, node);
       evict(node);
     } else {
       policyStats.recordOperation();
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
       node.accessTime = now;
       node.frequency++;
     }
@@ -124,7 +123,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       Node victim = policy.select(sample, random, tick);
       policyStats.recordEviction();
 
-      if (admittor.admit(candidate.entry, victim.entry)) {
+      if (admittor.admit(candidate.event, victim.event)) {
         removeFromTable(victim);
         data.remove(victim.key);
       } else {
@@ -274,19 +273,19 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   static final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
     final long insertionTime;
 
     long accessTime;
     int frequency;
     int index;
 
-    public Node(AccessEvent entry, int index, long tick) {
+    public Node(AccessEvent event, int index, long tick) {
       this.insertionTime = tick;
       this.accessTime = tick;
       this.index = index;
-      this.key = entry.getKey();
-      this.entry = entry;
+      this.key = event.key();
+      this.event = event;
     }
 
     @Override
@@ -310,8 +309,5 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

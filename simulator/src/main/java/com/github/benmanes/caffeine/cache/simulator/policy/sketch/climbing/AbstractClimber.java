@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -35,14 +35,14 @@ public abstract class AbstractClimber implements HillClimber {
   static final boolean debug = false;
 
   @Override
-  public void onMiss(AccessEvent entry, boolean isFull) {
+  public void onMiss(AccessEvent event, boolean isFull) {
     if (isFull) {
       missesInSample++;
     }
   }
 
   @Override
-  public void onHit(AccessEvent entry, QueueType queueType, boolean isFull) {
+  public void onHit(AccessEvent event, QueueType queueType, boolean isFull) {
     if (isFull) {
       hitsInSample++;
 

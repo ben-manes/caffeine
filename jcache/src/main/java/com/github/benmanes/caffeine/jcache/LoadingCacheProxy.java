@@ -163,7 +163,7 @@ public final class LoadingCacheProxy<K, V> extends CacheProxy<K, V> {
           int[] ignored = { 0 };
           Map<K, V> loaded = cacheLoader.get().loadAll(keys);
           for (Map.Entry<? extends K, ? extends V> entry : loaded.entrySet()) {
-            putNoCopyOrAwait(entry.getKey(), entry.getValue(),
+            putNoCopyOrAwait(entry.key(), entry.getValue(),
                 /* publishToWriter */ false, ignored);
           }
         } else {

@@ -15,12 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
-import java.util.Base64;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -42,7 +40,7 @@ public final class UnboundedPolicy implements KeyOnlyPolicy {
 
   public UnboundedPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("opt.Unbounded",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("opt.Unbounded",settings.report().characteristics());
     this.data = new LongOpenHashSet();
   }
 
@@ -57,17 +55,14 @@ public final class UnboundedPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
+  public void record(AccessEvent event) {
     policyStats.recordOperation();
-    if (data.add(entry.getKey())) {
-      policyStats.recordMiss(entry);
+    if (data.add(event.key())) {
+      policyStats.recordMiss(event);
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

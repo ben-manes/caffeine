@@ -86,7 +86,7 @@ public final class CacheProvider {
     Parameter[] parameters = testMethod.getParameters();
     CacheContext[] stashed = new CacheContext[1];
     return scenarios.map(entry -> {
-      CacheContext context = entry.getKey();
+      CacheContext context = entry.key();
       Cache<Integer, Integer> cache = entry.getValue();
 
       // Retain a strong reference to the context throughout the test execution so that the

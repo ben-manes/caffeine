@@ -21,8 +21,7 @@ import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
@@ -54,7 +53,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
   public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()),settings.traceCharacteristics());
+    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()),settings.report().characteristics());
     this.admittor = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
@@ -76,12 +75,12 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
+  public void record(AccessEvent event) {
     policyStats.recordOperation();
-    Node node = data.get(entry.getKey());
-    admittor.record(entry);
+    Node node = data.get(event.key());
+    admittor.record(event);
     if (node == null) {
-      onMiss(entry);
+      onMiss(event);
     } else {
       onHit(node);
     }
@@ -89,7 +88,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the next higher frequency list, creating it if necessary. */
   private void onHit(Node node) {
-    policyStats.recordHit(node.entry);
+    policyStats.recordHit(node.event);
 
     int newCount = node.freq.count + 1;
     FrequencyNode freqN = (node.freq.next.count == newCount)
@@ -104,13 +103,13 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   }
 
   /** Adds the entry, creating an initial frequency list of 1 if necessary, and evicts if needed. */
-  private void onMiss(AccessEvent entry) {
+  private void onMiss(AccessEvent event) {
     FrequencyNode freq1 = (freq0.next.count == 1)
         ? freq0.next
         : new FrequencyNode(1, freq0);
-    Node node = new Node(entry, freq1);
-    policyStats.recordMiss(entry);
-    data.put(entry.getKey(), node);
+    Node node = new Node(event, freq1);
+    policyStats.recordMiss(event);
+    data.put(event.key(), node);
     node.append();
     evict(node);
   }
@@ -119,7 +118,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
       Node victim = nextVictim(candidate);
-      boolean admit = admittor.admit(candidate.entry, victim.entry);
+      boolean admit = admittor.admit(candidate.event, victim.event);
       if (admit) {
         evictEntry(victim);
       } else {
@@ -213,7 +212,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   /** A cache entry on the frequency node's chain. */
   static final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
 
     FrequencyNode freq;
     Node prev;
@@ -221,18 +220,18 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
     public Node(FrequencyNode freq) {
       this.key = Long.MIN_VALUE;
-      this.entry = null;
+      this.event = null;
       this.freq = freq;
       this.prev = this;
       this.next = this;
     }
 
-    public Node(AccessEvent entry, FrequencyNode freq) {
+    public Node(AccessEvent event, FrequencyNode freq) {
       this.next = null;
       this.prev = null;
       this.freq = freq;
-      this.key = entry.getKey();
-      this.entry = entry;
+      this.key = event.key();
+      this.event = event;
     }
 
     /** Appends the node to the tail of the list. */
@@ -259,8 +258,5 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

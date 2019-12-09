@@ -39,8 +39,8 @@ public final class GuavaPolicy implements Policy {
   private final PolicyStats policyStats;
 
   public GuavaPolicy(Config config) {
-    policyStats = new PolicyStats("product.Guava");
     BasicSettings settings = new BasicSettings(config);
+    policyStats = new PolicyStats("product.Guava",settings.report().characteristics());
     cache = CacheBuilder.newBuilder()
         .maximumWeight(settings.maximumSize())
         .initialCapacity(settings.maximumSize())
@@ -63,9 +63,9 @@ public final class GuavaPolicy implements Policy {
     Object value = cache.getIfPresent(event.key());
     if (value == null) {
       cache.put(event.key(), event);
-      policyStats.recordMiss();
+      policyStats.recordMiss(event);
     } else {
-      policyStats.recordHit();
+      policyStats.recordHit(event);
     }
   }
 

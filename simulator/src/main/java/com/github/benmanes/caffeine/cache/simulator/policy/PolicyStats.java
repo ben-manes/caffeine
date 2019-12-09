@@ -16,12 +16,11 @@
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static java.util.Objects.requireNonNull;
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.PENALTIES;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableSet;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -34,7 +33,7 @@ import java.util.Set;
  */
 public final class PolicyStats {
     private final Stopwatch stopwatch;
-    private final Set<Characteristics> policyCharacteristics;
+    private final Set<Characteristic> characteristics;
 
     private String name;
     private long hitCount;
@@ -49,10 +48,10 @@ public final class PolicyStats {
     private long missCountAFS;
     private HashSet<Long> seen;
 
-    public PolicyStats(String name, Set<Characteristics> policyCharacteristics) {
+    public PolicyStats(String name, Set<Characteristic> characteristics) {
         this.name = requireNonNull(name);
         this.stopwatch = Stopwatch.createUnstarted();
-        this.policyCharacteristics = policyCharacteristics;
+        this.characteristics = characteristics;
         this.seen = new HashSet<>();
     }
 
@@ -80,9 +79,9 @@ public final class PolicyStats {
         operationCount += operations;
     }
 
-    public void recordHit(AccessEvent entry) {
+    public void recordHit(AccessEvent event) {
         hitCount++;
-        double hp = getPenalty(entry, true);
+        double hp = getPenalty(event, true);
         if (hp >= 0) {
             hitLatency += hp;
         }
@@ -97,37 +96,29 @@ public final class PolicyStats {
     }
 
     public void addHits(Collection<AccessEvent> hits) {
-        for (AccessEvent entry : hits) {
-            recordHit(entry);
+        for (AccessEvent event : hits) {
+            recordHit(event);
         }
     }
 
-    public void recordMiss(AccessEvent entry) {
+    public void recordMiss(AccessEvent event) {
         missCount++;
-        double mp = getPenalty(entry, false);
+        double mp = getPenalty(event, false);
         if (mp >= 0) {
-            if (this.seen.contains(entry.getKey())) {
+            if (this.seen.contains(event.key())) {
                 missLatencyAFS += mp;
                 missCountAFS++;
             }
-            this.seen.add(entry.getKey());
+            this.seen.add(event.key());
             missLatency += mp;
         }
     }
 
-    private double getPenalty(AccessEvent entry, boolean isHit) {
-        if (isHit) {
-            if (policyCharacteristics.contains(Characteristics.HIT_PENALTY)) {
-                return entry.getHitPenalty();
-            } else if (policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE, Characteristics.CACHE_READ_RATE))) {
-                return entry.calcHitPenalty();
-            }
-        } else {
-            if (policyCharacteristics.contains(Characteristics.MISS_PENALTY)) {
-                return entry.getMissPenalty();
-            } else if (policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE, Characteristics.MISS_READ_RATE))) {
-                return entry.calcMissPenalty();
-            }
+    private double getPenalty(AccessEvent event, boolean isHit) {
+        if (isHit && characteristics.contains(PENALTIES)) {
+            return event.hitPenalty();
+        } else if (characteristics.contains(PENALTIES)) {
+            return event.missPenalty();
         }
         return -1;
     }
@@ -137,8 +128,8 @@ public final class PolicyStats {
     }
 
     public void addMisses(Collection<AccessEvent> misses) {
-        for (AccessEvent entry : misses) {
-            recordMiss(entry);
+        for (AccessEvent event : misses) {
+            recordMiss(event);
         }
     }
 
@@ -198,8 +189,8 @@ public final class PolicyStats {
         return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
     }
 
-    public Set<Characteristics> getPolicyCharacteristics() {
-        return policyCharacteristics;
+    public Set<Characteristic> getcharacteristics() {
+        return characteristics;
     }
 
     public double missRateAFS() {

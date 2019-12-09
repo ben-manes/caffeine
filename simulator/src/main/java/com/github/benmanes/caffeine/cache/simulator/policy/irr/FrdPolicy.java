@@ -20,8 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -66,7 +65,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     FrdSettings settings = new FrdSettings(config);
     this.maximumMainResidentSize = (int) (settings.maximumSize() * settings.percentMain());
     this.maximumFilterSize = settings.maximumSize() - maximumMainResidentSize;
-    this.policyStats = new PolicyStats("irr.Frd",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("irr.Frd",settings.report().characteristics());
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headFilter = new Node();
@@ -79,12 +78,12 @@ public final class FrdPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      node = new Node(entry);
+      node = new Node(event);
       data.put(key,node);
       onMiss(node);
     } else if (node.status == Status.FILTER) {
@@ -101,7 +100,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
   private void onMiss(Node node) {
     // Initially, both the filter and reuse distance stacks are filled with newly arrived blocks
     // from the reuse distance stack to the filter stack.
-    policyStats.recordMiss(node.entry);
+    policyStats.recordMiss(node.event);
 
     if (residentSize < maximumMainResidentSize) {
       onMainWarmupMiss(node);
@@ -149,7 +148,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     // stack. The associated history block should be updated to maintain reuse distance order (i.e.,
     // move its history block in the reuse distance stack to the MRU position of the reuse distance
     // stack).
-    policyStats.recordHit(node.entry);
+    policyStats.recordHit(node.event);
 
     node.moveToTop(StackType.FILTER);
     node.moveToTop(StackType.MAIN);
@@ -160,7 +159,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     // the reuse distance stack. If the corresponding block is in the LRU position of the reuse
     // distance stack (i.e., the oldest resident block), the history blocks between the LRU position
     // and the 2nd oldest resident block are removed. Otherwise, no history block removing occurs.
-    policyStats.recordHit(node.entry);
+    policyStats.recordHit(node.event);
 
     boolean wasBottom = (headMain.prevMain == node);
     node.moveToTop(StackType.MAIN);
@@ -191,7 +190,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     // move the history hit block to the MRU position in the reuse distance stack and change it to a
     // resident block. No insertion or eviction occurs in the filter stack.
     policyStats.recordEviction();
-    policyStats.recordMiss(node.entry);
+    policyStats.recordMiss(node.event);
 
     pruneStack();
     Node victim = headMain.prevMain;
@@ -237,7 +236,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
 
   final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
 
     Status status;
 
@@ -253,12 +252,12 @@ public final class FrdPolicy implements KeyOnlyPolicy {
       key = Long.MIN_VALUE;
       prevMain = nextMain = this;
       prevFilter = nextFilter = this;
-      entry = null;
+      event = null;
     }
 
-    Node(AccessEvent entry) {
-      this.key = entry.getKey();
-      this.entry = entry;
+    Node(AccessEvent event) {
+      this.key = event.key();
+      this.event = event;
     }
 
     public boolean isInStack(StackType stackType) {
@@ -332,8 +331,5 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

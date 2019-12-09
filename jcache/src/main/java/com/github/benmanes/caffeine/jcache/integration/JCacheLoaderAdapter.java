@@ -100,11 +100,11 @@ public final class JCacheLoaderAdapter<K, V>
       long start = statsEnabled ? ticker.read() : 0L;
 
       Map<K, Expirable<V>> result = delegate.loadAll(keys).entrySet().stream()
-          .filter(entry -> (entry.getKey() != null) && (entry.getValue() != null))
+          .filter(entry -> (entry.key() != null) && (entry.getValue() != null))
           .collect(Collectors.toMap(Map.Entry::getKey,
               entry -> new Expirable<>(entry.getValue(), expireTimeMS())));
       for (Map.Entry<K, Expirable<V>> entry : result.entrySet()) {
-        dispatcher.publishCreated(cache, entry.getKey(), entry.getValue().get());
+        dispatcher.publishCreated(cache, entry.key(), entry.getValue().get());
       }
 
       if (statsEnabled) {

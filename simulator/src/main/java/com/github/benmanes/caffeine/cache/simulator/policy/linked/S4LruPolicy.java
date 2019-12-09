@@ -22,10 +22,9 @@ import java.util.Arrays;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -59,7 +58,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
 
   public S4LruPolicy(Admission admission, Config config) {
     S4LruSettings settings = new S4LruSettings(config);
-    this.policyStats = new PolicyStats(admission.format("linked.S4Lru"),settings.traceCharacteristics());
+    this.policyStats = new PolicyStats(admission.format("linked.S4Lru"),settings.report().characteristics());
     this.admittor = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
@@ -79,16 +78,16 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
+  public void record(AccessEvent event) {
     policyStats.recordOperation();
-    Node node = data.get(entry.getKey());
-    admittor.record(entry);
+    Node node = data.get(event.key());
+    admittor.record(event);
     if (node == null) {
-      onMiss(entry);
-      policyStats.recordMiss(entry);
+      onMiss(event);
+      policyStats.recordMiss(event);
     } else {
       onHit(node);
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
@@ -106,9 +105,9 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
     adjust();
   }
 
-  private void onMiss(AccessEvent entry) {
-    Node node = new Node(entry);
-    data.put(entry.getKey(), node);
+  private void onMiss(AccessEvent event) {
+    Node node = new Node(event);
+    data.put(event.key(), node);
     node.appendToTail(headQ[0]);
     sizeQ[0]++;
 
@@ -136,7 +135,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
       policyStats.recordEviction();
 
       Node victim = headQ[0].next;
-      boolean admit = admittor.admit(candidate.entry, victim.entry);
+      boolean admit = admittor.admit(candidate.event, victim.event);
       if (admit) {
         evictEntry(victim);
         sizeQ[0]--;
@@ -167,16 +166,16 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   }
 
   static final class Node {
-    final AccessEvent entry;
+    final AccessEvent event;
     final long key;
 
     Node prev;
     Node next;
     int level;
 
-    Node(AccessEvent entry) {
-      this.key = entry == null ? Long.MIN_VALUE : entry.getKey();
-      this.entry = entry;
+    Node(AccessEvent event) {
+      this.key = event == null ? Long.MIN_VALUE : event.key();
+      this.event = event;
     }
 
     static Node sentinel(int level) {
@@ -223,8 +222,5 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

@@ -1678,7 +1678,7 @@ public final class AsyncAsMapTest {
         cache.asMap().entrySet().toArray(new Entry<?, ?>[length]);
     assertThat(entries.length, is(length));
     for (Entry<Integer, CompletableFuture<Integer>> entry : entries) {
-      assertThat(context.original(), hasEntry(entry.getKey(), entry.getValue().join()));
+      assertThat(context.original(), hasEntry(entry.key(), entry.getValue().join()));
     }
 
     Object[] array = cache.asMap().entrySet().toArray();
@@ -1687,7 +1687,7 @@ public final class AsyncAsMapTest {
       @SuppressWarnings("unchecked")
       Entry<Integer, CompletableFuture<Integer>> entry =
           (Entry<Integer, CompletableFuture<Integer>>) item;
-      assertThat(context.original(), hasEntry(entry.getKey(), entry.getValue().join()));
+      assertThat(context.original(), hasEntry(entry.key(), entry.getValue().join()));
     }
   }
 
@@ -1770,7 +1770,7 @@ public final class AsyncAsMapTest {
     int iterations = 0;
     while (i.hasNext()) {
       Entry<Integer, CompletableFuture<Integer>> entry = i.next();
-      assertThat(cache.asMap(), hasEntry(entry.getKey(), entry.getValue()));
+      assertThat(cache.asMap(), hasEntry(entry.key(), entry.getValue()));
       iterations++;
       i.remove();
     }
@@ -1815,7 +1815,7 @@ public final class AsyncAsMapTest {
         assertThat(entry, is(instanceOf(WriteThroughEntry.class)));
       }
       count[0]++;
-      assertThat(context.original(), hasEntry(entry.getKey(), entry.getValue().join()));
+      assertThat(context.original(), hasEntry(entry.key(), entry.getValue().join()));
     });
     assertThat(count[0], is(context.original().size()));
   }
@@ -1883,7 +1883,7 @@ public final class AsyncAsMapTest {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(3);
 
     entry.setValue(value);
-    assertThat(cache.asMap().get(entry.getKey()), is(value));
+    assertThat(cache.asMap().get(entry.key()), is(value));
     assertThat(cache.asMap().size(), is(context.original().size()));
     assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
   }

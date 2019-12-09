@@ -18,10 +18,9 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCache;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheWithGhostCache;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -38,7 +37,7 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
 
   public WindowTinyCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("sketch.WindowTinyCache",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("sketch.WindowTinyCache",settings.report().characteristics());
     int maxSize = settings.maximumSize();
     if (maxSize <= 64) {
       window = null;
@@ -56,18 +55,18 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     if (tinyCache.contains(key) || ((window != null) && window.contains(key))) {
       tinyCache.recordItem(key);
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     } else {
       boolean evicted = tinyCache.addItem(key);
       if (!evicted && (window != null)) {
         evicted = window.addItem(key);
       }
       tinyCache.recordItem(key);
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       if (evicted) {
         policyStats.recordEviction();
       }
@@ -79,8 +78,4 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
     return policyStats;
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
 }

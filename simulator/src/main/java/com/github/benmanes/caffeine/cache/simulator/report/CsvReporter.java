@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 package com.github.benmanes.caffeine.cache.simulator.report;
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.PENALTIES;
 
 import java.io.StringWriter;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
@@ -44,18 +42,16 @@ public final class CsvReporter extends TextReporter {
     StringWriter output = new StringWriter();
     CsvWriter writer = new CsvWriter(output, new CsvWriterSettings());
     writer.writeHeaders(headers());
-    boolean mpFlag = hasMissPenalty();
-    boolean hpFlag = hasHitPenalty();
     Object[] empty = {};
     for (PolicyStats policyStats : results) {
-      Object[] mpData = {
+      Object[] penaltiesData = {
+              policyStats.hitCount() == 0 ? null : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit()),
               (policyStats.missCount() == 0) ? null : String.format("%.4f %s", policyStats.avgMissLatency(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgTotalLatency(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgMissLatencyAFS(),getTimeUnit()),
               String.format("%.4f %s", policyStats.avgTotalLatencyAFS(),getTimeUnit())
       };
-      Object[] hpData = { policyStats.hitCount() == 0 ? null : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit())};
-      Object[] mainData = {
+      Object[] basicData = {
               policyStats.name(),
               String.format("%.2f", 100 * policyStats.hitRate()),
               policyStats.hitCount(),
@@ -66,7 +62,7 @@ public final class CsvReporter extends TextReporter {
               (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),
               policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS)
       };
-      Object[] data = mergeData(mainData,hpFlag ? hpData : empty,mpFlag ? mpData : empty);
+      Object[] data = mergeData(basicData,characteristics().contains(PENALTIES) ? penaltiesData : empty);
       writer.writeRow(data);
     }
     writer.close();

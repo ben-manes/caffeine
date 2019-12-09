@@ -28,8 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.collect.ImmutableSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -90,7 +89,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     this.strategy = strategy;
     this.initialPercentMain = percentMain;
-    this.policyStats = new PolicyStats(getPolicyName(),settings.traceCharacteristics());
+    this.policyStats = new PolicyStats(getPolicyName(),settings.report().characteristics());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.climber = strategy.create(settings.config());
 
@@ -121,40 +120,40 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     boolean isFull = (data.size() >= maximumSize);
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(entry);
+    admittor.record(event);
 
     QueueType queue = null;
     if (node == null) {
-      onMiss(entry);
-      policyStats.recordMiss(entry);
+      onMiss(event);
+      policyStats.recordMiss(event);
     } else {
       queue = node.queue;
       if (queue == WINDOW) {
         onWindowHit(node);
-        policyStats.recordHit(entry);
+        policyStats.recordHit(event);
       } else if (queue == PROBATION) {
         onProbationHit(node);
-        policyStats.recordHit(entry);
+        policyStats.recordHit(event);
       } else if (queue == PROTECTED) {
         onProtectedHit(node);
-        policyStats.recordHit(entry);
+        policyStats.recordHit(event);
       } else {
         throw new IllegalStateException();
       }
     }
-    climb(entry, queue, isFull);
+    climb(event, queue, isFull);
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
-  private void onMiss(AccessEvent entry) {
-    Node node = new Node(entry, WINDOW);
+  private void onMiss(AccessEvent event) {
+    Node node = new Node(event, WINDOW);
     node.appendToTail(headWindow);
-    data.put(entry.getKey(), node);
+    data.put(event.key(), node);
     windowSize++;
     evict();
   }
@@ -207,7 +206,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (data.size() > maximumSize) {
       Node victim = headProbation.next;
-      Node evict = admittor.admit(candidate.entry, victim.entry) ? victim : candidate;
+      Node evict = admittor.admit(candidate.event, victim.event) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
 
@@ -216,11 +215,11 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   /** Performs the hill climbing process. */
-  private void climb(AccessEvent entry, @Nullable QueueType queue, boolean isFull) {
+  private void climb(AccessEvent event, @Nullable QueueType queue, boolean isFull) {
     if (queue == null) {
-      climber.onMiss(entry, isFull);
+      climber.onMiss(event, isFull);
     } else {
-      climber.onHit(entry, queue, isFull);
+      climber.onHit(event, queue, isFull);
     }
 
     double probationSize = maximumSize - windowSize - protectedSize;
@@ -318,7 +317,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   /** A node on the double-linked list. */
   static final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
 
     QueueType queue;
     Node prev;
@@ -326,17 +325,17 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Creates a new sentinel node. */
     public Node() {
-      this.entry = null;
+      this.event = null;
       this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(AccessEvent entry, QueueType queue) {
+    public Node(AccessEvent event, QueueType queue) {
       this.queue = queue;
-      this.key = entry.getKey();
-      this.entry = entry;
+      this.key = event.key();
+      this.event = event;
     }
 
     public void moveToTail(Node head) {
@@ -397,8 +396,5 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

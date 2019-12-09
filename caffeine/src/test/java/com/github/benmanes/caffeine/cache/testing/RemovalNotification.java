@@ -102,7 +102,7 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
       return false;
     }
     Entry<?, ?> entry = (Entry<?, ?>) o;
-    return Objects.equals(key, entry.getKey())
+    return Objects.equals(key, entry.key())
         && Objects.equals(value, entry.getValue());
   }
 

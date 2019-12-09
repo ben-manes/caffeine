@@ -21,8 +21,7 @@ import static java.util.stream.Collectors.toSet;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
@@ -49,7 +48,7 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
 
   public CollisionPolicy(CollisionSettings settings, Density density) {
     policyStats = new PolicyStats(String.format("product.Collision (%s)",
-        StringUtils.capitalize(density.name().toLowerCase(US))),settings.traceCharacteristics());
+        StringUtils.capitalize(density.name().toLowerCase(US))),settings.report().characteristics());
     maximumSize = settings.maximumSize();
 
     CollisionBuilder<Object> builder = CollisionCache
@@ -76,8 +75,8 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     Object value = cache.getIfPresent(key);
     if (value == null) {
       if (trackedSize == maximumSize) {
@@ -85,10 +84,10 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
         trackedSize--;
       }
       cache.putIfAbsent(key, key);
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
       trackedSize++;
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
@@ -121,8 +120,5 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

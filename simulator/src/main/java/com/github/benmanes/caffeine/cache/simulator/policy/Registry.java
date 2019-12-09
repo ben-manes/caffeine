@@ -100,7 +100,7 @@ public final class Registry {
   public static Set<Policy> policies(BasicSettings settings, Set<Characteristic> characteristics) {
     return settings.policies().stream()
         .flatMap(name -> policy(settings, name).stream())
-        .filter(policy -> policy.characteristics().containsAll(characteristics))
+        .filter(policy -> characteristics.containsAll(policy.characteristics()))
         .collect(toSet());
   }
 

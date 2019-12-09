@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -30,19 +30,19 @@ public interface HillClimber {
   /**
    * Records that a hit occurred with a full cache.
    *
-   * @param entry the entry accessed
-   * @param queue the queue the entry was found in
+   * @param event the event accessed
+   * @param queue the queue the event was found in
    * @param isFull if the cache is fully populated
    */
-  void onHit(AccessEvent entry, QueueType queue, boolean isFull);
+  void onHit(AccessEvent event, QueueType queue, boolean isFull);
 
   /**
    * Records that a miss occurred with a full cache.
    *
-   * @param entry the entry accessed
+   * @param event the entry accessed
    * @param isFull if the cache is fully populated and had to evict
    */
-  void onMiss(AccessEvent entry, boolean isFull);
+  void onMiss(AccessEvent event, boolean isFull);
 
   /**
    * Determines how to adapt the segment sizes.

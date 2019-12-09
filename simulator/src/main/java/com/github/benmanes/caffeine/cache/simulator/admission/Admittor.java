@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.admission;
 
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 
 /**
  * An admission policy to the cache. A page replacement policy always admits new entries and chooses
@@ -28,7 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
 public interface Admittor {
 
   /** Records the access to the entry. */
-  void record(AccessEvent entry);
+  void record(AccessEvent event);
 
   /**
    * Returns if the candidate should be added to the cache and the page replacement policy's chosen
@@ -50,7 +50,7 @@ enum AlwaysAdmit implements Admittor {
   INSTANCE;
 
   @Override
-  public void record(AccessEvent entry) {}
+  public void record(AccessEvent event) {}
 
   @Override
   public boolean admit(AccessEvent candidateKey, AccessEvent victimKey) {

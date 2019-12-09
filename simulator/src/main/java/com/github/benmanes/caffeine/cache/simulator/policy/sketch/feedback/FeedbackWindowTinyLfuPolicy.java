@@ -23,10 +23,9 @@ import java.util.Map;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -83,7 +82,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public FeedbackWindowTinyLfuPolicy(double percentMain, FeedbackWindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(String.format(
-        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)),settings.traceCharacteristics());
+        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)),settings.report().characteristics());
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
@@ -122,8 +121,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
     if ((sample % sampleSize) == 0) {
       sampled++;
     }
@@ -132,30 +130,30 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
     sample++;
 
-    admittor.record(entry);
+    admittor.record(event);
     policyStats.recordOperation();
-    Node node = data.get(key);
+    Node node = data.get(event.key());
     if (node == null) {
-      onMiss(entry);
-      policyStats.recordMiss(entry);
+      onMiss(event);
+      policyStats.recordMiss(event);
     } else if (node.status == Status.WINDOW) {
       onWindowHit(node);
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     } else if (node.status == Status.PROBATION) {
       onProbationHit(node);
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     } else if (node.status == Status.PROTECTED) {
       onProtectedHit(node);
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     } else {
       throw new IllegalStateException();
     }
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
-  private void onMiss(AccessEvent entry) {
-    long key = entry.getKey();
-    Node node = new Node(entry, Status.WINDOW);
+  private void onMiss(AccessEvent event) {
+    long key = event.key();
+    Node node = new Node(event, Status.WINDOW);
     node.appendToTail(headWindow);
     data.put(key, node);
     sizeWindow++;
@@ -189,7 +187,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the MRU position. */
   private void onProtectedHit(Node node) {
-    admittor.record(node.entry);
+    admittor.record(node.event);
     node.moveToTail(headProtected);
   }
 
@@ -212,7 +210,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     if (data.size() > maximumSize) {
       Node evict;
       Node victim = headProbation.next;
-      if (admittor.admit(candidate.entry, victim.entry)) {
+      if (admittor.admit(candidate.event, victim.event)) {
         evict = victim;
       } else if (adapt(candidate)) {
         evict = victim;
@@ -327,7 +325,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    final AccessEvent entry;
+    final AccessEvent event;
     final long key;
 
     Status status;
@@ -336,17 +334,17 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Creates a new sentinel node. */
     public Node() {
-      this.entry = null;
+      this.event = null;
       this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(AccessEvent entry, Status status) {
-      this.entry = entry;
+    public Node(AccessEvent event, Status status) {
+      this.event = event;
       this.status = status;
-      this.key = entry.getKey();
+      this.key = event.key();
     }
 
     public void moveToTail(Node head) {
@@ -424,8 +422,5 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

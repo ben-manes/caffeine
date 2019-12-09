@@ -21,10 +21,9 @@ import java.util.Map;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -67,7 +66,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
 
   public FeedbackTinyLfuPolicy(Config config) {
     FeedbackTinyLfuSettings settings = new FeedbackTinyLfuSettings(config);
-    this.policyStats = new PolicyStats("sketch.FeedbackTinyLfu",settings.traceCharacteristics());
+    this.policyStats = new PolicyStats("sketch.FeedbackTinyLfu",settings.report().characteristics());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
@@ -89,8 +88,8 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     if ((sample % sampleSize) == 0) {
       sampled++;
     }
@@ -99,26 +98,26 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     }
     sample++;
 
-    admittor.record(entry);
+    admittor.record(event);
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      onMiss(entry);
-      policyStats.recordMiss(entry);
+      onMiss(event);
+      policyStats.recordMiss(event);
     } else {
       onHit(node);
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
   /** Adds the entry, evicting if necessary. */
-  private void onMiss(AccessEvent entry) {
-    long key = entry.getKey();
+  private void onMiss(AccessEvent event) {
+    long key = event.key();
     for (int i = 0; i < gain; i++) {
-      admittor.record(entry);
+      admittor.record(event);
     }
 
-    Node node = new Node(entry);
+    Node node = new Node(event);
     node.appendToTail(head);
     data.put(key, node);
     evict(node);
@@ -137,7 +136,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     if (data.size() > maximumSize) {
       Node evict;
       Node victim = head.next;
-      if (admittor.admit(candidate.entry, victim.entry)) {
+      if (admittor.admit(candidate.event, victim.event)) {
         evict = victim;
       } else if (adapt(candidate)) {
         evict = victim;
@@ -190,22 +189,22 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
   /** A node on the double-linked list. */
   static final class Node {
     final long key;
-    final AccessEvent entry;
+    final AccessEvent event;
     Node prev;
     Node next;
 
     /** Creates a new sentinel node. */
     public Node() {
-      this.entry = null;
+      this.event = null;
       this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(AccessEvent entry) {
-      this.key = entry.getKey();
-      this.entry = entry;
+    public Node(AccessEvent event) {
+      this.key = event.key();
+      this.event = event;
     }
 
     public void moveToTail(Node head) {
@@ -258,8 +257,5 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     }
   }
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }

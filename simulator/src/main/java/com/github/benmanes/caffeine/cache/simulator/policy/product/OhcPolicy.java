@@ -25,8 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.Characteristics;
-import com.github.benmanes.caffeine.cache.simulator.parser.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.collect.ImmutableSet;
 import org.caffinitas.ohc.CacheSerializer;
 import org.caffinitas.ohc.Eviction;
@@ -59,7 +58,7 @@ public final class OhcPolicy implements KeyOnlyPolicy {
         .eviction(policy)
         .build();
     policyStats = new PolicyStats(String.format("product.OHC (%s)",
-        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"),settings.traceCharacteristics());
+        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"),settings.report().characteristics());
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -71,14 +70,14 @@ public final class OhcPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent entry) {
-    long key = entry.getKey();
+  public void record(AccessEvent event) {
+    long key = event.key();
     Object value = cache.get(key);
     if (value == null) {
       cache.put(key, key);
-      policyStats.recordMiss(entry);
+      policyStats.recordMiss(event);
     } else {
-      policyStats.recordHit(entry);
+      policyStats.recordHit(event);
     }
   }
 
@@ -135,8 +134,5 @@ public final class OhcPolicy implements KeyOnlyPolicy {
     }
   };
 
-  @Override
-  public Set<Characteristics> getCharacteristicsSet() {
-    return ImmutableSet.of(Characteristics.KEY);
-  }
+
 }
