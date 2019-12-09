@@ -23,6 +23,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -32,199 +33,212 @@ import java.util.Set;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class PolicyStats {
-  private final Stopwatch stopwatch;
-  private final Set<Characteristics> policyCharacteristics;
+    private final Stopwatch stopwatch;
+    private final Set<Characteristics> policyCharacteristics;
 
-  private String name;
-  private long hitCount;
-  private long missCount;
-  private long evictionCount;
-  private long admittedCount;
-  private long rejectedCount;
-  private long operationCount;
-  private double missLatency;
-  private double hitLatency;
-  private double missLatencyAFS;
-  private long missCountAFS;
-  private HashSet<Long> seen;
+    private String name;
+    private long hitCount;
+    private long missCount;
+    private long evictionCount;
+    private long admittedCount;
+    private long rejectedCount;
+    private long operationCount;
+    private double missLatency;
+    private double hitLatency;
+    private double missLatencyAFS;
+    private long missCountAFS;
+    private HashSet<Long> seen;
 
-  public PolicyStats(String name, Set<Characteristics> policyCharacteristics) {
-    this.name = requireNonNull(name);
-    this.stopwatch = Stopwatch.createUnstarted();
-    this.policyCharacteristics = policyCharacteristics;
-    this.seen = new HashSet<>();
-  }
-
-  public Stopwatch stopwatch() {
-    return stopwatch;
-  }
-
-  public String name() {
-    return name;
-  }
-
-  public void setName(String name) {
-    this.name = requireNonNull(name);
-  }
-
-  public void recordOperation() {
-    operationCount++;
-  }
-
-  public long operationCount() {
-    return operationCount;
-  }
-
-  public void addOperations(long operations) {
-    operationCount += operations;
-  }
-
-  public void recordHit(AccessEvent entry) {
-    hitCount++;
-    double hp = getPenalty(entry,true);
-    if(hp >= 0){
-      hitLatency += hp;
+    public PolicyStats(String name, Set<Characteristics> policyCharacteristics) {
+        this.name = requireNonNull(name);
+        this.stopwatch = Stopwatch.createUnstarted();
+        this.policyCharacteristics = policyCharacteristics;
+        this.seen = new HashSet<>();
     }
-  }
 
-  public long hitCount() {
-    return hitCount;
-  }
-
-  public void addHits(long hits) {
-    hitCount += hits;
-  }
-
-  public void recordMiss(AccessEvent entry) {
-    missCount++;
-    double mp = getPenalty(entry,false);
-    if(mp >= 0) {
-      if (this.seen.contains(entry.getKey())) {
-        missLatencyAFS += mp;
-        missCountAFS++;
-      }
-      this.seen.add(entry.getKey());
-      missLatency += mp;
+    public Stopwatch stopwatch() {
+        return stopwatch;
     }
-  }
 
-  private double getPenalty(AccessEvent entry, boolean isHit){
-    if(isHit){
-      if(policyCharacteristics.contains(Characteristics.HIT_PENALTY)){
-        return entry.getHitPenalty();
-      }else if(policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE,Characteristics.CACHE_READ_RATE))){
-        return entry.calcHitPenalty();
-      }
-    }else {
-      if (policyCharacteristics.contains(Characteristics.MISS_PENALTY)) {
-        return entry.getMissPenalty();
-      } else if (policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE, Characteristics.MISS_READ_RATE))) {
-       return entry.calcMissPenalty();
-      }
+    public String name() {
+        return name;
     }
-    return -1;
-  }
 
-  public long missCount() {
-    return missCount;
-  }
+    public void setName(String name) {
+        this.name = requireNonNull(name);
+    }
 
-  public void addMisses(long misses) {
-    missCount += misses;
-  }
+    public void recordOperation() {
+        operationCount++;
+    }
 
-  public long evictionCount() {
-    return evictionCount;
-  }
+    public long operationCount() {
+        return operationCount;
+    }
 
-  public void recordEviction() {
-    evictionCount++;
-  }
+    public void addOperations(long operations) {
+        operationCount += operations;
+    }
 
-  public void addEvictions(long evictions) {
-    evictionCount += evictions;
-  }
+    public void recordHit(AccessEvent entry) {
+        hitCount++;
+        double hp = getPenalty(entry, true);
+        if (hp >= 0) {
+            hitLatency += hp;
+        }
+    }
 
-  public long requestCount() {
-    return hitCount + missCount;
-  }
+    public long hitCount() {
+        return hitCount;
+    }
 
-  public long admissionCount() {
-    return admittedCount;
-  }
+    public void addHits(long hits) {
+        hitCount += hits;
+    }
 
-  public void recordAdmission() {
-    admittedCount++;
-  }
+    public void addHits(Collection<AccessEvent> hits) {
+        for (AccessEvent entry : hits) {
+            recordHit(entry);
+        }
+    }
 
-  public long rejectionCount() {
-    return rejectedCount;
-  }
+    public void recordMiss(AccessEvent entry) {
+        missCount++;
+        double mp = getPenalty(entry, false);
+        if (mp >= 0) {
+            if (this.seen.contains(entry.getKey())) {
+                missLatencyAFS += mp;
+                missCountAFS++;
+            }
+            this.seen.add(entry.getKey());
+            missLatency += mp;
+        }
+    }
 
-  public void recordRejection() {
-    rejectedCount++;
-  }
+    private double getPenalty(AccessEvent entry, boolean isHit) {
+        if (isHit) {
+            if (policyCharacteristics.contains(Characteristics.HIT_PENALTY)) {
+                return entry.getHitPenalty();
+            } else if (policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE, Characteristics.CACHE_READ_RATE))) {
+                return entry.calcHitPenalty();
+            }
+        } else {
+            if (policyCharacteristics.contains(Characteristics.MISS_PENALTY)) {
+                return entry.getMissPenalty();
+            } else if (policyCharacteristics.containsAll(ImmutableSet.of(Characteristics.SIZE, Characteristics.MISS_READ_RATE))) {
+                return entry.calcMissPenalty();
+            }
+        }
+        return -1;
+    }
 
-  public double hitRate() {
-    long requestCount = requestCount();
-    return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
-  }
+    public long missCount() {
+        return missCount;
+    }
 
-  public double missRate() {
-    long requestCount = requestCount();
-    return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
-  }
+    public void addMisses(Collection<AccessEvent> misses) {
+        for (AccessEvent entry : misses) {
+            recordMiss(entry);
+        }
+    }
 
-  public double admissionRate() {
-    long candidateCount = admittedCount + rejectedCount;
-    return (candidateCount == 0) ? 1.0 : (double) admittedCount / candidateCount;
-  }
+    public void addMisses(long misses) {
+        missCount += misses;
+    }
 
-  public double complexity() {
-    long requestCount = requestCount();
-    return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
-  }
+    public long evictionCount() {
+        return evictionCount;
+    }
 
-  public Set<Characteristics> getPolicyCharacteristics() {
-    return policyCharacteristics;
-  }
+    public void recordEviction() {
+        evictionCount++;
+    }
 
-  public double missRateAFS() {
-    long requestCount = requestCount() - Math.abs(missCount-missCountAFS);
-    return (requestCount == 0) ? 0.0 : missCountAFS /  (double)requestCount;
-  }
+    public void addEvictions(long evictions) {
+        evictionCount += evictions;
+    }
 
-  public double totalLatency() {
-    return hitLatency + missLatency;
-  }
+    public long requestCount() {
+        return hitCount + missCount;
+    }
 
-  public double totalLatencyAFS() {
-    return hitLatency + missLatencyAFS;
-  }
-  public double avgTotalLatencyAFS(){
-    long reqCount = requestCount() - Math.abs(missCount-missCountAFS);
-    return (reqCount == 0) ? 0.0 : totalLatencyAFS() / reqCount;
-  }
+    public long admissionCount() {
+        return admittedCount;
+    }
 
-  public double avgTotalLatency(){
-    long reqCount = requestCount();
-    return (reqCount == 0) ? 0.0 : totalLatency() / reqCount;
-  }
+    public void recordAdmission() {
+        admittedCount++;
+    }
 
-  public double avgHitLatency(){
-    return (hitCount == 0) ? 0.0 :  hitLatency / hitCount;
-  }
+    public long rejectionCount() {
+        return rejectedCount;
+    }
 
-  public double avgMissLatency(){
-    return (missCount == 0) ? 0.0 : missLatency / missCount;
-  }
+    public void recordRejection() {
+        rejectedCount++;
+    }
 
-  public double avgMissLatencyAFS(){
-    return (missCountAFS == 0) ? 0.0 : missLatencyAFS / missCountAFS;
-  }
+    public double hitRate() {
+        long requestCount = requestCount();
+        return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
+    }
 
-  @Override
-  public String toString() {
-    return MoreObjects.toStringHelper(this).addValue(name).toString();
-  }
+    public double missRate() {
+        long requestCount = requestCount();
+        return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
+    }
+
+    public double admissionRate() {
+        long candidateCount = admittedCount + rejectedCount;
+        return (candidateCount == 0) ? 1.0 : (double) admittedCount / candidateCount;
+    }
+
+    public double complexity() {
+        long requestCount = requestCount();
+        return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
+    }
+
+    public Set<Characteristics> getPolicyCharacteristics() {
+        return policyCharacteristics;
+    }
+
+    public double missRateAFS() {
+        long requestCount = requestCount() - Math.abs(missCount - missCountAFS);
+        return (requestCount == 0) ? 0.0 : missCountAFS / (double) requestCount;
+    }
+
+    private double totalLatency() {
+        return hitLatency + missLatency;
+    }
+
+    private double totalLatencyAFS() {
+        return hitLatency + missLatencyAFS;
+    }
+
+    public double avgTotalLatencyAFS() {
+        long reqCount = requestCount() - Math.abs(missCount - missCountAFS);
+        return (reqCount == 0) ? 0.0 : totalLatencyAFS() / reqCount;
+    }
+
+    public double avgTotalLatency() {
+        long reqCount = requestCount();
+        return (reqCount == 0) ? 0.0 : totalLatency() / reqCount;
+    }
+
+    public double avgHitLatency() {
+        return (hitCount == 0) ? 0.0 : hitLatency / hitCount;
+    }
+
+    public double avgMissLatency() {
+        return (missCount == 0) ? 0.0 : missLatency / missCount;
+    }
+
+    public double avgMissLatencyAFS() {
+        return (missCountAFS == 0) ? 0.0 : missLatencyAFS / missCountAFS;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).addValue(name).toString();
+    }
 }
