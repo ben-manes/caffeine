@@ -26,9 +26,12 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * A reader for the Gradle Build Cache trace files provided by the Gradle team.
+ * A reader for the Gradle Build Cache trace files provided by the Gradle team, but with an additional field.
  *
- * @author ben.manes@gmail.com (Ben Manes)
+ * Each line in the trace has the following format: uuid hit-penalty miss-penalty
+ * For example: d05fdfe4022d6da89116ccbd91a8df8b 50 200
+ *
+ * @author himelbrand@gmail.com (Omri Himelbrand)
  */
 public final class GradlePenaltiesTraceReader extends TextTraceReader {
 
