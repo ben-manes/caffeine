@@ -63,7 +63,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
     FrdSettings settings = new FrdSettings(config);
     this.maximumMainResidentSize = (int) (settings.maximumSize() * settings.percentMain());
     this.maximumFilterSize = settings.maximumSize() - maximumMainResidentSize;
-    this.policyStats = new PolicyStats("irr.AdaptiveFrd",settings.report().characteristics());
+    this.policyStats = new PolicyStats("irr.AdaptiveFrd");
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headFilter = new Node();
@@ -82,14 +82,13 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     policyStats.recordOperation();
     adapt();
 
     Node node = data.get(key);
     if (node == null) {
-      node = new Node(event);
+      node = new Node(key);
       data.put(key, node);
       onMiss(node);
     } else if (node.status == Status.FILTER) {
@@ -141,7 +140,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
      * Initially, both the filter and reuse distance stacks are filled with newly arrived blocks
      * from the reuse distance stack to the filter stack
      */
-    policyStats.recordMiss(node.event);
+    policyStats.recordMiss(node.key);
     missesInSample++;
     sample++;
 
@@ -186,7 +185,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
      * Evict from filter stack. Then insert to main stack
      */
     policyStats.recordEviction();
-    policyStats.recordMiss(node.event);
+    policyStats.recordMiss(node.key);
     missesInSample++;
     sample++;
 
@@ -244,7 +243,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
      * move its history block in the reuse distance stack to the MRU position of the reuse distance
      * stack).
      */
-    policyStats.recordHit(node.event);
+    policyStats.recordHit(node.key);
     hitsInSample++;
     sample++;
 
@@ -259,7 +258,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
      * distance stack (i.e., the oldest resident block), the history blocks between the LRU position
      * and the 2nd oldest resident block are removed. Otherwise, no history block removing occurs.
      */
-    policyStats.recordHit(node.event);
+    policyStats.recordHit(node.key);
     hitsInSample++;
     sample++;
 
@@ -294,7 +293,7 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
      * resident block. No insertion or eviction occurs in the filter stack.
      */
     policyStats.recordEviction();
-    policyStats.recordMiss(node.event);
+    policyStats.recordMiss(node.key);
     missesInSample++;
     sample++;
 
@@ -335,7 +334,6 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
 
   final class Node {
     final long key;
-    final AccessEvent event;
 
     Status status;
 
@@ -351,12 +349,10 @@ public final class HillClimberFrdPolicy implements KeyOnlyPolicy {
       key = Long.MIN_VALUE;
       prevMain = nextMain = this;
       prevFilter = nextFilter = this;
-      event = null;
     }
 
-    Node(AccessEvent event) {
-      this.key = event.key();
-      this.event = event;
+    Node(long key) {
+      this.key = key;
     }
 
     public boolean isInStack(StackType stackType) {

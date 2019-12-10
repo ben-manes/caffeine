@@ -21,12 +21,11 @@ import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -47,13 +46,13 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final EvictionPolicy policy;
   final FrequencyNode freq0;
-  final Admittor admittor;
+  final KeyOnlyAdmittor admittor;
   final int maximumSize;
 
   public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()),settings.report().characteristics());
-    this.admittor = admission.from(config, policyStats);
+    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
+    this.admittor = (KeyOnlyAdmittor)admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policy = requireNonNull(policy);
@@ -74,12 +73,12 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
+  public void record(long key) {
     policyStats.recordOperation();
-    Node node = data.get(event.key());
-    admittor.record(event);
+    Node node = data.get(key);
+    admittor.record(key);
     if (node == null) {
-      onMiss(event);
+      onMiss(key);
     } else {
       onHit(node);
     }
@@ -87,7 +86,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the next higher frequency list, creating it if necessary. */
   private void onHit(Node node) {
-    policyStats.recordHit(node.event);
+    policyStats.recordHit(node.key);
 
     int newCount = node.freq.count + 1;
     FrequencyNode freqN = (node.freq.next.count == newCount)
@@ -102,13 +101,13 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   }
 
   /** Adds the entry, creating an initial frequency list of 1 if necessary, and evicts if needed. */
-  private void onMiss(AccessEvent event) {
+  private void onMiss(long key) {
     FrequencyNode freq1 = (freq0.next.count == 1)
         ? freq0.next
         : new FrequencyNode(1, freq0);
-    Node node = new Node(event, freq1);
-    policyStats.recordMiss(event);
-    data.put(event.key(), node);
+    Node node = new Node(key, freq1);
+    policyStats.recordMiss(key);
+    data.put(key, node);
     node.append();
     evict(node);
   }
@@ -117,7 +116,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
       Node victim = nextVictim(candidate);
-      boolean admit = admittor.admit(candidate.event, victim.event);
+      boolean admit = admittor.admit(candidate.key, victim.key);
       if (admit) {
         evictEntry(victim);
       } else {
@@ -211,7 +210,6 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   /** A cache entry on the frequency node's chain. */
   static final class Node {
     final long key;
-    final AccessEvent event;
 
     FrequencyNode freq;
     Node prev;
@@ -219,18 +217,16 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
     public Node(FrequencyNode freq) {
       this.key = Long.MIN_VALUE;
-      this.event = null;
       this.freq = freq;
       this.prev = this;
       this.next = this;
     }
 
-    public Node(AccessEvent event, FrequencyNode freq) {
+    public Node(long key, FrequencyNode freq) {
       this.next = null;
       this.prev = null;
       this.freq = freq;
-      this.key = event.key();
-      this.event = event;
+      this.key = key;
     }
 
     /** Appends the node to the tail of the list. */

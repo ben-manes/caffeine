@@ -49,6 +49,11 @@ public interface Policy {
       return ImmutableSet.of();
     }
 
+    @Override default void record(AccessEvent event) {
+      record(event.key());
+    }
+
+    void record(long key);
   }
 
 }

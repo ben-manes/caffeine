@@ -30,19 +30,19 @@ public interface HillClimber {
   /**
    * Records that a hit occurred with a full cache.
    *
-   * @param event the event accessed
+   * @param key the key accessed
    * @param queue the queue the event was found in
    * @param isFull if the cache is fully populated
    */
-  void onHit(AccessEvent event, QueueType queue, boolean isFull);
+  void onHit(long key, QueueType queue, boolean isFull);
 
   /**
    * Records that a miss occurred with a full cache.
    *
-   * @param event the entry accessed
+   * @param key the key accessed
    * @param isFull if the cache is fully populated and had to evict
    */
-  void onMiss(AccessEvent event, boolean isFull);
+  void onMiss(long key, boolean isFull);
 
   /**
    * Determines how to adapt the segment sizes.

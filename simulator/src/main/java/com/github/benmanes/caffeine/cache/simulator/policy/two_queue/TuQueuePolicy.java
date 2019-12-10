@@ -78,7 +78,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     this.headCold = new Node();
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
-    this.policyStats = new PolicyStats("two-queue.TuQueue",settings.report().characteristics());
+    this.policyStats = new PolicyStats("two-queue.TuQueue");
     this.maxHot = (int) (maximumSize * settings.percentHot());
     this.maxWarm = (int) (maximumSize * settings.percentWarm());
   }
@@ -89,15 +89,14 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       onMiss(key);
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
       onHit(node);
     }
   }

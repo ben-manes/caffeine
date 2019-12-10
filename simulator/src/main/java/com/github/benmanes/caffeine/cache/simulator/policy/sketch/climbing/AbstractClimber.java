@@ -35,14 +35,14 @@ public abstract class AbstractClimber implements HillClimber {
   static final boolean debug = false;
 
   @Override
-  public void onMiss(AccessEvent event, boolean isFull) {
+  public void onMiss(long key, boolean isFull) {
     if (isFull) {
       missesInSample++;
     }
   }
 
   @Override
-  public void onHit(AccessEvent event, QueueType queueType, boolean isFull) {
+  public void onHit(long key, QueueType queueType, boolean isFull) {
     if (isFull) {
       hitsInSample++;
 

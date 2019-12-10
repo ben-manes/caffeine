@@ -35,7 +35,7 @@ public final class TinyCachePolicy implements KeyOnlyPolicy {
 
   public TinyCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("sketch.TinyCache",settings.report().characteristics());
+    this.policyStats = new PolicyStats("sketch.TinyCache");
     tinyCache = new TinyCache((int) Math.ceil(settings.maximumSize() / 64.0),
         64, settings.randomSeed());
   }
@@ -46,13 +46,12 @@ public final class TinyCachePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     if (tinyCache.contains(key)) {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else {
       boolean evicted = tinyCache.addItem(key);
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       if (evicted) {
         policyStats.recordEviction();
       }

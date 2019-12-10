@@ -20,12 +20,11 @@ import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -45,14 +44,14 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final EvictionPolicy policy;
-  final Admittor admittor;
+  final KeyOnlyAdmittor admittor;
   final int maximumSize;
   final Node sentinel;
 
   public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()),settings.report().characteristics());
-    this.admittor = admission.from(config, policyStats);
+    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
+    this.admittor = (KeyOnlyAdmittor)admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.sentinel = new Node();
@@ -73,18 +72,17 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Node old = data.get(key);
-    admittor.record(event);
+    admittor.record(key);
     if (old == null) {
-      Node node = new Node(event, sentinel);
-      policyStats.recordMiss(event);
+      Node node = new Node(key, sentinel);
+      policyStats.recordMiss(key);
       data.put(key, node);
       node.appendToTail();
       evict(node);
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
       policy.onAccess(old, policyStats);
     }
   }
@@ -95,7 +93,7 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
       Node victim = policy.findVictim(sentinel, policyStats);
       policyStats.recordEviction();
 
-      boolean admit = admittor.admit(candidate.event, victim.event);
+      boolean admit = admittor.admit(candidate.key, victim.key);
       if (admit) {
         evictEntry(victim);
       } else {
@@ -193,22 +191,19 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
     Node prev;
     Node next;
     long key;
-    AccessEvent event;
 
     /** Creates a new sentinel node. */
     public Node() {
       this.key = Long.MIN_VALUE;
-      this.event = null;
       this.sentinel = this;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(AccessEvent event, Node sentinel) {
+    public Node(long key, Node sentinel) {
       this.sentinel = sentinel;
-      this.key = event.key();
-      this.event = event;
+      this.key = key;
     }
 
     /** Appends the node to the tail of the list. */

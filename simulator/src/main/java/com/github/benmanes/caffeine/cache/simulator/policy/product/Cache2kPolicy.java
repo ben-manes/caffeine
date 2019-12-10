@@ -48,7 +48,7 @@ public final class Cache2kPolicy implements Policy {
   public Cache2kPolicy(Config config) {
     logger.setLevel(Level.WARNING);
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("product.Cache2k",settings.report().characteristics());
+    policyStats = new PolicyStats("product.Cache2k");
     CacheEntryEvictedListener<Long, AccessEvent> listener =
         (cache, entry) -> policyStats.recordEviction();
     cache = Cache2kBuilder.of(Long.class, AccessEvent.class)
@@ -72,15 +72,16 @@ public final class Cache2kPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
+    long key = event.key();
     Object value = cache.peek(event.key());
     if (value == null) {
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       if (cache.asMap().size() == maximumSize) {
         policyStats.recordEviction();
       }
-      cache.put(event.key(), event);
+      cache.put(key, event);
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     }
   }
 

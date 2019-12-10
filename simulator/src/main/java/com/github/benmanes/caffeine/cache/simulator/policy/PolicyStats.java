@@ -16,13 +16,10 @@
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static java.util.Objects.requireNonNull;
-import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.PENALTIES;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -33,7 +30,6 @@ import java.util.Set;
  */
 public final class PolicyStats {
     private final Stopwatch stopwatch;
-    private final Set<Characteristic> characteristics;
     private final Set<Long> seen;
 
     private String name;
@@ -48,10 +44,9 @@ public final class PolicyStats {
     private double missLatencyAFS;
     private long missCountAFS;
 
-    public PolicyStats(String name, Set<Characteristic> characteristics) {
+    public PolicyStats(String name) {
         this.name = requireNonNull(name);
         this.stopwatch = Stopwatch.createUnstarted();
-        this.characteristics = characteristics;
         this.seen = new HashSet<>();
     }
 
@@ -79,12 +74,12 @@ public final class PolicyStats {
         operationCount += operations;
     }
 
-    public void recordHit(AccessEvent event) {
+    public void recordHit(long key) {
         hitCount++;
-        double hp = getPenalty(event, true);
-        if (hp >= 0) {
-            hitLatency += hp;
-        }
+    }
+
+    public void recordHitPenalty(double hitPenalty) {
+        hitLatency += hitPenalty;
     }
 
     public long hitCount() {
@@ -95,42 +90,27 @@ public final class PolicyStats {
         hitCount += hits;
     }
 
-    public void addHits(Collection<AccessEvent> hits) {
-        for (AccessEvent event : hits) {
-            recordHit(event);
-        }
-    }
-
-    public void recordMiss(AccessEvent event) {
+    public void recordMiss(long key) {
         missCount++;
-        double mp = getPenalty(event, false);
-        if (mp >= 0) {
-            if (this.seen.contains(event.key())) {
-                missLatencyAFS += mp;
-                missCountAFS++;
-            }
-            this.seen.add(event.key());
-            missLatency += mp;
+        if (this.seen.contains(key)) {
+            missCountAFS++;
         }
+        this.seen.add(key);
     }
 
-    private double getPenalty(AccessEvent event, boolean isHit) {
-        if (isHit && characteristics.contains(PENALTIES)) {
-            return event.hitPenalty();
-        } else if (characteristics.contains(PENALTIES)) {
-            return event.missPenalty();
+    public void recordMissPenalty(long missPenalty,boolean seen) {
+        if(seen){
+            missLatencyAFS += missPenalty;
         }
-        return -1;
+        missLatency += missPenalty;
     }
 
     public long missCount() {
         return missCount;
     }
 
-    public void addMisses(Collection<AccessEvent> misses) {
-        for (AccessEvent event : misses) {
-            recordMiss(event);
-        }
+    public long missCountAFS() {
+        return missCountAFS;
     }
 
     public void addMisses(long misses) {
@@ -187,10 +167,6 @@ public final class PolicyStats {
     public double complexity() {
         long requestCount = requestCount();
         return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
-    }
-
-    public Set<Characteristic> getcharacteristics() {
-        return characteristics;
     }
 
     public double missRateAFS() {

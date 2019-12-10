@@ -40,16 +40,16 @@ public final class IndicatorClimber implements HillClimber {
   }
 
   @Override
-  public void onHit(AccessEvent event, QueueType queue, boolean isFull) {
+  public void onHit(long key, QueueType queue, boolean isFull) {
     if (isFull) {
-      indicator.record(event.key());
+      indicator.record(key);
     }
   }
 
   @Override
-  public void onMiss(AccessEvent event, boolean isFull) {
+  public void onMiss(long key, boolean isFull) {
     if (isFull) {
-      indicator.record(event.key());
+      indicator.record(key);
     }
   }
 

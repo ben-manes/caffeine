@@ -43,7 +43,7 @@ public final class TCachePolicy implements KeyOnlyPolicy {
 
   public TCachePolicy(Config config) {
     TCacheSettings settings = new TCacheSettings(config);
-    policyStats = new PolicyStats("product.TCache",settings.report().characteristics());
+    policyStats = new PolicyStats("product.TCache");
     cache = TCacheFactory.standardFactory().builder()
         .setMaxElements(settings.maximumSize())
         .setEvictionClass(settings.policy())
@@ -57,14 +57,13 @@ public final class TCachePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Object value = cache.get(key);
     if (value == null) {
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       cache.put(key, key);
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     }
   }
 

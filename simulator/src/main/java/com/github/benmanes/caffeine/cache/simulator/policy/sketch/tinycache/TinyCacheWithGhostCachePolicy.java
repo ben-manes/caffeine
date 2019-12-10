@@ -35,7 +35,7 @@ public final class TinyCacheWithGhostCachePolicy implements KeyOnlyPolicy {
 
   public TinyCacheWithGhostCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("sketch.TinyCache_GhostCache",settings.report().characteristics());
+    this.policyStats = new PolicyStats("sketch.TinyCache_GhostCache");
     tinyCache = new TinyCacheWithGhostCache((int) Math.ceil(settings.maximumSize() / 64.0),
         64, settings.randomSeed());
   }
@@ -46,15 +46,14 @@ public final class TinyCacheWithGhostCachePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     if (tinyCache.contains(key)) {
       tinyCache.recordItem(key);
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else {
       boolean evicted = tinyCache.addItem(key);
       tinyCache.recordItem(key);
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       if (evicted) {
         policyStats.recordEviction();
       }

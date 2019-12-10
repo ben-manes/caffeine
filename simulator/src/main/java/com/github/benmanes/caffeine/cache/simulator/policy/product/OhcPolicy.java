@@ -57,7 +57,7 @@ public final class OhcPolicy implements KeyOnlyPolicy {
         .eviction(policy)
         .build();
     policyStats = new PolicyStats(String.format("product.OHC (%s)",
-        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"),settings.report().characteristics());
+        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"));
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -69,14 +69,13 @@ public final class OhcPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Object value = cache.get(key);
     if (value == null) {
       cache.put(key, key);
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     }
   }
 

@@ -81,7 +81,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public FeedbackWindowTinyLfuPolicy(double percentMain, FeedbackWindowTinyLfuSettings settings) {
     this.policyStats = new PolicyStats(String.format(
-        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)),settings.report().characteristics());
+        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)));
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
@@ -120,7 +120,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
+  public void record(long key) {
     if ((sample % sampleSize) == 0) {
       sampled++;
     }
@@ -129,30 +129,29 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     }
     sample++;
 
-    admittor.record(event);
+    admittor.record(key);
     policyStats.recordOperation();
-    Node node = data.get(event.key());
+    Node node = data.get(key);
     if (node == null) {
-      onMiss(event);
-      policyStats.recordMiss(event);
+      onMiss(key);
+      policyStats.recordMiss(key);
     } else if (node.status == Status.WINDOW) {
       onWindowHit(node);
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else if (node.status == Status.PROBATION) {
       onProbationHit(node);
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else if (node.status == Status.PROTECTED) {
       onProtectedHit(node);
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else {
       throw new IllegalStateException();
     }
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
-  private void onMiss(AccessEvent event) {
-    long key = event.key();
-    Node node = new Node(event, Status.WINDOW);
+  private void onMiss(long key) {
+    Node node = new Node(key, Status.WINDOW);
     node.appendToTail(headWindow);
     data.put(key, node);
     sizeWindow++;
@@ -186,7 +185,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the MRU position. */
   private void onProtectedHit(Node node) {
-    admittor.record(node.event);
+    admittor.record(node.key);
     node.moveToTail(headProtected);
   }
 
@@ -209,7 +208,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     if (data.size() > maximumSize) {
       Node evict;
       Node victim = headProbation.next;
-      if (admittor.admit(candidate.event, victim.event)) {
+      if (admittor.admit(candidate.key, victim.key)) {
         evict = victim;
       } else if (adapt(candidate)) {
         evict = victim;
@@ -324,7 +323,6 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** A node on the double-linked list. */
   static final class Node {
-    final AccessEvent event;
     final long key;
 
     Status status;
@@ -333,17 +331,15 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Creates a new sentinel node. */
     public Node() {
-      this.event = null;
       this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(AccessEvent event, Status status) {
-      this.event = event;
+    public Node(long key, Status status) {
       this.status = status;
-      this.key = event.key();
+      this.key = key;
     }
 
     public void moveToTail(Node head) {

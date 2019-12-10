@@ -41,7 +41,7 @@ public final class CaffeinePolicy implements Policy {
 
   public CaffeinePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("product.Caffeine",settings.report().characteristics());
+    policyStats = new PolicyStats("product.Caffeine");
     int maximumSize = settings.maximumSize();
     cache = Caffeine.newBuilder()
         .removalListener((Long key, AccessEvent value, RemovalCause cause) ->
@@ -64,12 +64,13 @@ public final class CaffeinePolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    Object value = cache.getIfPresent(event.key());
+    long key = event.key();
+    Object value = cache.getIfPresent(key);
     if (value == null) {
       cache.put(event.key(), event);
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     }
   }
 

@@ -40,7 +40,7 @@ public final class UnboundedPolicy implements KeyOnlyPolicy {
 
   public UnboundedPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("opt.Unbounded",settings.report().characteristics());
+    this.policyStats = new PolicyStats("opt.Unbounded");
     this.data = new LongOpenHashSet();
   }
 
@@ -55,12 +55,12 @@ public final class UnboundedPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
+  public void record(long key) {
     policyStats.recordOperation();
-    if (data.add(event.key())) {
-      policyStats.recordMiss(event);
+    if (data.add(key)) {
+      policyStats.recordMiss(key);
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     }
   }
 

@@ -68,21 +68,20 @@ public final class MiniSimClimber implements HillClimber {
   }
 
   @Override
-  public void onHit(AccessEvent event, QueueType queue, boolean isFull) {
-    onAccess(event);
+  public void onHit(long key, QueueType queue, boolean isFull) {
+    onAccess(key);
   }
 
   @Override
-  public void onMiss(AccessEvent event, boolean isFull) {
-    onAccess(event);
+  public void onMiss(long key, boolean isFull) {
+    onAccess(key);
   }
 
-  private void onAccess(AccessEvent event) {
+  private void onAccess(long key) {
     sample++;
-    long key = event.key();
     if (Math.floorMod(hasher.hashLong(key).asInt(), R) < 1) {
       for (WindowTinyLfuPolicy policy : minis) {
-        policy.record(event);
+        policy.record(key);
       }
     }
   }

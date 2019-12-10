@@ -47,7 +47,7 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
   @SuppressWarnings("PMD.CloseResource")
   public Ehcache3Policy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("product.Ehcache3",settings.report().characteristics());
+    policyStats = new PolicyStats("product.Ehcache3");
     cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = cacheManager.createCache("ehcache3",
         CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,
@@ -63,18 +63,17 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Object value = cache.putIfAbsent(key, key);
     if (value == null) {
       size++;
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       if (size > maximumSize) {
         policyStats.recordEviction();
         size--;
       }
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     }
   }
 

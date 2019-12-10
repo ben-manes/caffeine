@@ -44,16 +44,40 @@ public interface Admittor {
   static Admittor always() {
     return AlwaysAdmit.INSTANCE;
   }
+
+  interface KeyOnlyAdmittor extends Admittor {
+
+    @Override default boolean admit(AccessEvent candidate, AccessEvent victim) {
+      return admit(candidate.key(),victim.key());
+    }
+
+    @Override default void record(AccessEvent event) {
+      record(event.key());
+    }
+
+    void record(long key);
+
+    boolean admit(long candidate, long victim);
+  }
 }
 
-enum AlwaysAdmit implements Admittor {
+enum AlwaysAdmit implements Admittor, Admittor.KeyOnlyAdmittor {
   INSTANCE;
 
   @Override
   public void record(AccessEvent event) {}
 
   @Override
-  public boolean admit(AccessEvent candidateKey, AccessEvent victimKey) {
+  public void record(long key) { }
+
+  @Override
+  public boolean admit(long candidate, long victim) {
     return true;
   }
+
+  @Override
+  public boolean admit(AccessEvent candidate, AccessEvent victim) {
+    return true;
+  }
+
 }

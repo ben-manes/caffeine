@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -87,7 +86,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   public ClockProPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("irr.ClockPro",settings.report().characteristics());
+    policyStats = new PolicyStats("irr.ClockPro");
     maximumColdSize = settings.maximumSize();
     data = new Long2ObjectOpenHashMap<>();
     maximumSize = settings.maximumSize();
@@ -102,12 +101,11 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Node node = data.get(key);
 
     if (node == null) {
-      onMiss(event);
+      onMiss(key);
     } else if (node.status == Status.TEST) {
       onNonResidentHit(node);
     } else {
@@ -115,11 +113,11 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     }
   }
 
-  private void onMiss(AccessEvent event) {
+  private void onMiss(long key) {
     policyStats.recordOperation();
-    policyStats.recordMiss(event);
-    Node node = new Node(event);
-    data.put(event.key(), node);
+    policyStats.recordMiss(key);
+    Node node = new Node(key);
+    data.put(key, node);
     add(node);
     sizeCold++;
 
@@ -128,7 +126,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   private void onNonResidentHit(Node node) {
     policyStats.recordOperation();
-    policyStats.recordMiss(node.event);
+    policyStats.recordMiss(node.key);
 
     if (maximumColdSize < maximumSize) {
       maximumColdSize++;
@@ -146,7 +144,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   private void onHit(Node node) {
     policyStats.recordOperation();
-    policyStats.recordHit(node.event);
+    policyStats.recordHit(node.key);
     node.marked = true;
   }
 
@@ -314,17 +312,15 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   private static final class Node {
     final long key;
-    final AccessEvent event;
     boolean marked;
     Status status;
 
     Node prev;
     Node next;
 
-    public Node(AccessEvent event) {
+    public Node(long key) {
       status = Status.COLD;
-      this.key = event.key();
-      this.event = event;
+      this.key = key;
     }
 
     /** Removes the node from the list. */

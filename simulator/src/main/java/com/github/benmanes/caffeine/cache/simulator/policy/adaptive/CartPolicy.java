@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -66,7 +65,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
 
   public CartPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("adaptive.Cart",settings.report().characteristics());
+    this.policyStats = new PolicyStats("adaptive.Cart");
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.headT1 = new Node();
@@ -81,14 +80,13 @@ public final class CartPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Node node = data.get(key);
     if (isHit(node)) {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
       onHit(node);
     } else {
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       onMiss(key, node);
     }
   }

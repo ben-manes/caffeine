@@ -31,6 +31,7 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
 
 /**
@@ -41,7 +42,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
  */
 public final class ClairvoyantPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<IntPriorityQueue> accessTimes;
-  private final ObjectArrayFIFOQueue<AccessEvent> future;
+  private final LongArrayFIFOQueue future;
   private final PolicyStats policyStats;
   private final IntSortedSet data;
   private final int maximumSize;
@@ -51,11 +52,11 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
 
   public ClairvoyantPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    policyStats = new PolicyStats("opt.Clairvoyant",settings.report().characteristics());
+    policyStats = new PolicyStats("opt.Clairvoyant");
     accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
     maximumSize = settings.maximumSize();
-    future = new ObjectArrayFIFOQueue<AccessEvent>();
+    future = new LongArrayFIFOQueue();
     data = new IntRBTreeSet();
   }
 
@@ -65,10 +66,9 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     tick++;
-    future.enqueue(event);
+    future.enqueue(key);
     IntPriorityQueue times = accessTimes.get(key);
     if (times == null) {
       times = new IntArrayFIFOQueue();
@@ -86,14 +86,13 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
   public void finished() {
     policyStats.stopwatch().start();
     while (!future.isEmpty()) {
-      process(future.dequeue());
+      process(future.dequeueLong());
     }
     policyStats.stopwatch().stop();
   }
 
   /** Performs the cache operations for the given key. */
-  private void process(AccessEvent event) {
-    long key = event.key();
+  private void process(long key) {
     IntPriorityQueue times = accessTimes.get(key);
 
     int lastAccess = times.dequeueInt();
@@ -106,9 +105,9 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
       data.add(times.firstInt());
     }
     if (found) {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else {
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       if (data.size() > maximumSize) {
         evict();
       }

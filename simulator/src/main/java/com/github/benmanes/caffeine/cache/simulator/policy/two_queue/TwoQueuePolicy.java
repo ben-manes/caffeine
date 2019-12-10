@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -71,7 +70,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
     this.maxIn = (int) (maximumSize * settings.percentIn());
-    this.policyStats = new PolicyStats("two-queue.TwoQueue",characteristics());
+    this.policyStats = new PolicyStats("two-queue.TwoQueue");
     this.maxOut = (int) (maximumSize * settings.percentOut());
   }
 
@@ -82,8 +81,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
 
   @Override
   @SuppressWarnings({"PMD.ConfusingTernary", "PMD.SwitchStmtsShouldHaveDefault"})
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     // On accessing a page X :
     //   if X is in Am then
     //     move X to the head of Am
@@ -103,7 +101,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
       switch (node.type) {
         case MAIN:
           node.moveToTail(headMain);
-          policyStats.recordHit(event);
+          policyStats.recordHit(key);
           return;
         case OUT:
           node.remove();
@@ -115,11 +113,11 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
           node.type = QueueType.MAIN;
           sizeMain++;
 
-          policyStats.recordMiss(event);
+          policyStats.recordMiss(key);
           return;
         case IN:
           // do nothing
-          policyStats.recordHit(event);
+          policyStats.recordHit(key);
           return;
       }
     } else {
@@ -130,7 +128,7 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
       node.appendToTail(headIn);
       sizeIn++;
 
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
     }
   }
 

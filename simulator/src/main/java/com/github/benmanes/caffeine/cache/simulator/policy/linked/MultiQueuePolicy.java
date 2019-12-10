@@ -66,7 +66,7 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
   public MultiQueuePolicy(Config config) {
     MultiQueueSettings settings = new MultiQueueSettings(config);
-    policyStats = new PolicyStats("linked.MultiQueue",settings.report().characteristics());
+    policyStats = new PolicyStats("linked.MultiQueue");
     threshold = new long[settings.numberOfQueues()];
     headQ = new Node[settings.numberOfQueues()];
     out = new Long2ObjectLinkedOpenHashMap<>();
@@ -85,15 +85,14 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       node = out.remove(key);
       if (node == null) {
-        node = new Node(event);
+        node = new Node(key);
       }
       data.put(key, node);
       if (data.size() > maximumSize) {
@@ -101,7 +100,7 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
         evict();
       }
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
       node.remove();
     }
     node.reference++;
@@ -160,7 +159,6 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
 
   static final class Node {
     final long key;
-    final AccessEvent event;
 
     Node prev;
     Node next;
@@ -168,13 +166,12 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
     int queueIndex;
     long expireTime;
 
-    Node(AccessEvent event) {
-      this.key = event == null ? Long.MIN_VALUE : event.key();
-      this.event = event;
+    Node(long key) {
+      this.key = key;
     }
 
     static Node sentinel(int queueIndex) {
-      Node node = new Node(null);
+      Node node = new Node(Long.MIN_VALUE);
       node.expireTime = Long.MAX_VALUE;
       node.queueIndex = queueIndex;
       node.prev = node;

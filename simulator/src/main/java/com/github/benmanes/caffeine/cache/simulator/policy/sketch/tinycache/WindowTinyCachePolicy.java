@@ -37,7 +37,7 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
 
   public WindowTinyCachePolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats("sketch.WindowTinyCache",settings.report().characteristics());
+    this.policyStats = new PolicyStats("sketch.WindowTinyCache");
     int maxSize = settings.maximumSize();
     if (maxSize <= 64) {
       window = null;
@@ -55,18 +55,17 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     if (tinyCache.contains(key) || ((window != null) && window.contains(key))) {
       tinyCache.recordItem(key);
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else {
       boolean evicted = tinyCache.addItem(key);
       if (!evicted && (window != null)) {
         evicted = window.addItem(key);
       }
       tinyCache.recordItem(key);
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       if (evicted) {
         policyStats.recordEviction();
       }

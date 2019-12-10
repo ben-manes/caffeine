@@ -41,7 +41,7 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
 
   public ExpiringMapPolicy(Config config) {
     ExpiringMapSettings settings = new ExpiringMapSettings(config);
-    policyStats = new PolicyStats("product.ExpiringMap",settings.report().characteristics());
+    policyStats = new PolicyStats("product.ExpiringMap");
     cache = ExpiringMap.builder()
         .expirationPolicy(settings.policy())
         .maxSize(settings.maximumSize())
@@ -54,17 +54,16 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Object value = cache.get(key);
     if (value == null) {
       if (cache.size() == cache.getMaxSize()) {
         policyStats.recordEviction();
       }
       cache.put(key, key);
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     }
   }
 

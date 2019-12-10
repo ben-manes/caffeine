@@ -47,7 +47,7 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
 
   public CollisionPolicy(CollisionSettings settings, Density density) {
     policyStats = new PolicyStats(String.format("product.Collision (%s)",
-        StringUtils.capitalize(density.name().toLowerCase(US))),settings.report().characteristics());
+        StringUtils.capitalize(density.name().toLowerCase(US))));
     maximumSize = settings.maximumSize();
 
     CollisionBuilder<Object> builder = CollisionCache
@@ -74,8 +74,7 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Object value = cache.getIfPresent(key);
     if (value == null) {
       if (trackedSize == maximumSize) {
@@ -83,10 +82,10 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
         trackedSize--;
       }
       cache.putIfAbsent(key, key);
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       trackedSize++;
     } else {
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     }
   }
 

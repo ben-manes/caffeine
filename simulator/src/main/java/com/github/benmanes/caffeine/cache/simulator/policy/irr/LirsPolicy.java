@@ -81,7 +81,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     LirsSettings settings = new LirsSettings(config);
     this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
     this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
-    this.policyStats = new PolicyStats("irr.Lirs",settings.report().characteristics());
+    this.policyStats = new PolicyStats("irr.Lirs");
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.evicted = new ArrayList<>();
@@ -96,12 +96,11 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     policyStats.recordOperation();
     Node node = data.get(key);
     if (node == null) {
-      node = new Node(event);
+      node = new Node(key);
       data.put(key,node);
       onNonResidentHir(node);
     } else if (node.status == Status.LIR) {
@@ -121,7 +120,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // it to the top of stack S. If the LIR block is originally located at the bottom of the
     // stack, we conduct a stack pruning. This case is illustrated in the transition from state
     // (a) to state (b) in Fig. 2.
-    policyStats.recordHit(node.event);
+    policyStats.recordHit(node.key);
 
     boolean wasBottom = (headS.prevS == node);
     node.moveToTop(StackType.S);
@@ -138,7 +137,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // stack pruning is then conducted. This case is illustrated in the transition from state (a)
     // to state (c) in Fig. 2. b) If X is not in stack S, we leave its status unchanged and move
     // it to the top of stack Q.
-    policyStats.recordHit(node.event);
+    policyStats.recordHit(node.key);
 
     boolean isInStack = node.isInStack(StackType.S);
     boolean isTop = node.isStackTop(StackType.S);
@@ -167,7 +166,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // size reaches Llirs. After that, HIR status is given to any blocks that are accessed for the
     // first time and to blocks that have not been accessed for a long time so that currently they
     // are not in stack S.
-    policyStats.recordMiss(node.event);
+    policyStats.recordMiss(node.key);
 
     if (sizeHot < maximumHotSize) {
       onLirWarmupMiss(node);
@@ -366,7 +365,6 @@ public final class LirsPolicy implements KeyOnlyPolicy {
   // indicating whether or not the block resides in the cache.
   final class Node {
     final long key;
-    final AccessEvent event;
 
     Status status;
 
@@ -383,15 +381,13 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
     Node() {
       key = Long.MIN_VALUE;
-      event = null;
       prevS = nextS = this;
       prevQ = nextQ = this;
       prevNR = nextNR = this;
     }
 
-    Node(AccessEvent event) {
-      this.key = event.key();
-      this.event = event;
+    Node(long key) {
+      this.key = key;
     }
 
     public boolean isInStack(StackType stackType) {

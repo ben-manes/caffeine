@@ -22,9 +22,8 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -54,7 +53,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
-  private final Admittor admittor;
+  private final KeyOnlyAdmittor admittor;
   private final int maximumSize;
 
   private final Node headWindow;
@@ -69,7 +68,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public WindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
     String name = String.format("sketch.WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
-    this.policyStats = new PolicyStats(name,settings.report().characteristics());
+    this.policyStats = new PolicyStats(name);
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
@@ -97,46 +96,46 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
 
   @Override
-  public void record(AccessEvent event) {
+  public void record(long key) {
     policyStats.recordOperation();
-    Node node = data.get(event.key());
+    Node node = data.get(key);
     if (node == null) {
-      onMiss(event);
-      policyStats.recordMiss(event);
+      onMiss(key);
+      policyStats.recordMiss(key);
     } else if (node.status == Status.WINDOW) {
       onWindowHit(node);
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else if (node.status == Status.PROBATION) {
       onProbationHit(node);
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else if (node.status == Status.PROTECTED) {
       onProtectedHit(node);
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
     } else {
       throw new IllegalStateException();
     }
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
-  private void onMiss(AccessEvent event) {
-    admittor.record(event);
+  private void onMiss(long key) {
+    admittor.record(key);
 
-    Node node = new Node(event, Status.WINDOW);
+    Node node = new Node(key, Status.WINDOW);
     node.appendToTail(headWindow);
-    data.put(event.key(), node);
+    data.put(key, node);
     sizeWindow++;
     evict();
   }
 
   /** Moves the entry to the MRU position in the admission window. */
   private void onWindowHit(Node node) {
-    admittor.record(node.event);
+    admittor.record(node.key);
     node.moveToTail(headWindow);
   }
 
   /** Promotes the entry to the protected region's MRU position, demoting an entry if necessary. */
   private void onProbationHit(Node node) {
-    admittor.record(node.event);
+    admittor.record(node.key);
 
     node.remove();
     node.status = Status.PROTECTED;
@@ -154,7 +153,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   /** Moves the entry to the MRU position, if it falls outside of the fast-path threshold. */
   private void onProtectedHit(Node node) {
-    admittor.record(node.event);
+    admittor.record(node.key);
     node.moveToTail(headProtected);
   }
 
@@ -176,7 +175,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (data.size() > maximumSize) {
       Node victim = headProbation.next;
-      Node evict = admittor.admit(candidate.event, victim.event) ? victim : candidate;
+      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
 
@@ -204,7 +203,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   /** A node on the double-linked list. */
   static final class Node {
     final long key;
-    final AccessEvent event;
+
     Status status;
     Node prev;
     Node next;
@@ -212,16 +211,14 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
     /** Creates a new sentinel node. */
     public Node() {
       this.key = Integer.MIN_VALUE;
-      this.event = null;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(AccessEvent event, Status status) {
-      this.event = event;
+    public Node(long key, Status status) {
       this.status = status;
-      this.key = event.key();
+      this.key = key;
     }
 
     public void moveToTail(Node head) {

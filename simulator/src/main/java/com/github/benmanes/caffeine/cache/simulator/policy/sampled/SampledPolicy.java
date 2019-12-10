@@ -25,12 +25,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -57,7 +56,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   final PolicyStats policyStats;
   final EvictionPolicy policy;
   final Sample sampleStrategy;
-  final Admittor admittor;
+  final KeyOnlyAdmittor admittor;
   final int maximumSize;
   final int sampleSize;
   final Random random;
@@ -67,8 +66,8 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
     SampledSettings settings = new SampledSettings(config);
-    this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()),settings.report().characteristics());
-    this.admittor = admission.from(config, policyStats);
+    this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
+    this.admittor = (KeyOnlyAdmittor)admission.from(config, policyStats);
 
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
@@ -93,21 +92,20 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     Node node = data.get(key);
-    admittor.record(event);
+    admittor.record(key);
     long now = ++tick;
     if (node == null) {
-      node = new Node(event, data.size(), now);
+      node = new Node(key, data.size(), now);
       policyStats.recordOperation();
-      policyStats.recordMiss(event);
+      policyStats.recordMiss(key);
       table[node.index] = node;
       data.put(key, node);
       evict(node);
     } else {
       policyStats.recordOperation();
-      policyStats.recordHit(event);
+      policyStats.recordHit(key);
       node.accessTime = now;
       node.frequency++;
     }
@@ -122,7 +120,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       Node victim = policy.select(sample, random, tick);
       policyStats.recordEviction();
 
-      if (admittor.admit(candidate.event, victim.event)) {
+      if (admittor.admit(candidate.key, victim.key)) {
         removeFromTable(victim);
         data.remove(victim.key);
       } else {
@@ -272,19 +270,17 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
   static final class Node {
     final long key;
-    final AccessEvent event;
     final long insertionTime;
 
     long accessTime;
     int frequency;
     int index;
 
-    public Node(AccessEvent event, int index, long tick) {
+    public Node(long key, int index, long tick) {
       this.insertionTime = tick;
       this.accessTime = tick;
       this.index = index;
-      this.key = event.key();
-      this.event = event;
+      this.key = key;
     }
 
     @Override

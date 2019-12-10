@@ -24,7 +24,6 @@ import com.github.benmanes.caffeine.cache.simulator.admission.countmin64.CountMi
 import com.github.benmanes.caffeine.cache.simulator.admission.perfect.PerfectFrequency;
 import com.github.benmanes.caffeine.cache.simulator.admission.table.RandomRemovalFrequencyTable;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCacheAdapter;
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
@@ -33,7 +32,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TinyLfu implements Admittor {
+public final class TinyLfu implements Admittor.KeyOnlyAdmittor {
   private final PolicyStats policyStats;
   private final Frequency sketch;
 
@@ -73,17 +72,15 @@ public final class TinyLfu implements Admittor {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    sketch.increment(event.key());
+  public void record(long key) {
+    sketch.increment(key);
   }
 
   @Override
-  public boolean admit(AccessEvent candidate, AccessEvent victim) {
+  public boolean admit(long candidate, long victim) {
     sketch.reportMiss();
-    long candidateKey = candidate.key();
-    long victimKey = victim.key();
-    long candidateFreq = sketch.frequency(candidateKey);
-    long victimFreq = sketch.frequency(victimKey);
+    long candidateFreq = sketch.frequency(candidate);
+    long victimFreq = sketch.frequency(victim);
     if (candidateFreq > victimFreq) {
       policyStats.recordAdmission();
       return true;

@@ -28,11 +28,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor.KeyOnlyAdmittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
@@ -58,7 +57,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
   private final HillClimber climber;
-  private final Admittor admittor;
+  private final KeyOnlyAdmittor admittor;
   private final int maximumSize;
 
   private final Node headWindow;
@@ -88,7 +87,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     this.strategy = strategy;
     this.initialPercentMain = percentMain;
-    this.policyStats = new PolicyStats(getPolicyName(),settings.report().characteristics());
+    this.policyStats = new PolicyStats(getPolicyName());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.climber = strategy.create(settings.config());
 
@@ -119,40 +118,39 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(AccessEvent event) {
-    long key = event.key();
+  public void record(long key) {
     boolean isFull = (data.size() >= maximumSize);
     policyStats.recordOperation();
     Node node = data.get(key);
-    admittor.record(event);
+    admittor.record(key);
 
     QueueType queue = null;
     if (node == null) {
-      onMiss(event);
-      policyStats.recordMiss(event);
+      onMiss(key);
+      policyStats.recordMiss(key);
     } else {
       queue = node.queue;
       if (queue == WINDOW) {
         onWindowHit(node);
-        policyStats.recordHit(event);
+        policyStats.recordHit(key);
       } else if (queue == PROBATION) {
         onProbationHit(node);
-        policyStats.recordHit(event);
+        policyStats.recordHit(key);
       } else if (queue == PROTECTED) {
         onProtectedHit(node);
-        policyStats.recordHit(event);
+        policyStats.recordHit(key);
       } else {
         throw new IllegalStateException();
       }
     }
-    climb(event, queue, isFull);
+    climb(key, queue, isFull);
   }
 
   /** Adds the entry to the admission window, evicting if necessary. */
-  private void onMiss(AccessEvent event) {
-    Node node = new Node(event, WINDOW);
+  private void onMiss(long key) {
+    Node node = new Node(key, WINDOW);
     node.appendToTail(headWindow);
-    data.put(event.key(), node);
+    data.put(key, node);
     windowSize++;
     evict();
   }
@@ -205,7 +203,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     if (data.size() > maximumSize) {
       Node victim = headProbation.next;
-      Node evict = admittor.admit(candidate.event, victim.event) ? victim : candidate;
+      Node evict = admittor.admit(candidate.key, victim.key) ? victim : candidate;
       data.remove(evict.key);
       evict.remove();
 
@@ -214,11 +212,11 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   /** Performs the hill climbing process. */
-  private void climb(AccessEvent event, @Nullable QueueType queue, boolean isFull) {
+  private void climb(long key, @Nullable QueueType queue, boolean isFull) {
     if (queue == null) {
-      climber.onMiss(event, isFull);
+      climber.onMiss(key, isFull);
     } else {
-      climber.onHit(event, queue, isFull);
+      climber.onHit(key, queue, isFull);
     }
 
     double probationSize = maximumSize - windowSize - protectedSize;
@@ -316,7 +314,6 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   /** A node on the double-linked list. */
   static final class Node {
     final long key;
-    final AccessEvent event;
 
     QueueType queue;
     Node prev;
@@ -324,17 +321,15 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     /** Creates a new sentinel node. */
     public Node() {
-      this.event = null;
       this.key = Integer.MIN_VALUE;
       this.prev = this;
       this.next = this;
     }
 
     /** Creates a new, unlinked node. */
-    public Node(AccessEvent event, QueueType queue) {
+    public Node(long key, QueueType queue) {
       this.queue = queue;
-      this.key = event.key();
-      this.event = event;
+      this.key = key;
     }
 
     public void moveToTail(Node head) {
