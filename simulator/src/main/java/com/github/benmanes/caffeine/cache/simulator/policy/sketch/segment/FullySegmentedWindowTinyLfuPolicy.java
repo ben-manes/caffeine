@@ -27,7 +27,6 @@ import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy;
 import com.google.common.base.MoreObjects;
 import com.typesafe.config.Config;
 
@@ -36,7 +35,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * The Window TinyLfu algorithm where the window and main spaces implement {@link
- * SegmentedLruPolicy}.
+ * com.github.benmanes.caffeine.cache.simulator.policy.linked.SegmentedLruPolicy}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
