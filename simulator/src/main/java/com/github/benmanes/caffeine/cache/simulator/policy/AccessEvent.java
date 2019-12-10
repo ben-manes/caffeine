@@ -70,12 +70,14 @@ public class AccessEvent {
         }
         AccessEvent event = (AccessEvent) o;
         return Objects.equals(key(), event.key())
-                && Objects.equals(weight(), event.weight());
+                && Objects.equals(weight(), event.weight())
+                && Objects.equals(missPenalty(),event.missPenalty())
+                && Objects.equals(hitPenalty(),event.hitPenalty());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(key(), weight());
+        return Objects.hash(key(), weight(), missPenalty(), hitPenalty());
     }
 
     @Override
@@ -83,6 +85,8 @@ public class AccessEvent {
         return MoreObjects.toStringHelper(this)
                 .add("key", key())
                 .add("weight", weight())
+                .add("miss penalty", missPenalty())
+                .add("hit penalty", hitPenalty())
                 .toString();
     }
 

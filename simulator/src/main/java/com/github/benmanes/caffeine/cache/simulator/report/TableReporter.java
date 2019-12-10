@@ -19,7 +19,6 @@ import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Charact
 
 import java.util.List;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.jakewharton.fliptables.FlipTable;
 import com.typesafe.config.Config;

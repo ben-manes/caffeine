@@ -34,6 +34,7 @@ import java.util.Set;
 public final class PolicyStats {
     private final Stopwatch stopwatch;
     private final Set<Characteristic> characteristics;
+    private final Set<Long> seen;
 
     private String name;
     private long hitCount;
@@ -46,7 +47,6 @@ public final class PolicyStats {
     private double hitLatency;
     private double missLatencyAFS;
     private long missCountAFS;
-    private HashSet<Long> seen;
 
     public PolicyStats(String name, Set<Characteristic> characteristics) {
         this.name = requireNonNull(name);

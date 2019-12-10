@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
-import com.google.common.collect.ImmutableSet;
 import org.caffinitas.ohc.CacheSerializer;
 import org.caffinitas.ohc.Eviction;
 import org.caffinitas.ohc.OHCache;

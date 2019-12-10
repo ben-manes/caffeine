@@ -26,7 +26,6 @@ import java.util.Random;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
