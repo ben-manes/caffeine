@@ -61,12 +61,15 @@ public class AccessEvent {
       return false;
     }
     AccessEvent event = (AccessEvent) o;
-    return Objects.equals(key(), event.key()) && Objects.equals(weight(), event.weight());
+    return Objects.equals(key(), event.key())
+        && Objects.equals(weight(), event.weight())
+        && Objects.equals(missPenalty(), event.missPenalty())
+        && Objects.equals(hitPenalty(), event.hitPenalty());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(key(), weight());
+    return Objects.hash(key(), weight(), missPenalty(), hitPenalty());
   }
 
   @Override
@@ -119,24 +122,6 @@ public class AccessEvent {
       this.hitPenalty = hitPenalty;
       checkArgument(hitPenalty >= 0);
       checkArgument(missPenalty > hitPenalty);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (o == this) {
-        return true;
-      } else if (!(o instanceof PenaltiesAccessEvent)) {
-        return false;
-      }
-      PenaltiesAccessEvent event = (PenaltiesAccessEvent) o;
-      return super.equals(o)
-          && Objects.equals(missPenalty(), event.missPenalty())
-          && Objects.equals(hitPenalty(), event.hitPenalty());
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(key(), weight(), missPenalty(), hitPenalty());
     }
 
     @Override
