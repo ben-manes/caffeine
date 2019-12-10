@@ -98,7 +98,7 @@ public final class PolicyStats {
     this.seen.add(key);
   }
 
-  public void recordMissPenalty(long missPenalty, boolean seen) {
+  public void recordMissPenalty(double missPenalty, boolean seen) {
     if (seen) {
       missLatencyAFS += missPenalty;
     }

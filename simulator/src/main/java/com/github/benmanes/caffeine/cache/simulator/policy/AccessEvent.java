@@ -44,12 +44,12 @@ public class AccessEvent {
   }
 
   /** Returns the miss penalty of the entry */
-  public int missPenalty() {
+  public double missPenalty() {
     return 1;
   }
 
   /** Returns the hit penalty of the entry */
-  public int hitPenalty() {
+  public double hitPenalty() {
     return 0;
   }
 
@@ -93,7 +93,7 @@ public class AccessEvent {
   }
 
   /** Returns an event for the given key and penalties. */
-  public static AccessEvent forKeyAndPenalties(long key, int hitPenalty, int missPenalty) {
+  public static AccessEvent forKeyAndPenalties(long key, double hitPenalty, double missPenalty) {
     return new PenaltiesAccessEvent(key, hitPenalty, missPenalty);
   }
 
@@ -113,10 +113,10 @@ public class AccessEvent {
   }
 
   private static final class PenaltiesAccessEvent extends AccessEvent {
-    private final int missPenalty;
-    private final int hitPenalty;
+    private final double missPenalty;
+    private final double hitPenalty;
 
-    PenaltiesAccessEvent(long key, int hitPenalty, int missPenalty) {
+    PenaltiesAccessEvent(long key, double hitPenalty, double missPenalty) {
       super(key);
       this.missPenalty = missPenalty;
       this.hitPenalty = hitPenalty;
@@ -125,12 +125,12 @@ public class AccessEvent {
     }
 
     @Override
-    public int missPenalty() {
+    public double missPenalty() {
       return missPenalty;
     }
 
     @Override
-    public int hitPenalty() {
+    public double hitPenalty() {
       return hitPenalty;
     }
   }

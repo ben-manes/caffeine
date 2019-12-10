@@ -66,7 +66,7 @@ public final class AddressPenaltiesTraceReader extends TextTraceReader {
             split ->
                 AccessEvent.forKeyAndPenalties(
                     Long.parseLong(split[1].substring(2), 16),
-                    Integer.parseInt(split[3]),
-                    Integer.parseInt(split[4])));
+                    Double.parseDouble(split[3]),
+                    Double.parseDouble(split[4])));
   }
 }
