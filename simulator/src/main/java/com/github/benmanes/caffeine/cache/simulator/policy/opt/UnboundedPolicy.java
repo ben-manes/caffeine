@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
@@ -38,15 +36,14 @@ public final class UnboundedPolicy implements KeyOnlyPolicy {
   private final PolicyStats policyStats;
   private final LongOpenHashSet data;
 
-  public UnboundedPolicy(Config config) {
-    BasicSettings settings = new BasicSettings(config);
+  public UnboundedPolicy() {
     this.policyStats = new PolicyStats("opt.Unbounded");
     this.data = new LongOpenHashSet();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new UnboundedPolicy(config));
+    return ImmutableSet.of(new UnboundedPolicy());
   }
 
   @Override

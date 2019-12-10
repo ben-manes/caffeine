@@ -15,8 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 

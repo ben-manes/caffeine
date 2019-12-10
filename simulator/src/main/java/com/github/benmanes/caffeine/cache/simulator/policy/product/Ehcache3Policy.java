@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import java.util.Set;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;

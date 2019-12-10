@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.inference;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.Indicator;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimberWindowTinyLfuPolicy.HillClimberWindowTinyLfuSettings;
