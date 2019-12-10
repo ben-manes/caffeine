@@ -57,8 +57,7 @@ public final class AddressPenaltiesTraceReader extends TextTraceReader {
   public Stream<AccessEvent> events() throws IOException {
     return lines()
             .map(line -> line.split(" ", 5))
-            .map(split -> String.join(" ",split[1],split[3],split[4]))
-            .map(joined -> joined.substring(2).split(" ", 3))
-            .map(split -> AccessEvent.forKeyAndPenalties(Long.parseLong(split[0], 16), Integer.parseInt(split[1]), Integer.parseInt(split[2])));
+            .map(split -> AccessEvent.forKeyAndPenalties(Long.parseLong(split[1].substring(2), 16),
+                    Integer.parseInt(split[3]), Integer.parseInt(split[4])));
   }
 }

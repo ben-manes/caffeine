@@ -103,6 +103,10 @@ public final class Simulator extends AbstractActor {
 
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() {
+    if(router.routees().isEmpty()){
+      context().system().log().error("No active policies under current configuration.");
+      context().stop(self());
+    }
     try (Stream<AccessEvent> events = traceReader.events()) {
       Iterators.partition(events.iterator(), batchSize)
           .forEachRemaining(batch -> router.route(batch, self()));

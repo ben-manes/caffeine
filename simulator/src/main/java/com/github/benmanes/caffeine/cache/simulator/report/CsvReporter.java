@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
+import org.apache.commons.lang3.ArrayUtils;
 
 /**
  * A plain text report that prints comma-separated values.
@@ -41,15 +42,19 @@ public final class CsvReporter extends TextReporter {
   protected String assemble(List<PolicyStats> results) {
     StringWriter output = new StringWriter();
     CsvWriter writer = new CsvWriter(output, new CsvWriterSettings());
-    writer.writeHeaders(headers());
-    Object[] empty = {};
+    boolean penaltiesFlag = characteristics().contains(PENALTIES);
+    String[] empty = {};
+    String[] timeUnitHeader = {"Time Unit"};
+    String[] headers = ArrayUtils.addAll(headers(),penaltiesFlag ? timeUnitHeader : empty);
+    writer.writeHeaders(headers);
     for (PolicyStats policyStats : results) {
       Object[] penaltiesData = {
-              policyStats.hitCount() == 0 ? null : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit()),
-              (policyStats.missCount() == 0) ? null : String.format("%.4f %s", policyStats.avgMissLatency(),getTimeUnit()),
-              String.format("%.4f %s", policyStats.avgTotalLatency(),getTimeUnit()),
-              String.format("%.4f %s", policyStats.avgMissLatencyAFS(),getTimeUnit()),
-              String.format("%.4f %s", policyStats.avgTotalLatencyAFS(),getTimeUnit())
+              policyStats.hitCount() == 0 ? null : String.format("%.4f", policyStats.avgHitLatency()),
+              (policyStats.missCount() == 0) ? null : String.format("%.4f", policyStats.avgMissLatency()),
+              String.format("%.4f", policyStats.avgTotalLatency()),
+              String.format("%.4f", policyStats.avgMissLatencyAFS()),
+              String.format("%.4f", policyStats.avgTotalLatencyAFS()),
+              getTimeUnit()
       };
       Object[] basicData = {
               policyStats.name(),
@@ -62,7 +67,7 @@ public final class CsvReporter extends TextReporter {
               (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),
               policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS)
       };
-      Object[] data = mergeData(basicData,characteristics().contains(PENALTIES) ? penaltiesData : empty);
+      Object[] data = mergeData(basicData,penaltiesFlag ? penaltiesData : empty);
       writer.writeRow(data);
     }
     writer.close();
