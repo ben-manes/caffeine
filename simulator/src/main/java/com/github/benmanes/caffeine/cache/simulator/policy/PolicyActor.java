@@ -54,7 +54,7 @@ public final class PolicyActor extends AbstractActor
       policy.stats().stopwatch().start();
       for (AccessEvent event : events) {
         policy.record(event);
-        addPenalties(event,hitCounts,missCount,missCountAFS);
+        addPenalties(event, hitCounts, missCount, missCountAFS);
         hitCounts = policy.stats().hitCount();
         missCount = policy.stats().missCount();
         missCountAFS = policy.stats().missCountAFS();
@@ -66,13 +66,18 @@ public final class PolicyActor extends AbstractActor
       policy.stats().stopwatch().stop();
     }
   }
-  private void addPenalties(AccessEvent event, long prevHitCount,long prevMissCount, long prevMissCountAFS) {
-    if(prevHitCount < policy.stats().hitCount()){
+
+  private void addPenalties(
+      AccessEvent event, long prevHitCount, long prevMissCount, long prevMissCountAFS) {
+    if (prevHitCount < policy.stats().hitCount()) {
       policy.stats().recordHitPenalty(event.hitPenalty());
-    }else if(prevMissCount < policy.stats().missCount()){
-      policy.stats().recordMissPenalty(event.missPenalty(),prevMissCountAFS < policy.stats().missCountAFS());
+    } else if (prevMissCount < policy.stats().missCount()) {
+      policy
+          .stats()
+          .recordMissPenalty(event.missPenalty(), prevMissCountAFS < policy.stats().missCountAFS());
     }
   }
+
   private void finish() {
     try {
       policy.finished();

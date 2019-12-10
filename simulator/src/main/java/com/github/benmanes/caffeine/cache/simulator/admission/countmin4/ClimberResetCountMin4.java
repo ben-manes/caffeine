@@ -20,8 +20,8 @@ import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
 import com.typesafe.config.Config;
 
 /**
- * A sketch where the aging process is a dynamic process and adjusts to the
- * recency/frequency bias of the actual workload.
+ * A sketch where the aging process is a dynamic process and adjusts to the recency/frequency bias
+ * of the actual workload.
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  * @author ben.manes@gmail.com (Ben Manes)
@@ -41,9 +41,10 @@ public final class ClimberResetCountMin4 extends CountMin4 {
   public ClimberResetCountMin4(Config config) {
     super(config);
     BasicSettings settings = new BasicSettings(config);
-    doorkeeper = settings.tinyLfu().countMin4().periodic().doorkeeper().enabled()
-        ? settings.membership().filter().create(config)
-        : Membership.disabled();
+    doorkeeper =
+        settings.tinyLfu().countMin4().periodic().doorkeeper().enabled()
+            ? settings.membership().filter().create(config)
+            : Membership.disabled();
   }
 
   @Override
@@ -74,8 +75,8 @@ public final class ClimberResetCountMin4 extends CountMin4 {
   }
 
   /**
-   * Reduces every counter by half of its original value. To reduce the truncation
-   * error, the sample is reduced by the number of counters with an odd value.
+   * Reduces every counter by half of its original value. To reduce the truncation error, the sample
+   * is reduced by the number of counters with an odd value.
    */
   @Override
   protected void tryReset(boolean added) {
@@ -142,5 +143,4 @@ public final class ClimberResetCountMin4 extends CountMin4 {
   public int getPeriod() {
     return period;
   }
-
 }

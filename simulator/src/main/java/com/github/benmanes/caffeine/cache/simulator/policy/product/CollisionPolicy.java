@@ -45,15 +45,17 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
   private int trackedSize;
 
   public CollisionPolicy(CollisionSettings settings, Density density) {
-    policyStats = new PolicyStats(String.format("product.Collision (%s)",
-        StringUtils.capitalize(density.name().toLowerCase(US))));
+    policyStats =
+        new PolicyStats(
+            String.format(
+                "product.Collision (%s)", StringUtils.capitalize(density.name().toLowerCase(US))));
     maximumSize = settings.maximumSize();
 
-    CollisionBuilder<Object> builder = CollisionCache
-        .withCapacity(maximumSize)
-        .setInitCount(settings.initCount())
-        .setBucketSize(settings.bucketSize())
-        .setStrictCapacity(settings.strictCapacity());
+    CollisionBuilder<Object> builder =
+        CollisionCache.withCapacity(maximumSize)
+            .setInitCount(settings.initCount())
+            .setBucketSize(settings.bucketSize())
+            .setStrictCapacity(settings.strictCapacity());
 
     if (density == Density.SPARSE) {
       cache = builder.buildSparse(settings.sparseFactor());
@@ -67,7 +69,8 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
     CollisionSettings settings = new CollisionSettings(config);
-    return settings.density()
+    return settings
+        .density()
         .map(density -> new CollisionPolicy(settings, density))
         .collect(toSet());
   }
@@ -93,29 +96,35 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
     return policyStats;
   }
 
-  enum Density { SPARSE, PACKED }
+  enum Density {
+    SPARSE,
+    PACKED
+  }
 
   static final class CollisionSettings extends BasicSettings {
     public CollisionSettings(Config config) {
       super(config);
     }
+
     public int initCount() {
       return config().getInt("collision.init-count");
     }
+
     public int bucketSize() {
       return config().getInt("collision.bucket-size");
     }
+
     public double sparseFactor() {
       return config().getDouble("collision.sparse-factor");
     }
+
     public boolean strictCapacity() {
       return config().getBoolean("collision.strict-capacity");
     }
+
     public Stream<Density> density() {
       return config().getStringList("collision.density").stream()
           .map(density -> Density.valueOf(density.toUpperCase(US)));
     }
   }
-
-
 }

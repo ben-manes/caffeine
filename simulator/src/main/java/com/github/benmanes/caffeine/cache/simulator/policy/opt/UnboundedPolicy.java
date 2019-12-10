@@ -60,6 +60,4 @@ public final class UnboundedPolicy implements KeyOnlyPolicy {
       policyStats.recordHit(key);
     }
   }
-
-
 }

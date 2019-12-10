@@ -31,26 +31,34 @@ import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.base.Stopwatch;
 
 /**
- * A simple utility to rewrite traces for into the format used by other simulators. This lets us
- * run multiple simulators in parallel for a quick-and-dirty analysis, rather than port their code
- * into Java.
+ * A simple utility to rewrite traces for into the format used by other simulators. This lets us run
+ * multiple simulators in parallel for a quick-and-dirty analysis, rather than port their code into
+ * Java.
+ *
  * <p>
+ *
  * <pre>{@code
- *   ./gradlew :simulator:rewrite -PinputFiles=? -PoutputFile=? -PoutputFormat=?
+ * ./gradlew :simulator:rewrite -PinputFiles=? -PoutputFile=? -PoutputFormat=?
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("PMD.ImmutableField")
 public final class Rewriter {
-  @Parameter(names = "--inputFiles", required = true, description = "The trace input files. To use "
-      + "a mix of formats, specify the entry as format:path, e.g. lirs:loop.trace.gz")
+  @Parameter(
+      names = "--inputFiles",
+      required = true,
+      description =
+          "The trace input files. To use "
+              + "a mix of formats, specify the entry as format:path, e.g. lirs:loop.trace.gz")
   private List<String> inputFiles = new ArrayList<>();
+
   @Parameter(names = "--inputFormat", description = "The default trace input format")
   private TraceFormat inputFormat = TraceFormat.LIRS;
 
   @Parameter(names = "--outputFile", description = "The trace output file", required = true)
   private Path outputFile;
+
   @Parameter(names = "--outputFormat", description = "The trace output format", required = true)
   private OutputFormat outputFormat;
 
@@ -62,8 +70,8 @@ public final class Rewriter {
     int count = 0;
     Stopwatch stopwatch = Stopwatch.createStarted();
     try (Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
-         BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
-      for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
+        BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
+      for (Iterator<AccessEvent> i = events.iterator(); i.hasNext(); ) {
         outputFormat.write(writer, i.next().key());
         count++;
       }
@@ -73,10 +81,11 @@ public final class Rewriter {
 
   public static void main(String[] args) throws IOException {
     Rewriter rewriter = new Rewriter();
-    JCommander commander =  JCommander.newBuilder()
-        .programName(Rewriter.class.getSimpleName())
-        .addObject(rewriter)
-        .build();
+    JCommander commander =
+        JCommander.newBuilder()
+            .programName(Rewriter.class.getSimpleName())
+            .addObject(rewriter)
+            .build();
     commander.parse(args);
     if (rewriter.help) {
       commander.usage();

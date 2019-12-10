@@ -45,15 +45,16 @@ public interface Policy {
   /** A policy that does not exploit external event metadata. */
   interface KeyOnlyPolicy extends Policy {
 
-    @Override default Set<Characteristic> characteristics() {
+    @Override
+    default Set<Characteristic> characteristics() {
       return ImmutableSet.of();
     }
 
-    @Override default void record(AccessEvent event) {
+    @Override
+    default void record(AccessEvent event) {
       record(event.key());
     }
 
     void record(long key);
   }
-
 }

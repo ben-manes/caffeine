@@ -41,8 +41,9 @@ public final class Indicator {
   private long sample;
 
   public Indicator(Config config) {
-    this.sketch = new PeriodicResetCountMin4(
-        ConfigFactory.parseString("maximum-size = 5000").withFallback(config));
+    this.sketch =
+        new PeriodicResetCountMin4(
+            ConfigFactory.parseString("maximum-size = 5000").withFallback(config));
     IndicatorSettings settings = new IndicatorSettings(config);
     this.sample = 0;
     this.k = settings.k();
@@ -124,7 +125,7 @@ public final class Indicator {
 
     public double estSkew(int k) {
       SimpleRegression regression = new SimpleRegression();
-      int[] idx = { 1 };
+      int[] idx = {1};
       getTopK(k).forEachOrdered(freq -> regression.addData(Math.log(idx[0]++), Math.log(freq)));
       return -regression.getSlope();
     }

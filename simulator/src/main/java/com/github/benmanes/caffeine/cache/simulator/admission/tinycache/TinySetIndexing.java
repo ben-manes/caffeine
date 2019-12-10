@@ -23,10 +23,8 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
  * assumed to be 64 bits, (longs) for efficiency and simplicity. The technique update the indexes
  * upon addition/removal.
  *
- * Paper link:
- * http://www.cs.technion.ac.il/users/wwwb/cgi-bin/tr-get.cgi/2015/CS/CS-2015-03.pdf
- * Presentation:
- * http://www.cs.technion.ac.il/~gilga/UCLA_and_TCL.pptx
+ * <p>Paper link: http://www.cs.technion.ac.il/users/wwwb/cgi-bin/tr-get.cgi/2015/CS/CS-2015-03.pdf
+ * Presentation: http://www.cs.technion.ac.il/~gilga/UCLA_and_TCL.pptx
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
@@ -76,11 +74,11 @@ public final class TinySetIndexing {
   }
 
   @SuppressWarnings("PMD.AvoidReassigningLoopVariables")
-  public static int getChainAtOffset(HashedItem fpaux,
-      long[] chainIndex, long[] isLastIndex, int offset) {
+  public static int getChainAtOffset(
+      HashedItem fpaux, long[] chainIndex, long[] isLastIndex, int offset) {
     int nonEmptyChainsToSee = rank(isLastIndex[fpaux.set], offset);
     int nonEmptyChainSeen = rank(chainIndex[fpaux.set], nonEmptyChainsToSee);
-    for (int i = nonEmptyChainsToSee; i <= 64;) {
+    for (int i = nonEmptyChainsToSee; i <= 64; ) {
       if (TinySetIndexing.chainExist(chainIndex[fpaux.set], i)
           && (nonEmptyChainSeen == nonEmptyChainsToSee)) {
         return i;
@@ -115,9 +113,7 @@ public final class TinySetIndexing {
   private static long extendZero(final long isLastIndex, final int offset) {
     long constantPartMask = (1L << offset) - 1;
     return (isLastIndex & constantPartMask)
-        | ((isLastIndex << 1L)
-        & (~(constantPartMask))
-        & (~(1L << offset)));
+        | ((isLastIndex << 1L) & (~(constantPartMask)) & (~(1L << offset)));
   }
 
   @SuppressWarnings("UnnecessaryParentheses")
@@ -129,9 +125,10 @@ public final class TinySetIndexing {
   public static void removeItem(HashedItem fpaux, long[] chainIndex, long[] isLastIndex) {
     int chainStart = getChainStart(fpaux, chainIndex, isLastIndex);
     // avoid an if command: either update chainIndex to the new state or keep it the way it is.
-    chainIndex[fpaux.set] = (isLastIndex[fpaux.set] & (1L << chainStart)) == 0L
-        ? chainIndex[fpaux.set]
-        : chainIndex[fpaux.set] & ~(1L << fpaux.chainId);
+    chainIndex[fpaux.set] =
+        (isLastIndex[fpaux.set] & (1L << chainStart)) == 0L
+            ? chainIndex[fpaux.set]
+            : chainIndex[fpaux.set] & ~(1L << fpaux.chainId);
     // update isLastIndex.
     isLastIndex[fpaux.set] = shrinkOffset(isLastIndex[fpaux.set], chainStart);
   }

@@ -175,10 +175,12 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
   public void finished() {
     for (int i = 0; i < levels; i++) {
       int level = i;
-      int count = (int) data.values().stream()
-          .filter(node -> node.status == Status.MAIN)
-          .filter(node -> node.level == level)
-          .count();
+      int count =
+          (int)
+              data.values().stream()
+                  .filter(node -> node.status == Status.MAIN)
+                  .filter(node -> node.level == level)
+                  .count();
       checkState(count == sizeMainQ[i]);
     }
     checkState(data.values().stream().filter(n -> n.status == Status.WINDOW).count() == sizeWindow);
@@ -186,7 +188,8 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   enum Status {
-    WINDOW, MAIN
+    WINDOW,
+    MAIN
   }
 
   /** A node on the double-linked list. */
@@ -201,7 +204,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
     /** Creates a new, unlinked node. */
     public Node(long key, Status status) {
       this.status = status;
-      this.key =  key;
+      this.key = key;
     }
 
     /** Creates a new sentinel node. */
@@ -236,10 +239,7 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("level", level)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("level", level).toString();
     }
   }
 
@@ -247,13 +247,13 @@ public final class S4WindowTinyLfuPolicy implements KeyOnlyPolicy {
     public S4WindowTinyLfuSettings(Config config) {
       super(config);
     }
+
     public int levels() {
       return config().getInt("s4-window-tiny-lfu.levels");
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("s4-window-tiny-lfu.percent-main");
     }
   }
-
-
 }

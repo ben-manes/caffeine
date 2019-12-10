@@ -41,10 +41,11 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
   public ExpiringMapPolicy(Config config) {
     ExpiringMapSettings settings = new ExpiringMapSettings(config);
     policyStats = new PolicyStats("product.ExpiringMap");
-    cache = ExpiringMap.builder()
-        .expirationPolicy(settings.policy())
-        .maxSize(settings.maximumSize())
-        .build();
+    cache =
+        ExpiringMap.builder()
+            .expirationPolicy(settings.policy())
+            .maxSize(settings.maximumSize())
+            .build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -75,6 +76,7 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
     public ExpiringMapSettings(Config config) {
       super(config);
     }
+
     public ExpirationPolicy policy() {
       String policy = config().getString("expiring-map.policy").toLowerCase(US);
       switch (policy) {
@@ -87,7 +89,4 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
       }
     }
   }
-
-
-
 }

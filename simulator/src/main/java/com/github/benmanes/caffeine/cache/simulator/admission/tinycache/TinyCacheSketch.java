@@ -58,9 +58,10 @@ public final class TinyCacheSketch {
     // time. As far as I understand it is working right now.
     while (TinySetIndexing.chainStart <= TinySetIndexing.chainEnd) {
       try {
-        $ += (cache[TinySetIndexing.chainStart % cache.length] == hashFunc.fpaux.fingerprint)
-            ? 1
-            : 0;
+        $ +=
+            (cache[TinySetIndexing.chainStart % cache.length] == hashFunc.fpaux.fingerprint)
+                ? 1
+                : 0;
         TinySetIndexing.chainStart++;
 
       } catch (Exception e) {

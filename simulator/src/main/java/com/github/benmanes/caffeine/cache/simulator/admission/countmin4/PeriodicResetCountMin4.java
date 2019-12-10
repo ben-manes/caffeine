@@ -36,9 +36,10 @@ public final class PeriodicResetCountMin4 extends CountMin4 {
     super(config);
 
     BasicSettings settings = new BasicSettings(config);
-    doorkeeper = settings.tinyLfu().countMin4().periodic().doorkeeper().enabled()
-        ? settings.membership().filter().create(config)
-        : Membership.disabled();
+    doorkeeper =
+        settings.tinyLfu().countMin4().periodic().doorkeeper().enabled()
+            ? settings.membership().filter().create(config)
+            : Membership.disabled();
   }
 
   @Override

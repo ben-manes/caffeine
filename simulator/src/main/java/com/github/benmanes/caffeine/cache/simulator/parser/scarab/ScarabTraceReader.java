@@ -25,8 +25,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic
 import com.google.common.collect.ImmutableSet;
 
 /**
- * A reader for the trace files provided by
- * <a href="http://www.scarabresearch.com/">Scarab Research</a>.
+ * A reader for the trace files provided by <a href="http://www.scarabresearch.com/">Scarab
+ * Research</a>.
  *
  * @author phraktle@gmail.com (Viktor Szathmáry)
  */

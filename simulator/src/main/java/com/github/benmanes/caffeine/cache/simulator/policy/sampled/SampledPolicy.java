@@ -41,12 +41,12 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
  * A cache that uses a sampled array of entries to implement simple page replacement algorithms.
- * <p>
- * The sampling approach for an approximate of classical policies is described
- * <a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.110.8469">Efficient Randomized Web
+ *
+ * <p>The sampling approach for an approximate of classical policies is described <a
+ * href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.110.8469">Efficient Randomized Web
  * Cache Replacement Schemes Using Samples from Past Eviction Times</a>. The Hyperbolic algorithm is
- * a newer addition to this family and is described in
- * <a href="https://www.usenix.org/system/files/conference/atc17/atc17-blankstein.pdf">Hyperbolic
+ * a newer addition to this family and is described in <a
+ * href="https://www.usenix.org/system/files/conference/atc17/atc17-blankstein.pdf">Hyperbolic
  * Caching: Flexible Caching for Web Applications</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -67,7 +67,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   public SampledPolicy(Admission admission, EvictionPolicy policy, Config config) {
     SampledSettings settings = new SampledSettings(config);
     this.policyStats = new PolicyStats(admission.format("sampled." + policy.label()));
-    this.admittor = (KeyOnlyAdmittor)admission.from(config, policyStats);
+    this.admittor = (KeyOnlyAdmittor) admission.from(config, policyStats);
 
     this.sampleStrategy = settings.sampleStrategy();
     this.random = new Random(settings.randomSeed());
@@ -81,9 +81,9 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
-    return settings.admission().stream().map(admission ->
-      new SampledPolicy(admission, policy, config)
-    ).collect(toSet());
+    return settings.admission().stream()
+        .map(admission -> new SampledPolicy(admission, policy, config))
+        .collect(toSet());
   }
 
   @Override
@@ -114,9 +114,10 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   /** Evicts if the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
-      List<Node> sample = (policy == EvictionPolicy.RANDOM)
-          ? Arrays.asList(table)
-          : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
+      List<Node> sample =
+          (policy == EvictionPolicy.RANDOM)
+              ? Arrays.asList(table)
+              : sampleStrategy.sample(table, candidate, sampleSize, random, policyStats);
       Node victim = policy.select(sample, random, tick);
       policyStats.recordEviction();
 
@@ -142,8 +143,9 @@ public final class SampledPolicy implements KeyOnlyPolicy {
   public enum Sample {
     GUESS {
       @SuppressWarnings("PMD.AvoidReassigningLoopVariables")
-      @Override public <E> List<E> sample(E[] elements, E candidate,
-          int sampleSize, Random random, PolicyStats policyStats) {
+      @Override
+      public <E> List<E> sample(
+          E[] elements, E candidate, int sampleSize, Random random, PolicyStats policyStats) {
         List<E> sample = new ArrayList<>(sampleSize);
         policyStats.addOperations(sampleSize);
         for (int i = 0; i < sampleSize; i++) {
@@ -157,8 +159,9 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     },
     RESERVOIR {
-      @Override public <E> List<E> sample(E[] elements, E candidate,
-          int sampleSize, Random random, PolicyStats policyStats) {
+      @Override
+      public <E> List<E> sample(
+          E[] elements, E candidate, int sampleSize, Random random, PolicyStats policyStats) {
         List<E> sample = new ArrayList<>(sampleSize);
         policyStats.addOperations(elements.length);
         int count = 0;
@@ -180,8 +183,9 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     },
     SHUFFLE {
-      @Override public <E> List<E> sample(E[] elements, E candidate,
-          int sampleSize, Random random, PolicyStats policyStats) {
+      @Override
+      public <E> List<E> sample(
+          E[] elements, E candidate, int sampleSize, Random random, PolicyStats policyStats) {
         List<E> sample = new ArrayList<>(Arrays.asList(elements));
         policyStats.addOperations(elements.length);
         Collections.shuffle(sample, random);
@@ -190,8 +194,8 @@ public final class SampledPolicy implements KeyOnlyPolicy {
       }
     };
 
-    abstract <E> List<E> sample(E[] elements, E candidate,
-        int sampleSize, Random random, PolicyStats policyStats);
+    abstract <E> List<E> sample(
+        E[] elements, E candidate, int sampleSize, Random random, PolicyStats policyStats);
   }
 
   /** The replacement policy. */
@@ -199,25 +203,31 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
     /** Evicts entries based on insertion order. */
     FIFO {
-      @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min((first, second) ->
-            Long.compare(first.insertionTime, second.insertionTime)).get();
+      @Override
+      Node select(List<Node> sample, Random random, long tick) {
+        return sample.stream()
+            .min((first, second) -> Long.compare(first.insertionTime, second.insertionTime))
+            .get();
       }
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     LRU {
-      @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min((first, second) ->
-            Long.compare(first.accessTime, second.accessTime)).get();
+      @Override
+      Node select(List<Node> sample, Random random, long tick) {
+        return sample.stream()
+            .min((first, second) -> Long.compare(first.accessTime, second.accessTime))
+            .get();
       }
     },
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     MRU {
-      @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().max((first, second) ->
-            Long.compare(first.accessTime, second.accessTime)).get();
+      @Override
+      Node select(List<Node> sample, Random random, long tick) {
+        return sample.stream()
+            .max((first, second) -> Long.compare(first.accessTime, second.accessTime))
+            .get();
       }
     },
 
@@ -225,9 +235,11 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      * Evicts entries based on how frequently they are used, with the least frequent evicted first.
      */
     LFU {
-      @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min((first, second) ->
-            Long.compare(first.frequency, second.frequency)).get();
+      @Override
+      Node select(List<Node> sample, Random random, long tick) {
+        return sample.stream()
+            .min((first, second) -> Long.compare(first.frequency, second.frequency))
+            .get();
       }
     },
 
@@ -235,15 +247,18 @@ public final class SampledPolicy implements KeyOnlyPolicy {
      * Evicts entries based on how frequently they are used, with the most frequent evicted first.
      */
     MFU {
-      @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().max((first, second) ->
-            Long.compare(first.frequency, second.frequency)).get();
+      @Override
+      Node select(List<Node> sample, Random random, long tick) {
+        return sample.stream()
+            .max((first, second) -> Long.compare(first.frequency, second.frequency))
+            .get();
       }
     },
 
     /** Evicts a random entry. */
     RANDOM {
-      @Override Node select(List<Node> sample, Random random, long tick) {
+      @Override
+      Node select(List<Node> sample, Random random, long tick) {
         int victim = random.nextInt(sample.size());
         return sample.get(victim);
       }
@@ -251,10 +266,15 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
     /** Evicts entries based on how frequently they are used divided by their age. */
     HYPERBOLIC {
-      @Override Node select(List<Node> sample, Random random, long tick) {
-        return sample.stream().min((first, second) ->
-            Double.compare(hyperbolic(first, tick), hyperbolic(second, tick))).get();
+      @Override
+      Node select(List<Node> sample, Random random, long tick) {
+        return sample.stream()
+            .min(
+                (first, second) ->
+                    Double.compare(hyperbolic(first, tick), hyperbolic(second, tick)))
+            .get();
       }
+
       double hyperbolic(Node node, long tick) {
         return node.frequency / (double) (tick - node.insertionTime);
       }
@@ -285,10 +305,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("index", index)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("index", index).toString();
     }
   }
 
@@ -296,13 +313,13 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     public SampledSettings(Config config) {
       super(config);
     }
+
     public int sampleSize() {
       return config().getInt("sampled.size");
     }
+
     public Sample sampleStrategy() {
       return Sample.valueOf(config().getString("sampled.strategy").toUpperCase(US));
     }
   }
-
-
 }

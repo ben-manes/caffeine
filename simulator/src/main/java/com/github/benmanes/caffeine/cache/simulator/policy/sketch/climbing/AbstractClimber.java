@@ -53,8 +53,8 @@ public abstract class AbstractClimber implements HillClimber {
   }
 
   @Override
-  public Adaptation adapt(double windowSize, double probationSize,
-      double protectedSize, boolean isFull) {
+  public Adaptation adapt(
+      double windowSize, double probationSize, double protectedSize, boolean isFull) {
     if (!isFull) {
       return Adaptation.hold();
     }

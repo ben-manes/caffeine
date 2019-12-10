@@ -28,10 +28,10 @@ import com.typesafe.config.ConfigFactory;
 
 /**
  * A MinSim version for W-TinyLFU.
- * <p>
- * The algorithm is explained by the authors in
- * <a href="https://www.usenix.org/system/files/conference/atc17/atc17-waldspurger.pdf">Cache
- * Modeling and Optimization using Miniature Simulation</a>.
+ *
+ * <p>The algorithm is explained by the authors in <a
+ * href="https://www.usenix.org/system/files/conference/atc17/atc17-waldspurger.pdf">Cache Modeling
+ * and Optimization using Miniature Simulation</a>.
  *
  * @author ohadey@gmail.com (Ohad Eytan)
  */
@@ -51,9 +51,10 @@ public final class MiniSimClimber implements HillClimber {
   public MiniSimClimber(Config config) {
     MiniSimSettings settings = new MiniSimSettings(config);
     R = (settings.maximumSize() / 1000) > 100 ? 1000 : (settings.maximumSize() / 100);
-    WindowTinyLfuSettings simulationSettings = new WindowTinyLfuSettings(ConfigFactory
-        .parseString("maximum-size = " + settings.maximumSize() / R)
-        .withFallback(config));
+    WindowTinyLfuSettings simulationSettings =
+        new WindowTinyLfuSettings(
+            ConfigFactory.parseString("maximum-size = " + settings.maximumSize() / R)
+                .withFallback(config));
     this.prevPercent = 1 - settings.percentMain().get(0);
     this.cacheSize = settings.maximumSize();
     this.period = settings.minisimPeriod();
@@ -86,8 +87,8 @@ public final class MiniSimClimber implements HillClimber {
   }
 
   @Override
-  public Adaptation adapt(double windowSize,
-      double probationSize, double protectedSize, boolean isFull) {
+  public Adaptation adapt(
+      double windowSize, double probationSize, double protectedSize, boolean isFull) {
     if (sample <= period) {
       return Adaptation.hold();
     }
@@ -116,9 +117,11 @@ public final class MiniSimClimber implements HillClimber {
     public MiniSimSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
+
     public int minisimPeriod() {
       return config().getInt("hill-climber-window-tiny-lfu.minisim.period");
     }

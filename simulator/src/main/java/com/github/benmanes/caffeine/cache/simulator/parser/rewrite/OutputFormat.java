@@ -25,7 +25,8 @@ import java.io.IOException;
  */
 public enum OutputFormat {
   CLIMB {
-    @Override public void write(BufferedWriter writer, long event) throws IOException {
+    @Override
+    public void write(BufferedWriter writer, long event) throws IOException {
       writer.write(Long.toString(event));
       writer.newLine();
     }

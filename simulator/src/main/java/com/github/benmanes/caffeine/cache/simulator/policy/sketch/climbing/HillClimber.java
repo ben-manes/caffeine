@@ -54,13 +54,17 @@ public interface HillClimber {
   Adaptation adapt(double windowSize, double probationSize, double protectedSize, boolean isFull);
 
   enum QueueType {
-    WINDOW, PROBATION, PROTECTED
+    WINDOW,
+    PROBATION,
+    PROTECTED
   }
 
   /** The adaptation type and its magnitude. */
   final class Adaptation {
     public enum Type {
-      HOLD, INCREASE_WINDOW, DECREASE_WINDOW
+      HOLD,
+      INCREASE_WINDOW,
+      DECREASE_WINDOW
     }
 
     private static final Adaptation HOLD = new Adaptation(0, Type.HOLD);
@@ -84,6 +88,7 @@ public interface HillClimber {
         return increaseWindow(amount);
       }
     }
+
     public static int roundToInt(double amount) {
       return (amount < 0) ? (int) Math.floor(amount) : (int) Math.ceil(amount);
     }
@@ -91,9 +96,11 @@ public interface HillClimber {
     public static Adaptation hold() {
       return HOLD;
     }
+
     public static Adaptation increaseWindow(double amount) {
       return new Adaptation(amount, Type.INCREASE_WINDOW);
     }
+
     public static Adaptation decreaseWindow(double amount) {
       return new Adaptation(amount, Type.DECREASE_WINDOW);
     }
@@ -101,10 +108,14 @@ public interface HillClimber {
     @Override
     public String toString() {
       switch (type) {
-        case HOLD: return "0";
-        case INCREASE_WINDOW: return "+" + amount;
-        case DECREASE_WINDOW: return "-" + amount;
-        default: throw new IllegalStateException();
+        case HOLD:
+          return "0";
+        case INCREASE_WINDOW:
+          return "+" + amount;
+        case DECREASE_WINDOW:
+          return "-" + amount;
+        default:
+          throw new IllegalStateException();
       }
     }
   }

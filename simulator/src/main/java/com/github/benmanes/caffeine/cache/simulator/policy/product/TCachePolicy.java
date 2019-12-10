@@ -43,11 +43,13 @@ public final class TCachePolicy implements KeyOnlyPolicy {
   public TCachePolicy(Config config) {
     TCacheSettings settings = new TCacheSettings(config);
     policyStats = new PolicyStats("product.TCache");
-    cache = TCacheFactory.standardFactory().builder()
-        .setMaxElements(settings.maximumSize())
-        .setEvictionClass(settings.policy())
-        .setStatistics(true)
-        .build();
+    cache =
+        TCacheFactory.standardFactory()
+            .builder()
+            .setMaxElements(settings.maximumSize())
+            .setEvictionClass(settings.policy())
+            .setStatistics(true)
+            .build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -81,6 +83,7 @@ public final class TCachePolicy implements KeyOnlyPolicy {
     public TCacheSettings(Config config) {
       super(config);
     }
+
     public <K, V> EvictionInterface<K, V> policy() {
       String policy = config().getString("tcache.policy").toLowerCase(US);
       switch (policy) {
@@ -93,6 +96,4 @@ public final class TCachePolicy implements KeyOnlyPolicy {
       }
     }
   }
-
-
 }

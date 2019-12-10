@@ -18,9 +18,9 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 import java.util.Random;
 
 /**
- * This is the TinyCache model that takes advantage of random eviction policy with
- * a ghost cache as admission policy. It offers a very dense memory layout combined with
- * (relative) speed at the expense of limited associativity. s
+ * This is the TinyCache model that takes advantage of random eviction policy with a ghost cache as
+ * admission policy. It offers a very dense memory layout combined with (relative) speed at the
+ * expense of limited associativity. s
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
@@ -107,8 +107,8 @@ public final class TinyCacheWithGhostCache {
 
   private boolean selectVictim(int bucketStart) {
     byte victimOffset = (byte) rnd.nextInt(this.itemsPerSet);
-    int victimChain = TinySetIndexing.getChainAtOffset(
-        hashFunc.fpaux, chainIndex, lastIndex, victimOffset);
+    int victimChain =
+        TinySetIndexing.getChainAtOffset(hashFunc.fpaux, chainIndex, lastIndex, victimOffset);
     long victim = cache[bucketStart + victimOffset];
     // this if is still for debugging and common sense. Should be eliminated for performance once
     // I am sure of the correctness.

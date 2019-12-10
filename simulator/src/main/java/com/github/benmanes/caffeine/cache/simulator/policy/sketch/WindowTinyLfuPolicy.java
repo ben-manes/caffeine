@@ -36,15 +36,15 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 /**
  * An adaption of the TinyLfu policy that adds a temporal admission window. This window allows the
  * policy to have a high hit rate when entries exhibit a high temporal / low frequency pattern.
- * <p>
- * A new entry starts in the window and remains there as long as it has high temporal locality.
+ *
+ * <p>A new entry starts in the window and remains there as long as it has high temporal locality.
  * Eventually an entry will slip from the end of the window onto the front of the main queue. If the
  * main queue is already full, then a historic frequency filter determines whether to evict the
  * newly admitted entry or the victim entry chosen by main queue's policy. This process ensures that
  * the entries in the main queue have both a high recency and frequency. The window space uses LRU
  * and the main uses Segmented LRU.
- * <p>
- * Scan resistance is achieved by means of the window. Transient data will pass through from the
+ *
+ * <p>Scan resistance is achieved by means of the window. Transient data will pass through from the
  * window and not be accepted into the main queue. Responsiveness is maintained by the main queue's
  * LRU and the TinyLfu's reset operation so that expired long term entries fade away.
  *
@@ -93,7 +93,6 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   public PolicyStats stats() {
     return policyStats;
   }
-
 
   @Override
   public void record(long key) {
@@ -197,7 +196,9 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   enum Status {
-    WINDOW, PROBATION, PROTECTED
+    WINDOW,
+    PROBATION,
+    PROTECTED
   }
 
   /** A node on the double-linked list. */
@@ -244,10 +245,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("status", status)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("status", status).toString();
     }
   }
 
@@ -255,9 +253,11 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
     public WindowTinyLfuSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("window-tiny-lfu.percent-main");
     }
+
     public double percentMainProtected() {
       return config().getDouble("window-tiny-lfu.percent-main-protected");
     }

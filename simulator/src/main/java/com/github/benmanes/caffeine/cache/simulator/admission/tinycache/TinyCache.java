@@ -18,9 +18,9 @@ package com.github.benmanes.caffeine.cache.simulator.admission.tinycache;
 import java.util.Random;
 
 /**
- * This is the TinyCache model that takes advantage of random eviction policy with
- * a ghost cache as admission policy. It offers a very dense memory layout combined with
- * (relative) speed at the expense of limited associativity. s
+ * This is the TinyCache model that takes advantage of random eviction policy with a ghost cache as
+ * admission policy. It offers a very dense memory layout combined with (relative) speed at the
+ * expense of limited associativity. s
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  */
@@ -88,7 +88,6 @@ public final class TinyCache {
     int bucketStart = this.itemsPerSet * hashFunc.fpaux.set;
     if (cache[bucketStart + this.itemsPerSet - 1] != 0) {
       return selectVictim(bucketStart);
-
     }
     int idxToAdd = TinySetIndexing.addItem(hashFunc.fpaux, chainIndex, lastIndex);
     this.replaceItems(idxToAdd, hashFunc.fpaux.value, bucketStart, 1);

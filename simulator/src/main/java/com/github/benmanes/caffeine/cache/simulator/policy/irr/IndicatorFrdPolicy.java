@@ -64,9 +64,7 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
     this.indicator = new Indicator(config);
   }
 
-  /**
-   * Returns all variations of this policy based on the configuration parameters.
-   */
+  /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
     return ImmutableSet.of(new IndicatorFrdPolicy(config));
   }
@@ -136,8 +134,8 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
 
   private void adaptMainToFilter(Node node) {
     /**
-     * Cache miss and history miss with adaptation:
-     * Evict from main stack. Then insert to filter stack
+     * Cache miss and history miss with adaptation: Evict from main stack. Then insert to filter
+     * stack
      */
     policyStats.recordEviction();
 
@@ -156,8 +154,8 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
 
   private void adaptFilterToMain(Node node) {
     /**
-     * Cache miss and history hit with adaptation:
-     * Evict from filter stack. Then insert to main stack.
+     * Cache miss and history hit with adaptation: Evict from filter stack. Then insert to main
+     * stack.
      */
     policyStats.recordEviction();
     policyStats.recordMiss(node.key);
@@ -239,7 +237,7 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
   }
 
   private void pruneStack() {
-    for (;;) {
+    for (; ; ) {
       Node bottom = headMain.prevMain;
       if ((bottom == headMain) || (bottom.status == Status.MAIN)) {
         break;
@@ -291,12 +289,14 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
   }
 
   enum Status {
-    NON_RESIDENT, FILTER, MAIN,
+    NON_RESIDENT,
+    FILTER,
+    MAIN,
   }
 
   enum StackType {
     FILTER, // holds all of the resident filter blocks
-    MAIN,   // holds all of the resident and non-resident blocks
+    MAIN, // holds all of the resident and non-resident blocks
   }
 
   final class Node {
@@ -377,10 +377,7 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", status)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", status).toString();
     }
   }
 
@@ -397,6 +394,4 @@ public final class IndicatorFrdPolicy implements KeyOnlyPolicy {
       return config().getInt("frd.period");
     }
   }
-
-
 }

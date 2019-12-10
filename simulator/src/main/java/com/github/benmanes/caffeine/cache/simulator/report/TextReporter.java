@@ -53,11 +53,18 @@ public abstract class TextReporter implements Reporter {
     timeUnit = settings.report().timeUnit();
     characteristics = settings.report().characteristics();
     String[] basicHeaders = {
-            "Policy", "Hit rate", "Hits", "Misses", "Requests",
-            "Evictions", "Admit rate", "Steps", "Time"};
-    String[] penaltyHeaders = {"Avg. Hit Penalty","Avg. Miss Penalty","Avg. Total Penalty","Avg. Miss Penalty (AFS)","Avg. Total Penalty (AFS)"};
+      "Policy", "Hit rate", "Hits", "Misses", "Requests", "Evictions", "Admit rate", "Steps", "Time"
+    };
+    String[] penaltyHeaders = {
+      "Avg. Hit Penalty",
+      "Avg. Miss Penalty",
+      "Avg. Total Penalty",
+      "Avg. Miss Penalty (AFS)",
+      "Avg. Total Penalty (AFS)"
+    };
     String[] empty = {};
-    HEADERS = mergeStringData(basicHeaders,characteristics.contains(PENALTIES) ? penaltyHeaders : empty);
+    HEADERS =
+        mergeStringData(basicHeaders, characteristics.contains(PENALTIES) ? penaltyHeaders : empty);
   }
 
   /** Returns the column headers. */
@@ -98,11 +105,9 @@ public abstract class TextReporter implements Reporter {
     return settings.report().ascending() ? comparator : comparator.reversed();
   }
 
-
-  String getTimeUnit(){
+  String getTimeUnit() {
     return timeUnit;
   }
-
 
   private Comparator<PolicyStats> makeComparator() {
     switch (settings.report().sortBy().toLowerCase(US)) {
@@ -127,9 +132,7 @@ public abstract class TextReporter implements Reporter {
     }
   }
 
-  protected static String[] mergeStringData(String[] ...arrays) {
-    return Stream.of(arrays)
-            .flatMap(Stream::of)
-            .toArray(String[]::new);
+  protected static String[] mergeStringData(String[]... arrays) {
+    return Stream.of(arrays).flatMap(Stream::of).toArray(String[]::new);
   }
 }

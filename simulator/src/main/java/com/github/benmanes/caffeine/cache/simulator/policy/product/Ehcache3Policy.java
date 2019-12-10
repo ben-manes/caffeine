@@ -48,11 +48,15 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
     BasicSettings settings = new BasicSettings(config);
     policyStats = new PolicyStats("product.Ehcache3");
     cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
-    cache = cacheManager.createCache("ehcache3",
-        CacheConfigurationBuilder.newCacheConfigurationBuilder(Object.class, Object.class,
-            ResourcePoolsBuilder.newResourcePoolsBuilder()
-                .heap(settings.maximumSize(), EntryUnit.ENTRIES))
-            .build());
+    cache =
+        cacheManager.createCache(
+            "ehcache3",
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                    Object.class,
+                    Object.class,
+                    ResourcePoolsBuilder.newResourcePoolsBuilder()
+                        .heap(settings.maximumSize(), EntryUnit.ENTRIES))
+                .build());
     maximumSize = settings.maximumSize();
   }
 
@@ -85,6 +89,4 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
   public void finished() {
     cacheManager.close();
   }
-
-
 }

@@ -35,15 +35,16 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * queue for items seen multiple times (T2), and non-resident queues for evicted items that are
  * being monitored (B1, B2). The maximum size of the T1 and T2 queues is adjusted dynamically based
  * on the workload patterns and effectiveness of the cache.
- * <p>
- * This implementation is based on the pseudo code provided by the authors in their paper
- * <a href="http://www.cs.cmu.edu/~15-440/READINGS/megiddo-computer2004.pdf">Outperforming LRU with
- * an Adaptive Replacement Cache Algorithm</a> and is further described in their paper,
- * <a href="https://www.usenix.org/event/fast03/tech/full_papers/megiddo/megiddo.pdf">ARC: A
+ *
+ * <p>This implementation is based on the pseudo code provided by the authors in their paper <a
+ * href="http://www.cs.cmu.edu/~15-440/READINGS/megiddo-computer2004.pdf">Outperforming LRU with an
+ * Adaptive Replacement Cache Algorithm</a> and is further described in their paper, <a
+ * href="https://www.usenix.org/event/fast03/tech/full_papers/megiddo/megiddo.pdf">ARC: A
  * Self-Tuning, Low Overhead Replacement Cache</a>.
- * <p>
- * This algorithm is patented by IBM (6996676, 7096321, 7058766, 8612689) and Sun (7469320), making
- * its use in applications ambiguous due to Sun's ZFS providing an implementation under the CDDL.
+ *
+ * <p>This algorithm is patented by IBM (6996676, 7096321, 7058766, 8612689) and Sun (7469320),
+ * making its use in applications ambiguous due to Sun's ZFS providing an implementation under the
+ * CDDL.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -234,8 +235,10 @@ public final class ArcPolicy implements KeyOnlyPolicy {
   }
 
   private enum QueueType {
-    T1, B1,
-    T2, B2,
+    T1,
+    B1,
+    T2,
+    B2,
   }
 
   static final class Node {
@@ -275,12 +278,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", type)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", type).toString();
     }
   }
-
-
 }

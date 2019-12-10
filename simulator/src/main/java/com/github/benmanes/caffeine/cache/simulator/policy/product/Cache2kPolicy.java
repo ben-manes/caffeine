@@ -51,13 +51,14 @@ public final class Cache2kPolicy implements Policy {
     policyStats = new PolicyStats("product.Cache2k");
     CacheEntryEvictedListener<Long, AccessEvent> listener =
         (cache, entry) -> policyStats.recordEviction();
-    cache = Cache2kBuilder.of(Long.class, AccessEvent.class)
-        .weigher((Long key, AccessEvent value) -> value.weight())
-        .maximumWeight(settings.maximumSize())
-        .addListener(listener)
-        .strictEviction(true)
-        .eternal(true)
-        .build();
+    cache =
+        Cache2kBuilder.of(Long.class, AccessEvent.class)
+            .weigher((Long key, AccessEvent value) -> value.weight())
+            .maximumWeight(settings.maximumSize())
+            .addListener(listener)
+            .strictEviction(true)
+            .eternal(true)
+            .build();
     maximumSize = settings.maximumSize();
   }
 
@@ -66,7 +67,8 @@ public final class Cache2kPolicy implements Policy {
     return ImmutableSet.of(new Cache2kPolicy(config));
   }
 
-  @Override public Set<Characteristic> characteristics() {
+  @Override
+  public Set<Characteristic> characteristics() {
     return Sets.immutableEnumSet(WEIGHTED);
   }
 

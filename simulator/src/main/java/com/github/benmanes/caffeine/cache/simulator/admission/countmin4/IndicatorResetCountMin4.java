@@ -20,8 +20,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.Indicator;
 import com.typesafe.config.Config;
 
 /**
- * A sketch where the aging process is a dynamic process and adjusts to the
- * recency/frequency bias of the actual workload recognized by the indicator.
+ * A sketch where the aging process is a dynamic process and adjusts to the recency/frequency bias
+ * of the actual workload recognized by the indicator.
  *
  * @author gilga1983@gmail.com (Gil Einziger)
  * @author ben.manes@gmail.com (Ben Manes)

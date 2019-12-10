@@ -30,7 +30,8 @@ import com.typesafe.config.Config;
  */
 public abstract class CountMin4 implements Frequency {
   static final long[] SEED = { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
-      0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
+    0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L
+  };
   static final long RESET_MASK = 0x7777777777777777L;
 
   protected final boolean conservative;
@@ -40,8 +41,8 @@ public abstract class CountMin4 implements Frequency {
   protected int step = 1;
 
   /**
-   * Creates a frequency sketch that can accurately estimate the popularity of elements given
-   * the maximum size of the cache.
+   * Creates a frequency sketch that can accurately estimate the popularity of elements given the
+   * maximum size of the cache.
    */
   protected CountMin4(Config config) {
     BasicSettings settings = new BasicSettings(config);
@@ -50,7 +51,6 @@ public abstract class CountMin4 implements Frequency {
     double countersMultiplier = settings.tinyLfu().countMin4().countersMultiplier();
     long counters = (long) (countersMultiplier * settings.maximumSize());
     ensureCapacity(counters);
-
   }
 
   /**

@@ -41,12 +41,13 @@ public final class GuavaPolicy implements Policy {
   public GuavaPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
     policyStats = new PolicyStats("product.Guava");
-    cache = CacheBuilder.newBuilder()
-        .maximumWeight(settings.maximumSize())
-        .initialCapacity(settings.maximumSize())
-        .weigher((Long key, AccessEvent value) -> value.weight())
-        .removalListener(notification -> policyStats.recordEviction())
-        .build();
+    cache =
+        CacheBuilder.newBuilder()
+            .maximumWeight(settings.maximumSize())
+            .initialCapacity(settings.maximumSize())
+            .weigher((Long key, AccessEvent value) -> value.weight())
+            .removalListener(notification -> policyStats.recordEviction())
+            .build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -54,7 +55,8 @@ public final class GuavaPolicy implements Policy {
     return ImmutableSet.of(new GuavaPolicy(config));
   }
 
-  @Override public Set<Characteristic> characteristics() {
+  @Override
+  public Set<Characteristic> characteristics() {
     return Sets.immutableEnumSet(WEIGHTED);
   }
 

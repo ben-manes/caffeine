@@ -23,8 +23,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTr
 import com.google.common.hash.Hashing;
 
 /**
- * A reader for the trace files provided by the
- * <a href="http://traces.cs.umass.edu/index.php/Network/Network">UMass Trace Repository</a>.
+ * A reader for the trace files provided by the <a
+ * href="http://traces.cs.umass.edu/index.php/Network/Network">UMass Trace Repository</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

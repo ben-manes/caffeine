@@ -77,21 +77,27 @@ public final class Nadam extends AbstractClimber {
     public NadamSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
+
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");
     }
+
     public double percentSample() {
       return config().getDouble(BASE_PATH + "percent-sample");
     }
+
     public double beta1() {
       return config().getDouble(BASE_PATH + "beta1");
     }
+
     public double beta2() {
       return config().getDouble(BASE_PATH + "beta2");
     }
+
     public double epsilon() {
       return config().getDouble(BASE_PATH + "epsilon");
     }

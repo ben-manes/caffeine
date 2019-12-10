@@ -25,16 +25,18 @@ import com.typesafe.config.Config;
 
 /**
  * Stochastic gradient descent (SGD) optimizer.
- * <p>
- * <tt>w(t+1) = w(t) - alpha * dL/dw(t)</tt> where,
+ *
+ * <p><tt>w(t+1) = w(t) - alpha * dL/dw(t)</tt> where,
+ *
  * <ul>
  *   <li><b>w(t)</b> is the current window size
  *   <li><b>alpha</b> is the learning rate (step size)
  *   <li><b>dL/dw(t)</b> is the gradient of the curve
  *   <li><b>w(t+1)</b> is the new window size configuration
  * </ul>
- * <p>
- * SGC may be enhanced using momentum, either classical or Nesterov's. For details see
+ *
+ * <p>SGC may be enhanced using momentum, either classical or Nesterov's. For details see
+ *
  * <ul>
  *   <li>https://towardsdatascience.com/10-gradient-descent-optimisation-algorithms-86989510b5e9
  *   <li>http://ruder.io/optimizing-gradient-descent/index.html#momentum
@@ -79,7 +81,11 @@ public final class Stochastic extends AbstractClimber {
     throw new IllegalStateException("Unknown acceleration type: " + acceleration);
   }
 
-  enum Acceleration { NONE, MOMENTUM, NESTEROV }
+  enum Acceleration {
+    NONE,
+    MOMENTUM,
+    NESTEROV
+  }
 
   static final class StochasticSettings extends BasicSettings {
     static final String BASE_PATH = "hill-climber-window-tiny-lfu.stochastic-gradient-descent.";
@@ -87,18 +93,23 @@ public final class Stochastic extends AbstractClimber {
     public StochasticSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
+
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");
     }
+
     public double percentSample() {
       return config().getDouble(BASE_PATH + "percent-sample");
     }
+
     public Acceleration acceleration() {
       return Acceleration.valueOf(config().getString(BASE_PATH + "acceleration").toUpperCase(US));
     }
+
     public double beta() {
       return config().getDouble(BASE_PATH + "beta");
     }

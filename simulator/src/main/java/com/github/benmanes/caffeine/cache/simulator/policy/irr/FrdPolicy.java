@@ -36,14 +36,14 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * and non-resident) and promoted resident entries. A resident entry is promoted when a miss occurs
  * on a non-resident node, meaning that is has been used after having been evicted by the filter or
  * main cache partitions.
- * <p>
- * While the authors describe the filter entry and its history entry as distinct, thereby requiring
- * two hash tables, this implementation merges them. Thus, during the main space's pruning operation
- * an entry also in the filter space is treated as a history node, pruned, and remains in the hash
- * table. This simplification should have no effect on the algorithm or its performance.
- * <p>
- * The algorithm is explained by the authors in
- * <a href="http://storageconference.us/2017/Papers/FilteringBasedBufferCacheAlgorithm.pdf">FRD: A
+ *
+ * <p>While the authors describe the filter entry and its history entry as distinct, thereby
+ * requiring two hash tables, this implementation merges them. Thus, during the main space's pruning
+ * operation an entry also in the filter space is treated as a history node, pruned, and remains in
+ * the hash table. This simplification should have no effect on the algorithm or its performance.
+ *
+ * <p>The algorithm is explained by the authors in <a
+ * href="http://storageconference.us/2017/Papers/FilteringBasedBufferCacheAlgorithm.pdf">FRD: A
  * Filtering based Buffer Cache Algorithm that Considers both Frequency and Reuse Distance</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -82,7 +82,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     Node node = data.get(key);
     if (node == null) {
       node = new Node(key);
-      data.put(key,node);
+      data.put(key, node);
       onMiss(node);
     } else if (node.status == Status.FILTER) {
       onFilterHit(node);
@@ -167,7 +167,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
   }
 
   private void pruneStack() {
-    for (;;) {
+    for (; ; ) {
       Node bottom = headMain.prevMain;
       if ((bottom == headMain) || (bottom.status == Status.MAIN)) {
         break;
@@ -208,12 +208,8 @@ public final class FrdPolicy implements KeyOnlyPolicy {
 
   @Override
   public void finished() {
-    long filterSize = data.values().stream()
-        .filter(node -> node.status == Status.FILTER)
-        .count();
-    long mainSize = data.values().stream()
-        .filter(node -> node.status == Status.MAIN)
-        .count();
+    long filterSize = data.values().stream().filter(node -> node.status == Status.FILTER).count();
+    long mainSize = data.values().stream().filter(node -> node.status == Status.MAIN).count();
 
     checkState(filterSize <= maximumFilterSize);
     checkState(mainSize <= maximumMainResidentSize);
@@ -229,7 +225,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
 
   enum StackType {
     FILTER, // holds all of the resident filter blocks
-    MAIN,   // holds all of the resident and non-resident blocks
+    MAIN, // holds all of the resident and non-resident blocks
   }
 
   final class Node {
@@ -310,10 +306,7 @@ public final class FrdPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", status)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", status).toString();
     }
   }
 
@@ -321,10 +314,9 @@ public final class FrdPolicy implements KeyOnlyPolicy {
     public FrdSettings(Config config) {
       super(config);
     }
+
     public double percentMain() {
       return config().getDouble("frd.percent-main");
     }
   }
-
-
 }

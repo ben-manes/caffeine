@@ -134,7 +134,8 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   enum Status {
-    WINDOW, MAIN
+    WINDOW,
+    MAIN
   }
 
   /** A node on the double-linked list. */
@@ -181,9 +182,7 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).toString();
     }
   }
 
@@ -191,10 +190,9 @@ public final class LruWindowTinyLfuPolicy implements KeyOnlyPolicy {
     public LruWindowTinyLfuSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("lru-window-tiny-lfu.percent-main");
     }
   }
-
-
 }

@@ -51,22 +51,33 @@ public final class Synthetic {
         return () -> exponential(settings.synthetic().exponential().mean(), events);
       case "hotspot":
         HotspotSettings hotspot = settings.synthetic().hotspot();
-        return () -> Synthetic.hotspot(hotspot.lowerBound(), hotspot.upperBound(),
-            hotspot.hotOpnFraction(), hotspot.hotsetFraction(), events);
+        return () ->
+            Synthetic.hotspot(
+                hotspot.lowerBound(),
+                hotspot.upperBound(),
+                hotspot.hotOpnFraction(),
+                hotspot.hotsetFraction(),
+                events);
       case "zipfian":
-        return () -> zipfian(settings.synthetic().zipfian().items(),
-            settings.synthetic().zipfian().constant(), events);
+        return () ->
+            zipfian(
+                settings.synthetic().zipfian().items(),
+                settings.synthetic().zipfian().constant(),
+                events);
       case "scrambled-zipfian":
-        return () -> scrambledZipfian(settings.synthetic().zipfian().items(),
-            settings.synthetic().zipfian().constant(), events);
+        return () ->
+            scrambledZipfian(
+                settings.synthetic().zipfian().items(),
+                settings.synthetic().zipfian().constant(),
+                events);
       case "skewed-zipfian-latest":
         return () -> skewedZipfianLatest(settings.synthetic().zipfian().items(), events);
       case "uniform":
         UniformSettings uniform = settings.synthetic().uniform();
         return () -> uniform(uniform.lowerBound(), uniform.upperBound(), events);
       default:
-        throw new IllegalStateException("Unknown distribution: "
-            + settings.synthetic().distribution());
+        throw new IllegalStateException(
+            "Unknown distribution: " + settings.synthetic().distribution());
     }
   }
 
@@ -104,10 +115,11 @@ public final class Synthetic {
    * @param hotOpnFraction percentage of operations accessing the hot set
    * @param events the number of events in the distribution
    */
-  public static LongStream hotspot(int lowerBound, int upperBound,
-      double hotsetFraction, double hotOpnFraction, int events) {
-    return generate(new HotspotIntegerGenerator(lowerBound,
-        upperBound, hotsetFraction, hotOpnFraction), events);
+  public static LongStream hotspot(
+      int lowerBound, int upperBound, double hotsetFraction, double hotOpnFraction, int events) {
+    return generate(
+        new HotspotIntegerGenerator(lowerBound, upperBound, hotsetFraction, hotOpnFraction),
+        events);
   }
 
   /**

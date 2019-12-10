@@ -36,7 +36,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * Least/Most Frequency Used in O(1) time as described in <a href="http://dhruvbird.com/lfu.pdf"> An
+ * Least/Most Frequency Used in O(1) time as described in <a href="http://dhruvbird.com/lfu.pdf">An
  * O(1) algorithm for implementing the LFU cache eviction scheme</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -52,7 +52,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     BasicSettings settings = new BasicSettings(config);
     this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
-    this.admittor = (KeyOnlyAdmittor)admission.from(config, policyStats);
+    this.admittor = (KeyOnlyAdmittor) admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.policy = requireNonNull(policy);
@@ -62,9 +62,9 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
-    return settings.admission().stream().map(admission ->
-      new FrequentlyUsedPolicy(admission, policy, config)
-    ).collect(toSet());
+    return settings.admission().stream()
+        .map(admission -> new FrequentlyUsedPolicy(admission, policy, config))
+        .collect(toSet());
   }
 
   @Override
@@ -89,9 +89,10 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
     policyStats.recordHit(node.key);
 
     int newCount = node.freq.count + 1;
-    FrequencyNode freqN = (node.freq.next.count == newCount)
-        ? node.freq.next
-        : new FrequencyNode(newCount, node.freq);
+    FrequencyNode freqN =
+        (node.freq.next.count == newCount)
+            ? node.freq.next
+            : new FrequencyNode(newCount, node.freq);
     node.remove();
     if (node.freq.isEmpty()) {
       node.freq.remove();
@@ -102,9 +103,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
   /** Adds the entry, creating an initial frequency list of 1 if necessary, and evicts if needed. */
   private void onMiss(long key) {
-    FrequencyNode freq1 = (freq0.next.count == 1)
-        ? freq0.next
-        : new FrequencyNode(1, freq0);
+    FrequencyNode freq1 = (freq0.next.count == 1) ? freq0.next : new FrequencyNode(1, freq0);
     Node node = new Node(key, freq1);
     policyStats.recordMiss(key);
     data.put(key, node);
@@ -140,9 +139,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
     // find the lowest that is not the candidate
     Node victim = freq0.next.nextNode.next;
     if (victim == candidate) {
-      victim = (victim.next == victim.prev)
-          ? victim.freq.next.nextNode.next
-          : victim.next;
+      victim = (victim.next == victim.prev) ? victim.freq.next.nextNode.next : victim.next;
     }
     return victim;
   }
@@ -157,7 +154,8 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   }
 
   public enum EvictionPolicy {
-    LFU, MFU;
+    LFU,
+    MFU;
 
     public String label() {
       return StringUtils.capitalize(name().toLowerCase(US));
@@ -201,9 +199,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("count", count)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("count", count).toString();
     }
   }
 
@@ -246,12 +242,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("freq", freq)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("freq", freq).toString();
     }
   }
-
-
 }

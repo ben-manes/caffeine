@@ -32,13 +32,11 @@ public final class TinyCacheAdapter implements Frequency {
   // max frequency estimation of an item.
   static final int maxcount = 10;
 
-  /**
-   * Note that in this implementation there are always 64 items per set.
-   */
+  /** Note that in this implementation there are always 64 items per set. */
   public TinyCacheAdapter(Config config) {
     BasicSettings settings = new BasicSettings(config);
     int nrSets = sampleFactor * settings.maximumSize() / 64; // number of (independent sets)
-    tcs = new TinyCacheSketch(nrSets, 64,settings.randomSeed());
+    tcs = new TinyCacheSketch(nrSets, 64, settings.randomSeed());
   }
 
   @Override

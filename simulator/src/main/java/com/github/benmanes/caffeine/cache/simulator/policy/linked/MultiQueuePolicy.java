@@ -40,13 +40,13 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectSortedMap;
  * reordered to the least-recently-used position in the queue it resides in. A non-resident queue
  * retains evicted items that are being monitored (OUT) to allow entries to retain their historic
  * frequency and be eagerly promoted.
- * <p>
- * This policy is designed for second-level caches where a hit in this cache was a miss at the first
- * level. Thus the first-level cache captures most of the recency information and the second-level
- * cache access is dominated by usage frequency.
- * <p>
- * This implementation is based on the pseudo code provided by the authors in their paper
- * <a href="https://www.usenix.org/legacy/event/usenix01/full_papers/zhou/zhou.pdf">The Multi-Queue
+ *
+ * <p>This policy is designed for second-level caches where a hit in this cache was a miss at the
+ * first level. Thus the first-level cache captures most of the recency information and the
+ * second-level cache access is dominated by usage frequency.
+ *
+ * <p>This implementation is based on the pseudo code provided by the authors in their paper <a
+ * href="https://www.usenix.org/legacy/event/usenix01/full_papers/zhou/zhou.pdf">The Multi-Queue
  * Replacement Algorithm for Second Level. Buffer Caches</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -210,19 +210,20 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
     public MultiQueueSettings(Config config) {
       super(config);
     }
+
     public int lifetime() {
       return config().getInt("multi-queue.lifetime");
     }
+
     public int numberOfQueues() {
       int queues = config().getInt("multi-queue.num-queues");
       checkArgument(queues > 0, "Must have one or more queues");
       checkArgument(queues <= 62, "May not have more than 62 queues");
       return queues;
     }
+
     public double percentOut() {
       return config().getDouble("multi-queue.percent-out");
     }
   }
-
-
 }

@@ -34,10 +34,10 @@ public interface TraceReader {
 
   /**
    * Creates a stream that lazily reads the trace source.
-   * <p>
-   * If timely disposal of underlying resources is required, the try-with-resources construct should
-   * be used to ensure that the stream's {@link Stream#close close} method is invoked after the
-   * stream operations are completed.
+   *
+   * <p>If timely disposal of underlying resources is required, the try-with-resources construct
+   * should be used to ensure that the stream's {@link Stream#close close} method is invoked after
+   * the stream operations are completed.
    *
    * @return a lazy stream of cache events
    */
@@ -46,11 +46,13 @@ public interface TraceReader {
   /** A trace reader that that does not contain external event metadata. */
   interface KeyOnlyTraceReader extends TraceReader {
 
-    @Override default Set<Characteristic> characteristics() {
+    @Override
+    default Set<Characteristic> characteristics() {
       return ImmutableSet.of();
     }
 
-    @Override default Stream<AccessEvent> events() throws IOException {
+    @Override
+    default Stream<AccessEvent> events() throws IOException {
       return keys().mapToObj(AccessEvent::forKey);
     }
 

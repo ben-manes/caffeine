@@ -22,9 +22,7 @@ import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 import com.typesafe.config.Config;
 
-/**
- * @author ben.manes@gmail.com (Ben Manes)
- */
+/** @author ben.manes@gmail.com (Ben Manes) */
 public final class GuavaBloomFilter implements Membership {
   private final long expectedInsertions;
   private final double fpp;

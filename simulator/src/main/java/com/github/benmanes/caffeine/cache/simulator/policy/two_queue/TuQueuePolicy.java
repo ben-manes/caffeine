@@ -36,20 +36,20 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * <a href="http://www.tedunangst.com/flak/post/2Q-buffer-cache-algorithm">2Q buffer cache
  * algorithm</a> and memcached's at <a href="https://github.com/memcached/memcached/pull/97">[Work
  * In Progress] LRU rework</a>.
- * <p>
- * "We retain the key three working set distinction. In the OpenBSD code, they are named hot, cold,
- * and warm, and each is an LRU queue. New buffers start hot. They stay that way as long as they
- * remain on the hot queue. Eventually, a buffer will slip from the end of the hot queue onto the
- * front of the cold queue. (We preserve the data, not just the address.) When a new buffer is
+ *
+ * <p>"We retain the key three working set distinction. In the OpenBSD code, they are named hot,
+ * cold, and warm, and each is an LRU queue. New buffers start hot. They stay that way as long as
+ * they remain on the hot queue. Eventually, a buffer will slip from the end of the hot queue onto
+ * the front of the cold queue. (We preserve the data, not just the address.) When a new buffer is
  * needed, we recycle one from the tail of the cold queue. The oldest and coldest. If, on the other
  * hand, we have a cache hit on a cold buffer, it turns into a warm buffer and goes to the front of
  * the warm queue. Then as the warm queue lengthens, buffers start slipping from the end onto the
  * cold queue. Both the hot and warm queues are capped at one third of memory each to ensure
  * balance."
- * <p>
- * Scan resistance is achieved by means of the warm queue. Transient data will pass from hot queue
- * to cold queue and be recycled. Responsiveness is maintained by making the warm queue LRU so that
- * expired long term set buffers fade away."
+ *
+ * <p>Scan resistance is achieved by means of the warm queue. Transient data will pass from hot
+ * queue to cold queue and be recycled. Responsiveness is maintained by making the warm queue LRU so
+ * that expired long term set buffers fade away."
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -164,7 +164,6 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     return policyStats;
   }
 
-
   @Override
   public void finished() {
     checkState(sizeHot + sizeWarm + sizeCold == data.size());
@@ -227,10 +226,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", type)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", type).toString();
     }
   }
 

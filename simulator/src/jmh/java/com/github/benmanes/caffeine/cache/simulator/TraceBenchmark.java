@@ -39,8 +39,8 @@ import com.typesafe.config.ConfigFactory;
  * A benchmark to show the feasibility of a cache policy on a fixed workload. This is not meant to
  * be comparative, but rather simulate the benefits of a higher hit rate if the implementation costs
  * are not excessive.
- * <p>
- * See JMHSample_38_PerInvokeSetup for background on the per-iteration setup.
+ *
+ * <p>See JMHSample_38_PerInvokeSetup for background on the per-iteration setup.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -74,8 +74,9 @@ public class TraceBenchmark {
   public Policy makePolicy() {
     Set<Policy> policies = Registry.policy(settings, policyName);
     if (policies.size() > 1) {
-      throw new IllegalArgumentException("Use one variation per policy configuration: "
-          + policies.stream().map(policy -> policy.stats().name()).collect(toList()));
+      throw new IllegalArgumentException(
+          "Use one variation per policy configuration: "
+              + policies.stream().map(policy -> policy.stats().name()).collect(toList()));
     }
     return policies.iterator().next();
   }

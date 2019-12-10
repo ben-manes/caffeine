@@ -35,8 +35,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * A cache that uses a linked list, in either insertion or access order, to implement simple
- * page replacement algorithms.
+ * A cache that uses a linked list, in either insertion or access order, to implement simple page
+ * replacement algorithms.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -51,7 +51,7 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
   public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     BasicSettings settings = new BasicSettings(config);
     this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
-    this.admittor = (KeyOnlyAdmittor)admission.from(config, policyStats);
+    this.admittor = (KeyOnlyAdmittor) admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.sentinel = new Node();
@@ -61,9 +61,9 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
-    return settings.admission().stream().map(admission ->
-      new LinkedPolicy(admission, policy, config)
-    ).collect(toSet());
+    return settings.admission().stream()
+        .map(admission -> new LinkedPolicy(admission, policy, config))
+        .collect(toSet());
   }
 
   @Override
@@ -114,11 +114,14 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
 
     /** Evicts entries based on insertion order. */
     FIFO {
-      @Override void onAccess(Node node, PolicyStats policyStats) {
+      @Override
+      void onAccess(Node node, PolicyStats policyStats) {
         policyStats.recordOperation();
         // do nothing
       }
-      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+
+      @Override
+      Node findVictim(Node sentinel, PolicyStats policyStats) {
         policyStats.recordOperation();
         return sentinel.next;
       }
@@ -129,12 +132,15 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
      * requested recently.
      */
     CLOCK {
-      @Override void onAccess(Node node, PolicyStats policyStats) {
+      @Override
+      void onAccess(Node node, PolicyStats policyStats) {
         policyStats.recordOperation();
         node.marked = true;
       }
-      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
-        for (;;) {
+
+      @Override
+      Node findVictim(Node sentinel, PolicyStats policyStats) {
+        for (; ; ) {
           policyStats.recordOperation();
           Node node = sentinel.next;
           if (node.marked) {
@@ -149,11 +155,14 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
 
     /** Evicts entries based on how recently they are used, with the most recent evicted first. */
     MRU {
-      @Override void onAccess(Node node, PolicyStats policyStats) {
+      @Override
+      void onAccess(Node node, PolicyStats policyStats) {
         policyStats.recordOperation();
         node.moveToTail();
       }
-      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+
+      @Override
+      Node findVictim(Node sentinel, PolicyStats policyStats) {
         policyStats.recordOperation();
         // Skip over the added entry
         return sentinel.prev.prev;
@@ -162,11 +171,14 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
 
     /** Evicts entries based on how recently they are used, with the least recent evicted first. */
     LRU {
-      @Override void onAccess(Node node, PolicyStats policyStats) {
+      @Override
+      void onAccess(Node node, PolicyStats policyStats) {
         policyStats.recordOperation();
         node.moveToTail();
       }
-      @Override Node findVictim(Node sentinel, PolicyStats policyStats) {
+
+      @Override
+      Node findVictim(Node sentinel, PolicyStats policyStats) {
         policyStats.recordOperation();
         return sentinel.next;
       }
@@ -238,12 +250,7 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("marked", marked)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("marked", marked).toString();
     }
   }
-
-
 }

@@ -46,24 +46,29 @@ import akka.routing.Router;
 /**
  * A simulator that broadcasts the recorded cache events to each policy and generates an aggregated
  * report. See <tt>reference.conf</tt> for details on the configuration.
- * <p>
- * The simulator reports the hit rate of each of the policy being evaluated. A miss may occur
- * due to,
+ *
+ * <p>The simulator reports the hit rate of each of the policy being evaluated. A miss may occur due
+ * to,
+ *
  * <ul>
  *   <li>Conflict: multiple entries are mapped to the same location
  *   <li>Compulsory: the first reference misses and the entry must be loaded
  *   <li>Capacity: the cache is not large enough to contain the needed entries
  *   <li>Coherence: an invalidation is issued by another process in the system
  * </ul>
- * <p>
- * It is recommended that multiple access traces are used during evaluation to see how the policies
- * handle different workload patterns. When choosing a policy some metrics that are not reported
- * may be relevant, such as the cost of maintaining the policy's internal structures.
+ *
+ * <p>It is recommended that multiple access traces are used during evaluation to see how the
+ * policies handle different workload patterns. When choosing a policy some metrics that are not
+ * reported may be relevant, such as the cost of maintaining the policy's internal structures.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Simulator extends AbstractActor {
-  public enum Message { START, FINISH, ERROR }
+  public enum Message {
+    START,
+    FINISH,
+    ERROR
+  }
 
   private final TraceReader traceReader;
   private final BasicSettings settings;
@@ -103,7 +108,7 @@ public final class Simulator extends AbstractActor {
 
   /** Broadcast the trace events to all of the policy actors. */
   private void broadcast() {
-    if(router.routees().isEmpty()){
+    if (router.routees().isEmpty()) {
       context().system().log().error("No active policies under current configuration.");
       context().stop(self());
     }
@@ -129,11 +134,14 @@ public final class Simulator extends AbstractActor {
 
   /** Returns the actors to broadcast trace events to. */
   private List<Routee> makeRoutes() {
-    return Registry.policies(settings, traceReader.characteristics()).stream().map(policy -> {
-      ActorRef actorRef = context().actorOf(Props.create(PolicyActor.class, policy));
-      context().watch(actorRef);
-      return new ActorRefRoutee(actorRef);
-    }).collect(toList());
+    return Registry.policies(settings, traceReader.characteristics()).stream()
+        .map(
+            policy -> {
+              ActorRef actorRef = context().actorOf(Props.create(PolicyActor.class, policy));
+              context().watch(actorRef);
+              return new ActorRefRoutee(actorRef);
+            })
+        .collect(toList());
   }
 
   /** Add the stats to the reporter, print if completed, and stop the simulator. */
@@ -147,6 +155,6 @@ public final class Simulator extends AbstractActor {
   }
 
   public static void main(String[] args) {
-    akka.Main.main(new String[] { Simulator.class.getName() } );
+    akka.Main.main(new String[] {Simulator.class.getName()});
   }
 }

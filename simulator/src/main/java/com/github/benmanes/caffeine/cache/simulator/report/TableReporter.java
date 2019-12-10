@@ -43,26 +43,30 @@ public final class TableReporter extends TextReporter {
     for (int i = 0; i < results.size(); i++) {
       PolicyStats policyStats = results.get(i);
       String[] penaltiesData = {
-              policyStats.hitCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgHitLatency(),getTimeUnit()),
-              policyStats.missCount() == 0 ? "?" : String.format("%.4f %s", policyStats.avgMissLatency(),getTimeUnit()),
-              String.format("%.4f %s", policyStats.avgTotalLatency(),getTimeUnit()),
-              String.format("%.4f %s", policyStats.avgMissLatencyAFS(),getTimeUnit()),
-              String.format("%.4f %s", policyStats.avgTotalLatencyAFS(),getTimeUnit())
+        policyStats.hitCount() == 0
+            ? "?"
+            : String.format("%.4f %s", policyStats.avgHitLatency(), getTimeUnit()),
+        policyStats.missCount() == 0
+            ? "?"
+            : String.format("%.4f %s", policyStats.avgMissLatency(), getTimeUnit()),
+        String.format("%.4f %s", policyStats.avgTotalLatency(), getTimeUnit()),
+        String.format("%.4f %s", policyStats.avgMissLatencyAFS(), getTimeUnit()),
+        String.format("%.4f %s", policyStats.avgTotalLatencyAFS(), getTimeUnit())
       };
       String[] basicData = {
-          policyStats.name(),
-          String.format("%.2f %%", 100 * policyStats.hitRate()),
-          String.format("%,d", policyStats.hitCount()),
-          String.format("%,d", policyStats.missCount()),
-          String.format("%,d", policyStats.requestCount()),
-          String.format("%,d", policyStats.evictionCount()),
-          String.format("%.2f %%", 100 * policyStats.admissionRate()),
-          steps(policyStats),
-          policyStats.stopwatch().toString()
+        policyStats.name(),
+        String.format("%.2f %%", 100 * policyStats.hitRate()),
+        String.format("%,d", policyStats.hitCount()),
+        String.format("%,d", policyStats.missCount()),
+        String.format("%,d", policyStats.requestCount()),
+        String.format("%,d", policyStats.evictionCount()),
+        String.format("%.2f %%", 100 * policyStats.admissionRate()),
+        steps(policyStats),
+        policyStats.stopwatch().toString()
       };
 
-      data[i] = mergeStringData(basicData, characteristics().contains(PENALTIES) ? penaltiesData : empty);
-
+      data[i] =
+          mergeStringData(basicData, characteristics().contains(PENALTIES) ? penaltiesData : empty);
     }
     return FlipTable.of(headers(), data);
   }
@@ -72,6 +76,4 @@ public final class TableReporter extends TextReporter {
     long complexity = (long) (100 * policyStats.complexity());
     return (operations == 0) ? "?" : String.format("%,d (%,d %%)", operations, complexity);
   }
-
-
 }

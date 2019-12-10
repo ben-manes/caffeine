@@ -22,8 +22,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
- * A reader for the trace files provided by the authors of the ARC algorithm. See
- * <a href="http://researcher.watson.ibm.com/researcher/view_person_subpage.php?id=4700">traces</a>.
+ * A reader for the trace files provided by the authors of the ARC algorithm. See <a
+ * href="http://researcher.watson.ibm.com/researcher/view_person_subpage.php?id=4700">traces</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -35,11 +35,13 @@ public final class ArcTraceReader extends TextTraceReader implements KeyOnlyTrac
 
   @Override
   public LongStream keys() throws IOException {
-    return lines().flatMapToLong(line -> {
-      String[] array = line.split(" ", 3);
-      long startBlock = Long.parseLong(array[0]);
-      int sequence = Integer.parseInt(array[1]);
-      return LongStream.range(startBlock, startBlock + sequence);
-    });
+    return lines()
+        .flatMapToLong(
+            line -> {
+              String[] array = line.split(" ", 3);
+              long startBlock = Long.parseLong(array[0]);
+              int sequence = Integer.parseInt(array[1]);
+              return LongStream.range(startBlock, startBlock + sequence);
+            });
   }
 }

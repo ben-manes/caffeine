@@ -225,9 +225,7 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).toString();
     }
   }
 
@@ -235,22 +233,23 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     public FeedbackTinyLfuSettings(Config config) {
       super(config);
     }
+
     public int maximumInsertionGain() {
       return config().getInt("feedback-tiny-lfu.maximum-insertion-gain");
     }
+
     public int maximumSampleSize() {
       return config().getInt("feedback-tiny-lfu.maximum-sample-size");
     }
+
     public double adaptiveFpp() {
       return config().getDouble("feedback-tiny-lfu.adaptive-fpp");
     }
+
     public Config filterConfig(int sampleSize) {
-      Map<String, Object> properties = ImmutableMap.of(
-          "membership.fpp", adaptiveFpp(),
-          "maximum-size", sampleSize);
+      Map<String, Object> properties =
+          ImmutableMap.of("membership.fpp", adaptiveFpp(), "maximum-size", sampleSize);
       return ConfigFactory.parseMap(properties).withFallback(config());
     }
   }
-
-
 }

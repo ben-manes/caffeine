@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 package com.github.benmanes.caffeine.cache.simulator.report;
+
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.PENALTIES;
 
 import java.io.StringWriter;
@@ -45,38 +46,36 @@ public final class CsvReporter extends TextReporter {
     boolean penaltiesFlag = characteristics().contains(PENALTIES);
     String[] empty = {};
     String[] timeUnitHeader = {"Time Unit"};
-    String[] headers = ArrayUtils.addAll(headers(),penaltiesFlag ? timeUnitHeader : empty);
+    String[] headers = ArrayUtils.addAll(headers(), penaltiesFlag ? timeUnitHeader : empty);
     writer.writeHeaders(headers);
     for (PolicyStats policyStats : results) {
       Object[] penaltiesData = {
-              policyStats.hitCount() == 0 ? null : String.format("%.4f", policyStats.avgHitLatency()),
-              (policyStats.missCount() == 0) ? null : String.format("%.4f", policyStats.avgMissLatency()),
-              String.format("%.4f", policyStats.avgTotalLatency()),
-              String.format("%.4f", policyStats.avgMissLatencyAFS()),
-              String.format("%.4f", policyStats.avgTotalLatencyAFS()),
-              getTimeUnit()
+        policyStats.hitCount() == 0 ? null : String.format("%.4f", policyStats.avgHitLatency()),
+        (policyStats.missCount() == 0) ? null : String.format("%.4f", policyStats.avgMissLatency()),
+        String.format("%.4f", policyStats.avgTotalLatency()),
+        String.format("%.4f", policyStats.avgMissLatencyAFS()),
+        String.format("%.4f", policyStats.avgTotalLatencyAFS()),
+        getTimeUnit()
       };
       Object[] basicData = {
-              policyStats.name(),
-              String.format("%.2f", 100 * policyStats.hitRate()),
-              policyStats.hitCount(),
-              policyStats.missCount(),
-              policyStats.requestCount(),
-              policyStats.evictionCount(),
-              String.format("%.2f", 100 * policyStats.admissionRate()),
-              (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),
-              policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS)
+        policyStats.name(),
+        String.format("%.2f", 100 * policyStats.hitRate()),
+        policyStats.hitCount(),
+        policyStats.missCount(),
+        policyStats.requestCount(),
+        policyStats.evictionCount(),
+        String.format("%.2f", 100 * policyStats.admissionRate()),
+        (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),
+        policyStats.stopwatch().elapsed(TimeUnit.MILLISECONDS)
       };
-      Object[] data = mergeData(basicData,penaltiesFlag ? penaltiesData : empty);
+      Object[] data = mergeData(basicData, penaltiesFlag ? penaltiesData : empty);
       writer.writeRow(data);
     }
     writer.close();
     return output.toString();
   }
 
-  private static Object[] mergeData(Object[] ...arrays) {
-    return Stream.of(arrays)
-            .flatMap(Stream::of)
-            .toArray(Object[]::new);
+  private static Object[] mergeData(Object[]... arrays) {
+    return Stream.of(arrays).flatMap(Stream::of).toArray(Object[]::new);
   }
 }

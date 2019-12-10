@@ -25,8 +25,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic
 import com.google.common.collect.ImmutableSet;
 
 /**
- * A reader for the trace files provided by the author of cache2k. See
- * <a href="https://github.com/cache2k/cache2k-benchmark">traces</a>.
+ * A reader for the trace files provided by the author of cache2k. See <a
+ * href="https://github.com/cache2k/cache2k-benchmark">traces</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

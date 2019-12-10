@@ -35,12 +35,13 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * locality window such that pages that are re-requested within the window are of short-term utility
  * and pages that are re-requested outside the window are of long-term utility. The temporal
  * locality window is an adaptable parameter of the algorithm.
- * <p>
- * This implementation is based on the pseudo code provided by the authors in their paper <a href=
+ *
+ * <p>This implementation is based on the pseudo code provided by the authors in their paper <a
+ * href=
  * "https://www.usenix.org/legacy/publications/library/proceedings/fast04/tech/full_papers/bansal/bansal.pdf">
  * CAR: Clock with Adaptive Replacement</a> and is further described in their paper,
- * <p>
- * This algorithm is patented by IBM (6996676, 7096321, 7058766, 8612689).
+ *
+ * <p>This algorithm is patented by IBM (6996676, 7096321, 7058766, 8612689).
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -318,8 +319,10 @@ public final class CartPolicy implements KeyOnlyPolicy {
   }
 
   private enum QueueType {
-    T1, B1,
-    T2, B2,
+    T1,
+    B1,
+    T2,
+    B2,
   }
 
   private enum FilterType {
@@ -380,12 +383,7 @@ public final class CartPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", type)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", type).toString();
     }
   }
-
-
 }

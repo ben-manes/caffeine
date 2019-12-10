@@ -47,11 +47,13 @@ public interface Admittor {
 
   interface KeyOnlyAdmittor extends Admittor {
 
-    @Override default boolean admit(AccessEvent candidate, AccessEvent victim) {
-      return admit(candidate.key(),victim.key());
+    @Override
+    default boolean admit(AccessEvent candidate, AccessEvent victim) {
+      return admit(candidate.key(), victim.key());
     }
 
-    @Override default void record(AccessEvent event) {
+    @Override
+    default void record(AccessEvent event) {
       record(event.key());
     }
 
@@ -68,7 +70,7 @@ enum AlwaysAdmit implements Admittor, Admittor.KeyOnlyAdmittor {
   public void record(AccessEvent event) {}
 
   @Override
-  public void record(long key) { }
+  public void record(long key) {}
 
   @Override
   public boolean admit(long candidate, long victim) {
@@ -79,5 +81,4 @@ enum AlwaysAdmit implements Admittor, Admittor.KeyOnlyAdmittor {
   public boolean admit(AccessEvent candidate, AccessEvent victim) {
     return true;
   }
-
 }

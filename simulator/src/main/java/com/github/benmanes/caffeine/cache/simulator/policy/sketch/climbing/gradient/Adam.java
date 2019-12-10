@@ -23,8 +23,8 @@ import com.typesafe.config.Config;
 
 /**
  * Adaptive Moment Estimation (Adam) optimizer. Adam is an improvement on stochastic gradient
- * descent with momentum, that incorporates adaptive learning rates. The authors describe it in
- * <a href="https://arxiv.org/abs/1412.6980">Adam: A Method for Stochastic Optimization</a>.
+ * descent with momentum, that incorporates adaptive learning rates. The authors describe it in <a
+ * href="https://arxiv.org/abs/1412.6980">Adam: A Method for Stochastic Optimization</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -74,21 +74,27 @@ public final class Adam extends AbstractClimber {
     public AdamSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
+
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");
     }
+
     public double percentSample() {
       return config().getDouble(BASE_PATH + "percent-sample");
     }
+
     public double beta1() {
       return config().getDouble(BASE_PATH + "beta1");
     }
+
     public double beta2() {
       return config().getDouble(BASE_PATH + "beta2");
     }
+
     public double epsilon() {
       return config().getDouble(BASE_PATH + "epsilon");
     }

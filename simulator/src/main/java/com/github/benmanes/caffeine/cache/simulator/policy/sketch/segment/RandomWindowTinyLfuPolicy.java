@@ -141,10 +141,7 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("index", index)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("index", index).toString();
     }
   }
 
@@ -152,10 +149,9 @@ public final class RandomWindowTinyLfuPolicy implements KeyOnlyPolicy {
     public RandomWindowTinyLfuSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("random-window-tiny-lfu.percent-main");
     }
   }
-
-
 }

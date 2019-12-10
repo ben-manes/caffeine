@@ -22,8 +22,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
- * A reader for the trace files of application address instructions, provided by
- * <a href="http://cseweb.ucsd.edu/classes/fa07/cse240a/project1.html">UC SD</a>.
+ * A reader for the trace files of application address instructions, provided by <a
+ * href="http://cseweb.ucsd.edu/classes/fa07/cse240a/project1.html">UC SD</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

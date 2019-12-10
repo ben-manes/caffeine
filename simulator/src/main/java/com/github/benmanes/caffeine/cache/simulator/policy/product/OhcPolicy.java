@@ -48,15 +48,17 @@ public final class OhcPolicy implements KeyOnlyPolicy {
   private final PolicyStats policyStats;
 
   public OhcPolicy(OhcSettings settings, Eviction policy) {
-    cache = OHCacheBuilder.<Long, Long>newBuilder()
-        .capacity(ENTRY_SIZE * settings.maximumSize())
-        .edenSize(settings.percentEden())
-        .valueSerializer(longSerializer)
-        .keySerializer(longSerializer)
-        .eviction(policy)
-        .build();
-    policyStats = new PolicyStats(String.format("product.OHC (%s)",
-        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"));
+    cache =
+        OHCacheBuilder.<Long, Long>newBuilder()
+            .capacity(ENTRY_SIZE * settings.maximumSize())
+            .edenSize(settings.percentEden())
+            .valueSerializer(longSerializer)
+            .keySerializer(longSerializer)
+            .eviction(policy)
+            .build();
+    policyStats =
+        new PolicyStats(
+            String.format("product.OHC (%s)", (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"));
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -100,9 +102,11 @@ public final class OhcPolicy implements KeyOnlyPolicy {
     public OhcSettings(Config config) {
       super(config);
     }
+
     public double percentEden() {
       return config().getDouble("ohc.percent-eden");
     }
+
     public Set<Eviction> policy() {
       Set<Eviction> policies = new HashSet<>();
       for (String policy : config().getStringList("ohc.policy")) {
@@ -119,17 +123,21 @@ public final class OhcPolicy implements KeyOnlyPolicy {
     }
   }
 
-  static final CacheSerializer<Long> longSerializer = new CacheSerializer<Long>() {
-    @Override public void serialize(Long value, ByteBuffer buffer) {
-      buffer.putLong(value);
-    }
-    @Override public Long deserialize(ByteBuffer buffer) {
-      return buffer.getLong();
-    }
-    @Override public int serializedSize(Long value) {
-      return Long.BYTES;
-    }
-  };
+  static final CacheSerializer<Long> longSerializer =
+      new CacheSerializer<Long>() {
+        @Override
+        public void serialize(Long value, ByteBuffer buffer) {
+          buffer.putLong(value);
+        }
 
+        @Override
+        public Long deserialize(ByteBuffer buffer) {
+          return buffer.getLong();
+        }
 
+        @Override
+        public int serializedSize(Long value) {
+          return Long.BYTES;
+        }
+      };
 }

@@ -42,7 +42,9 @@ public abstract class TextTraceReader extends AbstractTraceReader implements Tra
   protected Stream<String> lines() throws IOException {
     InputStream input = readFile();
     Reader reader = new InputStreamReader(input, UTF_8);
-    return new BufferedReader(reader).lines().map(String::trim)
+    return new BufferedReader(reader)
+        .lines()
+        .map(String::trim)
         .onClose(() -> Closeables.closeQuietly(input));
   }
 }

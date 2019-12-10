@@ -33,8 +33,8 @@ import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
- * The simulator's configuration. A policy can extend this class as a convenient way to extract
- * its own settings.
+ * The simulator's configuration. A policy can extend this class as a convenient way to extract its
+ * own settings.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -58,9 +58,7 @@ public class BasicSettings {
   }
 
   public Set<String> policies() {
-    return config().getStringList("policies").stream()
-        .map(String::toLowerCase)
-        .collect(toSet());
+    return config().getStringList("policies").stream().map(String::toLowerCase).collect(toSet());
   }
 
   public Set<Admission> admission() {
@@ -109,25 +107,29 @@ public class BasicSettings {
     public ReportFormat format() {
       return ReportFormat.valueOf(config().getString("report.format").toUpperCase(US));
     }
+
     public String sortBy() {
       return config().getString("report.sort-by").trim();
     }
+
     public boolean ascending() {
       return config().getBoolean("report.ascending");
     }
+
     public String output() {
       return config().getString("report.output").trim();
     }
+
     public Set<Characteristic> characteristics() {
       return config().getStringList("report.characteristics").stream()
-              .map(String::toUpperCase)
-              .map(Characteristic::valueOf)
-              .collect(Sets.toImmutableEnumSet());
+          .map(String::toUpperCase)
+          .map(Characteristic::valueOf)
+          .collect(Sets.toImmutableEnumSet());
     }
+
     public String timeUnit() {
       return config().getString("report.time-unit");
     }
-
   }
 
   public final class MembershipSettings {
@@ -135,10 +137,12 @@ public class BasicSettings {
       String type = config().getString("membership.filter");
       return FilterType.valueOf(CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_UNDERSCORE, type));
     }
+
     public long expectedInsertions() {
       double multiplier = config().getDouble("membership.expected-insertions-multiplier");
       return (long) (maximumSize() * multiplier);
     }
+
     public double fpp() {
       return config().getDouble("membership.fpp");
     }
@@ -148,12 +152,15 @@ public class BasicSettings {
     public String sketch() {
       return config().getString("tiny-lfu.sketch");
     }
+
     public boolean conservative() {
       return config().getBoolean("tiny-lfu.count-min.conservative");
     }
+
     public CountMin4Settings countMin4() {
       return new CountMin4Settings();
     }
+
     public CountMin64Settings countMin64() {
       return new CountMin64Settings();
     }
@@ -162,34 +169,42 @@ public class BasicSettings {
       public String reset() {
         return config().getString("tiny-lfu.count-min-4.reset");
       }
+
       public double countersMultiplier() {
         return config().getDouble("tiny-lfu.count-min-4.counters-multiplier");
       }
+
       public IncrementalSettings incremental() {
         return new IncrementalSettings();
       }
+
       public PeriodicSettings periodic() {
         return new PeriodicSettings();
       }
+
       public final class IncrementalSettings {
         public int interval() {
           return config().getInt("tiny-lfu.count-min-4.incremental.interval");
         }
       }
+
       public final class PeriodicSettings {
         public DoorkeeperSettings doorkeeper() {
           return new DoorkeeperSettings();
         }
       }
     }
+
     public final class CountMin64Settings {
       public double eps() {
         return config().getDouble("tiny-lfu.count-min-64.eps");
       }
+
       public double confidence() {
         return config().getDouble("tiny-lfu.count-min-64.confidence");
       }
     }
+
     public final class DoorkeeperSettings {
       public boolean enabled() {
         return config().getBoolean("tiny-lfu.count-min-4.periodic.doorkeeper.enabled");
@@ -201,6 +216,7 @@ public class BasicSettings {
     public List<String> paths() {
       return config().getStringList("files.paths");
     }
+
     public TraceFormat format() {
       return TraceFormat.named(config().getString("files.format"));
     }
@@ -210,21 +226,27 @@ public class BasicSettings {
     public String distribution() {
       return config().getString("synthetic.distribution");
     }
+
     public int events() {
       return config().getInt("synthetic.events");
     }
+
     public CounterSettings counter() {
       return new CounterSettings();
     }
+
     public UniformSettings uniform() {
       return new UniformSettings();
     }
+
     public ExponentialSettings exponential() {
       return new ExponentialSettings();
     }
+
     public HotspotSettings hotspot() {
       return new HotspotSettings();
     }
+
     public ZipfianSettings zipfian() {
       return new ZipfianSettings();
     }
@@ -234,37 +256,46 @@ public class BasicSettings {
         return config().getInt("synthetic.counter.start");
       }
     }
+
     public final class UniformSettings {
       public int lowerBound() {
         return config().getInt("synthetic.uniform.lower-bound");
       }
+
       public int upperBound() {
         return config().getInt("synthetic.uniform.upper-bound");
       }
     }
+
     public final class ExponentialSettings {
       public double mean() {
         return config().getDouble("synthetic.exponential.mean");
       }
     }
+
     public final class HotspotSettings {
       public int lowerBound() {
         return config().getInt("synthetic.hotspot.lower-bound");
       }
+
       public int upperBound() {
         return config().getInt("synthetic.hotspot.upper-bound");
       }
+
       public double hotsetFraction() {
         return config().getDouble("synthetic.hotspot.hotset-fraction");
       }
+
       public double hotOpnFraction() {
         return config().getDouble("synthetic.hotspot.hot-opn-fraction");
       }
     }
+
     public final class ZipfianSettings {
       public int items() {
         return config().getInt("synthetic.zipfian.items");
       }
+
       public double constant() {
         return config().getDouble("synthetic.zipfian.constant");
       }

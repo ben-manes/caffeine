@@ -81,13 +81,15 @@ public enum TraceFormat {
   public TraceReader readFiles(List<String> filePaths) {
     return new TraceReader() {
 
-      @Override public Set<Characteristic> characteristics() {
+      @Override
+      public Set<Characteristic> characteristics() {
         return readers().stream()
             .flatMap(reader -> reader.characteristics().stream())
             .collect(Sets.toImmutableEnumSet());
       }
 
-      @Override public Stream<AccessEvent> events() throws IOException {
+      @Override
+      public Stream<AccessEvent> events() throws IOException {
         Stream<AccessEvent> events = Stream.empty();
         for (TraceReader reader : readers()) {
           events = Stream.concat(events, reader.events());
@@ -96,11 +98,14 @@ public enum TraceFormat {
       }
 
       private List<TraceReader> readers() {
-        return filePaths.stream().map(path -> {
-          List<String> parts = Splitter.on(':').limit(2).splitToList(path);
-          TraceFormat format = (parts.size() == 1) ? TraceFormat.this : named(parts.get(0));
-          return format.factory.apply(Iterables.getLast(parts));
-        }).collect(toList());
+        return filePaths.stream()
+            .map(
+                path -> {
+                  List<String> parts = Splitter.on(':').limit(2).splitToList(path);
+                  TraceFormat format = (parts.size() == 1) ? TraceFormat.this : named(parts.get(0));
+                  return format.factory.apply(Iterables.getLast(parts));
+                })
+            .collect(toList());
       }
     };
   }

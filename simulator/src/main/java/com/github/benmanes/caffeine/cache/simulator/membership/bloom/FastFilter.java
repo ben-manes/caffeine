@@ -74,10 +74,12 @@ public final class FastFilter implements Membership {
     public FastFilterSettings(Config config) {
       super(config);
     }
+
     public FilterType filterType() {
       String type = config().getString("membership.fast-filter.type");
       return FilterType.valueOf(CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_UNDERSCORE, type));
     }
+
     public int bitsPerKey() {
       return config().getInt("membership.fast-filter.bits-per-key");
     }

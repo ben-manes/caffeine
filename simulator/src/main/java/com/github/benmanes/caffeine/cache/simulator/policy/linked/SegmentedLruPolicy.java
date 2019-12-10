@@ -36,8 +36,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * "Segmented LRU is based on the observation that objects with at least two accesses are much more
  * popular than those with only one access during a short interval. In Segmented LRU, cache space is
  * partitioned into two segments: probationary segment and protected segment.
- * <p>
- * New objects (with only one access) are first faulted into the probationary segment, whereas
+ *
+ * <p>New objects (with only one access) are first faulted into the probationary segment, whereas
  * objects with two or more accesses are kept in the protected segment. When a probationary object
  * gets one more reference, it will change to the protected segment. When the whole cache space
  * becomes full, the least recently used object in the probationary segment will first be replaced.
@@ -66,7 +66,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   public SegmentedLruPolicy(Admission admission, Config config) {
     SegmentedLruSettings settings = new SegmentedLruSettings(config);
     this.policyStats = new PolicyStats(admission.format("linked.SegmentedLru"));
-    this.admittor = (KeyOnlyAdmittor)admission.from(config, policyStats);
+    this.admittor = (KeyOnlyAdmittor) admission.from(config, policyStats);
 
     this.headProtected = new Node();
     this.headProbation = new Node();
@@ -78,9 +78,9 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    return settings.admission().stream().map(admission ->
-      new SegmentedLruPolicy(admission, config)
-    ).collect(toSet());
+    return settings.admission().stream()
+        .map(admission -> new SegmentedLruPolicy(admission, config))
+        .collect(toSet());
   }
 
   @Override
@@ -125,9 +125,10 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
   private void evict(Node candidate) {
     if (data.size() > maximumSize) {
-      Node victim = (maxProtected == 0)
-          ? headProtected.next // degrade to LRU
-          : headProbation.next;
+      Node victim =
+          (maxProtected == 0)
+              ? headProtected.next // degrade to LRU
+              : headProbation.next;
       policyStats.recordEviction();
 
       boolean admit = admittor.admit(candidate.key, victim.key);
@@ -206,10 +207,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", type)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", type).toString();
     }
   }
 
@@ -223,6 +221,4 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
       return config().getDouble("segmented-lru.percent-protected");
     }
   }
-
-
 }

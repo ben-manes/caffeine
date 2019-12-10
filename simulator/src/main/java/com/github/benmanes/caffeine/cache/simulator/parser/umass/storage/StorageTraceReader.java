@@ -24,8 +24,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTr
 import com.google.common.math.IntMath;
 
 /**
- * A reader for the trace files provided by the
- * <a href="http://traces.cs.umass.edu/index.php/Storage/Storage">UMass Trace Repository</a>.
+ * A reader for the trace files provided by the <a
+ * href="http://traces.cs.umass.edu/index.php/Storage/Storage">UMass Trace Repository</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -38,18 +38,20 @@ public final class StorageTraceReader extends TextTraceReader implements KeyOnly
 
   @Override
   public LongStream keys() throws IOException {
-    return lines().flatMapToLong(line -> {
-      String[] array = line.split(",", 5);
-      if (array.length <= 4) {
-        return LongStream.empty();
-      }
-      long startBlock = Long.parseLong(array[1]);
-      int size = Integer.parseInt(array[2]);
-      int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
-      char readWrite = Character.toLowerCase(array[3].charAt(0));
-      return (readWrite == 'w')
-          ? LongStream.empty()
-          : LongStream.range(startBlock, startBlock + sequence);
-    });
+    return lines()
+        .flatMapToLong(
+            line -> {
+              String[] array = line.split(",", 5);
+              if (array.length <= 4) {
+                return LongStream.empty();
+              }
+              long startBlock = Long.parseLong(array[1]);
+              int size = Integer.parseInt(array[2]);
+              int sequence = IntMath.divide(size, BLOCK_SIZE, RoundingMode.UP);
+              char readWrite = Character.toLowerCase(array[3].charAt(0));
+              return (readWrite == 'w')
+                  ? LongStream.empty()
+                  : LongStream.range(startBlock, startBlock + sequence);
+            });
   }
 }

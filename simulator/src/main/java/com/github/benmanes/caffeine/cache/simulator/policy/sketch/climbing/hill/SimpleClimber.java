@@ -76,21 +76,27 @@ public final class SimpleClimber extends AbstractClimber {
     public SimpleClimberSettings(Config config) {
       super(config);
     }
+
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");
     }
+
     public double percentSample() {
       return config().getDouble(BASE_PATH + "percent-sample");
     }
+
     public double tolerance() {
       return config().getDouble(BASE_PATH + "tolerance");
     }
+
     public double stepDecayRate() {
       return config().getDouble(BASE_PATH + "step-decay-rate");
     }
+
     public double sampleDecayRate() {
       return config().getDouble(BASE_PATH + "sample-decay-rate");
     }
+
     public double restartThreshold() {
       return config().getDouble(BASE_PATH + "restart-threshold");
     }

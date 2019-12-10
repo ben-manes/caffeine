@@ -26,9 +26,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 
-/**
- * @author gilga1983@gmail.com (Gil Einziger)
- */
+/** @author gilga1983@gmail.com (Gil Einziger) */
 public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
   private final TinyCache window;
   private final PolicyStats policyStats;
@@ -44,8 +42,8 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
       maxSize -= 64;
       window = new TinyCache(1, 64, 0);
     }
-    tinyCache = new TinyCacheWithGhostCache((int) Math.ceil(maxSize / 64.0),
-        64, settings.randomSeed());
+    tinyCache =
+        new TinyCacheWithGhostCache((int) Math.ceil(maxSize / 64.0), 64, settings.randomSeed());
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -75,5 +73,4 @@ public final class WindowTinyCachePolicy implements KeyOnlyPolicy {
   public PolicyStats stats() {
     return policyStats;
   }
-
 }

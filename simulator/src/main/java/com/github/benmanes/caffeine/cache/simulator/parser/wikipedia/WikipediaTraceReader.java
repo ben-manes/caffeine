@@ -33,12 +33,28 @@ import com.google.common.hash.Hashing;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class WikipediaTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
-  private static final String[] CONTAINS_FILTER = {"?search=", "&search=", "User+talk", "User_talk",
-      "User:", "Talk:", "&diff=", "&action=rollback", "Special:Watchlist"};
-  private static final String[] STARTS_WITH_FILTER = {"wiki/Special:Search", "w/query.php",
-      "wiki/Talk:", "wiki/Special:AutoLogin", "Special:UserLogin", "w/api.php", "error:"};
-  private static final String[] SEARCH_LIST = { "%2F", "%20", "&amp;", "%3A" };
-  private static final String[] REPLACEMENT_LIST = { "/", " ", "&", ":" };
+  private static final String[] CONTAINS_FILTER = {
+    "?search=",
+    "&search=",
+    "User+talk",
+    "User_talk",
+    "User:",
+    "Talk:",
+    "&diff=",
+    "&action=rollback",
+    "Special:Watchlist"
+  };
+  private static final String[] STARTS_WITH_FILTER = {
+    "wiki/Special:Search",
+    "w/query.php",
+    "wiki/Talk:",
+    "wiki/Special:AutoLogin",
+    "Special:UserLogin",
+    "w/api.php",
+    "error:"
+  };
+  private static final String[] SEARCH_LIST = {"%2F", "%20", "&amp;", "%3A"};
+  private static final String[] REPLACEMENT_LIST = {"/", " ", "&", ":"};
 
   public WikipediaTraceReader(String filePath) {
     super(filePath);
@@ -55,11 +71,12 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
   /**
    * Returns the request's path or {@code null} if this request should be ignored. The input is
    * space deliminated with the following format,
+   *
    * <ul>
-   *  <li>A monotonically increasing counter (useful for sorting the trace in chronological order)
-   *  <li>The timestamp of the request in Unix notation with millisecond precision
-   *  <li>The requested URL
-   *  <li>A flag to indicate if the request resulted in a database update or not ('-' or 'save')
+   *   <li>A monotonically increasing counter (useful for sorting the trace in chronological order)
+   *   <li>The timestamp of the request in Unix notation with millisecond precision
+   *   <li>The requested URL
+   *   <li>A flag to indicate if the request resulted in a database update or not ('-' or 'save')
    * </ul>
    */
   private @Nullable String parseRequest(String line) {
@@ -111,8 +128,8 @@ public final class WikipediaTraceReader extends TextTraceReader implements KeyOn
   }
 
   /**
-   * Returns if the path should be included. The request is ignored if it is a search query, a
-   * page revision, related to users or user management, or talk pages.
+   * Returns if the path should be included. The request is ignored if it is a search query, a page
+   * revision, related to users or user management, or talk pages.
    */
   public boolean isAllowed(String path) {
     for (String filter : STARTS_WITH_FILTER) {

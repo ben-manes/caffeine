@@ -22,8 +22,8 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
- * A reader for the SNIA MSR Cambridge trace files provided by
- * <a href="http://iotta.snia.org/traces/388">SNIA</a>.
+ * A reader for the SNIA MSR Cambridge trace files provided by <a
+ * href="http://iotta.snia.org/traces/388">SNIA</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -35,8 +35,6 @@ public final class CambridgeTraceReader extends TextTraceReader implements KeyOn
 
   @Override
   public LongStream keys() throws IOException {
-    return lines()
-        .map(line -> line.split(",", 6))
-        .mapToLong(array -> Long.parseLong(array[4]));
+    return lines().map(line -> line.split(",", 6)).mapToLong(array -> Long.parseLong(array[4]));
   }
 }

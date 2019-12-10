@@ -31,14 +31,14 @@ import com.typesafe.config.Config;
  * controlled with a sample factor. Instead of halving the popularity of elements a random element
  * is dropped when table is full.
  *
- * This class is used to check the feasibility of using TinyTable instead of CountMin Sketch.
+ * <p>This class is used to check the feasibility of using TinyTable instead of CountMin Sketch.
  *
  * @author gilg1983@gmail.com (Gil Einziger)
  */
 public final class RandomRemovalFrequencyTable implements Frequency {
   /** sum of total items */
   private final int maxSum;
-  /** total sum of stored items **/
+  /** total sum of stored items * */
   private int currSum;
   /** controls both the max count and how many items are remembered (the sum) */
   private static final int sampleFactor = 8;

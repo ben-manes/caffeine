@@ -33,8 +33,12 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 
 /**
- * <pre>Bélády's</pre> optimal page replacement policy. The upper bound of the hit rate is estimated
- * by evicting from the cache the item that will next be used farthest into the future.
+ *
+ *
+ * <pre>Bélády's</pre>
+ *
+ * optimal page replacement policy. The upper bound of the hit rate is estimated by evicting from
+ * the cache the item that will next be used farthest into the future.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -117,6 +121,4 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
     data.remove(data.lastInt());
     policyStats.recordEviction();
   }
-
-
 }

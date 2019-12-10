@@ -44,11 +44,12 @@ public final class ElasticSearchPolicy implements Policy {
   public ElasticSearchPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
     policyStats = new PolicyStats("product.ElasticSearch");
-    cache = CacheBuilder.<Long, AccessEvent>builder()
-        .removalListener(notification -> policyStats.recordEviction())
-        .setMaximumWeight(settings.maximumSize())
-        .weigher((key, value) -> value.weight())
-        .build();
+    cache =
+        CacheBuilder.<Long, AccessEvent>builder()
+            .removalListener(notification -> policyStats.recordEviction())
+            .setMaximumWeight(settings.maximumSize())
+            .weigher((key, value) -> value.weight())
+            .build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -56,7 +57,8 @@ public final class ElasticSearchPolicy implements Policy {
     return ImmutableSet.of(new ElasticSearchPolicy(config));
   }
 
-  @Override public Set<Characteristic> characteristics() {
+  @Override
+  public Set<Characteristic> characteristics() {
     return Sets.immutableEnumSet(WEIGHTED);
   }
 

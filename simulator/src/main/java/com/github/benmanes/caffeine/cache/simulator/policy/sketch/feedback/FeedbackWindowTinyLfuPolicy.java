@@ -79,8 +79,9 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   boolean trace;
 
   public FeedbackWindowTinyLfuPolicy(double percentMain, FeedbackWindowTinyLfuSettings settings) {
-    this.policyStats = new PolicyStats(String.format(
-        "sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)));
+    this.policyStats =
+        new PolicyStats(
+            String.format("sketch.FeedbackWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain)));
     this.admittor = new TinyLfu(settings.config(), policyStats);
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
@@ -296,7 +297,8 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   void printSegmentSizes() {
     if (debug) {
-      System.out.printf("maxWindow=%d, maxProtected=%d, percentWindow=%.1f%n",
+      System.out.printf(
+          "maxWindow=%d, maxProtected=%d, percentWindow=%.1f%n",
           maxWindow, maxProtected, (double) (100 * maxWindow) / maximumSize);
     }
   }
@@ -317,7 +319,9 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   enum Status {
-    WINDOW, PROBATION, PROTECTED
+    WINDOW,
+    PROBATION,
+    PROTECTED
   }
 
   /** A node on the double-linked list. */
@@ -373,10 +377,7 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("status", status)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("status", status).toString();
     }
   }
 
@@ -384,37 +385,43 @@ public final class FeedbackWindowTinyLfuPolicy implements KeyOnlyPolicy {
     public FeedbackWindowTinyLfuSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("feedback-window-tiny-lfu.percent-main");
     }
+
     public double percentMainProtected() {
       return config().getDouble("feedback-window-tiny-lfu.percent-main-protected");
     }
+
     public double percentPivot() {
       return config().getDouble("feedback-window-tiny-lfu.percent-pivot");
     }
+
     public int pivotIncrement() {
       return config().getInt("feedback-window-tiny-lfu.pivot-increment");
     }
+
     public int pivotDecrement() {
       return config().getInt("feedback-window-tiny-lfu.pivot-decrement");
     }
+
     public int maximumWindowSize() {
       return config().getInt("feedback-window-tiny-lfu.maximum-window-size");
     }
+
     public int maximumSampleSize() {
       return config().getInt("feedback-window-tiny-lfu.maximum-sample-size");
     }
+
     public double adaptiveFpp() {
       return config().getDouble("feedback-window-tiny-lfu.adaptive-fpp");
     }
+
     public Config filterConfig(int sampleSize) {
-      Map<String, Object> properties = ImmutableMap.of(
-          "membership.fpp", adaptiveFpp(),
-          "maximum-size", sampleSize);
+      Map<String, Object> properties =
+          ImmutableMap.of("membership.fpp", adaptiveFpp(), "maximum-size", sampleSize);
       return ConfigFactory.parseMap(properties).withFallback(config());
     }
   }
-
-
 }

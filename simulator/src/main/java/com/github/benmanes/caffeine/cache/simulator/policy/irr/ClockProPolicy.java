@@ -34,20 +34,20 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * The ClockPro algorithm. This algorithm differs from LIRS by replacing the LRU stacks with Clock
  * (Second Chance) policy. This allows cache hits to be performed concurrently at the cost of a
  * global lock on a miss and a worst case O(n) eviction when the queue is scanned.
- * <p>
- * ClockPro uses three hands that scan the queue. The hot hand points to the largest recency, the
+ *
+ * <p>ClockPro uses three hands that scan the queue. The hot hand points to the largest recency, the
  * cold hand to the cold entry furthest from the hot hand, and the test hand to the last cold entry
  * in the test period. This policy is adaptive by adjusting the percentage of hot and cold entries
  * that may reside in the cache. It uses non-resident (ghost) entries to retain additional history,
- * which are removed during the test hand's scan. The algorithm is explained by the authors in
- * <a href="http://www.ece.eng.wayne.edu/~sjiang/pubs/papers/jiang05_CLOCK-Pro.pdf">CLOCK-Pro: An
- * Effective Improvement of the CLOCK Replacement</a> and
- * <a href="http://www.slideshare.net/huliang64/clockpro">Clock-Pro: An Effective Replacement in OS
+ * which are removed during the test hand's scan. The algorithm is explained by the authors in <a
+ * href="http://www.ece.eng.wayne.edu/~sjiang/pubs/papers/jiang05_CLOCK-Pro.pdf">CLOCK-Pro: An
+ * Effective Improvement of the CLOCK Replacement</a> and <a
+ * href="http://www.slideshare.net/huliang64/clockpro">Clock-Pro: An Effective Replacement in OS
  * Kernel</a>.
- * <p>
- * This implementation is based on
- * <a href="https://bitbucket.org/SamiLehtinen/pyclockpro">PyClockPro</a> by Sami Lehtinen,
- * available under the MIT license.
+ *
+ * <p>This implementation is based on <a
+ * href="https://bitbucket.org/SamiLehtinen/pyclockpro">PyClockPro</a> by Sami Lehtinen, available
+ * under the MIT license.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -307,7 +307,9 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
   }
 
   enum Status {
-    HOT, COLD, TEST,
+    HOT,
+    COLD,
+    TEST,
   }
 
   private static final class Node {
@@ -330,6 +332,4 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
       prev = next = null;
     }
   }
-
-
 }

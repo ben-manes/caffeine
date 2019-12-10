@@ -89,8 +89,8 @@ public final class Registry {
     registerProduct(factories);
     registerTwoQueue(factories);
     registerAdaptive(factories);
-    return factories.entrySet().stream().collect(
-        toMap(entry -> entry.getKey().toLowerCase(US), Entry::getValue));
+    return factories.entrySet().stream()
+        .collect(toMap(entry -> entry.getKey().toLowerCase(US), Entry::getValue));
   }
 
   /**
@@ -117,24 +117,30 @@ public final class Registry {
   }
 
   private static void registerLinked(Map<String, Function<Config, Set<Policy>>> factories) {
-    Stream.of(LinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "linked." + priority.name();
-      factories.put(id, config -> LinkedPolicy.policies(config, priority));
-    });
-    Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "linked." + priority.name();
-      factories.put(id, config -> FrequentlyUsedPolicy.policies(config, priority));
-    });
+    Stream.of(LinkedPolicy.EvictionPolicy.values())
+        .forEach(
+            priority -> {
+              String id = "linked." + priority.name();
+              factories.put(id, config -> LinkedPolicy.policies(config, priority));
+            });
+    Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values())
+        .forEach(
+            priority -> {
+              String id = "linked." + priority.name();
+              factories.put(id, config -> FrequentlyUsedPolicy.policies(config, priority));
+            });
     factories.put("linked.SegmentedLru", SegmentedLruPolicy::policies);
     factories.put("linked.Multiqueue", MultiQueuePolicy::policies);
     factories.put("linked.S4Lru", S4LruPolicy::policies);
   }
 
   private static void registerSampled(Map<String, Function<Config, Set<Policy>>> factories) {
-    Stream.of(SampledPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "sampled." + priority.name();
-      factories.put(id, config -> SampledPolicy.policies(config, priority));
-    });
+    Stream.of(SampledPolicy.EvictionPolicy.values())
+        .forEach(
+            priority -> {
+              String id = "sampled." + priority.name();
+              factories.put(id, config -> SampledPolicy.policies(config, priority));
+            });
   }
 
   private static void registerTwoQueue(Map<String, Function<Config, Set<Policy>>> factories) {
@@ -147,8 +153,8 @@ public final class Registry {
     factories.put("sketch.S4WindowTinyLfu", S4WindowTinyLfuPolicy::policies);
     factories.put("sketch.LruWindowTinyLfu", LruWindowTinyLfuPolicy::policies);
     factories.put("sketch.RandomWindowtinyLfu", RandomWindowTinyLfuPolicy::policies);
-    factories.put("sketch.FullySegmentedWindowTinylfu",
-        FullySegmentedWindowTinyLfuPolicy::policies);
+    factories.put(
+        "sketch.FullySegmentedWindowTinylfu", FullySegmentedWindowTinyLfuPolicy::policies);
 
     factories.put("sketch.FeedbackTinyLfu", FeedbackTinyLfuPolicy::policies);
     factories.put("sketch.FeedbackWindowTinyLfu", FeedbackWindowTinyLfuPolicy::policies);

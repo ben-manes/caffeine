@@ -40,7 +40,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * total cache size and items are evicted from the tail of a queue to the head of the next lower
  * queue to maintain the size invariants. Items evicted from queue 0 are evicted from the cache."
  *
- * For more details, see <a href="http://www.cs.cornell.edu/~qhuang/papers/sosp_fbanalysis.pdf"An
+ * <p>For more details, see <a href="http://www.cs.cornell.edu/~qhuang/papers/sosp_fbanalysis.pdf"An
  * Analysis of Facebook Photo Caching</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
@@ -57,7 +57,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   public S4LruPolicy(Admission admission, Config config) {
     S4LruSettings settings = new S4LruSettings(config);
     this.policyStats = new PolicyStats(admission.format("linked.S4Lru"));
-    this.admittor = (KeyOnlyAdmittor)admission.from(config, policyStats);
+    this.admittor = (KeyOnlyAdmittor) admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
     this.maximumSize = settings.maximumSize();
     this.levels = settings.levels();
@@ -70,9 +70,9 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    return settings.admission().stream().map(admission ->
-      new S4LruPolicy(admission, config)
-    ).collect(toSet());
+    return settings.admission().stream()
+        .map(admission -> new S4LruPolicy(admission, config))
+        .collect(toSet());
   }
 
   @Override
@@ -202,10 +202,7 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("level", level)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("level", level).toString();
     }
   }
 
@@ -213,10 +210,9 @@ public final class S4LruPolicy implements KeyOnlyPolicy {
     public S4LruSettings(Config config) {
       super(config);
     }
+
     public int levels() {
       return config().getInt("s4lru.levels");
     }
   }
-
-
 }

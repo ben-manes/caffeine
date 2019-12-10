@@ -43,14 +43,15 @@ public final class CaffeinePolicy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     policyStats = new PolicyStats("product.Caffeine");
     int maximumSize = settings.maximumSize();
-    cache = Caffeine.newBuilder()
-        .removalListener((Long key, AccessEvent value, RemovalCause cause) ->
-            policyStats.recordEviction())
-        .weigher((key, value) -> value.weight())
-        .initialCapacity(maximumSize)
-        .maximumWeight(maximumSize)
-        .executor(Runnable::run)
-        .build();
+    cache =
+        Caffeine.newBuilder()
+            .removalListener(
+                (Long key, AccessEvent value, RemovalCause cause) -> policyStats.recordEviction())
+            .weigher((key, value) -> value.weight())
+            .initialCapacity(maximumSize)
+            .maximumWeight(maximumSize)
+            .executor(Runnable::run)
+            .build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -58,7 +59,8 @@ public final class CaffeinePolicy implements Policy {
     return ImmutableSet.of(new CaffeinePolicy(config));
   }
 
-  @Override public Set<Characteristic> characteristics() {
+  @Override
+  public Set<Characteristic> characteristics() {
     return Sets.immutableEnumSet(WEIGHTED);
   }
 

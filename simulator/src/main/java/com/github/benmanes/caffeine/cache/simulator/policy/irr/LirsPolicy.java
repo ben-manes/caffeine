@@ -39,16 +39,16 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * as non-resident HIR entries. This allows a non-resident HIR entry to be promoted to a LIR entry
  * shortly after a cache miss. The authors recommend sizing the maximum number of LIR blocks to 99%
  * of the cache's total size (1% remaining for HIR blocks).
- * <p>
- * The authors do not provide a recommendation for setting the maximum number of non-resident HIR
+ *
+ * <p>The authors do not provide a recommendation for setting the maximum number of non-resident HIR
  * blocks. To avoid unbounded memory usage, these blocks are placed on a non-resident queue to allow
  * immediate removal, when a non-resident size limit is reached, instead of searching the stack.
- * <p>
- * The algorithm is explained by the authors in
- * <a href="http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-02-6.pdf">LIRS: An
+ *
+ * <p>The algorithm is explained by the authors in <a
+ * href="http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-02-6.pdf">LIRS: An
  * Efficient Low Inter-reference Recency Set Replacement Policy to Improve Buffer Cache
- * Performance</a> and
- * <a href="http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-05-11.pdf">Making LRU
+ * Performance</a> and <a
+ * href="http://web.cse.ohio-state.edu/hpcs/WWW/HTML/publications/papers/TR-05-11.pdf">Making LRU
  * Friendly to Weak Locality Workloads: A Novel Replacement Algorithm to Improve Buffer Cache
  * Performance</a>.
  *
@@ -100,7 +100,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     Node node = data.get(key);
     if (node == null) {
       node = new Node(key);
-      data.put(key,node);
+      data.put(key, node);
       onNonResidentHir(node);
     } else if (node.status == Status.LIR) {
       onLir(node);
@@ -235,7 +235,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // block set. 2) After the LIR block in the bottom is removed, those HIR blocks contiguously
     // located above it will not have a chance to change their status from HIR to LIR since their
     // recencies are larger than the new maximum recency of the LIR blocks.
-    for (;;) {
+    for (; ; ) {
       Node bottom = headS.prevS;
       if ((bottom == headS) || (bottom.status == Status.LIR)) {
         break;
@@ -251,7 +251,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     // Bound the number of non-resident entries. While not described in the paper, the author's
     // reference implementation provides a similar parameter to avoid uncontrolled growth.
     Node node = headNR.prevNR;
-    while (sizeNR >  maximumNonResidentSize) {
+    while (sizeNR > maximumNonResidentSize) {
       policyStats.recordOperation();
       Node removed = node;
       node = node.prevNR;
@@ -294,14 +294,13 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
   @Override
   public void finished() {
-    long resident = data.values().stream()
-        .filter(node -> node.status != Status.HIR_NON_RESIDENT)
-        .count();
+    long resident =
+        data.values().stream().filter(node -> node.status != Status.HIR_NON_RESIDENT).count();
 
     checkState(resident == residentSize);
     checkState(sizeHot <= maximumHotSize);
     checkState(residentSize <= maximumSize);
-    checkState(sizeNR <=  maximumNonResidentSize);
+    checkState(sizeNR <= maximumNonResidentSize);
     checkState(data.size() <= (maximumSize + maximumNonResidentSize));
     checkState(sizeS == data.values().stream().filter(node -> node.isInS).count());
     checkState(sizeQ == data.values().stream().filter(node -> node.isInQ).count());
@@ -477,10 +476,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", status)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", status).toString();
     }
   }
 
@@ -488,13 +484,13 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     public LirsSettings(Config config) {
       super(config);
     }
+
     public double percentHot() {
       return config().getDouble("lirs.percent-hot");
     }
+
     public double nonResidentMultiplier() {
       return config().getDouble("lirs.non-resident-multiplier");
     }
   }
-
-
 }

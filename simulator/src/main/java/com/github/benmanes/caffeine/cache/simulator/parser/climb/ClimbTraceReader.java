@@ -43,8 +43,10 @@ public final class ClimbTraceReader extends TextTraceReader implements KeyOnlyTr
   @Override
   public LongStream keys() throws IOException {
     TraceIterator iterator = new TraceIterator(readFile());
-    return StreamSupport.longStream(Spliterators.spliteratorUnknownSize(
-        iterator, Spliterator.ORDERED), /* parallel */ false).onClose(iterator::close);
+    return StreamSupport.longStream(
+            Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED), /* parallel */
+            false)
+        .onClose(iterator::close);
   }
 
   private static final class TraceIterator implements PrimitiveIterator.OfLong {

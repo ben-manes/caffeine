@@ -35,8 +35,8 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 /**
- * The Window TinyLfu algorithm where the window and main spaces implement
- * {@link SegmentedLruPolicy}.
+ * The Window TinyLfu algorithm where the window and main spaces implement {@link
+ * SegmentedLruPolicy}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -62,8 +62,8 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public FullySegmentedWindowTinyLfuPolicy(
       double percentMain, FullySegmentedWindowTinyLfuSettings settings) {
-    String name = String.format(
-        "sketch.FullySegmentedWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+    String name =
+        String.format("sketch.FullySegmentedWindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
     this.policyStats = new PolicyStats(name);
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxWindow = settings.maximumSize() - maxMain;
@@ -196,12 +196,12 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   @Override
   public void finished() {
-    long windowProbationSize = data.values().stream()
-        .filter(n -> n.status == Status.WINDOW_PROBATION).count();
-    long windowProtectedSize = data.values().stream()
-        .filter(n -> n.status == Status.WINDOW_PROTECTED).count();
-    long mainProtectedSize = data.values().stream()
-        .filter(n -> n.status == Status.MAIN_PROTECTED).count();
+    long windowProbationSize =
+        data.values().stream().filter(n -> n.status == Status.WINDOW_PROBATION).count();
+    long windowProtectedSize =
+        data.values().stream().filter(n -> n.status == Status.WINDOW_PROTECTED).count();
+    long mainProtectedSize =
+        data.values().stream().filter(n -> n.status == Status.MAIN_PROTECTED).count();
 
     checkState(sizeWindow <= maxWindow);
     checkState(windowProtectedSize == sizeWindowProtected);
@@ -212,8 +212,10 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   enum Status {
-    WINDOW_PROBATION, WINDOW_PROTECTED,
-    MAIN_PROBATION, MAIN_PROTECTED
+    WINDOW_PROBATION,
+    WINDOW_PROTECTED,
+    MAIN_PROBATION,
+    MAIN_PROTECTED
   }
 
   /** A node on the double-linked list. */
@@ -260,10 +262,7 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("status", status)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("status", status).toString();
     }
   }
 
@@ -271,16 +270,17 @@ public final class FullySegmentedWindowTinyLfuPolicy implements KeyOnlyPolicy {
     public FullySegmentedWindowTinyLfuSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("fully-segmented-window-tiny-lfu.percent-main");
     }
+
     public double percentMainProtected() {
       return config().getDouble("fully-segmented-window-tiny-lfu.percent-main-protected");
     }
+
     public double percentWindowProtected() {
       return config().getDouble("fully-segmented-window-tiny-lfu.percent-window-protected");
     }
   }
-
-
 }

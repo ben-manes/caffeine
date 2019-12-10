@@ -23,11 +23,12 @@ import com.typesafe.config.Config;
  * A version of the TinyLFU sketch based on a regular conservative update sketch. The difference is
  * that a counter may not exceed a maximum and any time the sum of events reach a predefined values
  * we divide all counters by 2 in what is called a reset operation.
- * <p>
- * For more details see <a href="http://www.cs.technion.ac.il/~gilga/TinyLFU_PDP2014.pdf">TinyLFU: A
- * Highly Efficient Cache Admission Policy</a>.
- * <p>
- * The CountMinSketch parameters are described in <a href=
+ *
+ * <p>For more details see <a
+ * href="http://www.cs.technion.ac.il/~gilga/TinyLFU_PDP2014.pdf">TinyLFU: A Highly Efficient Cache
+ * Admission Policy</a>.
+ *
+ * <p>The CountMinSketch parameters are described in <a href=
  * "https://github.com/twitter/algebird/blob/develop/algebird-core/src/main/scala/com/twitter/algebird/CountMinSketch.scala">
  * Twitter's implementation</a>.
  *
@@ -43,8 +44,11 @@ public final class CountMin64TinyLfu implements Frequency {
 
   public CountMin64TinyLfu(Config config) {
     BasicSettings settings = new BasicSettings(config);
-    sketch = new CountMin64(settings.tinyLfu().countMin64().eps(),
-        settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
+    sketch =
+        new CountMin64(
+            settings.tinyLfu().countMin64().eps(),
+            settings.tinyLfu().countMin64().confidence(),
+            settings.randomSeed());
     conservative = settings.tinyLfu().conservative();
     sampleSize = 10 * settings.maximumSize();
   }

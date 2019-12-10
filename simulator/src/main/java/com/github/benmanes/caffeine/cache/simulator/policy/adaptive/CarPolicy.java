@@ -34,12 +34,13 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * Clock with Adaptive Replacement policy. This algorithm differs from ARC by replacing the LRU
  * policy with the Clock (Second Chance) policy. This allows cache hits to be performed concurrently
  * at the cost of a global lock on a miss and a worst case O(2n) eviction as the queues are scanned.
- * <p>
- * This implementation is based on the pseudo code provided by the authors in their paper <a href=
+ *
+ * <p>This implementation is based on the pseudo code provided by the authors in their paper <a
+ * href=
  * "https://www.usenix.org/legacy/publications/library/proceedings/fast04/tech/full_papers/bansal/bansal.pdf">
  * CAR: Clock with Adaptive Replacement</a> and is further described in their paper,
- * <p>
- * This algorithm is patented by IBM (6996676, 7096321, 7058766, 8612689).
+ *
+ * <p>This algorithm is patented by IBM (6996676, 7096321, 7058766, 8612689).
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -199,9 +200,9 @@ public final class CarPolicy implements KeyOnlyPolicy {
     // until (found)
 
     policyStats.recordEviction();
-    for (;;) {
+    for (; ; ) {
       policyStats.recordOperation();
-      if (sizeT1 >= Math.max(1,  p)) {
+      if (sizeT1 >= Math.max(1, p)) {
         Node candidate = headT1.next;
         if (!candidate.marked) {
           candidate.remove();
@@ -253,8 +254,10 @@ public final class CarPolicy implements KeyOnlyPolicy {
   }
 
   private enum QueueType {
-    T1, B1,
-    T2, B2,
+    T1,
+    B1,
+    T2,
+    B2,
   }
 
   static final class Node {
@@ -295,10 +298,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("type", type)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("type", type).toString();
     }
   }
 }

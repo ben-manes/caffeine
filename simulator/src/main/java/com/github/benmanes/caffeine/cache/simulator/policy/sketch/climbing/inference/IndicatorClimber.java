@@ -53,8 +53,8 @@ public final class IndicatorClimber implements HillClimber {
   }
 
   @Override
-  public Adaptation adapt(double windowSize,
-      double probationSize, double protectedSize, boolean isFull) {
+  public Adaptation adapt(
+      double windowSize, double probationSize, double protectedSize, boolean isFull) {
     if (indicator.getSample() != 50_000) {
       return Adaptation.hold();
     }

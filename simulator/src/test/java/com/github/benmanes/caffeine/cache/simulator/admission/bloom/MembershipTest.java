@@ -39,7 +39,7 @@ import com.typesafe.config.ConfigFactory;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public class MembershipTest {
-  static final String[] HEADERS = { "Type", "Insertions", "False Positives" };
+  static final String[] HEADERS = {"Type", "Insertions", "False Positives"};
   static final double EXPECTED_INSERTIONS_MULTIPLIER = 0.5;
   static final double FPP = 0.03;
 
@@ -95,22 +95,23 @@ public class MembershipTest {
   }
 
   private Config getConfig(FilterType filterType, int capacity) {
-    Map<String, Object> properties = ImmutableMap.of(
-        "membership.expected-insertions-multiplier", EXPECTED_INSERTIONS_MULTIPLIER,
-        "membership.filter", filterType.name(),
-        "maximum-size", capacity,
-        "membership.fpp", FPP);
+    Map<String, Object> properties =
+        ImmutableMap.of(
+            "membership.expected-insertions-multiplier", EXPECTED_INSERTIONS_MULTIPLIER,
+            "membership.filter", filterType.name(),
+            "maximum-size", capacity,
+            "membership.fpp", FPP);
     return ConfigFactory.parseMap(properties)
         .withFallback(ConfigFactory.load().getConfig("caffeine.simulator"));
   }
 
   /** Returns a table row for printing the false positive rates of an implementation. */
-  private static String[] row(FilterType filterType, int expectedInsertions,
-      int falsePositives, double falsePositiveRate) {
+  private static String[] row(
+      FilterType filterType, int expectedInsertions, int falsePositives, double falsePositiveRate) {
     return new String[] {
-        filterType.toString(),
-        String.format("%,d", expectedInsertions),
-        String.format("%,d (%.2f %%)", falsePositives, 100 * falsePositiveRate),
+      filterType.toString(),
+      String.format("%,d", expectedInsertions),
+      String.format("%,d (%.2f %%)", falsePositives, 100 * falsePositiveRate),
     };
   }
 

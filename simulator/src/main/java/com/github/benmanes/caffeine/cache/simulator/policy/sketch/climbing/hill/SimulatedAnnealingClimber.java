@@ -86,21 +86,27 @@ public final class SimulatedAnnealingClimber extends AbstractClimber {
     public SimulatedAnnealingSettings(Config config) {
       super(config);
     }
+
     public double percentPivot() {
       return config().getDouble(BASE_PATH + "percent-pivot");
     }
+
     public double percentSample() {
       return config().getDouble(BASE_PATH + "percent-sample");
     }
+
     public double coolDownRate() {
       return config().getDouble(BASE_PATH + "cool-down-rate");
     }
+
     public double minTemperature() {
       return config().getDouble(BASE_PATH + "min-temperature");
     }
+
     public double restartTolerance() {
       return config().getDouble(BASE_PATH + "restart-tolerance");
     }
+
     public double coolDownTolerance() {
       return config().getDouble(BASE_PATH + "cool-down-tolerance");
     }

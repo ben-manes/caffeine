@@ -29,183 +29,183 @@ import java.util.Set;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class PolicyStats {
-    private final Stopwatch stopwatch;
-    private final Set<Long> seen;
+  private final Stopwatch stopwatch;
+  private final Set<Long> seen;
 
-    private String name;
-    private long hitCount;
-    private long missCount;
-    private long evictionCount;
-    private long admittedCount;
-    private long rejectedCount;
-    private long operationCount;
-    private double missLatency;
-    private double hitLatency;
-    private double missLatencyAFS;
-    private long missCountAFS;
+  private String name;
+  private long hitCount;
+  private long missCount;
+  private long evictionCount;
+  private long admittedCount;
+  private long rejectedCount;
+  private long operationCount;
+  private double missLatency;
+  private double hitLatency;
+  private double missLatencyAFS;
+  private long missCountAFS;
 
-    public PolicyStats(String name) {
-        this.name = requireNonNull(name);
-        this.stopwatch = Stopwatch.createUnstarted();
-        this.seen = new HashSet<>();
+  public PolicyStats(String name) {
+    this.name = requireNonNull(name);
+    this.stopwatch = Stopwatch.createUnstarted();
+    this.seen = new HashSet<>();
+  }
+
+  public Stopwatch stopwatch() {
+    return stopwatch;
+  }
+
+  public String name() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = requireNonNull(name);
+  }
+
+  public void recordOperation() {
+    operationCount++;
+  }
+
+  public long operationCount() {
+    return operationCount;
+  }
+
+  public void addOperations(long operations) {
+    operationCount += operations;
+  }
+
+  public void recordHit(long key) {
+    hitCount++;
+  }
+
+  public void recordHitPenalty(double hitPenalty) {
+    hitLatency += hitPenalty;
+  }
+
+  public long hitCount() {
+    return hitCount;
+  }
+
+  public void addHits(long hits) {
+    hitCount += hits;
+  }
+
+  public void recordMiss(long key) {
+    missCount++;
+    if (this.seen.contains(key)) {
+      missCountAFS++;
     }
+    this.seen.add(key);
+  }
 
-    public Stopwatch stopwatch() {
-        return stopwatch;
+  public void recordMissPenalty(long missPenalty, boolean seen) {
+    if (seen) {
+      missLatencyAFS += missPenalty;
     }
+    missLatency += missPenalty;
+  }
 
-    public String name() {
-        return name;
-    }
+  public long missCount() {
+    return missCount;
+  }
 
-    public void setName(String name) {
-        this.name = requireNonNull(name);
-    }
+  public long missCountAFS() {
+    return missCountAFS;
+  }
 
-    public void recordOperation() {
-        operationCount++;
-    }
+  public void addMisses(long misses) {
+    missCount += misses;
+  }
 
-    public long operationCount() {
-        return operationCount;
-    }
+  public long evictionCount() {
+    return evictionCount;
+  }
 
-    public void addOperations(long operations) {
-        operationCount += operations;
-    }
+  public void recordEviction() {
+    evictionCount++;
+  }
 
-    public void recordHit(long key) {
-        hitCount++;
-    }
+  public void addEvictions(long evictions) {
+    evictionCount += evictions;
+  }
 
-    public void recordHitPenalty(double hitPenalty) {
-        hitLatency += hitPenalty;
-    }
+  public long requestCount() {
+    return hitCount + missCount;
+  }
 
-    public long hitCount() {
-        return hitCount;
-    }
+  public long admissionCount() {
+    return admittedCount;
+  }
 
-    public void addHits(long hits) {
-        hitCount += hits;
-    }
+  public void recordAdmission() {
+    admittedCount++;
+  }
 
-    public void recordMiss(long key) {
-        missCount++;
-        if (this.seen.contains(key)) {
-            missCountAFS++;
-        }
-        this.seen.add(key);
-    }
+  public long rejectionCount() {
+    return rejectedCount;
+  }
 
-    public void recordMissPenalty(long missPenalty,boolean seen) {
-        if(seen){
-            missLatencyAFS += missPenalty;
-        }
-        missLatency += missPenalty;
-    }
+  public void recordRejection() {
+    rejectedCount++;
+  }
 
-    public long missCount() {
-        return missCount;
-    }
+  public double hitRate() {
+    long requestCount = requestCount();
+    return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
+  }
 
-    public long missCountAFS() {
-        return missCountAFS;
-    }
+  public double missRate() {
+    long requestCount = requestCount();
+    return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
+  }
 
-    public void addMisses(long misses) {
-        missCount += misses;
-    }
+  public double admissionRate() {
+    long candidateCount = admittedCount + rejectedCount;
+    return (candidateCount == 0) ? 1.0 : (double) admittedCount / candidateCount;
+  }
 
-    public long evictionCount() {
-        return evictionCount;
-    }
+  public double complexity() {
+    long requestCount = requestCount();
+    return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
+  }
 
-    public void recordEviction() {
-        evictionCount++;
-    }
+  public double missRateAFS() {
+    long requestCount = requestCount() - Math.abs(missCount - missCountAFS);
+    return (requestCount == 0) ? 0.0 : missCountAFS / (double) requestCount;
+  }
 
-    public void addEvictions(long evictions) {
-        evictionCount += evictions;
-    }
+  private double totalLatency() {
+    return hitLatency + missLatency;
+  }
 
-    public long requestCount() {
-        return hitCount + missCount;
-    }
+  private double totalLatencyAFS() {
+    return hitLatency + missLatencyAFS;
+  }
 
-    public long admissionCount() {
-        return admittedCount;
-    }
+  public double avgTotalLatencyAFS() {
+    long reqCount = requestCount() - Math.abs(missCount - missCountAFS);
+    return (reqCount == 0) ? 0.0 : totalLatencyAFS() / reqCount;
+  }
 
-    public void recordAdmission() {
-        admittedCount++;
-    }
+  public double avgTotalLatency() {
+    long reqCount = requestCount();
+    return (reqCount == 0) ? 0.0 : totalLatency() / reqCount;
+  }
 
-    public long rejectionCount() {
-        return rejectedCount;
-    }
+  public double avgHitLatency() {
+    return (hitCount == 0) ? 0.0 : hitLatency / hitCount;
+  }
 
-    public void recordRejection() {
-        rejectedCount++;
-    }
+  public double avgMissLatency() {
+    return (missCount == 0) ? 0.0 : missLatency / missCount;
+  }
 
-    public double hitRate() {
-        long requestCount = requestCount();
-        return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
-    }
+  public double avgMissLatencyAFS() {
+    return (missCountAFS == 0) ? 0.0 : missLatencyAFS / missCountAFS;
+  }
 
-    public double missRate() {
-        long requestCount = requestCount();
-        return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
-    }
-
-    public double admissionRate() {
-        long candidateCount = admittedCount + rejectedCount;
-        return (candidateCount == 0) ? 1.0 : (double) admittedCount / candidateCount;
-    }
-
-    public double complexity() {
-        long requestCount = requestCount();
-        return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
-    }
-
-    public double missRateAFS() {
-        long requestCount = requestCount() - Math.abs(missCount - missCountAFS);
-        return (requestCount == 0) ? 0.0 : missCountAFS / (double) requestCount;
-    }
-
-    private double totalLatency() {
-        return hitLatency + missLatency;
-    }
-
-    private double totalLatencyAFS() {
-        return hitLatency + missLatencyAFS;
-    }
-
-    public double avgTotalLatencyAFS() {
-        long reqCount = requestCount() - Math.abs(missCount - missCountAFS);
-        return (reqCount == 0) ? 0.0 : totalLatencyAFS() / reqCount;
-    }
-
-    public double avgTotalLatency() {
-        long reqCount = requestCount();
-        return (reqCount == 0) ? 0.0 : totalLatency() / reqCount;
-    }
-
-    public double avgHitLatency() {
-        return (hitCount == 0) ? 0.0 : hitLatency / hitCount;
-    }
-
-    public double avgMissLatency() {
-        return (missCount == 0) ? 0.0 : missLatency / missCount;
-    }
-
-    public double avgMissLatencyAFS() {
-        return (missCountAFS == 0) ? 0.0 : missLatencyAFS / missCountAFS;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).addValue(name).toString();
-    }
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).addValue(name).toString();
+  }
 }

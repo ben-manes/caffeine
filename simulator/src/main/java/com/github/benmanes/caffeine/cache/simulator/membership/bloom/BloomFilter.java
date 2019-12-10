@@ -37,7 +37,8 @@ import com.typesafe.config.Config;
  */
 public final class BloomFilter implements Membership {
   static final long[] SEED = { // A mixture of seeds from FNV-1a, CityHash, and Murmur3
-      0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L};
+    0xc3a5c85c97cb3127L, 0xb492b66fbe98f273L, 0x9ae16a3b2f90404fL, 0xcbf29ce484222325L
+  };
   static final int BITS_PER_LONG_SHIFT = 6; // 64-bits
   static final int BITS_PER_LONG_MASK = Long.SIZE - 1;
 
@@ -54,9 +55,9 @@ public final class BloomFilter implements Membership {
   }
 
   /**
-   * Initializes and increases the capacity of this <tt>BloomFilter</tt> instance, if necessary,
-   * to ensure that it can accurately estimate the membership of elements given the expected
-   * number of insertions. This operation forgets all previous memberships when resizing.
+   * Initializes and increases the capacity of this <tt>BloomFilter</tt> instance, if necessary, to
+   * ensure that it can accurately estimate the membership of elements given the expected number of
+   * insertions. This operation forgets all previous memberships when resizing.
    *
    * @param expectedInsertions the number of expected insertions
    * @param fpp the false positive probability, where 0.0 > fpp < 1.0

@@ -73,8 +73,8 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   static final boolean debug = false;
   static final boolean trace = false;
 
-  public HillClimberWindowTinyLfuPolicy(HillClimberType strategy, double percentMain,
-      HillClimberWindowTinyLfuSettings settings) {
+  public HillClimberWindowTinyLfuPolicy(
+      HillClimberType strategy, double percentMain, HillClimberWindowTinyLfuSettings settings) {
 
     int maxMain = (int) (settings.maximumSize() * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
@@ -95,8 +95,10 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   }
 
   private String getPolicyName() {
-    return String.format("sketch.HillClimberWindowTinyLfu (%s %.0f%% -> %.0f%%)",
-        strategy.name().toLowerCase(US), 100 * (1.0 - initialPercentMain),
+    return String.format(
+        "sketch.HillClimberWindowTinyLfu (%s %.0f%% -> %.0f%%)",
+        strategy.name().toLowerCase(US),
+        100 * (1.0 - initialPercentMain),
         (100.0 * maxWindow) / maximumSize);
   }
 
@@ -287,7 +289,8 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   private void printSegmentSizes() {
     if (debug) {
-      System.out.printf("maxWindow=%d, maxProtected=%d, percentWindow=%.1f",
+      System.out.printf(
+          "maxWindow=%d, maxProtected=%d, percentWindow=%.1f",
           maxWindow, maxProtected, (100.0 * maxWindow) / maximumSize);
     }
   }
@@ -302,12 +305,21 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     long actualProtectedSize = data.values().stream().filter(n -> n.queue == PROTECTED).count();
     long calculatedProbationSize = data.size() - actualWindowSize - actualProtectedSize;
 
-    checkState((long) windowSize == actualWindowSize,
-        "Window: %s != %s", (long) windowSize, actualWindowSize);
-    checkState((long) protectedSize == actualProtectedSize,
-        "Protected: %s != %s", (long) protectedSize, actualProtectedSize);
-    checkState(actualProbationSize == calculatedProbationSize,
-        "Probation: %s != %s", actualProbationSize, calculatedProbationSize);
+    checkState(
+        (long) windowSize == actualWindowSize,
+        "Window: %s != %s",
+        (long) windowSize,
+        actualWindowSize);
+    checkState(
+        (long) protectedSize == actualProtectedSize,
+        "Protected: %s != %s",
+        (long) protectedSize,
+        actualProtectedSize);
+    checkState(
+        actualProbationSize == calculatedProbationSize,
+        "Probation: %s != %s",
+        actualProbationSize,
+        calculatedProbationSize);
     checkState(data.size() <= maximumSize, "Maximum: %s > %s", data.size(), maximumSize);
   }
 
@@ -364,10 +376,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-          .add("key", key)
-          .add("queue", queue)
-          .toString();
+      return MoreObjects.toStringHelper(this).add("key", key).add("queue", queue).toString();
     }
   }
 
@@ -375,20 +384,20 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     public HillClimberWindowTinyLfuSettings(Config config) {
       super(config);
     }
+
     public List<Double> percentMain() {
       return config().getDoubleList("hill-climber-window-tiny-lfu.percent-main");
     }
+
     public double percentMainProtected() {
       return config().getDouble("hill-climber-window-tiny-lfu.percent-main-protected");
     }
+
     public Set<HillClimberType> strategy() {
       return config().getStringList("hill-climber-window-tiny-lfu.strategy").stream()
           .map(strategy -> strategy.replace('-', '_').toUpperCase(US))
           .map(HillClimberType::valueOf)
           .collect(toSet());
     }
-
   }
-
-
 }
