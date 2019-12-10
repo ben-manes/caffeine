@@ -16,11 +16,30 @@ configurations {
   checkstyleConfig
 }
 
+repositories {
+  flatDir {
+    dirs "${rootDir}/build/libs"
+  }
+}
+
 dependencies {
   checkstyleConfig gradlePlugins.checkstyle
   errorproneJavac libraries.errorproneJavac
   errorprone libraries.errorproneCore
   errorprone libraries.nullaway
+  errorprone name: 'caffeine_local'
+}
+
+// Gradle rewrites the compiler's dependency on Caffeine to a project dependency, which fails
+// Instead we have to download and trick the build to put the jar on the compiler's classpath
+// See the downloadCaffeineLocal() task and https://github.com/gradle/gradle/issues/11625
+task downloadCaffeineLocal() {
+  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.8.0/caffeine-2.8.0.jar'
+  def local = file("${rootDir}/build/libs/caffeine_local.jar")
+  if (!local.exists()) {
+    local.parentFile.mkdirs()
+    new URL(url).withInputStream{ input -> local.withOutputStream{ it << input }}
+  }
 }
 
 javadoc.options.links(
@@ -88,8 +107,9 @@ sonarqube {
 tasks.sonarqube.dependsOn(jacocoMerge)
 
 tasks.withType(JavaCompile) {
-  options.encoding = 'UTF-8'
+  dependsOn downloadCaffeineLocal
   options.compilerArgs << '-Xlint:all,-auxiliaryclass'
+  options.encoding = 'UTF-8'
   options.errorprone {
     option('ClassName')
     option('ComparisonContractViolated')

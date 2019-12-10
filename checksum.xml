@@ -156,6 +156,9 @@
     <trusted-key id='a840320c83d56348' group='systems.comodal' />
   </trusted-keys>
   <dependencies>
+    <dependency group='' module='caffeine_local' version=''>
+      <sha512>F8FEFDB21CB04D9C229D3C27DC03BDF141A943AED99D29B1349CAFB10758901AE8A564C0C00FF55F574D1CBCE4BEF9E33B6F6CF92B8ABD31A8D98009870DB800</sha512>
+    </dependency>
     <dependency group='antlr' module='antlr' version='2.7.7'>
       <sha512>311C3115F9F6651D1711C52D1739E25A70F25456CACB9A2CDDE7627498C30B13D721133CC75B39462AD18812A82472EF1B3B9D64FAB5ABB0377C12BF82043A74</sha512>
     </dependency>

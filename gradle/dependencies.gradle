@@ -35,7 +35,7 @@ ext {
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.0',
     ehcache3: '3.8.1',
-    errorprone: '2.3.3',
+    errorprone: '2.3.4',
     errorproneJavac: '9+181-r4173-1',
     elasticSearch: '7.5.0',
     expiringMap: '0.5.9',
