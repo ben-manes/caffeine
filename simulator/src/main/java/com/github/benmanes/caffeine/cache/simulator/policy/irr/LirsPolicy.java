@@ -302,7 +302,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     checkState(sizeHot <= maximumHotSize);
     checkState(residentSize <= maximumSize);
     checkState(sizeNR <=  maximumNonResidentSize);
-    checkState(data.size() <= (maximumSize + maximumNonResidentSize));
+    checkState(data.size() <= ((long) maximumSize + maximumNonResidentSize));
     checkState(sizeS == data.values().stream().filter(node -> node.isInS).count());
     checkState(sizeQ == data.values().stream().filter(node -> node.isInQ).count());
 
