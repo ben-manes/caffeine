@@ -70,7 +70,7 @@ ext {
     junit: '4.12',
     mockito: '3.2.0',
     paxExam: '4.13.1',
-    testng: '7.0.0',
+    testng: '7.1.0',
     truth: '0.24',
   ]
   pluginVersions = [
