@@ -41,6 +41,9 @@ task osgiTests(type: Test, group: 'Cache tests', description: 'Isolated OSGi tes
   useJUnit {
     includeCategories 'com.github.benmanes.caffeine.guava.OSGiTests'
   }
+  options {
+    jvmArgs '-noverify'
+  }
 }
 
 tasks.withType(Test) {
