@@ -16,10 +16,13 @@
 package com.github.benmanes.caffeine.cache;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.testng.annotations.DataProvider;
@@ -81,6 +84,18 @@ public final class FrequencySketchTest {
     assertThat(sketch.frequency(item), is(1));
     assertThat(sketch.frequency(item + 1), is(1));
     assertThat(sketch.frequency(item + 2), is(0));
+  }
+
+  @Test(dataProvider = "sketch")
+  public void indexOf_aroundZero(FrequencySketch<Integer> sketch) {
+    Set<Integer> indexes = new HashSet<>(16);
+    int[] hashes = { -1, 0, 1 };
+    for (int hash : hashes) {
+      for (int i = 0; i < 4; i++) {
+        indexes.add(sketch.indexOf(hash, i));
+      }
+    }
+    assertThat(indexes, hasSize(4 * hashes.length));
   }
 
   @Test

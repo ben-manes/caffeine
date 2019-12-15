@@ -189,8 +189,8 @@ final class FrequencySketch<E> {
    * @return the table index
    */
   int indexOf(int item, int i) {
-    long hash = SEED[i] * item;
-    hash += hash >>> 32;
+    long hash = (item + SEED[i]) * SEED[i];
+    hash += (hash >>> 32);
     return ((int) hash) & tableMask;
   }
 
