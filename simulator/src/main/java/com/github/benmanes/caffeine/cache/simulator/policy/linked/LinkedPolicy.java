@@ -18,6 +18,10 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 import static java.util.Locale.US;
 import static java.util.stream.Collectors.toSet;
 
+import java.util.Objects;
+
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -25,10 +29,12 @@ import org.apache.commons.lang3.StringUtils;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -40,12 +46,13 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LinkedPolicy implements KeyOnlyPolicy {
+public final class LinkedPolicy implements Policy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final EvictionPolicy policy;
   final Admittor admittor;
   final int maximumSize;
+  int currentSize;
   final Node sentinel;
 
   public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
@@ -67,18 +74,30 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public PolicyStats stats() {
-    return policyStats;
+  public Set<Characteristic> characteristics() {
+    return Sets.immutableEnumSet(WEIGHTED);  
   }
 
   @Override
-  public void record(long key) {
+  public PolicyStats stats() {
+    return policyStats;
+  }
+  
+  @Override
+  public void record(AccessEvent event) {
+    final int weight = event.weight();
+    final long key = hashCode(event.key(), weight);
     Node old = data.get(key);
     admittor.record(key);
     if (old == null) {
-      Node node = new Node(key, sentinel);
       policyStats.recordMiss();
+      if (weight > maximumSize) {
+        policyStats.recordOperation();
+        return;
+      }
+      Node node = new Node(key, weight, sentinel);
       data.put(key, node);
+      currentSize += node.weight;
       node.appendToTail();
       evict(node);
     } else {
@@ -89,15 +108,17 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
 
   /** Evicts while the map exceeds the maximum capacity. */
   private void evict(Node candidate) {
-    if (data.size() > maximumSize) {
-      Node victim = policy.findVictim(sentinel, policyStats);
-      policyStats.recordEviction();
-
-      boolean admit = admittor.admit(candidate.key, victim.key);
-      if (admit) {
-        evictEntry(victim);
-      } else {
-        evictEntry(candidate);
+    if (currentSize > maximumSize) {
+      while (currentSize > maximumSize) {
+        Node victim = policy.findVictim(sentinel, policyStats);
+        policyStats.recordEviction();
+  
+        boolean admit = admittor.admit(candidate.key, victim.key);
+        if (admit) {
+          evictEntry(victim);
+        } else {
+          evictEntry(candidate);
+        }
       }
     } else {
       policyStats.recordOperation();
@@ -105,6 +126,7 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
   }
 
   private void evictEntry(Node node) {
+    currentSize -= node.weight;
     data.remove(node.key);
     node.remove();
   }
@@ -191,6 +213,7 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
     Node prev;
     Node next;
     long key;
+    int weight;
 
     /** Creates a new sentinel node. */
     public Node() {
@@ -201,9 +224,10 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
     }
 
     /** Creates a new, unlinked node. */
-    public Node(long key, Node sentinel) {
+    public Node(long key, int weight, Node sentinel) {
       this.sentinel = sentinel;
       this.key = key;
+      this.weight = weight;
     }
 
     /** Appends the node to the tail of the list. */
@@ -240,8 +264,14 @@ public final class LinkedPolicy implements KeyOnlyPolicy {
     public String toString() {
       return MoreObjects.toStringHelper(this)
           .add("key", key)
+          .add("weight", weight)
           .add("marked", marked)
           .toString();
     }
+  }
+  
+  /** Cantor pairing function. */
+  private long hashCode(long key, int weight) {
+    return (key + weight) * (key + weight + 1) / 2 + weight;
   }
 }
