@@ -101,7 +101,7 @@ public class AccessEvent {
     private final int weight;
 
     WeightedAccessEvent(long key, int weight) {
-      super(key);
+      super(cantorHashCode(key, weight));
       this.weight = weight;
       checkArgument(weight >= 0);
     }
@@ -110,6 +110,11 @@ public class AccessEvent {
     public int weight() {
       return weight;
     }
+  }
+
+  /** Cantor pairing function. */
+  private static long cantorHashCode(long key, int weight) {
+    return (key + weight) * (key + weight + 1) / 2 + weight;
   }
 
   private static final class PenaltiesAccessEvent extends AccessEvent {

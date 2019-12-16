@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 import static java.util.Locale.US;
 import static java.util.stream.Collectors.toSet;
 
-import java.util.Objects;
-
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 
 import java.util.Set;
@@ -86,7 +84,7 @@ public final class LinkedPolicy implements Policy {
   @Override
   public void record(AccessEvent event) {
     final int weight = event.weight();
-    final long key = hashCode(event.key(), weight);
+    final long key = event.key();
     Node old = data.get(key);
     admittor.record(key);
     if (old == null) {
@@ -268,10 +266,5 @@ public final class LinkedPolicy implements Policy {
           .add("marked", marked)
           .toString();
     }
-  }
-  
-  /** Cantor pairing function. */
-  private long hashCode(long key, int weight) {
-    return (key + weight) * (key + weight + 1) / 2 + weight;
   }
 }
