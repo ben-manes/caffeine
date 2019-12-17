@@ -50,8 +50,8 @@ public final class LinkedPolicy implements Policy {
   final EvictionPolicy policy;
   final Admittor admittor;
   final int maximumSize;
-  int currentSize;
   final Node sentinel;
+  int currentSize;
 
   public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
@@ -88,7 +88,6 @@ public final class LinkedPolicy implements Policy {
     Node old = data.get(key);
     admittor.record(key);
     if (old == null) {
-      policyStats.recordMiss();
       policyStats.recordWeightedMiss(weight);
       if (weight > maximumSize) {
         policyStats.recordOperation();
@@ -100,7 +99,6 @@ public final class LinkedPolicy implements Policy {
       node.appendToTail();
       evict(node);
     } else {
-      policyStats.recordHit();
       policyStats.recordWeightedHit(weight);
       policy.onAccess(old, policyStats);
     }

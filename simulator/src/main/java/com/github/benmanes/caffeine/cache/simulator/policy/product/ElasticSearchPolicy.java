@@ -65,10 +65,8 @@ public final class ElasticSearchPolicy implements Policy {
     Object value = cache.get(event.key());
     if (value == null) {
       cache.put(event.key(), event);
-      policyStats.recordMiss();
       policyStats.recordWeightedMiss(event.weight());
     } else {
-      policyStats.recordHit();
       policyStats.recordWeightedHit(event.weight());
     }
   }

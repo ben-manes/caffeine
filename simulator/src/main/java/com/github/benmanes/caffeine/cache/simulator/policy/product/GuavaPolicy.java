@@ -63,11 +63,9 @@ public final class GuavaPolicy implements Policy {
     Object value = cache.getIfPresent(event.key());
     if (value == null) {
       cache.put(event.key(), event);
-      policyStats.recordMiss();
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
-      policyStats.recordHit();
     }
   }
 

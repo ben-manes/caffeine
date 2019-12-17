@@ -83,6 +83,7 @@ public final class PolicyStats {
 
   public void recordWeightedHit(int weight) {
     hitsWeight += weight;
+    recordHit();
   }  
   
   public long hitsWeight() {
@@ -111,6 +112,7 @@ public final class PolicyStats {
 
   public void recordWeightedMiss(int weight) {
     missesWeight += weight;
+    recordMiss();
   }  
   
   public long missesWeight() {
@@ -184,7 +186,6 @@ public final class PolicyStats {
     long requestsWeight = requestsWeight();
     return (requestsWeight == 0) ? 1.0 : (double) missesWeight / requestsWeight;
   }
-
 
   public double admissionRate() {
     long candidateCount = admittedCount + rejectedCount;
