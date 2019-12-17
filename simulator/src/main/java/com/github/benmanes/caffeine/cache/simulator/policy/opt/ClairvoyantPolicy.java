@@ -15,11 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
@@ -30,7 +32,6 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
 
 /**
  * <pre>Bélády's</pre> optimal page replacement policy. The upper bound of the hit rate is estimated
@@ -38,9 +39,9 @@ import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class ClairvoyantPolicy implements KeyOnlyPolicy {
+public final class ClairvoyantPolicy implements Policy {
   private final Long2ObjectMap<IntPriorityQueue> accessTimes;
-  private final LongArrayFIFOQueue future;
+  private final Queue<AccessEvent> future;
   private final PolicyStats policyStats;
   private final IntSortedSet data;
   private final int maximumSize;
@@ -54,7 +55,7 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
     accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
     maximumSize = settings.maximumSize();
-    future = new LongArrayFIFOQueue();
+    future = new ArrayDeque<>(maximumSize);
     data = new IntRBTreeSet();
   }
 
@@ -64,13 +65,18 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
   }
 
   @Override
-  public void record(long key) {
+  public Set<Characteristic> characteristics() {
+    return ImmutableSet.of();
+  }
+
+  @Override
+  public void record(AccessEvent event) {
     tick++;
-    future.enqueue(key);
-    IntPriorityQueue times = accessTimes.get(key);
+    future.add(event);
+    IntPriorityQueue times = accessTimes.get(event.key().longValue());
     if (times == null) {
       times = new IntArrayFIFOQueue();
-      accessTimes.put(key, times);
+      accessTimes.put(event.key().longValue(), times);
     }
     times.enqueue(tick);
   }
@@ -84,28 +90,30 @@ public final class ClairvoyantPolicy implements KeyOnlyPolicy {
   public void finished() {
     policyStats.stopwatch().start();
     while (!future.isEmpty()) {
-      process(future.dequeueLong());
+      process(future.poll());
     }
     policyStats.stopwatch().stop();
   }
 
   /** Performs the cache operations for the given key. */
-  private void process(long key) {
-    IntPriorityQueue times = accessTimes.get(key);
+  private void process(AccessEvent event) {
+    IntPriorityQueue times = accessTimes.get(event.key().longValue());
 
     int lastAccess = times.dequeueInt();
     boolean found = data.remove(lastAccess);
 
     if (times.isEmpty()) {
       data.add(infiniteTimestamp--);
-      accessTimes.remove(key);
+      accessTimes.remove(event.key().longValue());
     } else {
       data.add(times.firstInt());
     }
     if (found) {
       policyStats.recordHit();
+      policyStats.recordHitPenalty(event.hitPenalty());
     } else {
       policyStats.recordMiss();
+      policyStats.recordMissPenalty(event.missPenalty());
       if (data.size() > maximumSize) {
         evict();
       }

@@ -47,6 +47,8 @@ public final class TableReporter extends TextReporter {
           String.format("%,d", policyStats.requestCount()),
           String.format("%,d", policyStats.evictionCount()),
           String.format("%.2f %%", 100 * policyStats.admissionRate()),
+          String.format("%.2f", policyStats.averageMissPenalty()),
+          String.format("%.2f", policyStats.avergePenalty()),
           steps(policyStats),
           policyStats.stopwatch().toString()
       };

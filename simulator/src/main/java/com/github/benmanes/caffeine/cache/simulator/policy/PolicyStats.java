@@ -31,6 +31,8 @@ public final class PolicyStats {
   private String name;
   private long hitCount;
   private long missCount;
+  private double hitPenalty;
+  private double missPenalty;
   private long evictionCount;
   private long admittedCount;
   private long rejectedCount;
@@ -77,6 +79,14 @@ public final class PolicyStats {
     hitCount += hits;
   }
 
+  public void recordHitPenalty(double penalty) {
+    hitPenalty += penalty;
+  }
+
+  public double hitPenalty() {
+    return hitPenalty;
+  }
+
   public void recordMiss() {
     missCount++;
   }
@@ -87,6 +97,14 @@ public final class PolicyStats {
 
   public void addMisses(long misses) {
     missCount += misses;
+  }
+
+  public void recordMissPenalty(double penalty) {
+    missPenalty += penalty;
+  }
+
+  public double missPenalty() {
+    return missPenalty;
   }
 
   public long evictionCount() {
@@ -121,6 +139,10 @@ public final class PolicyStats {
     rejectedCount++;
   }
 
+  public double totalPenalty() {
+    return hitPenalty + missPenalty;
+  }
+
   public double hitRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
@@ -139,6 +161,19 @@ public final class PolicyStats {
   public double complexity() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) operationCount / requestCount;
+  }
+
+  public double avergePenalty() {
+    long requestCount = requestCount();
+    return (requestCount == 0) ? 0.0 : totalPenalty() / requestCount;
+  }
+
+  public double avergeHitPenalty() {
+    return (hitCount == 0) ? 0.0 : hitPenalty / hitCount;
+  }
+
+  public double averageMissPenalty() {
+    return (missCount == 0) ? 0.0 : missPenalty / missCount;
   }
 
   @Override

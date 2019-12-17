@@ -50,7 +50,16 @@ public final class PolicyActor extends AbstractActor
     try {
       policy.stats().stopwatch().start();
       for (AccessEvent event : events) {
+        long priorHits = policy.stats().hitCount();
+        long priorMisses = policy.stats().missCount();
+
         policy.record(event);
+
+        if (policy.stats().hitCount() > priorHits) {
+          policy.stats().recordHitPenalty(event.hitPenalty());
+        } else if (policy.stats().missCount() > priorMisses) {
+          policy.stats().recordMissPenalty(event.missPenalty());
+        }
       }
     } catch (Exception e) {
       sender().tell(ERROR, self());

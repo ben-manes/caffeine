@@ -43,6 +43,16 @@ public class AccessEvent {
     return 1;
   }
 
+  /** Returns the hit penalty of the entry */
+  public double hitPenalty() {
+    return 0;
+  }
+
+  /** Returns the miss penalty of the entry */
+  public double missPenalty() {
+    return 0;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (o == this) {
@@ -52,12 +62,14 @@ public class AccessEvent {
     }
     AccessEvent event = (AccessEvent) o;
     return Objects.equals(key(), event.key())
-        && Objects.equals(weight(), event.weight());
+        && Objects.equals(weight(), event.weight())
+        && Objects.equals(hitPenalty(), event.hitPenalty())
+        && Objects.equals(missPenalty(), event.missPenalty());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(key(), weight());
+    return Objects.hash(key(), weight(), missPenalty(), hitPenalty());
   }
 
   @Override
@@ -65,6 +77,8 @@ public class AccessEvent {
     return MoreObjects.toStringHelper(this)
         .add("key", key())
         .add("weight", weight())
+        .add("hit penalty", hitPenalty())
+        .add("miss penalty", missPenalty())
         .toString();
   }
 
@@ -76,6 +90,11 @@ public class AccessEvent {
   /** Returns an event for the given key and weight. */
   public static AccessEvent forKeyAndWeight(long key, int weight) {
     return new WeightedAccessEvent(key, weight);
+  }
+
+  /** Returns an event for the given key and penalties. */
+  public static AccessEvent forKeyAndPenalties(long key, double hitPenalty, double missPenalty) {
+    return new PenaltiesAccessEvent(key, hitPenalty, missPenalty);
   }
 
   private static final class WeightedAccessEvent extends AccessEvent {
@@ -90,6 +109,29 @@ public class AccessEvent {
     @Override
     public int weight() {
       return weight;
+    }
+  }
+
+  private static final class PenaltiesAccessEvent extends AccessEvent {
+    private final double missPenalty;
+    private final double hitPenalty;
+
+    PenaltiesAccessEvent(long key, double hitPenalty, double missPenalty) {
+      super(key);
+      this.hitPenalty = hitPenalty;
+      this.missPenalty = missPenalty;
+      checkArgument(hitPenalty >= 0);
+      checkArgument(missPenalty >= hitPenalty);
+    }
+
+    @Override
+    public double missPenalty() {
+      return missPenalty;
+    }
+
+    @Override
+    public double hitPenalty() {
+      return hitPenalty;
     }
   }
 }
