@@ -31,6 +31,8 @@ public final class PolicyStats {
   private String name;
   private long hitCount;
   private long missCount;
+  private long hitsWeight;
+  private long missesWeight;
   private double hitPenalty;
   private double missPenalty;
   private long evictionCount;
@@ -79,6 +81,14 @@ public final class PolicyStats {
     hitCount += hits;
   }
 
+  public void recordWeightedHit(int weight) {
+    hitsWeight += weight;
+  }  
+  
+  public long hitsWeight() {
+    return hitsWeight;
+  }
+  
   public void recordHitPenalty(double penalty) {
     hitPenalty += penalty;
   }
@@ -99,6 +109,14 @@ public final class PolicyStats {
     missCount += misses;
   }
 
+  public void recordWeightedMiss(int weight) {
+    missesWeight += weight;
+  }  
+  
+  public long missesWeight() {
+    return missesWeight;
+  }
+  
   public void recordMissPenalty(double penalty) {
     missPenalty += penalty;
   }
@@ -121,6 +139,10 @@ public final class PolicyStats {
 
   public long requestCount() {
     return hitCount + missCount;
+  }
+
+  public long requestsWeight() {
+    return hitsWeight + missesWeight;
   }
 
   public long admissionCount() {
@@ -148,10 +170,21 @@ public final class PolicyStats {
     return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
   }
 
+  public double weightedHitRate() {
+    long requestsWeight = requestsWeight();
+    return (requestsWeight == 0) ? 1.0 : (double) hitsWeight / requestsWeight;
+  }
+
   public double missRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 0.0 : (double) missCount / requestCount;
   }
+
+  public double weightedMissRate() {
+    long requestsWeight = requestsWeight();
+    return (requestsWeight == 0) ? 1.0 : (double) missesWeight / requestsWeight;
+  }
+
 
   public double admissionRate() {
     long candidateCount = admittedCount + rejectedCount;

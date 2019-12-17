@@ -89,6 +89,7 @@ public final class LinkedPolicy implements Policy {
     admittor.record(key);
     if (old == null) {
       policyStats.recordMiss();
+      policyStats.recordWeightedMiss(weight);
       if (weight > maximumSize) {
         policyStats.recordOperation();
         return;
@@ -100,6 +101,7 @@ public final class LinkedPolicy implements Policy {
       evict(node);
     } else {
       policyStats.recordHit();
+      policyStats.recordWeightedHit(weight);
       policy.onAccess(old, policyStats);
     }
   }

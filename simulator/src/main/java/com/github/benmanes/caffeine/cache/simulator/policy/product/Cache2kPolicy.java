@@ -76,12 +76,14 @@ public final class Cache2kPolicy implements Policy {
     Object value = cache.peek(event.key());
     if (value == null) {
       policyStats.recordMiss();
+      policyStats.recordWeightedMiss(event.weight());
       if (cache.asMap().size() == maximumSize) {
         policyStats.recordEviction();
       }
       cache.put(event.key(), event);
     } else {
       policyStats.recordHit();
+      policyStats.recordWeightedHit(event.weight());
     }
   }
 
