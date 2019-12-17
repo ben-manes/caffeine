@@ -139,7 +139,7 @@ public final class BloomFilter implements Membership {
    * @return the table index
    */
   static int seeded(int item, int i) {
-    long hash = SEED[i] * item;
+    long hash = (item + SEED[i]) * SEED[i];
     hash += hash >>> 32;
     return (int) hash;
   }
