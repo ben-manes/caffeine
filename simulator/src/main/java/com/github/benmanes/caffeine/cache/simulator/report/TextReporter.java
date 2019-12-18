@@ -38,7 +38,8 @@ import com.typesafe.config.Config;
 public abstract class TextReporter implements Reporter {
   private static final String[] HEADERS = {
       "Policy", "Hit rate", "Hits", "Misses", "Requests", "Evictions",
-      "Admit rate", "Average Miss Penalty", "Average Penalty", "Steps", "Time"};
+      "Admit rate", "Requests Weight", "Weighted Hit Rate", "Average Miss Penalty", 
+      "Average Penalty", "Steps", "Time"};
 
   private final List<PolicyStats> results;
   private final BasicSettings settings;

@@ -49,6 +49,8 @@ public final class CsvReporter extends TextReporter {
           policyStats.requestCount(),
           policyStats.evictionCount(),
           String.format("%.2f", 100 * policyStats.admissionRate()),
+          policyStats.requestsWeight(),
+          String.format("%.2f", 100 * policyStats.weightedHitRate()),
           String.format("%.2f", policyStats.averageMissPenalty()),
           String.format("%.2f", policyStats.avergePenalty()),
           (policyStats.operationCount() == 0) ? null : policyStats.operationCount(),

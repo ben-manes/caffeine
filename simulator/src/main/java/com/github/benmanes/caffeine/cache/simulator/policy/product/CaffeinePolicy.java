@@ -66,9 +66,9 @@ public final class CaffeinePolicy implements Policy {
     Object value = cache.getIfPresent(event.key());
     if (value == null) {
       cache.put(event.key(), event);
-      policyStats.recordMiss();
+      policyStats.recordWeightedMiss(event.weight());
     } else {
-      policyStats.recordHit();
+      policyStats.recordWeightedHit(event.weight());
     }
   }
 
