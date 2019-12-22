@@ -64,11 +64,11 @@ final class TimerWheel<K, V> {
       BUCKETS[3] * ceilingPowerOfTwo(TimeUnit.DAYS.toNanos(1)), // 6.5d
   };
   static final long[] SHIFT = {
-      Long.SIZE - Long.numberOfLeadingZeros(SPANS[0] - 1),
-      Long.SIZE - Long.numberOfLeadingZeros(SPANS[1] - 1),
-      Long.SIZE - Long.numberOfLeadingZeros(SPANS[2] - 1),
-      Long.SIZE - Long.numberOfLeadingZeros(SPANS[3] - 1),
-      Long.SIZE - Long.numberOfLeadingZeros(SPANS[4] - 1),
+      Long.numberOfTrailingZeros(SPANS[0]),
+      Long.numberOfTrailingZeros(SPANS[1]),
+      Long.numberOfTrailingZeros(SPANS[2]),
+      Long.numberOfTrailingZeros(SPANS[3]),
+      Long.numberOfTrailingZeros(SPANS[4]),
   };
 
   final BoundedLocalCache<K, V> cache;
@@ -148,8 +148,7 @@ final class TimerWheel<K, V> {
         try {
           if (((node.getVariableTime() - nanos) > 0)
               || !cache.evictEntry(node, RemovalCause.EXPIRED, nanos)) {
-            Node<K, V> newSentinel = findBucket(node.getVariableTime());
-            link(newSentinel, node);
+            schedule(node);
           }
           node = next;
         } catch (Throwable t) {

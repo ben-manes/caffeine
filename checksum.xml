@@ -93,6 +93,7 @@
     <trusted-key id='82de7be82166e84e' group='net.sourceforge.pmd' />
     <trusted-key id='6b1b008864323b92' group='org.antlr' />
     <trusted-key id='411063a3a0ffd119' group='org.apache-extras.beanshell' />
+    <trusted-key id='a2115ae15f6b8b72' group='org.apache.ant' />
     <trusted-key id='86fdc7e2a11262cb' group='org.apache.bcel' />
     <trusted-key id='3faad2cd5ecbb314' group='org.apache.commons' />
     <trusted-key id='64a16faaec16a4be' group='org.apache.commons' />
@@ -314,6 +315,9 @@
     </dependency>
     <dependency group='org.testng' module='testng' version='7.1.0'>
       <sha512>E91C5D07ED0532F89A1B84E6DE6BF31F583018F92D360F74357D233D26B601408B6D6EA65FBFC7C913C7BD6878D91AF4C7C01143B61B79AE9E0A2261A62F4996</sha512>
+    </dependency>
+    <dependency group='org.testng' module='testng' version='7.1.1'>
+      <sha512>508B1F1594A3E377DD9AEBA9EF1EF43DA24F22BE488B4AF9EDB719D02814741B47AD69D22A7E8CAF799D847A5CE20DE8B199586958AECA17C79EFDCA8D257E</sha512>
     </dependency>
     <dependency group='xerces' module='xercesImpl' version='2.9.1'>
       <sha512>37A13B129F3536A53F2A553151A53997DA6DE7CE4D7231EFEEFD26A68C92BE309666F2EE1F527D3B8C38BC6ADDC9FCCBBDD0D134759FD88667976B0CFF842435</sha512>

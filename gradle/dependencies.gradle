@@ -37,7 +37,7 @@ ext {
     ehcache3: '3.8.1',
     errorprone: '2.3.4',
     errorproneJavac: '9+181-r4173-1',
-    elasticSearch: '7.5.0',
+    elasticSearch: '7.5.1',
     expiringMap: '0.5.9',
     fastfilter: 'bf0b02297f',
     fastutil: '8.3.0',
@@ -68,9 +68,9 @@ ext {
     jcacheTck: '1.1.1',
     jctools: '2.1.2',
     junit: '4.12',
-    mockito: '3.2.0',
+    mockito: '3.2.4',
     paxExam: '4.13.1',
-    testng: '7.1.0',
+    testng: '7.1.1',
     truth: '0.24',
   ]
   pluginVersions = [
