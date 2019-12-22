@@ -15,12 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+
 import java.util.Set;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -32,7 +35,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class UnboundedPolicy implements KeyOnlyPolicy {
+public final class UnboundedPolicy implements Policy {
   private final PolicyStats policyStats;
   private final LongOpenHashSet data;
 
@@ -47,14 +50,19 @@ public final class UnboundedPolicy implements KeyOnlyPolicy {
   }
 
   @Override
+  public Set<Characteristic> characteristics() {
+    return Sets.immutableEnumSet(WEIGHTED);
+  }
+
+  @Override
   public PolicyStats stats() {
     return policyStats;
   }
 
   @Override
-  public void record(long key) {
+  public void record(AccessEvent event) {
     policyStats.recordOperation();
-    if (data.add(key)) {
+    if (data.add(event.key().longValue())) {
       policyStats.recordMiss();
     } else {
       policyStats.recordHit();

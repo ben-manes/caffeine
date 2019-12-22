@@ -15,11 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge;
 
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+
 import java.io.IOException;
-import java.util.stream.LongStream;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.common.collect.Sets;
 
 /**
  * A reader for the SNIA MSR Cambridge trace files provided by
@@ -27,16 +32,22 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTr
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CambridgeTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
+public final class CambridgeTraceReader extends TextTraceReader {
 
   public CambridgeTraceReader(String filePath) {
     super(filePath);
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public Set<Characteristic> characteristics() {
+    return Sets.immutableEnumSet(WEIGHTED);
+  }
+
+  @Override
+  public Stream<AccessEvent> events() throws IOException {
     return lines()
-        .map(line -> line.split(",", 6))
-        .mapToLong(array -> Long.parseLong(array[4]));
+        .map(line -> line.split(","))
+        .map(array -> AccessEvent.forKeyAndWeight(
+            Long.parseLong(array[4]), Integer.parseInt(array[5])));
   }
 }
