@@ -136,7 +136,10 @@ tasks.withType(JavaCompile) {
 
     // Disabled due to incompatibility; fixed in
     // https://github.com/google/error-prone/issues/1106
-    enabled = !JavaVersion.current().isJava12Compatible()
+    if (JavaVersion.current().isJava12Compatible()) {
+      // Avoid explicitly enabling, as sometimes lost by JMH's compile task
+      enabled = false
+    }
   }
 }
 
