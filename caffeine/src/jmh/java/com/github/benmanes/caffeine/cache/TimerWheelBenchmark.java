@@ -76,8 +76,9 @@ public class TimerWheelBenchmark {
     long time = times[threadState.index++ & MASK];
     timer.setVariableTime(time);
     timerWheel.nanos = (time - DELTA);
-    timerWheel.advance(time);
+    timerWheel.deschedule(timer);
     timerWheel.schedule(timer);
+    timerWheel.advance(time);
   }
 
   @Benchmark
