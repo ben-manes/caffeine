@@ -117,6 +117,11 @@ task generateNodes(type: JavaExec) {
 }
 compileJava.dependsOn(generateNodes)
 
+afterEvaluate {
+  sourcesJar.dependsOn('generateLocalCaches')
+  sourcesJar.dependsOn('generateNodes')
+}
+
 task memoryOverhead(type: JavaExec, group: 'Benchmarks', description: 'Evaluates cache overhead') {
   classpath sourceSets.jmh.runtimeClasspath
   jvmArgs "-javaagent:${configurations.javaAgent.singleFile}"
