@@ -42,7 +42,7 @@ import org.junit.Test;
 /**
  * @author nitsanw@yahoo.com (Nitsan Wakart)
  */
-@SuppressWarnings("ThreadPriorityCheck")
+@SuppressWarnings({"deprecation", "ThreadPriorityCheck"})
 public abstract class QueueSanityTest {
 
   public static final int SIZE = 8192 * 2;

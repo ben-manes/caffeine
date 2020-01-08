@@ -112,6 +112,7 @@
     <trusted-key id='b16698a4adf4d638' group='org.checkerframework' />
     <trusted-key id='41321490758aad6f' group='org.codehaus.groovy' />
     <trusted-key id='873a8e86b4372146' group='org.codehaus.mojo' />
+    <trusted-key id='9b7d32f2d50582e6' group='org.codehaus.mojo' />
     <trusted-key id='79e193516be7998f' group='org.dom4j' />
     <trusted-key id='7c7d8456294423ba' group='org.easymock' />
     <trusted-key id='eca081a9790d4fc4' group='org.eclipse.jdt.core.compiler' />
@@ -168,6 +169,15 @@
     </dependency>
     <dependency group='com.beust' module='jcommander' version='1.78'>
       <sha512>5EE2EF4C12888A48D7C830189D06EE8A653C7664A53C9B6FA935D4E7866B0454111F8092D7ECE086EC80C61EDAB2856187A1E247873E5C8E4724EFB02C37504B</sha512>
+    </dependency>
+    <dependency group='com.github.FastFilter.fastfilter_java' module='fastfilter' version='5eeaa9b829'>
+      <sha512>DB4ED602996D01166A138BC3DDF2B926CA4A0870A8575EEB033C0230BA46EAF0C72C1E821DEC77DF2F737D70773DB4B3D6C7EFB6172939A0D05B31B9DEAE1195</sha512>
+    </dependency>
+    <dependency group='com.github.FastFilter.fastfilter_java' module='jmh' version='5eeaa9b829'>
+      <sha512>D5C91E2276B9E3EC98BF3F1EE4110A1371403CE554DC54C45F408C55A65037BB22BA7F0D453C7A70E16E0D68616054DB6F14F73CEE2B60280A76D297CF53ABB0</sha512>
+    </dependency>
+    <dependency group='com.github.FastFilter' module='fastfilter_java' version='5eeaa9b829'>
+      <sha512>F4EF28996D370BF019BDCBAF77052F25D89F05F64273825A3C9546B1A672DC9D0E38189FD6BFBDE9DB3E1633DBA45A96D38EB28ED1237C4CE6F94A0F978A78A6</sha512>
     </dependency>
     <dependency group='com.github.FastFilter' module='fastfilter_java' version='bf0b02297f'>
       <sha512>1E637F7546DDA1EDD3EB74B181B918137776611EB703ED90A91B3845DD7D2615D40A0A586DCAA4E494EB097D2E2E05511D0DCFEAD47416AE7622EBA05EFBF7C</sha512>

@@ -26,7 +26,13 @@ import org.junit.runners.Parameterized;
  * @author nitsanw@yahoo.com (Nitsan Wakart)
  */
 @RunWith(Parameterized.class)
+@SuppressWarnings("deprecation")
 public final class MpscGrowableQueueSanityTest extends QueueSanityTest {
+
+  public MpscGrowableQueueSanityTest(ConcurrentQueueSpec spec, Queue<Integer> queue) {
+    super(spec, queue);
+  }
+
   @Parameterized.Parameters
   public static Collection<Object[]> parameters() {
     ArrayList<Object[]> list = new ArrayList<Object[]>();
@@ -35,9 +41,5 @@ public final class MpscGrowableQueueSanityTest extends QueueSanityTest {
     // MPSC size SIZE
     list.add(makeQueue(0, 1, SIZE, Ordering.FIFO, new MpscGrowableArrayQueue<>(8, SIZE)));
     return list;
-  }
-
-  public MpscGrowableQueueSanityTest(ConcurrentQueueSpec spec, Queue<Integer> queue) {
-    super(spec, queue);
   }
 }

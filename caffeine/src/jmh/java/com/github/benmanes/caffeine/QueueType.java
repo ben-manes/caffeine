@@ -24,7 +24,7 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.function.Supplier;
 
-import org.jctools.queues.MpscLinkedQueue8;
+import org.jctools.queues.MpscLinkedQueue;
 
 import com.google.common.collect.Queues;
 
@@ -33,7 +33,7 @@ import com.google.common.collect.Queues;
  */
 @SuppressWarnings("ImmutableEnumChecker")
 public enum QueueType {
-  MpscLinkedQueue(MpscLinkedQueue8::new),
+  MpscLinkedQueue(MpscLinkedQueue::new),
   SingleConsumerQueue_optimistic(SingleConsumerQueue::optimistic),
   SingleConsumerQueue_linearizable(SingleConsumerQueue::linearizable),
   ConcurrentLinkedQueue(ConcurrentLinkedQueue<Object>::new),
