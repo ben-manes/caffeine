@@ -1,46 +1,89 @@
 /**
  * Configuration for publishing to Maven Central
  */
-apply plugin: 'com.bmuschko.nexus'
+apply plugin: 'maven-publish'
+apply plugin: 'java-library'
+apply plugin: 'signing'
 
-if (System.env.'nexusUsername') {
-  project.nexusUsername = System.env.'nexusUsername'
-  project.nexusPassword = System.env.'nexusPassword'
+configurations {
+  testArtifacts
 }
 
-extraArchive.tests = true
+java {
+  withJavadocJar()
+  withSourcesJar()
+}
 
-modifyPom {
-  project {
-    name 'Caffeine cache'
-    description 'A high performance caching library for Java 8+'
-    url 'https://github.com/ben-manes/caffeine'
-    inceptionYear '2014'
+task testJar(type: Jar, group: 'Build') {
+  description = 'Assembles a jar archive containing the test classes.'
+  from sourceSets.test.output
+  archiveClassifier = 'test'
+}
 
-    scm {
-      url 'https://github.com/ben-manes/caffeine'
-      connection 'scm:https://ben-manes@github.com/ben-manes/caffeine.git'
-      developerConnection 'scm:git://github.com/ben-manes/caffeine.git'
-    }
+artifacts {
+  testArtifacts testJar
+}
 
-    licenses {
-      license {
-        name 'Apache License, Version 2.0'
-        url 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-        distribution 'repo'
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+      artifact testJar
+
+      pom {
+        name = 'Caffeine cache'
+        description = 'A high performance caching library'
+        url = 'https://github.com/ben-manes/caffeine'
+        inceptionYear = '2014'
+
+        scm {
+          url = 'https://github.com/ben-manes/caffeine'
+          connection = 'scm:https://ben-manes@github.com/ben-manes/caffeine.git'
+          developerConnection = 'scm:git://github.com/ben-manes/caffeine.git'
+        }
+
+        licenses {
+          license {
+            name = 'Apache License, Version 2.0'
+            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+            distribution = 'repo'
+          }
+        }
+
+        developers {
+          developer {
+            id = 'ben-manes'
+            name = 'Ben Manes'
+            email = 'ben.manes@gmail.com'
+            roles = [ 'owner', 'developer' ]
+          }
+        }
       }
-    }
-
-    developers {
-      developer {
-        id 'ben-manes'
-        name 'Ben Manes'
-        email 'ben.manes@gmail.com'
-        roles {
-          role 'owner'
-          role 'developer'
+      repositories {
+        maven {
+          def releasesUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+          def snapshotsUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
+          url = project.version.releaseBuild ? releasesUrl : snapshotsUrl
+          credentials {
+            username = project.properties['nexusUsername'] ?: null
+            password = project.properties['nexusPassword'] ?: null
+          }
         }
       }
     }
+  }
+}
+
+signing {
+  // https://github.com/gradle/gradle/issues/11387
+  required { false }
+  if (version.releaseBuild) {
+    sign publishing.publications.mavenJava
+  }
+}
+
+javadoc {
+  if (JavaVersion.current().isJava9Compatible()) {
+    options.addBooleanOption('html5', true)
   }
 }

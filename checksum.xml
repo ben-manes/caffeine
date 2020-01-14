@@ -48,6 +48,7 @@
     <trusted-key id='a50569c7ca7fa1f0' group='com.jcraft' />
     <trusted-key id='52931f4b72b4f54c' group='com.koloboke' />
     <trusted-key id='1063fe98bcecb758' group='com.puppycrawl.tools' />
+    <trusted-key id='685c46769dbb5e5d' group='com.squareup' />
     <trusted-key id='80c08b1c29100955' group='com.squareup' />
     <trusted-key id='8671a8df71296252' group='com.squareup' />
     <trusted-key id='0315bfb7970a144f' group='com.sun.istack' />

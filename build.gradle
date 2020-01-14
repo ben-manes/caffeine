@@ -79,7 +79,6 @@ subprojects {
 
   configurations {
     bundleCompile
-    testArtifacts
   }
 
   sourceSets {
@@ -109,16 +108,6 @@ subprojects {
     reports.html.destination = file("${buildDir}/reports/${name}")
     reports.junitXml.destination = file("${buildDir}/reports/${name}/results")
     binResultsDir = file("${buildDir}/reports/${name}/results/binary/${name}")
-  }
-
-  task testJar(type: Jar, group: 'Build') {
-    description = 'Assembles a jar archive containing the test classes.'
-    archiveBaseName = "${archivesBaseName}-test"
-    from sourceSets.test.output
-  }
-
-  artifacts {
-    testArtifacts testJar
   }
 
   if (project != project(':caffeine')) {
