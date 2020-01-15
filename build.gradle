@@ -31,6 +31,7 @@ task testReport(type: TestReport, group: 'Build') {
 }
 
 allprojects {
+  apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply from: "${rootDir}/gradle/eclipse.gradle"
 
   repositories {
@@ -38,10 +39,17 @@ allprojects {
     mavenCentral()
     maven { url 'https://jitpack.io' }
   }
+
+  group = 'com.github.ben-manes.caffeine'
+  version.with {
+    major = 2 // incompatible API changes
+    minor = 8 // backwards-compatible additions
+    patch = 1 // backwards-compatible bug fixes
+    releaseBuild = rootProject.hasProperty('release')
+  }
 }
 
 subprojects {
-  apply plugin: 'com.github.ethankhall.semantic-versioning'
   apply plugin: 'biz.aQute.bnd.builder'
   apply plugin: 'java-library'
   apply plugin: 'eclipse'
@@ -52,19 +60,7 @@ subprojects {
   apply from: "${rootDir}/gradle/dependencies.gradle"
   apply from: "${rootDir}/gradle/objectLayout.gradle"
 
-  if (JavaVersion.current().isJava9Compatible()) {
-    tasks.uploadArchives.enabled = false
-  }
-
   sourceCompatibility = JavaVersion.VERSION_1_8
-
-  group = 'com.github.ben-manes.caffeine'
-  version.with {
-    major = 2 // incompatible API changes
-    minor = 8 // backwards-compatible additions
-    patch = 1 // backwards-compatible bug fixes
-    releaseBuild = rootProject.hasProperty('release')
-  }
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
 
   dependencies {

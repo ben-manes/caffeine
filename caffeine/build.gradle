@@ -64,6 +64,10 @@ dependencies {
   javaPoetImplementation libraries.commonsLang3
 }
 
+java {
+  withSourcesJar()
+}
+
 compileCodeGenJava {
   gradle.taskGraph.whenReady {
     enabled = gradle.taskGraph.hasTask('uploadArchives')
@@ -105,6 +109,7 @@ task generateLocalCaches(type: JavaExec) {
   outputs.cacheIf { true }
 }
 compileJava.dependsOn(generateLocalCaches)
+sourcesJar.dependsOn(generateLocalCaches)
 
 task generateNodes(type: JavaExec) {
   main = 'com.github.benmanes.caffeine.cache.NodeFactoryGenerator'
@@ -116,11 +121,7 @@ task generateNodes(type: JavaExec) {
   outputs.cacheIf { true }
 }
 compileJava.dependsOn(generateNodes)
-
-afterEvaluate {
-  sourcesJar.dependsOn('generateLocalCaches')
-  sourcesJar.dependsOn('generateNodes')
-}
+sourcesJar.dependsOn(generateNodes)
 
 task memoryOverhead(type: JavaExec, group: 'Benchmarks', description: 'Evaluates cache overhead') {
   classpath sourceSets.jmh.runtimeClasspath

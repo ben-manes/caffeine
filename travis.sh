@@ -31,7 +31,7 @@ case "${1:?''}" in
     runSlow "./gradlew :caffeine:slowCaffeineTest --console plain"
     runSlow "./gradlew :caffeine:slowGuavaTest --console plain"
     if [[ (${CI:-false} == "true") && (${TRAVIS_PULL_REQUEST:-false} == "false") ]]; then
-      run "./gradlew coveralls uploadArchives --console plain"
+      run "./gradlew coveralls publish --console plain"
       runSlow "./gradlew sonarqube --console plain"
     fi
     ;;
