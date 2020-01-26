@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
+import com.google.common.math.IntMath;
 import com.typesafe.config.Config;
 
 /**
@@ -67,7 +68,7 @@ public abstract class CountMin4 implements Frequency {
       return;
     }
 
-    table = new long[(maximum == 0) ? 1 : ceilingNextPowerOfTwo(maximum)];
+    table = new long[(maximum == 0) ? 1 : IntMath.ceilingPowerOfTwo(maximum)];
     tableMask = Math.max(0, table.length - 1);
   }
 
@@ -196,10 +197,5 @@ public abstract class CountMin4 implements Frequency {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;
-  }
-
-  static int ceilingNextPowerOfTwo(int x) {
-    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1 << -Integer.numberOfLeadingZeros(x - 1);
   }
 }

@@ -74,10 +74,6 @@ public final class StripedBufferTest {
     };
   }
 
-  static int ceilingNextPowerOfTwo(int x) {
-    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
-  }
-
   static final class FakeBuffer<E> extends StripedBuffer<E> {
     final int result;
     int drains = 0;

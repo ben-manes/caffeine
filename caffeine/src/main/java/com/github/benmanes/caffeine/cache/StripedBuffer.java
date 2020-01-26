@@ -20,6 +20,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
+
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
@@ -91,7 +93,7 @@ abstract class StripedBuffer<E> implements Buffer<E> {
   static final int NCPU = Runtime.getRuntime().availableProcessors();
 
   /** The bound on the table size. */
-  static final int MAXIMUM_TABLE_SIZE = 4 * ceilingNextPowerOfTwo(NCPU);
+  static final int MAXIMUM_TABLE_SIZE = 4 * ceilingPowerOfTwo(NCPU);
 
   /** The maximum number of attempts when trying to expand the table. */
   static final int ATTEMPTS = 3;
@@ -125,12 +127,6 @@ abstract class StripedBuffer<E> implements Buffer<E> {
     probe ^= probe << 5;
     UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), PROBE, probe);
     return probe;
-  }
-
-  /** Returns the closest power-of-two at or higher than the given value. */
-  static int ceilingNextPowerOfTwo(int x) {
-    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
   }
 
   /**

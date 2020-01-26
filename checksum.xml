@@ -92,6 +92,7 @@
     <trusted-key id='1d185615d0a84648' group='net.sf.saxon' />
     <trusted-key id='098a31f381819057' group='net.sourceforge.nekohtml' />
     <trusted-key id='82de7be82166e84e' group='net.sourceforge.pmd' />
+    <trusted-key id='d0bf1d737c9a1c22' group='net.sourceforge.pmd' />
     <trusted-key id='6b1b008864323b92' group='org.antlr' />
     <trusted-key id='411063a3a0ffd119' group='org.apache-extras.beanshell' />
     <trusted-key id='a2115ae15f6b8b72' group='org.apache.ant' />
@@ -143,6 +144,7 @@
     <trusted-key id='492985b45e8d6711' group='org.ops4j.pax.tinybundles' />
     <trusted-key id='494a3c0ddce0bc7d' group='org.ops4j.pax.url' />
     <trusted-key id='adbec7a623dbb1d6' group='org.ops4j.pax.url' />
+    <trusted-key id='51cdb4a9daac1cbc' group='org.osgi' />
     <trusted-key id='734aef3d43509290' group='org.osgi' />
     <trusted-key id='5f69ad087600b22c' group='org.ow2.asm' />
     <trusted-key id='2be5d98f751f4136' group='org.pcollections' />
@@ -171,11 +173,20 @@
     <dependency group='com.beust' module='jcommander' version='1.78'>
       <sha512>5EE2EF4C12888A48D7C830189D06EE8A653C7664A53C9B6FA935D4E7866B0454111F8092D7ECE086EC80C61EDAB2856187A1E247873E5C8E4724EFB02C37504B</sha512>
     </dependency>
+    <dependency group='com.github.FastFilter.fastfilter_java' module='fastfilter' version='1.0'>
+      <sha512>EE4724836776BBB74983ED44958DBF566E60F258E2BC5B6669D61BC6F962F8DEC70C8EACA50BE5C9DDBF1D5AC8DD48BFEB583C33426B62396146EBA511471D4A</sha512>
+    </dependency>
     <dependency group='com.github.FastFilter.fastfilter_java' module='fastfilter' version='5eeaa9b829'>
       <sha512>DB4ED602996D01166A138BC3DDF2B926CA4A0870A8575EEB033C0230BA46EAF0C72C1E821DEC77DF2F737D70773DB4B3D6C7EFB6172939A0D05B31B9DEAE1195</sha512>
     </dependency>
+    <dependency group='com.github.FastFilter.fastfilter_java' module='jmh' version='1.0'>
+      <sha512>7A734E87D19D016D25D97D67B139C5C7CFFF2C655177980EAB20A4D19BA97012079F97FD70B8E72C24BC11C90205616B36696F0D256B4D3FE7A16234C0F16232</sha512>
+    </dependency>
     <dependency group='com.github.FastFilter.fastfilter_java' module='jmh' version='5eeaa9b829'>
       <sha512>D5C91E2276B9E3EC98BF3F1EE4110A1371403CE554DC54C45F408C55A65037BB22BA7F0D453C7A70E16E0D68616054DB6F14F73CEE2B60280A76D297CF53ABB0</sha512>
+    </dependency>
+    <dependency group='com.github.FastFilter' module='fastfilter_java' version='1.0'>
+      <sha512>BA336464F60B2A58DFE6F5ED5C3A29EF4DEEE339F98EA532D71B4DB8142A3B21370678931AC1FF5DBFFC2713A78BF66CC6AA61C2836947AA8478AF6DE4071F7A</sha512>
     </dependency>
     <dependency group='com.github.FastFilter' module='fastfilter_java' version='5eeaa9b829'>
       <sha512>F4EF28996D370BF019BDCBAF77052F25D89F05F64273825A3C9546B1A672DC9D0E38189FD6BFBDE9DB3E1633DBA45A96D38EB28ED1237C4CE6F94A0F978A78A6</sha512>

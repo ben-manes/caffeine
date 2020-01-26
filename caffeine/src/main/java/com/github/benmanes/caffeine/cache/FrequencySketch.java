@@ -83,7 +83,7 @@ final class FrequencySketch<E> {
       return;
     }
 
-    table = new long[(maximum == 0) ? 1 : ceilingNextPowerOfTwo(maximum)];
+    table = new long[(maximum == 0) ? 1 : Caffeine.ceilingPowerOfTwo(maximum)];
     tableMask = Math.max(0, table.length - 1);
     sampleSize = (maximumSize == 0) ? 10 : (10 * maximum);
     if (sampleSize <= 0) {
@@ -202,10 +202,5 @@ final class FrequencySketch<E> {
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     x = ((x >>> 16) ^ x) * 0x45d9f3b;
     return (x >>> 16) ^ x;
-  }
-
-  static int ceilingNextPowerOfTwo(int x) {
-    // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
-    return 1 << (Integer.SIZE - Integer.numberOfLeadingZeros(x - 1));
   }
 }
