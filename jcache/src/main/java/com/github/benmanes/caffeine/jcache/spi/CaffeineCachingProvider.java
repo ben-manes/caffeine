@@ -17,9 +17,16 @@ package com.github.benmanes.caffeine.jcache.spi;
 
 import static javax.cache.configuration.OptionalFeature.STORE_BY_REFERENCE;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.WeakHashMap;
@@ -28,6 +35,8 @@ import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.OptionalFeature;
 import javax.cache.spi.CachingProvider;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.jcache.CacheManagerImpl;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -45,6 +54,9 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineCachingProvider implements CachingProvider {
+  private static final ClassLoader DEFAULT_CLASS_LOADER = AccessController.doPrivileged(
+      (PrivilegedAction<ClassLoader>) JCacheClassLoader::new);
+
   @GuardedBy("itself")
   private final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;
 
@@ -54,7 +66,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
 
   @Override
   public ClassLoader getDefaultClassLoader() {
-    return getClass().getClassLoader();
+    return DEFAULT_CLASS_LOADER;
   }
 
   @Override
@@ -145,5 +157,69 @@ public final class CaffeineCachingProvider implements CachingProvider {
 
   private ClassLoader getManagerClassLoader(ClassLoader classLoader) {
     return (classLoader == null) ? getDefaultClassLoader() : classLoader;
+  }
+
+  /**
+   * A {@link ClassLoader} that combines {@code Thread.currentThread().getContextClassLoader()}
+   * and {@code getClass().getClassLoader()}.
+   */
+  private static final class JCacheClassLoader extends ClassLoader {
+
+    @Override
+    public Class<?> loadClass(String name) throws ClassNotFoundException {
+      ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+      ClassNotFoundException error = null;
+      if (contextClassLoader != null) {
+        try {
+          return contextClassLoader.loadClass(name);
+        } catch (ClassNotFoundException e) {
+          error = e;
+        }
+      }
+
+      ClassLoader classClassLoader = getClass().getClassLoader();
+      if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
+        return classClassLoader.loadClass(name);
+      }
+      throw (error == null) ? new ClassNotFoundException(name) : error;
+    }
+
+    @Override
+    public @Nullable URL getResource(String name) {
+      ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+      if (contextClassLoader != null) {
+        URL resource = contextClassLoader.getResource(name);
+        if (resource != null) {
+          return resource;
+        }
+      }
+
+      ClassLoader classClassLoader = Thread.currentThread().getContextClassLoader();
+      if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
+        URL resource = classClassLoader.getResource(name);
+        if (resource != null) {
+          return resource;
+        }
+      }
+
+      return null;
+    }
+
+    @Override
+    public Enumeration<URL> getResources(String name) throws IOException {
+      List<URL> resources = new ArrayList<>();
+
+      ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+      if (contextClassLoader != null) {
+        resources.addAll(Collections.list(contextClassLoader.getResources(name)));
+      }
+
+      ClassLoader classClassLoader = Thread.currentThread().getContextClassLoader();
+      if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
+        resources.addAll(Collections.list(classClassLoader.getResources(name)));
+      }
+
+      return Collections.enumeration(resources);
+    }
   }
 }
