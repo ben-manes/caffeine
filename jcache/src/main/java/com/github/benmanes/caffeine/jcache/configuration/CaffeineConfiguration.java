@@ -366,7 +366,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
-   * Set the maximum weight.
+   * Set the maximum size.
    *
    * @param maximumSize the maximum size
    */
@@ -377,7 +377,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   }
 
   /**
-   * Returns the maximum weight to be used for the cache.
+   * Returns the maximum size to be used for the cache.
    *
    * @return the maximum size
    */
