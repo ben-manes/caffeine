@@ -579,7 +579,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    */
   @GuardedBy("evictionLock")
   void setMaximumSize(long maximum) {
-    requireArgument(maximum >= 0);
+    requireArgument(maximum >= 0, "maximum must not be negative");
     if (maximum == maximum()) {
       return;
     }

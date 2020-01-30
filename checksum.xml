@@ -58,6 +58,7 @@
     <trusted-key id='fa65b4e0f7a915e0' group='com.trivago' />
     <trusted-key id='0753c4188493fd20' group='com.typesafe' />
     <trusted-key id='e735df276c508071' group='com.typesafe' />
+    <trusted-key id='0753c4188493fd20' group='com.typesafe.akka' />
     <trusted-key id='2b183b279dfd639e' group='com.typesafe.akka' />
     <trusted-key id='c7d0ad0d36477196' group='com.typesafe.akka' />
     <trusted-key id='eb9d04a9a679fe18' group='com.uber.nullaway' />
