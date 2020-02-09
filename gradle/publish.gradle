@@ -38,8 +38,8 @@ publishing {
 
         scm {
           url = 'https://github.com/ben-manes/caffeine'
-          connection = 'scm:https://ben-manes@github.com/ben-manes/caffeine.git'
-          developerConnection = 'scm:git://github.com/ben-manes/caffeine.git'
+          connection = 'scm:git:https://github.com/ben-manes/caffeine.git'
+          developerConnection = 'scm:git:ssh://git@github.com/ben-manes/caffeine.git'
         }
 
         licenses {
