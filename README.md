@@ -53,7 +53,6 @@ Use Caffeine in a community provided integration:
  * [ScalaCache][scala-cache]: Simple caching in Scala
  * [Camel][camel]: Routing and mediation engine
  * [JHipster][jhipster]: Generate, develop, deploy
- * [Druid][druid]: Real-time analytics
 
 Powering infrastructure near you:
  * [Dropwizard][dropwizard]: Ops-friendly, high-performance, RESTful APIs
@@ -62,11 +61,12 @@ Powering infrastructure near you:
  * [HBase][hbase]: A distributed, scalable, big data store
  * [Apache Solr][solr]: Blazingly fast enterprise search
  * [Infinispan][infinispan]: Distributed in-memory data grid
+ * [OpenWhisk][open-whisk]: Serverless cloud platform
  * [Corfu][corfu]: A cluster consistency platform
  * [Grails][grails]: Groovy-based web framework
- * [Orbit][orbit]: Virtual actors on the JVM
  * [Finagle][finagle]: Extensible RPC system
  * [Neo4j][neo4j]: Graphs for Everyone
+ * [Druid][druid]: Real-time analytics
 
 ### In the News
 
@@ -130,7 +130,7 @@ Snapshots of the development version are available in
 [finagle]: https://github.com/twitter/finagle
 [druid]: https://druid.apache.org/docs/latest/configuration/index.html#cache-configuration
 [jhipster]: https://www.jhipster.tech/
-[orbit]: https://github.com/orbit/orbit
+[open-whisk]: https://openwhisk.apache.org/
 [camel]: https://github.com/apache/camel/blob/master/components/camel-caffeine/src/main/docs/caffeine-cache-component.adoc
 [corfu]: https://github.com/CorfuDB/CorfuDB
 [akka-http]: https://doc.akka.io/docs/akka-http/current/common/caching.html

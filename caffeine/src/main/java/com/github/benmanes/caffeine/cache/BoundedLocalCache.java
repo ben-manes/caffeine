@@ -2006,6 +2006,17 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             return null;
           }
         }
+      } else if (onlyIfAbsent) {
+        // An optimistic fast path to avoid unnecessary locking
+        V currentValue = prior.getValue();
+        if ((currentValue != null) && !hasExpired(prior, now)) {
+          if (!isComputingAsync(prior)) {
+            tryExpireAfterRead(prior, key, currentValue, expiry(), now);
+            setAccessTime(prior, now);
+          }
+          afterRead(prior, now, /* recordHit */ false);
+          return currentValue;
+        }
       }
 
       V oldValue;

@@ -45,6 +45,7 @@
     <trusted-key id='476634a4694e716a' group='com.googlecode.java-diff-utils' />
     <trusted-key id='72475fd306b9cab7' group='com.googlecode.javaewah' />
     <trusted-key id='80c08b1c29100955' group='com.jakewharton.fliptables' />
+    <trusted-key id='e0cb7823cfd00fbf' group='com.jakewharton.fliptables' />
     <trusted-key id='a50569c7ca7fa1f0' group='com.jcraft' />
     <trusted-key id='52931f4b72b4f54c' group='com.koloboke' />
     <trusted-key id='1063fe98bcecb758' group='com.puppycrawl.tools' />
@@ -204,6 +205,9 @@
     <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.27.0'>
       <sha512>EEA3D1118C6DE8F890AB6A04EA3505C149F99C034C26707C44ED736F6603C6253A03BA07D0361C4D1008E5CE944B0DD7457DC1AF2CD6B01091F6594261DB1F77</sha512>
     </dependency>
+    <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.28.0'>
+      <sha512>6B6E1C845DF98A6EFD07354F7DC2FABB77FFB171F20BE88BC232270AEB0243370B5265E2A310D8CBAC77F83F2B0D11AE8EB59A9ED1F030D5789357DA3899798B</sha512>
+    </dependency>
     <dependency group='com.github.brianfrankcooper.YCSB' module='core' version='0.15.0'>
       <sha512>DF5BFED7DFC327166FE0CB81BD6A9655F44CCB268E7E69204BD09955147CE9A97EBBCC28F9ACF315DBAF49E850A43CE8744F44E68D7BE816EACCAF0BEE41B203</sha512>
     </dependency>
@@ -341,6 +345,9 @@
     </dependency>
     <dependency group='org.testng' module='testng' version='7.1.1'>
       <sha512>508B1F1594A3E377DD9AEBA9EF1EF43DA24F22BE488B4AF9EDB719D02814741B47AD69D22A7E8CAF799D847A5CE20DE8B199586958AECA17C79EFDCA8D257E</sha512>
+    </dependency>
+    <dependency group='org.testng' module='testng' version='7.2.0'>
+      <sha512>AC7BBD700CB88EDB3E0FC92D7A0D659F42C97E6E0B5E21DD3EC2EC8537841CAEA50E99AC3414026BFE54D89EA72F6F635F964B429EC8A1E5BF6F44101AC58868</sha512>
     </dependency>
     <dependency group='xerces' module='xercesImpl' version='2.9.1'>
       <sha512>37A13B129F3536A53F2A553151A53997DA6DE7CE4D7231EFEEFD26A68C92BE309666F2EE1F527D3B8C38BC6ADDC9FCCBBDD0D134759FD88667976B0CFF842435</sha512>
