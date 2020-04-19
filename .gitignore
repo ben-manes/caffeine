@@ -15,4 +15,3 @@ target
 **/hs_err_pid*.log
 **/replay_pid*.log
 **/caffeine.log
-simulator/src/main/resources/application.conf
