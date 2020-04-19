@@ -27,7 +27,7 @@ public final class MyCachePolicy implements Policy {
 	  private final LongOpenHashSet data;
 
 	  public MyCachePolicy() {
-	    this.policyStats = new PolicyStats("opt.Unbounded");
+	    this.policyStats = new PolicyStats("MyCachePolicy");
 	    this.data = new LongOpenHashSet();
 	  }
 

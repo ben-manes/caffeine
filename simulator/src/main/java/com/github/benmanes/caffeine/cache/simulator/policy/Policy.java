@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableSet;
 
 /**
  * A cache that implements a page replacement policy.
- *
+ * 
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Policy {
