@@ -46,7 +46,7 @@ public final class CacheMemSystem implements Policy {
 
   public CacheMemSystem () {  
     this.policyStats = new PolicyStats("CacheMemSystem");
-//    ResetSystem ();
+    ResetSystem ();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -74,7 +74,7 @@ public final class CacheMemSystem implements Policy {
     this.fn_miss_cnt = 0;
     this.fp_miss_cnt = 0;
     this.staleness_fp_miss_cnt = 0;
-    this.updated_indicator = new CBF<Long>(this.cache_size, this.designed_indicator_fpr); // Create a new empty updated indicator
+//    this.updated_indicator = new CBF<Long>(this.cache_size, this.designed_indicator_fpr); // Create a new empty updated indicator
 //  	snd_update_cnt = 0;
 //    SendUpdate (); // Copy the updated indicator to a stale indicator   
   }
