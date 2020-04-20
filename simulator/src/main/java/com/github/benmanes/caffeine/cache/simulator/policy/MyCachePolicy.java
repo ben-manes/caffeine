@@ -18,17 +18,14 @@ import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 
 // A version of MyCachePolicy which implements the i/f Policy This is the i/f implemented by most the opt.UnboundedPolicy.
 public final class MyCachePolicy implements Policy {
 	  private final PolicyStats policyStats;
-	  private final LongOpenHashSet data;
 
 	  public MyCachePolicy() {
 	    this.policyStats = new PolicyStats("MyCachePolicy");
-	    this.data = new LongOpenHashSet();
 	  }
 
 	  /** Returns all variations of this policy based on the configuration parameters. */
@@ -47,13 +44,9 @@ public final class MyCachePolicy implements Policy {
 	  }
 
 	  @Override
+	  /** Records that the entry was accessed. */
 	  public void record(AccessEvent event) {
 	    policyStats.recordOperation();
-	    if (data.add(event.key().longValue())) {
-	      policyStats.recordWeightedMiss(event.weight());
-	    } else {
-	      policyStats.recordWeightedHit(event.weight());
-	    }
 	  }
 	}
 
