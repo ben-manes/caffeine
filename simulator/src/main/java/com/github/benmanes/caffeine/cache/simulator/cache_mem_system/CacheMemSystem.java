@@ -5,7 +5,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import java.util.Scanner; 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -14,7 +13,6 @@ import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
-import com.github.benmanes.caffeine.cache.simulator.policy.MyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
@@ -32,7 +30,7 @@ enum Op {Add, Remove};
 
 //A version of MyCachePolicy which implements the i/f Policy This is the i/f implemented by most the opt.UnboundedPolicy.
 public final class CacheMemSystem implements Policy {
-	private final PolicyStats policyStats;
+    private final PolicyStats policyStats;
 	public Integer cache_size;
 	public CBF<Long> stale_indicator, updated_indicator;
 	public double accs_cnt, hit_cnt, fp_miss_cnt, tn_miss_cnt, fn_miss_cnt;
@@ -41,37 +39,53 @@ public final class CacheMemSystem implements Policy {
 //	public Value cur_val;
 	public double designed_indicator_fpr; // The designed False Positive Ratio the indicator should have 
 	final Integer max_num_of_requests = 700000;
-	public Scanner scanner; // A scanner is a kind of Java's file descriptor for reading from the trace file
 	public Integer num_of_cache_changes_since_last_update;
 	public double num_of_cache_changes_between_updates = 2;
 	private double measured_fpr, measured_fnr; // False Postive, Negative Ratios obtained in practice
 	private double hit_ratio, expected_service_cost, NI_expected_service_cost; //NI = No Indicator
 
-	  public CacheMemSystem () {
-	    this.policyStats = new PolicyStats("CacheMemSystem");
-	  }
+  public CacheMemSystem () {  
+    this.policyStats = new PolicyStats("CacheMemSystem");
+//    ResetSystem ();
+  }
 
-	  /** Returns all variations of this policy based on the configuration parameters. */
-	  public static Set<Policy> policies(Config config) {
-	    return ImmutableSet.of(new CacheMemSystem());
-	  }
+  /** Returns all variations of this policy based on the configuration parameters. */
+  public static Set<Policy> policies(Config config) {
+    return ImmutableSet.of(new CacheMemSystem());
+  }
 
-	  @Override
-	  public Set<Characteristic> characteristics() {
-	    return Sets.immutableEnumSet(WEIGHTED);
-	  }
+  @Override
+  public Set<Characteristic> characteristics() {
+    return Sets.immutableEnumSet(WEIGHTED);
+  }
 
-	  @Override
-	  public PolicyStats stats() {
-	    return policyStats;
-	  }
+  @Override
+  public PolicyStats stats() {
+    return policyStats;
+  }
 
-	  @Override
-	  /** Records that the entry was accessed. */
-	  public void record(AccessEvent event) {
-	    policyStats.recordOperation();
-	  }
-	}
+  // Reset the cache-mem system. 
+  // Call this method before each run of a trace
+  private void ResetSystem () {
+    this.cache_size = MyConfig.GetIntParameterFromConfFile("maximum-size");
+    this.accs_cnt 	 = 0;
+    this.hit_cnt 	 = 0;
+    this.tn_miss_cnt = 0;
+    this.fn_miss_cnt = 0;
+    this.fp_miss_cnt = 0;
+    this.staleness_fp_miss_cnt = 0;
+    this.updated_indicator = new CBF<Long>(this.cache_size, this.designed_indicator_fpr); // Create a new empty updated indicator
+//  	snd_update_cnt = 0;
+//    SendUpdate (); // Copy the updated indicator to a stale indicator   
+  }
+
+  @Override
+  /** Records that the entry was accessed. */
+  public void record(AccessEvent event) {
+    this.accs_cnt++;
+    policyStats.recordOperation();
+  }
+}
 
 
 

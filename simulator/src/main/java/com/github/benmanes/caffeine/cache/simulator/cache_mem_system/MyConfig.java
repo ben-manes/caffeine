@@ -9,12 +9,12 @@ import java.util.Scanner;
 import java.io.FileNotFoundException;
 
 class MyConfig {
-    static final String conf_file_name = "CacheTry.conf";
+    static final String conf_file_name = "application.conf";
+    static final String path_to_conf_file = "\\src\\main\\resources\\";
     static final String trace_file_name = "WikiBench.csv"; 
        
-    public static Config GetConfig () {
-    	System.out.println("path to the config file is " + System.getProperty("user.dir")); //$$
-    	final String full_path_conf_file_name = System.getProperty("user.dir") + "\\" + conf_file_name;
+    public static Config MyGetConfig () {
+    	final String full_path_conf_file_name = System.getProperty("user.dir") + path_to_conf_file + conf_file_name;
         File conf_file = new File(full_path_conf_file_name);
     	if (!conf_file.isFile()) {
     		System.out.println ("Missing configuration file " + full_path_conf_file_name);
@@ -27,23 +27,23 @@ class MyConfig {
     public static String GetStringParameterFromConfFile (String str) {
     	String res = null;
     	try {
-    		res = GetConfig().getString(str);
+    		res = MyGetConfig().getString(str);
     	}
     	catch (ConfigException.Missing | ConfigException.WrongType e) { //
-    		System.out.println("Missing parameter cache-size in configuration file");
+    		System.out.println("Missing String parameter " + str + " in configuration file");
     		System.exit (0);
     	}
     	return res;
     }
     
-    // Returns the desired int parameter written in the configuration file
+    // Returns the desired double parameter written in the configuration file
     public static double GetDoubleParameterFromConfFile (String str) {
     	double res = -1;
     	try {
-    		res = GetConfig().getDouble(str);
+    		res = MyGetConfig().getDouble(str);
     	}
     	catch (ConfigException.Missing | ConfigException.WrongType e) { //
-    		System.out.println("Missing parameter cache-size in configuration file");
+    		System.out.println("Missing double parameter " + str + " in configuration file");
     		System.exit (0);
     	}
     	return res;
@@ -53,10 +53,10 @@ class MyConfig {
     public static int GetIntParameterFromConfFile (String str) {
     	int res = -1;
     	try {
-    		res = GetConfig().getInt(str);
+    		res = MyGetConfig().getInt(str);
     	}
     	catch (ConfigException.Missing | ConfigException.WrongType e) { //
-    		System.out.println("Missing parameter cache-size in configuration file");
+    		System.out.println("Missing int parameter " + str + " in configuration file");
     		System.exit (0);
     	}
     	return res;
