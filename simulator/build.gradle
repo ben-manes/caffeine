@@ -7,7 +7,6 @@ mainClassName = 'com.github.benmanes.caffeine.cache.simulator.Simulator'
 
 dependencies {
   implementation project(':caffeine')
-
   implementation libraries.xz
   implementation libraries.ohc
   implementation libraries.akka
@@ -29,8 +28,19 @@ dependencies {
   implementation libraries.elasticSearch
   implementation libraries.commonsCompress
   implementation libraries.univocityParsers
-
   testImplementation testLibraries.testng
+}
+
+//$$ repo and dependencies added by ofanan for using Orestes BF
+repositories {
+    jcenter()
+}
+dependencies {
+	// https://mvnrepository.com/artifact/redis.clients/jedis
+	compile group: 'redis.clients', name: 'jedis', version: '3.2.0'
+    compile(
+            'com.baqend:bloom-filter:1.0.7'
+    )
 }
 
 test {
