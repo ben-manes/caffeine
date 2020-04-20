@@ -43,7 +43,8 @@ public final class CacheMemSystem implements Policy {
 	public double num_of_cache_changes_between_updates = 2;
 	private double measured_fpr, measured_fnr; // False Postive, Negative Ratios obtained in practice
 	private double hit_ratio, expected_service_cost, NI_expected_service_cost; //NI = No Indicator
-
+  private Integer snd_update_cnt;
+  
   public CacheMemSystem () {  
     this.policyStats = new PolicyStats("CacheMemSystem");
     ResetSystem ();
@@ -67,16 +68,23 @@ public final class CacheMemSystem implements Policy {
   // Reset the cache-mem system. 
   // Call this method before each run of a trace
   private void ResetSystem () {
-    this.cache_size = MyConfig.GetIntParameterFromConfFile("maximum-size");
-    this.accs_cnt 	 = 0;
-    this.hit_cnt 	 = 0;
-    this.tn_miss_cnt = 0;
-    this.fn_miss_cnt = 0;
-    this.fp_miss_cnt = 0;
-    this.staleness_fp_miss_cnt = 0;
-//    this.updated_indicator = new CBF<Long>(this.cache_size, this.designed_indicator_fpr); // Create a new empty updated indicator
-//  	snd_update_cnt = 0;
+    cache_size = MyConfig.GetIntParameterFromConfFile("maximum-size");
+    designed_indicator_fpr =  MyConfig.GetDoubleParameterFromConfFile("designed-indicator-fpr");
+    accs_cnt 	 = 0;
+    hit_cnt 	 = 0;
+    tn_miss_cnt = 0;
+    fn_miss_cnt = 0;
+    fp_miss_cnt = 0;
+    staleness_fp_miss_cnt = 0;
+    updated_indicator = new CBF<Long>(cache_size, designed_indicator_fpr); // Create a new empty updated indicator
+    snd_update_cnt = 0;
 //    SendUpdate (); // Copy the updated indicator to a stale indicator   
+  }
+
+  private void SendUpdate () {
+    stale_indicator = new CBF<Long> (updated_indicator); // Copy the stale indicator to the updated indicator
+    num_of_cache_changes_since_last_update = 0;
+    snd_update_cnt++;
   }
 
   @Override
