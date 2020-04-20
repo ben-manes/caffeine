@@ -72,6 +72,12 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
     return policyStats;
   }
 
+  //$$
+  public static boolean IsInCache (long key) {
+    Node node = data.get(key);
+    return (node == null)? false:true;
+  }
+  
   @Override
   public void record(long key) {
     policyStats.recordOperation();
@@ -208,7 +214,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
   }
 
   /** A cache entry on the frequency node's chain. */
-  static final class Node {
+  public static final class Node {
     final long key;
 
     FrequencyNode freq;
