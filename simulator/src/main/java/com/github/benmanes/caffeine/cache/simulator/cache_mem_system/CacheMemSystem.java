@@ -30,8 +30,9 @@ enum Op {Add, Remove};
 
 //A version of MyCachePolicy which implements the i/f Policy This is the i/f implemented by most the opt.UnboundedPolicy.
 public final class CacheMemSystem implements Policy {
-    private final PolicyStats policyStats;
-	public Integer cache_size;
+  private final PolicyStats policyStats;
+//  final Long2ObjectMap<Node> cache;
+  public Integer cache_size;
 	public CBF<Long> stale_indicator, updated_indicator;
 	public double accs_cnt, hit_cnt, fp_miss_cnt, tn_miss_cnt, fn_miss_cnt;
 	private int staleness_fp_miss_cnt;  // The number of FP misses caused due to indicator's staleness. The current calculation gives strange results. 
@@ -98,10 +99,30 @@ public final class CacheMemSystem implements Policy {
 
 
   @Override
-  /** Records that the entry was accessed. */
+  /** Handle a user's request for an item. */
   public void record(AccessEvent event) {
-    this.accs_cnt++;
-    policyStats.recordOperation();
+    accs_cnt++;
+    /*
+     * policyStats.recordOperation(); boolean key_is_in_cache =
+     * IsInCache(this.cur_key); if (this.stale_indicator.Query(this.cur_key)) {
+     * //Query the stale indicator
+     * 
+     * //Positive indication if (key_is_in_cache) { this.hit_cnt++; } else {
+     * this.fp_miss_cnt++; //A miss due to false-positive indication if
+     * (!this.updated_indicator.Query(this.cur_key)) { // stale indicator positively
+     * replies, while updated indicator negatively reply
+     * this.staleness_fp_miss_cnt++; } } AccessCache (this.cur_key, this.cur_val); }
+     * 
+     * else { //Negative indication if (key_is_in_cache) { this.fn_miss_cnt++; //A
+     * miss due to false negative indication } else { this.tn_miss_cnt++; //A miss
+     * due to true negative indication } this.InformCache(); // After the item
+     * "was fetched from the memory", inform the cache about the requested item }
+     * 
+     * // If the key has just been cached, need to inform the updated indicator if
+     * (!key_is_in_cache && IsInCache(this.cur_key)) { HandleCacheChange
+     * (this.cur_key, Op.Add); }
+     */
+  
   }
 }
 

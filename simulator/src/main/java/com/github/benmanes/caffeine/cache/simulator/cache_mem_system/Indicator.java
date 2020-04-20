@@ -11,7 +11,7 @@ public interface Indicator<K> {
     public void SndUpdate ();    
     
 //    public void HandleCacheChangeWhileStale (K key, Op op);
-//    
-//    public void HandleCacheChange (K key, Op op);
+    
+    public void HandleCacheChange (K key, Op op);
        
 }
