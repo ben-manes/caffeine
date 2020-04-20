@@ -78,7 +78,7 @@ public final class CacheMemSystem implements Policy {
     staleness_fp_miss_cnt = 0;
     updated_indicator = new CBF<Long>(cache_size, designed_indicator_fpr); // Create a new empty updated indicator
     snd_update_cnt = 0;
-//    SendUpdate (); // Copy the updated indicator to a stale indicator   
+    SendUpdate (); // Copy the updated indicator to a stale indicator   
   }
 
   private void SendUpdate () {
@@ -86,6 +86,16 @@ public final class CacheMemSystem implements Policy {
     num_of_cache_changes_since_last_update = 0;
     snd_update_cnt++;
   }
+  
+  private void HandleCacheChange (Long key, Op op) {
+    this.num_of_cache_changes_since_last_update++;
+    updated_indicator.HandleCacheChange (key, op);           
+    if (num_of_cache_changes_since_last_update >= num_of_cache_changes_between_updates) {
+      SendUpdate();
+      num_of_cache_changes_since_last_update = 0;
+    }
+  }
+
 
   @Override
   /** Records that the entry was accessed. */

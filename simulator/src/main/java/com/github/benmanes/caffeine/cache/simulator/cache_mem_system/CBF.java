@@ -56,11 +56,11 @@ public class CBF<K> implements Indicator<K> {
 //  public void HandleCacheChangeWhileStale (K key, Op op) {
 //  } 
 //  
-//  public void HandleCacheChange (K key, Op op) {
-//		if (op == Op.Add)
-//			Insert (key);
-//		else //key was removed
-//			Remove (key);
-//  } 
+  public void HandleCacheChange (K key, Op op) {
+		if (op == Op.Add)
+			Insert (key);
+		else //key was removed
+			Remove (key);
+  } 
 	
 }
