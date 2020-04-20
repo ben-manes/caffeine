@@ -13,7 +13,8 @@ public class CBF<K> implements Indicator<K> {
   // C'tor
   CBF (Integer cache_size, double fpr) {
   	this.fpr = fpr;
-//      this.cache_size = MyConfig.GetIntParameterFromConfFile("cache-size");      
+      this.cache_size = 100; //$$$ MyConfig.GetIntParameterFromConfFile("cache-size");
+  	
       this.my_indicator = new FilterBuilder(this.cache_size, this.fpr)
       						//.size(10000) //bits to use
               				.countingBits(this.countingBits)

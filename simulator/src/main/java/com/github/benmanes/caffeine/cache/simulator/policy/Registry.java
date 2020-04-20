@@ -67,7 +67,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.Tiny
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.WindowTinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.MyCachePolicy; //$$
+import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.CacheMemSystem; //$$
 import com.typesafe.config.Config;
 
 /**
@@ -178,7 +178,7 @@ public final class Registry {
 
   //$$
   private static void registerMyCachePolicy (Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("MyCachePolicy", MyCachePolicy::policies);
+    factories.put("MyCachePolicy", CacheMemSystem::policies);
   }
 
 

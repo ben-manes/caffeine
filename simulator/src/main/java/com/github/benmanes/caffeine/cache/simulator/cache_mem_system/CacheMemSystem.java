@@ -32,7 +32,20 @@ enum Op {Add, Remove};
 
 //A version of MyCachePolicy which implements the i/f Policy This is the i/f implemented by most the opt.UnboundedPolicy.
 public final class CacheMemSystem implements Policy {
-	  private final PolicyStats policyStats;
+	private final PolicyStats policyStats;
+	public Integer cache_size;
+	public CBF<Long> stale_indicator, updated_indicator;
+	public double accs_cnt, hit_cnt, fp_miss_cnt, tn_miss_cnt, fn_miss_cnt;
+	private int staleness_fp_miss_cnt;  // The number of FP misses caused due to indicator's staleness. The current calculation gives strange results. 
+	public Integer cur_key;
+//	public Value cur_val;
+	public double designed_indicator_fpr; // The designed False Positive Ratio the indicator should have 
+	final Integer max_num_of_requests = 700000;
+	public Scanner scanner; // A scanner is a kind of Java's file descriptor for reading from the trace file
+	public Integer num_of_cache_changes_since_last_update;
+	public double num_of_cache_changes_between_updates = 2;
+	private double measured_fpr, measured_fnr; // False Postive, Negative Ratios obtained in practice
+	private double hit_ratio, expected_service_cost, NI_expected_service_cost; //NI = No Indicator
 
 	  public CacheMemSystem () {
 	    this.policyStats = new PolicyStats("CacheMemSystem");
@@ -40,7 +53,7 @@ public final class CacheMemSystem implements Policy {
 
 	  /** Returns all variations of this policy based on the configuration parameters. */
 	  public static Set<Policy> policies(Config config) {
-	    return ImmutableSet.of(new MyCachePolicy());
+	    return ImmutableSet.of(new CacheMemSystem());
 	  }
 
 	  @Override
