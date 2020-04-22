@@ -8,16 +8,22 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
+import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.*; // BANG: cannot import this private class
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy.EvictionPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -38,7 +44,6 @@ public final class CacheMemSystem implements Policy {
 	public double accs_cnt, hit_cnt, fp_miss_cnt, tn_miss_cnt, fn_miss_cnt;
 	private int staleness_fp_miss_cnt;  // The number of FP misses caused due to indicator's staleness. The current calculation gives strange results. 
 	public long cur_key;
-//	public Value cur_val;
 	public double designed_indicator_fpr; // The designed False Positive Ratio the indicator should have 
 	final Integer max_num_of_requests = 700000;
 	public Integer num_of_cache_changes_since_last_update;
@@ -46,15 +51,25 @@ public final class CacheMemSystem implements Policy {
 	private double measured_fpr, measured_fnr; // False Postive, Negative Ratios obtained in practice
 	private double hit_ratio, expected_service_cost, NI_expected_service_cost; //NI = No Indicator
   private Integer snd_update_cnt;
+  public Config config;
+  public Set<Policy> my_policies_set;
+  public FrequentlyUsedPolicy my_policy; //(Admission admission, EvictionPolicy policy, Config config)
   
-  public CacheMemSystem () {  
-    this.policyStats = new PolicyStats("CacheMemSystem");
+  // C'tor
+  // config - the configuration file
+  public CacheMemSystem (Config config) {  
+    policyStats = new PolicyStats("CacheMemSystem");
+    this.config = config; 
     ResetSystem ();
+    GenMyPolicy ();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
+  // This method is called by Registry.java, upon reading application.conf file and initializing the simulation.
+  // config holds the parameters in the configuration file (e.g., application.conf).
+  // The policies are returned as a set, because sometimes a single policy has multiple sub-policies.
   public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new CacheMemSystem());
+    return ImmutableSet.of(new CacheMemSystem(config));
   }
 
   @Override
@@ -67,6 +82,19 @@ public final class CacheMemSystem implements Policy {
     return policyStats;
   }
 
+  private void GenMyPolicy () {
+
+    BasicSettings settings = new BasicSettings(config);
+    EvictionPolicy eviction_policy = EvictionPolicy.MFU; 
+    my_policies_set = settings.admission().stream().map(admission ->
+    new FrequentlyUsedPolicy(admission, eviction_policy, config)).collect(toSet());
+    // Now my_policies_set holds a set of policy with a single item: the FrequentlyUsedPolicy. 
+    
+//    System.out.println ("The num of elements in the set is" + my_policies_set.size());
+//    System.exit (0);
+    
+  }
+  
   // Reset the cache-mem system. 
   // Call this method before each run of a trace
   private void ResetSystem () {
@@ -100,7 +128,9 @@ public final class CacheMemSystem implements Policy {
 
   // Checks whether a given key is in the cache, by calling to the relevant policy. 
   private boolean IsInCache (long key) {
-      return com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy.IsInCache (key);
+    return false; //$$
+//    return my_policy.IsInCache(key);
+      //return com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy.IsInCache (key);
   }
 
 
@@ -109,21 +139,22 @@ public final class CacheMemSystem implements Policy {
   public void record(AccessEvent event) {
     accs_cnt++;
     policyStats.recordOperation();
-    boolean key_is_in_cache = IsInCache(cur_key);
+    cur_key = event.key().longValue(); 
+    boolean key_is_in_cache = IsInCache (cur_key); 
         
     //Query the stale indicator
-    if (this.stale_indicator.Query(this.cur_key)) { 
+    if (stale_indicator.Query(cur_key)) { 
        
-       //Positive indication
-       if (key_is_in_cache) {
-             this.hit_cnt++;         
-       }
-       else {
-         this.fp_miss_cnt++; //A miss due to false-positive indication
-         if (!this.updated_indicator.Query(this.cur_key)) { // stale indicator positively replies, while updated indicator negatively reply  
-           this.staleness_fp_miss_cnt++;
-         }
-       }
+      // Positive indication
+      if (key_is_in_cache) { // True Positive 
+        hit_cnt++;         
+      }
+      else { // False Positive
+        fp_miss_cnt++; //A miss due to false-positive indication
+        if (!updated_indicator.Query(cur_key)) {// stale indicator positively replies, updated indicator negatively reply  
+          staleness_fp_miss_cnt++; // False Positive which happened due to staleness
+        }
+      }
 //         AccessCache (this.cur_key, this.cur_val);
      }
      
