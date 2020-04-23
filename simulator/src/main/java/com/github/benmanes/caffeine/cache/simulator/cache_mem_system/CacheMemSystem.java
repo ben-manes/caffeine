@@ -17,7 +17,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.linked.*; // BANG: cannot import this private class
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -37,7 +36,7 @@ public final class CacheMemSystem implements Policy {
 	public CBF<Long> stale_indicator, updated_indicator;
 	public double accs_cnt, hit_cnt, fp_miss_cnt, tn_miss_cnt, fn_miss_cnt;
 	private int staleness_fp_miss_cnt;  // The number of FP misses caused due to indicator's staleness. The current calculation gives strange results. 
-	public long cur_key;
+	public Integer cur_key;
 //	public Value cur_val;
 	public double designed_indicator_fpr; // The designed False Positive Ratio the indicator should have 
 	final Integer max_num_of_requests = 700000;
@@ -98,50 +97,32 @@ public final class CacheMemSystem implements Policy {
     }
   }
 
-  // Checks whether a given key is in the cache, by calling to the relevant policy. 
-  private boolean IsInCache (long key) {
-      return com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy.IsInCache (key);
-  }
-
 
   @Override
   /** Handle a user's request for an item. */
   public void record(AccessEvent event) {
     accs_cnt++;
-    policyStats.recordOperation();
-    boolean key_is_in_cache = IsInCache(cur_key);
-        
-    //Query the stale indicator
-    if (this.stale_indicator.Query(this.cur_key)) { 
-       
-       //Positive indication
-       if (key_is_in_cache) {
-             this.hit_cnt++;         
-       }
-       else {
-         this.fp_miss_cnt++; //A miss due to false-positive indication
-         if (!this.updated_indicator.Query(this.cur_key)) { // stale indicator positively replies, while updated indicator negatively reply  
-           this.staleness_fp_miss_cnt++;
-         }
-       }
-//         AccessCache (this.cur_key, this.cur_val);
-     }
-     
-     else { //Negative indication
-//       if (key_is_in_cache) {
-//             this.fn_miss_cnt++; //A miss due to false negative indication
-//       }
-//       else {
-//         this.tn_miss_cnt++; //A miss due to true negative indication
-//       }
-//         this.InformCache(); // After the item "was fetched from the memory", inform the cache about the requested item
-     }
-     
-//     // If the key has just been cached, need to inform the updated indicator  
-//     if (!key_is_in_cache && IsInCache(this.cur_key)) {
-//       HandleCacheChange (this.cur_key, Op.Add);       
-//     }
-
+    /*
+     * policyStats.recordOperation(); boolean key_is_in_cache =
+     * IsInCache(this.cur_key); if (this.stale_indicator.Query(this.cur_key)) {
+     * //Query the stale indicator
+     * 
+     * //Positive indication if (key_is_in_cache) { this.hit_cnt++; } else {
+     * this.fp_miss_cnt++; //A miss due to false-positive indication if
+     * (!this.updated_indicator.Query(this.cur_key)) { // stale indicator positively
+     * replies, while updated indicator negatively reply
+     * this.staleness_fp_miss_cnt++; } } AccessCache (this.cur_key, this.cur_val); }
+     * 
+     * else { //Negative indication if (key_is_in_cache) { this.fn_miss_cnt++; //A
+     * miss due to false negative indication } else { this.tn_miss_cnt++; //A miss
+     * due to true negative indication } this.InformCache(); // After the item
+     * "was fetched from the memory", inform the cache about the requested item }
+     * 
+     * // If the key has just been cached, need to inform the updated indicator if
+     * (!key_is_in_cache && IsInCache(this.cur_key)) { HandleCacheChange
+     * (this.cur_key, Op.Add); }
+     */
+  
   }
 }
 
