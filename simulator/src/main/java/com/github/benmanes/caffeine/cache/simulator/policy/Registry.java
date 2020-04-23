@@ -71,6 +71,7 @@ import com.typesafe.config.Config;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyLinkedPolicy; //$$
 import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.CacheMemSystem; //$$
+import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.MyGenericPolicy; //$$
 
 /**
  * The registry of caching policies.
@@ -124,7 +125,7 @@ public final class Registry {
   private static void registerMyLinked(Map<String, Function<Config, Set<Policy>>> factories) {
     Stream.of(MyLinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "my_linked." + priority.name();
-      factories.put(id, config -> MyLinkedPolicy.policies(config, priority));
+      factories.put(id, config -> MyGenericPolicy.policies(config, priority));
     });
     Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "linked." + priority.name();
