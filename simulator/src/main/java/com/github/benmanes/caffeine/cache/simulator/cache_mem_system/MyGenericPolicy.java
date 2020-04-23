@@ -24,6 +24,13 @@ import com.typesafe.config.Config;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
+
+// A slightly-more generic envelope, which can be used (possibly with some little changes) by several "MyXXXPolicy"
+// MyGenericPolicy adds to "MyXXXPolicy" a CacheMemSystem, which does the following:
+// - tracks changes in the cache, 
+// - collects stats (e.g., counts of true / false positives and true / false negatives)
+// - updates an indicator
+// - uses the indicator's indications as an "access strategy" to the cache / directly to the "mem".
 public class MyGenericPolicy extends MyLinkedPolicy {
   public CacheMemSystem cache_mem_system;
   public long cur_key;
@@ -33,6 +40,7 @@ public class MyGenericPolicy extends MyLinkedPolicy {
     cache_mem_system = new CacheMemSystem ();
   }
 
+  // Intercept requests for keys and insertions to the cache
   @Override
   public void record(AccessEvent event) {
     cur_key = event.key();
@@ -41,9 +49,24 @@ public class MyGenericPolicy extends MyLinkedPolicy {
     super.record(event); 
   }
 
+  // Intercept evictions from the cache
   @Override
   public void IndicateEviction (long key) {
     this.cache_mem_system.HandleCacheChange(key, Op.Remove);
+  }
+
+  /** Indicates that the recording has completed. */
+  @Override
+  public void finished() {
+    System.out.println ("Yalla Hapoel*************\n ************\n **********\n");
+    System.exit (0);
+  }
+
+  @Override
+  public PolicyStats stats() {
+    System.out.println ("Yalla Hapoel*************\n ************\n **********\n");
+    System.exit (0);
+    return super.stats();
   }
 
 }

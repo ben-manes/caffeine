@@ -24,7 +24,7 @@ import com.typesafe.config.Config;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
-public class MyLinkedPolicy implements Policy { 
+public class MyLinkedPolicy implements Policy { //$$ 
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final EvictionPolicy policy;
@@ -33,7 +33,7 @@ public class MyLinkedPolicy implements Policy {
   final Node sentinel;
   int currentSize;
   
-  public MyLinkedPolicy (Admission admission, EvictionPolicy policy, Config config) {
+  public MyLinkedPolicy (Admission admission, EvictionPolicy policy, Config config) { //$$
     this.policyStats = new PolicyStats(admission.format("my_linked." + policy.label())); //$$
     this.admittor = admission.from(config, policyStats);
     BasicSettings settings = new BasicSettings(config);
