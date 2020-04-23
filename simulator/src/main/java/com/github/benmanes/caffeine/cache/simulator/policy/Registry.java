@@ -38,7 +38,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.irr.HillClimberFrdPol
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.IndicatorFrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.LirsPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.FrequentlyUsedPolicy;
-import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyFrequentlyUsedPolicy; //$$
+//import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyFrequentlyUsedPolicy; //$$
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.MultiQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.S4LruPolicy;
@@ -85,14 +85,14 @@ public final class Registry {
     Map<String, Function<Config, Set<Policy>>> factories = new HashMap<>();
     registerIrr(factories);
     registerLinked(factories);
-    registerMyLinked(factories); //$$
+//    registerMyLinked(factories); //$$
     registerSketch(factories);
     registerOptimal(factories);
     registerSampled(factories);
     registerProduct(factories);
     registerTwoQueue(factories);
     registerAdaptive(factories);
-    registerCacheMemSystem(factories); //$$
+//    registerCacheMemSystem(factories); //$$
     return factories.entrySet().stream().collect(
         toMap(entry -> entry.getKey().toLowerCase(US), Entry::getValue));
   }
@@ -134,21 +134,21 @@ public final class Registry {
     factories.put("linked.S4Lru", S4LruPolicy::policies);
   }
 
-  //$$
+  /*
   private static void registerMyLinked(Map<String, Function<Config, Set<Policy>>> factories) {
     Stream.of(LinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "linked." + priority.name();
       factories.put(id, config -> LinkedPolicy.policies(config, priority));
     });
-    Stream.of(MyFrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
+    Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "linked." + priority.name();
-      factories.put(id, config -> MyFrequentlyUsedPolicy.policies(config, priority)); //$$
+      factories.put(id, config -> FrequentlyUsedPolicy.policies(config, priority)); //$$
     });
     factories.put("linked.SegmentedLru", SegmentedLruPolicy::policies);
     factories.put("linked.Multiqueue", MultiQueuePolicy::policies);
     factories.put("linked.S4Lru", S4LruPolicy::policies);
   }
-
+*/
 
   private static void registerSampled(Map<String, Function<Config, Set<Policy>>> factories) {
     Stream.of(SampledPolicy.EvictionPolicy.values()).forEach(priority -> {
@@ -195,9 +195,9 @@ public final class Registry {
   }
 
   //$$
-  private static void registerCacheMemSystem (Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("CacheMemSystem", CacheMemSystem::policies);
-  }
+//  private static void registerCacheMemSystem (Map<String, Function<Config, Set<Policy>>> factories) {
+//    factories.put("CacheMemSystem", CacheMemSystem::policies);
+//  }
 
 
 
