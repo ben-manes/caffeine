@@ -35,7 +35,7 @@ public final class CacheMemSystem implements Policy {
 	public CBF<Long> stale_indicator, updated_indicator;
 	public double accs_cnt, hit_cnt, fp_miss_cnt, tn_miss_cnt, fn_miss_cnt;
 	private int staleness_fp_miss_cnt;  // The number of FP misses caused due to indicator's staleness. The current calculation gives strange results. 
-	public Integer cur_key;
+	public long cur_key;
 	public double designed_indicator_fpr; // The designed False Positive Ratio the indicator should have 
 	public Integer num_of_cache_changes_since_last_update;
 	public double num_of_cache_changes_between_updates = 2;
@@ -86,6 +86,48 @@ public final class CacheMemSystem implements Policy {
     if (num_of_cache_changes_since_last_update >= num_of_cache_changes_between_updates) {
       SendUpdate();
       num_of_cache_changes_since_last_update = 0;
+    }
+  }
+
+  public boolean IsInCache (long key) {
+    return true; //$$$$
+//    Value rd_val = this.cache.getIfPresent(key);
+//      return (rd_val != null);
+  }
+
+  // Handle a user request for a given key
+  public void HandleReq (long key) {
+    cur_key = key;
+    this.accs_cnt++;
+    boolean key_is_in_cache = IsInCache(cur_key);
+    if (this.stale_indicator.Query(cur_key)) { //Query the stale indicator
+      
+      //Positive indication
+      if (key_is_in_cache) {
+            this.hit_cnt++;         
+      }
+      else {
+        this.fp_miss_cnt++; //A miss due to false-positive indication
+        if (!this.updated_indicator.Query(this.cur_key)) { // stale indicator positively replies, while updated indicator negatively reply  
+          this.staleness_fp_miss_cnt++;
+        }
+      }
+//$$$$          AccessCache (this.cur_key, this.cur_val);
+    }
+    
+    else { //Negative indication
+      if (key_is_in_cache) {
+            this.fn_miss_cnt++; //A miss due to false negative indication
+      }
+      else {
+        this.tn_miss_cnt++; //A miss due to true negative indication
+      }
+    //$$$$    this.InformCache(); // After the item "was fetched from the memory", inform the cache about the requested item
+    }
+    
+    // If the key has just been cached, need to inform the updated indicator  
+    if (!key_is_in_cache && IsInCache(cur_key)) {
+      HandleCacheChange (cur_key, Op.Add);       
     }
   }
 

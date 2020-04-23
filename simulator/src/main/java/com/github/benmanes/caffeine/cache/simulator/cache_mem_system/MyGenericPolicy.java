@@ -17,7 +17,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyLinkedPolicy;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
@@ -32,4 +31,11 @@ public class MyGenericPolicy extends MyLinkedPolicy {
     super (admission, policy, config);
     cache_mem_system = new CacheMemSystem ();
   }
+
+  @Override
+  public void record(AccessEvent event) {
+    this.cache_mem_system.HandleReq (event.key());
+    super.record(event); 
+  }
+
 }
