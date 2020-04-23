@@ -72,18 +72,24 @@ public class MyLinkedPolicy implements Policy {
     final long key = event.key();
     Node old = data.get(key);
     admittor.record(key);
-    if (old == null) {
+    if (old == null) { // miss
+      
+      // Write stats about the miss
       policyStats.recordWeightedMiss(weight);
       if (weight > maximumSize) {
         policyStats.recordOperation();
         return;
       }
+      
+      // cache the (missed) requested key  
       Node node = new Node(key, weight, sentinel);
       data.put(key, node);
       currentSize += node.weight;
       node.appendToTail();
       evict(node);
-    } else {
+    } 
+    
+    else { // hit
       policyStats.recordWeightedHit(weight);
       policy.onAccess(old, policyStats);
     }
@@ -108,10 +114,20 @@ public class MyLinkedPolicy implements Policy {
     }
   }
 
+  //$$ Inform other classes about an evicted key.
+  // The function is empty - to be overriden by other classes.
+  public void IndicateEviction (long key) {
+  }
+  
+  
+  // This function is private, and uses the private class Node. 
+  // Hence, it's hard to intercepted / override it by another class.
+  // To solve it, I added the call to IndicateEviction in the end.
   private void evictEntry(Node node) {
     currentSize -= node.weight;
     data.remove(node.key);
     node.remove();
+    IndicateEviction (node.key); //$$ Inform other classes about the eviction  
   }
 
   /** The replacement policy. */

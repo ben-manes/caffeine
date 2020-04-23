@@ -36,9 +36,14 @@ public class MyGenericPolicy extends MyLinkedPolicy {
   @Override
   public void record(AccessEvent event) {
     cur_key = event.key();
-    this.cache_mem_system.HandleReq (cur_key, super.IsInCache(cur_key));
+    boolean is_in_cache = super.IsInCache(cur_key);
+    cache_mem_system.HandleReq (cur_key, is_in_cache);
     super.record(event); 
-    // $$$$ Still need to insert / remove the key upon cache changes
+  }
+
+  @Override
+  public void IndicateEviction (long key) {
+    this.cache_mem_system.HandleCacheChange(key, Op.Remove);
   }
 
 }

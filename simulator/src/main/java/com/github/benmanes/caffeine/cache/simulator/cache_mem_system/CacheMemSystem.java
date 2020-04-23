@@ -80,7 +80,7 @@ public final class CacheMemSystem implements Policy {
     snd_update_cnt++;
   }
   
-  private void HandleCacheChange (Long key, Op op) {
+  public void HandleCacheChange (Long key, Op op) {
     this.num_of_cache_changes_since_last_update++;
     updated_indicator.HandleCacheChange (key, op);           
     if (num_of_cache_changes_since_last_update >= num_of_cache_changes_between_updates) {
@@ -92,36 +92,36 @@ public final class CacheMemSystem implements Policy {
   // Handle a user request for a given key
   public void HandleReq (long key, boolean key_is_in_cache) {
     cur_key = key;
-    this.accs_cnt++;
-    if (this.stale_indicator.Query(cur_key)) { //Query the stale indicator
+    accs_cnt++;
+    if (stale_indicator.Query(cur_key)) { //Query the stale indicator
       
       //Positive indication
       if (key_is_in_cache) {
-            this.hit_cnt++;         
+            hit_cnt++;         
       }
       else {
-        this.fp_miss_cnt++; //A miss due to false-positive indication
-        if (!this.updated_indicator.Query(this.cur_key)) { // stale indicator positively replies, while updated indicator negatively reply  
-          this.staleness_fp_miss_cnt++;
+        fp_miss_cnt++; //A miss due to false-positive indication
+        if (!updated_indicator.Query(cur_key)) { // stale indicator positively replies, while updated indicator negatively reply  
+          staleness_fp_miss_cnt++;
         }
       }
     }
     
     else { //Negative indication
       if (key_is_in_cache) {
-            this.fn_miss_cnt++; //A miss due to false negative indication
+            fn_miss_cnt++; //A miss due to false negative indication
       }
       else {
-        this.tn_miss_cnt++; //A miss due to true negative indication
+        tn_miss_cnt++; //A miss due to true negative indication
       }
     }
     
-    // If the key has just been cached, need to inform the updated indicator
-    
-    //$$$$
-//    if (!key_is_in_cache && IsInCache(cur_key)) {
-//      HandleCacheChange (cur_key, Op.Add);       
-//    }
+    // In Caffeine, every key which caused a miss (wasn't in the cache) is first entered to the cache.
+    // In most policies, the new key also remains in the cache; in TinyLFU, it may be immediately after 
+    // removed from the cache (which is equivalent to not being admitted to the cache at all).
+    if (!key_is_in_cache) {
+      HandleCacheChange (cur_key, Op.Add);       
+    }
   }
 
 
