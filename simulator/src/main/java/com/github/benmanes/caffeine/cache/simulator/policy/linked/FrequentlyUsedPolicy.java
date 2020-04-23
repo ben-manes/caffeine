@@ -41,7 +41,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
+public final class FrequentlyUsedPolicy implements KeyOnlyPolicy { 
   final PolicyStats policyStats;
   final Long2ObjectMap<Node> data;
   final EvictionPolicy policy;

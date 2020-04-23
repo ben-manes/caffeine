@@ -67,8 +67,10 @@ import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.Tiny
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache.WindowTinyCachePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
-import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.CacheMemSystem; //$$
 import com.typesafe.config.Config;
+
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyLinkedPolicy; //$$
+import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.CacheMemSystem; //$$
 
 /**
  * The registry of caching policies.
@@ -84,6 +86,7 @@ public final class Registry {
     Map<String, Function<Config, Set<Policy>>> factories = new HashMap<>();
     registerIrr(factories);
     registerLinked(factories);
+    registerMyLinked(factories); //$$
     registerSketch(factories);
     registerOptimal(factories);
     registerSampled(factories);
@@ -116,6 +119,20 @@ public final class Registry {
   private static void registerOptimal(Map<String, Function<Config, Set<Policy>>> factories) {
     factories.put("opt.Clairvoyant", ClairvoyantPolicy::policies);
     factories.put("opt.Unbounded", UnboundedPolicy::policies);
+  }
+
+  private static void registerMyLinked(Map<String, Function<Config, Set<Policy>>> factories) {
+    Stream.of(MyLinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
+      String id = "my_linked." + priority.name();
+      factories.put(id, config -> MyLinkedPolicy.policies(config, priority));
+    });
+    Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
+      String id = "linked." + priority.name();
+      factories.put(id, config -> FrequentlyUsedPolicy.policies(config, priority));
+    });
+    factories.put("linked.SegmentedLru", SegmentedLruPolicy::policies);
+    factories.put("linked.Multiqueue", MultiQueuePolicy::policies);
+    factories.put("linked.S4Lru", S4LruPolicy::policies);
   }
 
   private static void registerLinked(Map<String, Function<Config, Set<Policy>>> factories) {

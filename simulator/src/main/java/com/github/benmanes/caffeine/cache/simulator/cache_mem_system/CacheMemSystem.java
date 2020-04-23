@@ -31,24 +31,32 @@ enum Op {Add, Remove};
 //A version of MyCachePolicy which implements the i/f Policy This is the i/f implemented by most the opt.UnboundedPolicy.
 public final class CacheMemSystem implements Policy {
   private final PolicyStats policyStats;
-//  final Long2ObjectMap<Node> cache;
   public Integer cache_size;
 	public CBF<Long> stale_indicator, updated_indicator;
 	public double accs_cnt, hit_cnt, fp_miss_cnt, tn_miss_cnt, fn_miss_cnt;
 	private int staleness_fp_miss_cnt;  // The number of FP misses caused due to indicator's staleness. The current calculation gives strange results. 
 	public Integer cur_key;
-//	public Value cur_val;
 	public double designed_indicator_fpr; // The designed False Positive Ratio the indicator should have 
-	final Integer max_num_of_requests = 700000;
 	public Integer num_of_cache_changes_since_last_update;
 	public double num_of_cache_changes_between_updates = 2;
 	private double measured_fpr, measured_fnr; // False Postive, Negative Ratios obtained in practice
 	private double hit_ratio, expected_service_cost, NI_expected_service_cost; //NI = No Indicator
   private Integer snd_update_cnt;
   
+  //  C'tor
   public CacheMemSystem () {  
     this.policyStats = new PolicyStats("CacheMemSystem");
-    ResetSystem ();
+    cache_size = MyConfig.GetIntParameterFromConfFile("maximum-size");
+    designed_indicator_fpr =  MyConfig.GetDoubleParameterFromConfFile("designed-indicator-fpr");
+    accs_cnt   = 0;
+    hit_cnt    = 0;
+    tn_miss_cnt = 0;
+    fn_miss_cnt = 0;
+    fp_miss_cnt = 0;
+    staleness_fp_miss_cnt = 0;
+    updated_indicator = new CBF<Long>(cache_size, designed_indicator_fpr); // Create a new empty updated indicator
+    snd_update_cnt = 0;
+    SendUpdate (); // Copy the updated indicator to a stale indicator   
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
@@ -64,22 +72,6 @@ public final class CacheMemSystem implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
-  }
-
-  // Reset the cache-mem system. 
-  // Call this method before each run of a trace
-  private void ResetSystem () {
-    cache_size = MyConfig.GetIntParameterFromConfFile("maximum-size");
-    designed_indicator_fpr =  MyConfig.GetDoubleParameterFromConfFile("designed-indicator-fpr");
-    accs_cnt 	 = 0;
-    hit_cnt 	 = 0;
-    tn_miss_cnt = 0;
-    fn_miss_cnt = 0;
-    fp_miss_cnt = 0;
-    staleness_fp_miss_cnt = 0;
-    updated_indicator = new CBF<Long>(cache_size, designed_indicator_fpr); // Create a new empty updated indicator
-    snd_update_cnt = 0;
-    SendUpdate (); // Copy the updated indicator to a stale indicator   
   }
 
   private void SendUpdate () {

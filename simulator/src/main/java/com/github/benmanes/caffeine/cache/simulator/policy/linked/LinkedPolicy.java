@@ -44,7 +44,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LinkedPolicy implements Policy {
+public final class LinkedPolicy implements Policy { 
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
   final EvictionPolicy policy;
