@@ -122,10 +122,11 @@ public final class Registry {
     factories.put("opt.Unbounded", UnboundedPolicy::policies);
   }
 
+  // $$
   private static void registerMyLinked(Map<String, Function<Config, Set<Policy>>> factories) {
-    Stream.of(MyLinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
+    Stream.of(MyGenericPolicy.EvictionPolicy.values()).forEach(priority -> { //$$
       String id = "my_linked." + priority.name();
-      factories.put(id, config -> MyGenericPolicy.policies(config, priority));
+      factories.put(id, config -> MyGenericPolicy.policies(config, priority)); //$$
     });
     Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "linked." + priority.name();
