@@ -34,7 +34,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 public class MyGenericPolicy extends MyLinkedPolicy {
   public CacheMemSystem cache_mem_system;
   public long cur_key;
-  
+   
   public MyGenericPolicy (Admission admission, EvictionPolicy policy, Config config) {
     super (admission, policy, config);
     cache_mem_system = new CacheMemSystem ();
