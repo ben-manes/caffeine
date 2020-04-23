@@ -26,6 +26,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 public class MyGenericPolicy extends MyLinkedPolicy {
   public CacheMemSystem cache_mem_system;
+  public long cur_key;
   
   public MyGenericPolicy (Admission admission, EvictionPolicy policy, Config config) {
     super (admission, policy, config);
@@ -34,8 +35,10 @@ public class MyGenericPolicy extends MyLinkedPolicy {
 
   @Override
   public void record(AccessEvent event) {
-    this.cache_mem_system.HandleReq (event.key());
+    cur_key = event.key();
+    this.cache_mem_system.HandleReq (cur_key, super.IsInCache(cur_key));
     super.record(event); 
+    // $$$$ Still need to insert / remove the key upon cache changes
   }
 
 }

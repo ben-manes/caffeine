@@ -61,6 +61,11 @@ public class MyLinkedPolicy implements Policy {
     return policyStats;
   }
   
+  //$$
+  public boolean IsInCache (long key) {
+    return (data.get(key) == null)? false:true;   
+  }
+  
   @Override
   public void record(AccessEvent event) {
     final int weight = event.weight();

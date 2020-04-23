@@ -89,17 +89,10 @@ public final class CacheMemSystem implements Policy {
     }
   }
 
-  public boolean IsInCache (long key) {
-    return true; //$$$$
-//    Value rd_val = this.cache.getIfPresent(key);
-//      return (rd_val != null);
-  }
-
   // Handle a user request for a given key
-  public void HandleReq (long key) {
+  public void HandleReq (long key, boolean key_is_in_cache) {
     cur_key = key;
     this.accs_cnt++;
-    boolean key_is_in_cache = IsInCache(cur_key);
     if (this.stale_indicator.Query(cur_key)) { //Query the stale indicator
       
       //Positive indication
@@ -112,7 +105,6 @@ public final class CacheMemSystem implements Policy {
           this.staleness_fp_miss_cnt++;
         }
       }
-//$$$$          AccessCache (this.cur_key, this.cur_val);
     }
     
     else { //Negative indication
@@ -122,13 +114,14 @@ public final class CacheMemSystem implements Policy {
       else {
         this.tn_miss_cnt++; //A miss due to true negative indication
       }
-    //$$$$    this.InformCache(); // After the item "was fetched from the memory", inform the cache about the requested item
     }
     
-    // If the key has just been cached, need to inform the updated indicator  
-    if (!key_is_in_cache && IsInCache(cur_key)) {
-      HandleCacheChange (cur_key, Op.Add);       
-    }
+    // If the key has just been cached, need to inform the updated indicator
+    
+    //$$$$
+//    if (!key_is_in_cache && IsInCache(cur_key)) {
+//      HandleCacheChange (cur_key, Op.Add);       
+//    }
   }
 
 
