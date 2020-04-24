@@ -63,14 +63,16 @@ public abstract class TextReporter implements Reporter {
   /** Writes the report to the output destination. */
   @Override
   public void print() throws IOException {
-    results.sort(comparator());
-    String report = assemble(results);
-    String output = settings.report().output();
-    if (output.equalsIgnoreCase("console")) {
-      System.out.println(report);
-    } else {
-      Files.write(Paths.get(output), report.getBytes(UTF_8));
-    }
+    System.out.println ("rgrgrg");
+//    System.exit (0);
+//    results.sort(comparator());
+//    String report = assemble(results);
+//    String output = settings.report().output();
+//    if (output.equalsIgnoreCase("console")) {
+//      System.out.println(report);
+//    } else {
+//      Files.write(Paths.get(output), report.getBytes(UTF_8));
+//    }
   }
 
   /** Assembles an aggregated report. */

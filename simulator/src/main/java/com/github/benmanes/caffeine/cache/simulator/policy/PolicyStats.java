@@ -43,6 +43,18 @@ public final class PolicyStats {
   private long admittedCount;
   private long rejectedCount;
   private long operationCount;
+  
+  //$$ Added fields (cntrs)
+  private long accsCnt;
+  private long tnMissCnt;
+  private long fnMissCnt;
+  private long fpMissCnt;
+  private long stalenessFpMissCnt;
+
+  public void recordAccs() {
+    accsCnt++;
+  }
+  
 
   public PolicyStats(String name) {
     this.name = requireNonNull(name);

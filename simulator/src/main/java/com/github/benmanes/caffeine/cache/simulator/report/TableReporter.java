@@ -36,8 +36,8 @@ public final class TableReporter extends TextReporter {
   @Override
   @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   protected String assemble(List<PolicyStats> results) {
-    String[][] data = new String[results.size()][headers().length];
-    for (int i = 0; i < results.size(); i++) {
+    String[][] data = new String[results.size()][headers().length]; // headers is the statistics of each policy 
+    for (int i = 0; i < results.size(); i++) { // results.size() is the # of policies 
       PolicyStats policyStats = results.get(i);
       data[i] = new String[] {
           policyStats.name(),

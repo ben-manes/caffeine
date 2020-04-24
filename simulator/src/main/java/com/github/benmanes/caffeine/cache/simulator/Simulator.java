@@ -71,16 +71,16 @@ public final class Simulator extends AbstractActor {
   private final Reporter reporter;
   private final Router router;
   private final int batchSize;
-  private int remaining;
+  private int remaining; // Will hold the # of currently running policies 
 
   public Simulator() {
     Config config = context().system().settings().config().getConfig("caffeine.simulator");
     settings = new BasicSettings(config);
     traceReader = makeTraceReader();
 
-    List<Routee> routes = makeRoutes();
+    List<Routee> routes = makeRoutes(); // Assign to routes the list of policies to run 
     router = new Router(new BroadcastRoutingLogic(), routes);
-    remaining = routes.size();
+    remaining = routes.size(); // # of policies to run
 
     batchSize = settings.batchSize();
     stopwatch = Stopwatch.createStarted();
@@ -140,8 +140,8 @@ public final class Simulator extends AbstractActor {
 
   /** Add the stats to the reporter, print if completed, and stop the simulator. */
   private void reportStats(PolicyStats stats) throws IOException {
-    reporter.add(stats);
-    if (--remaining == 0) {
+    reporter.add(stats); // Add the stats of the policy which finished to the reporter's data base.
+    if (--remaining == 0) { // All policies finished sim
       reporter.print();
       context().stop(self());
       System.out.println("Executed in " + stopwatch);
