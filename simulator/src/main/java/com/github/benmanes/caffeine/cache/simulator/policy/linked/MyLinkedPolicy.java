@@ -21,13 +21,15 @@ import com.typesafe.config.Config;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
+import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.MyGenericPolicy;
+
 public class MyLinkedPolicy implements Policy { //$$ 
   final Long2ObjectMap<Node> data;
   protected PolicyStats policyStats; //$$ Chanted to protected, for letting sub-class MyGenericPolicy to access it
   final EvictionPolicy policy;
   final Admittor admittor;
   final int maximumSize;
-  final Node sentinel; 
+  final Node sentinel;
   int currentSize;
   
   public MyLinkedPolicy (Admission admission, EvictionPolicy policy, Config config) { //$$
@@ -44,7 +46,7 @@ public class MyLinkedPolicy implements Policy { //$$
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
-      new MyGenericPolicy (admission, policy, config) //$$
+      new MyGenericPolicy(admission, policy, config) //$$
     ).collect(toSet());
   }
 
@@ -121,10 +123,10 @@ public class MyLinkedPolicy implements Policy { //$$
   // Hence, it's hard to intercepted / override it by another class.
   // To solve it, I added the call to IndicateEviction in the end.
   private void evictEntry(Node node) {
+    IndicateEviction (node.key); //$$ Inform other classes about the eviction
     currentSize -= node.weight;
     data.remove(node.key);
     node.remove();
-    IndicateEviction (node.key); //$$ Inform other classes about the eviction  
   }
 
   /** The replacement policy. */

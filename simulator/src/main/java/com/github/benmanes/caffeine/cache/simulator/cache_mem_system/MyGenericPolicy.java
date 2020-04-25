@@ -46,44 +46,32 @@ public class MyGenericPolicy extends MyLinkedPolicy {
   public MyGenericPolicy (Admission admission, EvictionPolicy policy, Config config) {
     super (admission, policy, config);
     cache_size = MyConfig.GetIntParameterFromConfFile("maximum-size");
-    designed_indicator_fpr =  MyConfig.GetDoubleParameterFromConfFile("designed-indicator-fpr");
+    designed_indicator_fpr = MyConfig.GetDoubleParameterFromConfFile("designed-indicator-fpr");
     updated_indicator = new CBF<Long>(cache_size, designed_indicator_fpr); // Create a new empty updated indicator
+    snd_update_cnt = 0;
+    SendUpdate ();
   }
-
-  
-  // the method policies() already exists in the super-class MyLinkedPolicy.
-//  /** Returns all variations of this policy based on the configuration parameters. */
-//  public static Set<Policy> policies(Config config) {
-//    return ImmutableSet.of(new MyGenericPolicy());
-//  }
-
 
   // Intercept requests for keys and insertions to the cache
   @Override
   public void record(AccessEvent event) {
-    System.out.println ("in record\n");
-    System.exit(0);
     cur_key = event.key();
     boolean is_in_cache = super.IsInCache(cur_key);
     boolean stale_indication = stale_indicator.Query (cur_key);
     
-   if (stale_indication) { // Check indication
+    if (stale_indication) { // Positive indication
       
-      if (!is_in_cache) {
-
-        // False Positive indication
+      if (is_in_cache) {
+        this.policyStats.recordtp(); // True Positive indication       
+      }
+      else {// False Positive indication
         this.policyStats.recordFp();
         if (!updated_indicator.Query (cur_key)) { // stale indicator positively replies, while updated indicator negatively reply
           this.policyStats.recordStalenessFp();
         }
       }
-      else {
-        this.policyStats.recordtp();       
-      }
-        
-   }
-   
-   else { //Negative indication
+    }
+    else { //Negative indication
       if (is_in_cache) {
         this.policyStats.recordFn(); // False Negative
       }
@@ -91,7 +79,7 @@ public class MyGenericPolicy extends MyLinkedPolicy {
         this.policyStats.recordTn(); // True Negative
       }
     }
-   HandleCacheChange (cur_key, Op.Add);
+    HandleCacheChange (cur_key, Op.Add);
     super.record(event); 
   }
 
@@ -113,21 +101,14 @@ public class MyGenericPolicy extends MyLinkedPolicy {
   // Intercept evictions from the cache
   @Override
   public void IndicateEviction (long key) {
-    HandleCacheChange(key, Op.Remove);
-  }
-
-  /** Indicates that the recording has completed. */
-  @Override
-  public void finished() {
-    System.out.println ("Yalla Hapoel*************\n ************\n **********\n");
-    System.exit (0);
+//    System.out.printf ("IndicateEviction key %d", key);
+    HandleCacheChange (key, Op.Remove);
   }
 
   @Override
-  public PolicyStats stats() {
-    System.out.println ("Yalla Hapoel*************\n ************\n **********\n");
-    System.exit (0);
-    return super.stats();
+  public void finished () {
+    System.out.printf ("Num of insertsions: %d ", this.updated_indicator.insert_cnt);
+    System.out.printf ("Num of removals: %d\n", this.updated_indicator.rmv_cnt);
   }
-
+  
 }

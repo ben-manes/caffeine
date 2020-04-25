@@ -7,22 +7,19 @@ public class CBF<K> implements Indicator<K> {
   public CountingBloomFilter<K> my_indicator; 
   public int cache_size; //Cache size is used for estimating the # of items to be concurrently stored in the CBF
   public double fpr; //False Positive Ratio
-  public final int countingBits = 8;
+//  public final int countingBits = 8;
   public int insert_cnt, rmv_cnt; 
   
   // C'tor
   public CBF (Integer cache_size, double fpr) {
     this.fpr = fpr;
-      this.cache_size = 100; //$$$ MyConfig.GetIntParameterFromConfFile("cache-size");
-    
-      this.my_indicator = new FilterBuilder(this.cache_size, this.fpr)
+    this.my_indicator = new FilterBuilder (cache_size, this.fpr)
                   //.size(10000) //bits to use
-                      .countingBits(this.countingBits)
+//                      .countingBits(this.countingBits)
                       .buildCountingBloomFilter();
-//      this.my_indicator = new FilterBuilder(10, 2);
-      this.insert_cnt = 0;
-      this.rmv_cnt = 0;
-      //To get the # of hashes: this.my_indicator.getHashes
+    this.insert_cnt = 0;
+    this.rmv_cnt = 0;
+    //To get the # of hashes: this.my_indicator.getHashes
   }
 
   // Copy C'tore
@@ -42,20 +39,15 @@ public class CBF<K> implements Indicator<K> {
   public void Insert (K key) {
     this.my_indicator.add (key);
     this.insert_cnt++;
+//    System.out.printf ("inserting key %d\n", key);
   }
 
   public void Remove (K key) {
     this.my_indicator.remove (key);
     this.rmv_cnt++;
+//    System.out.printf ("removing key %d\n", key);
   }  
-
-  public void SndUpdate () {
-//    my_indicator.clone();
-  }
   
-//  public void HandleCacheChangeWhileStale (K key, Op op) {
-//  } 
-//  
   public void HandleCacheChange (K key, Op op) {
     if (op == Op.Add)
       Insert (key);

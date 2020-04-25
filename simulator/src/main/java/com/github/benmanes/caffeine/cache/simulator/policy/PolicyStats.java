@@ -228,7 +228,7 @@ public final class PolicyStats {
 
   //$$ Added methods from here until the file's end 
   public void recordtp() {
-    tpCnt = 10; //$$$$$$$$$$$$$$$$
+    tpCnt++;
   }
 
   public long tpCnt() {

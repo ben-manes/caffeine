@@ -8,10 +8,6 @@ public interface Indicator<K> {
 
     public void Remove (K key);
   
-    public void SndUpdate ();    
-    
-//    public void HandleCacheChangeWhileStale (K key, Op op);
-    
     public void HandleCacheChange (K key, Op op);
        
 }
