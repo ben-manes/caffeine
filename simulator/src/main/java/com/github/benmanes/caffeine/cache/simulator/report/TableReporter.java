@@ -37,22 +37,27 @@ public final class TableReporter extends TextReporter {
   @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   protected String assemble(List<PolicyStats> results) {
     String[][] data = new String[results.size()][headers().length]; // headers is the statistics of each policy 
+    System.out.printf("size of results is %d. size of headers is %d\n", results.size(), headers().length);
+    PolicyStats policyStats1 = results.get(1);
+//    System.out.printf("size of policyStats1 is %d\n", policyStats1.  
     for (int i = 0; i < results.size(); i++) { // results.size() is the # of policies 
       PolicyStats policyStats = results.get(i);
       data[i] = new String[] {
           policyStats.name(),
           String.format("%.2f %%", 100 * policyStats.hitRate()),
-          String.format("%,d", policyStats.hitCount()),
-          String.format("%,d", policyStats.missCount()),
-          String.format("%,d", policyStats.requestCount()),
-          String.format("%,d", policyStats.evictionCount()),
-          String.format("%.2f %%", 100 * policyStats.admissionRate()),
-          String.format("%,d", policyStats.requestsWeight()),
-          String.format("%.2f %%", 100 * policyStats.weightedHitRate()),
-          String.format("%.2f", policyStats.averageMissPenalty()),
-          String.format("%.2f", policyStats.avergePenalty()),
-          steps(policyStats),
-          policyStats.stopwatch().toString()
+          String.format("%.2f %%", 100 * policyStats.hitRate()),
+//          String.format("%,d", policyStats.hitCount()),
+//          String.format("%,d", policyStats.missCount()),
+//          String.format("%,d", policyStats.requestCount()),
+//          String.format("%,d", policyStats.evictionCount()),
+//          String.format("%.2f %%", 100 * policyStats.admissionRate()),
+//          String.format("%,d", policyStats.requestsWeight()),
+//          String.format("%.2f %%", 100 * policyStats.weightedHitRate()),
+//          String.format("%.2f", policyStats.averageMissPenalty()),
+//          String.format("%.2f", policyStats.avergePenalty()),
+//          String.format("%.2f", policyStats.avergePenalty()),
+//          steps(policyStats),
+//          policyStats.stopwatch().toString()
       };
     }
     return FlipTable.of(headers(), data);

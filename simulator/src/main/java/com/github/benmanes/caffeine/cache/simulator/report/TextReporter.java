@@ -37,9 +37,10 @@ import com.typesafe.config.Config;
  */
 public abstract class TextReporter implements Reporter {
   private static final String[] HEADERS = {
-      "Policy", "Hit rate", "Hits", "Misses", "Requests", "Evictions",
-      "Admit rate", "Requests Weight", "Weighted Hit Rate", "Average Miss Penalty", 
-      "Average Penalty", "Steps", "Time"}; //,
+      "Policy", "Hit rate", "FP misses"}; // 
+//      "Hits", "Misses", "Requests", 
+//      "Evictions", "Admit rate", "Requests Weight", "Weighted Hit Rate", "Average Miss Penalty", 
+//      "Average Penalty", "Steps", "Time", "a"}; //,
       // $$ Added entries below 
 //      "Fp Misses"}; 
 
@@ -104,9 +105,9 @@ public abstract class TextReporter implements Reporter {
       case "time":
         return Comparator.comparingLong(stats -> stats.stopwatch().elapsed(TimeUnit.NANOSECONDS));
 
-        //$$ Statistics added by me
-        case "fp misses":
-            return Comparator.comparingLong(PolicyStats::fpMissCnt);
+      //$$ 
+      case "fp misses":
+          return Comparator.comparingLong(PolicyStats::fpMissCnt);
 
       default:
         throw new IllegalArgumentException("Unknown sort order: " + settings.report().sortBy());
