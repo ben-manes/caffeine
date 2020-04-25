@@ -27,7 +27,7 @@ public class MyLinkedPolicy implements Policy { //$$
   final EvictionPolicy policy;
   final Admittor admittor;
   final int maximumSize;
-  final Node sentinel;
+  final Node sentinel; 
   int currentSize;
   
   public MyLinkedPolicy (Admission admission, EvictionPolicy policy, Config config) { //$$
@@ -44,7 +44,7 @@ public class MyLinkedPolicy implements Policy { //$$
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
-      new MyLinkedPolicy(admission, policy, config) //$$
+      new MyGenericPolicy (admission, policy, config) //$$
     ).collect(toSet());
   }
 

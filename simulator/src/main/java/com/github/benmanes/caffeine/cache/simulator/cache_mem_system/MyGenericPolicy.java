@@ -61,6 +61,8 @@ public class MyGenericPolicy extends MyLinkedPolicy {
   // Intercept requests for keys and insertions to the cache
   @Override
   public void record(AccessEvent event) {
+    System.out.println ("in record\n");
+    System.exit(0);
     cur_key = event.key();
     boolean is_in_cache = super.IsInCache(cur_key);
     boolean stale_indication = stale_indicator.Query (cur_key);
@@ -74,7 +76,11 @@ public class MyGenericPolicy extends MyLinkedPolicy {
         if (!updated_indicator.Query (cur_key)) { // stale indicator positively replies, while updated indicator negatively reply
           this.policyStats.recordStalenessFp();
         }
-      }  
+      }
+      else {
+        this.policyStats.recordtp();       
+      }
+        
    }
    
    else { //Negative indication

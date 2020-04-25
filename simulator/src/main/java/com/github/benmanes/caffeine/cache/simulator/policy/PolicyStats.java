@@ -49,6 +49,7 @@ public final class PolicyStats {
   private long fnMissCnt;
   private long tnMissCnt;
   private long stalenessFpMissCnt;
+  private long tpCnt;
 
   public PolicyStats(String name) {
     this.name = requireNonNull(name);
@@ -226,6 +227,14 @@ public final class PolicyStats {
   }
 
   //$$ Added methods from here until the file's end 
+  public void recordtp() {
+    tpCnt = 10; //$$$$$$$$$$$$$$$$
+  }
+
+  public long tpCnt() {
+    return tpCnt;
+  }
+  
   public void recordFp() {
     fpMissCnt++;
   }

@@ -37,9 +37,17 @@ public final class TableReporter extends TextReporter {
   @SuppressWarnings("PMD.AvoidDuplicateLiterals")
   protected String assemble(List<PolicyStats> results) {
     String[][] data = new String[results.size()][headers().length]; // headers is the statistics of each policy 
-    System.out.printf("size of results is %d. size of headers is %d\n", results.size(), headers().length);
-    PolicyStats policyStats1 = results.get(1);
-//    System.out.printf("size of policyStats1 is %d\n", policyStats1.  
+//    System.out.printf("size of results is %d. size of headers is %d\n", results.size(), headers().length);
+//    PolicyStats policyStats1 = results.get(1);
+//    System.out.printf("size of policyStats1 is %d\n", policyStats1.
+    
+    for (int policy_idx = 0; policy_idx < results.size(); policy_idx++) {
+      PolicyStats policyStats = results.get(policy_idx);
+      System.out.println ("\n" + policyStats.name());
+      System.out.printf ("tp = %d, fp = %d, fn = %d, tn = %d", policyStats.tpCnt(), policyStats.fpMissCnt(), policyStats.fnMissCnt(), policyStats.tnMissCnt());
+    }
+    
+    System.out.println ("\n");
     for (int i = 0; i < results.size(); i++) { // results.size() is the # of policies 
       PolicyStats policyStats = results.get(i);
       data[i] = new String[] {
