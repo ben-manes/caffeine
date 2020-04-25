@@ -67,21 +67,22 @@ public class MyGenericPolicy extends MyLinkedPolicy {
     
    if (stale_indication) { // Check indication
       
-      // False Positive indication
       if (!is_in_cache) {
+
+        // False Positive indication
         this.policyStats.recordFp();
-        if (!updated_indicator.Query (cur_key)) { // stale indicator positively replies, while updated indicator negatively reply  
-//          staleness_fp_miss_cnt++;
+        if (!updated_indicator.Query (cur_key)) { // stale indicator positively replies, while updated indicator negatively reply
+          this.policyStats.recordStalenessFp();
         }
       }  
    }
    
    else { //Negative indication
       if (is_in_cache) {
-//            fn_miss_cnt++; //A miss due to false negative indication
+        this.policyStats.recordFn(); // False Negative
       }
       else {
-//        tn_miss_cnt++; //A miss due to true negative indication
+        this.policyStats.recordTn(); // True Negative
       }
     }
    HandleCacheChange (cur_key, Op.Add);

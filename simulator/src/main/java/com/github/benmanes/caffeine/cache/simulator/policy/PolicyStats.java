@@ -46,9 +46,9 @@ public final class PolicyStats {
   
   //$$ Added fields (cntrs)
   private long fpMissCnt;
-//  private long fnMissCnt;
-//  private long tnMissCnt;
-//  private long stalenessFpMissCnt;
+  private long fnMissCnt;
+  private long tnMissCnt;
+  private long stalenessFpMissCnt;
 
   public PolicyStats(String name) {
     this.name = requireNonNull(name);
@@ -77,10 +77,6 @@ public final class PolicyStats {
 
   public void addOperations(long operations) {
     operationCount += operations;
-  }
-
-  public long fpMissCnt() {
-    return fpMissCnt;
   }
 
   public void recordHit() {
@@ -229,9 +225,36 @@ public final class PolicyStats {
     return MoreObjects.toStringHelper(this).addValue(name).toString();
   }
 
-  //$$
+  //$$ Added methods from here until the file's end 
   public void recordFp() {
     fpMissCnt++;
   }
+
+  public long fpMissCnt() {
+    return fpMissCnt;
+  }
   
+  public void recordStalenessFp() {
+    stalenessFpMissCnt++;
+  }
+
+  public long stalenessFpMissCnt() {
+    return stalenessFpMissCnt;
+  }
+  
+  public void recordFn() {
+    fnMissCnt++;
+  }
+
+  public long fnMissCnt() {
+    return fnMissCnt;
+  }
+
+  public void recordTn() {
+    tnMissCnt++;
+  }
+
+  public long tnMissCnt() {
+    return tnMissCnt;
+  }
 }
