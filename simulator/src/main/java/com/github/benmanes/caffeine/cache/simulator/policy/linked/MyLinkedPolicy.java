@@ -1,7 +1,6 @@
 package com.github.benmanes.caffeine.cache.simulator.policy.linked;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
-import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.*;
 import static java.util.Locale.US;
 import static java.util.stream.Collectors.toSet;
 
@@ -15,8 +14,6 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
-import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy.EvictionPolicy;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
@@ -26,7 +23,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 public class MyLinkedPolicy implements Policy { //$$ 
   final Long2ObjectMap<Node> data;
-  final PolicyStats policyStats;
+  protected PolicyStats policyStats; //$$ Chanted to protected, for letting sub-class MyGenericPolicy to access it
   final EvictionPolicy policy;
   final Admittor admittor;
   final int maximumSize;

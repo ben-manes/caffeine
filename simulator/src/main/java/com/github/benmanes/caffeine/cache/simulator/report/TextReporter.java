@@ -39,7 +39,9 @@ public abstract class TextReporter implements Reporter {
   private static final String[] HEADERS = {
       "Policy", "Hit rate", "Hits", "Misses", "Requests", "Evictions",
       "Admit rate", "Requests Weight", "Weighted Hit Rate", "Average Miss Penalty", 
-      "Average Penalty", "Steps", "Time"};
+      "Average Penalty", "Steps", "Time",
+      // $$ Added entries below 
+      "Fp Misses"}; 
 
   private final List<PolicyStats> results;
   private final BasicSettings settings;
@@ -63,16 +65,15 @@ public abstract class TextReporter implements Reporter {
   /** Writes the report to the output destination. */
   @Override
   public void print() throws IOException {
-    System.out.println ("rgrgrg");
-//    System.exit (0);
-//    results.sort(comparator());
-//    String report = assemble(results);
-//    String output = settings.report().output();
-//    if (output.equalsIgnoreCase("console")) {
-//      System.out.println(report);
-//    } else {
-//      Files.write(Paths.get(output), report.getBytes(UTF_8));
-//    }
+//    System.out.println ("rgrgrg");
+    results.sort(comparator());
+    String report = assemble(results);
+    String output = settings.report().output();
+    if (output.equalsIgnoreCase("console")) {
+      System.out.println(report);
+    } else {
+      Files.write(Paths.get(output), report.getBytes(UTF_8));
+    }
   }
 
   /** Assembles an aggregated report. */
@@ -102,6 +103,11 @@ public abstract class TextReporter implements Reporter {
         return Comparator.comparingLong(PolicyStats::operationCount);
       case "time":
         return Comparator.comparingLong(stats -> stats.stopwatch().elapsed(TimeUnit.NANOSECONDS));
+
+        //$$ Statistics added by me
+        case "fp misses":
+            return Comparator.comparingLong(PolicyStats::fpMissCnt);
+
       default:
         throw new IllegalArgumentException("Unknown sort order: " + settings.report().sortBy());
     }

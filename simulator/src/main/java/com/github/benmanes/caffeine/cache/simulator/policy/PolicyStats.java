@@ -45,16 +45,10 @@ public final class PolicyStats {
   private long operationCount;
   
   //$$ Added fields (cntrs)
-  private long accsCnt;
-  private long tnMissCnt;
-  private long fnMissCnt;
   private long fpMissCnt;
+  private long fnMissCnt;
+  private long tnMissCnt;
   private long stalenessFpMissCnt;
-
-  public void recordAccs() {
-    accsCnt++;
-  }
-  
 
   public PolicyStats(String name) {
     this.name = requireNonNull(name);
@@ -83,6 +77,15 @@ public final class PolicyStats {
 
   public void addOperations(long operations) {
     operationCount += operations;
+  }
+
+  //$$
+  public void recordFp() {
+    fpMissCnt++;
+  }
+  
+  public long fpMissCnt() {
+    return fpMissCnt;
   }
 
   public void recordHit() {
