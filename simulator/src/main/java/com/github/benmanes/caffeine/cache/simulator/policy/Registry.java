@@ -69,8 +69,8 @@ import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePoli
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.typesafe.config.Config;
 
-import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyLinkedPolicy; //$$
-import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.CacheMemSystem; //$$
+//import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyLinkedPolicy; //$$
+//import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.CacheMemSystem; //$$
 import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.MyGenericPolicy; //$$
 
 /**
@@ -94,7 +94,6 @@ public final class Registry {
     registerProduct(factories);
     registerTwoQueue(factories);
     registerAdaptive(factories);
-    registerMyCachePolicy(factories); //$$
     return factories.entrySet().stream().collect(
         toMap(entry -> entry.getKey().toLowerCase(US), Entry::getValue));
   }
@@ -194,13 +193,6 @@ public final class Registry {
     factories.put("adaptive.Car", CarPolicy::policies);
     factories.put("adaptive.Cart", CartPolicy::policies);
   }
-
-  //$$
-  private static void registerMyCachePolicy (Map<String, Function<Config, Set<Policy>>> factories) {
-    factories.put("MyCachePolicy", CacheMemSystem::policies);
-  }
-
-
 
   private static void registerProduct(Map<String, Function<Config, Set<Policy>>> factories) {
     factories.put("product.OHC", OhcPolicy::policies);

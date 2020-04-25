@@ -42,12 +42,21 @@ public class MyGenericPolicy extends MyLinkedPolicy {
   public double num_of_cache_changes_between_updates = 2;
   private Integer snd_update_cnt;
    
+  // C'tor
   public MyGenericPolicy (Admission admission, EvictionPolicy policy, Config config) {
     super (admission, policy, config);
     cache_size = MyConfig.GetIntParameterFromConfFile("maximum-size");
     designed_indicator_fpr =  MyConfig.GetDoubleParameterFromConfFile("designed-indicator-fpr");
     updated_indicator = new CBF<Long>(cache_size, designed_indicator_fpr); // Create a new empty updated indicator
   }
+
+  
+  // the method policies() already exists in the super-class MyLinkedPolicy.
+//  /** Returns all variations of this policy based on the configuration parameters. */
+//  public static Set<Policy> policies(Config config) {
+//    return ImmutableSet.of(new MyGenericPolicy());
+//  }
+
 
   // Intercept requests for keys and insertions to the cache
   @Override
