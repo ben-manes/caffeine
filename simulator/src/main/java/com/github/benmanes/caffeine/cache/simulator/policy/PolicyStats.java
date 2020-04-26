@@ -20,10 +20,6 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
 
-import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
-
 /**
  * Statistics gathered by a policy execution.
  *
@@ -266,4 +262,15 @@ public final class PolicyStats {
   public long tnMissCnt() {
     return tnMissCnt;
   }
+
+  public double fpRate() {
+    double hitRate = hitRate();
+    return (hitRate == 1) ? 0.0 : (double) fpMissCnt / (1 - hitRate);
+  }
+
+  public double fnRate() {
+    double hitRate = hitRate();
+    return (hitRate == 0) ? 1.0 : (double) fnMissCnt / hitRate;
+  }
+
 }

@@ -43,8 +43,8 @@ public final class TableReporter extends TextReporter {
     
     for (int policy_idx = 0; policy_idx < results.size(); policy_idx++) {
       PolicyStats policyStats = results.get(policy_idx);
-      System.out.println ("\n" + policyStats.name());
-      System.out.printf ("tp = %d, fp = %d, fn = %d, tn = %d", policyStats.tpCnt(), policyStats.fpMissCnt(), policyStats.fnMissCnt(), policyStats.tnMissCnt());
+      System.out.printf ("%s : ", policyStats.name());
+      System.out.printf ("tp = %d, fp = %d, fn = %d, tn = %d\n", policyStats.tpCnt(), policyStats.fpMissCnt(), policyStats.fnMissCnt(), policyStats.tnMissCnt());
     }
     
     System.out.println ("\n");
@@ -56,7 +56,7 @@ public final class TableReporter extends TextReporter {
           String.format("%.2f %%", 100 * policyStats.hitRate()),
 //          String.format("%,d", policyStats.hitCount()),
 //          String.format("%,d", policyStats.missCount()),
-//          String.format("%,d", policyStats.requestCount()),
+          String.format("%,d", policyStats.requestCount()),
 //          String.format("%,d", policyStats.evictionCount()),
 //          String.format("%.2f %%", 100 * policyStats.admissionRate()),
 //          String.format("%,d", policyStats.requestsWeight()),
