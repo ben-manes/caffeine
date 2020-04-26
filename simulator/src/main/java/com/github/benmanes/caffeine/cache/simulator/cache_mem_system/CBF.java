@@ -7,8 +7,9 @@ public class CBF<K> implements Indicator<K> {
   public CountingBloomFilter<K> my_indicator; 
   public int cache_size; //Cache size is used for estimating the # of items to be concurrently stored in the CBF
   public double fpr; //False Positive Ratio
-//  public final int countingBits = 8;
+  //  public final int countingBits = 8;
   public int insert_cnt, rmv_cnt; 
+  private final boolean verbose = false; 
   
   // C'tor
   public CBF (Integer cache_size, double fpr) {
@@ -29,7 +30,7 @@ public class CBF<K> implements Indicator<K> {
       this.insert_cnt = 0;
       this.rmv_cnt = 0;
       this.my_indicator = cbf.my_indicator.clone();
-      this.insert_cnt = 0;       
+      this.insert_cnt = 0;    
   }
 
   public boolean Query (K key)  {
@@ -39,13 +40,17 @@ public class CBF<K> implements Indicator<K> {
   public void Insert (K key) {
     this.my_indicator.add (key);
     this.insert_cnt++;
-//    System.out.printf ("inserting key %d\n", key);
+    if (verbose) {
+      System.out.printf ("inserting key %d\n", key);
+    }
   }
 
   public void Remove (K key) {
     this.my_indicator.remove (key);
     this.rmv_cnt++;
-//    System.out.printf ("removing key %d\n", key);
+    if (verbose) {
+      System.out.printf ("removing key %d\n", key);
+    }
   }  
   
   public void HandleCacheChange (K key, Op op) {

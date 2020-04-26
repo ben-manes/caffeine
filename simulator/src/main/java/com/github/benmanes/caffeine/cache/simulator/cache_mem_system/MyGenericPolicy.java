@@ -1,28 +1,10 @@
 package com.github.benmanes.caffeine.cache.simulator.cache_mem_system;
 
-import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
-import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.*;
-import static java.util.Locale.US;
-import static java.util.stream.Collectors.toSet;
-
-import java.util.Set;
-
-import org.apache.commons.lang3.StringUtils;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
-import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
-import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyLinkedPolicy;
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.Sets;
+import com.github.benmanes.caffeine.cache.simulator.policy.linked.LinkedPolicy;
 import com.typesafe.config.Config;
-
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 
 enum Op {Add, Remove};
@@ -33,23 +15,31 @@ enum Op {Add, Remove};
 // - Collecting system-levle stats (e.g., counts of true / false positives and true / false negatives)
 // - Updating indicators.
 // - Using the indicator's indications as an "access strategy" to the cache / directly to the "mem".
-public class MyGenericPolicy extends MyLinkedPolicy {
+public class MyGenericPolicy extends LinkedPolicy {
   public long cur_key;
-  public Integer cache_size;
+  public int cache_size;
   public CBF<Long> stale_indicator, updated_indicator;
   public double designed_indicator_fpr; // The designed False Positive Ratio the indicator should have 
   public Integer num_of_cache_changes_since_last_update;
-  public double num_of_cache_changes_between_updates = 2;
+  public int num_of_cache_changes_between_updates;
   private Integer snd_update_cnt;
-   
+  private static boolean finish_flag; // Reset upon init; set when first policy finishes sim 
+
+  // debug $$$$$$$$$
+  private int insert_cnt, rmv_cnt;
+
   // C'tor
   public MyGenericPolicy (Admission admission, EvictionPolicy policy, Config config) {
     super (admission, policy, config);
-    cache_size = MyConfig.GetIntParameterFromConfFile("maximum-size");
+    BasicSettings settings = new BasicSettings(config);
+    cache_size = settings.maximumSize(); 
+    num_of_cache_changes_between_updates = 1; //(int) (cache_size * 0.2);
     designed_indicator_fpr = MyConfig.GetDoubleParameterFromConfFile("designed-indicator-fpr");
     updated_indicator = new CBF<Long>(cache_size, designed_indicator_fpr); // Create a new empty updated indicator
     snd_update_cnt = 0;
+    finish_flag = false;
     SendUpdate ();
+    
   }
 
   // Intercept requests for keys and insertions to the cache
@@ -61,8 +51,9 @@ public class MyGenericPolicy extends MyLinkedPolicy {
     
     if (stale_indication) { // Positive indication
       
-      if (is_in_cache) {
-        this.policyStats.recordtp(); // True Positive indication       
+      if (is_in_cache) { // True positive indication - nothing special to do
+        super.record(event); 
+        return;
       }
       else {// False Positive indication
         this.policyStats.recordFp();
@@ -79,6 +70,10 @@ public class MyGenericPolicy extends MyLinkedPolicy {
         this.policyStats.recordTn(); // True Negative
       }
     }
+    
+    // A miss (either FP, TN or FN) --> the missed item is inserted into the cache.
+    // Later, the cache policy may either evict an old item from the cache; or evict this newly-inserted item,  
+    // which is equivalent to not admitting the new item into the cache.
     HandleCacheChange (cur_key, Op.Add);
     super.record(event); 
   }
@@ -91,7 +86,11 @@ public class MyGenericPolicy extends MyLinkedPolicy {
 
   public void HandleCacheChange (long key, Op op) {
     num_of_cache_changes_since_last_update++;
-    updated_indicator.HandleCacheChange (key, op);           
+    updated_indicator.HandleCacheChange (key, op);
+    if (op == Op.Add)
+      insert_cnt++;
+    else
+      rmv_cnt++;
     if (num_of_cache_changes_since_last_update >= num_of_cache_changes_between_updates) {
       SendUpdate();
       num_of_cache_changes_since_last_update = 0;
@@ -101,14 +100,17 @@ public class MyGenericPolicy extends MyLinkedPolicy {
   // Intercept evictions from the cache
   @Override
   public void IndicateEviction (long key) {
-//    System.out.printf ("IndicateEviction key %d", key);
     HandleCacheChange (key, Op.Remove);
   }
 
   @Override
   public void finished () {
-    System.out.printf ("Num of insertsions: %d ", this.updated_indicator.insert_cnt);
-    System.out.printf ("Num of removals: %d\n", this.updated_indicator.rmv_cnt);
+    if (finish_flag) { // at least one other have already finished running
+      return;
+    }
+    finish_flag = true;  
+    System.out.printf ("Cache size = %d inter-update-ops = %d designed fpr = %.2f \n", 
+        cache_size, this.num_of_cache_changes_between_updates, designed_indicator_fpr);
   }
   
 }

@@ -69,8 +69,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePoli
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.typesafe.config.Config;
 
-//import com.github.benmanes.caffeine.cache.simulator.policy.linked.MyLinkedPolicy; //$$
-//import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.CacheMemSystem; //$$
 import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.MyGenericPolicy; //$$
 
 /**
@@ -121,7 +119,7 @@ public final class Registry {
     factories.put("opt.Unbounded", UnboundedPolicy::policies);
   }
 
-  // $$
+  // $$ Added method
   private static void registerMyLinked(Map<String, Function<Config, Set<Policy>>> factories) {
     Stream.of(MyGenericPolicy.EvictionPolicy.values()).forEach(priority -> { //$$
       String id = "my_linked." + priority.name();

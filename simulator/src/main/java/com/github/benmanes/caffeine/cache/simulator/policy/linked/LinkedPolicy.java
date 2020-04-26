@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.github.benmanes.caffeine.cache.simulator.cache_mem_system.MyGenericPolicy; //$$
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
@@ -44,15 +45,15 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class LinkedPolicy implements Policy { 
+public class LinkedPolicy implements Policy { //$$ Removed "final", for letting other classes extend it 
   final Long2ObjectMap<Node> data;
-  final PolicyStats policyStats;
+  protected PolicyStats policyStats; //$$ Chanted from "final" to "protected", for letting sub-class MyGenericPolicy to access it
   final EvictionPolicy policy;
   final Admittor admittor;
   final int maximumSize;
   final Node sentinel;
   int currentSize;
-
+  
   public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
     this.admittor = admission.from(config, policyStats);
@@ -61,13 +62,14 @@ public final class LinkedPolicy implements Policy {
     this.maximumSize = settings.maximumSize();
     this.sentinel = new Node();
     this.policy = policy;
+    
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
   public static Set<Policy> policies(Config config, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
-      new LinkedPolicy(admission, policy, config)
+      new MyGenericPolicy(admission, policy, config) //$$ 
     ).collect(toSet());
   }
 
@@ -79,6 +81,11 @@ public final class LinkedPolicy implements Policy {
   @Override
   public PolicyStats stats() {
     return policyStats;
+  }
+  
+  //$$
+  public boolean IsInCache (long key) {
+    return (data.get(key) == null)? false:true;   
   }
   
   @Override
@@ -123,11 +130,23 @@ public final class LinkedPolicy implements Policy {
     }
   }
 
+  //$$ Inform other classes about an evicted key.
+  // The function is empty - to be overriden by other classes.
+  public void IndicateEviction (long key) {
+  }
+  
+
+  // $$ Added documentation
+  // This function is private, and uses the private class Node. 
+  // Hence, it's hard to intercepted / override it by another class.
+  // To solve it, I added a call to IndicateEviction 
   private void evictEntry(Node node) {
+    IndicateEviction (node.key); //$$ Inform other classes about the eviction
     currentSize -= node.weight;
     data.remove(node.key);
     node.remove();
   }
+
 
   /** The replacement policy. */
   public enum EvictionPolicy {
@@ -200,7 +219,8 @@ public final class LinkedPolicy implements Policy {
     abstract void onAccess(Node node, PolicyStats policyStats);
 
     /** Returns the victim entry to evict. */
-    abstract Node findVictim(Node sentinel, PolicyStats policyStats);
+    abstract Node findVictim(Node sentinel, PolicyStats policyStats); 
+    
   }
 
   /** A node on the double-linked list. */
