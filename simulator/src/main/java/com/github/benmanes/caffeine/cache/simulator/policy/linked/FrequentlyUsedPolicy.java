@@ -72,6 +72,15 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
     return policyStats;
   }
 
+<<<<<<< HEAD
+=======
+  //$$
+  public boolean IsInCache (long key) {
+    Node node = data.get(key);
+    return (node == null)? false:true;
+  }
+  
+>>>>>>> b5c2d21d0084193786f91ae782eb8181533a674c
   @Override
   public void record(long key) {
     policyStats.recordOperation();
