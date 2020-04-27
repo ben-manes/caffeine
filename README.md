@@ -61,6 +61,7 @@ Powering infrastructure near you:
  * [HBase][hbase]: A distributed, scalable, big data store
  * [Apache Solr][solr]: Blazingly fast enterprise search
  * [Infinispan][infinispan]: Distributed in-memory data grid
+ * [Redisson][redisson]: Ultra-fast in-memory data grid
  * [OpenWhisk][open-whisk]: Serverless cloud platform
  * [Corfu][corfu]: A cluster consistency platform
  * [Grails][grails]: Groovy-based web framework
@@ -81,11 +82,11 @@ Powering infrastructure near you:
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:2.8.1'
+compile 'com.github.ben-manes.caffeine:caffeine:2.8.2'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:2.8.1'
-compile 'com.github.ben-manes.caffeine:jcache:2.8.1'
+compile 'com.github.ben-manes.caffeine:guava:2.8.2'
+compile 'com.github.ben-manes.caffeine:jcache:2.8.2'
 ```
 
 See the [release notes][releases] for details of the changes.
@@ -136,6 +137,7 @@ Snapshots of the development version are available in
 [akka-http]: https://doc.akka.io/docs/akka-http/current/common/caching.html
 [micronaut]: https://docs.micronaut.io/latest/guide/index.html#caching
 [play]: https://www.playframework.com/documentation/latest/JavaCache
+[redisson]: https://github.com/redisson/redisson
 [accumulo]: https://accumulo.apache.org
 [dropwizard]: https://www.dropwizard.io
 [grails]: https://grails.org
