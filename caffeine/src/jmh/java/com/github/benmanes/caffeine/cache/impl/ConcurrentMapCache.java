@@ -42,6 +42,11 @@ public final class ConcurrentMapCache<K, V> implements BasicCache<K, V> {
   }
 
   @Override
+  public void remove(K key) {
+    map.remove(key);
+  }
+
+  @Override
   public void clear() {
     map.clear();
   }

@@ -45,6 +45,13 @@ public final class LinkedHashMapCache<K, V> implements BasicCache<K, V> {
   }
 
   @Override
+  public void remove(K key) {
+    synchronized (map) {
+      map.remove(key);
+    }
+  }
+
+  @Override
   public void clear() {
     synchronized (map) {
       map.clear();

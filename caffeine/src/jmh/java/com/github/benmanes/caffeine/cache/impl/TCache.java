@@ -48,6 +48,11 @@ public final class TCache<K, V> implements BasicCache<K, V> {
   }
 
   @Override
+  public void remove(K key) {
+    cache.remove(key);
+  }
+
+  @Override
   public void clear() {
     cache.clear();
   }

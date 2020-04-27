@@ -28,7 +28,7 @@ public final class Cache2k<K, V> implements BasicCache<K, V> {
 
   @SuppressWarnings("unchecked")
   public Cache2k(int maximumSize) {
-    cache = (Cache<K, V>) Cache2kBuilder.forUnknownTypes()
+    cache = Cache2kBuilder.forUnknownTypes()
         .entryCapacity(maximumSize)
         .eternal(true)
         .build();
@@ -42,6 +42,11 @@ public final class Cache2k<K, V> implements BasicCache<K, V> {
   @Override
   public void put(K key, V value) {
     cache.put(key, value);
+  }
+
+  @Override
+  public void remove(K key) {
+    cache.remove(key);
   }
 
   @Override

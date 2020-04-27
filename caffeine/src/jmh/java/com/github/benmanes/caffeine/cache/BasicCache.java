@@ -26,11 +26,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface BasicCache<K, V> {
 
   /** Returns the value stored in the cache, or null if not present. */
-  @Nullable
-  V get(@NonNull K key);
+  @Nullable V get(@NonNull K key);
 
   /** Stores the value into the cache, replacing an existing mapping if present. */
   void put(@NonNull K key, @NonNull V value);
+
+  /** Removes the entry from the cache, if present. */
+  void remove(@NonNull K key);
 
   /** Invalidates all entries from the cache. */
   void clear();

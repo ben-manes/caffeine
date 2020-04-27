@@ -51,6 +51,11 @@ public final class GuavaCache<K, V> implements BasicCache<K, V> {
   }
 
   @Override
+  public void remove(K key) {
+    cache.invalidate(key);
+  }
+
+  @Override
   public void clear() {
     cache.invalidateAll();
   }

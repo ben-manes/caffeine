@@ -167,7 +167,7 @@ public interface Cache<K, V> {
    * @param keys the keys whose associated values are to be removed
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
-  void invalidateAll(@NonNull Iterable<?> keys);
+  void invalidateAll(@NonNull Iterable<@NonNull ?> keys);
 
   /**
    * Discards all entries in the cache. The behavior of this operation is undefined for an entry

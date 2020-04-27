@@ -47,6 +47,11 @@ public final class CaffeineCache<K, V> implements BasicCache<K, V> {
   }
 
   @Override
+  public void remove(K key) {
+    map.remove(key);
+  }
+
+  @Override
   public void clear() {
     cache.invalidateAll();
   }

@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -35,7 +36,7 @@ public final class RemovalListeners {
   private RemovalListeners() {}
 
   /** A removal listener that stores the notifications for inspection. */
-  public static <K, V> RemovalListener<K, V> consuming() {
+  public static <K, V> ConsumingRemovalListener<K, V> consuming() {
     return new ConsumingRemovalListener<>();
   }
 
@@ -78,11 +79,11 @@ public final class RemovalListeners {
     private final List<RemovalNotification<K, V>> evicted;
 
     public ConsumingRemovalListener() {
-      this.evicted = new ArrayList<>();
+      this.evicted = Collections.synchronizedList(new ArrayList<>());
     }
 
     @Override
-    public synchronized void onRemoval(K key, V value, RemovalCause cause) {
+    public void onRemoval(K key, V value, RemovalCause cause) {
       validate(key, value, cause);
       evicted.add(new RemovalNotification<>(key, value, cause));
     }

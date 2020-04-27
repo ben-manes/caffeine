@@ -43,7 +43,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class ConcurrentTestHarness {
-  private static final ThreadFactory DAEMON_FACTORY = new ThreadFactoryBuilder()
+  public static final ThreadFactory DAEMON_FACTORY = new ThreadFactoryBuilder()
       .setPriority(Thread.MIN_PRIORITY).setDaemon(true).build();
   public static final ScheduledExecutorService scheduledExecutor =
       Executors.newSingleThreadScheduledExecutor(DAEMON_FACTORY);

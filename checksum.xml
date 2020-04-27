@@ -26,6 +26,7 @@
     <trusted-key id='53dfc5afe188b729' group='com.github.jbellis' />
     <trusted-key id='218fa0f6a941a037' group='com.github.kevinstern' />
     <trusted-key id='1756b920eecf0e90' group='com.github.spotbugs' />
+    <trusted-key id='a5def5a76f94a471' group='com.github.spotbugs' />
     <trusted-key id='c7ca19b7b620d787' group='com.github.stephenc.jcip' />
     <trusted-key id='5e1f79a7c298661e' group='com.google.auto' />
     <trusted-key id='353a436e043e3145' group='com.google.code.findbugs' />
@@ -101,6 +102,7 @@
     <trusted-key id='86fdc7e2a11262cb' group='org.apache.bcel' />
     <trusted-key id='3faad2cd5ecbb314' group='org.apache.commons' />
     <trusted-key id='64a16faaec16a4be' group='org.apache.commons' />
+    <trusted-key id='86fdc7e2a11262cb' group='org.apache.commons' />
     <trusted-key id='9ae296fd02e9f65b' group='org.apache.commons' />
     <trusted-key id='a2115ae15f6b8b72' group='org.apache.commons' />
     <trusted-key id='9054823a859a7237' group='org.apache.felix' />
@@ -140,9 +142,11 @@
     <trusted-key id='7c7d8456294423ba' group='org.objenesis' />
     <trusted-key id='0d3b328562a119a7' group='org.openjdk.jmh' />
     <trusted-key id='0d3b328562a119a7' group='org.openjdk.jol' />
+    <trusted-key id='bff2ee42c8282e76' group='org.ops4j.base' />
     <trusted-key id='ecdfea3cb4493b94' group='org.ops4j.base' />
     <trusted-key id='bff2ee42c8282e76' group='org.ops4j.pax.exam' />
     <trusted-key id='75ed6d831ac2f4ba' group='org.ops4j.pax.swissbox' />
+    <trusted-key id='bf8ea4f17f15e52f' group='org.ops4j.pax.swissbox' />
     <trusted-key id='492985b45e8d6711' group='org.ops4j.pax.tinybundles' />
     <trusted-key id='494a3c0ddce0bc7d' group='org.ops4j.pax.url' />
     <trusted-key id='adbec7a623dbb1d6' group='org.ops4j.pax.url' />
@@ -240,6 +244,9 @@
     </dependency>
     <dependency group='gradle.plugin.com.github.mjdetullio.gradle' module='coverity-plugin' version='1.0.10'>
       <sha512>D046D70ABBD137039F917CCD3786F5B3FCABA0FBAC3AE1C7597A77FA84BC75466F48A40DA53ADA6C45F05F77AF952D5EA82A9B0F873C53DF894DE0E15DB6D8AA</sha512>
+    </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.0.5'>
+      <sha512>559ECA3B9FC21BE76ECAAA9E0073DC2014BA50DF2A14AD8919F358C1D7761E2C492EB09DAE1099A308C2F8C0A14635AD4583FF26B7868A782DE6A16D26F7EC6C</sha512>
     </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>
