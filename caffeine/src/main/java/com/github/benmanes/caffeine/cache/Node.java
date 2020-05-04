@@ -117,7 +117,7 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
 
   /* --------------- Variable order --------------- */
 
-  /** Returns the time that this entry was last accessed, in ns. */
+  /** Returns the variable expiration time, in nanoseconds. */
   public long getVariableTime() {
     return 0L;
   }
