@@ -248,6 +248,9 @@
     <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.0.5'>
       <sha512>559ECA3B9FC21BE76ECAAA9E0073DC2014BA50DF2A14AD8919F358C1D7761E2C492EB09DAE1099A308C2F8C0A14635AD4583FF26B7868A782DE6A16D26F7EC6C</sha512>
     </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.0.8'>
+      <sha512>24498846D540C1FDA16E3F835058DEAD3FE28C8D8D1AF35D1DA40C53441876AD3022085110ED3F633685EECC56642AB7B6EC7E6F1B0A11584CF4BBB3464C435D</sha512>
+    </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>
     </dependency>

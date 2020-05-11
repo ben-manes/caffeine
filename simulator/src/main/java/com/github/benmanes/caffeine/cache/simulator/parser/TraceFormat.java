@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.address.AddressTraceR
 import com.github.benmanes.caffeine.cache.simulator.parser.address.penalties.AddressPenaltiesTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.arc.ArcTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.cache2k.Cache2kTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.camelab.CamelabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
@@ -56,6 +57,7 @@ public enum TraceFormat {
   ADAPT_SIZE(AdaptSizeReader::new),
   ARC(ArcTraceReader::new),
   CACHE2K(Cache2kTraceReader::new),
+  CAMELAB(CamelabTraceReader::new),
   CLIMB(ClimbTraceReader::new),
   CORDA(CordaTraceReader::new),
   GRADLE(GradleTraceReader::new),
