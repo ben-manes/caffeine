@@ -64,7 +64,7 @@ public final class Rewriter {
     try (Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
          BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
       for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
-        outputFormat.write(writer, i.next().key());
+        outputFormat.write(writer, i.next());
         count++;
       }
     }
