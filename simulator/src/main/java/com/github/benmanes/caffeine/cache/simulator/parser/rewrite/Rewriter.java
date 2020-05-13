@@ -59,12 +59,12 @@ public final class Rewriter {
 
   @SuppressWarnings("PMD.ForLoopCanBeForeach")
   public void run() throws IOException {
-    int count = 0;
+    long count = 0;
     Stopwatch stopwatch = Stopwatch.createStarted();
     try (Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
          BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
       for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
-        outputFormat.write(writer, i.next());
+        outputFormat.write(writer, i.next(), count);
         count++;
       }
     }

@@ -27,20 +27,19 @@ import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
  */
 public enum OutputFormat {
   CLIMB {
-    @Override public void write(BufferedWriter writer, AccessEvent event) throws IOException {
+    @Override public void write(BufferedWriter writer, AccessEvent event, long time) throws IOException {
       writer.write(Long.toString(event.key()));
       writer.newLine();
     }
   },
   ADAPT_SIZE {
-    long time = 0;
-    @Override public void write(BufferedWriter writer, AccessEvent event) throws IOException {
-      writer.write(Long.toString(time++) + " ");
+    @Override public void write(BufferedWriter writer, AccessEvent event, long time) throws IOException {
+      writer.write(Long.toString(time) + " ");
       writer.write(Long.toString(event.key()) + " ");
       writer.write(Integer.toString(event.weight()));
       writer.newLine();
     }
   };
 
-  public abstract void write(BufferedWriter writer, AccessEvent event) throws IOException;
+  public abstract void write(BufferedWriter writer, AccessEvent event, long time) throws IOException;
 }
