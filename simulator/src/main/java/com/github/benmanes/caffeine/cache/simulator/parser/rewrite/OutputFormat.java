@@ -35,7 +35,9 @@ public enum OutputFormat {
   ADAPT_SIZE {
     long time = 0;
     @Override public void write(BufferedWriter writer, AccessEvent event) throws IOException {
-      writer.write(Long.toString(time++) + " " + Long.toString(event.key()) + " " + Integer.toString(event.weight()));
+      writer.write(Long.toString(time++) + " ");
+      writer.write(Long.toString(event.key()) + " ");
+      writer.write(Integer.toString(event.weight()));
       writer.newLine();
     }
   };

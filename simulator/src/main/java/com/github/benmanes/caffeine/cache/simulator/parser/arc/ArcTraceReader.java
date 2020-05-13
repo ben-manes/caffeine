@@ -50,7 +50,8 @@ public final class ArcTraceReader extends TextTraceReader {
       String[] array = line.split(" ", 3);
       long startBlock = Long.parseLong(array[0]);
       int sequence = Integer.parseInt(array[1]);
-      return LongStream.range(startBlock, startBlock + sequence).mapToObj(key -> AccessEvent.forKeyAndWeight(key, 512));
+      return LongStream.range(startBlock, startBlock + sequence)
+          .mapToObj(key -> AccessEvent.forKeyAndWeight(key, 512));
     });
   }
 }
