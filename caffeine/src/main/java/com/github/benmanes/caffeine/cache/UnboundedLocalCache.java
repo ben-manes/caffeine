@@ -868,7 +868,9 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
+      return (policy == null)
+          ? (policy = new UnboundedPolicy<>(cache, Function.identity()))
+          : policy;
     }
 
     @SuppressWarnings("UnusedVariable")
@@ -888,13 +890,18 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   /** An eviction policy that supports no boundings. */
   static final class UnboundedPolicy<K, V> implements Policy<K, V> {
-    private final boolean isRecordingStats;
+    final UnboundedLocalCache<K, V> cache;
+    final Function<V, V> transformer;
 
-    UnboundedPolicy(boolean isRecordingStats) {
-      this.isRecordingStats = isRecordingStats;
+    UnboundedPolicy(UnboundedLocalCache<K, V> cache, Function<V, V> transformer) {
+      this.transformer = transformer;
+      this.cache = cache;
     }
     @Override public boolean isRecordingStats() {
-      return isRecordingStats;
+      return cache.isRecordingStats;
+    }
+    @Override public V getIfPresentQuietly(Object key) {
+      return transformer.apply(cache.data.get(key));
     }
     @Override public Optional<Eviction<K, V>> eviction() {
       return Optional.empty();
@@ -990,7 +997,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
+      @SuppressWarnings("unchecked")
+      UnboundedLocalCache<K, V> castCache = (UnboundedLocalCache<K, V>) cache;
+      Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
+      @SuppressWarnings("unchecked")
+      Function<V, V> castTransformer = (Function<V, V>) transformer;
+      return (policy == null)
+          ? (policy = new UnboundedPolicy<>(castCache, castTransformer))
+          : policy;
     }
 
     @SuppressWarnings("UnusedVariable")
@@ -1039,7 +1053,14 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     @Override
     public Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<>(cache.isRecordingStats)) : policy;
+      @SuppressWarnings("unchecked")
+      UnboundedLocalCache<K, V> castCache = (UnboundedLocalCache<K, V>) cache;
+      Function<CompletableFuture<V>, V> transformer = Async::getIfReady;
+      @SuppressWarnings("unchecked")
+      Function<V, V> castTransformer = (Function<V, V>) transformer;
+      return (policy == null)
+          ? (policy = new UnboundedPolicy<>(castCache, castTransformer))
+          : policy;
     }
 
     @SuppressWarnings("UnusedVariable")

@@ -24,6 +24,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+import com.google.errorprone.annotations.CompatibleWith;
 
 /**
  * An access point for inspecting and performing low-level operations based on the cache's runtime
@@ -40,6 +43,23 @@ public interface Policy<K, V> {
    * @return if cache statistics are being recorded
    */
   boolean isRecordingStats();
+
+  /**
+   * Returns the value associated with the {@code key} in this cache, or {@code null} if there is no
+   * cached value for the {@code key}. Unlike {@link Cache#getIfPresent(Object)}, this method does
+   * not produce any side effects such as updating statistics, the eviction policy, reseting the
+   * expiration time, or triggering a refresh.
+   *
+   * @param key the key whose associated value is to be returned
+   * @return the value to which the specified key is mapped, or {@code null} if this map contains no
+   *         mapping for the key
+   * @throws NullPointerException if the specified key is null
+   */
+  @Nullable
+  default V getIfPresentQuietly(@NonNull @CompatibleWith("K") Object key) {
+    // This method was added & implemented in version 2.8.3
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * Returns access to perform operations based on the maximum size or maximum weight eviction

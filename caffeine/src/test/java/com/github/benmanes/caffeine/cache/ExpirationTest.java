@@ -68,6 +68,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
@@ -1356,5 +1357,21 @@ public final class ExpirationTest {
       context.ticker().advance(2, TimeUnit.SECONDS);
       context.cleanUp();
     }
+  }
+
+  /* --------------- Policy --------------- */
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+    population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+    expiryTime = Expire.ONE_MINUTE, mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+    expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+    expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+    expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE})
+  public void getIfPresentQuietly_expired(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.policy().getIfPresentQuietly(context.firstKey()), is(not(nullValue())));
+    context.ticker().advance(10, TimeUnit.MINUTES);
+    assertThat(cache.policy().getIfPresentQuietly(context.firstKey()), is(nullValue()));
   }
 }

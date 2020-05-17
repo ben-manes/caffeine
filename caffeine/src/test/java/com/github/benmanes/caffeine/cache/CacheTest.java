@@ -836,7 +836,16 @@ public final class CacheTest {
     cache.cleanUp();
   }
 
-  /* --------------- stats --------------- */
+  /* --------------- serialize --------------- */
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(writer = Writer.EXCEPTIONAL)
+  public void serialize(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache, is(reserializable()));
+  }
+
+  /* --------------- Policy: stats --------------- */
 
   @CacheSpec
   @CheckNoWriter @CheckNoStats
@@ -849,12 +858,32 @@ public final class CacheTest {
     assertThat(cache.policy().isRecordingStats(), is(context.isRecordingStats()));
   }
 
-  /* --------------- serialize --------------- */
+  /* --------------- Policy: getIfPresentQuietly --------------- */
+
+  @CheckNoWriter @CheckNoStats
+  @CacheSpec(implementation = Implementation.Caffeine,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
+  public void getIfPresentQuietly_nullKey(Cache<Integer, Integer> cache, CacheContext context) {
+    cache.policy().getIfPresentQuietly(null);
+  }
+
+  @CheckNoWriter @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING })
+  public void getIfPresentQuietly_absent(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.policy().getIfPresentQuietly(context.absentKey()), is(nullValue()));
+  }
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(writer = Writer.EXCEPTIONAL)
-  public void serialize(Cache<Integer, Integer> cache, CacheContext context) {
-    assertThat(cache, is(reserializable()));
+  @CacheSpec(implementation = Implementation.Caffeine,
+      removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
+  public void getIfPresentQuietly_present(Cache<Integer, Integer> cache, CacheContext context) {
+    assertThat(cache.policy().getIfPresentQuietly(context.firstKey()), is(not(nullValue())));
+    assertThat(cache.policy().getIfPresentQuietly(context.middleKey()), is(not(nullValue())));
+    assertThat(cache.policy().getIfPresentQuietly(context.lastKey()), is(not(nullValue())));
   }
 }

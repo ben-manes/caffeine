@@ -49,6 +49,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
+import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.ExpireAfterWrite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -204,6 +205,19 @@ public final class ExpireAfterWriteTest {
   }
 
   /* --------------- Policy --------------- */
+
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, expireAfterWrite = Expire.ONE_MINUTE)
+  public void getIfPresentQuietly(Cache<Integer, Integer> cache, CacheContext context) {
+    Duration original = cache.policy().expireAfterWrite().get().ageOf(context.firstKey()).get();
+    Duration advancement = Duration.ofSeconds(30);
+    context.ticker().advance(advancement);
+    cache.policy().getIfPresentQuietly(context.firstKey());
+    Duration current = cache.policy().expireAfterWrite().get().ageOf(context.firstKey()).get();
+    assertThat(current.minus(advancement), is(original));
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,

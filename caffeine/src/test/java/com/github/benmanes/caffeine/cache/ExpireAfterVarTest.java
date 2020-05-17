@@ -342,6 +342,22 @@ public final class ExpireAfterVarTest {
 
   /* --------------- Policy --------------- */
 
+  @CheckNoStats
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, expiryTime = Expire.ONE_MINUTE,
+      expiry = { CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS })
+  public void getIfPresentQuietly(Cache<Integer, Integer> cache, CacheContext context) {
+    Duration original = cache.policy().expireVariably().get()
+        .getExpiresAfter(context.firstKey()).get();
+    Duration advancement = Duration.ofSeconds(30);
+    context.ticker().advance(advancement);
+    cache.policy().getIfPresentQuietly(context.firstKey());
+    Duration current = cache.policy().expireVariably().get()
+        .getExpiresAfter(context.firstKey()).get();
+    assertThat(current.plus(advancement), is(original));
+  }
+
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.EMPTY, expiry = CacheExpiry.DISABLED)
