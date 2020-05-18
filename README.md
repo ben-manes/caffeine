@@ -82,11 +82,11 @@ Powering infrastructure near you:
 Download from [Maven Central][maven] or depend via Gradle:
 
 ```gradle
-compile 'com.github.ben-manes.caffeine:caffeine:2.8.2'
+compile 'com.github.ben-manes.caffeine:caffeine:2.8.3'
 
 // Optional extensions
-compile 'com.github.ben-manes.caffeine:guava:2.8.2'
-compile 'com.github.ben-manes.caffeine:jcache:2.8.2'
+compile 'com.github.ben-manes.caffeine:guava:2.8.3'
+compile 'com.github.ben-manes.caffeine:jcache:2.8.3'
 ```
 
 See the [release notes][releases] for details of the changes.
