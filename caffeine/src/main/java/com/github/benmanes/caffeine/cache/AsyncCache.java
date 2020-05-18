@@ -47,7 +47,7 @@ public interface AsyncCache<K, V> {
    *
    * @param key key whose associated value is to be returned
    * @return the current (existing or computed) future value to which the specified key is mapped,
-   *         or {@code null} if this map contains no mapping for the key
+   *         or {@code null} if this cache contains no mapping for the key
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
@@ -119,10 +119,9 @@ public interface AsyncCache<K, V> {
    * @return the future containing an unmodifiable mapping of keys to values for the specified keys
    *         in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
-   *         if the future returned by the {@link AsyncCacheLoader} is null
-   * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does so, if
-   *         {@link AsyncCacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing
-   *         the future, in which case the mapping is left unestablished
+   *         if the future returned by the mappingFunction is null
+   * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
+   *         left unestablished
    */
   @NonNull
   default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
@@ -150,10 +149,9 @@ public interface AsyncCache<K, V> {
    * @return the future containing an unmodifiable mapping of keys to values for the specified keys
    *         in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
-   *         if the future returned by the {@link AsyncCacheLoader} is null
-   * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does so, if
-   *         {@link AsyncCacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing
-   *         the future, in which case the mapping is left unestablished
+   *         if the future returned by the mappingFunction is null
+   * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
+   *         left unestablished
    */
   @NonNull
   default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,

@@ -181,7 +181,7 @@ afterEvaluate {
     it.enabled = System.properties.containsKey('spotbugs')
     it.group = 'SpotBugs'
     it.reports {
-      html { enabled = true }
+      html.enabled = true
     }
   }
 }

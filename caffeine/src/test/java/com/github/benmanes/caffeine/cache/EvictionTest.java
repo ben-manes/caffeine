@@ -27,6 +27,8 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Mockito.verify;
 
 import java.util.Collections;
@@ -483,6 +485,23 @@ public final class EvictionTest {
     cache.invalidateAll();
     assertThat(cache.estimatedSize(), is(0L));
     assertThat(eviction.weightedSize().getAsLong(), is(0L));
+  }
+
+  /* --------------- Policy --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = Maximum.UNREACHABLE)
+  public void getIfPresentQuietly(Cache<Integer, Integer> cache, CacheContext context) {
+    List<Integer> expected = ImmutableList.copyOf(
+        cache.policy().eviction().get().hottest(Integer.MAX_VALUE).keySet());
+    assertThat(cache.policy().getIfPresentQuietly(context.firstKey()), is(not(nullValue())));
+    assertThat(cache.policy().getIfPresentQuietly(context.middleKey()), is(not(nullValue())));
+    assertThat(cache.policy().getIfPresentQuietly(context.lastKey()), is(not(nullValue())));
+
+    List<Integer> actual = ImmutableList.copyOf(
+        cache.policy().eviction().get().hottest(Integer.MAX_VALUE).keySet());
+    assertThat(actual, is(expected));
   }
 
   /* --------------- Policy: IsWeighted --------------- */
