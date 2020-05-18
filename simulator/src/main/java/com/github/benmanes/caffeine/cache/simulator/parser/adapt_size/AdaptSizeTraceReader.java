@@ -32,9 +32,9 @@ import com.google.common.collect.Sets;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class AdaptSizeReader extends TextTraceReader {
+public final class AdaptSizeTraceReader extends TextTraceReader {
 
-  public AdaptSizeReader(String filePath) {
+  public AdaptSizeTraceReader(String filePath) {
     super(filePath);
   }
 

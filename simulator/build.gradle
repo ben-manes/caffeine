@@ -16,13 +16,13 @@ dependencies {
   implementation libraries.stream
   implementation libraries.tcache
   implementation libraries.cache2k
+  implementation libraries.picocli
   implementation libraries.ehcache3
   implementation libraries.fastutil
   implementation libraries.slf4jNop
   implementation libraries.collision
   implementation libraries.fastfilter
   implementation libraries.flipTables
-  implementation libraries.jcommander
   implementation libraries.expiringMap
   implementation libraries.commonsLang3
   implementation libraries.commonsMath3
@@ -80,10 +80,10 @@ run {
 }
 
 task rewrite(type: JavaExec) {
-  main = 'com.github.benmanes.caffeine.cache.simulator.parser.rewrite.Rewriter'
+  main = 'com.github.benmanes.caffeine.cache.simulator.parser.Rewriter'
   classpath = sourceSets.main.runtimeClasspath
 
-  def arguments = ['inputFiles', 'outputFile', 'outputFormat']
+  def arguments = ['inputFormat', 'inputFiles', 'outputFile', 'outputFormat']
   for (def argument : arguments) {
     if (project.hasProperty(argument)) {
       args "--${argument}", project.property(argument)

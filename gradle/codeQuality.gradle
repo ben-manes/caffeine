@@ -180,6 +180,9 @@ afterEvaluate {
   tasks.findAll { it.name.startsWith('spotbugs') }.each {
     it.enabled = System.properties.containsKey('spotbugs')
     it.group = 'SpotBugs'
+    it.reports {
+      html { enabled = true }
+    }
   }
 }
 

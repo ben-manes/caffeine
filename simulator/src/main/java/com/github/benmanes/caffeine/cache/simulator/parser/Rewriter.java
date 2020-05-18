@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.cache.simulator.parser.rewrite;
+package com.github.benmanes.caffeine.cache.simulator.parser;
 
-import java.io.BufferedWriter;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -24,11 +26,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.google.common.base.Stopwatch;
+
+import picocli.CommandLine;
+import picocli.CommandLine.Help;
+import picocli.CommandLine.Option;
 
 /**
  * A simple utility to rewrite traces for into the format used by other simulators. This lets us
@@ -36,52 +39,53 @@ import com.google.common.base.Stopwatch;
  * into Java.
  * <p>
  * <pre>{@code
- *   ./gradlew :simulator:rewrite -PinputFiles=? -PoutputFile=? -PoutputFormat=?
+ *   ./gradlew :simulator:rewrite \
+ *      -PinputFormat=? \
+ *      -PinputFiles=? \
+ *      -PoutputFile=? \
+ *      -PoutputFormat=?
  * }</pre>
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @SuppressWarnings("PMD.ImmutableField")
-public final class Rewriter {
-  @Parameter(names = "--inputFiles", required = true, description = "The trace input files. To use "
+public final class Rewriter implements Runnable {
+  @Option(names = "--inputFiles", required = true, description = "The trace input files. To use "
       + "a mix of formats, specify the entry as format:path, e.g. lirs:loop.trace.gz")
   private List<String> inputFiles = new ArrayList<>();
-  @Parameter(names = "--inputFormat", description = "The default trace input format")
-  private TraceFormat inputFormat = TraceFormat.LIRS;
+  @Option(names = "--inputFormat", required = true, description = "The default trace input format")
+  private TraceFormat inputFormat;
 
-  @Parameter(names = "--outputFile", description = "The trace output file", required = true)
+  @Option(names = "--outputFile", required = true, description = "The trace output file")
   private Path outputFile;
-  @Parameter(names = "--outputFormat", description = "The trace output format", required = true)
+  @Option(names = "--outputFormat", required = true, description = "The trace output format")
   private OutputFormat outputFormat;
 
-  @Parameter(names = "--help", help = true, hidden = true)
-  private boolean help;
-
+  @Override
   @SuppressWarnings("PMD.ForLoopCanBeForeach")
-  public void run() throws IOException {
-    long count = 0;
+  public void run() {
+    int tick = 0;
     Stopwatch stopwatch = Stopwatch.createStarted();
-    try (Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
-         BufferedWriter writer = Files.newBufferedWriter(outputFile)) {
+    try (OutputStream output = new BufferedOutputStream(Files.newOutputStream(outputFile));
+         Stream<AccessEvent> events = inputFormat.readFiles(inputFiles).events();
+         TraceWriter writer = outputFormat.writer(output)) {
+      writer.writeHeader();
       for (Iterator<AccessEvent> i = events.iterator(); i.hasNext();) {
-        outputFormat.write(writer, i.next(), count);
-        count++;
+        writer.writeEvent(tick, i.next());
+        tick++;
       }
+      writer.writeFooter();
+      System.out.printf("Rewrote %,d events in %s%n", tick, stopwatch);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
-    System.out.printf("Rewrote %,d events in %s%n", count, stopwatch);
   }
 
   public static void main(String[] args) throws IOException {
-    Rewriter rewriter = new Rewriter();
-    JCommander commander =  JCommander.newBuilder()
-        .programName(Rewriter.class.getSimpleName())
-        .addObject(rewriter)
-        .build();
-    commander.parse(args);
-    if (rewriter.help) {
-      commander.usage();
-    } else {
-      rewriter.run();
-    }
+    new CommandLine(Rewriter.class)
+        .setColorScheme(Help.defaultColorScheme(Help.Ansi.ON))
+        .setCommandName(Rewriter.class.getSimpleName())
+        .setCaseInsensitiveEnumValuesAllowed(true)
+        .execute(args);
   }
 }
