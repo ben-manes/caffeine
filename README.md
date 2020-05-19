@@ -18,7 +18,7 @@ Caffeine provides an in-memory cache using a Google Guava inspired API. The impr
 experience designing [Guava's cache][guava-cache] and [ConcurrentLinkedHashMap][clhm].
 
 ```java
-import com.github.benmanes.caffeine.Caffeine;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 LoadingCache<Key, Graph> graphs = Caffeine.newBuilder()
     .maximumSize(10_000)
