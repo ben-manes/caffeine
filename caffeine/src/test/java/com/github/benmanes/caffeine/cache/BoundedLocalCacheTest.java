@@ -545,6 +545,23 @@ public final class BoundedLocalCacheTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.FULL, maximumSize = Maximum.FULL)
+  public void drain_onRead_absent(Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    Buffer<Node<Integer, Integer>> buffer = localCache.readBuffer;
+    localCache.get(context.firstKey());
+    assertThat(buffer.size(), is(1));
+
+    assertThat(localCache.get(context.absentKey()), is(nullValue()));
+    assertThat(buffer.size(), is(1));
+
+    localCache.drainStatus = REQUIRED;
+    assertThat(localCache.get(context.absentKey()), is(nullValue()));
+    assertThat(buffer.size(), is(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
       population = Population.EMPTY, maximumSize = Maximum.FULL)
   public void drain_onWrite(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);

@@ -1878,6 +1878,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       if (recordStats) {
         statsCounter().recordMisses(1);
       }
+      if (drainStatus() == REQUIRED) {
+        scheduleDrainBuffers();
+      }
       return null;
     }
 
