@@ -68,7 +68,7 @@ public interface AsyncCache<K, V> {
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
    * <b>Warning:</b> the returned future can be resolved asynchronously, so it will not
-   * necessarily be completed on return from this functio, even if the value is in the cache.
+   * necessarily be completed on return from this function, even if the value is in the cache.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
@@ -92,7 +92,7 @@ public interface AsyncCache<K, V> {
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
    * <b>Warning:</b> the returned future can be resolved asynchronously, so it will not
-   * necessarily be completed on return from this functio, even if the value is in the cache.
+   * necessarily be completed on return from this function, even if the value is in the cache.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
