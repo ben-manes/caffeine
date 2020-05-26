@@ -43,7 +43,9 @@ public interface AsyncCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, or {@code null} if there is no
-   * cached future for {@code key}.
+   * cached future for {@code key}.  When a future is returned, it is guaranteed to have the same
+   * completion status as the future in the cache, and unlike {@link AsyncCache#get} it is never
+   * a wrapped future that is asynchronously completed.
    *
    * @param key key whose associated value is to be returned
    * @return the current (existing or computed) future value to which the specified key is mapped,
@@ -54,7 +56,7 @@ public interface AsyncCache<K, V> {
   CompletableFuture<V> getIfPresent(@NonNull @CompatibleWith("K") Object key);
 
   /**
-   * Returns the future associated with {@code key} in this cache, obtaining that value from
+   * Returns a future associated with {@code key} in this cache, obtaining that value from
    * {@code mappingFunction} if necessary. This method provides a simple substitute for the
    * conventional "if cached, return; otherwise create, cache and return" pattern.
    * <p>
@@ -65,6 +67,8 @@ public interface AsyncCache<K, V> {
    * <p>
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
+   * <b>Warning:</b> the returned future can be resolved asynchronously, so it will not
+   * necessarily be completed on return from this functio, even if the value is in the cache.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
@@ -76,7 +80,7 @@ public interface AsyncCache<K, V> {
       @NonNull Function<? super K, ? extends V> mappingFunction);
 
   /**
-   * Returns the future associated with {@code key} in this cache, obtaining that value from
+   * Returns a future associated with {@code key} in this cache, obtaining that value from
    * {@code mappingFunction} if necessary. This method provides a simple substitute for the
    * conventional "if cached, return; otherwise create, cache and return" pattern.
    * <p>
@@ -87,6 +91,8 @@ public interface AsyncCache<K, V> {
    * <p>
    * <b>Warning:</b> as with {@link CacheLoader#load}, {@code mappingFunction} <b>must not</b>
    * attempt to update any other mappings of this cache.
+   * <b>Warning:</b> the returned future can be resolved asynchronously, so it will not
+   * necessarily be completed on return from this functio, even if the value is in the cache.
    *
    * @param key key with which the specified value is to be associated
    * @param mappingFunction the function to asynchronously compute a value
