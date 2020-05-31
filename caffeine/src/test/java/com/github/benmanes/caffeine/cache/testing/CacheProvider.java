@@ -23,7 +23,6 @@ import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.LogManager;
@@ -82,7 +81,7 @@ public final class CacheProvider {
    * {@link Policy.Eviction}, and {@link Policy.Expiration}.
    */
   private static Iterator<Object[]> asTestCases(Method testMethod,
-      Stream<Entry<CacheContext, Cache<Integer, Integer>>> scenarios) {
+      Stream<Map.Entry<CacheContext, Cache<Integer, Integer>>> scenarios) {
     Parameter[] parameters = testMethod.getParameters();
     CacheContext[] stashed = new CacheContext[1];
     return scenarios.map(entry -> {

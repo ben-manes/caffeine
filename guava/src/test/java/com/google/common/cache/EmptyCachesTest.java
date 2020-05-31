@@ -21,7 +21,7 @@ import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.util.Collection;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -43,7 +43,6 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
-
 public class EmptyCachesTest extends TestCase {
 
   public void testEmpty() {
@@ -272,9 +271,9 @@ public class EmptyCachesTest extends TestCase {
 
   public void testEntrySet_nullToArray() {
     for (LoadingCache<Object, Object> cache : caches()) {
-      Set<Entry<Object, Object>> entries = cache.asMap().entrySet();
+      Set<Map.Entry<Object, Object>> entries = cache.asMap().entrySet();
       try {
-        entries.toArray((Entry<?, ?>[]) null);
+        entries.toArray((Map.Entry<?, ?>[]) null);
         fail();
       } catch (NullPointerException e) {
         // expected
@@ -311,7 +310,7 @@ public class EmptyCachesTest extends TestCase {
     for (LoadingCache<Object, Object> cache : caches()) {
       warmUp(cache, 0, 100);
 
-      Set<Entry<Object, Object>> entrySet = cache.asMap().entrySet();
+      Set<Map.Entry<Object, Object>> entrySet = cache.asMap().entrySet();
       entrySet.clear();
       checkEmpty(entrySet);
       checkEmpty(cache);
@@ -320,7 +319,7 @@ public class EmptyCachesTest extends TestCase {
 
   public void testEntrySet_empty_remove() {
     for (LoadingCache<Object, Object> cache : caches()) {
-      Set<Entry<Object, Object>> entrySet = cache.asMap().entrySet();
+      Set<Map.Entry<Object, Object>> entrySet = cache.asMap().entrySet();
       assertFalse(entrySet.remove(null));
       assertFalse(entrySet.remove(entryOf(6, 6)));
       assertFalse(entrySet.remove(entryOf(-6, -6)));
@@ -336,7 +335,7 @@ public class EmptyCachesTest extends TestCase {
       cache.getUnchecked(1);
       cache.getUnchecked(2);
 
-      Set<Entry<Object, Object>> entrySet = cache.asMap().entrySet();
+      Set<Map.Entry<Object, Object>> entrySet = cache.asMap().entrySet();
       // We don't know whether these are still in the cache, so we can't assert on the return
       // values of these removes, but the cache should be empty after the removes, regardless.
       entrySet.remove(entryOf(1, 1));
@@ -394,7 +393,7 @@ public class EmptyCachesTest extends TestCase {
     }
   }
 
-  private Entry<Object, Object> entryOf(Object key, Object value) {
+  private Map.Entry<Object, Object> entryOf(Object key, Object value) {
     return Maps.immutableEntry(key, value);
   }
 }

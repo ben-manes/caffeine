@@ -17,13 +17,11 @@ package com.github.benmanes.caffeine.cache.testing;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map.Entry;
-import java.util.Objects;
+import java.util.AbstractMap.SimpleImmutableEntry;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.errorprone.annotations.Immutable;
 
@@ -35,9 +33,9 @@ import com.google.errorprone.annotations.Immutable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Immutable(containerOf = {"K", "V"})
-public final class RemovalNotification<K, V> implements Entry<K, V> {
-  @Nullable private final K key;
-  @Nullable private final V value;
+public final class RemovalNotification<K, V> extends SimpleImmutableEntry<K, V> {
+  private static final long serialVersionUID = 0;
+
   private final RemovalCause cause;
 
   /**
@@ -48,9 +46,8 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
    * @param cause the reason for which the entry was removed
    */
   public RemovalNotification(@Nullable K key, @Nullable V value, @NonNull RemovalCause cause) {
+    super(key, value);
     this.cause = requireNonNull(cause);
-    this.value = value;
-    this.key = key;
   }
 
   /**
@@ -69,51 +66,5 @@ public final class RemovalNotification<K, V> implements Entry<K, V> {
    */
   public boolean wasEvicted() {
     return cause.wasEvicted();
-  }
-
-  /**
-   * Returns the key of the removed entry or null if it was garbage collected due to
-   * {@link Caffeine#weakKeys()} eviction.
-   */
-  @Override @Nullable
-  public K getKey() {
-    return key;
-  }
-
-  /**
-   * Returns the key of the removed entry or null if it was garbage collected due to
-   * {@link Caffeine#weakValues()} or {@link Caffeine#softValues()} eviction.
-   */
-  @Override @Nullable
-  public V getValue() {
-    return value;
-  }
-
-  @Override
-  public V setValue(V value) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (o == this) {
-      return true;
-    } else if (!(o instanceof Entry<?, ?>)) {
-      return false;
-    }
-    Entry<?, ?> entry = (Entry<?, ?>) o;
-    return Objects.equals(key, entry.getKey())
-        && Objects.equals(value, entry.getValue());
-  }
-
-  @Override
-  public int hashCode() {
-    return ((key == null) ? 0 : key.hashCode()) ^ ((value == null) ? 0 : value.hashCode());
-  }
-
-  /** Returns a string representation of the form <code>{key}={value}</code>. */
-  @Override
-  public String toString() {
-    return key + "=" + value;
   }
 }

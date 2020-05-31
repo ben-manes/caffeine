@@ -15,12 +15,6 @@
     <Bug code="SP"/>
   </Match>
   <Match>
-    <Or>
-      <Class name="com.github.benmanes.caffeine.profiler.SingleConsumerQueueProfiler"/>
-    </Or>
-    <Bug code="ST"/>
-  </Match>
-  <Match>
     <Class name="com.github.benmanes.caffeine.cache.CaffeineSpec"/>
     <Or>
       <Method name="parseDuration"/>
@@ -58,6 +52,13 @@
       <Class name="~.*Header.*"/>
     </Or>
     <Bug code="UuF"/>
+  </Match>
+  <Match>
+    <Or>
+      <Class name="com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"/>
+      <Class name="com.github.benmanes.caffeine.cache.NodeFactoryGenerator"/>
+    </Or>
+    <Bug code="RCN"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.DelegationBenchmark$DelegateMap"/>
@@ -104,6 +105,11 @@
     <Class name="com.github.benmanes.caffeine.cache.simulator.Simulator"/>
     <Method name="broadcast"/>
     <Bug code="RCN"/>
+  </Match>
+  <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.parser.AbstractTraceReader"/>
+    <Method name="openFile"/>
+    <Bug code="OBL"/>
   </Match>
   <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader"/>

@@ -24,7 +24,7 @@ public abstract class LocalCacheRule implements Consumer<LocalCacheContext> {
   protected LocalCacheContext context;
 
   @SuppressWarnings({"NullAway.Init", "PMD.UnnecessaryConstructor"})
-  public LocalCacheRule() {}
+  LocalCacheRule() {}
 
   @Override
   public void accept(LocalCacheContext context) {

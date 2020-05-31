@@ -19,7 +19,7 @@ import static org.mockito.Mockito.reset;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -56,7 +56,7 @@ import com.google.common.collect.Sets;
 final class CacheGenerator {
   // Integer caches the object identity semantics of autoboxing for values between
   // -128 and 127 (inclusive) as required by JLS (assuming default setting)
-  private static final List<Entry<Integer, Integer>> INTS = makeInts();
+  private static final List<Map.Entry<Integer, Integer>> INTS = makeInts();
   private static final int BASE = 1_000;
 
   private final Options options;
@@ -73,7 +73,7 @@ final class CacheGenerator {
   }
 
   /** Returns a lazy stream so that the test case is GC-able after use. */
-  public Stream<Entry<CacheContext, Cache<Integer, Integer>>> generate() {
+  public Stream<Map.Entry<CacheContext, Cache<Integer, Integer>>> generate() {
     return combinations().stream()
         .map(this::newCacheContext)
         .filter(this::isCompatible)
@@ -227,7 +227,7 @@ final class CacheGenerator {
 
     context.disableRejectingCacheWriter();
     for (int i = 0; i < maximum; i++) {
-      Entry<Integer, Integer> entry = INTS.get(i);
+      Map.Entry<Integer, Integer> entry = INTS.get(i);
 
       // Reference caching (weak, soft) require unique instances for identity comparison
       Integer key = context.isStrongKeys() ? entry.getKey() : new Integer(BASE + i);
@@ -254,11 +254,11 @@ final class CacheGenerator {
 
   /** Returns a cache of integers and their negation. */
   @SuppressWarnings({"BoxedPrimitiveConstructor", "deprecation"})
-  private static List<Entry<Integer, Integer>> makeInts() {
+  private static List<Map.Entry<Integer, Integer>> makeInts() {
     int size = Stream.of(CacheSpec.Population.values())
         .mapToInt(population -> Math.toIntExact(population.size()))
         .max().getAsInt();
-    ImmutableList.Builder<Entry<Integer, Integer>> builder = ImmutableList.builder();
+    ImmutableList.Builder<Map.Entry<Integer, Integer>> builder = ImmutableList.builder();
     for (int i = 0; i < size; i++) {
       int value = BASE + i;
       builder.add(Maps.immutableEntry(new Integer(value), new Integer(-value)));

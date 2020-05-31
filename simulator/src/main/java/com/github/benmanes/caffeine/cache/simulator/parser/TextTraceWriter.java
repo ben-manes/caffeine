@@ -30,7 +30,7 @@ import java.io.OutputStreamWriter;
 public abstract class TextTraceWriter implements TraceWriter {
   private final BufferedWriter writer;
 
-  public TextTraceWriter(OutputStream output) {
+  protected TextTraceWriter(OutputStream output) {
     this.writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8));
   }
 

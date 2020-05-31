@@ -22,7 +22,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 
 import org.mockito.Mockito;
@@ -76,7 +75,7 @@ public final class CacheWriterVerifier {
   }
 
   /** Checks that the entry was deleted for the specified reason. */
-  public void deleted(Entry<Integer, Integer> entry, RemovalCause cause) {
+  public void deleted(Map.Entry<Integer, Integer> entry, RemovalCause cause) {
     deleted(entry.getKey(), entry.getValue(), cause);
   }
 

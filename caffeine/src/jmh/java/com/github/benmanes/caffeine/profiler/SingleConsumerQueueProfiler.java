@@ -28,10 +28,6 @@ public final class SingleConsumerQueueProfiler extends ProfilerHook {
   final AtomicBoolean consumer = new AtomicBoolean();
   final Queue<Boolean> queue = queueType.create();
 
-  SingleConsumerQueueProfiler() {
-    ProfilerHook.NUM_THREADS = 8;
-  }
-
   @Override
   protected void profile() {
     if (consumer.compareAndSet(false, true)) {

@@ -130,7 +130,7 @@ public class TimerWheelBenchmark {
   static final class MockCache extends BoundedLocalCache<Integer, Integer> {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    protected MockCache() {
+    MockCache() {
       super((Caffeine) Caffeine.newBuilder(), /* cacheLoader */ null, /* isAsync */ false);
     }
 

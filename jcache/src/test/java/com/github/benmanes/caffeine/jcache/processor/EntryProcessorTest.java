@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
-import javax.cache.Cache.Entry;
+import javax.cache.Cache;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.integration.CacheLoader;
@@ -110,13 +110,13 @@ public final class EntryProcessorTest extends AbstractJCacheTest {
   final class MapWriter implements CacheWriter<Integer, Integer> {
 
     @Override
-    public void write(Entry<? extends Integer, ? extends Integer> entry) {
+    public void write(Cache.Entry<? extends Integer, ? extends Integer> entry) {
       writes++;
       map.put(entry.getKey(), entry.getValue());
     }
 
     @Override
-    public void writeAll(Collection<Entry<? extends Integer, ? extends Integer>> entries) {
+    public void writeAll(Collection<Cache.Entry<? extends Integer, ? extends Integer>> entries) {
       entries.forEach(this::write);
     }
 

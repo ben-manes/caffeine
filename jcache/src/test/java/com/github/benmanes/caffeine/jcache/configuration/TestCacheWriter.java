@@ -17,16 +17,16 @@ package com.github.benmanes.caffeine.jcache.configuration;
 
 import java.util.Collection;
 
-import javax.cache.Cache.Entry;
+import javax.cache.Cache;
 import javax.cache.integration.CacheWriter;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class TestCacheWriter implements CacheWriter<Integer, Integer> {
-  @Override public void write(Entry<? extends Integer, ? extends Integer> entry) {}
+  @Override public void write(Cache.Entry<? extends Integer, ? extends Integer> entry) {}
   @Override public void writeAll(
-      Collection<Entry<? extends Integer, ? extends Integer>> entries) {}
+      Collection<Cache.Entry<? extends Integer, ? extends Integer>> entries) {}
   @Override public void delete(Object key) {}
   @Override public void deleteAll(Collection<?> keys) {}
 }

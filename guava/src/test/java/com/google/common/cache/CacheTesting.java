@@ -65,10 +65,7 @@ class CacheTesting {
   }
 
   /**
-   * Peeks into the cache's internals to check its internal consistency. Verifies that each
-   * segment's count matches its #elements (after cleanup), each segment is unlocked, each entry
-   * contains a non-null key and value, and the eviction and expiration queues are consistent
-   * (see {@link #checkEviction}, {@link #checkExpiration}).
+   * Peeks into the cache's internals to check its internal consistency.
    */
   static void checkValidState(Cache<?, ?> cache) {}
 

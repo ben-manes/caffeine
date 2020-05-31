@@ -43,7 +43,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   protected NodeContext context;
 
   @SuppressWarnings("NullAway.Init")
-  public NodeRule() {}
+  NodeRule() {}
 
   @Override
   public final void accept(NodeContext context) {

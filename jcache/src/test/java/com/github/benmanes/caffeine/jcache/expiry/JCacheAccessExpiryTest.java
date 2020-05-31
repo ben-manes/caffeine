@@ -21,7 +21,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -197,7 +196,7 @@ public final class JCacheAccessExpiryTest extends AbstractJCacheTest {
     Map<Integer, EntryProcessorResult<Integer>> result =
         jcache.invokeAll(keys, (entry, args) -> entry.getValue());
     Map<Integer, Integer> unwrapped = result.entrySet().stream().collect(
-        Collectors.toMap(Entry::getKey, entry -> entry.getValue().get()));
+        Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().get()));
     assertThat(unwrapped, is(entries));
 
     for (Integer key : keys) {

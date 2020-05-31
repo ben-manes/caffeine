@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -64,9 +63,9 @@ final class MapTestFactory {
   public static TestStringMapGenerator synchronousGenerator(
       Supplier<Map<String, String>> supplier) {
     return new TestStringMapGenerator() {
-      @Override protected Map<String, String> create(Entry<String, String>[] entries) {
+      @Override protected Map<String, String> create(Map.Entry<String, String>[] entries) {
         Map<String, String> map = supplier.get();
-        for (Entry<String, String> entry : entries) {
+        for (Map.Entry<String, String> entry : entries) {
           map.put(entry.getKey(), entry.getValue());
         }
         return map;
@@ -79,9 +78,9 @@ final class MapTestFactory {
       Supplier<Map<String, CompletableFuture<String>>> supplier) {
     return new TestAsyncMapGenerator() {
       @Override protected Map<String, CompletableFuture<String>> create(
-          Entry<String, CompletableFuture<String>>[] entries) {
+          Map.Entry<String, CompletableFuture<String>>[] entries) {
         Map<String, CompletableFuture<String>> map = supplier.get();
-        for (Entry<String, CompletableFuture<String>> entry : entries) {
+        for (Map.Entry<String, CompletableFuture<String>> entry : entries) {
           map.put(entry.getKey(), entry.getValue());
         }
         return map;
@@ -99,7 +98,7 @@ final class MapTestFactory {
     static final CompletableFuture<String> MAY = CompletableFuture.completedFuture("May");
 
     @Override
-    public SampleElements<Entry<String, CompletableFuture<String>>> samples() {
+    public SampleElements<Map.Entry<String, CompletableFuture<String>>> samples() {
       return new SampleElements<>(
           Helpers.mapEntry("one", JAN),
           Helpers.mapEntry("two", FEB),
@@ -111,23 +110,24 @@ final class MapTestFactory {
     @Override
     public Map<String, CompletableFuture<String>> create(Object... entries) {
       @SuppressWarnings({"rawtypes", "unchecked"})
-      Entry<String, CompletableFuture<String>>[] array = new Entry[entries.length];
+      Map.Entry<String, CompletableFuture<String>>[] array = new Map.Entry[entries.length];
       int i = 0;
       for (Object o : entries) {
         @SuppressWarnings("unchecked")
-        Entry<String, CompletableFuture<String>> e = (Entry<String, CompletableFuture<String>>) o;
+        Map.Entry<String, CompletableFuture<String>> e =
+            (Map.Entry<String, CompletableFuture<String>>) o;
         array[i++] = e;
       }
       return create(array);
     }
 
     protected abstract Map<String, CompletableFuture<String>> create(
-        Entry<String, CompletableFuture<String>>[] entries);
+        Map.Entry<String, CompletableFuture<String>>[] entries);
 
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public final Entry<String, CompletableFuture<String>>[] createArray(int length) {
-      return new Entry[length];
+    public final Map.Entry<String, CompletableFuture<String>>[] createArray(int length) {
+      return new Map.Entry[length];
     }
 
     @Override
@@ -141,8 +141,8 @@ final class MapTestFactory {
     }
 
     @Override
-    public Iterable<Entry<String, CompletableFuture<String>>> order(
-        List<Entry<String, CompletableFuture<String>>> insertionOrder) {
+    public Iterable<Map.Entry<String, CompletableFuture<String>>> order(
+        List<Map.Entry<String, CompletableFuture<String>>> insertionOrder) {
       return insertionOrder;
     }
   }

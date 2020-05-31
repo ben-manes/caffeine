@@ -64,12 +64,14 @@ public final class JavaSerializationCopierTest {
   }
 
   @Test
+  @SuppressWarnings("JdkObsolete")
   public void deepCopy_date() {
     Date date = new Date();
     assertThat(copy(date), is(equalTo(date)));
   }
 
   @Test
+  @SuppressWarnings("JdkObsolete")
   public void deepCopy_calendar() {
     Calendar calendar = Calendar.getInstance();
     calendar.setTime(new Date());

@@ -47,7 +47,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Spliterator;
@@ -117,6 +116,7 @@ public final class AsyncAsMapTest {
   /* ---------------- contains -------------- */
 
   @CheckNoStats
+  @SuppressWarnings("ReturnValueIgnored")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void containsKey_null(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -141,6 +141,7 @@ public final class AsyncAsMapTest {
   }
 
   @CheckNoStats
+  @SuppressWarnings("ReturnValueIgnored")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void containsValue_null(AsyncCache<Integer, Integer> cache, CacheContext context) {
@@ -1663,7 +1664,7 @@ public final class AsyncAsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void entrySetToArray_null(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    cache.asMap().entrySet().toArray((Entry<?, ?>[]) null);
+    cache.asMap().entrySet().toArray((Map.Entry<?, ?>[]) null);
   }
 
   @CheckNoStats
@@ -1673,11 +1674,11 @@ public final class AsyncAsMapTest {
     int length = context.original().size();
 
     @SuppressWarnings("unchecked")
-    Entry<Integer, CompletableFuture<Integer>>[] entries =
-        (Entry<Integer, CompletableFuture<Integer>>[])
-        cache.asMap().entrySet().toArray(new Entry<?, ?>[length]);
+    Map.Entry<Integer, CompletableFuture<Integer>>[] entries =
+        (Map.Entry<Integer, CompletableFuture<Integer>>[])
+        cache.asMap().entrySet().toArray(new Map.Entry<?, ?>[length]);
     assertThat(entries.length, is(length));
-    for (Entry<Integer, CompletableFuture<Integer>> entry : entries) {
+    for (Map.Entry<Integer, CompletableFuture<Integer>> entry : entries) {
       assertThat(context.original(), hasEntry(entry.getKey(), entry.getValue().join()));
     }
 
@@ -1685,8 +1686,8 @@ public final class AsyncAsMapTest {
     assertThat(array.length, is(length));
     for (Object item : array) {
       @SuppressWarnings("unchecked")
-      Entry<Integer, CompletableFuture<Integer>> entry =
-          (Entry<Integer, CompletableFuture<Integer>>) item;
+      Map.Entry<Integer, CompletableFuture<Integer>> entry =
+          (Map.Entry<Integer, CompletableFuture<Integer>>) item;
       assertThat(context.original(), hasEntry(entry.getKey(), entry.getValue().join()));
     }
   }
@@ -1731,7 +1732,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_removeIf(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    Predicate<Entry<Integer, CompletableFuture<Integer>>> isEven =
+    Predicate<Map.Entry<Integer, CompletableFuture<Integer>>> isEven =
         entry -> (entry.getValue().join() % 2) == 0;
     boolean hasEven = cache.asMap().entrySet().stream().anyMatch(isEven);
 
@@ -1747,7 +1748,7 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    Set<Entry<Integer, CompletableFuture<Integer>>> entries = cache.asMap().entrySet();
+    Set<Map.Entry<Integer, CompletableFuture<Integer>>> entries = cache.asMap().entrySet();
     assertThat(entries.contains(new Object()), is(false));
     assertThat(entries.remove(new Object()), is(false));
     assertThat(entries, hasSize(context.original().size()));
@@ -1766,10 +1767,11 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entryIterator(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    Iterator<Entry<Integer, CompletableFuture<Integer>>> i = cache.asMap().entrySet().iterator();
+    Iterator<Map.Entry<Integer, CompletableFuture<Integer>>> i =
+        cache.asMap().entrySet().iterator();
     int iterations = 0;
     while (i.hasNext()) {
-      Entry<Integer, CompletableFuture<Integer>> entry = i.next();
+      Map.Entry<Integer, CompletableFuture<Integer>> entry = i.next();
       assertThat(cache.asMap(), hasEntry(entry.getKey(), entry.getValue()));
       iterations++;
       i.remove();
@@ -1833,7 +1835,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void entrySpliterator_tryAdvance(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
-    Spliterator<Entry<Integer, CompletableFuture<Integer>>> spliterator =
+    Spliterator<Map.Entry<Integer, CompletableFuture<Integer>>> spliterator =
         cache.asMap().entrySet().spliterator();
     int[] count = new int[1];
     boolean advanced;
@@ -1852,9 +1854,9 @@ public final class AsyncAsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySpliterator_trySplit(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    Spliterator<Entry<Integer, CompletableFuture<Integer>>> spliterator =
+    Spliterator<Map.Entry<Integer, CompletableFuture<Integer>>> spliterator =
         cache.asMap().entrySet().spliterator();
-    Spliterator<Entry<Integer, CompletableFuture<Integer>>> other = MoreObjects.firstNonNull(
+    Spliterator<Map.Entry<Integer, CompletableFuture<Integer>>> other = MoreObjects.firstNonNull(
         spliterator.trySplit(), Spliterators.emptySpliterator());
 
     int[] count = new int[1];
@@ -1868,7 +1870,7 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   public void entrySpliterator_estimateSize(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
-    Spliterator<Entry<Integer, CompletableFuture<Integer>>> spliterator =
+    Spliterator<Map.Entry<Integer, CompletableFuture<Integer>>> spliterator =
         cache.asMap().entrySet().spliterator();
     assertThat((int) spliterator.estimateSize(), is(cache.asMap().size()));
   }
@@ -1879,7 +1881,8 @@ public final class AsyncAsMapTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void writeThroughEntry(AsyncCache<Integer, Integer> cache, CacheContext context) {
-    Entry<Integer, CompletableFuture<Integer>> entry = cache.asMap().entrySet().iterator().next();
+    Map.Entry<Integer, CompletableFuture<Integer>> entry =
+        cache.asMap().entrySet().iterator().next();
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(3);
 
     entry.setValue(value);

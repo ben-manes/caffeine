@@ -40,7 +40,7 @@ public abstract class AbstractTraceReader implements TraceReader {
 
   protected final String filePath;
 
-  public AbstractTraceReader(String filePath) {
+  protected AbstractTraceReader(String filePath) {
     this.filePath = filePath.trim();
   }
 
@@ -73,7 +73,7 @@ public abstract class AbstractTraceReader implements TraceReader {
       return Files.newInputStream(file);
     }
     InputStream input = getClass().getResourceAsStream(filePath);
-    checkArgument(input != null, "Could not find file: " + filePath);
+    checkArgument(input != null, "Could not find file: %s", filePath);
     return input;
   }
 }

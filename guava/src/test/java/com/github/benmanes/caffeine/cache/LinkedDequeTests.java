@@ -59,7 +59,7 @@ public final class LinkedDequeTests extends TestCase {
     return suite;
   }
 
-  protected static Test suite(String name, Supplier<LinkedDeque<LinkedValue>> supplier) {
+  static Test suite(String name, Supplier<LinkedDeque<LinkedValue>> supplier) {
     return QueueTestSuiteBuilder
         .using(new TestLinkedValueGenerator() {
           @Override public Queue<LinkedValue> create(LinkedValue[] elements) {

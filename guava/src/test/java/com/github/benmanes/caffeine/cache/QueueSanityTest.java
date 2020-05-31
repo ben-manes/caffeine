@@ -50,7 +50,7 @@ public abstract class QueueSanityTest {
   private final Queue<Integer> queue;
   private final ConcurrentQueueSpec spec;
 
-  public QueueSanityTest(ConcurrentQueueSpec spec, Queue<Integer> queue) {
+  protected QueueSanityTest(ConcurrentQueueSpec spec, Queue<Integer> queue) {
     this.queue = queue;
     this.spec = spec;
   }

@@ -39,7 +39,7 @@ import com.google.common.io.Closeables;
  */
 public abstract class BinaryTraceReader extends AbstractTraceReader {
 
-  public BinaryTraceReader(String filePath) {
+  protected BinaryTraceReader(String filePath) {
     super(filePath);
   }
 

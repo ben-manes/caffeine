@@ -113,6 +113,7 @@ public class SingleConsumerQueueTest {
     assertThat(queue.contains(-1), is(false));
   }
 
+  @SuppressWarnings("ReturnValueIgnored")
   @Test(dataProvider = "empty", expectedExceptions = NullPointerException.class)
   public void containsAll_withNull(Queue<?> queue) {
     queue.containsAll(null);

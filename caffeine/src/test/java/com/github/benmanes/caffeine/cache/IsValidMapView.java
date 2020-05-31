@@ -38,6 +38,7 @@ public final class IsValidMapView<K, V> extends TypeSafeDiagnosingMatcher<Map<K,
   }
 
   @Override
+  @SuppressWarnings("NonCanonicalType")
   protected boolean matchesSafely(Map<K, V> map, Description description) {
     this.description = description;
 

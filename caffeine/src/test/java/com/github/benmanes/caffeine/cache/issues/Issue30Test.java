@@ -16,11 +16,13 @@
 package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
+import static java.time.ZoneOffset.UTC;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -81,7 +83,7 @@ public final class Issue30Test {
   @DataProvider(name = "params")
   public Object[][] providesCache() {
     ConcurrentMap<String, String> source = new ConcurrentHashMap<>();
-    ConcurrentMap<String, Date> lastLoad = new ConcurrentHashMap<>();
+    ConcurrentMap<String, Instant> lastLoad = new ConcurrentHashMap<>();
     AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
         .expireAfterWrite(TTL, TimeUnit.MILLISECONDS)
         .executor(executor)
@@ -91,14 +93,15 @@ public final class Issue30Test {
 
   @Test(dataProvider = "params", invocationCount = 100, threadPoolSize = N_THREADS)
   public void expiration(AsyncLoadingCache<String, String> cache,
-      ConcurrentMap<String, String> source, ConcurrentMap<String, Date> lastLoad) throws Exception {
+      ConcurrentMap<String, String> source, ConcurrentMap<String, Instant> lastLoad)
+          throws Exception {
     initialValues(cache, source, lastLoad);
     firstUpdate(cache, source);
     secondUpdate(cache, source);
   }
 
   private void initialValues(AsyncLoadingCache<String, String> cache,
-      ConcurrentMap<String, String> source, ConcurrentMap<String, Date> lastLoad)
+      ConcurrentMap<String, String> source, ConcurrentMap<String, Instant> lastLoad)
           throws InterruptedException, ExecutionException {
     source.put(A_KEY, A_ORIGINAL);
     source.put(B_KEY, B_ORIGINAL);
@@ -139,10 +142,12 @@ public final class Issue30Test {
   }
 
   static final class Loader implements AsyncCacheLoader<String, String> {
-    final ConcurrentMap<String, String> source;
-    final ConcurrentMap<String, Date> lastLoad;
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("hh:MM:ss.SSS");
 
-    Loader(ConcurrentMap<String, String> source, ConcurrentMap<String, Date> lastLoad) {
+    final ConcurrentMap<String, String> source;
+    final ConcurrentMap<String, Instant> lastLoad;
+
+    Loader(ConcurrentMap<String, String> source, ConcurrentMap<String, Instant> lastLoad) {
       this.source = source;
       this.lastLoad = lastLoad;
     }
@@ -154,16 +159,16 @@ public final class Issue30Test {
     }
 
     private void reportCacheMiss(String key) {
-      Date now = new Date();
-      Date last = lastLoad.get(key);
+      Instant now = Instant.now();
+      Instant last = lastLoad.get(key);
       lastLoad.put(key, now);
 
       if (DEBUG) {
-        String time = new SimpleDateFormat("hh:MM:ss.SSS").format(new Date());
+        String time = FORMATTER.format(LocalDateTime.now(UTC));
         if (last == null) {
           System.out.println(key + ": first load @ " + time);
         } else {
-          long duration = (now.getTime() - last.getTime());
+          long duration = (now.toEpochMilli() - last.toEpochMilli());
           System.out.println(key + ": " + duration + "ms after last load @ " + time);
         }
       }

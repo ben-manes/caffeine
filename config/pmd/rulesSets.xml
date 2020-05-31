@@ -12,6 +12,7 @@
     <exclude name="GuardLogStatement"/>
     <exclude name="OneDeclarationPerLine"/>
     <exclude name="AvoidReassigningParameters"/>
+    <exclude name="LiteralsFirstInComparisons"/>
     <exclude name="PositionLiteralsFirstInComparisons"/>
     <exclude name="PositionLiteralsFirstInCaseInsensitiveComparisons"/>
   </rule>

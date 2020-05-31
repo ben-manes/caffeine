@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
@@ -94,7 +94,8 @@ public final class MultiThreadedTest {
     Threads.runTest(cache, asyncOperations);
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes", "SizeGreaterThanOrEqualsZero", "SelfEquals"})
+  @SuppressWarnings(
+      {"unchecked", "rawtypes", "ReturnValueIgnored", "SizeGreaterThanOrEqualsZero", "SelfEquals"})
   List<BiConsumer<LoadingCache<Integer, Integer>, Integer>> operations = ImmutableList.of(
       // LoadingCache
       (cache, key) -> { cache.get(key); },
@@ -143,7 +144,7 @@ public final class MultiThreadedTest {
       },
       (cache, key) -> { cache.asMap().keySet().toArray(new Object[cache.asMap().size()]); },
       (cache, key) -> { cache.asMap().values().toArray(new Object[cache.asMap().size()]); },
-      (cache, key) -> { cache.asMap().entrySet().toArray(new Entry[cache.asMap().size()]); },
+      (cache, key) -> { cache.asMap().entrySet().toArray(new Map.Entry[cache.asMap().size()]); },
       (cache, key) -> { cache.hashCode(); },
       (cache, key) -> { cache.equals(cache); },
       (cache, key) -> { cache.toString(); },

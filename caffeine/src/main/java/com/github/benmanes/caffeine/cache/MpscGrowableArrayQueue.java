@@ -44,7 +44,7 @@ final class MpscGrowableArrayQueue<E> extends MpscChunkedArrayQueue<E> {
    *        be the upper limit of number of elements in this queue. Must be 4 or more and round up
    *        to a larger power of 2 than initialCapacity.
    */
-  public MpscGrowableArrayQueue(int initialCapacity, int maxCapacity) {
+  MpscGrowableArrayQueue(int initialCapacity, int maxCapacity) {
     super(initialCapacity, maxCapacity);
   }
 
@@ -69,7 +69,7 @@ abstract class MpscChunkedArrayQueue<E> extends MpscChunkedArrayQueueColdProduce
   long p0, p1, p2, p3, p4, p5, p6, p7;
   long p10, p11, p12, p13, p14, p15, p16, p17;
 
-  public MpscChunkedArrayQueue(int initialCapacity, int maxCapacity) {
+  MpscChunkedArrayQueue(int initialCapacity, int maxCapacity) {
     super(initialCapacity, maxCapacity);
   }
 
@@ -98,7 +98,7 @@ abstract class MpscChunkedArrayQueue<E> extends MpscChunkedArrayQueueColdProduce
 abstract class MpscChunkedArrayQueueColdProducerFields<E> extends BaseMpscLinkedArrayQueue<E> {
   protected final long maxQueueCapacity;
 
-  public MpscChunkedArrayQueueColdProducerFields(int initialCapacity, int maxCapacity) {
+  MpscChunkedArrayQueueColdProducerFields(int initialCapacity, int maxCapacity) {
     super(initialCapacity);
     if (maxCapacity < 4) {
       throw new IllegalArgumentException("Max capacity must be 4 or more");
@@ -184,7 +184,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    * @param initialCapacity the queue initial capacity. If chunk size is fixed this will be the
    *        chunk size. Must be 2 or more.
    */
-  public BaseMpscLinkedArrayQueue(final int initialCapacity) {
+  BaseMpscLinkedArrayQueue(final int initialCapacity) {
     if (initialCapacity < 2) {
       throw new IllegalArgumentException("Initial capacity must be 2 or more");
     }

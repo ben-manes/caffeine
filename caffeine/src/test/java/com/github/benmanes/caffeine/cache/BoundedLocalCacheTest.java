@@ -37,7 +37,6 @@ import static org.mockito.ArgumentMatchers.any;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -193,8 +192,8 @@ public final class BoundedLocalCacheTest {
       population = Population.EMPTY, maximumSize = Maximum.ONE)
   public void evict_alreadyRemoved(Cache<Integer, Integer> cache, CacheContext context) {
     BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
-    Entry<Integer, Integer> oldEntry = Iterables.get(context.absent().entrySet(), 0);
-    Entry<Integer, Integer> newEntry = Iterables.get(context.absent().entrySet(), 1);
+    Map.Entry<Integer, Integer> oldEntry = Iterables.get(context.absent().entrySet(), 0);
+    Map.Entry<Integer, Integer> newEntry = Iterables.get(context.absent().entrySet(), 1);
 
     localCache.put(oldEntry.getKey(), oldEntry.getValue());
     localCache.evictionLock.lock();

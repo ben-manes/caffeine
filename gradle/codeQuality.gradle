@@ -128,17 +128,12 @@ tasks.withType(JavaCompile) {
     option('TimeUnitMismatch')
     option('UnlockMethod')
     option('UnnecessaryDefaultInEnumSwitch')
+    disable('EmptyCatch')
+    disable('MissingSummary')
     error('NullAway')
 
     nullaway {
       annotatedPackages.add('com.github.benmanes.caffeine')
-    }
-
-    // Disabled due to incompatibility; fixed in
-    // https://github.com/google/error-prone/issues/1106
-    if (JavaVersion.current().isJava12Compatible()) {
-      // Avoid explicitly enabling, as sometimes lost by JMH's compile task
-      enabled = false
     }
   }
 }

@@ -22,7 +22,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
-@SuppressWarnings({"rawtypes", "unchecked", "UnnecessaryParentheses"})
+@SuppressWarnings({"rawtypes", "unchecked",
+  "ModifyCollectionInEnhancedForLoop", "ReturnValueIgnored", "UnnecessaryParentheses"})
 public class ConcurrentHashMapTest extends JSR166TestCase {
     public static void main(String[] args) {
         junit.textui.TestRunner.run(suite());

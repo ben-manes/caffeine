@@ -19,7 +19,6 @@ package com.google.common.cache;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
@@ -499,7 +498,7 @@ public class CacheBuilderGwtTest extends TestCase {
     fakeTicker.advance(501, TimeUnit.MILLISECONDS);
 
     int sum = 0;
-    for (Entry<Integer, Integer> current : cache.asMap().entrySet()) {
+    for (Map.Entry<Integer, Integer> current : cache.asMap().entrySet()) {
       sum += current.getKey() + current.getValue();
     }
     assertEquals(57, sum);

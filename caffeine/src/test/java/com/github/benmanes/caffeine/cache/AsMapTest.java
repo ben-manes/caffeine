@@ -45,7 +45,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Spliterator;
@@ -139,6 +138,7 @@ public final class AsMapTest {
   /* --------------- contains --------------- */
 
   @CheckNoWriter @CheckNoStats
+  @SuppressWarnings("ReturnValueIgnored")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void containsKey_null(Map<Integer, Integer> map, CacheContext context) {
@@ -163,6 +163,7 @@ public final class AsMapTest {
   }
 
   @CheckNoWriter @CheckNoStats
+  @SuppressWarnings("ReturnValueIgnored")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void containsValue_null(Map<Integer, Integer> map, CacheContext context) {
@@ -1894,7 +1895,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   @Test(dataProvider = "caches", expectedExceptions = NullPointerException.class)
   public void entrySetToArray_null(Map<Integer, Integer> map, CacheContext context) {
-    map.entrySet().toArray((Entry<?, ?>[]) null);
+    map.entrySet().toArray((Map.Entry<?, ?>[]) null);
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1968,7 +1969,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet_removeIf(Map<Integer, Integer> map, CacheContext context) {
-    Predicate<Entry<Integer, Integer>> isEven = entry -> (entry.getValue() % 2) == 0;
+    Predicate<Map.Entry<Integer, Integer>> isEven = entry -> (entry.getValue() % 2) == 0;
     boolean hasEven = map.entrySet().stream().anyMatch(isEven);
 
     boolean removedIfEven = map.entrySet().removeIf(isEven);
@@ -1983,7 +1984,7 @@ public final class AsMapTest {
   @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySet(Map<Integer, Integer> map, CacheContext context) {
-    Set<Entry<Integer, Integer>> entries = map.entrySet();
+    Set<Map.Entry<Integer, Integer>> entries = map.entrySet();
     assertThat(entries.contains(new Object()), is(false));
     assertThat(entries.remove(new Object()), is(false));
     assertThat(entries, hasSize(context.original().size()));
@@ -2005,8 +2006,8 @@ public final class AsMapTest {
   @Test(dataProvider = "caches")
   public void entryIterator(Map<Integer, Integer> map, CacheContext context) {
     int iterations = 0;
-    for (Iterator<Entry<Integer, Integer>> i = map.entrySet().iterator(); i.hasNext();) {
-      Entry<Integer, Integer> entry = i.next();
+    for (Iterator<Map.Entry<Integer, Integer>> i = map.entrySet().iterator(); i.hasNext();) {
+      Map.Entry<Integer, Integer> entry = i.next();
       assertThat(map, hasEntry(entry.getKey(), entry.getValue()));
       iterations++;
       i.remove();
@@ -2041,7 +2042,7 @@ public final class AsMapTest {
       compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void entryIterator_writerFails(Map<Integer, Integer> map, CacheContext context) {
     try {
-      Iterator<Entry<Integer, Integer>> i = map.entrySet().iterator();
+      Iterator<Map.Entry<Integer, Integer>> i = map.entrySet().iterator();
       i.next();
       i.remove();
     } finally {
@@ -2085,7 +2086,7 @@ public final class AsMapTest {
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySpliterator_tryAdvance(Map<Integer, Integer> map, CacheContext context) {
-    Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
+    Spliterator<Map.Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
     int[] count = new int[1];
     boolean advanced;
     do {
@@ -2103,8 +2104,8 @@ public final class AsMapTest {
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySpliterator_trySplit(Map<Integer, Integer> map, CacheContext context) {
-    Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
-    Spliterator<Entry<Integer, Integer>> other = MoreObjects.firstNonNull(
+    Spliterator<Map.Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
+    Spliterator<Map.Entry<Integer, Integer>> other = MoreObjects.firstNonNull(
         spliterator.trySplit(), Spliterators.emptySpliterator());
 
     int[] count = new int[1];
@@ -2117,7 +2118,7 @@ public final class AsMapTest {
   @CheckNoWriter @CheckNoStats
   @Test(dataProvider = "caches")
   public void entrySpliterator_estimateSize(Map<Integer, Integer> map, CacheContext context) {
-    Spliterator<Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
+    Spliterator<Map.Entry<Integer, Integer>> spliterator = map.entrySet().spliterator();
     assertThat((int) spliterator.estimateSize(), is(map.size()));
   }
 
@@ -2128,7 +2129,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void writeThroughEntry(Map<Integer, Integer> map, CacheContext context) {
-    Entry<Integer, Integer> entry = map.entrySet().iterator().next();
+    Map.Entry<Integer, Integer> entry = map.entrySet().iterator().next();
 
     entry.setValue(3);
     assertThat(map.get(entry.getKey()), is(3));
@@ -2150,7 +2151,7 @@ public final class AsMapTest {
   @CacheSpec(implementation = Implementation.Caffeine,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void writeThroughEntry_serialize(Map<Integer, Integer> map, CacheContext context) {
-    Entry<Integer, Integer> entry = map.entrySet().iterator().next();
+    Map.Entry<Integer, Integer> entry = map.entrySet().iterator().next();
     Object copy = SerializableTester.reserialize(entry);
     assertThat(entry, is(equalTo(copy)));
   }

@@ -24,7 +24,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -47,7 +46,6 @@ import junit.framework.TestCase;
  *
  * @author mike nonemacher
  */
-
 public class PopulatedCachesTest extends TestCase {
   // we use integers as keys; make sure the range covers some values that ARE cached by
   // Integer.valueOf(int), and some that are not cached. (127 is the highest cached value.)
@@ -59,7 +57,7 @@ public class PopulatedCachesTest extends TestCase {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
       @SuppressWarnings("unused")
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
       assertEquals(WARMUP_SIZE, cache.size());
       assertMapSize(cache.asMap(), WARMUP_SIZE);
       checkValidState(cache);
@@ -69,9 +67,9 @@ public class PopulatedCachesTest extends TestCase {
   public void testContainsKey_found() {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
-        Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
+        Map.Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
         assertTrue(cache.asMap().containsKey(entry.getKey()));
         assertTrue(cache.asMap().containsValue(entry.getValue()));
         // this getUnchecked() call shouldn't be a cache miss; verified below
@@ -85,9 +83,9 @@ public class PopulatedCachesTest extends TestCase {
   public void testPut_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
-        Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
+        Map.Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
         Object newValue = new Object();
         assertSame(entry.getValue(), cache.asMap().put(entry.getKey(), newValue));
         // don't let the new entry get GCed
@@ -108,9 +106,9 @@ public class PopulatedCachesTest extends TestCase {
   public void testPutIfAbsent_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
-        Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
+        Map.Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
         Object newValue = new Object();
         assertSame(entry.getValue(), cache.asMap().putIfAbsent(entry.getKey(), newValue));
         Object newKey = new Object();
@@ -130,7 +128,7 @@ public class PopulatedCachesTest extends TestCase {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
       @SuppressWarnings("unused")
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
       Object newKey = new Object();
       Object newValue = new Object();
       cache.asMap().putAll(ImmutableMap.of(newKey, newValue));
@@ -144,9 +142,9 @@ public class PopulatedCachesTest extends TestCase {
   public void testReplace_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
-        Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
+        Map.Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
         Object newValue = new Object();
         assertSame(entry.getValue(), cache.asMap().replace(entry.getKey(), newValue));
         assertTrue(cache.asMap().replace(entry.getKey(), newValue, entry.getValue()));
@@ -165,9 +163,9 @@ public class PopulatedCachesTest extends TestCase {
   public void testRemove_byKey() {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
-        Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
+        Map.Entry<Object, Object> entry = warmed.get(i - WARMUP_MIN);
         Object key = entry.getKey();
         assertEquals(entry.getValue(), cache.asMap().remove(key));
         assertNull(cache.asMap().remove(key));
@@ -180,7 +178,7 @@ public class PopulatedCachesTest extends TestCase {
   public void testRemove_byKeyAndValue() {
     for (LoadingCache<Object, Object> cache : caches()) {
       // don't let the entries get GCed
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
         Object key = warmed.get(i - WARMUP_MIN).getKey();
         Object value = warmed.get(i - WARMUP_MIN).getValue();
@@ -196,7 +194,7 @@ public class PopulatedCachesTest extends TestCase {
   public void testKeySet_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
       Set<Object> keys = cache.asMap().keySet();
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
 
       Set<Object> expected = Maps.newHashMap(cache.asMap()).keySet();
       assertThat(keys).containsExactlyElementsIn(expected);
@@ -223,7 +221,7 @@ public class PopulatedCachesTest extends TestCase {
   public void testValues_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
       Collection<Object> values = cache.asMap().values();
-      List<Entry<Object, Object>> warmed = warmUp(cache);
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache);
 
       Collection<Object> expected = Maps.newHashMap(cache.asMap()).values();
       assertThat(values).containsExactlyElementsIn(expected);
@@ -245,8 +243,8 @@ public class PopulatedCachesTest extends TestCase {
 
   public void testEntrySet_populated() {
     for (LoadingCache<Object, Object> cache : caches()) {
-      Set<Entry<Object, Object>> entries = cache.asMap().entrySet();
-      List<Entry<Object, Object>> warmed = warmUp(cache, WARMUP_MIN, WARMUP_MAX);
+      Set<Map.Entry<Object, Object>> entries = cache.asMap().entrySet();
+      List<Map.Entry<Object, Object>> warmed = warmUp(cache, WARMUP_MIN, WARMUP_MAX);
 
       Set<?> expected = Maps.newHashMap(cache.asMap()).entrySet();
       assertThat(entries).containsExactlyElementsIn(expected);
@@ -259,7 +257,7 @@ public class PopulatedCachesTest extends TestCase {
           .testEquals();
       assertEquals(WARMUP_SIZE, entries.size());
       for (int i = WARMUP_MIN; i < WARMUP_MAX; i++) {
-        Entry<Object, Object> newEntry = warmed.get(i - WARMUP_MIN);
+        Map.Entry<Object, Object> newEntry = warmed.get(i - WARMUP_MIN);
         assertTrue(entries.contains(newEntry));
         assertTrue(entries.remove(newEntry));
         assertFalse(entries.remove(newEntry));
@@ -273,7 +271,7 @@ public class PopulatedCachesTest extends TestCase {
   public void testWriteThroughEntry() {
     for (LoadingCache<Object, Object> cache : caches()) {
       cache.getUnchecked(1);
-      Entry<Object, Object> entry = Iterables.getOnlyElement(cache.asMap().entrySet());
+      Map.Entry<Object, Object> entry = Iterables.getOnlyElement(cache.asMap().entrySet());
 
       cache.invalidate(1);
       assertEquals(0, cache.size());
@@ -356,7 +354,7 @@ public class PopulatedCachesTest extends TestCase {
     return entries;
   }
 
-  private Entry<Object, Object> entryOf(Object key, Object value) {
+  private Map.Entry<Object, Object> entryOf(Object key, Object value) {
     return Maps.immutableEntry(key, value);
   }
 

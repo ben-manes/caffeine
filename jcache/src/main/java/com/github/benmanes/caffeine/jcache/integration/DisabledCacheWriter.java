@@ -17,7 +17,7 @@ package com.github.benmanes.caffeine.jcache.integration;
 
 import java.util.Collection;
 
-import javax.cache.Cache.Entry;
+import javax.cache.Cache;
 import javax.cache.integration.CacheWriter;
 
 /**
@@ -41,10 +41,10 @@ public enum DisabledCacheWriter implements CacheWriter<Object, Object> {
   }
 
   @Override
-  public void write(Entry<?, ?> entry) {}
+  public void write(Cache.Entry<?, ?> entry) {}
 
   @Override
-  public void writeAll(Collection<Entry<?, ?>> entries) {}
+  public void writeAll(Collection<Cache.Entry<?, ?>> entries) {}
 
   @Override
   public void delete(Object key) {}

@@ -33,7 +33,7 @@ import com.google.common.io.Closeables;
  */
 public abstract class TextTraceReader extends AbstractTraceReader implements TraceReader {
 
-  public TextTraceReader(String filePath) {
+  protected TextTraceReader(String filePath) {
     super(filePath);
   }
 

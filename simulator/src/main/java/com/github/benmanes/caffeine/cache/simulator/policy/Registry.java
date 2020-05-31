@@ -22,7 +22,6 @@ import static java.util.stream.Collectors.toSet;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -90,7 +89,7 @@ public final class Registry {
     registerTwoQueue(factories);
     registerAdaptive(factories);
     return factories.entrySet().stream().collect(
-        toMap(entry -> entry.getKey().toLowerCase(US), Entry::getValue));
+        toMap(entry -> entry.getKey().toLowerCase(US), Map.Entry::getValue));
   }
 
   /**

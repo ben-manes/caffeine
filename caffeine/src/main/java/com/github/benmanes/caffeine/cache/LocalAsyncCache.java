@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -235,7 +234,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         if (error == null) {
           error = new NullMapCompletionException();
         }
-        for (Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
+        for (Map.Entry<K, CompletableFuture<V>> entry : proxies.entrySet()) {
           cache.remove(entry.getKey(), entry.getValue());
           entry.getValue().obtrudeException(error);
         }
