@@ -34,6 +34,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceReade
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.kaggle.OutbrainTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
@@ -62,6 +63,7 @@ public enum TraceFormat {
   CORDA(CordaTraceReader::new),
   GRADLE(GradleTraceReader::new),
   LIRS(LirsTraceReader::new),
+  OUTBRAIN(OutbrainTraceReader::new),
   SCARAB(ScarabTraceReader::new),
   SNIA_CAMBRIDGE(CambridgeTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
