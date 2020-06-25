@@ -39,22 +39,26 @@ public final class CaffeinePolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
-  public CaffeinePolicy(Config config) {
+  public CaffeinePolicy(Config config, Set<Characteristic> characteristics) {
     policyStats = new PolicyStats("product.Caffeine");
     BasicSettings settings = new BasicSettings(config);
-    cache = Caffeine.newBuilder()
+    Caffeine<Long, AccessEvent> builder = Caffeine.newBuilder()
         .removalListener((Long key, AccessEvent value, RemovalCause cause) ->
             policyStats.recordEviction())
-        .weigher((key, value) -> value.weight())
         .initialCapacity(settings.maximumSize())
-        .maximumWeight(settings.maximumSize())
-        .executor(Runnable::run)
-        .build();
+        .executor(Runnable::run);
+    if (characteristics.contains(WEIGHTED)) {
+      builder.maximumWeight(settings.maximumSize());
+      builder.weigher((key, value) -> value.weight());
+    } else {
+      builder.maximumSize(settings.maximumSize());
+    }
+    cache = builder.build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new CaffeinePolicy(config));
+  public static Set<Policy> policies(Config config, Set<Characteristic> characteristics) {
+    return ImmutableSet.of(new CaffeinePolicy(config, characteristics));
   }
 
   @Override public Set<Characteristic> characteristics() {

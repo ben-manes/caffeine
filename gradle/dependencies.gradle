@@ -25,9 +25,10 @@
  */
 ext {
   versions = [
-    akka: '2.6.5',
+    akka: '2.6.6',
     cache2k: '1.3.1.Alpha',
-    checkerFramework: '3.4.0',
+    checkerFramework: '3.4.1',
+    coherence: '20.06',
     collision: '0.3.3',
     commonsCompress: '1.20',
     commonsLang3: '3.10',
@@ -37,7 +38,7 @@ ext {
     ehcache3: '3.8.1',
     errorprone: '2.4.0',
     errorproneJavac: '9+181-r4173-1',
-    elasticSearch: '7.7.0',
+    elasticSearch: '7.8.0',
     expiringMap: '0.5.9',
     fastfilter: 'bf0b02297f',
     fastutil: '8.3.1',
@@ -46,7 +47,7 @@ ext {
     jackrabbit: '1.30.0',
     jamm: '0.3.3',
     javaObjectLayout: '0.10',
-    javapoet: '1.12.1',
+    javapoet: '1.13.0',
     jcache: '1.1.1',
     jmh: '1.23',
     jsr330: '1',
@@ -75,7 +76,7 @@ ext {
   ]
   pluginVersions = [
     apt: '0.21',
-    bnd: '5.0.1',
+    bnd: '5.1.1',
     checkstyle: '8.33',
     coveralls: '2.8.4',
     coverity: '1.0.10',
@@ -86,10 +87,10 @@ ext {
     nullaway: '1.0.1',
     pmd: '6.24.0',
     semanticVersioning: '1.1.0',
-    shadow: '5.2.0',
+    shadow: '6.0.0',
     sonarqube: '3.0',
     spotbugs: '4.0.3',
-    spotbugsPlugin: '4.2.4',
+    spotbugsPlugin: '4.4.3',
     stats: '0.2.2',
     versions: '0.28.0',
   ]
@@ -98,6 +99,10 @@ ext {
     akka: "com.typesafe.akka:akka-actor_2.12:${versions.akka}",
     cache2k: "org.cache2k:cache2k-core:${versions.cache2k}",
     checkerAnnotations: "org.checkerframework:checker-qual:${versions.checkerFramework}",
+    coherence: [
+      "com.oracle.coherence.ce:coherence:${versions.coherence}",
+      'javax.json.bind:javax.json.bind-api:1.0',
+    ],
     collision: "systems.comodal:collision:${versions.collision}",
     commonsCompress: "org.apache.commons:commons-compress:${versions.commonsCompress}",
     commonsLang3: "org.apache.commons:commons-lang3:${versions.commonsLang3}",

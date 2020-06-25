@@ -20,6 +20,7 @@ dependencies {
   implementation libraries.ehcache3
   implementation libraries.fastutil
   implementation libraries.slf4jNop
+  implementation libraries.coherence
   implementation libraries.collision
   implementation libraries.fastfilter
   implementation libraries.flipTables

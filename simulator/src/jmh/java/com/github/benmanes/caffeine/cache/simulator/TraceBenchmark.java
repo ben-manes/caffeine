@@ -33,6 +33,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Registry;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.ConfigFactory;
 
 /**
@@ -52,13 +53,15 @@ public class TraceBenchmark {
   @Param({"0", "1000"})
   int missPenalty;
 
-  BasicSettings settings;
   AccessEvent[] events;
+  Registry registry;
 
   @Setup
   public void setup() throws IOException {
-    settings = new BasicSettings(ConfigFactory.load().getConfig("caffeine.simulator"));
+    BasicSettings settings = new BasicSettings(
+        ConfigFactory.load().getConfig("caffeine.simulator"));
     events = readEventStream(settings).toArray(AccessEvent[]::new);
+    registry = new Registry(settings, ImmutableSet.of());
   }
 
   @Benchmark
@@ -72,7 +75,7 @@ public class TraceBenchmark {
   }
 
   public Policy makePolicy() {
-    Set<Policy> policies = Registry.policy(settings, policyName);
+    Set<Policy> policies = registry.policy(policyName);
     if (policies.size() > 1) {
       throw new IllegalArgumentException("Use one variation per policy configuration: "
           + policies.stream().map(policy -> policy.stats().name()).collect(toList()));

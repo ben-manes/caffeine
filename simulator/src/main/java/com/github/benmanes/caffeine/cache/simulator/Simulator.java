@@ -131,7 +131,7 @@ public final class Simulator extends AbstractActor {
 
   /** Returns the actors to broadcast trace events to. */
   private List<Routee> makeRoutes() {
-    return Registry.policies(settings, traceReader.characteristics()).stream().map(policy -> {
+    return new Registry(settings, traceReader.characteristics()).policies().stream().map(policy -> {
       ActorRef actorRef = context().actorOf(Props.create(PolicyActor.class, policy));
       context().watch(actorRef);
       return new ActorRefRoutee(actorRef);

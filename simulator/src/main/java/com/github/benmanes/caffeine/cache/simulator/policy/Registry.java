@@ -45,6 +45,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.opt.ClairvoyantPolicy
 import com.github.benmanes.caffeine.cache.simulator.policy.opt.UnboundedPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Cache2kPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.CaffeinePolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.product.CoherencePolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.CollisionPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.Ehcache3Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.product.ElasticSearchPolicy;
@@ -74,48 +75,57 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Registry {
-  private static final Map<String, Function<Config, Set<Policy>>> FACTORIES = makeRegistry();
+  private final Set<Characteristic> characteristics;
+  private final Map<String, Factory> factories;
+  private final BasicSettings settings;
 
-  private Registry() {}
-
-  private static Map<String, Function<Config, Set<Policy>>> makeRegistry() {
-    Map<String, Function<Config, Set<Policy>>> factories = new HashMap<>();
-    registerIrr(factories);
-    registerLinked(factories);
-    registerSketch(factories);
-    registerOptimal(factories);
-    registerSampled(factories);
-    registerProduct(factories);
-    registerTwoQueue(factories);
-    registerAdaptive(factories);
-    return factories.entrySet().stream().collect(
-        toMap(entry -> entry.getKey().toLowerCase(US), Map.Entry::getValue));
+  public Registry(BasicSettings settings, Set<Characteristic> characteristics) {
+    this.characteristics = characteristics;
+    this.factories = new HashMap<>();
+    this.settings = settings;
+    buildRegistry();
   }
 
   /**
    * Returns all of the policies that have been configured for simulation and that meet a minimal
    * set of supported characteristics.
    */
-  public static Set<Policy> policies(BasicSettings settings, Set<Characteristic> characteristics) {
+  public Set<Policy> policies() {
     return settings.policies().stream()
-        .flatMap(name -> policy(settings, name).stream())
+        .flatMap(name -> policy(name).stream())
         .filter(policy -> policy.characteristics().containsAll(characteristics))
         .collect(toSet());
   }
 
   /** Returns all of the policy variations that have been configured. */
-  public static Set<Policy> policy(BasicSettings settings, String name) {
-    Function<Config, Set<Policy>> factory = FACTORIES.get(name.toLowerCase(US));
+  public Set<Policy> policy(String name) {
+    Factory factory = factories.get(name.toLowerCase(US));
     checkNotNull(factory, "%s not found", name);
     return factory.apply(settings.config());
   }
 
-  private static void registerOptimal(Map<String, Function<Config, Set<Policy>>> factories) {
+  private void buildRegistry() {
+    registerIrr();
+    registerLinked();
+    registerSketch();
+    registerOptimal();
+    registerSampled();
+    registerProduct();
+    registerTwoQueue();
+    registerAdaptive();
+
+    Map<String, Factory> normalized = factories.entrySet().stream()
+        .collect(toMap(entry -> entry.getKey().toLowerCase(US), Map.Entry::getValue));
+    factories.clear();
+    factories.putAll(normalized);
+  }
+
+  private void registerOptimal() {
     factories.put("opt.Clairvoyant", ClairvoyantPolicy::policies);
     factories.put("opt.Unbounded", UnboundedPolicy::policies);
   }
 
-  private static void registerLinked(Map<String, Function<Config, Set<Policy>>> factories) {
+  private void registerLinked() {
     Stream.of(LinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "linked." + priority.name();
       factories.put(id, config -> LinkedPolicy.policies(config, priority));
@@ -129,19 +139,19 @@ public final class Registry {
     factories.put("linked.S4Lru", S4LruPolicy::policies);
   }
 
-  private static void registerSampled(Map<String, Function<Config, Set<Policy>>> factories) {
+  private void registerSampled() {
     Stream.of(SampledPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "sampled." + priority.name();
       factories.put(id, config -> SampledPolicy.policies(config, priority));
     });
   }
 
-  private static void registerTwoQueue(Map<String, Function<Config, Set<Policy>>> factories) {
+  private void registerTwoQueue() {
     factories.put("two-queue.TuQueue", TuQueuePolicy::policies);
     factories.put("two-queue.TwoQueue", TwoQueuePolicy::policies);
   }
 
-  private static void registerSketch(Map<String, Function<Config, Set<Policy>>> factories) {
+  private void registerSketch() {
     factories.put("sketch.WindowTinyLfu", WindowTinyLfuPolicy::policies);
     factories.put("sketch.S4WindowTinyLfu", S4WindowTinyLfuPolicy::policies);
     factories.put("sketch.LruWindowTinyLfu", LruWindowTinyLfuPolicy::policies);
@@ -159,7 +169,7 @@ public final class Registry {
     factories.put("sketch.TinyCache_GhostCache", TinyCacheWithGhostCachePolicy::policies);
   }
 
-  private static void registerIrr(Map<String, Function<Config, Set<Policy>>> factories) {
+  private void registerIrr() {
     factories.put("irr.Frd", FrdPolicy::policies);
     factories.put("irr.IndicatorFrd", IndicatorFrdPolicy::policies);
     factories.put("irr.ClimberFrd", HillClimberFrdPolicy::policies);
@@ -167,21 +177,24 @@ public final class Registry {
     factories.put("irr.ClockPro", ClockProPolicy::policies);
   }
 
-  private static void registerAdaptive(Map<String, Function<Config, Set<Policy>>> factories) {
+  private void registerAdaptive() {
     factories.put("adaptive.Arc", ArcPolicy::policies);
     factories.put("adaptive.Car", CarPolicy::policies);
     factories.put("adaptive.Cart", CartPolicy::policies);
   }
 
-  private static void registerProduct(Map<String, Function<Config, Set<Policy>>> factories) {
+  private void registerProduct() {
     factories.put("product.OHC", OhcPolicy::policies);
     factories.put("product.Guava", GuavaPolicy::policies);
     factories.put("product.Tcache", TCachePolicy::policies);
     factories.put("product.Cache2k", Cache2kPolicy::policies);
     factories.put("product.Ehcache3", Ehcache3Policy::policies);
-    factories.put("product.Caffeine", CaffeinePolicy::policies);
+    factories.put("product.Coherence", CoherencePolicy::policies);
     factories.put("product.Collision", CollisionPolicy::policies);
     factories.put("product.ExpiringMap", ExpiringMapPolicy::policies);
     factories.put("product.Elasticsearch", ElasticSearchPolicy::policies);
+    factories.put("product.Caffeine", config -> CaffeinePolicy.policies(config, characteristics));
   }
+
+  private interface Factory extends Function<Config, Set<Policy>> {}
 }
