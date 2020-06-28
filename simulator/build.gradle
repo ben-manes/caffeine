@@ -20,7 +20,6 @@ dependencies {
   implementation libraries.ehcache3
   implementation libraries.fastutil
   implementation libraries.slf4jNop
-  implementation libraries.coherence
   implementation libraries.collision
   implementation libraries.fastfilter
   implementation libraries.flipTables
@@ -30,7 +29,6 @@ dependencies {
   implementation libraries.elasticSearch
   implementation libraries.commonsCompress
   implementation libraries.univocityParsers
-  implementation libraries.coherenceProvidedScope
 
   testImplementation testLibraries.testng
 }

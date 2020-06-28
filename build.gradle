@@ -156,6 +156,5 @@ tasks.coveralls {
 }
 
 dependencyUpdates.resolutionStrategy {
-  force libraries.coherenceProvidedScope
   force testLibraries.truth
 }
