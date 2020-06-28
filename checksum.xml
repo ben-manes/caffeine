@@ -53,6 +53,7 @@
     <trusted-key id='52931f4b72b4f54c' group='com.koloboke' />
     <trusted-key id='0c33729405f13ee8' group='com.oracle.coherence.ce' />
     <trusted-key id='1063fe98bcecb758' group='com.puppycrawl.tools' />
+    <trusted-key id='156e8da37abc7c91' group='com.sleepycat' />
     <trusted-key id='685c46769dbb5e5d' group='com.squareup' />
     <trusted-key id='80c08b1c29100955' group='com.squareup' />
     <trusted-key id='8671a8df71296252' group='com.squareup' />
@@ -82,11 +83,20 @@
     <trusted-key id='a41f13c999945293' group='commons-logging' />
     <trusted-key id='379ce192d401ab61' group='info.picocli' />
     <trusted-key id='5e2f2b3d474efe6b' group='it.unimi.dsi' />
+    <trusted-key id='d908a43fb7ec07ac' group='jakarta.activation' />
+    <trusted-key id='0e325becb6962a24' group='jakarta.annotation' />
+    <trusted-key id='0aa3e5c3d232e79b' group='jakarta.inject' />
+    <trusted-key id='c809ca3c41ba6e96' group='jakarta.validation' />
+    <trusted-key id='b4bf94f677caa76f' group='jakarta.ws.rs' />
+    <trusted-key id='8118b3bcdb1a5000' group='jakarta.xml.bind' />
     <trusted-key id='6425559c47cc79c4' group='javax.activation' />
     <trusted-key id='8db9fa0b0718bbf9' group='javax.cache' />
     <trusted-key id='d5e520459cb3aa49' group='javax.cache' />
+    <trusted-key id='6425559c47cc79c4' group='javax.jms' />
     <trusted-key id='0315bfb7970a144f' group='javax.json' />
+    <trusted-key id='3575e1c767076ca8' group='javax.json.bind' />
     <trusted-key id='5f46eb39af9138fe' group='javax.json.bind' />
+    <trusted-key id='6425559c47cc79c4' group='javax.ws.rs' />
     <trusted-key id='0315bfb7970a144f' group='javax.xml.bind' />
     <trusted-key id='4044edf1bb73efea' group='jaxen' />
     <trusted-key id='72385ff0af338d52' group='joda-time' />
@@ -132,7 +142,11 @@
     <trusted-key id='5b05ccde140c2876' group='org.eclipse.jgit' />
     <trusted-key id='b83a12a027fc6962' group='org.ehcache' />
     <trusted-key id='d27d666cd88e42b4' group='org.elasticsearch' />
+    <trusted-key id='afc18a2271eddfe1' group='org.glassfish.hk2' />
+    <trusted-key id='afc18a2271eddfe1' group='org.glassfish.hk2.external' />
     <trusted-key id='0315bfb7970a144f' group='org.glassfish.jaxb' />
+    <trusted-key id='18d239b1cbcd2236' group='org.glassfish.jersey.core' />
+    <trusted-key id='18d239b1cbcd2236' group='org.glassfish.jersey.media' />
     <trusted-key id='a6adfc93ef34893e' group='org.hamcrest' />
     <trusted-key id='bede11eaf1164480' group='org.hamcrest' />
     <trusted-key id='e7bf252cf360097e' group='org.hdrhistogram' />

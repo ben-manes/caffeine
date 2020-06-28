@@ -30,6 +30,7 @@ dependencies {
   implementation libraries.elasticSearch
   implementation libraries.commonsCompress
   implementation libraries.univocityParsers
+  implementation libraries.coherenceProvidedScope
 
   testImplementation testLibraries.testng
 }

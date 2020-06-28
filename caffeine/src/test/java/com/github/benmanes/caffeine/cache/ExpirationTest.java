@@ -39,7 +39,10 @@ import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.mockito.ArgumentCaptor;
+import org.mockito.stubbing.Answer;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
@@ -75,6 +79,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.Futures;
 
 /**
  * The test cases for caches that support an expiration policy.
@@ -149,12 +154,57 @@ public final class ExpirationTest {
       scheduler = CacheScheduler.MOCK)
   public void schedule_immediate(Cache<Integer, Integer> cache, CacheContext context) {
     doAnswer(invocation -> {
-      ((Runnable) invocation.getArgument(1)).run();
+      invocation.getArgument(1, Runnable.class).run();
       return DisabledFuture.INSTANCE;
     }).when(context.scheduler()).schedule(any(), any(), anyLong(), any());
 
     cache.put(context.absentKey(), context.absentValue());
     verify(context.scheduler(), atMostOnce()).schedule(any(), any(), anyLong(), any());
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      scheduler = CacheScheduler.MOCK, removalListener = Listener.MOCK)
+  public void schedule_delay(Cache<Integer, Duration> cache, CacheContext context)
+      throws InterruptedException {
+    Map<Integer, Duration> actualExpirationPeriods = new HashMap<>();
+    ArgumentCaptor<Long> delay = ArgumentCaptor.forClass(long.class);
+    ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+    Answer<Void> onRemoval = invocation -> {
+      Integer key = invocation.getArgument(0, Integer.class);
+      Duration value = invocation.getArgument(1, Duration.class);
+      actualExpirationPeriods.put(key, Duration.ofNanos(context.ticker().read()).minus(value));
+      return null;
+    };
+    doAnswer(onRemoval).when(context.removalListener()).onRemoval(any(), any(), any());
+    when(context.scheduler().schedule(any(), task.capture(), delay.capture(), any()))
+        .thenReturn(Futures.immediateFuture(null));
+
+    Integer key1 = 1;
+    cache.put(key1, Duration.ofNanos(context.ticker().read()));
+
+    Duration insertDelay = Duration.ofMillis(10);
+    context.ticker().advance(insertDelay);
+
+    Integer key2 = 2;
+    cache.put(key2, Duration.ofNanos(context.ticker().read()));
+
+    Duration expireKey1 = Duration.ofNanos(delay.getValue()).minus(insertDelay);
+    context.ticker().advance(expireKey1);
+    task.getValue().run();
+
+    Duration expireKey2 = Duration.ofNanos(delay.getValue());
+    context.ticker().advance(expireKey2);
+    task.getValue().run();
+
+    Duration maxExpirationPeriod = Duration.ofNanos(Pacer.TOLERANCE)
+        .plusNanos(context.expiryTime().timeNanos());
+    assertThat(actualExpirationPeriods.get(key1), lessThan(maxExpirationPeriod));
+    assertThat(actualExpirationPeriods.get(key2), lessThan(maxExpirationPeriod));
   }
 
   /* --------------- Cache --------------- */

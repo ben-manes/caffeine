@@ -156,6 +156,6 @@ tasks.coveralls {
 }
 
 dependencyUpdates.resolutionStrategy {
-  force 'javax.json.bind:javax.json.bind-api:1.0'
+  force libraries.coherenceProvidedScope
   force testLibraries.truth
 }

@@ -329,8 +329,9 @@ public @interface CacheSpec {
     IMMEDIATELY(0L),
     /** A configuration where entries are evicted almost immediately. */
     ONE_MILLISECOND(TimeUnit.MILLISECONDS.toNanos(1L)),
-    /** A configuration that holds a single entry. */
+    /** A configuration where entries are after a time duration. */
     ONE_MINUTE(TimeUnit.MINUTES.toNanos(1L)),
+    /** A configuration where entries should never expire. */
     /** A configuration that holds the {@link Population#FULL} count. */
     FOREVER(Long.MAX_VALUE);
 
@@ -419,6 +420,13 @@ public @interface CacheSpec {
     CONSUMING {
       @Override public <K, V> RemovalListener<K, V> create() {
         return RemovalListeners.consuming();
+      }
+    },
+    /** A removal listener that records interactions. */
+    MOCK {
+      @SuppressWarnings("unchecked")
+      @Override public <K, V> RemovalListener<K, V> create() {
+        return Mockito.mock(RemovalListener.class);
       }
     };
 

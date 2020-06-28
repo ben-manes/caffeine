@@ -850,23 +850,23 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     if (expiresAfterAccess()) {
       Node<K, V> node = accessOrderWindowDeque().peekFirst();
       if (node != null) {
-        delay = Math.min(delay, now - node.getAccessTime() + expiresAfterAccessNanos());
+        delay = Math.min(delay, expiresAfterAccessNanos() - (now - node.getAccessTime()));
       }
       if (evicts()) {
         node = accessOrderProbationDeque().peekFirst();
         if (node != null) {
-          delay = Math.min(delay, now - node.getAccessTime() + expiresAfterAccessNanos());
+          delay = Math.min(delay, expiresAfterAccessNanos() - (now - node.getAccessTime()));
         }
         node = accessOrderProtectedDeque().peekFirst();
         if (node != null) {
-          delay = Math.min(delay, now - node.getAccessTime() + expiresAfterAccessNanos());
+          delay = Math.min(delay, expiresAfterAccessNanos() - (now - node.getAccessTime()));
         }
       }
     }
     if (expiresAfterWrite()) {
       Node<K, V> node = writeOrderDeque().peekFirst();
       if (node != null) {
-        delay = Math.min(delay, now - node.getWriteTime() + expiresAfterWriteNanos());
+        delay = Math.min(delay, expiresAfterWriteNanos() - (now - node.getWriteTime()));
       }
     }
     if (expiresVariable()) {
