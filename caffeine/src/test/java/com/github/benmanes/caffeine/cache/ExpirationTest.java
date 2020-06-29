@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.ver
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
 import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
@@ -30,6 +31,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
@@ -185,26 +187,29 @@ public final class ExpirationTest {
         .thenReturn(Futures.immediateFuture(null));
 
     Integer key1 = 1;
-    cache.put(key1, Duration.ofNanos(context.ticker().read()));
+    Duration value1 = Duration.ofNanos(context.ticker().read());
+    cache.put(key1, value1);
 
     Duration insertDelay = Duration.ofMillis(10);
     context.ticker().advance(insertDelay);
 
     Integer key2 = 2;
-    cache.put(key2, Duration.ofNanos(context.ticker().read()));
+    Duration value2 = Duration.ofNanos(context.ticker().read());
+    cache.put(key2, value2);
 
-    Duration expireKey1 = Duration.ofNanos(delay.getValue()).minus(insertDelay);
+    Duration expireKey1 = Duration.ofNanos(1 + delay.getValue()).minus(insertDelay);
     context.ticker().advance(expireKey1);
     task.getValue().run();
 
-    Duration expireKey2 = Duration.ofNanos(delay.getValue());
+    Duration expireKey2 = Duration.ofNanos(1 + delay.getValue());
     context.ticker().advance(expireKey2);
     task.getValue().run();
 
-    Duration maxExpirationPeriod = Duration.ofNanos(Pacer.TOLERANCE)
-        .plusNanos(context.expiryTime().timeNanos());
-    assertThat(actualExpirationPeriods.get(key1), lessThan(maxExpirationPeriod));
-    assertThat(actualExpirationPeriods.get(key2), lessThan(maxExpirationPeriod));
+    Duration maxExpirationPeriod = Duration.ofNanos(
+        context.expiryTime().timeNanos() + Pacer.TOLERANCE);
+    assertThat(actualExpirationPeriods, is(aMapWithSize(2)));
+    assertThat(actualExpirationPeriods.get(key1), is(lessThanOrEqualTo(maxExpirationPeriod)));
+    assertThat(actualExpirationPeriods.get(key2), is(lessThanOrEqualTo(maxExpirationPeriod)));
   }
 
   /* --------------- Cache --------------- */
