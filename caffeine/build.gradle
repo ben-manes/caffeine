@@ -62,6 +62,7 @@ dependencies {
   javaPoetImplementation libraries.guava
   javaPoetImplementation libraries.javapoet
   javaPoetImplementation libraries.commonsLang3
+  javaPoetImplementation libraries.googleJavaFormat
 }
 
 java {

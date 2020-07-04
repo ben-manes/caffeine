@@ -37,6 +37,7 @@
     <trusted-key id='1669c4bb543e0445' group='com.google.errorprone' />
     <trusted-key id='912d2c0eccda55c0' group='com.google.errorprone' />
     <trusted-key id='9a259c7ee636c5ed' group='com.google.errorprone' />
+    <trusted-key id='9a259c7ee636c5ed' group='com.google.googlejavaformat' />
     <trusted-key id='abe9f3126bb741c1' group='com.google.guava' />
     <trusted-key id='f6d4a1d411e9d1ae' group='com.google.guava' />
     <trusted-key id='f0df21d1d0a3c384' group='com.google.inject' />
@@ -285,6 +286,9 @@
     <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.4.3'>
       <sha512>E4C006C0F02D96E33AC434A94002AC1FE4B7851C163CD77B89B93D662C5C632CE36B207657DC763B00940DA19B5DB5B364B0088A89214BE9CA28B0559444EF0</sha512>
     </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.4.4'>
+      <sha512>BCF18D17C1BF5AFE15872B77C84C23A88E2A3D93829520EF9BCEA74F1E42CB36575301FC0BAFB3458932437636645F046F03348751F695D960A9C4C2744B734D</sha512>
+    </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>
     </dependency>
@@ -329,6 +333,9 @@
     </dependency>
     <dependency group='net.ltgt.gradle' module='gradle-nullaway-plugin' version='1.0.1'>
       <sha512>C9D9D86002E5555FB8763AEE5E0E809C29F5D7A272E8130AE636040D40ABAEBDCDED435A12C8AB9788312650F0E6089B45CFE385CAF9DB32476BEFCD2C941D5</sha512>
+    </dependency>
+    <dependency group='net.ltgt.gradle' module='gradle-nullaway-plugin' version='1.0.2'>
+      <sha512>291E475CC67908330C30037783F7D57F773EAA7FD259CF95658BBB484EF173E012DDF88A882E3AE94BDE207EBE471A364791C43C8D7FFB6108576EDFF5F7209A</sha512>
     </dependency>
     <dependency group='net.sf.ezmorph' module='ezmorph' version='1.0.6'>
       <sha512>16D30BE564723B74F312B4E7D06F349370FB6726B3162778C869CD723ECA2A40C4972C2757B3E107E1820CEC0D70B0BD2B96EFCD466518FC64495F7AEF97967A</sha512>

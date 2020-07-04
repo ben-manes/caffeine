@@ -36,8 +36,10 @@ import static com.github.benmanes.caffeine.cache.Specifications.valueRefQueueSpe
 import static com.github.benmanes.caffeine.cache.Specifications.valueSpec;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
@@ -48,6 +50,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 
 import javax.lang.model.element.Modifier;
 
@@ -67,7 +70,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.io.MoreFiles;
 import com.google.common.io.Resources;
+import com.google.googlejavaformat.java.Formatter;
+import com.google.googlejavaformat.java.FormatterException;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
@@ -124,6 +130,7 @@ public final class NodeFactoryGenerator {
     generatedNodes();
     addNewFactoryMethods();
     writeJavaFile();
+    reformat();
   }
 
   private void writeJavaFile() throws IOException {
@@ -140,6 +147,22 @@ public final class NodeFactoryGenerator {
               .indent("  ")
               .build()
               .writeTo(directory);
+    }
+  }
+
+  private void reformat() throws IOException {
+    try (Stream<Path> stream = Files.walk(directory)) {
+      List<Path> files = stream
+          .filter(path -> path.toString().endsWith(".java"))
+          .collect(toList());
+      Formatter formatter = new Formatter();
+      for (Path file : files) {
+        String source = MoreFiles.asCharSource(file, UTF_8).read();
+        String formatted = formatter.formatSourceAndFixImports(source);
+        MoreFiles.asCharSink(file, UTF_8).write(formatted);
+      }
+    } catch (FormatterException e) {
+      throw new RuntimeException(e);
     }
   }
 
