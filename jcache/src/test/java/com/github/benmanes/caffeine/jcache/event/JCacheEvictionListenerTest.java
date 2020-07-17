@@ -31,6 +31,7 @@ import javax.cache.event.CacheEntryRemovedListener;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -47,12 +48,13 @@ public final class JCacheEvictionListenerTest {
   JCacheEvictionListener<Integer, Integer> listener;
   JCacheStatisticsMXBean statistics;
 
-  @Mock Cache<Integer, Integer> cache;
   @Mock EvictionListener entryListener;
+  @Mock Cache<Integer, Integer> cache;
+  AutoCloseable mocks;
 
   @BeforeMethod
   public void before() {
-    MockitoAnnotations.initMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
     statistics = new JCacheStatisticsMXBean();
     EventDispatcher<Integer, Integer> dispatcher =
         new EventDispatcher<>(MoreExecutors.directExecutor());
@@ -62,6 +64,11 @@ public final class JCacheEvictionListenerTest {
 
     dispatcher.register(new MutableCacheEntryListenerConfiguration<Integer, Integer>(
         () -> entryListener, null, false, false));
+  }
+
+  @AfterMethod
+  public void afterMethod() throws Exception {
+    mocks.close();
   }
 
   @DataProvider

@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -50,9 +51,16 @@ public final class CaffeineTest {
   @Mock CacheLoader<Object, Object> loader;
   @Mock CacheWriter<Object, Object> writer;
 
+  AutoCloseable mocks;
+
   @BeforeClass
   public void beforeClass() {
-    MockitoAnnotations.initMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
+  }
+
+  @AfterClass
+  public void afterClass() throws Exception {
+    mocks.close();
   }
 
   @Test

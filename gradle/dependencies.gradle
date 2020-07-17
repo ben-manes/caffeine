@@ -25,13 +25,13 @@
  */
 ext {
   versions = [
-    akka: '2.6.6',
+    akka: '2.6.8',
     cache2k: '1.3.1.Alpha',
     checkerFramework: '3.5.0',
     coherence: '20.06',
     collision: '0.3.3',
     commonsCompress: '1.20',
-    commonsLang3: '3.10',
+    commonsLang3: '3.11',
     commonsMath3: '3.6.1',
     concurrentlinkedhashmap: '1.4.2',
     config: '1.4.0',
@@ -45,9 +45,9 @@ ext {
     flipTables: '1.1.0',
     googleJavaFormat: '1.7',
     guava: '29.0-jre',
-    jackrabbit: '1.30.0',
+    jackrabbit: '1.32.0',
     jamm: '0.3.3',
-    javaObjectLayout: '0.10',
+    javaObjectLayout: '0.11',
     javapoet: '1.13.0',
     jcache: '1.1.1',
     jmh: '1.23',
@@ -55,7 +55,7 @@ ext {
     koloboke: '1.0.0',
     nullaway: '0.7.9',
     ohc: '0.6.1',
-    picocli: '4.3.2',
+    picocli: '4.4.0',
     slf4j: '1.7.30',
     tcache: '2.0.1',
     stream: '2.9.8',
@@ -70,7 +70,7 @@ ext {
     jcacheTck: '1.1.1',
     jctools: '3.0.0',
     junit: '4.13',
-    mockito: '3.3.3',
+    mockito: '3.4.3',
     paxExam: '4.13.3',
     testng: '7.2.0',
     truth: '0.24',
@@ -93,7 +93,7 @@ ext {
     spotbugs: '4.0.3',
     spotbugsPlugin: '4.4.4',
     stats: '0.2.2',
-    versions: '0.28.0',
+    versions: '0.29.0',
   ]
 
   libraries = [

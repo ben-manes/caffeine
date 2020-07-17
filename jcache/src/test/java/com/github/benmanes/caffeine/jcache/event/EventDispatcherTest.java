@@ -53,6 +53,7 @@ public final class EventDispatcherTest {
   @Mock CacheEntryUpdatedListener<Integer, Integer> updatedListener;
   @Mock CacheEntryRemovedListener<Integer, Integer> removedListener;
   @Mock CacheEntryExpiredListener<Integer, Integer> expiredListener;
+  AutoCloseable mocks;
 
   CacheEntryEventFilter<Integer, Integer> allowFilter = event -> true;
   CacheEntryEventFilter<Integer, Integer> rejectFilter = event -> false;
@@ -60,13 +61,14 @@ public final class EventDispatcherTest {
 
   @BeforeMethod
   public void before() {
-    MockitoAnnotations.initMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
     dispatcher = new EventDispatcher<>(MoreExecutors.directExecutor());
   }
 
   @AfterMethod
-  public void after() {
+  public void after() throws Exception {
     dispatcher.ignoreSynchronous();
+    mocks.close();
   }
 
   @Test

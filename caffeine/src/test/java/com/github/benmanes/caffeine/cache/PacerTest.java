@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -48,13 +49,19 @@ public final class PacerTest {
   @Mock Executor executor;
   @Mock Runnable command;
   @Mock Future<?> future;
+  AutoCloseable mocks;
 
   Pacer pacer;
 
   @BeforeMethod
   public void beforeMethod() {
-    MockitoAnnotations.initMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
     pacer = new Pacer(scheduler);
+  }
+
+  @AfterMethod
+  public void afterMethod() throws Exception {
+    mocks.close();
   }
 
   @Test

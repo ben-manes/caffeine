@@ -48,6 +48,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -68,13 +69,19 @@ public final class TimerWheelTest {
   @Captor ArgumentCaptor<Node<Long, Long>> captor;
   @Mock BoundedLocalCache<Long, Long> cache;
   TimerWheel<Long, Long> timerWheel;
+  AutoCloseable mocks;
 
   @BeforeMethod
   public void beforeMethod() {
-    MockitoAnnotations.initMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
     timerWheel = new TimerWheel<>(cache);
 
     RandomSeedEnforcer.setThreadLocalRandom(random.nextInt(), random.nextInt());
+  }
+
+  @AfterMethod
+  public void afterMethod() throws Exception {
+    mocks.close();
   }
 
   @Test(dataProvider = "schedule")

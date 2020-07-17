@@ -156,5 +156,6 @@ tasks.coveralls {
 }
 
 dependencyUpdates.resolutionStrategy {
+  force libraries.googleJavaFormat
   force testLibraries.truth
 }
