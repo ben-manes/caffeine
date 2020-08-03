@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Stopwatch;
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 
 /**
  * Statistics gathered by a policy execution.
@@ -39,6 +41,11 @@ public final class PolicyStats {
   private long admittedCount;
   private long rejectedCount;
   private long operationCount;
+
+  @FormatMethod
+  public PolicyStats(@FormatString String format, Object... args) {
+    this(String.format(format, args));
+  }
 
   public PolicyStats(String name) {
     this.name = requireNonNull(name);
@@ -84,12 +91,12 @@ public final class PolicyStats {
   public void recordWeightedHit(int weight) {
     hitsWeight += weight;
     recordHit();
-  }  
-  
+  }
+
   public long hitsWeight() {
     return hitsWeight;
   }
-  
+
   public void recordHitPenalty(double penalty) {
     hitPenalty += penalty;
   }
@@ -113,12 +120,12 @@ public final class PolicyStats {
   public void recordWeightedMiss(int weight) {
     missesWeight += weight;
     recordMiss();
-  }  
-  
+  }
+
   public long missesWeight() {
     return missesWeight;
   }
-  
+
   public void recordMissPenalty(double penalty) {
     missPenalty += penalty;
   }

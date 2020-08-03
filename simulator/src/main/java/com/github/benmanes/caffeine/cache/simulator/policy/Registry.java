@@ -32,6 +32,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.ArcPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CarPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.adaptive.CartPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.ClockProPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.irr.DClockPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.FrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.HillClimberFrdPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.irr.IndicatorFrdPolicy;
@@ -172,8 +173,11 @@ public final class Registry {
     factories.put("irr.Frd", FrdPolicy::policies);
     factories.put("irr.IndicatorFrd", IndicatorFrdPolicy::policies);
     factories.put("irr.ClimberFrd", HillClimberFrdPolicy::policies);
+
     factories.put("irr.Lirs", LirsPolicy::policies);
     factories.put("irr.ClockPro", ClockProPolicy::policies);
+
+    factories.put("irr.DClock", DClockPolicy::policies);
   }
 
   private void registerAdaptive() {
