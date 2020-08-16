@@ -77,6 +77,7 @@ run {
   systemProperties System.properties.findAll {
     it.getKey().startsWith('akka') || it.getKey().startsWith('caffeine')
   }
+  jvmArgs '-XX:+UseParallelGC', '-Xmx4g'
 }
 
 task rewrite(type: JavaExec) {

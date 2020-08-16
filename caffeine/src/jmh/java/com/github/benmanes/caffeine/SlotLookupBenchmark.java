@@ -26,9 +26,8 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import com.github.benmanes.caffeine.base.UnsafeAccess;
 
-import com.koloboke.collect.impl.hash.LHashSeparateKVLongIntMapFactoryImpl;
-import com.koloboke.collect.map.hash.HashLongIntMap;
-import com.koloboke.collect.map.hash.HashLongIntMapFactory;
+import it.unimi.dsi.fastutil.longs.Long2IntMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
 /**
  * A comparison of different lookup approaches for indexes for a slot in a fixed-sized shared array.
@@ -62,7 +61,7 @@ public class SlotLookupBenchmark {
   long probeOffset;
 
   long index;
-  HashLongIntMap mapping;
+  Long2IntMap mapping;
 
   int[] sparse;
 
@@ -94,15 +93,11 @@ public class SlotLookupBenchmark {
 
   @Setup
   public void setupHashing() {
-    long[] keys = new long[ARENA_SIZE];
-    int[] values = new int[ARENA_SIZE];
-    for (int i = 0; i < ARENA_SIZE; i++) {
-      keys[i] = i;
-      values[i] = selectSlot(i);
-    }
-    HashLongIntMapFactory factory = new LHashSeparateKVLongIntMapFactoryImpl();
-    mapping = factory.newImmutableMap(keys, values);
     index = ThreadLocalRandom.current().nextInt(ARENA_SIZE);
+    mapping = new Long2IntOpenHashMap(ARENA_SIZE);
+    for (int i = 0; i < ARENA_SIZE; i++) {
+      mapping.put(i, selectSlot(i));
+    }
   }
 
   @Setup

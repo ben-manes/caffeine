@@ -45,13 +45,13 @@ public final class CaffeinePolicy implements Policy {
     Caffeine<Long, AccessEvent> builder = Caffeine.newBuilder()
         .removalListener((Long key, AccessEvent value, RemovalCause cause) ->
             policyStats.recordEviction())
-        .initialCapacity(settings.maximumSize())
         .executor(Runnable::run);
     if (characteristics.contains(WEIGHTED)) {
       builder.maximumWeight(settings.maximumSize());
       builder.weigher((key, value) -> value.weight());
     } else {
       builder.maximumSize(settings.maximumSize());
+      builder.initialCapacity(settings.maximumSize());
     }
     cache = builder.build();
   }

@@ -33,10 +33,12 @@ import com.github.benmanes.caffeine.cache.simulator.parser.camelab.CamelabTraceR
 import com.github.benmanes.caffeine.cache.simulator.parser.climb.ClimbTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.corda.CordaTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.gradle.GradleTraceReader;
-import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.kaggle.OutbrainTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentBlockTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentPhotoTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
@@ -66,6 +68,8 @@ public enum TraceFormat {
   OUTBRAIN(OutbrainTraceReader::new),
   SCARAB(ScarabTraceReader::new),
   SNIA_CAMBRIDGE(CambridgeTraceReader::new),
+  SNIA_TENCENT_BLOCK(TencentBlockTraceReader::new),
+  SNIA_TENCENT_PHOTO(TencentPhotoTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
   UMASS_YOUTUBE(YoutubeTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new);
