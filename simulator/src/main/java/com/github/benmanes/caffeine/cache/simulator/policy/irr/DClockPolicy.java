@@ -91,7 +91,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
     if (node == null) {
       onMiss(key);
     } else if (node.status == Status.NON_RESIDENT) {
-      onNonResidentHir(node);
+      onNonResidentHit(node);
     } else if (node.status == Status.INACTIVE) {
       onInactiveHit(node);
     } else if (node.status == Status.ACTIVE) {
@@ -149,7 +149,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
     policyStats.recordHit();
   }
 
-  private void onNonResidentHir(Node node) {
+  private void onNonResidentHit(Node node) {
     // So when a refault distance of (R - E) is observed and there are at least (R - E) active
     // pages, the refaulting page is activated optimistically in the hope that (R - E) active pages
     // are actually used less frequently than the refaulting page - or even not used at all anymore.

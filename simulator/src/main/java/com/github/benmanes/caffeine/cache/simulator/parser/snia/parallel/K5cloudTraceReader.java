@@ -22,16 +22,15 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 /**
- * A reader for the Tencent Block Storage trace files provided by
+ * A reader for the K5cloud trace files provided by
  * <a href="http://iotta.snia.org/tracetypes/4">SNIA</a>.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class TencentBlockTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
+public final class K5cloudTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
   static final int BLOCK_SIZE = 512;
-  static final char READ = '0';
 
-  public TencentBlockTraceReader(String filePath) {
+  public K5cloudTraceReader(String filePath) {
     super(filePath);
   }
 
@@ -39,14 +38,12 @@ public final class TencentBlockTraceReader extends TextTraceReader implements Ke
   public LongStream keys() throws IOException {
     return lines()
         .map(line -> line.split(","))
-        .filter(array -> array[3].charAt(0) == READ)
+        .filter(array -> array[2].charAt(0) == 'R')
         .flatMapToLong(array -> {
-          long offset = Long.parseLong(array[1]);
+          long offset = Long.parseLong(array[3]);
           long startBlock = (offset / BLOCK_SIZE);
-          int sequence = Integer.parseInt(array[2]);
-          int volumeId = Integer.parseInt(array[4]);
-          long key = (((long) volumeId) << 31) | Long.hashCode(startBlock);
-          return LongStream.range(key, key + sequence);
-        });
+          int sequence = Integer.parseInt(array[4]) / BLOCK_SIZE;
+          return LongStream.range(startBlock, startBlock + sequence);
+    });
   }
 }
