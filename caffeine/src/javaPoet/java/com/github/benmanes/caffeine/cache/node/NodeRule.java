@@ -104,18 +104,36 @@ public abstract class NodeRule implements Consumer<NodeContext> {
     return getter.build();
   }
 
-  /** Creates an accessor that returns the unwrapped variable. */
-  protected final MethodSpec newGetter(Strength strength, TypeName varType,
-      String varName, Visibility visibility) {
-    MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName))
-        .addModifiers(context.publicFinalModifiers())
-        .returns(varType);
+  /**
+   *  @return the String representation of {@link TypeName} and {@link Volatility} representing the
+   *          desired {@link UnsafeAccess} method name to use.
+   */
+  private String getTypeName(TypeName varType, Volatility volatility) {
     String type;
     if (varType.isPrimitive()) {
       type = varType.equals(TypeName.INT) ? "Int" : "Long";
     } else {
       type = "Object";
     }
+    if (volatility == Volatility.VOLATILE) {
+      type += "Volatile";
+    }
+    return type;
+  }
+
+  /** Creates an accessor that returns the unwrapped variable. */
+  protected final MethodSpec newGetter(Strength strength, TypeName varType,
+      String varName, Visibility visibility) {
+    return newGetter(strength, varType, varName, visibility, Volatility.NON_VOLATILE);
+  }
+
+  /** Creates an accessor that returns the unwrapped variable. */
+  protected final MethodSpec newGetter(Strength strength, TypeName varType,
+      String varName, Visibility visibility, Volatility volatility) {
+    MethodSpec.Builder getter = MethodSpec.methodBuilder("get" + capitalize(varName))
+        .addModifiers(context.publicFinalModifiers())
+        .returns(varType);
+    String type = getTypeName(varType, volatility);
     if (strength == Strength.STRONG) {
       if (visibility.isRelaxed) {
         if (varType.isPrimitive()) {
@@ -141,13 +159,14 @@ public abstract class NodeRule implements Consumer<NodeContext> {
 
   /** Creates a mutator to the variable. */
   protected final MethodSpec newSetter(TypeName varType, String varName, Visibility visibility) {
+    return newSetter(varType, varName, visibility, Volatility.NON_VOLATILE);
+  }
+
+  /** Creates a mutator to the variable. */
+  protected final MethodSpec newSetter(TypeName varType, String varName, Visibility visibility,
+      Volatility volatility) {
     String methodName = "set" + Character.toUpperCase(varName.charAt(0)) + varName.substring(1);
-    String type;
-    if (varType.isPrimitive()) {
-      type = varType.equals(TypeName.INT) ? "Int" : "Long";
-    } else {
-      type = "Object";
-    }
+    String type = getTypeName(varType, volatility);
     MethodSpec.Builder setter = MethodSpec.methodBuilder(methodName)
         .addModifiers(context.publicFinalModifiers())
         .addParameter(varType, varName);
@@ -172,6 +191,10 @@ public abstract class NodeRule implements Consumer<NodeContext> {
 
   protected enum Strength {
     STRONG, WEAK, SOFT,
+  }
+
+  protected enum Volatility {
+    VOLATILE, NON_VOLATILE
   }
 
   protected enum Visibility {

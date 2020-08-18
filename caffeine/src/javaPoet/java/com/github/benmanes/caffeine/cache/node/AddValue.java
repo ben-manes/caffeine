@@ -68,11 +68,11 @@ public final class AddValue extends NodeRule {
         .addParameter(vRefQueueType, "referenceQueue");
 
     if (isStrongValues()) {
-      setter.addStatement("$T.UNSAFE.putObject(this, $N, $N)",
+      setter.addStatement("$T.UNSAFE.putObjectVolatile(this, $N, $N)",
           UNSAFE_ACCESS, offsetName("value"), "value");
     } else {
       setter.addStatement("(($T<V>) getValueReference()).clear()", Reference.class);
-      setter.addStatement("$T.UNSAFE.putObject(this, $N, new $T($L, $N, referenceQueue))",
+      setter.addStatement("$T.UNSAFE.putObjectVolatile(this, $N, new $T($L, $N, referenceQueue))",
           UNSAFE_ACCESS, offsetName("value"), valueReferenceType(), "getKeyReference()", "value");
     }
 

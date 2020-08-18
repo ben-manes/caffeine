@@ -86,14 +86,14 @@ public final class AddExpiration extends NodeRule {
   private void addVariableTime(String varName) {
     MethodSpec getter = MethodSpec.methodBuilder("getVariableTime")
         .addModifiers(Modifier.PUBLIC)
-        .addStatement("return $T.UNSAFE.getLong(this, $N)",
+        .addStatement("return $T.UNSAFE.getLongVolatile(this, $N)",
             UNSAFE_ACCESS, offsetName(varName))
         .returns(long.class)
         .build();
     MethodSpec setter = MethodSpec.methodBuilder("setVariableTime")
         .addModifiers(Modifier.PUBLIC)
         .addParameter(long.class, varName)
-        .addStatement("$T.UNSAFE.putLong(this, $N, $N)",
+        .addStatement("$T.UNSAFE.putLongVolatile(this, $N, $N)",
             UNSAFE_ACCESS, offsetName(varName), varName)
         .build();
     MethodSpec cas = MethodSpec.methodBuilder("casVariableTime")
@@ -116,8 +116,10 @@ public final class AddExpiration extends NodeRule {
     }
     context.nodeSubtype.addField(newFieldOffset(context.className, "accessTime"))
         .addField(long.class, "accessTime", Modifier.VOLATILE)
-        .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.LAZY))
-        .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.LAZY));
+        .addMethod(
+            newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.LAZY,
+                Volatility.VOLATILE))
+        .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.LAZY, Volatility.VOLATILE));
     addTimeConstructorAssignment(context.constructorByKey, "accessTime");
     addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime");
   }
@@ -127,8 +129,10 @@ public final class AddExpiration extends NodeRule {
         && Feature.useWriteTime(context.generateFeatures)) {
       context.nodeSubtype.addField(newFieldOffset(context.className, "writeTime"))
           .addField(long.class, "writeTime", Modifier.VOLATILE)
-          .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY))
-          .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY));
+          .addMethod(
+              newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.LAZY,
+                  Volatility.VOLATILE))
+          .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.LAZY, Volatility.VOLATILE));
       addTimeConstructorAssignment(context.constructorByKey, "writeTime");
       addTimeConstructorAssignment(context.constructorByKeyRef, "writeTime");
     }
