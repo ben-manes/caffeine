@@ -27,6 +27,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -66,9 +67,9 @@ public final class DClockPolicy implements KeyOnlyPolicy {
 
   public DClockPolicy(DClockSettings settings, double percentActive) {
     this.policyStats = new PolicyStats("irr.DClock (active: %d%%)", (int) (100 * percentActive));
-    this.maxActive = (int) (percentActive * settings.maximumSize());
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maxActive = (int) (percentActive * maximumSize);
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
     this.headNonResident = new Node();
     this.headInactive = new Node();
     this.headActive = new Node();

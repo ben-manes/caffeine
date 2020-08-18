@@ -43,7 +43,7 @@ public final class Cache2kPolicy implements Policy {
 
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
-  private final int maximumSize;
+  private final long maximumSize;
 
   public Cache2kPolicy(Config config) {
     logger.setLevel(Level.WARNING);

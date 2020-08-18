@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache.simulator.admission.countmin64;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.Frequency;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -45,8 +46,8 @@ public final class CountMin64TinyLfu implements Frequency {
     BasicSettings settings = new BasicSettings(config);
     sketch = new CountMin64(settings.tinyLfu().countMin64().eps(),
         settings.tinyLfu().countMin64().confidence(), settings.randomSeed());
+    sampleSize = Ints.checkedCast(10 * settings.maximumSize());
     conservative = settings.tinyLfu().conservative();
-    sampleSize = 10 * settings.maximumSize();
   }
 
   /** Returns the estimated usage frequency of the item. */

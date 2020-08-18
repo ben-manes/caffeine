@@ -25,10 +25,14 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hashing;
 
 /**
  * A reader for the trace files provided by the authors of the AdaptSize algorithm. See
  * <a href="https://github.com/dasebe/webcachesim#how-to-get-traces">traces</a>.
+ * <p>
+ * The AdaptSize simulator treats identical keys with different weights as unique entries, rather
+ * than as an update to that entry's size. This behavior is emulated by a key hash.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
@@ -47,7 +51,12 @@ public final class AdaptSizeTraceReader extends TextTraceReader {
   public Stream<AccessEvent> events() throws IOException {
     return lines()
         .map(line -> line.split(" ", 3))
-        .map(array -> AccessEvent.forKeyAndWeight(
-            Long.parseLong(array[1]), Integer.parseInt(array[2])));
+        .map(array -> {
+          long key = Long.parseLong(array[1]);
+          int weight = Integer.parseInt(array[2]);
+          long hashKey = Hashing.murmur3_128().newHasher()
+              .putLong(key).putInt(weight).hash().asLong();
+          return AccessEvent.forKeyAndWeight(hashKey, weight);
+        });
   }
 }

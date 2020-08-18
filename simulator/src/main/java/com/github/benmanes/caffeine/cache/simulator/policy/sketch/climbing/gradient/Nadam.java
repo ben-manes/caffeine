@@ -19,6 +19,7 @@ import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -41,8 +42,9 @@ public final class Nadam extends AbstractClimber {
 
   public Nadam(Config config) {
     NadamSettings settings = new NadamSettings(config);
-    sampleSize = (int) (settings.percentSample() * settings.maximumSize());
-    stepSize = (int) (settings.percentPivot() * settings.maximumSize());
+    int maximumSize = Ints.checkedCast(settings.maximumSize());
+    sampleSize = (int) (settings.percentSample() * maximumSize);
+    stepSize = (int) (settings.percentPivot() * maximumSize);
     epsilon = settings.epsilon();
     beta1 = settings.beta1();
     beta2 = settings.beta2();

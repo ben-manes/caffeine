@@ -21,6 +21,7 @@ import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.AbstractClimber;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -52,8 +53,9 @@ public final class Stochastic extends AbstractClimber {
 
   public Stochastic(Config config) {
     StochasticSettings settings = new StochasticSettings(config);
-    sampleSize = (int) (settings.percentSample() * settings.maximumSize());
-    stepSize = (int) (settings.percentPivot() * settings.maximumSize());
+    int maximumSize = Ints.checkedCast(settings.maximumSize());
+    sampleSize = (int) (settings.percentSample() * maximumSize);
+    stepSize = (int) (settings.percentPivot() * maximumSize);
     acceleration = settings.acceleration();
     beta = settings.beta();
   }

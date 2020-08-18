@@ -39,6 +39,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType;
 import com.google.common.base.MoreObjects;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -75,12 +76,12 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
 
   public HillClimberWindowTinyLfuPolicy(HillClimberType strategy, double percentMain,
       HillClimberWindowTinyLfuSettings settings) {
-
-    int maxMain = (int) (settings.maximumSize() * percentMain);
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    int maxMain = (int) (maximumSize * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
-    this.maxWindow = settings.maximumSize() - maxMain;
+    this.maxWindow = maximumSize - maxMain;
+
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headWindow = new Node();

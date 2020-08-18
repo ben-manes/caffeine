@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -67,10 +68,10 @@ public final class TwoQueuePolicy implements KeyOnlyPolicy {
     this.headIn = new Node();
     this.headOut = new Node();
     this.headMain = new Node();
-    this.maximumSize = settings.maximumSize();
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maxIn = (int) (maximumSize * settings.percentIn());
     this.policyStats = new PolicyStats("two-queue.TwoQueue");
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maxIn = (int) (maximumSize * settings.percentIn());
     this.maxOut = (int) (maximumSize * settings.percentOut());
   }
 

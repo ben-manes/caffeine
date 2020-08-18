@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -86,10 +87,10 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
 
   public ClockProPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
+    maximumSize = Ints.checkedCast(settings.maximumSize());
     policyStats = new PolicyStats("irr.ClockPro");
-    maximumColdSize = settings.maximumSize();
     data = new Long2ObjectOpenHashMap<>();
-    maximumSize = settings.maximumSize();
+    maximumColdSize = maximumSize;
 
     // All the hands move in the clockwise direction
     handHot = handCold = handTest = null;

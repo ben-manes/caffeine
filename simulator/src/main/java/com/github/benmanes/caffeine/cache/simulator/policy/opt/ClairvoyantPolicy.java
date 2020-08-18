@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
@@ -51,10 +52,10 @@ public final class ClairvoyantPolicy implements Policy {
 
   public ClairvoyantPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
+    maximumSize = Ints.checkedCast(settings.maximumSize());
     policyStats = new PolicyStats("opt.Clairvoyant");
     accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
-    maximumSize = settings.maximumSize();
     future = new ArrayDeque<>(maximumSize);
     data = new IntRBTreeSet();
   }

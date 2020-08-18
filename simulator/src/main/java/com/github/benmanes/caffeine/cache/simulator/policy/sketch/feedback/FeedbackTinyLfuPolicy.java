@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -66,9 +67,9 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
   public FeedbackTinyLfuPolicy(Config config) {
     FeedbackTinyLfuSettings settings = new FeedbackTinyLfuSettings(config);
     this.policyStats = new PolicyStats("sketch.FeedbackTinyLfu");
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
     this.head = new Node();
 
     maxGain = Math.min(15, settings.maximumInsertionGain());

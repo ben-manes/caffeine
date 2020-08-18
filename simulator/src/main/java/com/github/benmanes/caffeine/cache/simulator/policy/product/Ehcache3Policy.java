@@ -40,8 +40,9 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
   private final Cache<Object, Object> cache;
   private final CacheManager cacheManager;
   private final PolicyStats policyStats;
-  private final int maximumSize;
-  private int size;
+  private final long maximumSize;
+
+  private long size;
 
   @SuppressWarnings("PMD.CloseResource")
   public Ehcache3Policy(Config config) {

@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import net.jodah.expiringmap.ExpirationPolicy;
@@ -42,8 +43,8 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
     policyStats = new PolicyStats("product.ExpiringMap");
     ExpiringMapSettings settings = new ExpiringMapSettings(config);
     cache = ExpiringMap.builder()
+        .maxSize(Ints.checkedCast(settings.maximumSize()))
         .expirationPolicy(settings.policy())
-        .maxSize(settings.maximumSize())
         .build();
   }
 

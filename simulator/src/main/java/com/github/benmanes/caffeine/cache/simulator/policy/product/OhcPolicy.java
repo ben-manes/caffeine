@@ -55,8 +55,8 @@ public final class OhcPolicy implements KeyOnlyPolicy {
         .keySerializer(longSerializer)
         .eviction(policy)
         .build();
-    policyStats = new PolicyStats(String.format("product.OHC (%s)",
-        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu"));
+    policyStats = new PolicyStats("product.OHC (%s)",
+        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu");
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */

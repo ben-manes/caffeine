@@ -27,6 +27,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -78,11 +79,11 @@ public final class LirsPolicy implements KeyOnlyPolicy {
 
   public LirsPolicy(Config config) {
     LirsSettings settings = new LirsSettings(config);
-    this.maximumNonResidentSize = (int) (settings.maximumSize() * settings.nonResidentMultiplier());
-    this.maximumHotSize = (int) (settings.maximumSize() * settings.percentHot());
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
+    this.maximumNonResidentSize = (int) (maximumSize * settings.nonResidentMultiplier());
+    this.maximumHotSize = (int) (maximumSize * settings.percentHot());
     this.policyStats = new PolicyStats("irr.Lirs");
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
     this.evicted = new ArrayList<>();
     this.headNR = new Node();
     this.headS = new Node();

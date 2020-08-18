@@ -76,8 +76,8 @@ public class BasicSettings {
     return new TinyLfuSettings();
   }
 
-  public int maximumSize() {
-    return config().getInt("maximum-size");
+  public long maximumSize() {
+    return config().getLong("maximum-size");
   }
 
   public boolean isFiles() {

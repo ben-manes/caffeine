@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 /**
@@ -51,7 +52,7 @@ public final class CaffeinePolicy implements Policy {
       builder.weigher((key, value) -> value.weight());
     } else {
       builder.maximumSize(settings.maximumSize());
-      builder.initialCapacity(settings.maximumSize());
+      builder.initialCapacity(Ints.saturatedCast(settings.maximumSize()));
     }
     cache = builder.build();
   }

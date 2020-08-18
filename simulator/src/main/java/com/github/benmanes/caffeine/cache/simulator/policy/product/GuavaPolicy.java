@@ -43,7 +43,6 @@ public final class GuavaPolicy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     cache = CacheBuilder.newBuilder()
         .maximumWeight(settings.maximumSize())
-        .initialCapacity(settings.maximumSize())
         .weigher((Long key, AccessEvent value) -> value.weight())
         .removalListener(notification -> policyStats.recordEviction())
         .build();

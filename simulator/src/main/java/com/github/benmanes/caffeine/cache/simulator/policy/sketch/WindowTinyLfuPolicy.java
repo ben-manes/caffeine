@@ -28,6 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
+import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -67,15 +68,14 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   private int sizeProtected;
 
   public WindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
-    String name = String.format("sketch.WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
-    this.policyStats = new PolicyStats(name);
+    this.policyStats = new PolicyStats("sketch.WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
     this.admittor = new TinyLfu(settings.config(), policyStats);
+    this.maximumSize = Ints.checkedCast(settings.maximumSize());
 
-    int maxMain = (int) (settings.maximumSize() * percentMain);
+    int maxMain = (int) (maximumSize * percentMain);
     this.maxProtected = (int) (maxMain * settings.percentMainProtected());
-    this.maxWindow = settings.maximumSize() - maxMain;
     this.data = new Long2ObjectOpenHashMap<>();
-    this.maximumSize = settings.maximumSize();
+    this.maxWindow = maximumSize - maxMain;
     this.headProtected = new Node();
     this.headProbation = new Node();
     this.headWindow = new Node();
