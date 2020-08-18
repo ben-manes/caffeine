@@ -54,6 +54,7 @@ ext {
     jsr330: '1',
     nullaway: '0.7.9',
     ohc: '0.6.1',
+    osgiComponentAnnotations: '1.4.0',
     picocli: '4.5.0',
     slf4j: '1.7.30',
     tcache: '2.0.1',
@@ -73,6 +74,10 @@ ext {
     paxExam: '4.13.3',
     testng: '7.3.0',
     truth: '0.24',
+    felix: '6.0.3',
+    felixScr: '2.1.20',
+    osgiUtilFunction: '1.1.0',
+    osgiUtilPromise: '1.1.0'
   ]
   pluginVersions = [
     apt: '0.21',
@@ -128,6 +133,7 @@ ext {
     jsr330: "javax.inject:javax.inject:${versions.jsr330}",
     nullaway: "com.uber.nullaway:nullaway:${versions.nullaway}",
     ohc: "org.caffinitas.ohc:ohc-core-j8:${versions.ohc}",
+    osgiComponentAnnotations: "org.osgi:org.osgi.service.component.annotations:${versions.osgiComponentAnnotations}",
     picocli: "info.picocli:picocli:${versions.picocli}",
     slf4jNop: "org.slf4j:slf4j-nop:${versions.slf4j}",
     tcache: "com.trivago:triava:${versions.tcache}",
@@ -151,10 +157,13 @@ ext {
     junit: "junit:junit:${testVersions.junit}",
     mockito: "org.mockito:mockito-core:${testVersions.mockito}",
     osgiCompile: [
-      'org.apache.felix:org.apache.felix.framework:6.0.3',
       "org.ops4j.pax.exam:pax-exam-junit4:${testVersions.paxExam}",
     ],
     osgiRuntime: [
+      "org.apache.felix:org.apache.felix.framework:${testVersions.felix}",
+      "org.apache.felix:org.apache.felix.scr:${testVersions.felixScr}",
+      "org.osgi:org.osgi.util.function:${testVersions.osgiUtilFunction}",
+      "org.osgi:org.osgi.util.promise:${testVersions.osgiUtilPromise}",
       "org.ops4j.pax.exam:pax-exam-container-native:${testVersions.paxExam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${testVersions.paxExam}",
       "org.ops4j.pax.url:pax-url-aether:2.6.2",
