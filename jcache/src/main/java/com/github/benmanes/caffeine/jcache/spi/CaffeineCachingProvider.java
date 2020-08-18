@@ -37,9 +37,13 @@ import javax.cache.configuration.OptionalFeature;
 import javax.cache.spi.CachingProvider;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
 
 import com.github.benmanes.caffeine.jcache.CacheManagerImpl;
+import com.github.benmanes.caffeine.jcache.configuration.TypesafeConfigurator;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * A provider that produces a JCache implementation backed by Caffeine. Typically this provider is
@@ -53,12 +57,15 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@Component
 public final class CaffeineCachingProvider implements CachingProvider {
   private static final ClassLoader DEFAULT_CLASS_LOADER = AccessController.doPrivileged(
       (PrivilegedAction<ClassLoader>) JCacheClassLoader::new);
 
   @GuardedBy("itself")
   private final Map<ClassLoader, Map<URI, CacheManager>> cacheManagers;
+
+  private boolean isOsgiComponent;
 
   public CaffeineCachingProvider() {
     this.cacheManagers = new WeakHashMap<>(1);
@@ -165,11 +172,15 @@ public final class CaffeineCachingProvider implements CachingProvider {
    */
   private static final class JCacheClassLoader extends ClassLoader {
 
+    public JCacheClassLoader() {
+      super(Thread.currentThread().getContextClassLoader());
+    }
+
     @Override
     public Class<?> loadClass(String name) throws ClassNotFoundException {
       ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
       ClassNotFoundException error = null;
-      if (contextClassLoader != null) {
+      if (contextClassLoader != null && contextClassLoader != DEFAULT_CLASS_LOADER) {
         try {
           return contextClassLoader.loadClass(name);
         } catch (ClassNotFoundException e) {
@@ -179,7 +190,16 @@ public final class CaffeineCachingProvider implements CachingProvider {
 
       ClassLoader classClassLoader = getClass().getClassLoader();
       if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
-        return classClassLoader.loadClass(name);
+        try {
+          return classClassLoader.loadClass(name);
+        } catch (ClassNotFoundException e) {
+          error = e;
+        }
+      }
+
+      ClassLoader parentClassLoader = getParent();
+      if (parentClassLoader != null && parentClassLoader != contextClassLoader && parentClassLoader != classClassLoader) {
+        return parentClassLoader.loadClass(name);
       }
       throw (error == null) ? new ClassNotFoundException(name) : error;
     }
@@ -187,19 +207,24 @@ public final class CaffeineCachingProvider implements CachingProvider {
     @Override
     public @Nullable URL getResource(String name) {
       ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-      if (contextClassLoader != null) {
+      if (contextClassLoader != null && contextClassLoader != DEFAULT_CLASS_LOADER) {
         URL resource = contextClassLoader.getResource(name);
         if (resource != null) {
           return resource;
         }
       }
 
-      ClassLoader classClassLoader = Thread.currentThread().getContextClassLoader();
+      ClassLoader classClassLoader = getClass().getClassLoader();
       if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
         URL resource = classClassLoader.getResource(name);
         if (resource != null) {
           return resource;
         }
+      }
+
+      ClassLoader parentClassLoader = getParent();
+      if (parentClassLoader != null && parentClassLoader != contextClassLoader && parentClassLoader != classClassLoader) {
+        return parentClassLoader.getResource(name);
       }
 
       return null;
@@ -210,16 +235,33 @@ public final class CaffeineCachingProvider implements CachingProvider {
       List<URL> resources = new ArrayList<>();
 
       ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-      if (contextClassLoader != null) {
+      if (contextClassLoader != null && contextClassLoader != DEFAULT_CLASS_LOADER) {
         resources.addAll(Collections.list(contextClassLoader.getResources(name)));
       }
 
-      ClassLoader classClassLoader = Thread.currentThread().getContextClassLoader();
+      ClassLoader classClassLoader = getClass().getClassLoader();
       if ((classClassLoader != null) && (classClassLoader != contextClassLoader)) {
         resources.addAll(Collections.list(classClassLoader.getResources(name)));
+      }
+
+      ClassLoader parentClassLoader = getParent();
+      if (parentClassLoader != null && parentClassLoader != contextClassLoader && parentClassLoader != classClassLoader) {
+        resources.addAll(Collections.list(parentClassLoader.getResources(name)));
       }
 
       return Collections.enumeration(resources);
     }
   }
+
+  @Activate
+  @SuppressWarnings("unused")
+  private void activate() {
+    isOsgiComponent = true;
+    TypesafeConfigurator.setConfigSource(() -> ConfigFactory.load(DEFAULT_CLASS_LOADER));
+  }
+
+  public boolean isOsgiComponent() {
+    return isOsgiComponent;
+  }
+
 }

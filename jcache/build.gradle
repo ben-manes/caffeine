@@ -11,6 +11,7 @@ dependencies {
   api libraries.jcache
   api libraries.config
   api libraries.jsr330
+  api libraries.osgiComponentAnnotations
 
   testImplementation libraries.guava
   testImplementation testLibraries.junit
@@ -32,16 +33,16 @@ dependencies {
 jar.manifest {
   attributes 'Bundle-SymbolicName': 'com.github.ben-manes.caffeine.jcache'
   attributes 'Import-Package': [
-    'javax.cache.*',
-    'javax.management',
-    'com.typesafe.config',
-    'com.github.benmanes.caffeine.cache',
-    'com.github.benmanes.caffeine.cache.stats'].join(',')
+    '!org.checkerframework.checker.*',
+    '*'].join(',')
   attributes 'Export-Package': [
     'com.github.benmanes.caffeine.jcache.spi',
     'com.github.benmanes.caffeine.jcache.copy',
     'com.github.benmanes.caffeine.jcache.configuration'].join(',')
   attributes 'Automatic-Module-Name': 'com.github.benmanes.caffeine.jcache'
+  attributes '-exportcontents': '${removeall;${packages;VERSIONED};${packages;CONDITIONAL}}'
+  attributes '-snapshot': 'SNAPSHOT'
+  attributes '-noextraheaders': true
 }
 
 task unzipJCacheJavaDoc(type: Copy, group: 'Build', description: 'Unzips the JCache JavaDoc') {
@@ -87,6 +88,10 @@ task osgiTests(type: Test, group: 'Build', description: 'Isolated OSGi tests') {
   tasks.test.dependsOn(it)
   systemProperty 'config.osgi.version', versions.config
   systemProperty 'jcache.osgi.version', versions.jcache
+  systemProperty 'checkerAnnotations.version', versions.checkerFramework
+  systemProperty 'felixScr.version', testVersions.felixScr
+  systemProperty 'osgiUtil.function', testVersions.osgiUtilFunction
+  systemProperty 'osgiUtil.promise', testVersions.osgiUtilPromise
   systemProperty 'caffeine.osgi.jar', project(':caffeine').jar.archivePath.path
   systemProperty 'caffeine-jcache.osgi.jar', project(':jcache').jar.archivePath.path
 }

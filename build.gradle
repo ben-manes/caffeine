@@ -73,17 +73,9 @@ subprojects {
     testRuntimeOnly testLibraries.osgiRuntime
   }
 
-  configurations {
-    bundleCompile
-  }
-
-  sourceSets {
-    bundle
-  }
-
   task bundle(type: aQute.bnd.gradle.Bundle) {
-    from sourceSets.bundle.output
-    sourceSet = sourceSets.bundle
+    from sourceSets.main.output
+    sourceSet = sourceSets.main
   }
 
   tasks.withType(JavaCompile) {
