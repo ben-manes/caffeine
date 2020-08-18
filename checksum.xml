@@ -123,6 +123,7 @@
     <trusted-key id='9ae296fd02e9f65b' group='org.apache.commons' />
     <trusted-key id='a2115ae15f6b8b72' group='org.apache.commons' />
     <trusted-key id='9054823a859a7237' group='org.apache.felix' />
+    <trusted-key id='3fcf529ff2f27a06' group='org.apache.felix' />
     <trusted-key id='de78987a9cd4d9d3' group='org.apache.htrace' />
     <trusted-key id='7c25280eae63ebe5' group='org.apache.httpcomponents' />
     <trusted-key id='1de461528f1f1b2a' group='org.apache.jackrabbit' />
