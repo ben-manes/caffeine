@@ -340,6 +340,10 @@ abstract class AbstractLinkedDeque<E> extends AbstractCollection<E> implements L
     return removeFirst();
   }
 
+  public final PeekingIterator<E> iterator(boolean ascending) {
+    return ascending ? iterator() : descendingIterator();
+  }
+
   @Override
   public PeekingIterator<E> iterator() {
     return new AbstractLinkedIterator(first) {
