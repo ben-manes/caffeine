@@ -705,7 +705,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           done[0] = true;
           V oldValue = Async.getIfReady(oldValueFuture);
           removed[0] = value.equals(oldValue);
-          return removed[0] ? null : oldValueFuture;
+          return (oldValue == null) || removed[0] ? null : oldValueFuture;
         }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
 
         if (done[0]) {
