@@ -16,6 +16,7 @@
     <trusted-key id='2189ca6247f3dee5' group='com.android.tools.lint' />
     <trusted-key id='22e44ac0622b91c3' group='com.beust' />
     <trusted-key id='5ad66315fc018797' group='com.beust' />
+    <trusted-key id='930c5b1ea41b1aa1' group='com.beust' />
     <trusted-key id='848c5ec3bc9d709c' group='com.bmuschko' />
     <trusted-key id='0a9f96a917990cf6' group='com.carrotsearch' />
     <trusted-key id='1cb026127786f3ac' group='com.clearspring.analytics' />
@@ -53,6 +54,7 @@
     <trusted-key id='a50569c7ca7fa1f0' group='com.jcraft' />
     <trusted-key id='52931f4b72b4f54c' group='com.koloboke' />
     <trusted-key id='0c33729405f13ee8' group='com.oracle.coherence.ce' />
+    <trusted-key id='dfb26dda74ac00c9' group='com.osacky.doctor' />
     <trusted-key id='1063fe98bcecb758' group='com.puppycrawl.tools' />
     <trusted-key id='156e8da37abc7c91' group='com.sleepycat' />
     <trusted-key id='685c46769dbb5e5d' group='com.squareup' />
@@ -68,6 +70,7 @@
     <trusted-key id='e735df276c508071' group='com.typesafe' />
     <trusted-key id='0753c4188493fd20' group='com.typesafe.akka' />
     <trusted-key id='2b183b279dfd639e' group='com.typesafe.akka' />
+    <trusted-key id='6ff60b55630dc90e' group='com.typesafe.akka' />
     <trusted-key id='c7d0ad0d36477196' group='com.typesafe.akka' />
     <trusted-key id='eb9d04a9a679fe18' group='com.uber.nullaway' />
     <trusted-key id='d0d1b9a54efd603d' group='com.univocity' />
@@ -83,6 +86,7 @@
     <trusted-key id='1861c322c56014b2' group='commons-lang' />
     <trusted-key id='a41f13c999945293' group='commons-logging' />
     <trusted-key id='379ce192d401ab61' group='info.picocli' />
+    <trusted-key id='94b291aef984a085' group='io.reactivex.rxjava3' />
     <trusted-key id='5e2f2b3d474efe6b' group='it.unimi.dsi' />
     <trusted-key id='d908a43fb7ec07ac' group='jakarta.activation' />
     <trusted-key id='0e325becb6962a24' group='jakarta.annotation' />
@@ -122,8 +126,9 @@
     <trusted-key id='86fdc7e2a11262cb' group='org.apache.commons' />
     <trusted-key id='9ae296fd02e9f65b' group='org.apache.commons' />
     <trusted-key id='a2115ae15f6b8b72' group='org.apache.commons' />
-    <trusted-key id='9054823a859a7237' group='org.apache.felix' />
     <trusted-key id='3fcf529ff2f27a06' group='org.apache.felix' />
+    <trusted-key id='9054823a859a7237' group='org.apache.felix' />
+    <trusted-key id='bff2ee42c8282e76' group='org.apache.felix' />
     <trusted-key id='de78987a9cd4d9d3' group='org.apache.htrace' />
     <trusted-key id='7c25280eae63ebe5' group='org.apache.httpcomponents' />
     <trusted-key id='1de461528f1f1b2a' group='org.apache.jackrabbit' />
@@ -153,6 +158,7 @@
     <trusted-key id='bede11eaf1164480' group='org.hamcrest' />
     <trusted-key id='e7bf252cf360097e' group='org.hdrhistogram' />
     <trusted-key id='cb43338e060cf9fa' group='org.jacoco' />
+    <trusted-key id='10066a9707090cf9' group='org.javassist' />
     <trusted-key id='eb23d947b2b8e23c' group='org.jctools' />
     <trusted-key id='379ce192d401ab61' group='org.jetbrains' />
     <trusted-key id='bcf4173966770193' group='org.jetbrains' />
@@ -178,6 +184,8 @@
     <trusted-key id='5f69ad087600b22c' group='org.ow2.asm' />
     <trusted-key id='2be5d98f751f4136' group='org.pcollections' />
     <trusted-key id='03a0e85480e2c433' group='org.plumelib' />
+    <trusted-key id='1364c5e2df3e99c5' group='org.reactivestreams' />
+    <trusted-key id='8e1ad594207b7fb2' group='org.reflections' />
     <trusted-key id='c03ef1d7d692bcff' group='org.scala-lang' />
     <trusted-key id='64163449a529ab1e' group='org.scala-lang.modules' />
     <trusted-key id='2c7b12f2a511e325' group='org.slf4j' />
@@ -239,6 +247,9 @@
     <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.29.0'>
       <sha512>B6382350A47641D02372F93D535ED31CD2141CAD2792FACB9497B4E434EA0881D0DD344E39267381033F40BDC58F5EAEA1C1632AE4BD0BC04CD78D2384CDA440</sha512>
     </dependency>
+    <dependency group='com.github.ben-manes' module='gradle-versions-plugin' version='0.33.0'>
+      <sha512>C0B463A7C016BA23733DA36F7B6AA224CD466605E8EBA63688A06665E9AF6110218D4081088F8AF824BEB6E139259CAC18E7E26DD9B63826698D0669FF29B303</sha512>
+    </dependency>
     <dependency group='com.github.brianfrankcooper.YCSB' module='core' version='0.15.0'>
       <sha512>DF5BFED7DFC327166FE0CB81BD6A9655F44CCB268E7E69204BD09955147CE9A97EBBCC28F9ACF315DBAF49E850A43CE8744F44E68D7BE816EACCAF0BEE41B203</sha512>
     </dependency>
@@ -299,6 +310,9 @@
     <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.5.0'>
       <sha512>36557C04B8FC7DC446B5FBDD6383A1B7281708B424C3039E7EC11807F3BB9A5E2764BE4BEC1D717C38595B12D8B291CB2A002D85B5E79DC9A9A4CBD27C58C7BB</sha512>
     </dependency>
+    <dependency group='gradle.plugin.com.github.spotbugs.snom' module='spotbugs-gradle-plugin' version='4.5.1'>
+      <sha512>5D5868FDE2D3C76909980535E146F4FD4EC8C921BFC337953B8E2C29D2F55D274100FFC4200CA0385CAA60DF2E5E9234DEB9745EEE63A04FBCD1E76603AE9873</sha512>
+    </dependency>
     <dependency group='gradle.plugin.com.github.spotbugs' module='spotbugs-gradle-plugin' version='2.0.0'>
       <sha512>B3BFAD07E6A3D4D73CBCE802D8614CF4AC84E589166D243D41028DC077F84C027DF4D514F145360405F37DA73A8F2E7B65D90877A9EE1151174D2440530F9051</sha512>
     </dependency>
@@ -319,6 +333,9 @@
     </dependency>
     <dependency group='me.champeau.gradle' module='jmh-gradle-plugin' version='0.5.0-rc-2'>
       <sha512>E04A4F762BE04B506EBD71A464B7D163C2F51F85BE44674E4A38AF084D98FBA0671EA229B5EFB9E10D611B4E1636795ACCDA62C96C6E37D3A9B4B665B61C7612</sha512>
+    </dependency>
+    <dependency group='me.champeau.gradle' module='jmh-gradle-plugin' version='0.5.2'>
+      <sha512>84C4330B4677C21A5CEA0337B9E9946B70BB6F5A7C52B87DB165C30905A026B7C6B833249A43364B211049CFB21F033C64106FC6335618E4C75F8F77309F8DC3</sha512>
     </dependency>
     <dependency group='net.java.dev.javacc' module='javacc' version='5.0'>
       <sha512>EEB189E22FA686CD71103C943A185533C3976C1706E86F737D60AAA28CE3FE5C16658979DCD22CD359B0F0B6F3C94043347638617E4367BB46E8E876B7DE498C</sha512>
@@ -422,6 +439,7 @@
     </dependency>
     <dependency group='xerces' module='xercesImpl' version='2.9.1'>
       <sha512>37A13B129F3536A53F2A553151A53997DA6DE7CE4D7231EFEEFD26A68C92BE309666F2EE1F527D3B8C38BC6ADDC9FCCBBDD0D134759FD88667976B0CFF842435</sha512>
+      <sha512>EC2200E5A5A70F5C64744F6413A546F5E4979B3FB1649B02756FF035D36DDE31170EAADC70842230296B60896F04877270C26B40415736299AEF44AC16C5811C</sha512>
     </dependency>
     <dependency group='xml-resolver' module='xml-resolver' version='1.2'>
       <sha512>ECA19B8A6B04C279B7982B16F1763CA1D49B0081A8D4CA2B7419F057D22A0EC60795EB4D901C5EB25DD4A733248876AA2F522C17A6144A26C8EDE9FB2F84531A</sha512>

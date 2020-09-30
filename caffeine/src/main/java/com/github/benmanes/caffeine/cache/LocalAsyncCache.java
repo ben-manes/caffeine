@@ -629,9 +629,37 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override
     public @Nullable V putIfAbsent(K key, V value) {
       requireNonNull(value);
-      CompletableFuture<V> valueFuture =
-          delegate.putIfAbsent(key, CompletableFuture.completedFuture(value));
-      return Async.getWhenSuccessful(valueFuture);
+
+      for (;;) {
+        CompletableFuture<V> priorFuture = delegate.get(key);
+        if (priorFuture != null) {
+          if (!priorFuture.isDone()) {
+            Async.getWhenSuccessful(priorFuture);
+            continue;
+          }
+
+          V prior = Async.getWhenSuccessful(priorFuture);
+          if (prior != null) {
+            return prior;
+          }
+        }
+
+        boolean[] added = { false };
+        CompletableFuture<V> computed = delegate.compute(key, (k, valueFuture) -> {
+          added[0] = (valueFuture == null)
+              || (valueFuture.isDone() && (Async.getIfReady(valueFuture) == null));
+          return added[0] ? CompletableFuture.completedFuture(value) : valueFuture;
+        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+        if (added[0]) {
+          return null;
+        } else {
+          V prior = Async.getWhenSuccessful(computed);
+          if (prior != null) {
+            return prior;
+          }
+        }
+      }
     }
 
     @Override
@@ -657,24 +685,29 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
       @SuppressWarnings("unchecked")
       K castedKey = (K) key;
-      boolean[] removed = { false };
       boolean[] done = { false };
+      boolean[] removed = { false };
       for (;;) {
         CompletableFuture<V> future = delegate.get(key);
-        V oldValue = Async.getWhenSuccessful(future);
-        if ((future != null) && !value.equals(oldValue)) {
-          // Optimistically check if the current value is equal, but don't skip if it may be loading
+        if ((future == null) || future.isCompletedExceptionally()) {
           return false;
         }
 
+        Async.getWhenSuccessful(future);
         delegate.compute(castedKey, (k, oldValueFuture) -> {
-          if (future != oldValueFuture) {
+          if (oldValueFuture == null) {
+            done[0] = true;
+            return null;
+          } else if (!oldValueFuture.isDone()) {
             return oldValueFuture;
           }
+
           done[0] = true;
+          V oldValue = Async.getIfReady(oldValueFuture);
           removed[0] = value.equals(oldValue);
           return removed[0] ? null : oldValueFuture;
         }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
+
         if (done[0]) {
           return removed[0];
         }
@@ -684,62 +717,139 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     @Override
     public @Nullable V replace(K key, V value) {
       requireNonNull(value);
-      CompletableFuture<V> oldValueFuture =
-          delegate.replace(key, CompletableFuture.completedFuture(value));
-      return Async.getWhenSuccessful(oldValueFuture);
+
+      @SuppressWarnings({"unchecked", "rawtypes"})
+      V[] oldValue = (V[]) new Object[1];
+      boolean[] done = { false };
+      for (;;) {
+        CompletableFuture<V> future = delegate.get(key);
+        if ((future == null) || future.isCompletedExceptionally()) {
+          return null;
+        }
+
+        Async.getWhenSuccessful(future);
+        delegate.compute(key, (k, oldValueFuture) -> {
+          if (oldValueFuture == null) {
+            done[0] = true;
+            return null;
+          } else if (!oldValueFuture.isDone()) {
+            return oldValueFuture;
+          }
+
+          done[0] = true;
+          oldValue[0] = Async.getIfReady(oldValueFuture);
+          return (oldValue[0] == null) ? null : CompletableFuture.completedFuture(value);
+        }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+        if (done[0]) {
+          return oldValue[0];
+        }
+      }
     }
 
     @Override
     public boolean replace(K key, V oldValue, V newValue) {
       requireNonNull(oldValue);
       requireNonNull(newValue);
-      CompletableFuture<V> oldValueFuture = delegate.get(key);
-      if ((oldValueFuture != null) && !oldValue.equals(Async.getWhenSuccessful(oldValueFuture))) {
-        // Optimistically check if the current value is equal, but don't skip if it may be loading
-        return false;
-      }
 
-      @SuppressWarnings("unchecked")
-      K castedKey = key;
+      boolean[] done = { false };
       boolean[] replaced = { false };
-      delegate.compute(castedKey, (k, value) -> {
-        replaced[0] = oldValue.equals(Async.getWhenSuccessful(value));
-        return replaced[0] ? CompletableFuture.completedFuture(newValue) : value;
-      }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
-      return replaced[0];
+      for (;;) {
+        CompletableFuture<V> future = delegate.get(key);
+        if ((future == null) || future.isCompletedExceptionally()) {
+          return false;
+        }
+
+        Async.getWhenSuccessful(future);
+        delegate.compute(key, (k, oldValueFuture) -> {
+          if (oldValueFuture == null) {
+            done[0] = true;
+            return null;
+          } else if (!oldValueFuture.isDone()) {
+            return oldValueFuture;
+          }
+
+          done[0] = true;
+          replaced[0] = oldValue.equals(Async.getIfReady(oldValueFuture));
+          return replaced[0] ? CompletableFuture.completedFuture(newValue) : oldValueFuture;
+        }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+        if (done[0]) {
+          return replaced[0];
+        }
+      }
     }
 
     @Override
     public @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
       requireNonNull(mappingFunction);
-      CompletableFuture<V> valueFuture = delegate.computeIfAbsent(key, k -> {
-        V newValue = mappingFunction.apply(key);
-        return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
-      });
-      return Async.getWhenSuccessful(valueFuture);
+
+      for (;;) {
+        CompletableFuture<V> priorFuture = delegate.get(key);
+        if (priorFuture != null) {
+          if (!priorFuture.isDone()) {
+            Async.getWhenSuccessful(priorFuture);
+            continue;
+          }
+
+          V prior = Async.getWhenSuccessful(priorFuture);
+          if (prior != null) {
+            delegate.statsCounter().recordHits(1);
+            return prior;
+          }
+        }
+
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        CompletableFuture<V>[] future = new CompletableFuture[1];
+        CompletableFuture<V> computed = delegate.compute(key, (k, valueFuture) -> {
+          if ((valueFuture != null) && valueFuture.isDone()
+              && (Async.getIfReady(valueFuture) != null)) {
+            return valueFuture;
+          }
+
+          V newValue = delegate.statsAware(mappingFunction, /* recordLoad */ true).apply(key);
+          if (newValue == null) {
+            return null;
+          }
+          future[0] = CompletableFuture.completedFuture(newValue);
+          return future[0];
+        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+        V result = Async.getWhenSuccessful(computed);
+        if ((computed == future[0]) || (result != null)) {
+          return result;
+        }
+      }
     }
 
     @Override
     public @Nullable V computeIfPresent(K key,
         BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
       requireNonNull(remappingFunction);
-      boolean[] computed = { false };
+
+      @SuppressWarnings({"unchecked", "rawtypes"})
+      V[] newValue = (V[]) new Object[1];
       for (;;) {
-        CompletableFuture<V> future = delegate.get(key);
-        V oldValue = Async.getWhenSuccessful(future);
-        if (oldValue == null) {
-          return null;
-        }
+        Async.getWhenSuccessful(delegate.get(key));
+
         CompletableFuture<V> valueFuture = delegate.computeIfPresent(key, (k, oldValueFuture) -> {
-          if (future != oldValueFuture) {
+          if (!oldValueFuture.isDone()) {
             return oldValueFuture;
           }
-          computed[0] = true;
-          V newValue = remappingFunction.apply(key, oldValue);
-          return (newValue == null) ? null : CompletableFuture.completedFuture(newValue);
+
+          V oldValue = Async.getIfReady(oldValueFuture);
+          if (oldValue == null) {
+            return null;
+          }
+
+          newValue[0] = remappingFunction.apply(key, oldValue);
+          return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
         });
-        if (computed[0] || (valueFuture == null)) {
-          return Async.getWhenSuccessful(valueFuture);
+
+        if (newValue[0] != null) {
+          return newValue[0];
+        } else if (valueFuture == null) {
+          return null;
         }
       }
     }
@@ -748,27 +858,29 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     public @Nullable V compute(K key,
         BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
       requireNonNull(remappingFunction);
-      boolean[] computed = { false };
+
+      @SuppressWarnings({"unchecked", "rawtypes"})
+      V[] newValue = (V[]) new Object[1];
       for (;;) {
-        CompletableFuture<V> future = delegate.get(key);
-        V oldValue = Async.getWhenSuccessful(future);
+        Async.getWhenSuccessful(delegate.get(key));
+
         CompletableFuture<V> valueFuture = delegate.compute(key, (k, oldValueFuture) -> {
-          if (future != oldValueFuture) {
+          if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
             return oldValueFuture;
           }
-          computed[0] = true;
-          long startTime = delegate.statsTicker().read();
-          V newValue = remappingFunction.apply(key, oldValue);
-          long loadTime = delegate.statsTicker().read() - startTime;
-          if (newValue == null) {
-            delegate.statsCounter().recordLoadFailure(loadTime);
-            return null;
-          }
-          delegate.statsCounter().recordLoadSuccess(loadTime);
-          return CompletableFuture.completedFuture(newValue);
-        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
-        if (computed[0]) {
-          return Async.getWhenSuccessful(valueFuture);
+
+          V oldValue = Async.getIfReady(oldValueFuture);
+          BiFunction<? super K, ? super V, ? extends V> function = delegate.statsAware(
+              remappingFunction, /* recordMiss */ false, /* recordLoad */ true,
+              /* recordLoadFailure */ true);
+          newValue[0] = function.apply(key, oldValue);
+          return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
+        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+        if (newValue[0] != null) {
+          return newValue[0];
+        } else if (valueFuture == null) {
+          return null;
         }
       }
     }
@@ -778,17 +890,20 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
       requireNonNull(value);
       requireNonNull(remappingFunction);
+
       CompletableFuture<V> newValueFuture = CompletableFuture.completedFuture(value);
       boolean[] merged = { false };
       for (;;) {
-        CompletableFuture<V> future = delegate.get(key);
-        V oldValue = Async.getWhenSuccessful(future);
+        Async.getWhenSuccessful(delegate.get(key));
+
         CompletableFuture<V> mergedValueFuture = delegate.merge(
             key, newValueFuture, (oldValueFuture, valueFuture) -> {
-          if (future != oldValueFuture) {
+          if ((oldValueFuture != null) && !oldValueFuture.isDone()) {
             return oldValueFuture;
           }
+
           merged[0] = true;
+          V oldValue = Async.getIfReady(oldValueFuture);
           if (oldValue == null) {
             return valueFuture;
           }
@@ -802,6 +917,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           }
           return CompletableFuture.completedFuture(mergedValue);
         });
+
         if (merged[0] || (mergedValueFuture == newValueFuture)) {
           return Async.getWhenSuccessful(mergedValueFuture);
         }

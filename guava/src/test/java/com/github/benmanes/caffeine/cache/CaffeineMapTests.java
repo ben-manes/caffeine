@@ -45,11 +45,11 @@ public final class CaffeineMapTests extends TestCase {
       return cache.asMap();
     })));
     suite.addTest(MapTestFactory.suite("UnboundedAsyncCache", synchronousGenerator(() -> {
-      AsyncLoadingCache<String, String> cache = Caffeine.newBuilder().buildAsync(key -> null);
+      AsyncCache<String, String> cache = Caffeine.newBuilder().buildAsync();
       return cache.synchronous().asMap();
     })));
     suite.addTest(MapTestFactory.suite("UnboundedAsyncCache", asynchronousGenerator(() -> {
-      AsyncLoadingCache<String, String> cache = Caffeine.newBuilder().buildAsync(key -> null);
+      AsyncCache<String, String> cache = Caffeine.newBuilder().buildAsync();
       return cache.asMap();
     })));
   }
@@ -60,15 +60,15 @@ public final class CaffeineMapTests extends TestCase {
       return cache.asMap();
     })));
     suite.addTest(MapTestFactory.suite("BoundedAsyncCache", synchronousGenerator(() -> {
-      AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
+      AsyncCache<String, String> cache = Caffeine.newBuilder()
           .maximumSize(Long.MAX_VALUE)
-          .buildAsync(key -> null);
+          .buildAsync();
       return cache.synchronous().asMap();
     })));
     suite.addTest(MapTestFactory.suite("BoundedAsyncCache", asynchronousGenerator(() -> {
-      AsyncLoadingCache<String, String> cache = Caffeine.newBuilder()
+      AsyncCache<String, String> cache = Caffeine.newBuilder()
           .maximumSize(Long.MAX_VALUE)
-          .buildAsync(key -> null);
+          .buildAsync();
       return cache.asMap();
     })));
   }

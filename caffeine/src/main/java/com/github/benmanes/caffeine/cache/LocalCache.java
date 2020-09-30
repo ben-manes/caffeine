@@ -126,13 +126,13 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   void cleanUp();
 
   /** Decorates the remapping function to record statistics if enabled. */
-  default Function<? super K, ? extends V> statsAware(
-      Function<? super K, ? extends V> mappingFunction, boolean recordLoad) {
+  default <T, R> Function<? super T, ? extends R> statsAware(
+      Function<? super T, ? extends R> mappingFunction, boolean recordLoad) {
     if (!isRecordingStats()) {
       return mappingFunction;
     }
     return key -> {
-      V value;
+      R value;
       statsCounter().recordMisses(1);
       long startTime = statsTicker().read();
       try {
