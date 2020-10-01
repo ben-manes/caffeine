@@ -80,7 +80,11 @@ final class Async {
     public void onRemoval(@Nullable K key,
         @Nullable CompletableFuture<V> future, RemovalCause cause) {
       if (future != null) {
-        future.thenAcceptAsync(value -> delegate.onRemoval(key, value, cause), executor);
+        future.thenAcceptAsync(value -> {
+          if (value != null) {
+            delegate.onRemoval(key, value, cause);
+          }
+        }, executor);
       }
     }
 

@@ -36,6 +36,10 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -962,7 +966,17 @@ public final class AsyncCacheTest {
     assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
   }
 
-  /* --------------- serialize --------------- */
+  /* --------------- misc --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, removalListener = Listener.MOCK)
+  public void removalListener_nullValue(AsyncCache<Integer, Integer> cache, CacheContext context) {
+    CompletableFuture<Integer> future = new CompletableFuture<>();
+    cache.put(context.absentKey(), future);
+    future.complete(null);
+
+    verify(context.removalListener(), never()).onRemoval(anyInt(), any(), any(RemovalCause.class));
+  }
 
   @Test(dataProvider = "caches")
   @CacheSpec(writer = Writer.EXCEPTIONAL)
