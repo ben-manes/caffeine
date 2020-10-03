@@ -28,7 +28,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTr
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CamelabTraceReader extends TextTraceReader implements KeyOnlyTraceReader {
-  static final int BLOCK_SIZE = 512;
+  static final long BLOCK_SIZE = 512;
 
   public CamelabTraceReader(String filePath) {
     super(filePath);
