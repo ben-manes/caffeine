@@ -53,13 +53,13 @@ public final class CacheManagerImpl implements CacheManager {
 
   public CacheManagerImpl(CachingProvider cacheProvider,
       URI uri, ClassLoader classLoader, Properties properties) {
+    this.runsAsAnOsgiBundle = (cacheProvider instanceof CaffeineCachingProvider)
+        && ((CaffeineCachingProvider) cacheProvider).isOsgiComponent();
     this.classLoaderReference = new WeakReference<>(requireNonNull(classLoader));
     this.cacheProvider = requireNonNull(cacheProvider);
     this.properties = requireNonNull(properties);
     this.caches = new ConcurrentHashMap<>();
     this.uri = requireNonNull(uri);
-    runsAsAnOsgiBundle =
-            cacheProvider instanceof CaffeineCachingProvider && ((CaffeineCachingProvider) cacheProvider).isOsgiComponent();
   }
 
   @Override
