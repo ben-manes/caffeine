@@ -64,7 +64,7 @@ public final class Specifications {
       ParameterSpec.builder(vRefQueueType, "valueReferenceQueue").build();
 
   public static final TypeName UNSAFE_ACCESS =
-      ClassName.get("com.github.benmanes.caffeine.base", "UnsafeAccess");
+      ClassName.get("com.github.benmanes.caffeine.cache", "UnsafeAccess");
 
   public static final TypeName LOCAL_CACHE_FACTORY =
       ClassName.get(PACKAGE_NAME, "LocalCacheFactory");

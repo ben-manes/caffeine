@@ -40,6 +40,7 @@ public final class SingleConsumerQueueTests extends TestCase {
     return suite;
   }
 
+  @SuppressWarnings("deprecation")
   private static TestSuite queueTest(boolean optimistic) {
     return QueueTestSuiteBuilder
         .using(new TestStringQueueGenerator() {

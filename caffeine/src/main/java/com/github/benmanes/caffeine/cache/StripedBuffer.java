@@ -28,8 +28,6 @@ import java.util.function.Consumer;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.github.benmanes.caffeine.base.UnsafeAccess;
-
 /**
  * A base class providing the mechanics for supporting dynamic striping of bounded buffers. This
  * implementation is an adaption of the numeric 64-bit {@link java.util.concurrent.atomic.Striped64}

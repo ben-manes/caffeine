@@ -30,11 +30,7 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.hamcrest.Matcher;
-import org.jctools.queues.QueueFactory;
 import org.jctools.queues.atomic.AtomicQueueFactory;
-import org.jctools.queues.spec.ConcurrentQueueSpec;
-import org.jctools.queues.spec.Ordering;
-import org.jctools.queues.spec.Preference;
 import org.jctools.util.Pow2;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,9 +44,10 @@ public abstract class QueueSanityTest {
   public static final int SIZE = 8192 * 2;
 
   private final Queue<Integer> queue;
-  private final ConcurrentQueueSpec spec;
+  private final org.jctools.queues.spec.ConcurrentQueueSpec spec;
 
-  protected QueueSanityTest(ConcurrentQueueSpec spec, Queue<Integer> queue) {
+  protected QueueSanityTest(
+      org.jctools.queues.spec.ConcurrentQueueSpec spec, Queue<Integer> queue) {
     this.queue = queue;
     this.spec = spec;
   }
@@ -72,7 +69,7 @@ public abstract class QueueSanityTest {
     }
     int size = i;
     assertEquals(size, queue.size());
-    if (spec.ordering == Ordering.FIFO) {
+    if (spec.ordering == org.jctools.queues.spec.Ordering.FIFO) {
       // expect FIFO
       i = 0;
       Integer p;
@@ -110,7 +107,7 @@ public abstract class QueueSanityTest {
 
   @Test
   public void whenFirstInThenFirstOut() {
-    assumeThat(spec.ordering, is(Ordering.FIFO));
+    assumeThat(spec.ordering, is(org.jctools.queues.spec.Ordering.FIFO));
 
     // Arrange
     int i = 0;
@@ -292,20 +289,22 @@ public abstract class QueueSanityTest {
 
   }
 
-  public static Object[] makeQueue(int producers, int consumers, int capacity, Ordering ordering,
-      Queue<Integer> q) {
-    ConcurrentQueueSpec spec =
-        new ConcurrentQueueSpec(producers, consumers, capacity, ordering, Preference.NONE);
+  public static Object[] makeQueue(int producers, int consumers, int capacity,
+      org.jctools.queues.spec.Ordering ordering, Queue<Integer> q) {
+    org.jctools.queues.spec.ConcurrentQueueSpec spec =
+        new org.jctools.queues.spec.ConcurrentQueueSpec(
+            producers, consumers, capacity, ordering, org.jctools.queues.spec.Preference.NONE);
     if (q == null) {
-      q = QueueFactory.newQueue(spec);
+      q = org.jctools.queues.QueueFactory.newQueue(spec);
     }
     return new Object[] {spec, q};
   }
 
-  public static Object[] makeAtomic(int producers, int consumers, int capacity, Ordering ordering,
-      Queue<Integer> q) {
-    ConcurrentQueueSpec spec =
-        new ConcurrentQueueSpec(producers, consumers, capacity, ordering, Preference.NONE);
+  public static Object[] makeAtomic(int producers, int consumers, int capacity,
+      org.jctools.queues.spec.Ordering ordering, Queue<Integer> q) {
+    org.jctools.queues.spec.ConcurrentQueueSpec spec =
+        new org.jctools.queues.spec.ConcurrentQueueSpec(
+            producers, consumers, capacity, ordering, org.jctools.queues.spec.Preference.NONE);
     if (q == null) {
       q = AtomicQueueFactory.newQueue(spec);
     }

@@ -18,13 +18,12 @@ package com.github.benmanes.caffeine;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.jctools.util.UnsafeAccess;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
-
-import com.github.benmanes.caffeine.base.UnsafeAccess;
 
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
@@ -88,7 +87,7 @@ public class SlotLookupBenchmark {
 
   @Setup
   public void setupStriped64() {
-    probeOffset = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
+    probeOffset = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomProbe");
   }
 
   @Setup

@@ -26,8 +26,8 @@
 ext {
   versions = [
     akka: '2.6.9',
-    cache2k: '1.4.0.Final',
-    checkerFramework: '3.6.1',
+    cache2k: '1.5.1.Alpha',
+    checkerFramework: '3.7.0',
     coherence: '20.06',
     collision: '0.3.3',
     commonsCompress: '1.20',

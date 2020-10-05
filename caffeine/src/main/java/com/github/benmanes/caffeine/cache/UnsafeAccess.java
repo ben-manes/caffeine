@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.benmanes.caffeine.base;
+package com.github.benmanes.caffeine.cache;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -24,15 +24,11 @@ import sun.misc.Unsafe;
 /**
  * Static access to {@link Unsafe} and convenient utility methods for performing low-level, unsafe
  * operations.
- * <p>
- * <b>Warning:</b> This class is scheduled for removal in version 3.0.0.
  *
  * @author ben.manes@gmail.com (Ben Manes)
- * @deprecated Scheduled for removal in version 3.0.0
  */
-@Deprecated
 @SuppressWarnings("restriction")
-public final class UnsafeAccess {
+final class UnsafeAccess {
   static final String ANDROID = "THE_ONE";
   static final String OPEN_JDK = "theUnsafe";
 

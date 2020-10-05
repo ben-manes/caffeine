@@ -44,7 +44,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.SingleConsumerQueue.LinearizableNode;
 import com.github.benmanes.caffeine.SingleConsumerQueueTest.ValidatingQueueListener;
 import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
@@ -55,6 +54,7 @@ import com.google.common.testing.SerializableTester;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("deprecation")
 @Listeners(ValidatingQueueListener.class)
 public class SingleConsumerQueueTest {
   private static final int PRODUCE = 10_000;
@@ -561,8 +561,8 @@ public class SingleConsumerQueueTest {
     for (int i = 0; i < params.length; i++) {
       Object param = params[i];
       if ((param instanceof SingleConsumerQueue<?>)) {
-        boolean linearizable =
-            (((SingleConsumerQueue<?>) param).factory.apply(null) instanceof LinearizableNode<?>);
+        SingleConsumerQueue.Node<?> node = ((SingleConsumerQueue<?>) param).factory.apply(null);
+        boolean linearizable = (node instanceof SingleConsumerQueue.LinearizableNode<?>);
         params[i] = param.getClass().getSimpleName() + "_"
             + (linearizable ? "linearizable" : "optimistic");
       } else {

@@ -28,7 +28,6 @@ import java.util.function.Supplier;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.SingleConsumerQueue.Node;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.collect.Sets;
 
@@ -37,6 +36,7 @@ import com.google.common.collect.Sets;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("deprecation")
 public final class IsValidSingleConsumerQueue<E>
     extends TypeSafeDiagnosingMatcher<SingleConsumerQueue<E>> {
 
@@ -63,10 +63,10 @@ public final class IsValidSingleConsumerQueue<E>
 
   void checkForLoop(SingleConsumerQueue<E> queue, DescriptionBuilder builder) {
     builder.expectThat("Expected sentinel node", queue.head.value, is(nullValue()));
-    Set<Node<E>> seen = Sets.newIdentityHashSet();
-    Node<E> node = queue.head.next;
+    Set<SingleConsumerQueue.Node<E>> seen = Sets.newIdentityHashSet();
+    SingleConsumerQueue.Node<E> node = queue.head.next;
     while (node != null) {
-      Node<E> current = node;
+      SingleConsumerQueue.Node<E> current = node;
       Supplier<String> errorMsg = () -> String.format("Loop detected: %s in %s", current, seen);
       builder.expectThat(errorMsg, seen.add(node), is(true));
       builder.expectThat("not tail", node, is(not(queue.head)));

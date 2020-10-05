@@ -15,7 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import com.github.benmanes.caffeine.base.UnsafeAccess;
+import org.jctools.util.UnsafeAccess;
 
 /**
  * A hook to enforce that a predictable random seed is used by Caffeine's caches.
@@ -23,8 +23,8 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class RandomSeedEnforcer {
-  static final long PROBE = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
-  static final long SEED = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomSeed");
+  static final long PROBE = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomProbe");
+  static final long SEED = UnsafeAccess.fieldOffset(Thread.class, "threadLocalRandomSeed");
   static final int RANDOM_PROBE = 0x9e3779b9;
   static final int RANDOM_SEED = 1033096058;
 

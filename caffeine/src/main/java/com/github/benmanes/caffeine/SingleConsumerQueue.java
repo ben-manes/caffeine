@@ -34,9 +34,6 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.github.benmanes.caffeine.SingleConsumerQueue.Node;
-import com.github.benmanes.caffeine.base.UnsafeAccess;
-
 /**
  * A lock-free unbounded queue based on linked nodes that supports concurrent producers and is
  * restricted to a single consumer. This queue orders elements FIFO (first-in-first-out). The
@@ -75,7 +72,9 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
+ * @deprecated Scheduled for removal in version 3.0.0
  */
+@Deprecated
 @SuppressWarnings("NullAway")
 public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
     implements Queue<E>, Serializable {
@@ -131,7 +130,8 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   static final int SPINS = (NCPU == 1) ? 0 : 2000;
 
   /** The offset to the thread-specific probe field. */
-  static final long PROBE = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
+  static final long PROBE = com.github.benmanes.caffeine.base.UnsafeAccess.objectFieldOffset(
+      Thread.class, "threadLocalRandomProbe");
 
   static int ceilingPowerOfTwo(int x) {
     // From Hacker's Delight, Chapter 3, Harry S. Warren Jr.
@@ -363,10 +363,12 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
 
   /** Returns the arena index for the current thread. */
   static int index() {
-    int probe = UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), PROBE);
+    int probe = com.github.benmanes.caffeine.base.UnsafeAccess.UNSAFE.getInt(
+        Thread.currentThread(), PROBE);
     if (probe == 0) {
       ThreadLocalRandom.current(); // force initialization
-      probe = UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), PROBE);
+      probe = com.github.benmanes.caffeine.base.UnsafeAccess.UNSAFE.getInt(
+          Thread.currentThread(), PROBE);
     }
     return (probe & ARENA_MASK);
   }
@@ -469,7 +471,8 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
   }
 
   static class Node<E> {
-    static final long NEXT_OFFSET = UnsafeAccess.objectFieldOffset(Node.class, "next");
+    static final long NEXT_OFFSET =
+        com.github.benmanes.caffeine.base.UnsafeAccess.objectFieldOffset(Node.class, "next");
 
     @Nullable E value;
     @Nullable volatile Node<E> next;
@@ -480,11 +483,13 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
 
     @SuppressWarnings("unchecked")
     @Nullable Node<E> getNextRelaxed() {
-      return (Node<E>) UnsafeAccess.UNSAFE.getObject(this, NEXT_OFFSET);
+      return (Node<E>) com.github.benmanes.caffeine.base.UnsafeAccess.UNSAFE.getObject(
+          this, NEXT_OFFSET);
     }
 
     void lazySetNext(@Nullable Node<E> newNext) {
-      UnsafeAccess.UNSAFE.putOrderedObject(this, NEXT_OFFSET, newNext);
+      com.github.benmanes.caffeine.base.UnsafeAccess.UNSAFE.putOrderedObject(
+          this, NEXT_OFFSET, newNext);
     }
 
     /** A no-op notification that the element was added to the queue. */
@@ -534,32 +539,63 @@ public final class SingleConsumerQueue<E> extends SCQHeader.HeadAndTailRef<E>
 /** The namespace for field padding through inheritance. */
 final class SCQHeader {
   abstract static class PadHead<E> extends AbstractQueue<E> {
-    long p00, p01, p02, p03, p04, p05, p06, p07;
-    long p10, p11, p12, p13, p14, p15, p16;
+    byte p000, p001, p002, p003, p004, p005, p006, p007;
+    byte p008, p009, p010, p011, p012, p013, p014, p015;
+    byte p016, p017, p018, p019, p020, p021, p022, p023;
+    byte p024, p025, p026, p027, p028, p029, p030, p031;
+    byte p032, p033, p034, p035, p036, p037, p038, p039;
+    byte p040, p041, p042, p043, p044, p045, p046, p047;
+    byte p048, p049, p050, p051, p052, p053, p054, p055;
+    byte p056, p057, p058, p059, p060, p061, p062, p063;
+    byte p064, p065, p066, p067, p068, p069, p070, p071;
+    byte p072, p073, p074, p075, p076, p077, p078, p079;
+    byte p080, p081, p082, p083, p084, p085, p086, p087;
+    byte p088, p089, p090, p091, p092, p093, p094, p095;
+    byte p096, p097, p098, p099, p100, p101, p102, p103;
+    byte p104, p105, p106, p107, p108, p109, p110, p111;
+    byte p112, p113, p114, p115, p116, p117, p118, p119;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the head node. */
   abstract static class HeadRef<E> extends PadHead<E> {
-    @Nullable Node<E> head;
+    @SuppressWarnings("deprecation")
+    SingleConsumerQueue.@Nullable Node<E> head;
   }
 
   abstract static class PadHeadAndTail<E> extends HeadRef<E> {
-    long p20, p21, p22, p23, p24, p25, p26, p27;
-    long p30, p31, p32, p33, p34, p35, p36;
+    byte p120, p121, p122, p123, p124, p125, p126, p127;
+    byte p128, p129, p130, p131, p132, p133, p134, p135;
+    byte p136, p137, p138, p139, p140, p141, p142, p143;
+    byte p144, p145, p146, p147, p148, p149, p150, p151;
+    byte p152, p153, p154, p155, p156, p157, p158, p159;
+    byte p160, p161, p162, p163, p164, p165, p166, p167;
+    byte p168, p169, p170, p171, p172, p173, p174, p175;
+    byte p176, p177, p178, p179, p180, p181, p182, p183;
+    byte p184, p185, p186, p187, p188, p189, p190, p191;
+    byte p192, p193, p194, p195, p196, p197, p198, p199;
+    byte p200, p201, p202, p203, p204, p205, p206, p207;
+    byte p208, p209, p210, p211, p212, p213, p214, p215;
+    byte p216, p217, p218, p219, p220, p221, p222, p223;
+    byte p224, p225, p226, p227, p228, p229, p230, p231;
+    byte p232, p233, p234, p235, p236, p237, p238, p239;
   }
 
   /** Enforces a memory layout to avoid false sharing by padding the tail node. */
+  @SuppressWarnings("deprecation")
   abstract static class HeadAndTailRef<E> extends PadHeadAndTail<E> {
-    static final long TAIL_OFFSET = UnsafeAccess.objectFieldOffset(HeadAndTailRef.class, "tail");
+    static final long TAIL_OFFSET = com.github.benmanes.caffeine.base.UnsafeAccess.objectFieldOffset(
+        HeadAndTailRef.class, "tail");
 
-    @Nullable volatile Node<E> tail;
+    volatile SingleConsumerQueue.@Nullable Node<E> tail;
 
-    void lazySetTail(Node<E> next) {
-      UnsafeAccess.UNSAFE.putOrderedObject(this, TAIL_OFFSET, next);
+    void lazySetTail(SingleConsumerQueue.Node<E> next) {
+      com.github.benmanes.caffeine.base.UnsafeAccess.UNSAFE.putOrderedObject(
+          this, TAIL_OFFSET, next);
     }
 
-    boolean casTail(Node<E> expect, Node<E> update) {
-      return UnsafeAccess.UNSAFE.compareAndSwapObject(this, TAIL_OFFSET, expect, update);
+    boolean casTail(SingleConsumerQueue.Node<E> expect, SingleConsumerQueue.Node<E> update) {
+      return com.github.benmanes.caffeine.base.UnsafeAccess.UNSAFE.compareAndSwapObject(
+          this, TAIL_OFFSET, expect, update);
     }
   }
 }
