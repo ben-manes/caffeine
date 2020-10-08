@@ -84,6 +84,7 @@ public final class TypesafeConfigurationTest {
     assertThat(config2.get().getKeyType(), is(String.class));
     assertThat(config2.get().getValueType(), is(Integer.class));
     assertThat(config2.get().getExecutorFactory().create(), is(ForkJoinPool.commonPool()));
+    assertThat(config2.get().isRecordNativeStats(), is(false));
   }
 
   @Test
@@ -109,6 +110,7 @@ public final class TypesafeConfigurationTest {
     assertThat(config.getCacheWriter(), is(instanceOf(TestCacheWriter.class)));
     assertThat(config.isStatisticsEnabled(), is(true));
     assertThat(config.isManagementEnabled(), is(true));
+    assertThat(config.isRecordNativeStats(), is(true));
 
     checkSize(config);
     checkRefresh(config);

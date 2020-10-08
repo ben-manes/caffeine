@@ -68,6 +68,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private @Nullable Long expireAfterWriteNanos;
   private @Nullable Long maximumWeight;
   private @Nullable Long maximumSize;
+  private boolean recordNativeStats;
 
   public CaffeineConfiguration() {
     delegate = new MutableConfiguration<>();
@@ -91,6 +92,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       weigherFactory = config.weigherFactory;
       maximumWeight = config.maximumWeight;
       maximumSize = config.maximumSize;
+      recordNativeStats = config.recordNativeStats;
     } else {
       tickerFactory = SYSTEM_TICKER;
       executorFactory = COMMON_POOL;
@@ -385,6 +387,24 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     return (maximumSize == null)
         ? OptionalLong.empty()
         : OptionalLong.of(maximumSize);
+  }
+
+  /**
+   * Enables native statistics collection.  Default is false.
+   *
+   * @param recordNativeStats whether to enable
+   */
+  public void setRecordNativeStats(boolean recordNativeStats) {
+    this.recordNativeStats = recordNativeStats;
+  }
+
+  /**
+   * Returns whether native statistics collection is enabled.
+   *
+   * @return enabled status
+   */
+  public boolean isRecordNativeStats() {
+    return recordNativeStats;
   }
 
   /**
