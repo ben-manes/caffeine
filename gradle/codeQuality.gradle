@@ -1,6 +1,7 @@
 /**
  * Configurations for code quality analysis
  */
+apply plugin: 'org.kordamp.gradle.jandex'
 apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'com.github.spotbugs'
 apply plugin: 'net.ltgt.errorprone'
