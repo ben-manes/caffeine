@@ -26,7 +26,7 @@
 ext {
   versions = [
     akka: '2.6.9',
-    cache2k: '1.5.1.Alpha',
+    cache2k: '1.6.0.Final',
     checkerFramework: '3.7.0',
     coherence: '20.06',
     collision: '0.3.3',
@@ -46,6 +46,7 @@ ext {
     googleJavaFormat: '1.7',
     guava: '29.0-jre',
     jackrabbit: '1.34.0',
+    jandex: '2.2.1.Final',
     jamm: '0.3.3',
     javaObjectLayout: '0.13',
     javapoet: '1.13.0',
@@ -71,7 +72,7 @@ ext {
     jctools: '3.1.0',
     junit: '4.13',
     mockito: '3.5.13',
-    paxExam: '4.13.3',
+    paxExam: '4.13.4',
     testng: '7.3.0',
     truth: '0.24',
     felix: '6.0.3',
@@ -86,7 +87,7 @@ ext {
     coverity: '1.0.10',
     errorprone: '1.2.1',
     jacoco: '0.8.5',
-    jandex: '0.6.0',
+    jandex: '0.7.0',
     jmh: '0.5.2',
     jmhReport: '0.9.0',
     nullaway: '1.0.2',
@@ -126,6 +127,7 @@ ext {
     jackrabbit: dependencies.create("org.apache.jackrabbit:oak-core:${versions.jackrabbit}") {
       exclude group: 'junit'
     },
+    jandex: "org.jboss:jandex:${versions.jandex}",
     jamm: "com.github.jbellis:jamm:${versions.jamm}",
     javaObjectLayout: "org.openjdk.jol:jol-cli:${versions.javaObjectLayout}",
     javapoet: "com.squareup:javapoet:${versions.javapoet}",

@@ -65,6 +65,7 @@ subprojects {
 
   dependencies {
     testImplementation libraries.guava
+    testImplementation libraries.jandex
     testImplementation testLibraries.mockito
     testImplementation testLibraries.hamcrest
     testImplementation testLibraries.awaitility
