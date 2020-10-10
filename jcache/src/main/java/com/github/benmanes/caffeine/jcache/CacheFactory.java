@@ -160,6 +160,10 @@ final class CacheFactory {
       evicts |= configureExpireAfterAccess();
       evicts |= configureExpireVariably();
 
+      if (config.isNativeStatisticsEnabled()) {
+        caffeine.recordStats();
+      }
+
       JCacheEvictionListener<K, V> evictionListener = null;
       if (evicts) {
         evictionListener = new JCacheEvictionListener<>(dispatcher, statistics);

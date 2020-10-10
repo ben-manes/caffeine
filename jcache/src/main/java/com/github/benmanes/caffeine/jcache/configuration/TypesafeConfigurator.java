@@ -229,8 +229,9 @@ public final class TypesafeConfigurator {
       }
     }
 
-    /** Adds the JMX monitoring settings. */
+    /** Adds the monitoring settings. */
     private void addMonitoring() {
+      configuration.setNativeStatisticsEnabled(merged.getBoolean("monitoring.native-statistics"));
       configuration.setStatisticsEnabled(merged.getBoolean("monitoring.statistics"));
       configuration.setManagementEnabled(merged.getBoolean("monitoring.management"));
     }

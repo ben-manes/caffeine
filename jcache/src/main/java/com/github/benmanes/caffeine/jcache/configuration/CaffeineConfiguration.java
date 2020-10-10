@@ -23,7 +23,6 @@ import java.util.OptionalLong;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Factory;
@@ -31,6 +30,8 @@ import javax.cache.configuration.MutableConfiguration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.Ticker;
@@ -68,6 +69,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private @Nullable Long expireAfterWriteNanos;
   private @Nullable Long maximumWeight;
   private @Nullable Long maximumSize;
+  private boolean nativeStatistics;
 
   public CaffeineConfiguration() {
     delegate = new MutableConfiguration<>();
@@ -84,6 +86,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       refreshAfterWriteNanos = config.refreshAfterWriteNanos;
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
+      nativeStatistics = config.nativeStatistics;
       executorFactory = config.executorFactory;
       expiryFactory = config.expiryFactory;
       copierFactory = config.copierFactory;
@@ -203,6 +206,26 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   /** See {@link MutableConfiguration#setStoreByValue}. */
   public void setStoreByValue(boolean isStoreByValue) {
     delegate.setStoreByValue(isStoreByValue);
+  }
+
+  /**
+   * Checks whether native statistics collection is enabled in this cache.
+   * <p>
+   * The default value is <code>false</code>.
+   *
+   * @return true if native statistics collection is enabled
+   */
+  public boolean isNativeStatisticsEnabled() {
+    return nativeStatistics;
+  }
+
+  /**
+   * Sets whether native statistics gathering is enabled on a cache.
+   *
+   * @param enabled true to enable native statistics, false to disable.
+   */
+  public void setNativeStatisticsEnabled(boolean enabled) {
+    this.nativeStatistics = enabled;
   }
 
   @Override
