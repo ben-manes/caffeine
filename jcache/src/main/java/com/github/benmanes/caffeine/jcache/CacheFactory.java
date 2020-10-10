@@ -160,7 +160,7 @@ final class CacheFactory {
       evicts |= configureExpireAfterAccess();
       evicts |= configureExpireVariably();
 
-      if (config.isRecordNativeStats()) {
+      if (config.isNativeStatistics()) {
         caffeine.recordStats();
       }
 

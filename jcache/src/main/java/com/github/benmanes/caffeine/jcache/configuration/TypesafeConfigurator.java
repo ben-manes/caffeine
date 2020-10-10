@@ -159,7 +159,6 @@ public final class TypesafeConfigurator {
       addEagerExpiration();
       addRefresh();
       addMaximum();
-      addRecordStats();
 
       return configuration;
     }
@@ -230,10 +229,11 @@ public final class TypesafeConfigurator {
       }
     }
 
-    /** Adds the JMX monitoring settings. */
+    /** Adds the JMX monitoring settings and native statistics setting. */
     private void addMonitoring() {
       configuration.setStatisticsEnabled(merged.getBoolean("monitoring.statistics"));
       configuration.setManagementEnabled(merged.getBoolean("monitoring.management"));
+      configuration.setNativeStatistics(merged.getBoolean("monitoring.native-statistics"));
     }
 
     /** Adds the JCache specification's lazy expiration settings. */
@@ -300,13 +300,6 @@ public final class TypesafeConfigurator {
       if (isSet("policy.maximum.weigher")) {
         configuration.setWeigherFactory(Optional.of(
             FactoryBuilder.factoryOf(merged.getString("policy.maximum.weigher"))));
-      }
-    }
-
-    /** Adds whether we are recording native stats. */
-    private void addRecordStats() {
-      if (isSet("record-native-stats")) {
-        configuration.setRecordNativeStats(merged.getBoolean("record-native-stats"));
       }
     }
 

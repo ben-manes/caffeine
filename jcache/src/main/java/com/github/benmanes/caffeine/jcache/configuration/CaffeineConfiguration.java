@@ -68,7 +68,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private @Nullable Long expireAfterWriteNanos;
   private @Nullable Long maximumWeight;
   private @Nullable Long maximumSize;
-  private boolean recordNativeStats;
+  private boolean nativeStatistics;
 
   public CaffeineConfiguration() {
     delegate = new MutableConfiguration<>();
@@ -92,7 +92,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       weigherFactory = config.weigherFactory;
       maximumWeight = config.maximumWeight;
       maximumSize = config.maximumSize;
-      recordNativeStats = config.recordNativeStats;
+      nativeStatistics = config.nativeStatistics;
     } else {
       tickerFactory = SYSTEM_TICKER;
       executorFactory = COMMON_POOL;
@@ -226,6 +226,24 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   /** See {@link MutableConfiguration#setManagementEnabled}. */
   public void setManagementEnabled(boolean enabled) {
     delegate.setManagementEnabled(enabled);
+  }
+
+  /**
+   * Enables native statistics collection.  Default is false.
+   *
+   * @param nativeStatistics whether to enable
+   */
+  public void setNativeStatistics(boolean nativeStatistics) {
+    this.nativeStatistics = nativeStatistics;
+  }
+
+  /**
+   * Returns whether native statistics collection is enabled.
+   *
+   * @return enabled status
+   */
+  public boolean isNativeStatistics() {
+    return nativeStatistics;
   }
 
   /**
@@ -387,24 +405,6 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
     return (maximumSize == null)
         ? OptionalLong.empty()
         : OptionalLong.of(maximumSize);
-  }
-
-  /**
-   * Enables native statistics collection.  Default is false.
-   *
-   * @param recordNativeStats whether to enable
-   */
-  public void setRecordNativeStats(boolean recordNativeStats) {
-    this.recordNativeStats = recordNativeStats;
-  }
-
-  /**
-   * Returns whether native statistics collection is enabled.
-   *
-   * @return enabled status
-   */
-  public boolean isRecordNativeStats() {
-    return recordNativeStats;
   }
 
   /**
