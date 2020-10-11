@@ -31,16 +31,25 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.testng.ITestResult.FAILURE;
 
 import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.joor.Reflect;
 import org.mockito.Mockito;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
+import org.testng.ISuite;
+import org.testng.ISuiteListener;
 import org.testng.ITestContext;
 import org.testng.ITestResult;
+import org.testng.SuiteRunner;
+import org.testng.TestListenerAdapter;
+import org.testng.TestRunner;
 import org.testng.internal.TestResult;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
@@ -62,14 +71,52 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class CacheValidationListener implements IInvokedMethodListener {
+public final class CacheValidationListener implements ISuiteListener, IInvokedMethodListener {
   private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
   private static final ITestContext testngContext = Mockito.mock(ITestContext.class);
   private static final AtomicBoolean detailedParams = new AtomicBoolean();
   private static final Object[] EMPTY_PARAMS = {};
 
+  private final List<Collection<?>> resultQueues = new CopyOnWriteArrayList<>();
+  private final AtomicBoolean beforeCleanup = new AtomicBoolean();
+
   @Override
-  public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
+  public void onStart(ISuite suite) {
+    if (suite instanceof SuiteRunner) {
+      Reflect invokedMethods = Reflect.on(suite).fields().get("invokedMethods");
+      if ((invokedMethods != null) && (invokedMethods.get() instanceof Collection)) {
+        resultQueues.add(invokedMethods.get());
+      }
+    }
+  }
+
+  @Override
+  public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
+    if (beforeCleanup.get() || !beforeCleanup.compareAndSet(false, true)) {
+      return;
+    }
+
+    // Remove unused listener that retains all test results
+    // https://github.com/cbeust/testng/issues/2096#issuecomment-706643074
+    if (testResult.getTestContext() instanceof TestRunner) {
+      TestRunner runner = (TestRunner) testResult.getTestContext();
+      runner.getTestListeners().stream()
+          .filter(listener -> listener.getClass() == TestListenerAdapter.class)
+          .flatMap(listener -> Reflect.on(listener).fields().values().stream())
+          .filter(field -> field.get() instanceof Collection)
+          .forEach(field -> resultQueues.add(field.get()));
+
+      resultQueues.add(runner.getFailedButWithinSuccessPercentageTests().getAllResults());
+      resultQueues.add(runner.getSkippedTests().getAllResults());
+      resultQueues.add(runner.getPassedTests().getAllResults());
+      resultQueues.add(runner.getFailedTests().getAllResults());
+
+      Reflect invokedMethods = Reflect.on(runner).fields().get("m_invokedMethods");
+      if ((invokedMethods != null) && (invokedMethods.get() instanceof Collection)) {
+        resultQueues.add(invokedMethods.get());
+      }
+    }
+  }
 
   @Override
   public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
@@ -174,6 +221,7 @@ public final class CacheValidationListener implements IInvokedMethodListener {
 
   /** Free memory by clearing unused resources after test execution. */
   private void cleanUp(ITestResult testResult) {
+    resultQueues.forEach(Collection::clear);
     resetMocks(testResult);
     resetCache(testResult);
 

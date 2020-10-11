@@ -35,6 +35,7 @@ dependencies {
   api libraries.checkerAnnotations
   api libraries.errorproneAnnotations
 
+  testImplementation libraries.joor
   testImplementation libraries.ycsb
   testImplementation libraries.guava
   testImplementation libraries.fastutil
