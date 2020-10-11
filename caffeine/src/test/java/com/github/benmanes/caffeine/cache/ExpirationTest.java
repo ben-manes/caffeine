@@ -185,9 +185,11 @@ public final class ExpirationTest {
     doAnswer(onRemoval).when(context.removalListener()).onRemoval(any(), any(), any());
     when(context.scheduler().schedule(any(), task.capture(), delay.capture(), any()))
         .thenReturn(Futures.immediateFuture(null));
+    Map<Integer, Duration> original = new HashMap<>();
 
     Integer key1 = 1;
     Duration value1 = Duration.ofNanos(context.ticker().read());
+    original.put(key1, value1);
     cache.put(key1, value1);
 
     Duration insertDelay = Duration.ofMillis(10);
@@ -195,6 +197,7 @@ public final class ExpirationTest {
 
     Integer key2 = 2;
     Duration value2 = Duration.ofNanos(context.ticker().read());
+    original.put(key2, value2);
     cache.put(key2, value2);
 
     Duration expireKey1 = Duration.ofNanos(1 + delay.getValue()).minus(insertDelay);
@@ -207,7 +210,7 @@ public final class ExpirationTest {
 
     Duration maxExpirationPeriod = Duration.ofNanos(
         context.expiryTime().timeNanos() + Pacer.TOLERANCE);
-    assertThat(actualExpirationPeriods, is(aMapWithSize(2)));
+    assertThat(actualExpirationPeriods, is(aMapWithSize(original.size())));
     assertThat(actualExpirationPeriods.get(key1), is(lessThanOrEqualTo(maxExpirationPeriod)));
     assertThat(actualExpirationPeriods.get(key2), is(lessThanOrEqualTo(maxExpirationPeriod)));
   }
