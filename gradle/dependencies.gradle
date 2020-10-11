@@ -25,7 +25,7 @@
  */
 ext {
   versions = [
-    akka: '2.6.9',
+    akka: '2.6.10',
     cache2k: '1.6.0.Final',
     checkerFramework: '3.7.0',
     coherence: '20.06',
@@ -51,7 +51,7 @@ ext {
     javaObjectLayout: '0.13',
     javapoet: '1.13.0',
     jcache: '1.1.1',
-    jmh: '1.25.2',
+    jmh: '1.26',
     jsr330: '1',
     nullaway: '0.7.9',
     ohc: '0.6.1',

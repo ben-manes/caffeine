@@ -30,7 +30,7 @@ case "${1:?''}" in
     run "./gradlew check --console plain"
     runSlow "./gradlew :caffeine:slowCaffeineTest --console plain"
     runSlow "./gradlew :caffeine:slowGuavaTest --console plain"
-    if [[ (${CI:-false} == "true") && (${TRAVIS_PULL_REQUEST:-false} == "false") ]]; then
+    if [[ (${CI:-false} == "true") && (${TRAVIS_BRANCH:-other} = "master") ]]; then
       run "./gradlew coveralls publish --console plain"
       runSlow "./gradlew sonarqube --console plain"
     fi

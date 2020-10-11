@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.testng.ITestResult.FAILURE;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -35,9 +36,12 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.mockito.Mockito;
 import org.testng.IInvokedMethod;
 import org.testng.IInvokedMethodListener;
+import org.testng.ITestContext;
 import org.testng.ITestResult;
+import org.testng.internal.TestResult;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
@@ -46,7 +50,12 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.Expiration;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
+import com.github.benmanes.caffeine.cache.Reset;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -55,6 +64,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
  */
 public final class CacheValidationListener implements IInvokedMethodListener {
   private static final Cache<Object, String> simpleNames = Caffeine.newBuilder().build();
+  private static final ITestContext testngContext = Mockito.mock(ITestContext.class);
   private static final AtomicBoolean detailedParams = new AtomicBoolean();
   private static final Object[] EMPTY_PARAMS = {};
 
@@ -73,7 +83,7 @@ public final class CacheValidationListener implements IInvokedMethodListener {
         testResult.setThrowable(new AssertionError(getTestName(method), testResult.getThrowable()));
       }
     } catch (Throwable caught) {
-      testResult.setStatus(ITestResult.FAILURE);
+      testResult.setStatus(FAILURE);
       testResult.setThrowable(new AssertionError(getTestName(method), caught));
     } finally {
       cleanUp(testResult);
@@ -164,13 +174,62 @@ public final class CacheValidationListener implements IInvokedMethodListener {
 
   /** Free memory by clearing unused resources after test execution. */
   private void cleanUp(ITestResult testResult) {
-    boolean briefParams = !detailedParams.get();
+    resetMocks(testResult);
+    resetCache(testResult);
 
+    boolean briefParams = !detailedParams.get();
     if (testResult.isSuccess() && briefParams) {
-      testResult.setParameters(EMPTY_PARAMS);
-      testResult.setThrowable(null);
+      clearTestResults(testResult);
     }
 
+    stringifyParams(testResult, briefParams);
+    dedupTestName(testResult, briefParams);
+    CacheSpec.interner.get().clear();
+  }
+
+  private void dedupTestName(ITestResult testResult, boolean briefParams) {
+    if ((testResult.getName() != null) && briefParams) {
+      testResult.setTestName(simpleNames.get(testResult.getName(), Object::toString));
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void resetMocks(ITestResult testResult) {
+    for (Object param : testResult.getParameters()) {
+      if (param instanceof CacheContext) {
+        CacheContext context = (CacheContext) param;
+        if (context.writer() == Writer.MOCKITO) {
+          Mockito.clearInvocations(context.cacheWriter());
+        }
+        if (context.expiryType() == CacheExpiry.MOCKITO) {
+          Mockito.clearInvocations(context.expiry());
+        }
+        if (context.cacheScheduler == CacheScheduler.MOCKITO) {
+          Mockito.clearInvocations(context.scheduler());
+        }
+      }
+    }
+  }
+
+  private void resetCache(ITestResult testResult) {
+    for (Object param : testResult.getParameters()) {
+      if (param instanceof CacheContext) {
+        CacheContext context = (CacheContext) param;
+        if (context.implementation() == Implementation.Caffeine) {
+          Reset.destroy(context.cache());
+        }
+      }
+    }
+  }
+
+  private void clearTestResults(ITestResult testResult) {
+    TestResult result = (TestResult) testResult;
+    result.setParameters(EMPTY_PARAMS);
+    result.setContext(testngContext);
+    result.setThrowable(null);
+  }
+
+  private void stringifyParams(ITestResult testResult, boolean briefParams) {
     Object[] params = testResult.getParameters();
     for (int i = 0; i < params.length; i++) {
       Object param = params[i];
@@ -185,14 +244,5 @@ public final class CacheValidationListener implements IInvokedMethodListener {
         params[i] = Objects.toString(param);
       }
     }
-
-    /*
-    // Enable in TestNG 7.0
-    if ((testResult.getName() != null) && briefParams) {
-      testResult.setTestName(simpleNames.get(testResult.getName(), Object::toString));
-    }
-    */
-
-    CacheSpec.interner.get().clear();
   }
 }

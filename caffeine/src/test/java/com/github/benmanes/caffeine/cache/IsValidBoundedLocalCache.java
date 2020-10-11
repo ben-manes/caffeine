@@ -85,9 +85,9 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkReadBuffer(BoundedLocalCache<K, V> cache) {
-    Buffer<?> buffer = cache.readBuffer;
-    Awaits.await().until(() -> {
+    Awaits.await().pollInSameThread().until(() -> {
       cache.cleanUp();
+      Buffer<?> buffer = cache.readBuffer;
       return (buffer.size() == 0) && buffer.reads() == buffer.writes();
     });
   }

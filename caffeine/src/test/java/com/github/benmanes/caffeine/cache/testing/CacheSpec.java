@@ -675,7 +675,7 @@ public @interface CacheSpec {
     DEFAULT(() -> null), // disabled
     SYSTEM(Scheduler::systemScheduler),
     THREADED(() -> Scheduler.forScheduledExecutorService(scheduledExecutor)),
-    MOCK(() -> Mockito.mock(Scheduler.class));
+    MOCKITO(() -> Mockito.mock(Scheduler.class));
 
     private final Supplier<Scheduler> scheduler;
 

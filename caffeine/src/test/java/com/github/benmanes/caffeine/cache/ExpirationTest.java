@@ -121,7 +121,7 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, compute = Compute.SYNC,
-      scheduler = CacheScheduler.MOCK)
+      scheduler = CacheScheduler.MOCKITO)
   public void schedule(Cache<Integer, Integer> cache, CacheContext context) {
     ArgumentCaptor<Long> delay = ArgumentCaptor.forClass(long.class);
     ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
@@ -153,7 +153,7 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, compute = Compute.SYNC,
-      scheduler = CacheScheduler.MOCK)
+      scheduler = CacheScheduler.MOCKITO)
   public void schedule_immediate(Cache<Integer, Integer> cache, CacheContext context) {
     doAnswer(invocation -> {
       invocation.getArgument(1, Runnable.class).run();
@@ -170,7 +170,7 @@ public final class ExpirationTest {
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
-      scheduler = CacheScheduler.MOCK, removalListener = Listener.MOCK)
+      scheduler = CacheScheduler.MOCKITO, removalListener = Listener.MOCK)
   public void schedule_delay(Cache<Integer, Duration> cache, CacheContext context)
       throws InterruptedException {
     Map<Integer, Duration> actualExpirationPeriods = new HashMap<>();

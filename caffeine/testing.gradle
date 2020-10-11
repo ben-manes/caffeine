@@ -78,7 +78,7 @@ tasks.withType(Test) {
       options {
         threadCount = Math.max(6, Runtime.getRuntime().availableProcessors() - 1)
         excludeGroups = ['slow', 'isolated']
-        jvmArgs '-XX:+UseG1GC'
+        jvmArgs '-XX:+UseG1GC', '-XX:+ParallelRefProcEnabled'
         parallel = 'methods'
       }
     }
