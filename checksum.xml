@@ -164,6 +164,7 @@
     <trusted-key id='bcf4173966770193' group='org.jetbrains' />
     <trusted-key id='b2c4d8b48a99f98a' group='org.jetbrains.kotlin' />
     <trusted-key id='66f8e4860bf74983' group='org.jooq' />
+    <trusted-key id='145d819475314d97' group='org.json' />
     <trusted-key id='8db9fa0b0718bbf9' group='org.jsr107.ri' />
     <trusted-key id='0315bfb7970a144f' group='org.jvnet.staxex' />
     <trusted-key id='f1f286fc184b6bda' group='org.kordamp.gradle' />

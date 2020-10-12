@@ -96,7 +96,7 @@ ext {
     semanticVersioning: '1.1.0',
     shadow: '6.1.0',
     sonarqube: '3.0',
-    spotbugs: '4.0.3',
+    spotbugs: '4.1.3',
     spotbugsPlugin: '4.5.1',
     stats: '0.2.2',
     versions: '0.33.0',

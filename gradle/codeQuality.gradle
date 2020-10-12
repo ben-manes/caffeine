@@ -1,6 +1,8 @@
 /**
  * Configurations for code quality analysis
  */
+import static org.gradle.util.GradleVersion.version
+
 apply plugin: 'org.kordamp.gradle.jandex'
 apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'com.github.spotbugs'
@@ -67,18 +69,18 @@ checkstyle {
 
 spotbugs {
   effort = 'max'
-  toolVersion = pluginVersions.spotbugs
   excludeFilter = file("${rootDir}/config/spotbugs/exclude.xml")
+  toolVersion = [version(pluginVersions.spotbugs), version(toolVersion.get())].max().version
 }
 
 pmd {
   ruleSets = []
-  toolVersion = pluginVersions.pmd
   ruleSetConfig = resources.text.fromFile(file("${rootDir}/config/pmd/rulesSets.xml"))
+  toolVersion = [version(pluginVersions.pmd), version(toolVersion)].max().version
 }
 
 jacoco {
-  toolVersion = pluginVersions.jacoco
+  toolVersion = [version(pluginVersions.jacoco), version(toolVersion)].max().version
 }
 
 jacocoTestReport {
