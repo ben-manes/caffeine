@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireState;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -49,9 +50,10 @@ import com.github.benmanes.caffeine.cache.Caffeine.Strength;
  *   <li>{@code recordStats}: sets {@link Caffeine#recordStats}.
  * </ul>
  * <p>
- * Durations are represented by an integer, followed by one of "d", "h", "m", or "s", representing
- * days, hours, minutes, or seconds respectively. There is currently no syntax to request expiration
- * in milliseconds, microseconds, or nanoseconds.
+ * Durations are represented as either an ISO-8601 string using {@link Duration#parse(CharSequence)}
+ * or by an integer followed by one of "d", "h", "m", or "s", representing days, hours, minutes, or
+ * seconds respectively. There is currently no short syntax to request durations in milliseconds,
+ * microseconds, or nanoseconds.
  * <p>
  * Whitespace before and after commas and equal signs is ignored. Keys may not be repeated; it is
  * also illegal to use the following pairs of keys in a single value:
@@ -81,15 +83,9 @@ public final class CaffeineSpec {
 
   @Nullable Strength keyStrength;
   @Nullable Strength valueStrength;
-
-  long expireAfterAccessDuration = UNSET_INT;
-  @Nullable TimeUnit expireAfterAccessTimeUnit;
-
-  long expireAfterWriteDuration = UNSET_INT;
-  @Nullable TimeUnit expireAfterWriteTimeUnit;
-
-  long refreshAfterWriteDuration = UNSET_INT;
-  @Nullable TimeUnit refreshAfterWriteTimeUnit;
+  @Nullable Duration expireAfterWrite;
+  @Nullable Duration expireAfterAccess;
+  @Nullable Duration refreshAfterWrite;
 
   private CaffeineSpec(String specification) {
     this.specification = requireNonNull(specification);
@@ -124,14 +120,14 @@ public final class CaffeineSpec {
         throw new IllegalStateException();
       }
     }
-    if (expireAfterAccessTimeUnit != null) {
-      builder.expireAfterAccess(expireAfterAccessDuration, expireAfterAccessTimeUnit);
+    if (expireAfterWrite != null) {
+      builder.expireAfterWrite(expireAfterWrite);
     }
-    if (expireAfterWriteTimeUnit != null) {
-      builder.expireAfterWrite(expireAfterWriteDuration, expireAfterWriteTimeUnit);
+    if (expireAfterAccess != null) {
+      builder.expireAfterAccess(expireAfterAccess);
     }
-    if (refreshAfterWriteTimeUnit != null) {
-      builder.refreshAfterWrite(refreshAfterWriteDuration, refreshAfterWriteTimeUnit);
+    if (refreshAfterWrite != null) {
+      builder.refreshAfterWrite(refreshAfterWrite);
     }
     if (recordStats) {
       builder.recordStats();
@@ -250,23 +246,20 @@ public final class CaffeineSpec {
 
   /** Configures expire after access. */
   void expireAfterAccess(String key, @Nullable String value) {
-    requireArgument(expireAfterAccessDuration == UNSET_INT, "expireAfterAccess was already set");
-    expireAfterAccessDuration = parseDuration(key, value);
-    expireAfterAccessTimeUnit = parseTimeUnit(key, value);
+    requireArgument(expireAfterAccess == null, "expireAfterAccess was already set");
+    expireAfterAccess = parseDuration(key, value);
   }
 
   /** Configures expire after write. */
   void expireAfterWrite(String key, @Nullable String value) {
-    requireArgument(expireAfterWriteDuration == UNSET_INT, "expireAfterWrite was already set");
-    expireAfterWriteDuration = parseDuration(key, value);
-    expireAfterWriteTimeUnit = parseTimeUnit(key, value);
+    requireArgument(expireAfterWrite == null, "expireAfterWrite was already set");
+    expireAfterWrite = parseDuration(key, value);
   }
 
   /** Configures refresh after write. */
   void refreshAfterWrite(String key, @Nullable String value) {
-    requireArgument(refreshAfterWriteDuration == UNSET_INT, "refreshAfterWrite was already set");
-    refreshAfterWriteDuration = parseDuration(key, value);
-    refreshAfterWriteTimeUnit = parseTimeUnit(key, value);
+    requireArgument(refreshAfterWrite == null, "refreshAfterWrite was already set");
+    refreshAfterWrite = parseDuration(key, value);
   }
 
   /** Configures the value as weak or soft references. */
@@ -299,11 +292,22 @@ public final class CaffeineSpec {
   }
 
   /** Returns a parsed duration value. */
-  static long parseDuration(String key, @Nullable String value) {
+  static Duration parseDuration(String key, @Nullable String value) {
     requireArgument((value != null) && !value.isEmpty(), "value of key %s omitted", key);
+
     @SuppressWarnings("NullAway")
-    String duration = value.substring(0, value.length() - 1);
-    return parseLong(key, duration);
+    boolean isIsoFormat = value.contains("p") || value.contains("P");
+    if (isIsoFormat) {
+      Duration duration = Duration.parse(value);
+      requireArgument(!duration.isNegative(),
+          "key %s invalid format; was %s, but the duration cannot be negative", key, value);
+      return duration;
+    }
+
+    @SuppressWarnings("NullAway")
+    long duration = parseLong(key, value.substring(0, value.length() - 1));
+    TimeUnit unit = parseTimeUnit(key, value);
+    return Duration.ofNanos(unit.toNanos(duration));
   }
 
   /** Returns a parsed {@link TimeUnit} value. */
@@ -340,26 +344,16 @@ public final class CaffeineSpec {
         && Objects.equals(keyStrength, spec.keyStrength)
         && Objects.equals(valueStrength, spec.valueStrength)
         && Objects.equals(recordStats, spec.recordStats)
-        && (durationInNanos(expireAfterAccessDuration, expireAfterAccessTimeUnit) ==
-            durationInNanos(spec.expireAfterAccessDuration, spec.expireAfterAccessTimeUnit))
-        && (durationInNanos(expireAfterWriteDuration, expireAfterWriteTimeUnit) ==
-            durationInNanos(spec.expireAfterWriteDuration, spec.expireAfterWriteTimeUnit))
-        && (durationInNanos(refreshAfterWriteDuration, refreshAfterWriteTimeUnit) ==
-            durationInNanos(spec.refreshAfterWriteDuration, spec.refreshAfterWriteTimeUnit));
+        && Objects.equals(expireAfterWrite, spec.expireAfterWrite)
+        && Objects.equals(expireAfterAccess, spec.expireAfterAccess)
+        && Objects.equals(refreshAfterWrite, spec.refreshAfterWrite);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(
-        initialCapacity, maximumSize, maximumWeight, keyStrength, valueStrength, recordStats,
-        durationInNanos(expireAfterAccessDuration, expireAfterAccessTimeUnit),
-        durationInNanos(expireAfterWriteDuration, expireAfterWriteTimeUnit),
-        durationInNanos(refreshAfterWriteDuration, refreshAfterWriteTimeUnit));
-  }
-
-  /** Converts an expiration duration/unit pair into a single long for hashing and equality. */
-  static long durationInNanos(long duration, @Nullable TimeUnit unit) {
-    return (unit == null) ? UNSET_INT : unit.toNanos(duration);
+        initialCapacity, maximumSize, maximumWeight, keyStrength, valueStrength,
+        recordStats, expireAfterWrite, expireAfterAccess, refreshAfterWrite);
   }
 
   /**

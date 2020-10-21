@@ -49,7 +49,7 @@ public interface Scheduler {
    * @param command the runnable task to schedule
    * @param delay how long to delay, in units of {@code unit}
    * @param unit a {@code TimeUnit} determining how to interpret the {@code delay} parameter
-   * @return a scheduled future representing pending completion of the task
+   * @return a scheduled future representing pending submission of the task
    */
   @NonNull Future<?> schedule(@NonNull Executor executor,
       @NonNull Runnable command, @Positive long delay, @NonNull TimeUnit unit);

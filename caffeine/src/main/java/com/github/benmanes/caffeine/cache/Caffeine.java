@@ -153,9 +153,9 @@ public final class Caffeine<K, V> {
   long maximumWeight = UNSET_INT;
   int initialCapacity = UNSET_INT;
 
-  long refreshNanos = UNSET_INT;
   long expireAfterWriteNanos = UNSET_INT;
   long expireAfterAccessNanos = UNSET_INT;
+  long refreshAfterWriteNanos = UNSET_INT;
 
   @Nullable RemovalListener<? super K, ? super V> removalListener;
   @Nullable Supplier<StatsCounter> statsCounterSupplier;
@@ -781,18 +781,19 @@ public final class Caffeine<K, V> {
   @NonNull
   public Caffeine<K, V> refreshAfterWrite(@NonNegative long duration, @NonNull TimeUnit unit) {
     requireNonNull(unit);
-    requireState(refreshNanos == UNSET_INT, "refresh was already set to %s ns", refreshNanos);
+    requireState(refreshAfterWriteNanos == UNSET_INT,
+        "refreshAfterWriteNanos was already set to %s ns", refreshAfterWriteNanos);
     requireArgument(duration > 0, "duration must be positive: %s %s", duration, unit);
-    this.refreshNanos = unit.toNanos(duration);
+    this.refreshAfterWriteNanos = unit.toNanos(duration);
     return this;
   }
 
   long getRefreshAfterWriteNanos() {
-    return refreshes() ? refreshNanos : DEFAULT_REFRESH_NANOS;
+    return refreshAfterWrite() ? refreshAfterWriteNanos : DEFAULT_REFRESH_NANOS;
   }
 
-  boolean refreshes() {
-    return refreshNanos != UNSET_INT;
+  boolean refreshAfterWrite() {
+    return refreshAfterWriteNanos != UNSET_INT;
   }
 
   /**
@@ -817,7 +818,7 @@ public final class Caffeine<K, V> {
   @NonNull
   Ticker getTicker() {
     boolean useTicker = expiresVariable() || expiresAfterAccess()
-        || expiresAfterWrite() || refreshes() || isRecordingStats();
+        || expiresAfterWrite() || refreshAfterWrite() || isRecordingStats();
     return useTicker
         ? (ticker == null) ? Ticker.systemTicker() : ticker
         : Ticker.disabledTicker();
@@ -1017,7 +1018,7 @@ public final class Caffeine<K, V> {
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return isBounded() || refreshes()
+    return isBounded() || refreshAfterWrite()
         ? new BoundedLocalCache.BoundedLocalLoadingCache<>(self, loader)
         : new UnboundedLocalCache.UnboundedLocalLoadingCache<>(self, loader);
   }
@@ -1109,13 +1110,13 @@ public final class Caffeine<K, V> {
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
-    return isBounded() || refreshes()
+    return isBounded() || refreshAfterWrite()
         ? new BoundedLocalCache.BoundedLocalAsyncLoadingCache<>(self, loader)
         : new UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<>(self, loader);
   }
 
   void requireNonLoadingCache() {
-    requireState(refreshNanos == UNSET_INT, "refreshAfterWrite requires a LoadingCache");
+    requireState(refreshAfterWriteNanos == UNSET_INT, "refreshAfterWrite requires a LoadingCache");
   }
 
   void requireWeightWithWeigher() {
@@ -1172,8 +1173,8 @@ public final class Caffeine<K, V> {
     if (expiry != null) {
       s.append("expiry, ");
     }
-    if (refreshNanos != UNSET_INT) {
-      s.append("refreshNanos=").append(refreshNanos).append("ns, ");
+    if (refreshAfterWriteNanos != UNSET_INT) {
+      s.append("refreshAfterWriteNanos=").append(refreshAfterWriteNanos).append("ns, ");
     }
     if (keyStrength != null) {
       s.append("keyStrength=").append(keyStrength.toString().toLowerCase(US)).append(", ");

@@ -90,7 +90,7 @@ public final class LocalCacheSelectorCode {
         .beginControlFlow("if (builder.expiresAfterWrite())")
             .addStatement("sb.append('W')")
         .endControlFlow()
-        .beginControlFlow("if (builder.refreshes())")
+        .beginControlFlow("if (builder.refreshAfterWrite())")
             .addStatement("sb.append('R')")
         .endControlFlow();
     return this;
