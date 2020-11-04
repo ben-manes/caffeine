@@ -16,8 +16,10 @@
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.builder.ToStringStyle.MULTI_LINE_STYLE;
 
-import com.google.common.base.MoreObjects;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
 import com.google.common.base.Stopwatch;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
@@ -219,6 +221,6 @@ public final class PolicyStats {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).addValue(name).toString();
+    return ToStringBuilder.reflectionToString(this, MULTI_LINE_STYLE);
   }
 }

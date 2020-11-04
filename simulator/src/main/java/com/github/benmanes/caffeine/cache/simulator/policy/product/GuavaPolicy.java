@@ -38,19 +38,23 @@ public final class GuavaPolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
-  public GuavaPolicy(Config config) {
+  public GuavaPolicy(Config config, Set<Characteristic> characteristics) {
     policyStats = new PolicyStats("product.Guava");
     BasicSettings settings = new BasicSettings(config);
-    cache = CacheBuilder.newBuilder()
-        .maximumWeight(settings.maximumSize())
-        .weigher((Long key, AccessEvent value) -> value.weight())
-        .removalListener(notification -> policyStats.recordEviction())
-        .build();
+    CacheBuilder<Long, AccessEvent> builder = CacheBuilder.newBuilder()
+        .removalListener(notification -> policyStats.recordEviction());
+    if (characteristics.contains(WEIGHTED)) {
+      builder.maximumWeight(settings.maximumSize());
+      builder.weigher((key, value) -> value.weight());
+    } else {
+      builder.maximumSize(settings.maximumSize());
+    }
+    cache = builder.build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new GuavaPolicy(config));
+  public static Set<Policy> policies(Config config, Set<Characteristic> characteristics) {
+    return ImmutableSet.of(new GuavaPolicy(config, characteristics));
   }
 
   @Override public Set<Characteristic> characteristics() {
@@ -59,12 +63,15 @@ public final class GuavaPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    Object value = cache.getIfPresent(event.key());
+    AccessEvent value = cache.getIfPresent(event.key());
     if (value == null) {
       cache.put(event.key(), event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
+      if (event.weight() != value.weight()) {
+        cache.put(event.key(), event);
+      }
     }
   }
 

@@ -43,28 +43,30 @@ public final class Cache2kPolicy implements Policy {
 
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
-  private final long maximumSize;
 
-  public Cache2kPolicy(Config config) {
+  public Cache2kPolicy(Config config, Set<Characteristic> characteristics) {
     logger.setLevel(Level.WARNING);
 
     policyStats = new PolicyStats("product.Cache2k");
     CacheEntryEvictedListener<Long, AccessEvent> listener =
         (cache, entry) -> policyStats.recordEviction();
     BasicSettings settings = new BasicSettings(config);
-    cache = Cache2kBuilder.of(Long.class, AccessEvent.class)
-        .weigher((Long key, AccessEvent value) -> value.weight())
-        .maximumWeight(settings.maximumSize())
+    Cache2kBuilder<Long, AccessEvent> builder = Cache2kBuilder.of(Long.class, AccessEvent.class)
         .addListener(listener)
         .strictEviction(true)
-        .eternal(true)
-        .build();
-    maximumSize = settings.maximumSize();
+        .eternal(true);
+    if (characteristics.contains(WEIGHTED)) {
+      builder.weigher((Long key, AccessEvent value) -> value.weight());
+      builder.maximumWeight(settings.maximumSize());
+    } else {
+      builder.entryCapacity(settings.maximumSize());
+    }
+    cache = builder.build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new Cache2kPolicy(config));
+  public static Set<Policy> policies(Config config, Set<Characteristic> characteristics) {
+    return ImmutableSet.of(new Cache2kPolicy(config, characteristics));
   }
 
   @Override public Set<Characteristic> characteristics() {
@@ -73,15 +75,15 @@ public final class Cache2kPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    Object value = cache.peek(event.key());
+    AccessEvent value = cache.peek(event.key());
     if (value == null) {
-      policyStats.recordWeightedMiss(event.weight());
-      if (cache.asMap().size() == maximumSize) {
-        policyStats.recordEviction();
-      }
       cache.put(event.key(), event);
+      policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
+      if (event.weight() != value.weight()) {
+        cache.put(event.key(), event);
+      }
     }
   }
 

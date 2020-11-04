@@ -40,6 +40,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.Cambri
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.K5cloudTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentBlockTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentPhotoTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.twitter.TwitterTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
@@ -72,6 +73,7 @@ public enum TraceFormat {
   SNIA_K5CLOUD(K5cloudTraceReader::new),
   SNIA_TENCENT_BLOCK(TencentBlockTraceReader::new),
   SNIA_TENCENT_PHOTO(TencentPhotoTraceReader::new),
+  TWITTER(TwitterTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
   UMASS_YOUTUBE(YoutubeTraceReader::new),
   WIKIPEDIA(WikipediaTraceReader::new);

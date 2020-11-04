@@ -48,12 +48,16 @@ public final class LinkedPolicy implements Policy {
   final EvictionPolicy policy;
   final Admittor admittor;
   final long maximumSize;
+  final boolean weighted;
   final Node sentinel;
+
   long currentSize;
 
-  public LinkedPolicy(Admission admission, EvictionPolicy policy, Config config) {
+  public LinkedPolicy(Config config, Set<Characteristic> characteristics,
+      Admission admission, EvictionPolicy policy) {
     this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
     this.admittor = admission.from(config, policyStats);
+    this.weighted = characteristics.contains(WEIGHTED);
 
     BasicSettings settings = new BasicSettings(config);
     this.data = new Long2ObjectOpenHashMap<>();
@@ -63,10 +67,11 @@ public final class LinkedPolicy implements Policy {
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config, EvictionPolicy policy) {
+  public static Set<Policy> policies(Config config,
+      Set<Characteristic> characteristics, EvictionPolicy policy) {
     BasicSettings settings = new BasicSettings(config);
     return settings.admission().stream().map(admission ->
-      new LinkedPolicy(admission, policy, config)
+      new LinkedPolicy(config, characteristics, admission, policy)
     ).collect(toSet());
   }
 
@@ -82,7 +87,7 @@ public final class LinkedPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    final int weight = event.weight();
+    final int weight = weighted ? event.weight() : 1;
     final long key = event.key();
     Node old = data.get(key);
     admittor.record(key);

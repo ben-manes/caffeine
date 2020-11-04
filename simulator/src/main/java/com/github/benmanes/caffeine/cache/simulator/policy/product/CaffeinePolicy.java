@@ -68,12 +68,15 @@ public final class CaffeinePolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    Object value = cache.getIfPresent(event.key());
+    AccessEvent value = cache.getIfPresent(event.key());
     if (value == null) {
       cache.put(event.key(), event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
+      if (event.weight() != value.weight()) {
+        cache.put(event.key(), event);
+      }
     }
   }
 

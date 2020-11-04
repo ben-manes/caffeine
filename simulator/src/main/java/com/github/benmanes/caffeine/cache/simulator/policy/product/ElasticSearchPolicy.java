@@ -41,19 +41,21 @@ public final class ElasticSearchPolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
-  public ElasticSearchPolicy(Config config) {
+  public ElasticSearchPolicy(Config config, Set<Characteristic> characteristics) {
     policyStats = new PolicyStats("product.ElasticSearch");
     BasicSettings settings = new BasicSettings(config);
-    cache = CacheBuilder.<Long, AccessEvent>builder()
+    CacheBuilder<Long, AccessEvent> builder = CacheBuilder.<Long, AccessEvent>builder()
         .removalListener(notification -> policyStats.recordEviction())
-        .setMaximumWeight(settings.maximumSize())
-        .weigher((key, value) -> value.weight())
-        .build();
+        .setMaximumWeight(settings.maximumSize());
+    if (characteristics.contains(WEIGHTED)) {
+      builder.weigher((key, value) -> value.weight());
+    }
+    cache = builder.build();
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new ElasticSearchPolicy(config));
+  public static Set<Policy> policies(Config config, Set<Characteristic> characteristics) {
+    return ImmutableSet.of(new ElasticSearchPolicy(config, characteristics));
   }
 
   @Override public Set<Characteristic> characteristics() {
@@ -62,12 +64,15 @@ public final class ElasticSearchPolicy implements Policy {
 
   @Override
   public void record(AccessEvent event) {
-    Object value = cache.get(event.key());
+    AccessEvent value = cache.get(event.key());
     if (value == null) {
       cache.put(event.key(), event);
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());
+      if (event.weight() != value.weight()) {
+        cache.put(event.key(), event);
+      }
     }
   }
 

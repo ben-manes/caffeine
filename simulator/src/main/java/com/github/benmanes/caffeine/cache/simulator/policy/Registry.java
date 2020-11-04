@@ -128,7 +128,7 @@ public final class Registry {
   private void registerLinked() {
     Stream.of(LinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "linked." + priority.name();
-      factories.put(id, config -> LinkedPolicy.policies(config, priority));
+      factories.put(id, config -> LinkedPolicy.policies(config, characteristics, priority));
     });
     Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
       String id = "linked." + priority.name();
@@ -188,14 +188,15 @@ public final class Registry {
 
   private void registerProduct() {
     factories.put("product.OHC", OhcPolicy::policies);
-    factories.put("product.Guava", GuavaPolicy::policies);
     factories.put("product.Tcache", TCachePolicy::policies);
-    factories.put("product.Cache2k", Cache2kPolicy::policies);
     factories.put("product.Ehcache3", Ehcache3Policy::policies);
     factories.put("product.Collision", CollisionPolicy::policies);
     factories.put("product.ExpiringMap", ExpiringMapPolicy::policies);
-    factories.put("product.Elasticsearch", ElasticSearchPolicy::policies);
+    factories.put("product.Guava", config -> GuavaPolicy.policies(config, characteristics));
+    factories.put("product.Cache2k", config -> Cache2kPolicy.policies(config, characteristics));
     factories.put("product.Caffeine", config -> CaffeinePolicy.policies(config, characteristics));
+    factories.put("product.Elasticsearch", config ->
+        ElasticSearchPolicy.policies(config, characteristics));
   }
 
   private interface Factory extends Function<Config, Set<Policy>> {}

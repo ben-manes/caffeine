@@ -12,6 +12,7 @@ dependencies {
   implementation libraries.ohc
   implementation libraries.akka
   implementation libraries.ycsb
+  implementation libraries.zstd
   implementation libraries.guava
   implementation libraries.stream
   implementation libraries.tcache
