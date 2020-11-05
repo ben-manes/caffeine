@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.umass.storage;
 
-import java.io.IOException;
 import java.math.RoundingMode;
 import java.util.stream.LongStream;
 
@@ -37,7 +36,7 @@ public final class StorageTraceReader extends TextTraceReader implements KeyOnly
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines().flatMapToLong(line -> {
       String[] array = line.split(",", 5);
       if (array.length <= 4) {

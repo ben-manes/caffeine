@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -45,25 +46,29 @@ public abstract class AbstractTraceReader implements TraceReader {
   }
 
   /** Returns the input stream of the trace data. */
-  protected InputStream readFile() throws IOException {
-    BufferedInputStream input = new BufferedInputStream(openFile(), BUFFER_SIZE);
-    input.mark(100);
+  protected InputStream readFile() {
     try {
-      return new XZInputStream(input);
+      BufferedInputStream input = new BufferedInputStream(openFile(), BUFFER_SIZE);
+      input.mark(100);
+      try {
+        return new XZInputStream(input);
+      } catch (IOException e) {
+        input.reset();
+      }
+      try {
+        return new CompressorStreamFactory().createCompressorInputStream(input);
+      } catch (CompressorException e) {
+        input.reset();
+      }
+      try {
+        return new ArchiveStreamFactory().createArchiveInputStream(input);
+      } catch (ArchiveException e) {
+        input.reset();
+      }
+      return input;
     } catch (IOException e) {
-      input.reset();
+      throw new UncheckedIOException(e);
     }
-    try {
-      return new CompressorStreamFactory().createCompressorInputStream(input);
-    } catch (CompressorException e) {
-      input.reset();
-    }
-    try {
-      return new ArchiveStreamFactory().createArchiveInputStream(input);
-    } catch (ArchiveException e) {
-      input.reset();
-    }
-    return input;
   }
 
   /** Returns the input stream for the raw file. */

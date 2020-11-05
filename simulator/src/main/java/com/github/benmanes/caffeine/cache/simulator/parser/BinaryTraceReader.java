@@ -45,7 +45,7 @@ public abstract class BinaryTraceReader extends AbstractTraceReader {
 
   @Override
   @SuppressWarnings("PMD.CloseResource")
-  public Stream<AccessEvent> events() throws IOException {
+  public Stream<AccessEvent> events() {
     DataInputStream input = new DataInputStream(new BufferedInputStream(readFile()));
     Stream<AccessEvent> stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(
         new TraceIterator(input), Spliterator.ORDERED), /* parallel */ false);

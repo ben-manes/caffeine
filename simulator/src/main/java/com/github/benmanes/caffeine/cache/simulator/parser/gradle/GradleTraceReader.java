@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.gradle;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.util.stream.LongStream;
 
@@ -34,7 +33,7 @@ public final class GradleTraceReader extends TextTraceReader implements KeyOnlyT
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines()
         .map(uuid -> new BigInteger(uuid, 16))
         .mapToLong(num -> num.shiftRight(64).longValue() ^ num.longValue());

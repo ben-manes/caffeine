@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -48,7 +47,7 @@ public final class TencentPhotoTraceReader extends TextTraceReader {
   }
 
   @Override
-  public Stream<AccessEvent> events() throws IOException {
+  public Stream<AccessEvent> events() {
     return lines()
         .map(line -> line.split(" "))
         .filter(array -> array[2].equals(JPEG_FORMAT) || array[2].equals(WEBP_FORMAT))

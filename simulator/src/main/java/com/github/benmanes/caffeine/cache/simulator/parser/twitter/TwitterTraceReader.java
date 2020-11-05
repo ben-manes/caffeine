@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser.twitter;
 
 import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -45,7 +44,7 @@ public final class TwitterTraceReader extends TextTraceReader {
   }
 
   @Override
-  public Stream<AccessEvent> events() throws IOException {
+  public Stream<AccessEvent> events() {
     return lines()
         .map(line -> line.split(","))
         .filter(array -> {

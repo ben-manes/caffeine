@@ -93,7 +93,7 @@ ext {
     jmh: '0.5.2',
     jmhReport: '0.9.0',
     nullaway: '1.0.2',
-    pmd: '6.28.0',
+    pmd: '6.29.0',
     semanticVersioning: '1.1.0',
     shadow: '6.1.0',
     sonarqube: '3.0',
@@ -146,7 +146,7 @@ ext {
     univocityParsers: "com.univocity:univocity-parsers:${versions.univocityParsers}",
     ycsb: "site.ycsb:core:${versions.ycsb}",
     xz: "org.tukaani:xz:${versions.xz}",
-    zstd: "com.github.luben:zstd-jni:${versions.zstd}:darwin_x86_64",
+    zstd: "com.github.luben:zstd-jni:${versions.zstd}",
   ]
   testLibraries = [
     awaitility: "org.awaitility:awaitility:${testVersions.awaitility}",

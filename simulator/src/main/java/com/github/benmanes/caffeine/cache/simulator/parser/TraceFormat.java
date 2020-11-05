@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.simulator.parser;
 import static java.util.Locale.US;
 import static java.util.stream.Collectors.toList;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -99,12 +98,8 @@ public enum TraceFormat {
             .collect(Sets.toImmutableEnumSet());
       }
 
-      @Override public Stream<AccessEvent> events() throws IOException {
-        Stream<AccessEvent> events = Stream.empty();
-        for (TraceReader reader : readers()) {
-          events = Stream.concat(events, reader.events());
-        }
-        return events;
+      @Override public Stream<AccessEvent> events() {
+        return readers().stream().flatMap(TraceReader::events);
       }
 
       private List<TraceReader> readers() {

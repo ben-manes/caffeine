@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.umass.network;
 
-import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -35,7 +34,7 @@ public final class YoutubeTraceReader extends TextTraceReader implements KeyOnly
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines()
         .map(line -> line.split(" "))
         .filter(array -> array[3].equals("GETVIDEO"))

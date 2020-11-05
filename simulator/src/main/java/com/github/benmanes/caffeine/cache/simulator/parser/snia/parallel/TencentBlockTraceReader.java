@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel;
 
-import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -36,7 +35,7 @@ public final class TencentBlockTraceReader extends TextTraceReader implements Ke
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines()
         .map(line -> line.split(","))
         .filter(array -> array[3].charAt(0) == READ)

@@ -15,7 +15,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser.camelab;
 
-import java.io.IOException;
 import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TextTraceReader;
@@ -35,7 +34,7 @@ public final class CamelabTraceReader extends TextTraceReader implements KeyOnly
   }
 
   @Override
-  public LongStream keys() throws IOException {
+  public LongStream keys() {
     return lines().flatMapToLong(line -> {
       String[] array = line.split(" ", 5);
       char readWrite = Character.toLowerCase(array[1].charAt(0));

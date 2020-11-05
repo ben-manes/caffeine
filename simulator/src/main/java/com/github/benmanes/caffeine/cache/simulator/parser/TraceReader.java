@@ -13,7 +13,6 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.parser;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -41,7 +40,7 @@ public interface TraceReader {
    *
    * @return a lazy stream of cache events
    */
-  Stream<AccessEvent> events() throws IOException;
+  Stream<AccessEvent> events();
 
   /** A trace reader that that does not contain external event metadata. */
   interface KeyOnlyTraceReader extends TraceReader {
@@ -50,10 +49,10 @@ public interface TraceReader {
       return ImmutableSet.of();
     }
 
-    @Override default Stream<AccessEvent> events() throws IOException {
+    @Override default Stream<AccessEvent> events() {
       return keys().mapToObj(AccessEvent::forKey);
     }
 
-    LongStream keys() throws IOException;
+    LongStream keys();
   }
 }
