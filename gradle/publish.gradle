@@ -66,8 +66,8 @@ publishing {
           url = project.version.releaseBuild ? releasesUrl : snapshotsUrl
 
           credentials {
-            username = project.properties['nexusUsername'] ?: System.env.'nexusUsername'
-            password = project.properties['nexusPassword'] ?: System.env.'nexusPassword'
+            username = project.properties['nexusUsername'] ?: System.env.'NEXUS_USERNAME'
+            password = project.properties['nexusPassword'] ?: System.env.'NEXUS_PASSWORD'
           }
         }
       }

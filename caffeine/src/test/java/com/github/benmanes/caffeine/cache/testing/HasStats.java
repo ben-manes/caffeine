@@ -15,15 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static org.hamcrest.Matchers.is;
 
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
 
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 
 /**
@@ -58,25 +59,45 @@ public final class HasStats extends TypeSafeDiagnosingMatcher<CacheContext> {
     if (!context.isRecordingStats()) {
       return true;
     }
+    if ((context.cacheExecutor != CacheExecutor.DIRECT)
+        && context.executor() instanceof TrackingExecutor) {
+      TrackingExecutor executor = (TrackingExecutor) context.executor();
+      if (executor.submitted() != executor.completed()) {
+        await().pollInSameThread().until(() -> executor.submitted() == executor.completed());
+      }
+    }
 
     CacheStats stats = context.stats();
     desc = new DescriptionBuilder(description);
-    ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS);
     switch (type) {
       case HIT:
-        return desc.expectThat(type.name(), stats.hitCount(), is(count)).matches();
+        return awaitStatistic(context, stats::hitCount);
       case MISS:
-        return desc.expectThat(type.name(), stats.missCount(), is(count)).matches();
+        return awaitStatistic(context, stats::missCount);
       case EVICTION_COUNT:
-        return desc.expectThat(type.name(), stats.evictionCount(), is(count)).matches();
+        return awaitStatistic(context, stats::evictionCount);
       case EVICTION_WEIGHT:
-        return desc.expectThat(type.name(), stats.evictionWeight(), is(count)).matches();
+        return awaitStatistic(context, stats::evictionWeight);
       case LOAD_SUCCESS:
-        return desc.expectThat(type.name(), stats.loadSuccessCount(), is(count)).matches();
+        return awaitStatistic(context, stats::loadSuccessCount);
       case LOAD_FAILURE:
-        return desc.expectThat(type.name(), stats.loadFailureCount(), is(count)).matches();
+        return awaitStatistic(context, stats::loadFailureCount);
       default:
         throw new AssertionError("Unknown stats type");
+    }
+  }
+
+  private boolean awaitStatistic(CacheContext context, Callable<Long> statistic) {
+    try {
+      if (statistic.call().equals(count)) {
+        return true;
+      } else if (context.cacheExecutor != CacheExecutor.DIRECT)  {
+        await().pollInSameThread().until(statistic, is(count));
+        return true;
+      }
+      return false;
+    } catch (Exception e) {
+      return desc.expectThat(type.name(), statistic, is(count)).matches();
     }
   }
 

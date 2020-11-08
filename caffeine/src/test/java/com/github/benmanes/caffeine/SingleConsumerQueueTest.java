@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine;
 
 import static com.github.benmanes.caffeine.IsValidSingleConsumerQueue.validate;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static com.google.common.collect.Iterators.elementsEqual;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -45,7 +46,6 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.SingleConsumerQueueTest.ValidatingQueueListener;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -426,7 +426,7 @@ public class SingleConsumerQueueTest {
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      Awaits.await().untilAtomic(started, is(2));
+      await().untilAtomic(started, is(2));
       for (int i = 0; i < PRODUCE; i++) {
         queue.add(i);
       }
@@ -434,14 +434,14 @@ public class SingleConsumerQueueTest {
     });
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      Awaits.await().untilAtomic(started, is(2));
+      await().untilAtomic(started, is(2));
       for (int i = 0; i < PRODUCE; i++) {
         while (queue.poll() == null) {}
       }
       finished.incrementAndGet();
     });
 
-    Awaits.await().untilAtomic(finished, is(2));
+    await().untilAtomic(finished, is(2));
     assertThat(queue, is(deeplyEmpty()));
   }
 
@@ -463,7 +463,7 @@ public class SingleConsumerQueueTest {
 
     ConcurrentTestHarness.execute(() -> {
       started.incrementAndGet();
-      Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
+      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < (NUM_PRODUCERS * PRODUCE); i++) {
         while (queue.poll() == null) {}
       }
@@ -472,14 +472,14 @@ public class SingleConsumerQueueTest {
 
     ConcurrentTestHarness.timeTasks(NUM_PRODUCERS, () -> {
       started.incrementAndGet();
-      Awaits.await().untilAtomic(started, is(NUM_PRODUCERS + 1));
+      await().untilAtomic(started, is(NUM_PRODUCERS + 1));
       for (int i = 0; i < PRODUCE; i++) {
         queue.add(i);
       }
       finished.incrementAndGet();
     });
 
-    Awaits.await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
+    await().untilAtomic(finished, is(NUM_PRODUCERS + 1));
     assertThat(queue, is(deeplyEmpty()));
   }
 

@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache.issues;
 
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -99,7 +100,7 @@ public final class Issue298Test {
       do {
         cache.get(key);
       } while (!endRead.get());
-    });
+    }, executor);
 
     // Ran expireAfterCreate (expire: infinite -> create)
     doCreate.set(true);

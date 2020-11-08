@@ -72,7 +72,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -162,16 +161,16 @@ public final class AsyncCacheTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = cache.get(key, k -> {
-      Awaits.await().untilTrue(ready);
+      await().untilTrue(ready);
       return null;
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     ready.set(true);
-    Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
-    Awaits.await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
-    Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    await().untilTrue(done);
+    await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isDone(), is(true));
     assertThat(cache.synchronous().asMap(), not(hasKey(key)));
@@ -199,16 +198,16 @@ public final class AsyncCacheTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = cache.get(context.absentKey(), k -> {
-      Awaits.await().untilTrue(ready);
+      await().untilTrue(ready);
       throw new IllegalStateException();
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     ready.set(true);
-    Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
-    Awaits.await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
-    Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    await().untilTrue(done);
+    await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
@@ -220,15 +219,15 @@ public final class AsyncCacheTest {
   public void getFunc_absent_cancelled(AsyncCache<Integer, Integer> cache, CacheContext context) {
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = cache.get(context.absentKey(), k -> {
-      Awaits.await().until(done::get);
+      await().until(done::get);
       return null;
     });
     valueFuture.whenComplete((r, e) -> done.set(true));
     valueFuture.cancel(true);
 
-    Awaits.await().untilTrue(done);
-    await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
-    await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    await().untilTrue(done);
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isDone(), is(true));
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));

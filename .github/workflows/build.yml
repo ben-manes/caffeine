@@ -1,0 +1,63 @@
+name: build
+on: [ push, pull_request ]
+
+env:
+  ORG_GRADLE_PROJECT_checksumFailOn: build_finish
+  ORG_GRADLE_PROJECT_checksumIgnore: false
+  ORG_GRADLE_PROJECT_checksumPrint: true
+  MAX_JVM: 15
+  MIN_JVM: 8
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ 8, 15 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/caches
+            ~/.sonar/cache
+            ~/.m2
+          key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+      - name: Run tests
+        run: ./.github/scripts/test.sh
+      - name: Publish Coverage
+        if: >
+          success()
+          && matrix.java == env.MIN_JVM
+          && github.event_name == 'push'
+          && endsWith(github.ref, github.event.repository.default_branch)
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        run: ./gradlew coveralls
+      - name: SonarQube
+        if: >
+          success()
+          && matrix.java == env.MAX_JVM
+          && github.event_name == 'push'
+          && endsWith(github.ref, github.event.repository.default_branch)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonarqube
+      - name: Publish Snapshot
+        if: >
+          success()
+          && matrix.java == env.MIN_JVM
+          && github.event_name == 'push'
+          && endsWith(github.ref, github.event.repository.default_branch)
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: ./gradlew publish

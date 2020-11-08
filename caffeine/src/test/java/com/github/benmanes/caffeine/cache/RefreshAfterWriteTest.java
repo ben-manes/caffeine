@@ -360,7 +360,7 @@ public final class RefreshAfterWriteTest {
 
     await().until(() -> cache.getIfPresent(key), is(refreshed));
     await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
-    await().until(() -> context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
   /* --------------- Policy --------------- */

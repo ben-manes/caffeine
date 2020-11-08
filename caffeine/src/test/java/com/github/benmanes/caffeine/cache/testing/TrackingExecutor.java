@@ -29,32 +29,48 @@ import com.google.common.util.concurrent.ForwardingExecutorService;
  */
 public final class TrackingExecutor extends ForwardingExecutorService {
   private final ExecutorService delegate;
-  private final AtomicInteger failures;
+  private final AtomicInteger submitted;
+  private final AtomicInteger completed;
+  private final AtomicInteger failed;
 
   public TrackingExecutor(ExecutorService executor) {
     delegate = requireNonNull(executor);
-    failures = new AtomicInteger();
+    submitted = new AtomicInteger();
+    completed = new AtomicInteger();
+    failed = new AtomicInteger();
   }
 
   @Override
   public void execute(Runnable command) {
     try {
+      submitted.incrementAndGet();
       delegate.execute(() -> {
         try {
           command.run();
         } catch (Throwable t) {
-          failures.incrementAndGet();
+          failed.incrementAndGet();
           throw t;
+        } finally {
+          completed.incrementAndGet();
         }
       });
     } catch (Throwable t) {
-      failures.incrementAndGet();
+      completed.incrementAndGet();
+      failed.incrementAndGet();
       throw t;
     }
   }
 
-  public int failureCount() {
-    return failures.get();
+  public int submitted() {
+    return submitted.get();
+  }
+
+  public int completed() {
+    return completed.get();
+  }
+
+  public int failed() {
+    return failed.get();
   }
 
   @Override

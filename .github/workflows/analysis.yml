@@ -1,0 +1,32 @@
+name: analysis
+on: [ push, pull_request ]
+
+env:
+  ORG_GRADLE_PROJECT_checksumFailOn: build_finish
+  ORG_GRADLE_PROJECT_checksumIgnore: false
+  ORG_GRADLE_PROJECT_checksumPrint: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ 8, 15 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/caches
+            ~/.sonar/cache
+            ~/.m2
+          key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+      - name: Run analyzers
+        run: ./.github/scripts/analyze.sh

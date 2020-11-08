@@ -88,7 +88,7 @@ ext {
     coveralls: '2.8.4',
     coverity: '1.0.10',
     errorprone: '1.3.0',
-    jacoco: '0.8.5',
+    jacoco: '0.8.6',
     jandex: '0.8.0',
     jmh: '0.5.2',
     jmhReport: '0.9.0',
@@ -98,9 +98,9 @@ ext {
     shadow: '6.1.0',
     sonarqube: '3.0',
     spotbugs: '4.1.3',
-    spotbugsPlugin: '4.5.1',
+    spotbugsPlugin: '4.6.0',
     stats: '0.2.2',
-    versions: '0.34.0',
+    versions: '0.35.0',
   ]
 
   libraries = [

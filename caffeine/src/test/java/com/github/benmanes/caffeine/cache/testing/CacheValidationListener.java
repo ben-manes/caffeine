@@ -23,6 +23,7 @@ import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
@@ -31,6 +32,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.testng.ITestResult.FAILURE;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +62,7 @@ import com.github.benmanes.caffeine.cache.Policy.Eviction;
 import com.github.benmanes.caffeine.cache.Policy.Expiration;
 import com.github.benmanes.caffeine.cache.Policy.VarExpiration;
 import com.github.benmanes.caffeine.cache.Reset;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExpiry;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheScheduler;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.ExecutorFailure;
@@ -139,8 +142,39 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
   /** Validates the internal state of the cache. */
   private void validate(ITestResult testResult) {
+    CacheContext context = Arrays.stream(testResult.getParameters())
+        .filter(param -> param instanceof CacheContext)
+        .map(param -> (CacheContext) param)
+        .findFirst().orElse(null);
+    if (context != null) {
+      awaitExecutor(context);
+    }
+
+    boolean foundCache = findAndCheckCache(testResult);
+    if (context != null) {
+      if (!foundCache) {
+        assertThat(context.cache, is(validCache()));
+      }
+      checkWriter(testResult, context);
+      checkNoStats(testResult, context);
+      checkExecutor(testResult, context);
+    }
+  }
+
+  /** Waits until the executor has completed all of the submitted work. */
+  private void awaitExecutor(CacheContext context) {
+    if ((context.cacheExecutor != CacheExecutor.DIRECT)
+        && context.executor() instanceof TrackingExecutor) {
+      TrackingExecutor executor = (TrackingExecutor) context.executor();
+      if (executor.submitted() != executor.completed()) {
+        await().pollInSameThread().until(() -> executor.submitted() == executor.completed());
+      }
+    }
+  }
+
+  /** Returns if the cache was found and, if so, then validates it. */
+  private boolean findAndCheckCache(ITestResult testResult) {
     boolean foundCache = false;
-    CacheContext context = null;
     for (Object param : testResult.getParameters()) {
       if (param instanceof Cache<?, ?>) {
         foundCache = true;
@@ -151,18 +185,9 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
       } else if (param instanceof Map<?, ?>) {
         foundCache = true;
         assertThat((Map<?, ?>) param, is(validAsMap()));
-      } else if (param instanceof CacheContext) {
-        context = (CacheContext) param;
       }
     }
-    if (context != null) {
-      if (!foundCache) {
-        assertThat(context.cache, is(validCache()));
-      }
-      checkWriter(testResult, context);
-      checkNoStats(testResult, context);
-      checkExecutor(testResult, context);
-    }
+    return foundCache;
   }
 
   /** Returns the name of the executed test. */
@@ -186,9 +211,9 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
 
     TrackingExecutor executor = (TrackingExecutor) context.executor();
     if (cacheSpec.executorFailure() == ExecutorFailure.EXPECTED) {
-      assertThat(executor.failureCount(), is(greaterThan(0)));
+      assertThat(executor.failed(), is(greaterThan(0)));
     } else if (cacheSpec.executorFailure() == ExecutorFailure.DISALLOWED) {
-      assertThat(executor.failureCount(), is(0));
+      assertThat(executor.failed(), is(0));
     }
   }
 

@@ -171,8 +171,7 @@ public final class ExpirationTest {
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
       expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
       scheduler = CacheScheduler.MOCKITO, removalListener = Listener.MOCK)
-  public void schedule_delay(Cache<Integer, Duration> cache, CacheContext context)
-      throws InterruptedException {
+  public void schedule_delay(Cache<Integer, Duration> cache, CacheContext context) {
     Map<Integer, Duration> actualExpirationPeriods = new HashMap<>();
     ArgumentCaptor<Long> delay = ArgumentCaptor.forClass(long.class);
     ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
@@ -208,11 +207,16 @@ public final class ExpirationTest {
     context.ticker().advance(expireKey2);
     task.getValue().run();
 
+    if (context.expiresVariably()) {
+      context.ticker().advance(Pacer.TOLERANCE);
+      task.getValue().run();
+    }
+
     Duration maxExpirationPeriod = Duration.ofNanos(
         context.expiryTime().timeNanos() + Pacer.TOLERANCE);
-    assertThat(actualExpirationPeriods, is(aMapWithSize(original.size())));
     assertThat(actualExpirationPeriods.get(key1), is(lessThanOrEqualTo(maxExpirationPeriod)));
     assertThat(actualExpirationPeriods.get(key2), is(lessThanOrEqualTo(maxExpirationPeriod)));
+    assertThat(actualExpirationPeriods, is(aMapWithSize(original.size())));
   }
 
   /* --------------- Cache --------------- */

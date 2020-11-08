@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -37,7 +38,6 @@ import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.References.WeakKeyReference;
 import com.github.benmanes.caffeine.cache.TimerWheel.Sentinel;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.github.benmanes.caffeine.testing.DescriptionBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -85,11 +85,15 @@ public final class IsValidBoundedLocalCache<K, V>
   }
 
   private void checkReadBuffer(BoundedLocalCache<K, V> cache) {
-    Awaits.await().pollInSameThread().until(() -> {
-      cache.cleanUp();
-      Buffer<?> buffer = cache.readBuffer;
-      return (buffer.size() == 0) && buffer.reads() == buffer.writes();
-    });
+    if (!tryDrainBuffers(cache)) {
+      await().pollInSameThread().until(() -> tryDrainBuffers(cache));
+    }
+  }
+
+  private Boolean tryDrainBuffers(BoundedLocalCache<K, V> cache) {
+    cache.cleanUp();
+    Buffer<?> buffer = cache.readBuffer;
+    return (buffer.size() == 0) && buffer.reads() == buffer.writes();
   }
 
   private void checkCache(BoundedLocalCache<K, V> cache) {
@@ -131,6 +135,8 @@ public final class IsValidBoundedLocalCache<K, V>
   private void checkTimerWheel(BoundedLocalCache<K, V> cache) {
     if (!cache.expiresVariable()) {
       return;
+    } else if (!doesTimerWheelMatch(cache)) {
+      await().pollInSameThread().until(() -> doesTimerWheelMatch(cache));
     }
 
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
@@ -156,6 +162,28 @@ public final class IsValidBoundedLocalCache<K, V>
       }
     }
     desc.expectThat("Timers != Entries", seen, hasSize(cache.size()));
+  }
+
+  private boolean doesTimerWheelMatch(BoundedLocalCache<K, V> cache) {
+    cache.evictionLock.lock();
+    try {
+      Set<Node<K, V>> seen = Sets.newIdentityHashSet();
+      for (int i = 0; i < cache.timerWheel().wheel.length; i++) {
+        for (int j = 0; j < cache.timerWheel().wheel[i].length; j++) {
+          Node<K, V> sentinel = cache.timerWheel().wheel[i][j];
+
+          for (Node<K, V> node = sentinel.getNextInVariableOrder();
+              node != sentinel; node = node.getNextInVariableOrder()) {
+            if (!seen.add(node)) {
+              return false;
+            }
+          }
+        }
+      }
+      return cache.size() == seen.size();
+    } finally {
+      cache.evictionLock.unlock();
+    }
   }
 
   private void checkEvictionDeque(BoundedLocalCache<K, V> cache) {
@@ -184,6 +212,10 @@ public final class IsValidBoundedLocalCache<K, V>
 
   private void checkLinks(BoundedLocalCache<K, V> cache,
       ImmutableList<LinkedDeque<Node<K, V>>> deques, DescriptionBuilder desc) {
+    if (!doLinksMatch(cache, deques)) {
+      await().pollInSameThread().until(() -> doLinksMatch(cache, deques));
+    }
+
     int size = 0;
     long weightedSize = 0;
     Set<Node<K, V>> seen = Sets.newIdentityHashSet();
@@ -208,6 +240,20 @@ public final class IsValidBoundedLocalCache<K, V>
           expectedWeightedSize, weighted, seen.size(), cache.size());
       desc.expectThat("non-negative weight", weightedSize, is(greaterThanOrEqualTo(0L)));
       desc.expectThat(error, expectedWeightedSize, is(weightedSize));
+    }
+  }
+
+  private boolean doLinksMatch(BoundedLocalCache<K, V> cache,
+      ImmutableList<LinkedDeque<Node<K, V>>> deques) {
+    cache.evictionLock.lock();
+    try {
+      Set<Node<K, V>> seen = Sets.newIdentityHashSet();
+      for (LinkedDeque<Node<K, V>> deque : deques) {
+        scanLinks(cache, seen, deque, desc);
+      }
+      return cache.size() == seen.size();
+    } finally {
+      cache.evictionLock.unlock();
     }
   }
 

@@ -20,6 +20,7 @@ import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionWeight;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -64,7 +65,6 @@ import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
 import com.github.benmanes.caffeine.cache.testing.RejectingCacheWriter.DeleteException;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.RejectingRemovalListener;
 import com.github.benmanes.caffeine.cache.testing.RemovalNotification;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapDifference;
@@ -213,9 +213,9 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<Integer> valueFuture = CompletableFuture.supplyAsync(() -> {
-      Awaits.await().untilTrue(ready);
+      await().untilTrue(ready);
       return 6;
-    });
+    }, executor);
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     cache.put(5, CompletableFuture.completedFuture(5));
@@ -225,10 +225,10 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(3L));
 
     ready.set(true);
-    Awaits.await().untilTrue(done);
-    Awaits.await().until(context::consumedNotifications, hasSize(1));
-    Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(2L));
-    Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
+    await().untilTrue(done);
+    await().until(context::consumedNotifications, hasSize(1));
+    await().until(() -> cache.synchronous().estimatedSize(), is(2L));
+    await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
 
     assertThat(context, hasEvictionWeight(5L));
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
@@ -245,9 +245,9 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<List<Integer>> valueFuture = CompletableFuture.supplyAsync(() -> {
-      Awaits.await().untilTrue(ready);
+      await().untilTrue(ready);
       return ImmutableList.of(1, 2, 3, 4, 5);
-    });
+    }, executor);
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     cache.put(context.absentKey(), valueFuture);
@@ -255,9 +255,9 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     ready.set(true);
-    Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(0L));
-    Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(0L));
+    await().untilTrue(done);
+    await().until(() -> eviction.weightedSize().getAsLong(), is(0L));
+    await().until(() -> cache.synchronous().estimatedSize(), is(0L));
 
     assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
     verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
@@ -355,9 +355,9 @@ public final class EvictionTest {
     AtomicBoolean ready = new AtomicBoolean();
     AtomicBoolean done = new AtomicBoolean();
     CompletableFuture<List<Integer>> valueFuture = CompletableFuture.supplyAsync(() -> {
-      Awaits.await().untilTrue(ready);
+      await().untilTrue(ready);
       return ImmutableList.of(1, 2, 3, 4, 5);
-    });
+    }, executor);
     valueFuture.whenComplete((r, e) -> done.set(true));
 
     cache.put(context.absentKey(), valueFuture);
@@ -365,9 +365,9 @@ public final class EvictionTest {
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     ready.set(true);
-    Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> eviction.weightedSize().getAsLong(), is(5L));
-    Awaits.await().until(() -> cache.synchronous().estimatedSize(), is(1L));
+    await().untilTrue(done);
+    await().until(() -> eviction.weightedSize().getAsLong(), is(5L));
+    await().until(() -> cache.synchronous().estimatedSize(), is(1L));
   }
 
   @Test(dataProvider = "caches")

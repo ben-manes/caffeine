@@ -60,7 +60,6 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
 import com.github.benmanes.caffeine.cache.testing.CacheValidationListener;
 import com.github.benmanes.caffeine.cache.testing.CheckNoStats;
 import com.github.benmanes.caffeine.cache.testing.CheckNoWriter;
-import com.github.benmanes.caffeine.testing.Awaits;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -112,13 +111,14 @@ public final class AsyncLoadingCacheTest {
     CompletableFuture<Integer> valueFuture = cache.get(key);
     valueFuture.whenComplete((r, e) -> done.set(true));
 
-    Awaits.await().untilTrue(done);
-    Awaits.await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
-    Awaits.await().until(() -> context, both(hasMissCount(1)).and(hasHitCount(0)));
-    Awaits.await().until(() -> context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    await().untilTrue(done);
+    await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
+    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
+    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.getIfPresent(key), is(nullValue()));
+    await().until(() -> cache.synchronous().estimatedSize(), is(context.initialSize()));
   }
 
   @CheckNoWriter
