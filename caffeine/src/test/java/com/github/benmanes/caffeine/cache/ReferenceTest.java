@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -1062,6 +1063,42 @@ public final class ReferenceTest {
     });
 
     assertThat(cache.policy().eviction().get().weightedSize().getAsLong(), is(3L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
+  public void keySetToArray(Map<Integer, Integer> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.keySet().toArray(), arrayWithSize(0));
+    assertThat(map.keySet().toArray(new Integer[0]), arrayWithSize(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
+  public void valuesToArray(Map<Integer, Integer> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.values().toArray(), arrayWithSize(0));
+    assertThat(map.values().toArray(new Integer[0]), arrayWithSize(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(requiresWeakOrSoft = true, population = Population.FULL,
+      expireAfterAccess = Expire.DISABLED, expireAfterWrite = Expire.DISABLED,
+      maximumSize = Maximum.UNREACHABLE, weigher = CacheWeigher.DEFAULT,
+      stats = Stats.ENABLED, removalListener = Listener.DEFAULT, writer = Writer.DISABLED)
+  public void entrySetToArray(Map<Integer, Integer> map, CacheContext context) {
+    context.clear();
+    GcFinalization.awaitFullGc();
+    assertThat(map.entrySet().toArray(), arrayWithSize(0));
+    assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0]), arrayWithSize(0));
   }
 
   /** Ensures that that all the pending work is performed (Guava limits work per cycle). */

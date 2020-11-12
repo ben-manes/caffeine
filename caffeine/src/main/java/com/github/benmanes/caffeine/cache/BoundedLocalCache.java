@@ -2791,26 +2791,20 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
     @Override
     public Object[] toArray() {
-      if (cache.collectKeys()) {
-        List<Object> keys = new ArrayList<>(size());
-        for (Object key : this) {
-          keys.add(key);
-        }
-        return keys.toArray();
+      List<Object> keys = new ArrayList<>(size());
+      for (Object key : this) {
+        keys.add(key);
       }
-      return cache.data.keySet().toArray();
+      return keys.toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] array) {
-      if (cache.collectKeys()) {
-        List<Object> keys = new ArrayList<>(size());
-        for (Object key : this) {
-          keys.add(key);
-        }
-        return keys.toArray(array);
+      List<Object> keys = new ArrayList<>(size());
+      for (Object key : this) {
+        keys.add(key);
       }
-      return cache.data.keySet().toArray(array);
+      return keys.toArray(array);
     }
   }
 
