@@ -15,21 +15,38 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic.WEIGHTED;
+import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.NUMBER;
+import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.OBJECT;
+import static com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric.MetricType.PERCENT;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.builder.ToStringStyle.MULTI_LINE_STYLE;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.DoubleSupplier;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
+
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
+import net.autobuilder.AutoBuilder;
+
 /**
- * Statistics gathered by a policy execution.
+ * Statistics gathered by a policy execution. A policy can extend this class as a convenient way to
+ * add custom metrics.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class PolicyStats {
+public class PolicyStats {
+  private final Map<String, Metric> metrics;
   private final Stopwatch stopwatch;
 
   private String name;
@@ -43,6 +60,7 @@ public final class PolicyStats {
   private long admittedCount;
   private long rejectedCount;
   private long operationCount;
+  private double percentAdaption;
 
   @FormatMethod
   public PolicyStats(@FormatString String format, Object... args) {
@@ -51,7 +69,58 @@ public final class PolicyStats {
 
   public PolicyStats(String name) {
     this.name = requireNonNull(name);
+    this.metrics = new LinkedHashMap<>();
     this.stopwatch = Stopwatch.createUnstarted();
+
+    addMetric("Policy", this::name);
+    addPercentMetric("Hit rate", this::hitRate);
+    addMetric("Hits", this::hitCount);
+    addMetric("Misses", this::missCount);
+    addMetric("Requests", this::requestCount);
+    addMetric("Evictions", this::evictionCount);
+    addPercentMetric("Admit rate",
+        () -> (admittedCount + rejectedCount) == 0 ? 0 : admissionRate());
+    addMetric(Metric.builder()
+        .value((LongSupplier) this::requestsWeight)
+        .addToCharacteristics(WEIGHTED)
+        .name("Requests Weight")
+        .type(NUMBER)
+        .build());
+    addMetric(Metric.builder()
+        .value((LongSupplier) this::requestsWeight)
+        .addToCharacteristics(WEIGHTED)
+        .name("Weighted Hit Rate")
+        .type(PERCENT)
+        .build());
+    addPercentMetric("Adaption", this::percentAdaption);
+    addMetric("Average Miss Penalty", this::averageMissPenalty);
+    addMetric("Average Penalty", this::avergePenalty);
+    addMetric("Steps", this::operationCount);
+    addMetric("Time", this::stopwatch);
+  }
+
+  public void addMetric(Metric metric) {
+    metrics.put(metric.name(), requireNonNull(metric));
+  }
+
+  public void addMetric(String name, Supplier<?> supplier) {
+    addMetric(Metric.builder().name(name).value(supplier).type(OBJECT).build());
+  }
+
+  public void addMetric(String name, LongSupplier supplier) {
+    addMetric(Metric.builder().name(name).value(supplier).type(NUMBER).build());
+  }
+
+  public void addMetric(String name, DoubleSupplier supplier) {
+    addMetric(Metric.builder().name(name).value(supplier).type(NUMBER).build());
+  }
+
+  public void addPercentMetric(String name, DoubleSupplier supplier) {
+    addMetric(Metric.builder().name(name).value(supplier).type(PERCENT).build());
+  }
+
+  public Map<String, Metric> metrics() {
+    return metrics;
   }
 
   public Stopwatch stopwatch() {
@@ -60,10 +129,6 @@ public final class PolicyStats {
 
   public String name() {
     return name;
-  }
-
-  public void setName(String name) {
-    this.name = requireNonNull(name);
   }
 
   public void recordOperation() {
@@ -176,6 +241,14 @@ public final class PolicyStats {
     return hitPenalty + missPenalty;
   }
 
+  public double percentAdaption() {
+    return percentAdaption;
+  }
+
+  public void setPercentAdaption(double percentAdaption) {
+    this.percentAdaption = (Math.floor(100 * percentAdaption) / 100);
+  }
+
   public double hitRate() {
     long requestCount = requestCount();
     return (requestCount == 0) ? 1.0 : (double) hitCount / requestCount;
@@ -222,5 +295,19 @@ public final class PolicyStats {
   @Override
   public String toString() {
     return ToStringBuilder.reflectionToString(this, MULTI_LINE_STYLE);
+  }
+
+  @AutoValue @AutoBuilder
+  public static abstract class Metric {
+    public enum MetricType { NUMBER, PERCENT, OBJECT }
+
+    public abstract ImmutableSet<Characteristic> characteristics();
+    public abstract MetricType type();
+    public abstract Object value();
+    public abstract String name();
+
+    public static PolicyStats_Metric_Builder builder() {
+      return PolicyStats_Metric_Builder.builder();
+    }
   }
 }

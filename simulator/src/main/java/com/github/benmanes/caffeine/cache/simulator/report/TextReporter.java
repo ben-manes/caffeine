@@ -15,8 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.US;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,10 +26,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
+import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -36,22 +42,17 @@ import com.typesafe.config.Config;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public abstract class TextReporter implements Reporter {
-  private static final String[] HEADERS = {
-      "Policy", "Hit rate", "Hits", "Misses", "Requests", "Evictions",
-      "Admit rate", "Requests Weight", "Weighted Hit Rate", "Average Miss Penalty",
-      "Average Penalty", "Steps", "Time"};
-
+  private final Set<Characteristic> characteristics;
   private final List<PolicyStats> results;
   private final BasicSettings settings;
 
-  protected TextReporter(Config config) {
-    settings = new BasicSettings(config);
-    results = new ArrayList<>();
-  }
+  private ImmutableSet<String> headers;
+  private Metrics metrics;
 
-  /** Returns the column headers. */
-  protected String[] headers() {
-    return HEADERS.clone();
+  protected TextReporter(Config config, Set<Characteristic> characteristics) {
+    this.characteristics = requireNonNull(characteristics);
+    this.settings = new BasicSettings(config);
+    this.results = new ArrayList<>();
   }
 
   /** Adds the result of a policy simulation. */
@@ -73,6 +74,32 @@ public abstract class TextReporter implements Reporter {
     }
   }
 
+  /** Returns the column headers. */
+  protected Set<String> headers() {
+    if (headers == null) {
+      Set<String> all = results.stream()
+            .flatMap(policyStats -> policyStats.metrics().keySet().stream())
+            .collect(toImmutableSet());
+      Set<String> used = results.stream()
+          .flatMap(policyStats -> policyStats.metrics().values().stream())
+          .filter(metric -> metric.characteristics().isEmpty()
+              || metric.characteristics().stream().anyMatch(characteristics::contains))
+          .filter(metric -> !metrics().format(metric).isEmpty())
+          .map(Metric::name)
+          .collect(toImmutableSet());
+      headers = ImmutableSet.copyOf(Sets.intersection(all, used));
+    }
+    return headers;
+  }
+
+  /** Returns the configuration for how to work with metrics. */
+  protected Metrics metrics() {
+    return (metrics == null) ? (metrics = newMetrics()) : metrics;
+  }
+
+  /** Returns a new configuration for how to work with metrics. */
+  protected abstract Metrics newMetrics();
+
   /** Assembles an aggregated report. */
   protected abstract String assemble(List<PolicyStats> results);
 
@@ -83,25 +110,10 @@ public abstract class TextReporter implements Reporter {
   }
 
   private Comparator<PolicyStats> makeComparator() {
-    switch (settings.report().sortBy().toLowerCase(US)) {
-      case "policy":
-        return Comparator.comparing(PolicyStats::name);
-      case "hit rate":
-        return Comparator.comparingDouble(PolicyStats::hitRate);
-      case "hits":
-        return Comparator.comparingLong(PolicyStats::hitCount);
-      case "misses":
-        return Comparator.comparingLong(PolicyStats::missCount);
-      case "evictions":
-        return Comparator.comparingLong(PolicyStats::evictionCount);
-      case "admit rate":
-        return Comparator.comparingLong(PolicyStats::admissionCount);
-      case "steps":
-        return Comparator.comparingLong(PolicyStats::operationCount);
-      case "time":
-        return Comparator.comparingLong(stats -> stats.stopwatch().elapsed(TimeUnit.NANOSECONDS));
-      default:
-        throw new IllegalArgumentException("Unknown sort order: " + settings.report().sortBy());
-    }
+    String sortBy = headers().stream()
+        .filter(header -> header.toLowerCase(US).equals(settings.report().sortBy().toLowerCase(US)))
+        .findAny().orElseThrow(() -> new IllegalArgumentException(
+            "Unknown sort order: " + settings.report().sortBy()));
+    return metrics().comparator(sortBy);
   }
 }

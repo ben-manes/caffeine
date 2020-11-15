@@ -84,7 +84,7 @@ public final class Simulator extends AbstractActor {
 
     batchSize = settings.batchSize();
     stopwatch = Stopwatch.createStarted();
-    reporter = settings.report().format().create(config);
+    reporter = settings.report().format().create(config, traceReader.characteristics());
   }
 
   @Override

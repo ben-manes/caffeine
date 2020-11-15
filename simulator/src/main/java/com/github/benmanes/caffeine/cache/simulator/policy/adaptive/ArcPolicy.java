@@ -227,6 +227,8 @@ public final class ArcPolicy implements KeyOnlyPolicy {
 
   @Override
   public void finished() {
+    policyStats.setPercentAdaption((sizeT1 / (double) maximumSize) - 0.5);
+
     checkState(sizeT1 == data.values().stream().filter(node -> node.type == QueueType.T1).count());
     checkState(sizeT2 == data.values().stream().filter(node -> node.type == QueueType.T2).count());
     checkState(sizeB1 == data.values().stream().filter(node -> node.type == QueueType.B1).count());

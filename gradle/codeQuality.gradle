@@ -137,6 +137,7 @@ tasks.withType(JavaCompile) {
     disable('EmptyCatch')
     disable('MissingSummary')
     error('NullAway')
+    excludedPaths = "${buildDir}/generated-sources/.*"
 
     nullaway {
       annotatedPackages.add('com.github.benmanes.caffeine')

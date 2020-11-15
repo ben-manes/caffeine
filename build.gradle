@@ -9,7 +9,6 @@ buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
 
   repositories {
-    maven { url "https://repo.spring.io/plugins-release" }
     gradlePluginPortal()
     mavenCentral()
     jcenter()

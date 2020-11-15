@@ -46,7 +46,7 @@ ext {
     googleJavaFormat: '1.7',
     guava: '30.0-jre',
     jackrabbit: '1.34.0',
-    jandex: '2.2.1.Final',
+    jandex: '2.2.2.Final',
     jamm: '0.3.3',
     javaObjectLayout: '0.14',
     javapoet: '1.13.0',
@@ -101,6 +101,10 @@ ext {
     spotbugsPlugin: '4.6.0',
     stats: '0.2.2',
     versions: '0.36.0',
+  ]
+  annotationProcessorVersions = [
+    autoValue: '1.7.4',
+    autoValueBuilder: '2.9.3',
   ]
 
   libraries = [
@@ -172,7 +176,7 @@ ext {
       "org.osgi:org.osgi.util.promise:${testVersions.osgiUtilPromise}",
       "org.ops4j.pax.exam:pax-exam-container-native:${testVersions.paxExam}",
       "org.ops4j.pax.exam:pax-exam-link-mvn:${testVersions.paxExam}",
-      "org.ops4j.pax.url:pax-url-aether:2.6.2",
+      "org.ops4j.pax.url:pax-url-aether:2.6.3",
     ],
     testng: [
       dependencies.create("org.testng:testng:${testVersions.testng}") {
@@ -204,5 +208,12 @@ ext {
     spotbugs: "gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:${pluginVersions.spotbugsPlugin}",
     stats: "org.kordamp.gradle:stats-gradle-plugin:${pluginVersions.stats}",
     versions: "com.github.ben-manes:gradle-versions-plugin:${pluginVersions.versions}",
+  ]
+  annotationProcessors = [
+    autoValue: [
+      "com.google.auto.value:auto-value:${annotationProcessorVersions.autoValue}",
+      "com.github.h908714124:auto-builder:${annotationProcessorVersions.autoValueBuilder}",
+      "com.google.auto.value:auto-value-annotations:${annotationProcessorVersions.autoValue}",
+    ],
   ]
 }
