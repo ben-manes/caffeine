@@ -16,17 +16,16 @@
 package com.github.benmanes.caffeine.cache.simulator.report.csv;
 
 import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric;
 import com.github.benmanes.caffeine.cache.simulator.report.Metrics;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReporter;
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Strings;
 import com.typesafe.config.Config;
 import com.univocity.parsers.csv.CsvWriter;
 import com.univocity.parsers.csv.CsvWriterSettings;
@@ -48,13 +47,12 @@ public final class CsvReporter extends TextReporter {
     CsvWriter writer = new CsvWriter(output, new CsvWriterSettings());
     writer.writeHeaders(headers());
     for (PolicyStats policyStats : results) {
-      List<String> row = new ArrayList<>(headers().size());
-      for (String header : headers()) {
-        Metric metric = policyStats.metrics().get(header);
-        String value = metrics().format(metric);
-        row.add(value.isEmpty() ? null : value);
-      }
-      writer.writeRow(row);
+      String[] data = headers().stream()
+          .map(policyStats.metrics()::get)
+          .map(metrics()::format)
+          .map(Strings::emptyToNull)
+          .toArray(String[]::new);
+      writer.writeRow(data);
     }
     writer.close();
     return output.toString();

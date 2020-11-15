@@ -105,15 +105,12 @@ public abstract class TextReporter implements Reporter {
 
   /** Returns a comparator that sorts by the specified column. */
   private Comparator<PolicyStats> comparator() {
-    Comparator<PolicyStats> comparator = makeComparator();
-    return settings.report().ascending() ? comparator : comparator.reversed();
-  }
-
-  private Comparator<PolicyStats> makeComparator() {
-    String sortBy = headers().stream()
+    String sortBy = results.stream()
+        .flatMap(policyStats -> policyStats.metrics().keySet().stream())
         .filter(header -> header.toLowerCase(US).equals(settings.report().sortBy().toLowerCase(US)))
         .findAny().orElseThrow(() -> new IllegalArgumentException(
             "Unknown sort order: " + settings.report().sortBy()));
-    return metrics().comparator(sortBy);
+    Comparator<PolicyStats> comparator = metrics().comparator(sortBy);
+    return settings.report().ascending() ? comparator : comparator.reversed();
   }
 }

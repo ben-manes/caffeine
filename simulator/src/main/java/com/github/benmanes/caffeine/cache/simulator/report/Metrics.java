@@ -96,7 +96,7 @@ public abstract class Metrics {
         return Long.compare(((LongSupplier) metric1.value()).getAsLong(),
             ((LongSupplier) metric2.value()).getAsLong());
       } else if (metric1.value() instanceof DoubleSupplier) {
-        return Double.compare(((DoubleSupplier) metric1).getAsDouble(),
+        return Double.compare(((DoubleSupplier) metric1.value()).getAsDouble(),
             ((DoubleSupplier) metric2.value()).getAsDouble());
       } else if (metric1.value() instanceof Supplier) {
         Object value1 = ((Supplier<?>) metric1.value()).get();

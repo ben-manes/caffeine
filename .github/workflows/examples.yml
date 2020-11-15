@@ -24,7 +24,6 @@ jobs:
           path: |
             ~/.gradle/wrapper
             ~/.gradle/caches
-            ~/.sonar/cache
             ~/.m2
           key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle

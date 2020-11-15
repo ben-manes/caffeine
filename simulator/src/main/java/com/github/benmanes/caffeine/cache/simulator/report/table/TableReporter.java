@@ -15,13 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.report.table;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats.Metric;
 import com.github.benmanes.caffeine.cache.simulator.report.Metrics;
 import com.github.benmanes.caffeine.cache.simulator.report.TextReporter;
 import com.jakewharton.fliptables.FlipTable;
@@ -42,13 +40,11 @@ public final class TableReporter extends TextReporter {
   protected String assemble(List<PolicyStats> results) {
     String[][] data = new String[results.size()][headers().size()];
     for (int i = 0; i < results.size(); i++) {
-      List<String> row = new ArrayList<>(headers().size());
       PolicyStats policyStats = results.get(i);
-      for (String header : headers()) {
-        Metric metric = policyStats.metrics().get(header);
-        row.add(metrics().format(metric));
-      }
-      data[i] = row.toArray(new String[0]);
+      data[i] = headers().stream()
+          .map(policyStats.metrics()::get)
+          .map(metrics()::format)
+          .toArray(String[]::new);
     }
     return FlipTable.of(headers().toArray(new String[0]), data);
   }

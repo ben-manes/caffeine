@@ -17,11 +17,13 @@ package com.github.benmanes.caffeine.cache.simulator;
 
 import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.ERROR;
 import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.FINISH;
+import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.INIT;
 import static com.github.benmanes.caffeine.cache.simulator.Simulator.Message.START;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceFormat;
@@ -63,17 +65,37 @@ import akka.routing.Router;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Simulator extends AbstractActor {
-  public enum Message { START, FINISH, ERROR }
+  public enum Message { INIT, START, FINISH, ERROR }
 
-  private final TraceReader traceReader;
-  private final BasicSettings settings;
-  private final Stopwatch stopwatch;
-  private final Reporter reporter;
-  private final Router router;
-  private final int batchSize;
+  private TraceReader traceReader;
+  private BasicSettings settings;
+  private Stopwatch stopwatch;
+  private Reporter reporter;
+  private Router router;
+  private int batchSize;
   private int remaining;
 
-  public Simulator() {
+  @Override
+  public void preStart() {
+    self().tell(INIT, self());
+  }
+
+  @Override
+  public void preRestart(Throwable t, Optional<Object> message) {
+    context().stop(self());
+  }
+
+  @Override
+  public Receive createReceive() {
+    return receiveBuilder()
+        .matchEquals(INIT, msg -> initialize())
+        .matchEquals(START, msg -> broadcast())
+        .matchEquals(ERROR, msg -> context().stop(self()))
+        .match(PolicyStats.class, this::reportStats)
+        .build();
+  }
+
+  private void initialize() {
     Config config = context().system().settings().config().getConfig("caffeine.simulator");
     settings = new BasicSettings(config);
     traceReader = makeTraceReader();
@@ -85,20 +107,8 @@ public final class Simulator extends AbstractActor {
     batchSize = settings.batchSize();
     stopwatch = Stopwatch.createStarted();
     reporter = settings.report().format().create(config, traceReader.characteristics());
-  }
 
-  @Override
-  public void preStart() {
     self().tell(START, self());
-  }
-
-  @Override
-  public Receive createReceive() {
-    return receiveBuilder()
-        .matchEquals(START, msg -> broadcast())
-        .matchEquals(ERROR, msg -> context().stop(self()))
-        .match(PolicyStats.class, this::reportStats)
-        .build();
   }
 
   /** Broadcast the trace events to all of the policy actors. */
@@ -113,9 +123,6 @@ public final class Simulator extends AbstractActor {
       Iterators.partition(events.iterator(), batchSize)
           .forEachRemaining(batch -> router.route(batch, self()));
       router.route(FINISH, self());
-    } catch (Exception e) {
-      context().system().log().error(e, "");
-      context().stop(self());
     }
   }
 
@@ -141,7 +148,9 @@ public final class Simulator extends AbstractActor {
   /** Add the stats to the reporter, print if completed, and stop the simulator. */
   private void reportStats(PolicyStats stats) throws IOException {
     reporter.add(stats);
-    if (--remaining == 0) {
+    remaining--;
+
+    if (remaining == 0) {
       reporter.print();
       context().stop(self());
       System.out.println("Executed in " + stopwatch);

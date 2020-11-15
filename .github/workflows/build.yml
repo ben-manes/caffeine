@@ -27,15 +27,13 @@ jobs:
             ~/.gradle/wrapper
             ~/.gradle/caches
             ~/.sonar/cache
-            ~/.m2
           key: ${{ runner.os }}-${{ github.job }}-${{ matrix.java }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle
       - name: Run tests
         run: ./.github/scripts/test.sh
       - name: Publish Coverage
         if: >
-          success()
-          && matrix.java == env.MIN_JVM
+          matrix.java == env.MIN_JVM
           && github.event_name == 'push'
           && endsWith(github.ref, github.event.repository.default_branch)
         env:
@@ -43,8 +41,7 @@ jobs:
         run: ./gradlew coveralls
       - name: SonarQube
         if: >
-          success()
-          && matrix.java == env.MAX_JVM
+          matrix.java == env.MAX_JVM
           && github.event_name == 'push'
           && endsWith(github.ref, github.event.repository.default_branch)
         env:
@@ -53,8 +50,7 @@ jobs:
         run: ./gradlew sonarqube
       - name: Publish Snapshot
         if: >
-          success()
-          && matrix.java == env.MIN_JVM
+          matrix.java == env.MIN_JVM
           && github.event_name == 'push'
           && endsWith(github.ref, github.event.repository.default_branch)
         env:
