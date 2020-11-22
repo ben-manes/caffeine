@@ -85,6 +85,7 @@
     <trusted-key id='86fdc7e2a11262cb' group='commons-codec' />
     <trusted-key id='1861c322c56014b2' group='commons-collections' />
     <trusted-key id='a41f13c999945293' group='commons-collections' />
+    <trusted-key id='86fdc7e2a11262cb' group='commons-io' />
     <trusted-key id='9daadc1c9fcc82d0' group='commons-io' />
     <trusted-key id='1241bc872c5e4ec0' group='commons-lang' />
     <trusted-key id='1861c322c56014b2' group='commons-lang' />
@@ -110,6 +111,7 @@
     <trusted-key id='6425559c47cc79c4' group='javax.ws.rs' />
     <trusted-key id='0315bfb7970a144f' group='javax.xml.bind' />
     <trusted-key id='4044edf1bb73efea' group='jaxen' />
+    <trusted-key id='c6fc46eb51cf569c' group='jaxen' />
     <trusted-key id='72385ff0af338d52' group='joda-time' />
     <trusted-key id='85911f425ec61b51' group='junit' />
     <trusted-key id='efe8086f9e93774e' group='junit' />
@@ -137,6 +139,7 @@
     <trusted-key id='bff2ee42c8282e76' group='org.apache.felix' />
     <trusted-key id='de78987a9cd4d9d3' group='org.apache.htrace' />
     <trusted-key id='7c25280eae63ebe5' group='org.apache.httpcomponents' />
+    <trusted-key id='11b1a21ad89afded' group='org.apache.jackrabbit' />
     <trusted-key id='1de461528f1f1b2a' group='org.apache.jackrabbit' />
     <trusted-key id='d108ff879aa63950' group='org.apache.jackrabbit' />
     <trusted-key id='3595395eb3d8e1ba' group='org.apache.logging.log4j' />

@@ -21,6 +21,7 @@ import java.util.stream.LongStream;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.HotspotSettings;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings.SyntheticSettings.UniformSettings;
+import com.github.benmanes.caffeine.cache.simulator.BasicSettings.TraceSettings;
 import com.github.benmanes.caffeine.cache.simulator.parser.TraceReader.KeyOnlyTraceReader;
 
 import site.ycsb.generator.CounterGenerator;
@@ -42,7 +43,7 @@ public final class Synthetic {
   private Synthetic() {}
 
   /** Returns a sequence of events based on the setting's distribution. */
-  public static KeyOnlyTraceReader generate(BasicSettings settings) {
+  public static KeyOnlyTraceReader generate(TraceSettings settings) {
     int events = settings.synthetic().events();
     switch (settings.synthetic().distribution().toLowerCase(US)) {
       case "counter":

@@ -119,7 +119,9 @@ public final class Simulator extends AbstractActor {
       return;
     }
 
-    try (Stream<AccessEvent> events = traceReader.events()) {
+    long skip = settings.trace().skip();
+    long limit = settings.trace().limit();
+    try (Stream<AccessEvent> events = traceReader.events().skip(skip).limit(limit)) {
       Iterators.partition(events.iterator(), batchSize)
           .forEachRemaining(batch -> router.route(batch, self()));
       router.route(FINISH, self());
@@ -128,11 +130,11 @@ public final class Simulator extends AbstractActor {
 
   /** Returns a trace reader for the access events. */
   private TraceReader makeTraceReader() {
-    if (settings.isSynthetic()) {
-      return Synthetic.generate(settings);
+    if (settings.trace().isSynthetic()) {
+      return Synthetic.generate(settings.trace());
     }
-    List<String> filePaths = settings.traceFiles().paths();
-    TraceFormat format = settings.traceFiles().format();
+    List<String> filePaths = settings.trace().traceFiles().paths();
+    TraceFormat format = settings.trace().traceFiles().format();
     return format.readFiles(filePaths);
   }
 

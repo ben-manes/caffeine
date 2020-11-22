@@ -43,14 +43,19 @@ public class AccessEvent {
     return 1;
   }
 
-  /** Returns the hit penalty of the entry */
+  /** Returns the hit penalty of the entry. */
   public double hitPenalty() {
     return 0;
   }
 
-  /** Returns the miss penalty of the entry */
+  /** Returns the miss penalty of the entry. */
   public double missPenalty() {
     return 0;
+  }
+
+  /** Returns if the trace supplies the hit/miss penalty for this entry. */
+  public boolean isPenaltyAware() {
+    return false;
   }
 
   @Override
@@ -105,9 +110,7 @@ public class AccessEvent {
       this.weight = weight;
       checkArgument(weight >= 0);
     }
-
-    @Override
-    public int weight() {
+    @Override public int weight() {
       return weight;
     }
   }
@@ -123,15 +126,14 @@ public class AccessEvent {
       checkArgument(hitPenalty >= 0);
       checkArgument(missPenalty >= hitPenalty);
     }
-
-    @Override
-    public double missPenalty() {
+    @Override public double missPenalty() {
       return missPenalty;
     }
-
-    @Override
-    public double hitPenalty() {
+    @Override public double hitPenalty() {
       return hitPenalty;
+    }
+    @Override public boolean isPenaltyAware() {
+      return true;
     }
   }
 }
