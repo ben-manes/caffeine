@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -55,13 +56,11 @@ public abstract class TextReporter implements Reporter {
     this.results = new ArrayList<>();
   }
 
-  /** Adds the result of a policy simulation. */
   @Override
   public void add(PolicyStats policyStats) {
     results.add(policyStats);
   }
 
-  /** Writes the report to the output destination. */
   @Override
   public void print() throws IOException {
     results.sort(comparator());
@@ -72,6 +71,11 @@ public abstract class TextReporter implements Reporter {
     } else {
       Files.write(Paths.get(output), report.getBytes(UTF_8));
     }
+  }
+
+  @Override
+  public Collection<PolicyStats> stats() {
+    return results;
   }
 
   /** Returns the column headers. */

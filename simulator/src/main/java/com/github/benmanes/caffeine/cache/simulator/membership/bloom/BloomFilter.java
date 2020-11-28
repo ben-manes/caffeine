@@ -72,7 +72,7 @@ public final class BloomFilter implements Membership {
       return;
     } else if (optimalSize == 0) {
       tableShift = Integer.SIZE - 1;
-      table = new long[1];
+      table = new long[2];
     } else {
       int powerOfTwoShift = Integer.SIZE - Integer.numberOfLeadingZeros(optimalSize - 1);
       tableShift = Integer.SIZE - powerOfTwoShift;
