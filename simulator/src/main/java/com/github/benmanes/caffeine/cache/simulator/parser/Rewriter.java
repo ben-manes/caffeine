@@ -61,7 +61,6 @@ public final class Rewriter implements Runnable {
   private OutputFormat outputFormat;
 
   @Override
-  @SuppressWarnings("PMD.ForLoopCanBeForeach")
   public void run() {
     Stopwatch stopwatch = Stopwatch.createStarted();
     try (OutputStream output = new BufferedOutputStream(Files.newOutputStream(outputFile));

@@ -28,7 +28,7 @@ public final class Cache2k<K, V> implements BasicCache<K, V> {
 
   @SuppressWarnings("unchecked")
   public Cache2k(int maximumSize) {
-    cache = Cache2kBuilder.forUnknownTypes()
+    cache = (Cache<K, V>) Cache2kBuilder.forUnknownTypes()
         .entryCapacity(maximumSize)
         .eternal(true)
         .build();

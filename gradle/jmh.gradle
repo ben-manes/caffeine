@@ -9,10 +9,6 @@ idea.module {
   scopes.PROVIDED.plus += [ configurations.jmh ]
 }
 
-plugins.withType(EclipsePlugin) {
-  project.eclipse.classpath.plusConfigurations += [ configurations.jmh ]
-}
-
 eclipse.classpath.file.whenMerged {
   entries.find { it.path == 'src/jmh/java' }.entryAttributes['test'] = 'true'
 }
@@ -57,9 +53,9 @@ jmh {
   resultsFile = file("${buildDir}/reports/jmh/results.json")
 
   jvmArgs = '-server -Xmx2G -XX:+UseG1GC -XX:-UseBiasedLocking'
-  warmupIterations = 10
+  warmupIterations = 3
   failOnError = true
-  iterations = 10
+  iterations = 3
   forceGC = true
   fork = 1
 }

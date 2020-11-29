@@ -22,15 +22,18 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.IntStream;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.simulator.membership.FilterType;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
+import com.github.benmanes.caffeine.cache.simulator.membership.bloom.BloomFilter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jakewharton.fliptables.FlipTable;
@@ -72,6 +75,18 @@ public class MembershipTest {
         printTable(rows);
       }
     }
+  }
+
+  @Test(dataProvider = "ensureCapacity")
+  public void caffeine_ensureCapacity(int expectedInsertions, double fpp) {
+    BloomFilter filter = new BloomFilter();
+    filter.ensureCapacity(expectedInsertions, fpp);
+    filter.put(-1);
+  }
+
+  @DataProvider(name = "ensureCapacity")
+  public Iterator<Object[]> providesExpectedInsertions() {
+    return IntStream.range(0,  25).boxed().map(i -> new Object[] { i, FPP }).iterator();
   }
 
   @DataProvider(name = "filterTypes")
