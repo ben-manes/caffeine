@@ -72,12 +72,12 @@ public class PolicyStats {
     this.metrics = new LinkedHashMap<>();
     this.stopwatch = Stopwatch.createUnstarted();
 
-    addMetric("Policy", this::name);
-    addPercentMetric("Hit rate", this::hitRate);
-    addMetric("Hits", this::hitCount);
-    addMetric("Misses", this::missCount);
-    addMetric("Requests", this::requestCount);
-    addMetric("Evictions", this::evictionCount);
+    addMetric(Metric.of("Policy", (Supplier<String>) this::name, OBJECT, true));
+    addMetric(Metric.of("Hit Rate", (DoubleSupplier) this::hitRate, PERCENT, true));
+    addMetric(Metric.of("Hits", (LongSupplier) this::hitCount, NUMBER, true));
+    addMetric(Metric.of("Misses", (LongSupplier) this::missCount, NUMBER, true));
+    addMetric(Metric.of("Requests", (LongSupplier) this::requestCount, NUMBER, true));
+    addMetric(Metric.of("Evictions", (LongSupplier) this::evictionCount, NUMBER, true));
     addPercentMetric("Admit rate",
         () -> (admittedCount + rejectedCount) == 0 ? 0 : admissionRate());
     addMetric(Metric.builder()
@@ -87,7 +87,7 @@ public class PolicyStats {
         .type(NUMBER)
         .build());
     addMetric(Metric.builder()
-        .value((LongSupplier) this::requestsWeight)
+        .value((DoubleSupplier) this::weightedHitRate)
         .addToCharacteristics(WEIGHTED)
         .name("Weighted Hit Rate")
         .type(PERCENT)
@@ -301,11 +301,16 @@ public class PolicyStats {
   public static abstract class Metric {
     public enum MetricType { NUMBER, PERCENT, OBJECT }
 
-    public abstract ImmutableSet<Characteristic> characteristics();
-    public abstract MetricType type();
-    public abstract Object value();
     public abstract String name();
+    public abstract Object value();
+    public abstract MetricType type();
+    public abstract boolean required();
+    public abstract ImmutableSet<Characteristic> characteristics();
 
+    @SuppressWarnings("PMD.ShortMethodName")
+    public static Metric of(String name, Object value, MetricType type, boolean required) {
+      return builder().name(name).value(value).type(type).required(required).build();
+    }
     public static PolicyStats_Metric_Builder builder() {
       return PolicyStats_Metric_Builder.builder();
     }

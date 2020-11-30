@@ -51,9 +51,14 @@ public abstract class Metrics {
       return "";
     } else if (metric.value() instanceof LongSupplier) {
       long value = ((LongSupplier) metric.value()).getAsLong();
-      return longFormatter().apply(value);
+      return (value > 0) || metric.required()
+          ? longFormatter().apply(value)
+          : "";
     } else if (metric.value() instanceof DoubleSupplier) {
       double value = ((DoubleSupplier) metric.value()).getAsDouble();
+      if ((value == 0.0) && !metric.required()) {
+        return "";
+      }
       return (metric.type() == MetricType.PERCENT)
           ? percentFormatter().apply(value)
           : doubleFormatter().apply(value);

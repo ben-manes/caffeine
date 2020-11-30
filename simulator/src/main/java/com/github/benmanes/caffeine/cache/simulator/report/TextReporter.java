@@ -88,7 +88,7 @@ public abstract class TextReporter implements Reporter {
           .flatMap(policyStats -> policyStats.metrics().values().stream())
           .filter(metric -> metric.characteristics().isEmpty()
               || metric.characteristics().stream().anyMatch(characteristics::contains))
-          .filter(metric -> !metrics().format(metric).isEmpty())
+          .filter(metric -> metric.required() || !metrics().format(metric).isEmpty())
           .map(Metric::name)
           .collect(toImmutableSet());
       headers = ImmutableSet.copyOf(Sets.intersection(all, used));

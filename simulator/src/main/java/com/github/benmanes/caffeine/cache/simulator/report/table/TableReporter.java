@@ -52,9 +52,9 @@ public final class TableReporter extends TextReporter {
   @Override
   protected Metrics newMetrics() {
     return Metrics.builder()
-        .percentFormatter(value -> (value == 0) ? "" : String.format("%.2f %%", 100 * value))
-        .doubleFormatter(value -> (value == 0) ? "" : String.format("%.2f", value))
-        .longFormatter(value -> (value == 0) ? "" : String.format("%,d", value))
+        .percentFormatter(value -> String.format("%.2f %%", 100 * value))
+        .doubleFormatter(value -> String.format("%.2f", value))
+        .longFormatter(value -> String.format("%,d", value))
         .build();
   }
 }
