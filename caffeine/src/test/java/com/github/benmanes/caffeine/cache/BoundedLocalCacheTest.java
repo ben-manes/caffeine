@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_IDLE;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCESSING_TO_REQUIRED;
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
+import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
@@ -34,10 +35,13 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -84,6 +88,8 @@ public final class BoundedLocalCacheTest {
   static BoundedLocalCache<Integer, Integer> asBoundedLocalCache(Cache<Integer, Integer> cache) {
     return (BoundedLocalCache<Integer, Integer>) cache.asMap();
   }
+
+  /* --------------- Maintenance --------------- */
 
   @Test
   @SuppressWarnings("UnusedVariable")
@@ -168,6 +174,8 @@ public final class BoundedLocalCacheTest {
   public void scheduleDrainBuffers_rejected(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
   }
+
+  /* --------------- Eviction --------------- */
 
   @Test
   public void putWeighted_noOverflow() {
@@ -707,5 +715,76 @@ public final class BoundedLocalCacheTest {
 
     // Fill main protected space
     cache.asMap().keySet().stream().forEach(cache::getIfPresent);
+  }
+
+  /* --------------- Expiration --------------- */
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, initialCapacity = InitialCapacity.FULL,
+      expireAfterWrite = Expire.ONE_MINUTE)
+  public void put_expireTolerance_expireAfterWrite(
+      Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    boolean mayCheckReads = context.isStrongKeys() && context.isStrongValues()
+        && localCache.readBuffer != Buffer.<Node<Integer, Integer>>disabled();
+
+    cache.put(1, 1);
+    assertThat(localCache.writeBuffer().producerIndex, is(2L));
+
+    // If within the tolerance, treat the update as a read
+    cache.put(1, 2);
+    if (mayCheckReads) {
+      assertThat(localCache.readBuffer.reads(), is(0));
+      assertThat(localCache.readBuffer.writes(), is(1));
+    }
+    assertThat(localCache.writeBuffer().producerIndex, is(2L));
+
+    // If exceeds the tolerance, treat the update as a write
+    context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
+    cache.put(1, 3);
+    if (mayCheckReads) {
+      assertThat(localCache.readBuffer.reads(), is(1));
+      assertThat(localCache.readBuffer.writes(), is(1));
+    }
+    assertThat(localCache.writeBuffer().producerIndex, is(4L));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(compute = Compute.SYNC, implementation = Implementation.Caffeine,
+      population = Population.EMPTY, expiry = CacheExpiry.MOCKITO, expiryTime = Expire.ONE_MINUTE)
+  public void put_expireTolerance_expiry(Cache<Integer, Integer> cache, CacheContext context) {
+    BoundedLocalCache<Integer, Integer> localCache = asBoundedLocalCache(cache);
+    cache.put(1, 1);
+    assertThat(localCache.writeBuffer().producerIndex, is(2L));
+
+    // If within the tolerance, treat the update as a read
+    cache.put(1, 2);
+    assertThat(localCache.readBuffer.reads(), is(0));
+    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.writeBuffer().producerIndex, is(2L));
+
+    // If exceeds the tolerance, treat the update as a write
+    context.ticker().advance(EXPIRE_WRITE_TOLERANCE + 1, TimeUnit.NANOSECONDS);
+    cache.put(1, 3);
+    assertThat(localCache.readBuffer.reads(), is(1));
+    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.writeBuffer().producerIndex, is(4L));
+
+    // If the expire time reduces by more than the tolerance, treat the update as a write
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Expire.ONE_MILLISECOND.timeNanos());
+    cache.put(1, 4);
+    assertThat(localCache.readBuffer.reads(), is(1));
+    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.writeBuffer().producerIndex, is(6L));
+
+    // If the expire time increases by more than the tolerance, treat the update as a write
+    when(context.expiry().expireAfterUpdate(any(), any(), anyLong(), anyLong()))
+        .thenReturn(Expire.FOREVER.timeNanos());
+    cache.put(1, 4);
+    assertThat(localCache.readBuffer.reads(), is(1));
+    assertThat(localCache.readBuffer.writes(), is(1));
+    assertThat(localCache.writeBuffer().producerIndex, is(8L));
   }
 }

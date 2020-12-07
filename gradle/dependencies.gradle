@@ -26,8 +26,8 @@
 ext {
   versions = [
     akka: '2.6.10',
-    cache2k: '1.9.3.Alpha',
-    checkerFramework: '3.7.1',
+    cache2k: '1.9.4.Beta',
+    checkerFramework: '3.8.0',
     coherence: '20.06',
     collision: '0.3.3',
     commonsCompress: '1.20',
@@ -41,7 +41,7 @@ ext {
     elasticSearch: '7.10.0',
     expiringMap: '0.5.9',
     fastfilter: 'bf0b02297f',
-    fastutil: '8.4.3',
+    fastutil: '8.4.4',
     flipTables: '1.1.0',
     googleJavaFormat: '1.7',
     guava: '30.0-jre',
@@ -97,7 +97,7 @@ ext {
     semanticVersioning: '1.1.0',
     shadow: '6.1.0',
     sonarqube: '3.0',
-    spotbugs: '4.1.4',
+    spotbugs: '4.2.0',
     spotbugsPlugin: '4.6.0',
     stats: '0.2.2',
     versions: '0.36.0',

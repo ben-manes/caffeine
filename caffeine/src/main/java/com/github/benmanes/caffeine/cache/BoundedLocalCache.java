@@ -2026,7 +2026,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       int oldWeight;
       boolean expired = false;
       boolean mayUpdate = true;
-      boolean exceedsTolerance = true;
+      boolean exceedsTolerance = false;
       synchronized (prior) {
         if (!prior.isAlive()) {
           continue;
@@ -2051,7 +2051,10 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           writer.write(key, value);
         }
         if (mayUpdate) {
-          exceedsTolerance = ((now - prior.getWriteTime()) > EXPIRE_WRITE_TOLERANCE);
+          exceedsTolerance =
+              (expiresAfterWrite() && (now - prior.getWriteTime()) > EXPIRE_WRITE_TOLERANCE)
+              || (expiresVariable()
+                  && Math.abs(varTime - prior.getVariableTime()) > EXPIRE_WRITE_TOLERANCE);
 
           setWriteTime(prior, now);
           prior.setWeight(newWeight);
@@ -2075,7 +2078,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       int weightedDifference = mayUpdate ? (newWeight - oldWeight) : 0;
       if ((oldValue == null) || (weightedDifference != 0) || expired) {
         afterWrite(new UpdateTask(prior, weightedDifference));
-      } else if (!onlyIfAbsent && expiresAfterWrite() && exceedsTolerance) {
+      } else if (!onlyIfAbsent && exceedsTolerance) {
         afterWrite(new UpdateTask(prior, weightedDifference));
       } else {
         if (mayUpdate) {

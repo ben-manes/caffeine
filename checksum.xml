@@ -95,6 +95,7 @@
     <trusted-key id='94b291aef984a085' group='io.reactivex.rxjava3' />
     <trusted-key id='5e2f2b3d474efe6b' group='it.unimi.dsi' />
     <trusted-key id='823dba283a93ee3c' group='it.unimi.dsi' />
+    <trusted-key id='ca85ffe638d4407a' group='it.unimi.dsi' />
     <trusted-key id='d908a43fb7ec07ac' group='jakarta.activation' />
     <trusted-key id='0e325becb6962a24' group='jakarta.annotation' />
     <trusted-key id='0aa3e5c3d232e79b' group='jakarta.inject' />
