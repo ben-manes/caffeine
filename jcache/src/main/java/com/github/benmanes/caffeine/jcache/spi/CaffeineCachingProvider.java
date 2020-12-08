@@ -180,7 +180,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
     public Class<?> loadClass(String name) throws ClassNotFoundException {
       ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
       ClassNotFoundException error = null;
-      if (contextClassLoader != null && contextClassLoader != DEFAULT_CLASS_LOADER) {
+      if ((contextClassLoader != null) && (contextClassLoader != DEFAULT_CLASS_LOADER)) {
         try {
           return contextClassLoader.loadClass(name);
         } catch (ClassNotFoundException e) {
@@ -198,7 +198,9 @@ public final class CaffeineCachingProvider implements CachingProvider {
       }
 
       ClassLoader parentClassLoader = getParent();
-      if (parentClassLoader != null && parentClassLoader != contextClassLoader && parentClassLoader != classClassLoader) {
+      if ((parentClassLoader != null)
+          && (parentClassLoader != classClassLoader)
+          && (parentClassLoader != contextClassLoader)) {
         return parentClassLoader.loadClass(name);
       }
       throw (error == null) ? new ClassNotFoundException(name) : error;
@@ -207,7 +209,7 @@ public final class CaffeineCachingProvider implements CachingProvider {
     @Override
     public @Nullable URL getResource(String name) {
       ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-      if (contextClassLoader != null && contextClassLoader != DEFAULT_CLASS_LOADER) {
+      if ((contextClassLoader != null) && (contextClassLoader != DEFAULT_CLASS_LOADER)) {
         URL resource = contextClassLoader.getResource(name);
         if (resource != null) {
           return resource;
@@ -223,7 +225,9 @@ public final class CaffeineCachingProvider implements CachingProvider {
       }
 
       ClassLoader parentClassLoader = getParent();
-      if (parentClassLoader != null && parentClassLoader != contextClassLoader && parentClassLoader != classClassLoader) {
+      if ((parentClassLoader != null)
+          && (parentClassLoader != classClassLoader)
+          && (parentClassLoader != contextClassLoader)) {
         return parentClassLoader.getResource(name);
       }
 
@@ -245,7 +249,9 @@ public final class CaffeineCachingProvider implements CachingProvider {
       }
 
       ClassLoader parentClassLoader = getParent();
-      if (parentClassLoader != null && parentClassLoader != contextClassLoader && parentClassLoader != classClassLoader) {
+      if ((parentClassLoader != null)
+          && (parentClassLoader != classClassLoader)
+          && (parentClassLoader != contextClassLoader)) {
         resources.addAll(Collections.list(parentClassLoader.getResources(name)));
       }
 

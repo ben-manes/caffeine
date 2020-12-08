@@ -94,8 +94,7 @@ public final class NodeSelectorCode {
   private NodeSelectorCode selector() {
     block
         .beginControlFlow("try")
-            .addStatement("$T<?> clazz = $T.class.getClassLoader().loadClass(sb.toString())",
-                Class.class, NODE_FACTORY.rawType)
+            .addStatement("Class<?> clazz = Class.forName(sb.toString())")
             .add("@SuppressWarnings($S)\n", "unchecked")
             .addStatement("$1T factory = ($1T) clazz.getDeclaredConstructor().newInstance()",
                 NODE_FACTORY)
