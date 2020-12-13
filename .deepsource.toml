@@ -5,4 +5,4 @@ name = "java"
 enabled = true
 
   [analyzers.meta]
-  java_version = "8"
+  runtime_version = "8"
