@@ -53,8 +53,7 @@ public final class Cache2kPolicy implements Policy {
     BasicSettings settings = new BasicSettings(config);
     Cache2kBuilder<Long, AccessEvent> builder = Cache2kBuilder.of(Long.class, AccessEvent.class)
         .addListener(listener)
-        .strictEviction(true)
-        .eternal(true);
+        .strictEviction(true);
     if (characteristics.contains(WEIGHTED)) {
       builder.weigher((Long key, AccessEvent value) -> value.weight());
       builder.maximumWeight(settings.maximumSize());

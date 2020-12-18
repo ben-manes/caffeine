@@ -37,6 +37,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.lirs.LirsTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.lrb.LrbTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.scarab.ScarabTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.cambridge.CambridgeTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.snia.keyvalue.ObjectStoreTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.K5cloudTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentBlockTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.snia.parallel.TencentPhotoTraceReader;
@@ -72,6 +73,7 @@ public enum TraceFormat {
   SCARAB(ScarabTraceReader::new),
   SNIA_CAMBRIDGE(CambridgeTraceReader::new),
   SNIA_K5CLOUD(K5cloudTraceReader::new),
+  SNIA_OBJECT_STORE(ObjectStoreTraceReader::new),
   SNIA_TENCENT_BLOCK(TencentBlockTraceReader::new),
   SNIA_TENCENT_PHOTO(TencentPhotoTraceReader::new),
   TWITTER(TwitterTraceReader::new),

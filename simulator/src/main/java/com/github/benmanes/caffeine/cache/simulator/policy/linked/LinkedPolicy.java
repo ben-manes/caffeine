@@ -116,9 +116,12 @@ public final class LinkedPolicy implements Policy {
   private void evict(Node candidate) {
     if (currentSize > maximumSize) {
       while (currentSize > maximumSize) {
-        Node victim = policy.findVictim(sentinel, policyStats);
-        policyStats.recordEviction();
+        if (candidate.weight > maximumSize) {
+          evictEntry(candidate);
+          continue;
+        }
 
+        Node victim = policy.findVictim(sentinel, policyStats);
         boolean admit = admittor.admit(candidate.key, victim.key);
         if (admit) {
           evictEntry(victim);
@@ -132,6 +135,7 @@ public final class LinkedPolicy implements Policy {
   }
 
   private void evictEntry(Node node) {
+    policyStats.recordEviction();
     currentSize -= node.weight;
     data.remove(node.key);
     node.remove();
