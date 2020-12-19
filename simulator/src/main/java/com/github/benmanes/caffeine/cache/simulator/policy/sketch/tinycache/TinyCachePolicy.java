@@ -15,14 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy.sketch.tinycache;
 
-import java.util.Set;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.tinycache.TinyCache;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
@@ -39,11 +35,6 @@ public final class TinyCachePolicy implements KeyOnlyPolicy {
     int maximumSize = Ints.checkedCast(settings.maximumSize());
     tinyCache = new TinyCache((int) Math.ceil(maximumSize / 64.0),
         64, settings.randomSeed());
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new TinyCachePolicy(config));
   }
 
   @Override

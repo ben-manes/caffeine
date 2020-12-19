@@ -27,9 +27,8 @@ import org.elasticsearch.common.cache.CacheBuilder;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -37,6 +36,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(characteristics = WEIGHTED)
 public final class ElasticSearchPolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
@@ -51,15 +51,6 @@ public final class ElasticSearchPolicy implements Policy {
       builder.weigher((key, value) -> value.weight());
     }
     cache = builder.build();
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config, Set<Characteristic> characteristics) {
-    return ImmutableSet.of(new ElasticSearchPolicy(config, characteristics));
-  }
-
-  @Override public Set<Characteristic> characteristics() {
-    return Sets.immutableEnumSet(WEIGHTED);
   }
 
   @Override

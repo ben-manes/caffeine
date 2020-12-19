@@ -307,7 +307,6 @@ public class PolicyStats {
     public abstract boolean required();
     public abstract ImmutableSet<Characteristic> characteristics();
 
-    @SuppressWarnings("PMD.ShortMethodName")
     public static Metric of(String name, Object value, MetricType type, boolean required) {
       return builder().name(name).value(value).type(type).required(required).build();
     }

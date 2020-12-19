@@ -17,13 +17,11 @@ package com.github.benmanes.caffeine.cache.simulator.policy.opt;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
@@ -59,16 +57,6 @@ public final class ClairvoyantPolicy implements Policy {
     accessTimes = new Long2ObjectOpenHashMap<>();
     infiniteTimestamp = Integer.MAX_VALUE;
     data = new IntRBTreeSet();
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new ClairvoyantPolicy(config));
-  }
-
-  @Override
-  public Set<Characteristic> characteristics() {
-    return ImmutableSet.of();
   }
 
   @Override

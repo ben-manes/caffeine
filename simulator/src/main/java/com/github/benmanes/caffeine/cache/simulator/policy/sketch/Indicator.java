@@ -138,12 +138,9 @@ public final class Indicator {
     public IndicatorSettings(Config config) {
       super(config);
     }
-
-    @SuppressWarnings("PMD.ShortMethodName")
     public int k() {
       return config().getInt("indicator.k");
     }
-
     public int ssSize() {
       return config().getInt("indicator.ss-size");
     }

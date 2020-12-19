@@ -18,17 +18,14 @@ package com.github.benmanes.caffeine.cache.simulator.policy.sketch.feedback;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Map;
-import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.membership.Membership;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -75,11 +72,6 @@ public final class FeedbackTinyLfuPolicy implements KeyOnlyPolicy {
     maxGain = Math.min(15, settings.maximumInsertionGain());
     sampleSize = Math.min(settings.maximumSampleSize(), maximumSize);
     feedback = settings.membership().filter().create(settings.filterConfig(sampleSize));
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new FeedbackTinyLfuPolicy(config));
   }
 
   @Override

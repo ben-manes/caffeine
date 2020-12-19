@@ -15,9 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
-import java.util.Set;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import com.google.common.collect.ImmutableSet;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
 /**
  * A cache that implements a page replacement policy.
@@ -25,12 +27,6 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Policy {
-  enum Characteristic {
-    WEIGHTED
-  }
-
-  /** The event features that this policy supports. */
-  Set<Characteristic> characteristics();
 
   /** Records that the entry was accessed. */
   void record(AccessEvent event);
@@ -41,17 +37,23 @@ public interface Policy {
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
 
+  /** The additional features supported. */
+  enum Characteristic {
+    WEIGHTED
+  }
+
+  /** An optional annotation to declare additional capabilities. */
+  @Retention(RUNTIME)
+  @Target(ElementType.TYPE)
+  @interface PolicySpec {
+    Characteristic[] characteristics();
+  }
+
   /** A policy that does not exploit external event metadata. */
   interface KeyOnlyPolicy extends Policy {
-
-    @Override default Set<Characteristic> characteristics() {
-      return ImmutableSet.of();
-    }
-
     @Override default void record(AccessEvent event) {
       record(event.key());
     }
-
     void record(long key);
   }
 }

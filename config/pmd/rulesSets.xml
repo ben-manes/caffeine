@@ -25,6 +25,7 @@
     <exclude name="AbstractNaming"/>
     <exclude name="DefaultPackage"/>
     <exclude name="ShortClassName"/>
+    <exclude name="ShortMethodName"/>
     <exclude name="ConfusingTernary"/>
     <exclude name="DontImportJavaLang"/>
     <exclude name="UseDiamondOperator"/>

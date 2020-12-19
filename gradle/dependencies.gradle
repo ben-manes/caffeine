@@ -64,7 +64,7 @@ ext {
     univocityParsers: '2.9.0',
     ycsb: '0.17.0',
     xz: '1.8',
-    zstd: '1.4.5-12',
+    zstd: '1.4.8-1',
   ]
   testVersions = [
     awaitility: '4.0.3',

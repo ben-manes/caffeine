@@ -17,13 +17,9 @@ package com.github.benmanes.caffeine.cache.simulator.policy.product;
 
 import static java.util.Locale.US;
 
-import java.util.Set;
-
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
-import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
 
@@ -46,11 +42,6 @@ public final class ExpiringMapPolicy implements KeyOnlyPolicy {
         .maxSize(Ints.checkedCast(settings.maximumSize()))
         .expirationPolicy(settings.policy())
         .build();
-  }
-
-  /** Returns all variations of this policy based on the configuration parameters. */
-  public static Set<Policy> policies(Config config) {
-    return ImmutableSet.of(new ExpiringMapPolicy(config));
   }
 
   @Override
