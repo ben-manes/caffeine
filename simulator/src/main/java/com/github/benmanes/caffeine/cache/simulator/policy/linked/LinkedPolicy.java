@@ -56,7 +56,7 @@ public final class LinkedPolicy implements Policy {
 
   public LinkedPolicy(Config config, Set<Characteristic> characteristics,
       Admission admission, EvictionPolicy policy) {
-    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
+    this.policyStats = new PolicyStats(admission.format(policy.label()));
     this.admittor = admission.from(config, policyStats);
     this.weighted = characteristics.contains(WEIGHTED);
 
@@ -201,7 +201,7 @@ public final class LinkedPolicy implements Policy {
     };
 
     public String label() {
-      return StringUtils.capitalize(name().toLowerCase(US));
+      return "linked." + StringUtils.capitalize(name().toLowerCase(US));
     }
 
     /** Performs any operations required by the policy after a node was successfully retrieved. */

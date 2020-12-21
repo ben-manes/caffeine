@@ -19,6 +19,7 @@ import static java.util.Locale.US;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.primitives.Ints;
 import com.trivago.triava.tcache.Cache;
@@ -33,13 +34,14 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "product.TCache")
 public final class TCachePolicy implements KeyOnlyPolicy {
   private final Cache<Object, Object> cache;
   private final PolicyStats policyStats;
 
   public TCachePolicy(Config config) {
+    policyStats = new PolicyStats(name());
     TCacheSettings settings = new TCacheSettings(config);
-    policyStats = new PolicyStats("product.TCache");
     cache = TCacheFactory.standardFactory().builder()
         .setMaxElements(Ints.checkedCast(settings.maximumSize()))
         .setEvictionClass(settings.policy())

@@ -36,13 +36,13 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@PolicySpec(characteristics = WEIGHTED)
+@PolicySpec(name = "product.ElasticSearch", characteristics = WEIGHTED)
 public final class ElasticSearchPolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
   public ElasticSearchPolicy(Config config, Set<Characteristic> characteristics) {
-    policyStats = new PolicyStats("product.ElasticSearch");
+    policyStats = new PolicyStats(name());
     BasicSettings settings = new BasicSettings(config);
     CacheBuilder<Long, AccessEvent> builder = CacheBuilder.<Long, AccessEvent>builder()
         .removalListener(notification -> policyStats.recordEviction())

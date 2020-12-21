@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -40,6 +41,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "adaptive.Car")
 public final class CarPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -59,7 +61,7 @@ public final class CarPolicy implements KeyOnlyPolicy {
   public CarPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
     this.maximumSize = Ints.checkedCast(settings.maximumSize());
-    this.policyStats = new PolicyStats("adaptive.Car");
+    this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
     this.headT1 = new Node();
     this.headT2 = new Node();

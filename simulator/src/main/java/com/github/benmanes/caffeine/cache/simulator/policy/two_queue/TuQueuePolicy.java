@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -50,6 +51,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "two-queue.TuQueue")
 public class TuQueuePolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -73,7 +75,7 @@ public class TuQueuePolicy implements KeyOnlyPolicy {
     this.headWarm = new Node();
     this.headCold = new Node();
     this.data = new Long2ObjectOpenHashMap<>();
-    this.policyStats = new PolicyStats("two-queue.TuQueue");
+    this.policyStats = new PolicyStats(name());
     this.maximumSize = Ints.checkedCast(settings.maximumSize());
     this.maxHot = (int) (maximumSize * settings.percentHot());
     this.maxWarm = (int) (maximumSize * settings.percentWarm());

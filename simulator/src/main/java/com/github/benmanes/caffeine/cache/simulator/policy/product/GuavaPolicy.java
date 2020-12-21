@@ -33,13 +33,13 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@PolicySpec(characteristics = WEIGHTED)
+@PolicySpec(name = "product.Guava", characteristics = WEIGHTED)
 public final class GuavaPolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
   public GuavaPolicy(Config config, Set<Characteristic> characteristics) {
-    policyStats = new PolicyStats("product.Guava");
+    policyStats = new PolicyStats(name());
     BasicSettings settings = new BasicSettings(config);
     CacheBuilder<Long, AccessEvent> builder = CacheBuilder.newBuilder()
         .removalListener(notification -> policyStats.recordEviction());

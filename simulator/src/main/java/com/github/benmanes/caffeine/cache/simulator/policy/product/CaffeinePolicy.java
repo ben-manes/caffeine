@@ -35,13 +35,13 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@PolicySpec(characteristics = WEIGHTED)
+@PolicySpec(name = "product.Caffeine", characteristics = WEIGHTED)
 public final class CaffeinePolicy implements Policy {
   private final Cache<Long, AccessEvent> cache;
   private final PolicyStats policyStats;
 
   public CaffeinePolicy(Config config, Set<Characteristic> characteristics) {
-    policyStats = new PolicyStats("product.Caffeine");
+    policyStats = new PolicyStats(name());
     BasicSettings settings = new BasicSettings(config);
     Caffeine<Long, AccessEvent> builder = Caffeine.newBuilder()
         .removalListener((Long key, AccessEvent value, RemovalCause cause) ->

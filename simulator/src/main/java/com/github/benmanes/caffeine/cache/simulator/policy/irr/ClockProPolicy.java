@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -45,6 +46,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  * @author ben.manes@gmail.com (Ben Manes)
  * @author park910113@gmail.com (Chanyoung Park)
  */
+@PolicySpec(name = "irr.ClockPro")
 public final class ClockProPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -101,7 +103,7 @@ public final class ClockProPolicy implements KeyOnlyPolicy {
     if (maxResColdSize > maxSize - minResColdSize) {
       maxResColdSize = maxSize - minResColdSize;
     }
-    this.policyStats = new PolicyStats("irr.ClockPro");
+    this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
     this.coldTarget = minResColdSize;
     this.listHead = this.handHot = this.handCold = this.handTest = null;

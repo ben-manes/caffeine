@@ -262,7 +262,7 @@ public final class SampledPolicy implements KeyOnlyPolicy {
     };
 
     public String label() {
-      return StringUtils.capitalize(name().toLowerCase(US));
+      return "sampled." + StringUtils.capitalize(name().toLowerCase(US));
     }
 
     /** Determines which node to evict. */

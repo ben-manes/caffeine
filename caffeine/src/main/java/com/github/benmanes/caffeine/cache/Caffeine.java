@@ -135,7 +135,6 @@ import com.google.errorprone.annotations.FormatMethod;
  *     normally {@code Object} unless it is constrained by using a method like {@code
  *     #removalListener}
  */
-@SuppressWarnings("PMD.TooManyFields")
 public final class Caffeine<K, V> {
   static final Logger logger = Logger.getLogger(Caffeine.class.getName());
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;

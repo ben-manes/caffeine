@@ -52,7 +52,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
 
   public FrequentlyUsedPolicy(Admission admission, EvictionPolicy policy, Config config) {
     BasicSettings settings = new BasicSettings(config);
-    this.policyStats = new PolicyStats(admission.format("linked." + policy.label()));
+    this.policyStats = new PolicyStats(admission.format(policy.label()));
     this.maximumSize = Ints.checkedCast(settings.maximumSize());
     this.admittor = admission.from(config, policyStats);
     this.data = new Long2ObjectOpenHashMap<>();
@@ -161,7 +161,7 @@ public final class FrequentlyUsedPolicy implements KeyOnlyPolicy {
     LFU, MFU;
 
     public String label() {
-      return StringUtils.capitalize(name().toLowerCase(US));
+      return "linked." + StringUtils.capitalize(name().toLowerCase(US));
     }
   }
 

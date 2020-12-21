@@ -36,18 +36,18 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@PolicySpec(characteristics = WEIGHTED)
+@PolicySpec(name = "opt.Unbounded", characteristics = WEIGHTED)
 public final class UnboundedPolicy implements Policy {
   private final PolicyStats policyStats;
   private final LongOpenHashSet data;
 
   public UnboundedPolicy(Config config, Set<Characteristic> characteristics) {
-    policyStats = new PolicyStats("opt.Unbounded");
     BasicSettings settings = new BasicSettings(config);
     int initialSize = characteristics.contains(WEIGHTED)
         ? LongOpenHashSet.DEFAULT_INITIAL_SIZE
         : Ints.saturatedCast(settings.maximumSize());
     data = new LongOpenHashSet(initialSize);
+    policyStats = new PolicyStats(name());
   }
 
   @Override

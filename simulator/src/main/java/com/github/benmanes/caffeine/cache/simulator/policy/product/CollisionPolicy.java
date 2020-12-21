@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
@@ -38,6 +39,7 @@ import systems.comodal.collision.cache.CollisionCache;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "product.Collision")
 public final class CollisionPolicy implements KeyOnlyPolicy {
   private final CollisionCache<Object, Object> cache;
   private final PolicyStats policyStats;
@@ -46,7 +48,7 @@ public final class CollisionPolicy implements KeyOnlyPolicy {
   private int trackedSize;
 
   public CollisionPolicy(CollisionSettings settings, Density density) {
-    policyStats = new PolicyStats("product.Collision (%s)",
+    policyStats = new PolicyStats(name() + " (%s)",
         StringUtils.capitalize(density.name().toLowerCase(US)));
     maximumSize = Ints.checkedCast(settings.maximumSize());
 

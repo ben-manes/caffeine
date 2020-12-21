@@ -24,6 +24,7 @@ import org.ehcache.config.units.EntryUnit;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
@@ -32,6 +33,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "product.Ehcache3")
 public final class Ehcache3Policy implements KeyOnlyPolicy {
   private final Cache<Object, Object> cache;
   private final CacheManager cacheManager;
@@ -42,7 +44,7 @@ public final class Ehcache3Policy implements KeyOnlyPolicy {
 
   @SuppressWarnings("PMD.CloseResource")
   public Ehcache3Policy(Config config) {
-    policyStats = new PolicyStats("product.Ehcache3");
+    policyStats = new PolicyStats(name());
     BasicSettings settings = new BasicSettings(config);
     cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
     cache = cacheManager.createCache("ehcache3",

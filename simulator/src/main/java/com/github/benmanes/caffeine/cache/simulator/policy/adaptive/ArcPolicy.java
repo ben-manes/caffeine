@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -44,6 +45,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "adaptive.Arc")
 public final class ArcPolicy implements KeyOnlyPolicy {
   // In Cache:
   // - T1: Pages that have been accessed at least once
@@ -73,7 +75,7 @@ public final class ArcPolicy implements KeyOnlyPolicy {
   public ArcPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
     this.maximumSize = Ints.checkedCast(settings.maximumSize());
-    this.policyStats = new PolicyStats("adaptive.Arc");
+    this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
     this.headT1 = new Node();
     this.headT2 = new Node();

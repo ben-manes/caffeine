@@ -25,6 +25,7 @@ import java.util.Set;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -50,6 +51,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "irr.DClock")
 public final class DClockPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
@@ -66,7 +68,7 @@ public final class DClockPolicy implements KeyOnlyPolicy {
   long evictions;
 
   public DClockPolicy(DClockSettings settings, double percentActive) {
-    this.policyStats = new PolicyStats("irr.DClock (active: %d%%)", (int) (100 * percentActive));
+    this.policyStats = new PolicyStats(name() + " (active: %d%%)", (int) (100 * percentActive));
     this.maximumSize = Ints.checkedCast(settings.maximumSize());
     this.maxActive = (int) (percentActive * maximumSize);
     this.data = new Long2ObjectOpenHashMap<>();

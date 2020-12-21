@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admission;
 import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -51,6 +52,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "linked.SegmentedLru")
 public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   static final Node UNLINKED = new Node();
 
@@ -65,7 +67,7 @@ public final class SegmentedLruPolicy implements KeyOnlyPolicy {
   int sizeProtected;
 
   public SegmentedLruPolicy(Admission admission, Config config) {
-    this.policyStats = new PolicyStats(admission.format("linked.SegmentedLru"));
+    this.policyStats = new PolicyStats(admission.format(name()));
     this.admittor = admission.from(config, policyStats);
 
     SegmentedLruSettings settings = new SegmentedLruSettings(config);

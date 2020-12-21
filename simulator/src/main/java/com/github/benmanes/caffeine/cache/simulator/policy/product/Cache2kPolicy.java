@@ -37,7 +37,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@PolicySpec(characteristics = WEIGHTED)
+@PolicySpec(name = "product.Cache2k", characteristics = WEIGHTED)
 public final class Cache2kPolicy implements Policy {
   private static final Logger logger = Logger.getLogger("org.cache2k");
 
@@ -47,7 +47,7 @@ public final class Cache2kPolicy implements Policy {
   public Cache2kPolicy(Config config, Set<Characteristic> characteristics) {
     logger.setLevel(Level.WARNING);
 
-    policyStats = new PolicyStats("product.Cache2k");
+    policyStats = new PolicyStats(name());
     CacheEntryEvictedListener<Long, AccessEvent> listener =
         (cache, entry) -> policyStats.recordEviction();
     BasicSettings settings = new BasicSettings(config);

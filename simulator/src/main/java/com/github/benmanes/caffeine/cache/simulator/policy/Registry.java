@@ -16,9 +16,11 @@
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -127,107 +129,96 @@ public final class Registry {
     factories.putAll(normalized);
   }
 
+  /** Registers the policy based on the annotated name. */
+  private void register(Class<? extends Policy> policyClass, Function<Config, Policy> creator) {
+    registerMany(policyClass, config -> ImmutableSet.of(creator.apply(config)));
+  }
+
+  /** Registers the policy based on the annotated name. */
+  private void registerMany(Class<? extends Policy> policyClass,
+      Function<Config, Set<Policy>> creator) {
+    PolicySpec policySpec = policyClass.getAnnotation(PolicySpec.class);
+    checkState(isNotBlank(policySpec.name()), "The name must be specified on %s", policyClass);
+    factories.put(policySpec.name().trim(), Factory.of(policyClass, creator));
+  }
+
   private void registerOptimal() {
-    factories.put("opt.Clairvoyant", Factory.of(ClairvoyantPolicy.class, ClairvoyantPolicy::new));
-    factories.put("opt.Unbounded", Factory.of(
-        UnboundedPolicy.class, config -> new UnboundedPolicy(config, characteristics)));
+    register(ClairvoyantPolicy.class, ClairvoyantPolicy::new);
+    register(UnboundedPolicy.class, config -> new UnboundedPolicy(config, characteristics));
   }
 
   private void registerLinked() {
     Stream.of(LinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "linked." + priority.name();
-      factories.put(id, Factory.ofMany(LinkedPolicy.class,
+      factories.put(priority.label(), Factory.of(LinkedPolicy.class,
           config -> LinkedPolicy.policies(config, characteristics, priority)));
     });
     Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "linked." + priority.name();
-      factories.put(id, Factory.ofMany(FrequentlyUsedPolicy.class,
+      factories.put(priority.label(), Factory.of(FrequentlyUsedPolicy.class,
           config -> FrequentlyUsedPolicy.policies(config, priority)));
     });
-    factories.put("linked.SegmentedLru", Factory.ofMany(
-        SegmentedLruPolicy.class, SegmentedLruPolicy::policies));
-    factories.put("linked.Multiqueue", Factory.of(
-        MultiQueuePolicy.class, MultiQueuePolicy::new));
-    factories.put("linked.S4Lru", Factory.ofMany(S4LruPolicy.class, S4LruPolicy::policies));
+    registerMany(S4LruPolicy.class, S4LruPolicy::policies);
+    register(MultiQueuePolicy.class, MultiQueuePolicy::new);
+    registerMany(SegmentedLruPolicy.class, SegmentedLruPolicy::policies);
   }
 
   private void registerSampled() {
     Stream.of(SampledPolicy.EvictionPolicy.values()).forEach(priority -> {
-      String id = "sampled." + priority.name();
-      factories.put(id, Factory.ofMany(
+      factories.put(priority.label(), Factory.of(
           SampledPolicy.class, config -> SampledPolicy.policies(config, priority)));
     });
   }
 
   private void registerTwoQueue() {
-    factories.put("two-queue.TuQueue", Factory.of(TuQueuePolicy.class, TuQueuePolicy::new));
-    factories.put("two-queue.TwoQueue", Factory.of(TwoQueuePolicy.class, TwoQueuePolicy::new));
+    register(TuQueuePolicy.class, TuQueuePolicy::new);
+    register(TwoQueuePolicy.class, TwoQueuePolicy::new);
   }
 
   private void registerSketch() {
-    factories.put("sketch.WindowTinyLfu", Factory.ofMany(
-        WindowTinyLfuPolicy.class, WindowTinyLfuPolicy::policies));
-    factories.put("sketch.S4WindowTinyLfu", Factory.ofMany(
-        S4WindowTinyLfuPolicy.class, S4WindowTinyLfuPolicy::policies));
-    factories.put("sketch.LruWindowTinyLfu", Factory.ofMany(
-        LruWindowTinyLfuPolicy.class, LruWindowTinyLfuPolicy::policies));
-    factories.put("sketch.RandomWindowtinyLfu", Factory.ofMany(
-        RandomWindowTinyLfuPolicy.class, RandomWindowTinyLfuPolicy::policies));
-    factories.put("sketch.FullySegmentedWindowTinylfu", Factory.ofMany(
-        FullySegmentedWindowTinyLfuPolicy.class, FullySegmentedWindowTinyLfuPolicy::policies));
+    registerMany(WindowTinyLfuPolicy.class, WindowTinyLfuPolicy::policies);
+    registerMany(S4WindowTinyLfuPolicy.class, S4WindowTinyLfuPolicy::policies);
+    registerMany(LruWindowTinyLfuPolicy.class, LruWindowTinyLfuPolicy::policies);
+    registerMany(RandomWindowTinyLfuPolicy.class, RandomWindowTinyLfuPolicy::policies);
+    registerMany(FullySegmentedWindowTinyLfuPolicy.class,
+        FullySegmentedWindowTinyLfuPolicy::policies);
 
-    factories.put("sketch.FeedbackTinyLfu", Factory.of(
-        FeedbackTinyLfuPolicy.class, FeedbackTinyLfuPolicy::new));
-    factories.put("sketch.FeedbackWindowTinyLfu", Factory.ofMany(
-        FeedbackWindowTinyLfuPolicy.class, FeedbackWindowTinyLfuPolicy::policies));
+    register(FeedbackTinyLfuPolicy.class, FeedbackTinyLfuPolicy::new);
+    registerMany(FeedbackWindowTinyLfuPolicy.class, FeedbackWindowTinyLfuPolicy::policies);
 
-    factories.put("sketch.HillClimberWindowTinyLfu", Factory.ofMany(
-        HillClimberWindowTinyLfuPolicy.class, HillClimberWindowTinyLfuPolicy::policies));
+    registerMany(HillClimberWindowTinyLfuPolicy.class, HillClimberWindowTinyLfuPolicy::policies);
 
-    factories.put("sketch.TinyCache", Factory.of(TinyCachePolicy.class, TinyCachePolicy::new));
-    factories.put("sketch.WindowTinyCache", Factory.of(
-        WindowTinyCachePolicy.class, WindowTinyCachePolicy::new));
-    factories.put("sketch.TinyCache_GhostCache", Factory.of(
-        TinyCacheWithGhostCachePolicy.class, TinyCacheWithGhostCachePolicy::new));
+    register(TinyCachePolicy.class, TinyCachePolicy::new);
+    register(WindowTinyCachePolicy.class, WindowTinyCachePolicy::new);
+    register(TinyCacheWithGhostCachePolicy.class, TinyCacheWithGhostCachePolicy::new);
   }
 
   private void registerIrr() {
-    factories.put("irr.Frd", Factory.of(FrdPolicy.class, FrdPolicy::new));
-    factories.put("irr.IndicatorFrd", Factory.of(
-        IndicatorFrdPolicy.class, IndicatorFrdPolicy::new));
-    factories.put("irr.ClimberFrd", Factory.of(
-        HillClimberFrdPolicy.class, HillClimberFrdPolicy::new));
+    register(FrdPolicy.class, FrdPolicy::new);
+    register(IndicatorFrdPolicy.class, IndicatorFrdPolicy::new);
+    register(HillClimberFrdPolicy.class, HillClimberFrdPolicy::new);
 
-    factories.put("irr.Lirs", Factory.of(LirsPolicy.class, LirsPolicy::new));
-    factories.put("irr.ClockPro", Factory.of(ClockProPolicy.class, ClockProPolicy::new));
-    factories.put("irr.ClockProPlus", Factory.of(
-        ClockProPlusPolicy.class, ClockProPlusPolicy::new));
+    register(LirsPolicy.class, LirsPolicy::new);
+    register(ClockProPolicy.class, ClockProPolicy::new);
+    register(ClockProPlusPolicy.class, ClockProPlusPolicy::new);
 
-    factories.put("irr.DClock", Factory.ofMany(DClockPolicy.class, DClockPolicy::policies));
+    registerMany(DClockPolicy.class, DClockPolicy::policies);
   }
 
   private void registerAdaptive() {
-    factories.put("adaptive.Arc", Factory.of(ArcPolicy.class, ArcPolicy::new));
-    factories.put("adaptive.Car", Factory.of(CarPolicy.class, CarPolicy::new));
-    factories.put("adaptive.Cart", Factory.of(CartPolicy.class, CartPolicy::new));
+    register(ArcPolicy.class, ArcPolicy::new);
+    register(CarPolicy.class, CarPolicy::new);
+    register(CartPolicy.class, CartPolicy::new);
   }
 
   private void registerProduct() {
-    factories.put("product.OHC", Factory.ofMany(OhcPolicy.class, OhcPolicy::policies));
-    factories.put("product.Tcache", Factory.of(TCachePolicy.class, TCachePolicy::new));
-    factories.put("product.Ehcache3", Factory.of(Ehcache3Policy.class, Ehcache3Policy::new));
-    factories.put("product.Collision", Factory.ofMany(
-        CollisionPolicy.class, CollisionPolicy::policies));
-    factories.put("product.ExpiringMap", Factory.of(
-        ExpiringMapPolicy.class, ExpiringMapPolicy::new));
-    factories.put("product.Guava", Factory.of(
-        GuavaPolicy.class, config -> new GuavaPolicy(config, characteristics)));
-    factories.put("product.Cache2k", Factory.of(
-        Cache2kPolicy.class, config -> new Cache2kPolicy(config, characteristics)));
-    factories.put("product.Caffeine", Factory.of(
-        CaffeinePolicy.class, config -> new CaffeinePolicy(config, characteristics)));
-    factories.put("product.Elasticsearch", Factory.of(
-        ElasticSearchPolicy.class, config -> new ElasticSearchPolicy(config, characteristics)));
+    register(TCachePolicy.class, TCachePolicy::new);
+    registerMany(OhcPolicy.class, OhcPolicy::policies);
+    register(Ehcache3Policy.class, Ehcache3Policy::new);
+    register(ExpiringMapPolicy.class, ExpiringMapPolicy::new);
+    registerMany(CollisionPolicy.class, CollisionPolicy::policies);
+    register(GuavaPolicy.class, config -> new GuavaPolicy(config, characteristics));
+    register(Cache2kPolicy.class, config -> new Cache2kPolicy(config, characteristics));
+    register(CaffeinePolicy.class, config -> new CaffeinePolicy(config, characteristics));
+    register(ElasticSearchPolicy.class, config -> new ElasticSearchPolicy(config, characteristics));
   }
 
   @AutoValue
@@ -235,11 +226,7 @@ public final class Registry {
     abstract Function<Config, Set<Policy>> creator();
     abstract ImmutableSet<Characteristic> characteristics();
 
-    static Factory of(Class<? extends Policy> policyClass, Function<Config, Policy> creator) {
-      return ofMany(policyClass, config -> ImmutableSet.of(creator.apply(config)));
-    }
-    static Factory ofMany(Class<? extends Policy> policyClass,
-        Function<Config, Set<Policy>> creator) {
+    static Factory of(Class<? extends Policy> policyClass, Function<Config, Set<Policy>> creator) {
       PolicySpec policySpec = policyClass.getAnnotation(PolicySpec.class);
       ImmutableSet<Characteristic> characteristics = (policySpec == null)
           ? ImmutableSet.of()

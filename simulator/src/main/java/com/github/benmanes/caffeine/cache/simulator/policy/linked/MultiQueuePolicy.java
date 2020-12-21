@@ -22,6 +22,7 @@ import java.util.Arrays;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -49,6 +50,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectSortedMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "linked.MultiQueue")
 public final class MultiQueuePolicy implements KeyOnlyPolicy {
   private final Long2ObjectSortedMap<Node> out;
   private final Long2ObjectMap<Node> data;
@@ -64,10 +66,10 @@ public final class MultiQueuePolicy implements KeyOnlyPolicy {
   public MultiQueuePolicy(Config config) {
     MultiQueueSettings settings = new MultiQueueSettings(config);
     maximumSize = Ints.checkedCast(settings.maximumSize());
-    policyStats = new PolicyStats("linked.MultiQueue");
     threshold = new long[settings.numberOfQueues()];
     headQ = new Node[settings.numberOfQueues()];
     out = new Long2ObjectLinkedOpenHashMap<>();
+    policyStats = new PolicyStats(name());
     data = new Long2ObjectOpenHashMap<>();
     lifetime = settings.lifetime();
 

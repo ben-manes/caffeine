@@ -35,6 +35,7 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.Adaptation;
 import com.github.benmanes.caffeine.cache.simulator.policy.sketch.climbing.HillClimber.QueueType;
@@ -51,7 +52,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.TooManyFields")
+@PolicySpec(name = "sketch.HillClimberWindowTinyLfu")
 public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final double initialPercentMain;
   private final Long2ObjectMap<Node> data;
@@ -86,8 +87,7 @@ public final class HillClimberWindowTinyLfuPolicy implements KeyOnlyPolicy {
     this.headWindow = new Node();
 
     this.initialPercentMain = percentMain;
-    this.policyStats = new PolicyStats(
-        "sketch.HillClimberWindowTinyLfu (%s %.0f%%)",
+    this.policyStats = new PolicyStats(name() + " (%s %.0f%%)",
         strategy.name().toLowerCase(US), 100 * (1.0 - initialPercentMain));
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.climber = strategy.create(settings.config());

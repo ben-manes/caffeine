@@ -15,7 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache.simulator.policy;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -37,6 +39,14 @@ public interface Policy {
   /** Returns the cache efficiency statistics. */
   PolicyStats stats();
 
+  /** The annotated name. */
+  default String name() {
+    PolicySpec policySpec = getClass().getAnnotation(PolicySpec.class);
+    checkState((policySpec != null) && isNotBlank(policySpec.name()),
+        "The @%s name must be specified on %s", PolicySpec.class.getSimpleName(), getClass());
+    return policySpec.name().trim();
+  }
+
   /** The additional features supported. */
   enum Characteristic {
     WEIGHTED
@@ -46,7 +56,12 @@ public interface Policy {
   @Retention(RUNTIME)
   @Target(ElementType.TYPE)
   @interface PolicySpec {
-    Characteristic[] characteristics();
+
+    /** The policy's unique name. */
+    String name() default "";
+
+    /** The event features that this policy supports. */
+    Characteristic[] characteristics() default {};
   }
 
   /** A policy that does not exploit external event metadata. */

@@ -122,6 +122,11 @@
     <Bug code="UI"/>
   </Match>
   <Match>
+    <Class name="com.github.benmanes.caffeine.cache.simulator.policy.Policy"/>
+    <Method name="name"/>
+    <Bug code="NP"/>
+  </Match>
+  <Match>
     <Class name="com.github.benmanes.caffeine.cache.simulator.policy.linked.MultiQueuePolicy"/>
     <Method name="evict"/>
     <Bug code="NP"/>

@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -52,7 +53,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.TooManyFields")
+@PolicySpec(name = "irr.Lirs")
 public final class LirsPolicy implements KeyOnlyPolicy {
   final Long2ObjectMap<Node> data;
   final PolicyStats policyStats;
@@ -79,7 +80,7 @@ public final class LirsPolicy implements KeyOnlyPolicy {
     this.maximumSize = Ints.checkedCast(settings.maximumSize());
     this.maximumNonResidentSize = (int) (maximumSize * settings.nonResidentMultiplier());
     this.maximumHotSize = (int) (maximumSize * settings.percentHot());
-    this.policyStats = new PolicyStats("irr.Lirs");
+    this.policyStats = new PolicyStats(name());
     this.data = new Long2ObjectOpenHashMap<>();
     this.evicted = new ArrayList<>();
     this.headNR = new Node();

@@ -33,6 +33,7 @@ import org.caffinitas.ohc.OHCacheBuilder;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.typesafe.config.Config;
 
@@ -41,6 +42,7 @@ import com.typesafe.config.Config;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "product.OHC")
 public final class OhcPolicy implements KeyOnlyPolicy {
   private static final long ENTRY_SIZE = 80;
 
@@ -48,6 +50,7 @@ public final class OhcPolicy implements KeyOnlyPolicy {
   private final PolicyStats policyStats;
 
   public OhcPolicy(OhcSettings settings, Eviction policy) {
+    policyStats = new PolicyStats(name() + " (%s)", (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu");
     cache = OHCacheBuilder.<Long, Long>newBuilder()
         .capacity(ENTRY_SIZE * settings.maximumSize())
         .edenSize(settings.percentEden())
@@ -55,8 +58,6 @@ public final class OhcPolicy implements KeyOnlyPolicy {
         .keySerializer(longSerializer)
         .eviction(policy)
         .build();
-    policyStats = new PolicyStats("product.OHC (%s)",
-        (policy == Eviction.LRU) ? "Lru" : "W-TinyLfu");
   }
 
   /** Returns all variations of this policy based on the configuration parameters. */

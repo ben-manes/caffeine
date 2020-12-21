@@ -29,7 +29,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PMD.TooManyFields")
 final class SerializationProxy<K, V> implements Serializable {
   private static final long serialVersionUID = 1;
 

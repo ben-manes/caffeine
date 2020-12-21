@@ -26,6 +26,7 @@ import com.github.benmanes.caffeine.cache.simulator.admission.Admittor;
 import com.github.benmanes.caffeine.cache.simulator.admission.TinyLfu;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.KeyOnlyPolicy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.base.MoreObjects;
 import com.google.common.primitives.Ints;
@@ -51,6 +52,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "sketch.WindowTinyLfu")
 public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   private final Long2ObjectMap<Node> data;
   private final PolicyStats policyStats;
@@ -68,7 +70,7 @@ public final class WindowTinyLfuPolicy implements KeyOnlyPolicy {
   private int sizeProtected;
 
   public WindowTinyLfuPolicy(double percentMain, WindowTinyLfuSettings settings) {
-    this.policyStats = new PolicyStats("sketch.WindowTinyLfu (%.0f%%)", 100 * (1.0d - percentMain));
+    this.policyStats = new PolicyStats(name() + " (%.0f%%)", 100 * (1.0d - percentMain));
     this.admittor = new TinyLfu(settings.config(), policyStats);
     this.maximumSize = Ints.checkedCast(settings.maximumSize());
 

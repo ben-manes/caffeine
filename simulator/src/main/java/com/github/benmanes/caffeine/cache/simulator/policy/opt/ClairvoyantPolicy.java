@@ -21,6 +21,7 @@ import java.util.Queue;
 import com.github.benmanes.caffeine.cache.simulator.BasicSettings;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy;
+import com.github.benmanes.caffeine.cache.simulator.policy.Policy.PolicySpec;
 import com.github.benmanes.caffeine.cache.simulator.policy.PolicyStats;
 import com.google.common.primitives.Ints;
 import com.typesafe.config.Config;
@@ -39,6 +40,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@PolicySpec(name = "opt.Clairvoyant")
 public final class ClairvoyantPolicy implements Policy {
   private final Long2ObjectMap<IntPriorityQueue> accessTimes;
   private final PolicyStats policyStats;
@@ -53,8 +55,8 @@ public final class ClairvoyantPolicy implements Policy {
   public ClairvoyantPolicy(Config config) {
     BasicSettings settings = new BasicSettings(config);
     maximumSize = Ints.checkedCast(settings.maximumSize());
-    policyStats = new PolicyStats("opt.Clairvoyant");
     accessTimes = new Long2ObjectOpenHashMap<>();
+    policyStats = new PolicyStats(name());
     infiniteTimestamp = Integer.MAX_VALUE;
     data = new IntRBTreeSet();
   }
