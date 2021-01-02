@@ -431,13 +431,13 @@ public final class GuavaCacheFromContext {
         @Override public Optional<Eviction<K, V>> eviction() {
           return Optional.empty();
         }
-        @Override public Optional<Expiration<K, V>> expireAfterAccess() {
+        @Override public Optional<FixedExpiration<K, V>> expireAfterAccess() {
           return Optional.empty();
         }
-        @Override public Optional<Expiration<K, V>> expireAfterWrite() {
+        @Override public Optional<FixedExpiration<K, V>> expireAfterWrite() {
           return Optional.empty();
         }
-        @Override public Optional<Expiration<K, V>> refreshAfterWrite() {
+        @Override public Optional<FixedRefresh<K, V>> refreshAfterWrite() {
           return Optional.empty();
         }
       };

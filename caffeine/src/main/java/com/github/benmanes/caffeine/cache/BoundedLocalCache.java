@@ -3385,9 +3385,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     final boolean isWeighted;
 
     @Nullable Optional<Eviction<K, V>> eviction;
-    @Nullable Optional<Expiration<K, V>> refreshes;
-    @Nullable Optional<Expiration<K, V>> afterWrite;
-    @Nullable Optional<Expiration<K, V>> afterAccess;
+    @Nullable Optional<FixedRefresh<K, V>> refreshes;
+    @Nullable Optional<FixedExpiration<K, V>> afterWrite;
+    @Nullable Optional<FixedExpiration<K, V>> afterAccess;
     @Nullable Optional<VarExpiration<K, V>> variable;
 
     BoundedPolicy(BoundedLocalCache<K, V> cache, Function<V, V> transformer, boolean isWeighted) {
@@ -3411,7 +3411,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           ? (eviction == null) ? (eviction = Optional.of(new BoundedEviction())) : eviction
           : Optional.empty();
     }
-    @Override public Optional<Expiration<K, V>> expireAfterAccess() {
+    @Override public Optional<FixedExpiration<K, V>> expireAfterAccess() {
       if (!cache.expiresAfterAccess()) {
         return Optional.empty();
       }
@@ -3419,7 +3419,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           ? (afterAccess = Optional.of(new BoundedExpireAfterAccess()))
           : afterAccess;
     }
-    @Override public Optional<Expiration<K, V>> expireAfterWrite() {
+    @Override public Optional<FixedExpiration<K, V>> expireAfterWrite() {
       if (!cache.expiresAfterWrite()) {
         return Optional.empty();
       }
@@ -3435,7 +3435,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           ? (variable = Optional.of(new BoundedVarExpiration()))
           : variable;
     }
-    @Override public Optional<Expiration<K, V>> refreshAfterWrite() {
+    @Override public Optional<FixedRefresh<K, V>> refreshAfterWrite() {
       if (!cache.refreshAfterWrite()) {
         return Optional.empty();
       }
@@ -3498,7 +3498,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     @SuppressWarnings("PreferJavaTimeOverload")
-    final class BoundedExpireAfterAccess implements Expiration<K, V> {
+    final class BoundedExpireAfterAccess implements FixedExpiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
         requireNonNull(key);
         requireNonNull(unit);
@@ -3529,7 +3529,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     @SuppressWarnings("PreferJavaTimeOverload")
-    final class BoundedExpireAfterWrite implements Expiration<K, V> {
+    final class BoundedExpireAfterWrite implements FixedExpiration<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
         requireNonNull(key);
         requireNonNull(unit);
@@ -3635,7 +3635,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     @SuppressWarnings("PreferJavaTimeOverload")
-    final class BoundedRefreshAfterWrite implements Expiration<K, V> {
+    final class BoundedRefreshAfterWrite implements FixedRefresh<K, V> {
       @Override public OptionalLong ageOf(K key, TimeUnit unit) {
         requireNonNull(key);
         requireNonNull(unit);
@@ -3649,31 +3649,13 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             ? OptionalLong.empty()
             : OptionalLong.of(unit.convert(age, TimeUnit.NANOSECONDS));
       }
-      @Override public long getExpiresAfter(TimeUnit unit) {
+      @Override public long getRefreshesAfter(TimeUnit unit) {
         return unit.convert(cache.refreshAfterWriteNanos(), TimeUnit.NANOSECONDS);
       }
-      @Override public void setExpiresAfter(long duration, TimeUnit unit) {
+      @Override public void setRefreshesAfter(long duration, TimeUnit unit) {
         requireArgument(duration >= 0);
         cache.setRefreshAfterWriteNanos(unit.toNanos(duration));
         cache.scheduleAfterWrite();
-      }
-      @SuppressWarnings("PMD.SimplifiedTernary") // false positive (#1424)
-      @Override public Map<K, V> oldest(int limit) {
-        return cache.expiresAfterWrite()
-            ? expireAfterWrite().get().oldest(limit)
-            : sortedByWriteTime(limit, /* ascending */ true);
-      }
-      @SuppressWarnings("PMD.SimplifiedTernary") // false positive (#1424)
-      @Override public Map<K, V> youngest(int limit) {
-        return cache.expiresAfterWrite()
-            ? expireAfterWrite().get().youngest(limit)
-            : sortedByWriteTime(limit, /* ascending */ false);
-      }
-      Map<K, V> sortedByWriteTime(int limit, boolean ascending) {
-        Comparator<Node<K, V>> comparator = Comparator.comparingLong(Node::getWriteTime);
-        Iterator<Node<K, V>> iterator = cache.data.values().stream().parallel().sorted(
-            ascending ? comparator : comparator.reversed()).limit(limit).iterator();
-        return cache.fixedSnapshot(() -> iterator, limit, transformer);
       }
     }
   }

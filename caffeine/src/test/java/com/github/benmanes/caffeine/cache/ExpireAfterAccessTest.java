@@ -40,7 +40,7 @@ import org.testng.Assert;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.Policy.Expiration;
+import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
@@ -233,21 +233,21 @@ public final class ExpireAfterAccessTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void getExpiresAfter(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(1L));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void getExpiresAfter_duration(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.getExpiresAfter(), is(Duration.ofMinutes(1L)));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void setExpiresAfter(Cache<Integer, Integer> cache, CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.setExpiresAfter(2, TimeUnit.MINUTES);
     assertThat(expireAfterAccess.getExpiresAfter(TimeUnit.MINUTES), is(2L));
 
@@ -259,7 +259,7 @@ public final class ExpireAfterAccessTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void setExpiresAfter_duration(Cache<Integer, Integer> cache, CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.setExpiresAfter(Duration.ofMinutes(2L));
     assertThat(expireAfterAccess.getExpiresAfter(), is(Duration.ofMinutes(2L)));
 
@@ -272,7 +272,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void ageOf(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(0L));
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(expireAfterAccess.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(30L));
@@ -284,7 +284,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void ageOf_duration(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.ageOf(context.firstKey()), is(Optional.of(Duration.ZERO)));
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(expireAfterAccess.ageOf(context.firstKey()),
@@ -298,21 +298,21 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void oldest_unmodifiable(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.oldest(Integer.MAX_VALUE).clear();;
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void oldest_negative(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.oldest(-1);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void oldest_zero(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.oldest(0), is(emptyMap()));
   }
 
@@ -320,7 +320,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
   public void oldest_partial(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     int count = (int) context.initialSize() / 2;
     assertThat(expireAfterAccess.oldest(count).size(), is(count));
   }
@@ -330,7 +330,7 @@ public final class ExpireAfterAccessTest {
       population = {Population.PARTIAL, Population.FULL}, expireAfterAccess = Expire.ONE_MINUTE,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void oldest_order(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     Map<Integer, Integer> oldest = expireAfterAccess.oldest(Integer.MAX_VALUE);
     assertThat(oldest.keySet(), contains(context.original().keySet().toArray(new Integer[0])));
   }
@@ -338,7 +338,7 @@ public final class ExpireAfterAccessTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void oldest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     Map<Integer, Integer> oldest = expireAfterAccess.oldest(Integer.MAX_VALUE);
     cache.invalidateAll();
     assertThat(oldest, is(equalTo(context.original())));
@@ -349,21 +349,21 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void youngest_unmodifiable(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.youngest(Integer.MAX_VALUE).clear();;
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
   public void youngest_negative(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     expireAfterAccess.youngest(-1);
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void youngest_zero(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     assertThat(expireAfterAccess.youngest(0), is(emptyMap()));
   }
 
@@ -371,7 +371,7 @@ public final class ExpireAfterAccessTest {
   @CacheSpec(implementation = Implementation.Caffeine,
       population = Population.FULL, expireAfterAccess = Expire.ONE_MINUTE)
   public void youngest_partial(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     int count = (int) context.initialSize() / 2;
     assertThat(expireAfterAccess.youngest(count).size(), is(count));
   }
@@ -381,7 +381,7 @@ public final class ExpireAfterAccessTest {
       population = {Population.PARTIAL, Population.FULL}, expireAfterAccess = Expire.ONE_MINUTE,
       removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void youngest_order(CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     Map<Integer, Integer> youngest = expireAfterAccess.youngest(Integer.MAX_VALUE);
     Set<Integer> keys = new LinkedHashSet<>(ImmutableList.copyOf(youngest.keySet()).reverse());
     assertThat(keys, contains(context.original().keySet().toArray(new Integer[0])));
@@ -390,7 +390,7 @@ public final class ExpireAfterAccessTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, expireAfterAccess = Expire.ONE_MINUTE)
   public void youngest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
-      @ExpireAfterAccess Expiration<Integer, Integer> expireAfterAccess) {
+      @ExpireAfterAccess FixedExpiration<Integer, Integer> expireAfterAccess) {
     Map<Integer, Integer> youngest = expireAfterAccess.youngest(Integer.MAX_VALUE);
     cache.invalidateAll();
     assertThat(youngest, is(equalTo(context.original())));
