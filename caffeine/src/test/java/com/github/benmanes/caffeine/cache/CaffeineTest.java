@@ -34,7 +34,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
-import com.github.benmanes.caffeine.cache.Policy.Expiration;
+import com.github.benmanes.caffeine.cache.Policy.FixedExpiration;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import com.google.common.testing.FakeTicker;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -353,7 +353,7 @@ public final class CaffeineTest {
   public void expireAfterAccess_small() {
     Caffeine<?, ?> builder = Caffeine.newBuilder().expireAfterAccess(0, TimeUnit.MILLISECONDS);
     assertThat(builder.expireAfterAccessNanos, is(0L));
-    Expiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
+    FixedExpiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS), is(0L));
   }
 
@@ -362,7 +362,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder()
         .expireAfterAccess(Integer.MAX_VALUE, TimeUnit.NANOSECONDS);
     assertThat(builder.expireAfterAccessNanos, is((long) Integer.MAX_VALUE));
-    Expiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
+    FixedExpiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
@@ -388,7 +388,7 @@ public final class CaffeineTest {
   public void expireAfterAccess_duration_small() {
     Caffeine<?, ?> builder = Caffeine.newBuilder().expireAfterAccess(Duration.ofMillis(0));
     assertThat(builder.expireAfterAccessNanos, is(0L));
-    Expiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
+    FixedExpiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS), is(0L));
   }
 
@@ -397,7 +397,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder()
         .expireAfterAccess(Duration.ofNanos(Integer.MAX_VALUE));
     assertThat(builder.expireAfterAccessNanos, is((long) Integer.MAX_VALUE));
-    Expiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
+    FixedExpiration<?, ?> expiration = builder.build().policy().expireAfterAccess().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
@@ -423,7 +423,7 @@ public final class CaffeineTest {
   public void expireAfterWrite_small() {
     Caffeine<?, ?> builder = Caffeine.newBuilder().expireAfterWrite(0, TimeUnit.MILLISECONDS);
     assertThat(builder.expireAfterWriteNanos, is(0L));
-    Expiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
+    FixedExpiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS), is(0L));
   }
 
@@ -432,7 +432,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder()
         .expireAfterWrite(Integer.MAX_VALUE, TimeUnit.NANOSECONDS);
     assertThat(builder.expireAfterWriteNanos, is((long) Integer.MAX_VALUE));
-    Expiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
+    FixedExpiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 
@@ -458,7 +458,7 @@ public final class CaffeineTest {
   public void expireAfterWrite_duration_small() {
     Caffeine<?, ?> builder = Caffeine.newBuilder().expireAfterWrite(Duration.ofMillis(0));
     assertThat(builder.expireAfterWriteNanos, is(0L));
-    Expiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
+    FixedExpiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.MILLISECONDS), is(0L));
   }
 
@@ -467,7 +467,7 @@ public final class CaffeineTest {
     Caffeine<?, ?> builder = Caffeine.newBuilder()
         .expireAfterWrite(Duration.ofNanos(Integer.MAX_VALUE));
     assertThat(builder.expireAfterWriteNanos, is((long) Integer.MAX_VALUE));
-    Expiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
+    FixedExpiration<?, ?> expiration = builder.build().policy().expireAfterWrite().get();
     assertThat(expiration.getExpiresAfter(TimeUnit.NANOSECONDS), is((long) Integer.MAX_VALUE));
   }
 

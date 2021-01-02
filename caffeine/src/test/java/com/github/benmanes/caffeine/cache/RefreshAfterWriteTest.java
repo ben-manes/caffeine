@@ -18,23 +18,17 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
-import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -45,11 +39,10 @@ import java.util.function.Function;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.cache.Policy.Expiration;
+import com.github.benmanes.caffeine.cache.Policy.FixedRefresh;
 import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
@@ -366,131 +359,28 @@ public final class RefreshAfterWriteTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
   public void getExpiresAfter(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    assertThat(refreshAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(1L));
+      @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
+    assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES), is(1L));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
   public void setExpiresAfter(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    refreshAfterWrite.setExpiresAfter(2, TimeUnit.MINUTES);
-    assertThat(refreshAfterWrite.getExpiresAfter(TimeUnit.MINUTES), is(2L));
+      @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
+    refreshAfterWrite.setRefreshesAfter(2, TimeUnit.MINUTES);
+    assertThat(refreshAfterWrite.getRefreshesAfter(TimeUnit.MINUTES), is(2L));
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void ageOf(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
+      @RefreshAfterWrite FixedRefresh<Integer, Integer> refreshAfterWrite) {
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(0L));
     context.ticker().advance(30, TimeUnit.SECONDS);
     assertThat(refreshAfterWrite.ageOf(context.firstKey(), TimeUnit.SECONDS).getAsLong(), is(30L));
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(refreshAfterWrite.ageOf(
         context.firstKey(), TimeUnit.SECONDS).isPresent(), is(false));
-  }
-
-  /* --------------- Policy: oldest --------------- */
-
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void oldest_unmodifiable(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    refreshAfterWrite.oldest(Integer.MAX_VALUE).clear();;
-  }
-
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  public void oldest_negative(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    refreshAfterWrite.oldest(-1);
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void oldest_zero(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    assertThat(refreshAfterWrite.oldest(0), is(emptyMap()));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void oldest_partial(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    int count = (int) context.initialSize() / 2;
-    assertThat(refreshAfterWrite.oldest(count).size(), is(count));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
-      refreshAfterWrite = Expire.ONE_MINUTE, advanceOnPopulation = Advance.ONE_MINUTE,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void oldest_order(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    Map<Integer, Integer> oldest = refreshAfterWrite.oldest(Integer.MAX_VALUE);
-    assertThat(oldest.keySet(), contains(context.original().keySet().toArray(new Integer[0])));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void oldest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    Map<Integer, Integer> oldest = refreshAfterWrite.oldest(Integer.MAX_VALUE);
-    cache.invalidateAll();
-    assertThat(oldest, is(equalTo(context.original())));
-  }
-
-  /* --------------- Policy: youngest --------------- */
-
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
-  public void youngest_unmodifiable(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    refreshAfterWrite.youngest(Integer.MAX_VALUE).clear();;
-  }
-
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  @Test(dataProvider = "caches", expectedExceptions = IllegalArgumentException.class)
-  public void youngest_negative(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    refreshAfterWrite.youngest(-1);
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void youngest_zero(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    assertThat(refreshAfterWrite.youngest(0), is(emptyMap()));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      population = Population.FULL, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void youngest_partial(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    int count = (int) context.initialSize() / 2;
-    assertThat(refreshAfterWrite.youngest(count).size(), is(count));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
-      refreshAfterWrite = Expire.ONE_MINUTE, advanceOnPopulation = Advance.ONE_MINUTE,
-      removalListener = { Listener.DEFAULT, Listener.REJECTING })
-  public void youngest_order(CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    Map<Integer, Integer> youngest = refreshAfterWrite.youngest(Integer.MAX_VALUE);
-    Set<Integer> keys = new LinkedHashSet<>(ImmutableList.copyOf(youngest.keySet()).reverse());
-    assertThat(keys, contains(context.original().keySet().toArray(new Integer[0])));
-  }
-
-  @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine, refreshAfterWrite = Expire.ONE_MINUTE)
-  public void youngest_snapshot(Cache<Integer, Integer> cache, CacheContext context,
-      @RefreshAfterWrite Expiration<Integer, Integer> refreshAfterWrite) {
-    Map<Integer, Integer> youngest = refreshAfterWrite.youngest(Integer.MAX_VALUE);
-    cache.invalidateAll();
-    assertThat(youngest, is(equalTo(context.original())));
   }
 }

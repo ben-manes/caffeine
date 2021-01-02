@@ -86,7 +86,7 @@ public interface Policy<K, V> {
    *         used
    */
   @NonNull
-  Optional<Expiration<K, V>> expireAfterAccess();
+  Optional<FixedExpiration<K, V>> expireAfterAccess();
 
   /**
    * Returns access to perform operations based on the time-to-live expiration policy. This policy
@@ -100,7 +100,7 @@ public interface Policy<K, V> {
    *         used
    */
   @NonNull
-  Optional<Expiration<K, V>> expireAfterWrite();
+  Optional<FixedExpiration<K, V>> expireAfterWrite();
 
   /**
    * Returns access to perform operations based on the variable expiration policy. This policy
@@ -129,7 +129,7 @@ public interface Policy<K, V> {
    * @return access to low-level operations for this cache if a time-to-live refresh policy is used
    */
   @NonNull
-  Optional<Expiration<K, V>> refreshAfterWrite();
+  Optional<FixedRefresh<K, V>> refreshAfterWrite();
 
   /** The low-level operations for a cache with a size-based eviction policy. */
   interface Eviction<K, V> {
@@ -223,7 +223,7 @@ public interface Policy<K, V> {
   }
 
   /** The low-level operations for a cache with a fixed expiration policy. */
-  interface Expiration<K, V> { // To be renamed FixedExpiration in version 3.0.0
+  interface FixedExpiration<K, V> {
 
     /**
      * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
@@ -514,5 +514,98 @@ public interface Policy<K, V> {
      */
     @NonNull
     Map<@NonNull K, @NonNull V> youngest(@NonNegative int limit);
+  }
+
+  /** The low-level operations for a cache with a fixed refresh policy. */
+  interface FixedRefresh<K, V> {
+
+    /**
+     * Returns the age of the entry based on the refresh policy. The entry's age is the cache's
+     * estimate of the amount of time since the entry's refresh time was last reset.
+     * <p>
+     * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
+     * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
+     * where {@code freshnessLifetime = expires - currentTime}.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
+     *
+     * @param key the key for the entry being queried
+     * @param unit the unit that {@code age} is expressed in
+     * @return the age if the entry is present in the cache
+     */
+    @NonNull
+    OptionalLong ageOf(@NonNull K key, @NonNull TimeUnit unit);
+
+    /**
+     * Returns the age of the entry based on the expiration policy. The entry's age is the cache's
+     * estimate of the amount of time since the entry's expiration was last reset.
+     * <p>
+     * An expiration policy uses the age to determine if an entry is fresh or stale by comparing it
+     * to the freshness lifetime. This is calculated as {@code fresh = freshnessLifetime > age}
+     * where {@code freshnessLifetime = expires - currentTime}.
+     *
+     * @param key the key for the entry being queried
+     * @return the age if the entry is present in the cache
+     */
+    @NonNull
+    default Optional<Duration> ageOf(@NonNull K key) {
+      // This method will be abstract in version 3.0.0
+      OptionalLong duration = ageOf(key, TimeUnit.NANOSECONDS);
+      return duration.isPresent()
+          ? Optional.of(Duration.ofNanos(duration.getAsLong()))
+          : Optional.empty();
+    }
+
+    /**
+     * Returns the fixed duration used to determine if an entry should be eligible for reloading due
+     * to elapsing this time bound. An entry is considered fresh if its age is less than this
+     * duration, and stale otherwise. The refresh policy determines when the entry's age is
+     * reset.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
+     *
+     * @param unit the unit that duration is expressed in
+     * @return the length of time after which an entry is eligible to be reloaded
+     */
+    @NonNegative
+    long getRefreshesAfter(@NonNull TimeUnit unit);
+
+    /**
+     * Returns the fixed duration used to determine if an entry should be eligible for reloading due
+     * to elapsing this time bound. An entry is considered fresh if its age is less than this
+     * duration, and stale otherwise. The refresh policy determines when the entry's age is
+     * reset.
+     *
+     * @return the length of time after which an entry is eligible to be reloaded
+     */
+    @NonNull
+    default Duration getRefreshesAfter() {
+      // This method will be abstract in version 3.0.0
+      return Duration.ofNanos(getRefreshesAfter(TimeUnit.NANOSECONDS));
+    }
+
+    /**
+     * Specifies that each entry should be eligible for reloading once a fixed duration has elapsed.
+     * The refresh policy determines when the entry's age is reset.
+     * <p>
+     * This method is scheduled for removal in version 3.0.0.
+     *
+     * @param duration the length of time after which an entry is eligible to be reloaded
+     * @param unit the unit that {@code duration} is expressed in
+     * @throws IllegalArgumentException if {@code duration} is negative
+     */
+    void setRefreshesAfter(@NonNegative long duration, @NonNull TimeUnit unit);
+
+    /**
+     * Specifies that each entry should be eligible for reloading once a fixed duration has elapsed.
+     * The refresh policy determines when the entry's age is reset.
+     *
+     * @param duration the length of time after which an entry is eligible to be reloaded
+     * @throws IllegalArgumentException if {@code duration} is negative
+     */
+    default void setRefreshesAfter(@NonNull Duration duration) {
+      // This method will be abstract in version 3.0.0
+      setRefreshesAfter(duration.toNanos(), TimeUnit.NANOSECONDS);
+    }
   }
 }
