@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.util.function.Consumer;
@@ -25,6 +26,10 @@ import java.util.function.Consumer;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.benmanes.caffeine.cache.StripedBuffer.Probe;
+import com.github.benmanes.caffeine.cache.StripedBuffer.ThreadLocalProbe;
+import com.github.benmanes.caffeine.cache.StripedBuffer.UnsafeProbe;
+import com.github.benmanes.caffeine.cache.StripedBuffer.VarHandleProbe;
 import com.github.benmanes.caffeine.testing.ConcurrentTestHarness;
 import com.google.common.base.MoreObjects;
 
@@ -40,6 +45,24 @@ public final class StripedBufferTest {
 
     buffer.offer(ELEMENT);
     assertThat(buffer.table.length, is(1));
+  }
+
+  @Test(dataProvider = "probes")
+  public void probe(Probe probe) {
+    probe.initialize();
+    assertThat(probe.get(), is(not(0)));
+
+    probe.set(1);
+    assertThat(probe.get(), is(1));
+  }
+
+  @DataProvider(name = "probes")
+  public Object[][] providesProbes() {
+    return new Object[][] {
+      { new UnsafeProbe() },
+      { new VarHandleProbe() },
+      { new ThreadLocalProbe() },
+    };
   }
 
   @Test(dataProvider = "buffers")
@@ -65,8 +88,8 @@ public final class StripedBufferTest {
     assertThat(buffer.drains, is(1));
   }
 
-  @DataProvider
-  public Object[][] buffers() {
+  @DataProvider(name = "buffers")
+  public Object[][] providesBuffers() {
     return new Object[][] {
         { new FakeBuffer<Integer>(Buffer.FULL) },
         { new FakeBuffer<Integer>(Buffer.FAILED) },

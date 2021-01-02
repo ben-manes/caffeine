@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -50,8 +52,9 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
  */
 @State(Scope.Benchmark)
 public class SlotLookupBenchmark {
-  static final int ARENA_SIZE = 2 << 6;
   static final int SPARSE_SIZE = 2 << 14;
+  static final int ARENA_SIZE = 2 << 6;
+  static final VarHandle PROBE;
 
   ThreadLocal<Integer> threadLocal;
   long element;
@@ -148,30 +151,63 @@ public class SlotLookupBenchmark {
   }
 
   @Benchmark
-  public long striped64(Blackhole blackhole) {
+  public long striped64_unsafe(Blackhole blackhole) {
     // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
-    int hash = getProbe();
+    int hash = getProbe_unsafe();
     if (hash == 0) {
       blackhole.consume(ThreadLocalRandom.current()); // force initialization
-      hash = getProbe();
+      hash = getProbe_unsafe();
     }
-    advanceProbe(hash);
+    advanceProbe_unsafe(hash);
     int index = selectSlot(hash);
     return array[index];
   }
 
-  private int getProbe() {
+  private int getProbe_unsafe() {
     return UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), probeOffset);
   }
 
-  private void advanceProbe(int probe) {
+  private void advanceProbe_unsafe(int probe) {
     probe ^= probe << 13; // xorshift
     probe ^= probe >>> 17;
     probe ^= probe << 5;
     UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), probeOffset, probe);
   }
 
+  @Benchmark
+  public long striped64_varHandle(Blackhole blackhole) {
+    // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
+    int hash = getProbe_varHandle();
+    if (hash == 0) {
+      blackhole.consume(ThreadLocalRandom.current()); // force initialization
+      hash = getProbe_varHandle();
+    }
+    advanceProbe_varHandle(hash);
+    int index = selectSlot(hash);
+    return array[index];
+  }
+
+  private int getProbe_varHandle() {
+    return (int) PROBE.get(Thread.currentThread());
+  }
+
+  private void advanceProbe_varHandle(int probe) {
+    probe ^= probe << 13; // xorshift
+    probe ^= probe >>> 17;
+    probe ^= probe << 5;
+    PROBE.set(Thread.currentThread(), probe);
+  }
+
   private static int selectSlot(int i) {
     return i & (ARENA_SIZE - 1);
+  }
+
+  static {
+    try {
+      PROBE = MethodHandles.privateLookupIn(Thread.class, MethodHandles.lookup())
+          .findVarHandle(Thread.class, "threadLocalRandomProbe", int.class);
+    } catch (ReflectiveOperationException e) {
+      throw new ExceptionInInitializerError(e);
+    }
   }
 }
