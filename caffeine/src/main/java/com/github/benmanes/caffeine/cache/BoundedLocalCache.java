@@ -29,6 +29,8 @@ import static java.util.Objects.requireNonNull;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -65,8 +67,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -181,7 +181,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * http://www.cs.columbia.edu/~nahum/w6998/papers/ton97-timing-wheels.pdf
    */
 
-  static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
+  static final Logger logger = System.getLogger(BoundedLocalCache.class.getName());
 
   /** The number of CPUs */
   static final int NCPU = Runtime.getRuntime().availableProcessors();
@@ -338,7 +338,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     try {
       executor.execute(task);
     } catch (Throwable t) {
-      logger.log(Level.SEVERE, "Exception thrown when submitting removal listener", t);
+      logger.log(Level.ERROR, "Exception thrown when submitting removal listener", t);
       task.run();
     }
   }
@@ -1234,7 +1234,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         });
       } catch (Throwable t) {
         node.casWriteTime(refreshWriteTime, oldWriteTime);
-        logger.log(Level.SEVERE, "Exception thrown when submitting refresh task", t);
+        logger.log(Level.ERROR, "Exception thrown when submitting refresh task", t);
       }
     }
   }
@@ -1364,7 +1364,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       try {
         performCleanUp(task);
       } catch (RuntimeException e) {
-        logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", e);
+        logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", e);
       }
     } else {
       scheduleAfterWrite();
@@ -1430,7 +1430,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     try {
       performCleanUp(/* ignored */ null);
     } catch (RuntimeException e) {
-      logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", e);
+      logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", e);
     }
   }
 
@@ -3279,7 +3279,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       try {
         run();
       } catch (Throwable t) {
-        logger.log(Level.SEVERE, "Exception thrown when performing the maintenance task", t);
+        logger.log(Level.ERROR, "Exception thrown when performing the maintenance task", t);
       }
 
       // Indicates that the task has not completed to allow subsequent submissions to execute

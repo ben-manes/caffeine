@@ -17,6 +17,8 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -26,8 +28,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -38,7 +38,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K, V> {
-  Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
+  Logger logger = System.getLogger(LocalLoadingCache.class.getName());
 
   /** Returns the {@link CacheLoader} used by this cache. */
   CacheLoader<? super K, V> cacheLoader();

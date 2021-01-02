@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -39,8 +41,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -55,7 +55,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
-  Logger logger = Logger.getLogger(LocalAsyncCache.class.getName());
+  Logger logger = System.getLogger(LocalAsyncCache.class.getName());
 
   /** Returns the backing {@link LocalCache} data store. */
   LocalCache<K, CompletableFuture<V>> cache();
