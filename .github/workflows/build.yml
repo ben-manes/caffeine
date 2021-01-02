@@ -6,14 +6,14 @@ env:
   ORG_GRADLE_PROJECT_checksumIgnore: false
   ORG_GRADLE_PROJECT_checksumPrint: true
   MAX_JVM: 15
-  MIN_JVM: 8
+  MIN_JVM: 11
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ 8, 15 ]
+        java: [ 11, 15 ]
     steps:
       - uses: actions/checkout@v2
       - name: Set up JDK ${{ matrix.java }}
