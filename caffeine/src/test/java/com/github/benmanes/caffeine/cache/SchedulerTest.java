@@ -36,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.LogManager;
 
-import org.apache.commons.lang3.SystemUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
@@ -57,14 +56,6 @@ public final class SchedulerTest {
   }
 
   private final NullPointerTester npeTester = new NullPointerTester();
-
-  @Test
-  public void hasSystemScheduler() {
-    Scheduler scheduler = SystemUtils.IS_JAVA_1_8
-        ? Scheduler.disabledScheduler()
-        : SystemScheduler.INSTANCE;
-    assertThat(Scheduler.systemScheduler(), is(scheduler));
-  }
 
   @Test(dataProvider = "schedulers")
   public void scheduler_null(Scheduler scheduler) {

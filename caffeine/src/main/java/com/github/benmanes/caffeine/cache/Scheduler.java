@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -32,7 +30,6 @@ import java.util.logging.Logger;
 
 import org.checkerframework.checker.index.qual.Positive;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A scheduler that submits a task to an executor after a given delay.
@@ -64,15 +61,13 @@ public interface Scheduler {
   }
 
   /**
-   * Returns a scheduler that uses the system-wide scheduling thread if available, or else returns
-   * {@link #disabledScheduler()} if not present. This scheduler is provided in Java 9 or above
-   * by using {@link CompletableFuture} {@code delayedExecutor}.
+   * Returns a scheduler that uses the system-wide scheduling thread by using
+   * {@link CompletableFuture#delayedExecutor}.
    *
-   * @return a scheduler that uses the system-wide scheduling thread if available, or else a
-   *         disabled scheduler
+   * @return a scheduler that uses the system-wide scheduling thread
    */
   static @NonNull Scheduler systemScheduler() {
-    return SystemScheduler.isPresent() ? SystemScheduler.INSTANCE : disabledScheduler();
+    return SystemScheduler.INSTANCE;
   }
 
   /**
@@ -101,35 +96,10 @@ public interface Scheduler {
 enum SystemScheduler implements Scheduler {
   INSTANCE;
 
-  static final @Nullable Method delayedExecutor = getDelayedExecutorMethod();
-
   @Override
-  @SuppressWarnings("NullAway")
   public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
-    requireNonNull(executor);
-    requireNonNull(command);
-    requireNonNull(unit);
-
-    try {
-      Executor scheduler = (Executor) delayedExecutor.invoke(
-          CompletableFuture.class, delay, unit, executor);
-      return CompletableFuture.runAsync(command, scheduler);
-    } catch (IllegalAccessException | InvocationTargetException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  static @Nullable Method getDelayedExecutorMethod() {
-    try {
-      return CompletableFuture.class.getMethod(
-          "delayedExecutor", long.class, TimeUnit.class, Executor.class);
-    } catch (NoSuchMethodException | SecurityException e) {
-      return null;
-    }
-  }
-
-  static boolean isPresent() {
-    return (delayedExecutor != null);
+    Executor delayedExecutor = CompletableFuture.delayedExecutor(delay, unit, executor);
+    return CompletableFuture.runAsync(command, delayedExecutor);
   }
 }
 
