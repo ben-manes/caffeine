@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -474,24 +473,25 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Map<K, V> getAllPresent(Iterable<?> keys) {
-      Set<Object> uniqueKeys = new LinkedHashSet<>();
+      Map<Object, Object> result = new LinkedHashMap<>();
       for (Object key : keys) {
-        uniqueKeys.add(key);
+        result.put(key, null);
       }
 
-      int misses = 0;
-      Map<Object, Object> result = new LinkedHashMap<>();
-      for (Object key : uniqueKeys) {
-        CompletableFuture<V> future = asyncCache().cache().get(key);
+      int uniqueKeys = result.size();
+      for (var iter = result.entrySet().iterator(); iter.hasNext();) {
+        Map.Entry<Object, Object> entry = iter.next();
+
+        CompletableFuture<V> future = asyncCache().cache().get(entry.getKey());
         Object value = Async.getIfReady(future);
         if (value == null) {
-          misses++;
+          iter.remove();
         } else {
-          result.put(key, value);
+          entry.setValue(value);
         }
       }
-      asyncCache().cache().statsCounter().recordMisses(misses);
       asyncCache().cache().statsCounter().recordHits(result.size());
+      asyncCache().cache().statsCounter().recordMisses(uniqueKeys - result.size());
 
       @SuppressWarnings("unchecked")
       Map<K, V> castedResult = (Map<K, V>) result;

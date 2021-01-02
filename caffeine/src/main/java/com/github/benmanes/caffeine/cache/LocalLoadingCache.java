@@ -22,9 +22,7 @@ import java.lang.System.Logger.Level;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
@@ -64,24 +62,26 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   /** Sequentially loads each missing entry. */
   default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
-    Set<K> uniqueKeys = new LinkedHashSet<>();
+    Map<K, V> result = new LinkedHashMap<>();
     for (K key : keys) {
-      uniqueKeys.add(key);
+      result.put(key, null);
     }
 
     int count = 0;
-    Map<K, V> result = new LinkedHashMap<>(uniqueKeys.size());
     try {
-      for (K key : uniqueKeys) {
+      for (var iter = result.entrySet().iterator(); iter.hasNext();) {
+        Map.Entry<K, V> entry = iter.next();
         count++;
 
-        V value = get(key);
-        if (value != null) {
-          result.put(key, value);
+        V value = get(entry.getKey());
+        if (value == null) {
+          iter.remove();
+        } else {
+          entry.setValue(value);
         }
       }
     } catch (Throwable t) {
-      cache().statsCounter().recordMisses(uniqueKeys.size() - count);
+      cache().statsCounter().recordMisses(result.size() - count);
       throw t;
     }
     return Collections.unmodifiableMap(result);
