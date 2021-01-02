@@ -70,7 +70,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.io.MoreFiles;
 import com.google.common.io.Resources;
 import com.google.googlejavaformat.java.Formatter;
 import com.google.googlejavaformat.java.FormatterException;
@@ -157,9 +156,9 @@ public final class NodeFactoryGenerator {
           .collect(toList());
       Formatter formatter = new Formatter();
       for (Path file : files) {
-        String source = MoreFiles.asCharSource(file, UTF_8).read();
+        String source = Files.readString(file);
         String formatted = formatter.formatSourceAndFixImports(source);
-        MoreFiles.asCharSink(file, UTF_8).write(formatted);
+        Files.writeString(file, formatted);
       }
     } catch (FormatterException e) {
       throw new RuntimeException(e);
