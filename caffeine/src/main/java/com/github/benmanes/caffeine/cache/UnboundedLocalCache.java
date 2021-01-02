@@ -28,7 +28,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -110,23 +109,23 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
   @Override
   public Map<K, V> getAllPresent(Iterable<?> keys) {
-    Set<Object> uniqueKeys = new LinkedHashSet<>();
+    Map<Object, Object> result = new LinkedHashMap<>();
     for (Object key : keys) {
-      uniqueKeys.add(key);
+      result.put(key, null);
     }
 
-    int misses = 0;
-    Map<Object, Object> result = new LinkedHashMap<>(uniqueKeys.size());
-    for (Object key : uniqueKeys) {
-      Object value = data.get(key);
+    int uniqueKeys = result.size();
+    for (var iter = result.entrySet().iterator(); iter.hasNext();) {
+      Map.Entry<Object, Object> entry = iter.next();
+      Object value = data.get(entry.getKey());
       if (value == null) {
-        misses++;
+        iter.remove();
       } else {
-        result.put(key, value);
+        entry.setValue(value);
       }
     }
-    statsCounter.recordMisses(misses);
     statsCounter.recordHits(result.size());
+    statsCounter.recordMisses(uniqueKeys - result.size());
 
     @SuppressWarnings("unchecked")
     Map<K, V> castedResult = (Map<K, V>) result;
