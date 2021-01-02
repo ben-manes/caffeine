@@ -19,6 +19,8 @@ import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
@@ -33,8 +35,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -137,7 +137,7 @@ import com.google.errorprone.annotations.FormatMethod;
  *     #removalListener}
  */
 public final class Caffeine<K, V> {
-  static final Logger logger = Logger.getLogger(Caffeine.class.getName());
+  static final Logger logger = System.getLogger(Caffeine.class.getName());
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
 
   enum Strength { WEAK, SOFT }

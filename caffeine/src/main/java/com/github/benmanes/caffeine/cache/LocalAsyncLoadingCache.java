@@ -17,14 +17,14 @@ package com.github.benmanes.caffeine.cache;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -36,7 +36,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 abstract class LocalAsyncLoadingCache<K, V>
     implements LocalAsyncCache<K, V>, AsyncLoadingCache<K, V> {
-  static final Logger logger = Logger.getLogger(LocalAsyncLoadingCache.class.getName());
+  static final Logger logger = System.getLogger(LocalAsyncLoadingCache.class.getName());
 
   final boolean canBulkLoad;
   final AsyncCacheLoader<K, V> loader;

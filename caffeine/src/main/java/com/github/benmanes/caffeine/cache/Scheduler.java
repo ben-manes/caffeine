@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -25,8 +27,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.checkerframework.checker.index.qual.Positive;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -104,7 +104,7 @@ enum SystemScheduler implements Scheduler {
 }
 
 final class ExecutorServiceScheduler implements Scheduler, Serializable {
-  static final Logger logger = Logger.getLogger(ExecutorServiceScheduler.class.getName());
+  static final Logger logger = System.getLogger(ExecutorServiceScheduler.class.getName());
   static final long serialVersionUID = 1;
 
   final ScheduledExecutorService scheduledExecutorService;
@@ -134,7 +134,7 @@ final class ExecutorServiceScheduler implements Scheduler, Serializable {
 }
 
 final class GuardedScheduler implements Scheduler, Serializable {
-  static final Logger logger = Logger.getLogger(GuardedScheduler.class.getName());
+  static final Logger logger = System.getLogger(GuardedScheduler.class.getName());
   static final long serialVersionUID = 1;
 
   final Scheduler delegate;

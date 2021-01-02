@@ -17,8 +17,8 @@ package com.github.benmanes.caffeine.cache.stats;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 
@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 final class GuardedStatsCounter implements StatsCounter {
-  static final Logger logger = Logger.getLogger(GuardedStatsCounter.class.getName());
+  static final Logger logger = System.getLogger(GuardedStatsCounter.class.getName());
 
   final StatsCounter delegate;
 
