@@ -8,13 +8,6 @@
     <Bug code="Se"/>
   </Match>
   <Match>
-    <Or>
-      <Class name="com.github.benmanes.caffeine.SingleConsumerQueue$1"/>
-      <Class name="com.github.benmanes.caffeine.SingleConsumerQueue$LinearizableNode"/>
-    </Or>
-    <Bug code="SP"/>
-  </Match>
-  <Match>
     <Class name="com.github.benmanes.caffeine.cache.CaffeineSpec"/>
     <Or>
       <Method name="parseDuration"/>
