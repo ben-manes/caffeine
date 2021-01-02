@@ -151,6 +151,7 @@ public final class TypesafeConfigurator {
       addKeyValueTypes();
       addStoreByValue();
       addExecutor();
+      addScheduler();
       addListeners();
       addReadThrough();
       addWriteThrough();
@@ -189,6 +190,13 @@ public final class TypesafeConfigurator {
     public void addExecutor() {
       if (isSet("executor")) {
         configuration.setExecutorFactory(factoryCreator.factoryOf(merged.getString("executor")));
+      }
+    }
+
+    /** Adds the scheduler settings. */
+    public void addScheduler() {
+      if (isSet("scheduler")) {
+        configuration.setSchedulerFactory(factoryCreator.factoryOf(merged.getString("scheduler")));
       }
     }
 

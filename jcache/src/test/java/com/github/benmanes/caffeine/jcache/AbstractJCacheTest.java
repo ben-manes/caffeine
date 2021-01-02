@@ -45,7 +45,7 @@ import com.google.common.testing.FakeTicker;
 @Test(singleThreaded = true)
 @SuppressWarnings("PreferJavaTimeOverload")
 public abstract class AbstractJCacheTest {
-  protected static final long START_TIME_MS = System.currentTimeMillis();
+  protected static final long START_TIME_MS = 0L;//System.currentTimeMillis();
   protected static final long EXPIRY_DURATION = TimeUnit.MINUTES.toMillis(1);
 
   protected static final Integer KEY_1 = 1, VALUE_1 = -1;

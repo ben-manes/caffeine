@@ -34,6 +34,7 @@ import javax.cache.integration.CacheWriter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Expiry;
+import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Ticker;
 import com.github.benmanes.caffeine.cache.Weigher;
 import com.github.benmanes.caffeine.jcache.copy.Copier;
@@ -50,6 +51,7 @@ import com.github.benmanes.caffeine.jcache.copy.JavaSerializationCopier;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<K, V> {
+  private static final Factory<Scheduler> DISABLED_SCHEDULER = Scheduler::disabledScheduler;
   private static final Factory<Copier> JAVA_COPIER = JavaSerializationCopier::new;
   private static final Factory<Executor> COMMON_POOL = ForkJoinPool::commonPool;
   private static final Factory<Ticker> SYSTEM_TICKER = Ticker::systemTicker;
@@ -60,6 +62,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   private @Nullable Factory<Weigher<K, V>> weigherFactory;
   private @Nullable Factory<Expiry<K, V>> expiryFactory;
 
+  private Factory<Scheduler> schedulerFactory;
   private Factory<Executor> executorFactory;
   private Factory<Copier> copierFactory;
   private Factory<Ticker> tickerFactory;
@@ -74,6 +77,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
   public CaffeineConfiguration() {
     delegate = new MutableConfiguration<>();
     delegate.setStoreByValue(false);
+    schedulerFactory = DISABLED_SCHEDULER;
     tickerFactory = SYSTEM_TICKER;
     executorFactory = COMMON_POOL;
     copierFactory = JAVA_COPIER;
@@ -87,6 +91,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       expireAfterAccessNanos = config.expireAfterAccessNanos;
       expireAfterWriteNanos = config.expireAfterWriteNanos;
       nativeStatistics = config.nativeStatistics;
+      schedulerFactory = config.schedulerFactory;
       executorFactory = config.executorFactory;
       expiryFactory = config.expiryFactory;
       copierFactory = config.copierFactory;
@@ -95,6 +100,7 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
       maximumWeight = config.maximumWeight;
       maximumSize = config.maximumSize;
     } else {
+      schedulerFactory = DISABLED_SCHEDULER;
       tickerFactory = SYSTEM_TICKER;
       executorFactory = COMMON_POOL;
       copierFactory = JAVA_COPIER;
@@ -265,6 +271,24 @@ public final class CaffeineConfiguration<K, V> implements CompleteConfiguration<
    */
   public void setCopierFactory(Factory<Copier> factory) {
     copierFactory = requireNonNull(factory);
+  }
+
+  /**
+   * Returns the {@link Factory} for the {@link Scheduler} to be used for the cache.
+   *
+   * @return the {@link Factory} for the {@link Scheduler}
+   */
+  public Factory<Scheduler> getSchedulerFactory() {
+    return schedulerFactory;
+  }
+
+  /**
+   * Set the {@link Factory} for the {@link Scheduler}.
+   *
+   * @param factory the {@link Scheduler} {@link Factory}
+   */
+  public void setSchedulerFactory(Factory<Scheduler> factory) {
+    schedulerFactory = requireNonNull(factory);
   }
 
   /**

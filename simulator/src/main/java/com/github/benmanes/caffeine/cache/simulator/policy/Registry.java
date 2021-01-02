@@ -18,14 +18,13 @@ package com.github.benmanes.caffeine.cache.simulator.policy;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Locale.US;
-import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -74,7 +73,6 @@ import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TuQueuePoli
 import com.github.benmanes.caffeine.cache.simulator.policy.two_queue.TwoQueuePolicy;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 
 /**
@@ -122,11 +120,6 @@ public final class Registry {
     registerProduct();
     registerTwoQueue();
     registerAdaptive();
-
-    Map<String, Factory> normalized = factories.entrySet().stream()
-        .collect(toMap(entry -> entry.getKey().toLowerCase(US), Map.Entry::getValue));
-    factories.clear();
-    factories.putAll(normalized);
   }
 
   /** Registers the policy based on the annotated name. */
@@ -135,11 +128,23 @@ public final class Registry {
   }
 
   /** Registers the policy based on the annotated name. */
+  private void register(Class<? extends Policy> policyClass,
+      BiFunction<Config, Set<Characteristic>, Policy> creator) {
+    registerMany(policyClass, config -> ImmutableSet.of(creator.apply(config, characteristics)));
+  }
+
+  /** Registers the policy based on the annotated name. */
   private void registerMany(Class<? extends Policy> policyClass,
       Function<Config, Set<Policy>> creator) {
     PolicySpec policySpec = policyClass.getAnnotation(PolicySpec.class);
     checkState(isNotBlank(policySpec.name()), "The name must be specified on %s", policyClass);
-    factories.put(policySpec.name().trim(), Factory.of(policyClass, creator));
+    registerMany(policySpec.name(), policyClass, creator);
+  }
+
+  /** Registers the policy using the specified name. */
+  private void registerMany(String name, Class<? extends Policy> policyClass,
+      Function<Config, Set<Policy>> creator) {
+    factories.put(name.trim().toLowerCase(US), Factory.of(policyClass, creator));
   }
 
   private void registerOptimal() {
@@ -149,12 +154,12 @@ public final class Registry {
 
   private void registerLinked() {
     Stream.of(LinkedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      factories.put(priority.label(), Factory.of(LinkedPolicy.class,
-          config -> LinkedPolicy.policies(config, characteristics, priority)));
+      registerMany(priority.label(), LinkedPolicy.class,
+          config -> LinkedPolicy.policies(config, characteristics, priority));
     });
     Stream.of(FrequentlyUsedPolicy.EvictionPolicy.values()).forEach(priority -> {
-      factories.put(priority.label(), Factory.of(FrequentlyUsedPolicy.class,
-          config -> FrequentlyUsedPolicy.policies(config, priority)));
+      registerMany(priority.label(), FrequentlyUsedPolicy.class,
+          config -> FrequentlyUsedPolicy.policies(config, priority));
     });
     registerMany(S4LruPolicy.class, S4LruPolicy::policies);
     register(MultiQueuePolicy.class, MultiQueuePolicy::new);
@@ -163,8 +168,8 @@ public final class Registry {
 
   private void registerSampled() {
     Stream.of(SampledPolicy.EvictionPolicy.values()).forEach(priority -> {
-      factories.put(priority.label(), Factory.of(
-          SampledPolicy.class, config -> SampledPolicy.policies(config, priority)));
+      registerMany(priority.label(), SampledPolicy.class,
+          config -> SampledPolicy.policies(config, priority));
     });
   }
 
@@ -210,28 +215,31 @@ public final class Registry {
   }
 
   private void registerProduct() {
+    register(GuavaPolicy.class, GuavaPolicy::new);
     register(TCachePolicy.class, TCachePolicy::new);
+    register(Cache2kPolicy.class, Cache2kPolicy::new);
     registerMany(OhcPolicy.class, OhcPolicy::policies);
+    register(CaffeinePolicy.class, CaffeinePolicy::new);
     register(Ehcache3Policy.class, Ehcache3Policy::new);
     register(ExpiringMapPolicy.class, ExpiringMapPolicy::new);
+    register(ElasticSearchPolicy.class, ElasticSearchPolicy::new);
     registerMany(CollisionPolicy.class, CollisionPolicy::policies);
-    register(GuavaPolicy.class, config -> new GuavaPolicy(config, characteristics));
-    register(Cache2kPolicy.class, config -> new Cache2kPolicy(config, characteristics));
-    register(CaffeinePolicy.class, config -> new CaffeinePolicy(config, characteristics));
-    register(ElasticSearchPolicy.class, config -> new ElasticSearchPolicy(config, characteristics));
   }
 
   @AutoValue
   static abstract class Factory {
+    abstract Class<? extends Policy> policyClass();
     abstract Function<Config, Set<Policy>> creator();
-    abstract ImmutableSet<Characteristic> characteristics();
+
+    Set<Characteristic> characteristics() {
+      PolicySpec policySpec = policyClass().getAnnotation(PolicySpec.class);
+      return (policySpec == null)
+          ? ImmutableSet.of()
+          : ImmutableSet.copyOf(policySpec.characteristics());
+    }
 
     static Factory of(Class<? extends Policy> policyClass, Function<Config, Set<Policy>> creator) {
-      PolicySpec policySpec = policyClass.getAnnotation(PolicySpec.class);
-      ImmutableSet<Characteristic> characteristics = (policySpec == null)
-          ? ImmutableSet.of()
-          : Sets.immutableEnumSet(Arrays.asList(policySpec.characteristics()));
-      return new AutoValue_Registry_Factory(creator, characteristics);
+      return new AutoValue_Registry_Factory(policyClass, creator);
     }
   }
 }

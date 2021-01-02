@@ -106,6 +106,7 @@ public final class TypesafeConfigurationTest {
     assertThat(config.getKeyType(), is(Object.class));
     assertThat(config.getValueType(), is(Object.class));
     assertThat(config.getExecutorFactory().create(), is(instanceOf(TestExecutor.class)));
+    assertThat(config.getSchedulerFactory().create(), is(instanceOf(TestScheduler.class)));
     assertThat(config.getCacheLoaderFactory().create(), is(instanceOf(TestCacheLoader.class)));
     assertThat(config.getCacheWriter(), is(instanceOf(TestCacheWriter.class)));
     assertThat(config.isNativeStatisticsEnabled(), is(true));
