@@ -129,45 +129,109 @@ abstract class LocalAsyncLoadingCache<K, V>
     }
 
     @Override
-    @SuppressWarnings("FutureReturnValueIgnored")
-    public void refresh(K key) {
+    public CompletableFuture<V> refresh(K key) {
       requireNonNull(key);
 
-      long[] writeTime = new long[1];
-      CompletableFuture<V> oldValueFuture = asyncCache.cache().getIfPresentQuietly(key, writeTime);
-      if ((oldValueFuture == null)
-          || (oldValueFuture.isDone() && oldValueFuture.isCompletedExceptionally())) {
-        asyncCache.get(key, asyncCache.loader::asyncLoad, /* recordStats */ false);
-        return;
-      } else if (!oldValueFuture.isDone()) {
-        // no-op if load is pending
-        return;
+      Object keyReference = asyncCache.cache().referenceKey(key);
+      for (;;) {
+        var future = tryOptimisticRefresh(key, keyReference);
+        if (future == null) {
+          future = tryComputeRefresh(key, keyReference);
+        }
+        if (future != null) {
+          return future;
+        }
+      }
+    }
+
+    /** Attempts to avoid a reload if the entry is absent, or a load or reload is in-flight. */
+    private @Nullable CompletableFuture<V> tryOptimisticRefresh(K key, Object keyReference) {
+      // If a refresh is in-flight, then return it directly. If completed and not yet removed, then
+      // remove to trigger a new reload.
+      @SuppressWarnings("unchecked")
+      var lastRefresh = (CompletableFuture<V>) asyncCache.cache().refreshes().get(keyReference);
+      if (lastRefresh != null) {
+        if (Async.isReady(lastRefresh)) {
+          asyncCache.cache().refreshes().remove(keyReference, lastRefresh);
+        } else {
+          return lastRefresh;
+        }
       }
 
-      oldValueFuture.thenAccept(oldValue -> {
-        long now = asyncCache.cache().statsTicker().read();
-        CompletableFuture<V> refreshFuture = (oldValue == null)
-            ? asyncCache.loader.asyncLoad(key, asyncCache.cache().executor())
-            : asyncCache.loader.asyncReload(key, oldValue, asyncCache.cache().executor());
-        refreshFuture.whenComplete((newValue, error) -> {
-          long loadTime = asyncCache.cache().statsTicker().read() - now;
+      // If the entry is absent then perform a new load, else if in-flight then return it
+      var oldValueFuture = asyncCache.cache().getIfPresentQuietly(key, /* writeTime */ new long[1]);
+      if ((oldValueFuture == null)
+          || (oldValueFuture.isDone() && oldValueFuture.isCompletedExceptionally())) {
+        if (oldValueFuture != null) {
+          asyncCache.cache().remove(key, asyncCache);
+        }
+        var future = asyncCache.get(key,
+            asyncCache.loader::asyncLoad, /* recordStats */ false);
+        @SuppressWarnings("unchecked")
+        var prior = (CompletableFuture<V>) asyncCache.cache()
+            .refreshes().putIfAbsent(keyReference, future);
+        return (prior == null) ? future : prior;
+      } else if (!oldValueFuture.isDone()) {
+        // no-op if load is pending
+        return oldValueFuture;
+      }
+
+      // Fallback to the slow path, possibly retrying
+      return null;
+    }
+
+    /** Begins a refresh if the entry has materialized and no reload is in-flight. */
+    @SuppressWarnings("FutureReturnValueIgnored")
+    private @Nullable CompletableFuture<V> tryComputeRefresh(K key, Object keyReference) {
+      long[] startTime = new long[1];
+      long[] writeTime = new long[1];
+      boolean[] refreshed = new boolean[1];
+      @SuppressWarnings({"unchecked", "rawtypes"})
+      CompletableFuture<V>[] oldValueFuture = new CompletableFuture[1];
+      var future = asyncCache.cache().refreshes().computeIfAbsent(keyReference, k -> {
+        oldValueFuture[0] = asyncCache.cache().getIfPresentQuietly(key, writeTime);
+        V oldValue = Async.getIfReady(oldValueFuture[0]);
+        if (oldValue == null) {
+          return null;
+        }
+
+        refreshed[0] = true;
+        startTime[0] = asyncCache.cache().statsTicker().read();
+        return asyncCache.loader.asyncReload(key, oldValue, asyncCache.cache().executor());
+      });
+
+      if (future == null) {
+        // Retry the optimistic path
+        return null;
+      }
+
+      @SuppressWarnings("unchecked")
+      var castedFuture = (CompletableFuture<V>) future;
+      if (refreshed[0]) {
+        castedFuture.whenComplete((newValue, error) -> {
+          long loadTime = asyncCache.cache().statsTicker().read() - startTime[0];
           if (error != null) {
-            asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
             logger.log(Level.WARNING, "Exception thrown during refresh", error);
+            asyncCache.cache().refreshes().remove(keyReference, castedFuture);
+            asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
             return;
           }
 
           boolean[] discard = new boolean[1];
-          asyncCache.cache().compute(key, (k, currentValue) -> {
+          asyncCache.cache().compute(key, (ignored, currentValue) -> {
             if (currentValue == null) {
-              return (newValue == null) ? null : refreshFuture;
-            } else if (currentValue == oldValueFuture) {
+              if (newValue == null) {
+                return null;
+              } else if (asyncCache.cache().refreshes().get(key) == castedFuture) {
+                return castedFuture;
+              }
+            } else if (currentValue == oldValueFuture[0]) {
               long expectedWriteTime = writeTime[0];
               if (asyncCache.cache().hasWriteTime()) {
                 asyncCache.cache().getIfPresentQuietly(key, writeTime);
               }
               if (writeTime[0] == expectedWriteTime) {
-                return (newValue == null) ? null : refreshFuture;
+                return (newValue == null) ? null : castedFuture;
               }
             }
             discard[0] = true;
@@ -175,15 +239,18 @@ abstract class LocalAsyncLoadingCache<K, V>
           }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
 
           if (discard[0] && asyncCache.cache().hasRemovalListener()) {
-            asyncCache.cache().notifyRemoval(key, refreshFuture, RemovalCause.REPLACED);
+            asyncCache.cache().notifyRemoval(key, castedFuture, RemovalCause.REPLACED);
           }
           if (newValue == null) {
             asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
           } else {
             asyncCache.cache().statsCounter().recordLoadSuccess(loadTime);
           }
+
+          asyncCache.cache().refreshes().remove(keyReference, castedFuture);
         });
-      });
+      }
+      return castedFuture;
     }
   }
 }

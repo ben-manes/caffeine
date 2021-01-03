@@ -532,6 +532,20 @@ public @interface CacheSpec {
       @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
         throw new IllegalStateException();
       }
+    },
+    ASYNC_INCOMPLETE {
+      @Override public Integer load(Integer key) {
+        throw new UnsupportedOperationException();
+      }
+      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+        executor.execute(() -> {});
+        return new CompletableFuture<>();
+      }
+      @Override public CompletableFuture<Integer> asyncReload(
+          Integer key, Integer oldValue, Executor executor) {
+        executor.execute(() -> {});
+        return new CompletableFuture<>();
+      }
     };
 
     private final boolean bulk;

@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -65,6 +66,7 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
  */
 @SuppressWarnings("PreferJavaTimeOverload")
 public final class GuavaCacheFromContext {
+  private static final ThreadLocal<Exception> error = new ThreadLocal<>();
 
   private GuavaCacheFromContext() {}
 
@@ -489,8 +491,19 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public void refresh(K key) {
+    public CompletableFuture<V> refresh(K key) {
+      error.set(null);
       cache.refresh(key);
+
+      var e = error.get();
+      if (e == null) {
+        return CompletableFuture.completedFuture(cache.asMap().get(key));
+      } else if (e instanceof CacheMissException) {
+        return CompletableFuture.completedFuture(null);
+      }
+
+      error.remove();
+      return CompletableFuture.failedFuture(e);
     }
   }
 
@@ -542,11 +555,17 @@ public final class GuavaCacheFromContext {
 
     @Override
     public V load(K key) throws Exception {
-      V value = delegate.load(key);
-      if (value == null) {
-        throw new CacheMissException();
+      try {
+        error.set(null);
+        V value = delegate.load(key);
+        if (value == null) {
+          throw new CacheMissException();
+        }
+        return value;
+      } catch (Exception e) {
+        error.set(e);
+        throw e;
       }
-      return value;
     }
   }
 

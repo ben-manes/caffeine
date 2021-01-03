@@ -90,6 +90,7 @@ public final class Stresser {
     status();
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void run() throws InterruptedException {
     ConcurrentTestHarness.timeTasks(operation.maxThreads, () -> {
       int index = ThreadLocalRandom.current().nextInt();

@@ -604,9 +604,9 @@ public final class ExpirationTest {
   public void refresh(LoadingCache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.MINUTES);
     Integer key = context.firstKey();
-    cache.refresh(key);
+    cache.refresh(key).join();
 
-    long count = (cache.estimatedSize() == 1) ? context.initialSize() : 1;
+    long count = context.initialSize();
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
     verifyWriter(context, verifier -> {
       verifier.deleted(key, context.original().get(key), RemovalCause.EXPIRED);
@@ -623,7 +623,7 @@ public final class ExpirationTest {
       compute = Compute.SYNC, writer = Writer.EXCEPTIONAL, removalListener = Listener.REJECTING)
   public void refresh_writerFails(LoadingCache<Integer, Integer> cache, CacheContext context) {
     context.ticker().advance(1, TimeUnit.HOURS);
-    cache.refresh(context.firstKey());
+    cache.refresh(context.firstKey()).join();
     context.disableRejectingCacheWriter();
     context.ticker().advance(-1, TimeUnit.HOURS);
     assertThat(cache.asMap(), equalTo(context.original()));
