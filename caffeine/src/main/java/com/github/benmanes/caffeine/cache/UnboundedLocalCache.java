@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Collection;
@@ -36,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -54,6 +57,8 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  */
 @SuppressWarnings("deprecation")
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
+  static final Logger logger = System.getLogger(UnboundedLocalCache.class.getName());
+
   @Nullable final RemovalListener<K, V> removalListener;
   final ConcurrentHashMap<K, V> data;
   final StatsCounter statsCounter;
@@ -62,9 +67,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   final Executor executor;
   final Ticker ticker;
 
-  transient @Nullable Set<K> keySet;
-  transient @Nullable Collection<V> values;
-  transient @Nullable Set<Entry<K, V>> entrySet;
+  @Nullable Set<K> keySet;
+  @Nullable Collection<V> values;
+  @Nullable Set<Entry<K, V>> entrySet;
+  AtomicReference<ConcurrentMap<Object, CompletableFuture<?>>> refreshes;
 
   UnboundedLocalCache(Caffeine<? super K, ? super V> builder, boolean async) {
     this.data = new ConcurrentHashMap<>(builder.getInitialCapacity());
@@ -72,6 +78,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     this.removalListener = builder.getRemovalListener(async);
     this.isRecordingStats = builder.isRecordingStats();
     this.writer = builder.getCacheWriter(async);
+    this.refreshes = new AtomicReference<>();
     this.executor = builder.getExecutor();
     this.ticker = builder.getTicker();
   }
@@ -79,6 +86,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public boolean hasWriteTime() {
     return false;
+  }
+
+  @Override
+  public Object referenceKey(K key) {
+    return key;
   }
 
   /* --------------- Cache --------------- */
@@ -154,7 +166,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
     requireNonNull(removalListener(), "Notification should be guarded with a check");
-    executor.execute(() -> removalListener().onRemoval(key, value, cause));
+    Runnable task = () -> {
+      try {
+        removalListener().onRemoval(key, value, cause);
+      } catch (Throwable t) {
+        logger.log(Level.WARNING, "Exception thrown by removal listener", t);
+      }
+    };
+    try {
+      executor.execute(task);
+    } catch (Throwable t) {
+      logger.log(Level.ERROR, "Exception thrown when submitting removal listener", t);
+      task.run();
+    }
   }
 
   @Override
@@ -165,6 +189,19 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   @Override
   public Executor executor() {
     return executor;
+  }
+
+  @Override
+  @SuppressWarnings("NullAway")
+  public ConcurrentMap<Object, CompletableFuture<?>> refreshes() {
+    var pending = refreshes.get();
+    if (pending == null) {
+      pending = new ConcurrentHashMap<>();
+      if (!refreshes.compareAndSet(null, pending)) {
+        pending = refreshes.get();
+      }
+    }
+    return pending;
   }
 
   @Override
@@ -339,6 +376,11 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
   public void clear() {
     if (!hasRemovalListener() && (writer == CacheWriter.disabledWriter())) {
       data.clear();
+
+      var pending = refreshes.get();
+      if (pending != null) {
+        pending.clear();
+      }
       return;
     }
     for (K key : data.keySet()) {
@@ -431,6 +473,10 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
       });
     }
 
+    var pending = refreshes.get();
+    if (pending != null) {
+      pending.remove(key);
+    }
     if (hasRemovalListener() && (oldValue[0] != null)) {
       notifyRemoval(castKey, oldValue[0], RemovalCause.EXPLICIT);
     }
@@ -460,9 +506,16 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     });
 
     boolean removed = (oldValue[0] != null);
-    if (hasRemovalListener() && removed) {
-      notifyRemoval(castKey, oldValue[0], RemovalCause.EXPLICIT);
+    if (removed) {
+      var pending = refreshes.get();
+      if (pending != null) {
+        pending.remove(key);
+      }
+      if (hasRemovalListener()) {
+        notifyRemoval(castKey, oldValue[0], RemovalCause.EXPLICIT);
+      }
     }
+
     return removed;
   }
 

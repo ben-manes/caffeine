@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
@@ -52,6 +53,9 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Returns the {@link Executor} used by this cache. */
   @NonNull Executor executor();
 
+  /** Returns the map of in-flight refresh operations. */
+  ConcurrentMap<Object, CompletableFuture<?>> refreshes();
+
   /** Returns whether the cache captures the write time of the entry. */
   boolean hasWriteTime();
 
@@ -63,6 +67,9 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
 
   /** See {@link Cache#estimatedSize()}. */
   long estimatedSize();
+
+  /** Returns the reference key. */
+  Object referenceKey(K key);
 
   /**
    * See {@link Cache#getIfPresent(Object)}. This method differs by accepting a parameter of whether

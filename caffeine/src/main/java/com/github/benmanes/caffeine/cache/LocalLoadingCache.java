@@ -89,49 +89,78 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
-  default void refresh(K key) {
+  default CompletableFuture<V> refresh(K key) {
     requireNonNull(key);
 
     long[] writeTime = new long[1];
-    long startTime = cache().statsTicker().read();
-    V oldValue = cache().getIfPresentQuietly(key, writeTime);
-    CompletableFuture<V> refreshFuture = (oldValue == null)
-        ? cacheLoader().asyncLoad(key, cache().executor())
-        : cacheLoader().asyncReload(key, oldValue, cache().executor());
-    refreshFuture.whenComplete((newValue, error) -> {
-      long loadTime = cache().statsTicker().read() - startTime;
-      if (error != null) {
-        logger.log(Level.WARNING, "Exception thrown during refresh", error);
-        cache().statsCounter().recordLoadFailure(loadTime);
-        return;
+    long[] startTime = new long[1];
+    @SuppressWarnings("unchecked")
+    V[] oldValue = (V[]) new Object[1];
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    CompletableFuture<V>[] reloading = new CompletableFuture[1];
+    Object keyReference = cache().referenceKey(key);
+
+    var future = cache().refreshes().compute(keyReference, (k, existing) -> {
+      if ((existing != null) && !Async.isReady(existing)) {
+        return existing;
       }
 
-      boolean[] discard = new boolean[1];
-      cache().compute(key, (k, currentValue) -> {
-        if (currentValue == null) {
-          return newValue;
-        } else if (currentValue == oldValue) {
-          long expectedWriteTime = writeTime[0];
-          if (cache().hasWriteTime()) {
-            cache().getIfPresentQuietly(key, writeTime);
-          }
-          if (writeTime[0] == expectedWriteTime) {
-            return newValue;
-          }
-        }
-        discard[0] = true;
-        return currentValue;
-      }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
-
-      if (discard[0] && cache().hasRemovalListener()) {
-        cache().notifyRemoval(key, newValue, RemovalCause.REPLACED);
-      }
-      if (newValue == null) {
-        cache().statsCounter().recordLoadFailure(loadTime);
-      } else {
-        cache().statsCounter().recordLoadSuccess(loadTime);
-      }
+      startTime[0] = cache().statsTicker().read();
+      oldValue[0] = cache().getIfPresentQuietly(key, writeTime);
+      CompletableFuture<V> refreshFuture = (oldValue[0] == null)
+          ? cacheLoader().asyncLoad(key, cache().executor())
+          : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
+      reloading[0] = refreshFuture;
+      return refreshFuture;
     });
+
+    if (reloading[0] != null) {
+      reloading[0].whenComplete((newValue, error) -> {
+        long loadTime = cache().statsTicker().read() - startTime[0];
+        if (error != null) {
+          logger.log(Level.WARNING, "Exception thrown during refresh", error);
+          cache().refreshes().remove(keyReference, reloading[0]);
+          cache().statsCounter().recordLoadFailure(loadTime);
+          return;
+        }
+
+        boolean[] discard = new boolean[1];
+        cache().compute(key, (k, currentValue) -> {
+          if (currentValue == null) {
+            if (newValue == null) {
+              return null;
+            } else if (cache().refreshes().get(keyReference) == reloading[0]) {
+              return newValue;
+            }
+          } else if (currentValue == oldValue[0]) {
+            long expectedWriteTime = writeTime[0];
+            if (cache().hasWriteTime()) {
+              cache().getIfPresentQuietly(key, writeTime);
+            }
+            if (writeTime[0] == expectedWriteTime) {
+              return newValue;
+            }
+          }
+          discard[0] = true;
+          return currentValue;
+        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
+
+        if (discard[0] && cache().hasRemovalListener()) {
+          cache().notifyRemoval(key, newValue, RemovalCause.REPLACED);
+        }
+        if (newValue == null) {
+          cache().statsCounter().recordLoadFailure(loadTime);
+        } else {
+          cache().statsCounter().recordLoadSuccess(loadTime);
+        }
+
+        cache().refreshes().remove(keyReference, reloading[0]);
+      });
+    }
+
+    @SuppressWarnings("unchecked")
+    CompletableFuture<V> castedFuture = (CompletableFuture<V>) future;
+    return castedFuture;
   }
 
   /** Returns a mapping function that adapts to {@link CacheLoader#load}. */

@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -101,9 +102,13 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * Caches loaded by a {@link CacheLoader} will call {@link CacheLoader#reload} if the cache
    * currently contains a value for the {@code key}, and {@link CacheLoader#load} otherwise. Loading
    * is asynchronous by delegating to the default executor.
+   * <p>
+   * Returns an existing future without doing anything if another thread is currently loading the
+   * value for {@code key}.
    *
    * @param key key with which a value may be associated
+   * @return the future that is loading the value
    * @throws NullPointerException if the specified key is null
    */
-  void refresh(@NonNull K key);
+  CompletableFuture<V> refresh(@NonNull K key);
 }

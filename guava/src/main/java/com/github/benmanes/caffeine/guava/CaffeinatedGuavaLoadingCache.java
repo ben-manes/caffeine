@@ -117,6 +117,7 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void refresh(K key) {
     cache.refresh(key);
   }
