@@ -19,6 +19,7 @@ import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 
 import javax.lang.model.element.Modifier;
 
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 
 /**
@@ -40,7 +41,9 @@ public final class AddKey extends NodeRule {
         .addField(newKeyField())
         .addMethod(newGetter(keyStrength(), kTypeVar, "key", Visibility.PLAIN))
         .addMethod(newGetRef("key"));
-    addVarHandle("key", Object.class);
+    addVarHandle("key", isStrongKeys()
+        ? ClassName.get(Object.class)
+        : keyReferenceType().rawType);
   }
 
   private FieldSpec newKeyField() {

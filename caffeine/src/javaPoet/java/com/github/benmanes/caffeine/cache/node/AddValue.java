@@ -23,6 +23,7 @@ import java.util.Objects;
 
 import javax.lang.model.element.Modifier;
 
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 
@@ -47,7 +48,9 @@ public final class AddValue extends NodeRule {
         .addMethod(newGetRef("value"))
         .addMethod(makeSetValue())
         .addMethod(makeContainsValue());
-    addVarHandle("value", Object.class);
+    addVarHandle("value", isStrongValues()
+        ? ClassName.get(Object.class)
+        : valueReferenceType().rawType);
   }
 
   private FieldSpec newValueField() {
