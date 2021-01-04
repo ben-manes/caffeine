@@ -124,11 +124,8 @@ public interface AsyncCache<K, V> {
    *         left unestablished
    */
   @NonNull
-  default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
-      @NonNull Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction) {
-    // This method was added & implemented in version 2.8.0
-    throw new UnsupportedOperationException();
-  }
+  CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
+      @NonNull Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction);
 
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
@@ -154,11 +151,8 @@ public interface AsyncCache<K, V> {
    *         left unestablished
    */
   @NonNull
-  default CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
-      @NonNull BiFunction<Iterable<? extends @NonNull K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
-    // This method was added & implemented in version 2.8.0
-    throw new UnsupportedOperationException();
-  }
+  CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
+      @NonNull BiFunction<Iterable<? extends @NonNull K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction);
 
   /**
    * Associates {@code value} with {@code key} in this cache. If the cache previously contained a

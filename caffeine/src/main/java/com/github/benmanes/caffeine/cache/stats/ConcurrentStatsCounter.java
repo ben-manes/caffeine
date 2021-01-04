@@ -71,19 +71,6 @@ public final class ConcurrentStatsCounter implements StatsCounter {
     totalLoadTime.add(loadTime);
   }
 
-  @Override @Deprecated
-  @SuppressWarnings("deprecation")
-  public void recordEviction() {
-    evictionCount.increment();
-  }
-
-  @Override @Deprecated
-  @SuppressWarnings("deprecation")
-  public void recordEviction(int weight) {
-    evictionCount.increment();
-    evictionWeight.add(weight);
-  }
-
   @Override
   public void recordEviction(int weight, RemovalCause cause) {
     evictionCount.increment();

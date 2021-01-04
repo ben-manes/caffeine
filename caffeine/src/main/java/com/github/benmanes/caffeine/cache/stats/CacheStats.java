@@ -72,40 +72,7 @@ public final class CacheStats {
   private final long evictionCount;
   private final long evictionWeight;
 
-  /**
-   * Constructs a new {@code CacheStats} instance.
-   *
-   * @param hitCount the number of cache hits
-   * @param missCount the number of cache misses
-   * @param loadSuccessCount the number of successful cache loads
-   * @param loadFailureCount the number of failed cache loads
-   * @param totalLoadTime the total load time (success and failure)
-   * @param evictionCount the number of entries evicted from the cache
-   * @deprecated This constructor is scheduled for removal in version 3.0.0.
-   */
-  @Deprecated
-  public CacheStats(@NonNegative long hitCount, @NonNegative long missCount,
-      @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
-      @NonNegative long totalLoadTime, @NonNegative long evictionCount) {
-    this(hitCount, missCount, loadSuccessCount, loadFailureCount, totalLoadTime, evictionCount, 0L);
-  }
-
-  /**
-   * Constructs a new {@code CacheStats} instance.
-   * <p>
-   * Many parameters of the same type in a row is a bad thing, but this class is not constructed
-   * by end users and is too fine-grained for a builder.
-   *
-   * @param hitCount the number of cache hits
-   * @param missCount the number of cache misses
-   * @param loadSuccessCount the number of successful cache loads
-   * @param loadFailureCount the number of failed cache loads
-   * @param totalLoadTime the total load time (success and failure)
-   * @param evictionCount the number of entries evicted from the cache
-   * @param evictionWeight the sum of weights of entries evicted from the cache
-   */
-  @Deprecated
-  public CacheStats(@NonNegative long hitCount, @NonNegative long missCount,
+  private CacheStats(@NonNegative long hitCount, @NonNegative long missCount,
       @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
       @NonNegative long totalLoadTime, @NonNegative long evictionCount,
       @NonNegative long evictionWeight) {
