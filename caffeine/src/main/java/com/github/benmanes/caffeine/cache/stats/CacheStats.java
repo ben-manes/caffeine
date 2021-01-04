@@ -53,12 +53,16 @@ import com.google.errorprone.annotations.Immutable;
  * A lookup is specifically defined as an invocation of one of the methods
  * {@link LoadingCache#get(Object)}, {@link Cache#get(Object, java.util.function.Function)}, or
  * {@link LoadingCache#getAll(Iterable)}.
+ * <p>
+ * This is a <em>value-based</em> class; use of identity-sensitive operations (including reference
+ * equality ({@code ==}), identity hash code, or synchronization) on instances of {@code CacheStats}
+ * may have unpredictable results and should be avoided.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Immutable
 public final class CacheStats {
-  private static final CacheStats EMPTY_STATS = new CacheStats(0, 0, 0, 0, 0, 0, 0);
+  private static final CacheStats EMPTY_STATS = CacheStats.of(0L, 0L, 0L, 0L, 0L, 0L, 0L);
 
   private final long hitCount;
   private final long missCount;
@@ -100,6 +104,7 @@ public final class CacheStats {
    * @param evictionCount the number of entries evicted from the cache
    * @param evictionWeight the sum of weights of entries evicted from the cache
    */
+  @Deprecated
   public CacheStats(@NonNegative long hitCount, @NonNegative long missCount,
       @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
       @NonNegative long totalLoadTime, @NonNegative long evictionCount,
@@ -115,6 +120,27 @@ public final class CacheStats {
     this.totalLoadTime = totalLoadTime;
     this.evictionCount = evictionCount;
     this.evictionWeight = evictionWeight;
+  }
+
+  /**
+   * Returns a {@code CacheStats} representing the specified statistics.
+   *
+   * @param hitCount the number of cache hits
+   * @param missCount the number of cache misses
+   * @param loadSuccessCount the number of successful cache loads
+   * @param loadFailureCount the number of failed cache loads
+   * @param totalLoadTime the total load time (success and failure)
+   * @param evictionCount the number of entries evicted from the cache
+   * @param evictionWeight the sum of weights of entries evicted from the cache
+   */
+  public static CacheStats of(@NonNegative long hitCount, @NonNegative long missCount,
+      @NonNegative long loadSuccessCount, @NonNegative long loadFailureCount,
+      @NonNegative long totalLoadTime, @NonNegative long evictionCount,
+      @NonNegative long evictionWeight) {
+    // Many parameters of the same type in a row is a bad thing, but this class is not constructed
+    // by end users and is too fine-grained for a builder.
+    return new CacheStats(hitCount, missCount, loadSuccessCount,
+        loadFailureCount, totalLoadTime, evictionCount, evictionWeight);
   }
 
   /**
@@ -317,7 +343,7 @@ public final class CacheStats {
    */
   @NonNull
   public CacheStats minus(@NonNull CacheStats other) {
-    return new CacheStats(
+    return CacheStats.of(
         Math.max(0L, saturatedSubtract(hitCount, other.hitCount)),
         Math.max(0L, saturatedSubtract(missCount, other.missCount)),
         Math.max(0L, saturatedSubtract(loadSuccessCount, other.loadSuccessCount)),
@@ -340,7 +366,7 @@ public final class CacheStats {
    */
   @NonNull
   public CacheStats plus(@NonNull CacheStats other) {
-    return new CacheStats(
+    return CacheStats.of(
         saturatedAdd(hitCount, other.hitCount),
         saturatedAdd(missCount, other.missCount),
         saturatedAdd(loadSuccessCount, other.loadSuccessCount),

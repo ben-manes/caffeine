@@ -92,7 +92,7 @@ public final class ConcurrentStatsCounter implements StatsCounter {
 
   @Override
   public CacheStats snapshot() {
-    return new CacheStats(
+    return CacheStats.of(
         negativeToMaxValue(hitCount.sum()),
         negativeToMaxValue(missCount.sum()),
         negativeToMaxValue(loadSuccessCount.sum()),

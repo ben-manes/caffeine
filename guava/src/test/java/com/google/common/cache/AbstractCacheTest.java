@@ -128,6 +128,6 @@ public class AbstractCacheTest extends TestCase {
     }
 
     counter1.incrementBy(counter2);
-    assertEquals(new CacheStats(38, 60, 44, 54, totalLoadTime, 66, 66), counter1.snapshot());
+    assertEquals(CacheStats.of(38, 60, 44, 54, totalLoadTime, 66, 66), counter1.snapshot());
   }
 }

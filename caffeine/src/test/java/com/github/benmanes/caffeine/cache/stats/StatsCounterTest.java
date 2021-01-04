@@ -46,8 +46,8 @@ public final class StatsCounterTest {
     counter.recordEviction(1, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0, 0)));
-    assertThat(counter.toString(), is(new CacheStats(0, 0, 0, 0, 0, 0, 0).toString()));
+    assertThat(counter.snapshot(), is(CacheStats.of(0, 0, 0, 0, 0, 0, 0)));
+    assertThat(counter.toString(), is(CacheStats.of(0, 0, 0, 0, 0, 0, 0).toString()));
 
     for (DisabledStatsCounter type : DisabledStatsCounter.values()) {
       assertThat(DisabledStatsCounter.valueOf(type.name()), is(counter));
@@ -64,13 +64,13 @@ public final class StatsCounterTest {
     counter.recordEviction(1, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 3, 11);
+    CacheStats expected = CacheStats.of(1, 1, 1, 1, 2, 3, 11);
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));
 
     counter.incrementBy(counter);
-    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 6, 22)));
+    assertThat(counter.snapshot(), is(CacheStats.of(2, 2, 2, 2, 4, 6, 22)));
   }
 
   @Test
@@ -84,7 +84,7 @@ public final class StatsCounterTest {
       counter.recordLoadSuccess(1);
       counter.recordLoadFailure(1);
     });
-    assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 10, 50)));
+    assertThat(counter.snapshot(), is(CacheStats.of(5, 5, 5, 5, 10, 10, 50)));
   }
 
   @Test
@@ -97,7 +97,7 @@ public final class StatsCounterTest {
     counter.recordEviction(1, RemovalCause.SIZE);
     counter.recordLoadSuccess(1);
     counter.recordLoadFailure(1);
-    CacheStats expected = new CacheStats(1, 1, 1, 1, 2, 3, 11);
+    CacheStats expected = CacheStats.of(1, 1, 1, 1, 2, 3, 11);
     assertThat(counter.snapshot(), is(expected));
     assertThat(counter.toString(), is(expected.toString()));
     assertThat(counter.snapshot().toString(), is(expected.toString()));

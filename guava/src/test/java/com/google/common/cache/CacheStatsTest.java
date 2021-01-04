@@ -29,7 +29,7 @@ import junit.framework.TestCase;
 public class CacheStatsTest extends TestCase {
 
   public void testEmpty() {
-    CacheStats stats = new CacheStats(0, 0, 0, 0, 0, 0, 0);
+    CacheStats stats = CacheStats.of(0, 0, 0, 0, 0, 0, 0);
     assertEquals(0, stats.requestCount());
     assertEquals(0, stats.hitCount());
     assertEquals(1.0, stats.hitRate());
@@ -45,7 +45,7 @@ public class CacheStatsTest extends TestCase {
   }
 
   public void testSingle() {
-    CacheStats stats = new CacheStats(11, 13, 17, 19, 23, 27, 54);
+    CacheStats stats = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
     assertEquals(24, stats.requestCount());
     assertEquals(11, stats.hitCount());
     assertEquals(11.0/24, stats.hitRate());
@@ -62,8 +62,8 @@ public class CacheStatsTest extends TestCase {
   }
 
   public void testMinus() {
-    CacheStats one = new CacheStats(11, 13, 17, 19, 23, 27, 54);
-    CacheStats two = new CacheStats(53, 47, 43, 41, 37, 31, 62);
+    CacheStats one = CacheStats.of(11, 13, 17, 19, 23, 27, 54);
+    CacheStats two = CacheStats.of(53, 47, 43, 41, 37, 31, 62);
 
     CacheStats diff = two.minus(one);
     assertEquals(76, diff.requestCount());
@@ -80,12 +80,12 @@ public class CacheStatsTest extends TestCase {
     assertEquals(4, diff.evictionCount());
     assertEquals(8, diff.evictionWeight());
 
-    assertEquals(new CacheStats(0, 0, 0, 0, 0, 0, 0), one.minus(two));
+    assertEquals(CacheStats.of(0, 0, 0, 0, 0, 0, 0), one.minus(two));
   }
 
   public void testPlus() {
-    CacheStats one = new CacheStats(11, 13, 15, 13, 11, 9, 18);
-    CacheStats two = new CacheStats(53, 47, 41, 39, 37, 35, 70);
+    CacheStats one = CacheStats.of(11, 13, 15, 13, 11, 9, 18);
+    CacheStats two = CacheStats.of(53, 47, 41, 39, 37, 35, 70);
 
     CacheStats sum = two.plus(one);
     assertEquals(124, sum.requestCount());
@@ -107,7 +107,7 @@ public class CacheStatsTest extends TestCase {
 
   public void testPlusLarge() {
     CacheStats maxCacheStats =
-        new CacheStats(
+        CacheStats.of(
             Long.MAX_VALUE,
             Long.MAX_VALUE,
             Long.MAX_VALUE,
@@ -115,7 +115,7 @@ public class CacheStatsTest extends TestCase {
             Long.MAX_VALUE,
             Long.MAX_VALUE,
             Long.MAX_VALUE);
-    CacheStats smallCacheStats = new CacheStats(1, 1, 1, 1, 1, 1, 1);
+    CacheStats smallCacheStats = CacheStats.of(1, 1, 1, 1, 1, 1, 1);
 
     CacheStats sum = smallCacheStats.plus(maxCacheStats);
     assertEquals(Long.MAX_VALUE, sum.requestCount());
