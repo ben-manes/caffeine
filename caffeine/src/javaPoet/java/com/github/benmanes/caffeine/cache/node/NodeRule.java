@@ -85,13 +85,13 @@ public abstract class NodeRule implements Consumer<NodeContext> {
         || context.generateFeatures.contains(Feature.STRONG_VALUES);
   }
 
-  protected TypeName keyReferenceType() {
+  protected ParameterizedTypeName keyReferenceType() {
     checkState(context.generateFeatures.contains(Feature.WEAK_KEYS));
     return ParameterizedTypeName.get(
         ClassName.get(PACKAGE_NAME + ".References", "WeakKeyReference"), kTypeVar);
   }
 
-  protected TypeName valueReferenceType() {
+  protected ParameterizedTypeName valueReferenceType() {
     checkState(!context.generateFeatures.contains(Feature.STRONG_VALUES));
     String clazz = context.generateFeatures.contains(Feature.WEAK_VALUES)
         ? "WeakValueReference"
@@ -105,7 +105,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   }
 
   /** Creates a VarHandle to the instance field. */
-  public void addVarHandle(String varName, Class<?> type) {
+  public void addVarHandle(String varName, TypeName type) {
     String fieldName = varHandleName(varName);
     context.nodeSubtype.addField(FieldSpec.builder(VarHandle.class, fieldName,
         Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL).build());
@@ -177,7 +177,7 @@ public abstract class NodeRule implements Consumer<NodeContext> {
   }
 
   protected enum Strength {
-    STRONG, WEAK, SOFT,
+    STRONG, WEAK, SOFT;
   }
 
   protected enum Visibility {

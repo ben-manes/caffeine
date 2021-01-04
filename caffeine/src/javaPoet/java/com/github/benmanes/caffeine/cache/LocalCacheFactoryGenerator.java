@@ -16,7 +16,9 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
+import static com.github.benmanes.caffeine.cache.Specifications.BUILDER;
 import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
+import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER;
 import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
 import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
 import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
@@ -25,6 +27,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -82,6 +86,16 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
+  static final FieldSpec LOOKUP = FieldSpec.builder(MethodHandles.Lookup.class, "LOOKUP")
+      .initializer("$T.lookup()", MethodHandles.class)
+      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+      .build();
+  static final FieldSpec FACTORY = FieldSpec.builder(MethodType.class, "FACTORY")
+      .initializer("$T.methodType($T.class, $T.class, $T.class, $T.class)",
+          MethodType.class, void.class, BUILDER, CACHE_LOADER.rawType, TypeName.BOOLEAN)
+      .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+      .build();
+
   final Feature[] featureByIndex = { null, null, Feature.LISTENING, Feature.STATS,
       Feature.MAXIMUM_SIZE, Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS,
       Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE};
@@ -182,6 +196,9 @@ public final class LocalCacheFactoryGenerator {
               .initializer("$S", constant)
               .build());
     }
+
+    factory.addField(FACTORY);
+    factory.addField(LOOKUP);
   }
 
   private void generateLocalCaches() {

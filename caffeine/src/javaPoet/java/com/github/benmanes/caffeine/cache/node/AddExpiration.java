@@ -114,7 +114,7 @@ public final class AddExpiration extends NodeRule {
         .addField(long.class, "accessTime", Modifier.VOLATILE)
         .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "accessTime", Visibility.PLAIN))
         .addMethod(newSetter(TypeName.LONG, "accessTime", Visibility.PLAIN));
-    addVarHandle("accessTime", long.class);
+    addVarHandle("accessTime", TypeName.get(long.class));
     addTimeConstructorAssignment(context.constructorByKey, "accessTime");
     addTimeConstructorAssignment(context.constructorByKeyRef, "accessTime");
   }
@@ -126,7 +126,7 @@ public final class AddExpiration extends NodeRule {
           .addField(long.class, "writeTime", Modifier.VOLATILE)
           .addMethod(newGetter(Strength.STRONG, TypeName.LONG, "writeTime", Visibility.PLAIN))
           .addMethod(newSetter(TypeName.LONG, "writeTime", Visibility.PLAIN));
-      addVarHandle("writeTime", long.class);
+      addVarHandle("writeTime", TypeName.get(long.class));
       addTimeConstructorAssignment(context.constructorByKey, "writeTime");
       addTimeConstructorAssignment(context.constructorByKeyRef, "writeTime");
     }
