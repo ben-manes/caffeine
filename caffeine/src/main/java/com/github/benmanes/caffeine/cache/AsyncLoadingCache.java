@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentMap;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -81,22 +80,6 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    */
   @NonNull
   CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys);
-
-  /**
-   * Returns a view of the entries stored in this cache as a thread-safe map. Modifications made to
-   * the map directly affect the cache.
-   * <p>
-   * Iterators from the returned map are at least <i>weakly consistent</i>: they are safe for
-   * concurrent use, but if the cache is modified (including by eviction) after the iterator is
-   * created, it is undefined which of the changes (if any) will be reflected in that iterator.
-   *
-   * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
-   */
-  @Override
-  default @NonNull ConcurrentMap<@NonNull K, @NonNull CompletableFuture<V>> asMap() {
-    // This method was added & implemented in version 2.7.0
-    throw new UnsupportedOperationException();
-  }
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link LoadingCache}. A

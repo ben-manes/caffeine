@@ -119,11 +119,8 @@ public interface Cache<K, V> {
    *         left unestablished
    */
   @NonNull
-  default Map<K, V> getAll(@NonNull Iterable<? extends @NonNull K> keys,
-      @NonNull Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction) {
-    // This method was added & implemented in version 2.8.0
-    throw new UnsupportedOperationException();
-  }
+  Map<K, V> getAll(@NonNull Iterable<? extends @NonNull K> keys,
+      @NonNull Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction);
 
   /**
    * Associates the {@code value} with the {@code key} in this cache. If the cache previously

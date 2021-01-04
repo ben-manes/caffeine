@@ -56,10 +56,7 @@ public interface Policy<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
-  default V getIfPresentQuietly(@NonNull @CompatibleWith("K") Object key) {
-    // This method was added & implemented in version 2.8.3
-    throw new UnsupportedOperationException();
-  }
+  V getIfPresentQuietly(@NonNull @CompatibleWith("K") Object key);
 
   /**
    * Returns access to perform operations based on the maximum size or maximum weight eviction
@@ -113,10 +110,7 @@ public interface Policy<K, V> {
    * @return access to low-level operations for this cache if a variable expiration policy is used
    */
   @NonNull
-  default Optional<VarExpiration<K, V>> expireVariably() {
-    // This method will be abstract in version 3.0.0
-    return Optional.empty();
-  }
+  Optional<VarExpiration<K, V>> expireVariably();
 
   /**
    * Returns access to perform operations based on the time-to-live refresh policy. This policy
@@ -149,10 +143,7 @@ public interface Policy<K, V> {
      * @return the weight if the entry is present in the cache
      */
     @NonNull
-    default OptionalInt weightOf(@NonNull K key) {
-      // This method will be abstract in version 3.0.0
-      return OptionalInt.empty();
-    }
+    OptionalInt weightOf(@NonNull K key);
 
     /**
      * Returns the approximate accumulated weight of entries in this cache. If this cache does not
@@ -255,7 +246,6 @@ public interface Policy<K, V> {
      */
     @NonNull
     default Optional<Duration> ageOf(@NonNull K key) {
-      // This method will be abstract in version 3.0.0
       OptionalLong duration = ageOf(key, TimeUnit.NANOSECONDS);
       return duration.isPresent()
           ? Optional.of(Duration.ofNanos(duration.getAsLong()))
@@ -286,7 +276,6 @@ public interface Policy<K, V> {
      */
     @NonNull
     default Duration getExpiresAfter() {
-      // This method will be abstract in version 3.0.0
       return Duration.ofNanos(getExpiresAfter(TimeUnit.NANOSECONDS));
     }
 
@@ -310,7 +299,6 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     default void setExpiresAfter(@NonNull Duration duration) {
-      // This method will be abstract in version 3.0.0
       setExpiresAfter(duration.toNanos(), TimeUnit.NANOSECONDS);
     }
 
@@ -374,7 +362,6 @@ public interface Policy<K, V> {
      */
     @NonNull
     default Optional<Duration> getExpiresAfter(@NonNull K key) {
-      // This method will be abstract in version 3.0.0
       OptionalLong duration = getExpiresAfter(key, TimeUnit.NANOSECONDS);
       return duration.isPresent()
           ? Optional.of(Duration.ofNanos(duration.getAsLong()))
@@ -402,7 +389,6 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     default void setExpiresAfter(@NonNull K key, @NonNull Duration duration) {
-      // This method will be abstract in version 3.0.0
       setExpiresAfter(key, duration.toNanos(), TimeUnit.NANOSECONDS);
     }
 
@@ -421,11 +407,8 @@ public interface Policy<K, V> {
      * @return {@code true} if this cache did not already contain the specified entry
      * @throws IllegalArgumentException if {@code duration} is negative
      */
-    default boolean putIfAbsent(@NonNull K key, @NonNull V value,
-        @NonNegative long duration, @NonNull TimeUnit unit) {
-      // This method was added & implemented in version 2.6.0
-      throw new UnsupportedOperationException();
-    }
+    boolean putIfAbsent(@NonNull K key, @NonNull V value,
+        @NonNegative long duration, @NonNull TimeUnit unit);
 
     /**
      * Associates the {@code value} with the {@code key} in this cache if the specified key is not
@@ -440,7 +423,6 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     default boolean putIfAbsent(@NonNull K key, @NonNull V value, @NonNull Duration duration) {
-      // This method will be abstract in version 3.0.0
       return putIfAbsent(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
     }
 
@@ -459,11 +441,7 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      * @throws NullPointerException if the specified key or value is null
      */
-    default void put(@NonNull K key, @NonNull V value,
-        @NonNegative long duration, @NonNull TimeUnit unit) {
-      // This method was added & implemented in version 2.6.0
-      throw new UnsupportedOperationException();
-    }
+    void put(@NonNull K key, @NonNull V value, @NonNegative long duration, @NonNull TimeUnit unit);
 
     /**
      * Associates the {@code value} with the {@code key} in this cache. If the cache previously
@@ -477,7 +455,6 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     default void put(@NonNull K key, @NonNull V value, @NonNull Duration duration) {
-      // This method will be abstract in version 3.0.0
       put(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
     }
 
@@ -549,7 +526,6 @@ public interface Policy<K, V> {
      */
     @NonNull
     default Optional<Duration> ageOf(@NonNull K key) {
-      // This method will be abstract in version 3.0.0
       OptionalLong duration = ageOf(key, TimeUnit.NANOSECONDS);
       return duration.isPresent()
           ? Optional.of(Duration.ofNanos(duration.getAsLong()))
@@ -580,7 +556,6 @@ public interface Policy<K, V> {
      */
     @NonNull
     default Duration getRefreshesAfter() {
-      // This method will be abstract in version 3.0.0
       return Duration.ofNanos(getRefreshesAfter(TimeUnit.NANOSECONDS));
     }
 
@@ -604,7 +579,6 @@ public interface Policy<K, V> {
      * @throws IllegalArgumentException if {@code duration} is negative
      */
     default void setRefreshesAfter(@NonNull Duration duration) {
-      // This method will be abstract in version 3.0.0
       setRefreshesAfter(duration.toNanos(), TimeUnit.NANOSECONDS);
     }
   }

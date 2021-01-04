@@ -76,38 +76,10 @@ public interface StatsCounter {
    * evicted due to the cache's eviction strategy, and not as a result of manual
    * {@link Cache#invalidate invalidations}.
    *
-   * @deprecated Use {@link StatsCounter#recordEviction(int, RemovalCause)} instead. This method is
-   *     scheduled for removal in version 3.0.0.
-   */
-  @Deprecated
-  void recordEviction();
-
-  /**
-   * Records the eviction of an entry from the cache. This should only been called when an entry is
-   * evicted due to the cache's eviction strategy, and not as a result of manual
-   * {@link Cache#invalidate invalidations}.
-   *
-   * @param weight the weight of the evicted entry
-   * @deprecated Use {@link StatsCounter#recordEviction(int, RemovalCause)} instead. This method is
-   *     scheduled for removal in version 3.0.0.
-   */
-  @Deprecated
-  default void recordEviction(@NonNegative int weight) {
-    recordEviction();
-  }
-
-  /**
-   * Records the eviction of an entry from the cache. This should only been called when an entry is
-   * evicted due to the cache's eviction strategy, and not as a result of manual
-   * {@link Cache#invalidate invalidations}.
-   *
    * @param weight the weight of the evicted entry
    * @param cause the reason for which the entry was removed
    */
-  default void recordEviction(@NonNegative int weight, RemovalCause cause) {
-    // This method will be abstract in version 3.0.0
-    recordEviction(weight);
-  }
+  void recordEviction(@NonNegative int weight, RemovalCause cause);
 
   /**
    * Returns a snapshot of this counter's values. Note that this may be an inconsistent view, as it
