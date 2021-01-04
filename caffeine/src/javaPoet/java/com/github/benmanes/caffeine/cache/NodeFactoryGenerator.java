@@ -66,6 +66,7 @@ import com.github.benmanes.caffeine.cache.node.AddValue;
 import com.github.benmanes.caffeine.cache.node.Finalize;
 import com.github.benmanes.caffeine.cache.node.NodeContext;
 import com.github.benmanes.caffeine.cache.node.NodeRule;
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -142,10 +143,10 @@ public final class NodeFactoryGenerator {
 
     for (TypeSpec node : nodeTypes) {
       JavaFile.builder(getClass().getPackage().getName(), node)
-              .addFileComment(header, Year.now(timeZone))
-              .indent("  ")
-              .build()
-              .writeTo(directory);
+          .addFileComment(header, Year.now(timeZone))
+          .indent("  ")
+          .build()
+          .writeTo(directory);
     }
   }
 
@@ -172,7 +173,16 @@ public final class NodeFactoryGenerator {
   }
 
   private void addConstants() {
-    Modifier[] modifiers = {Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL};
+    List<String> constants = ImmutableList.of("key", "value", "accessTime", "writeTime");
+    for (String constant : constants) {
+      String name = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, constant);
+      nodeFactory.addField(FieldSpec.builder(String.class, name)
+          .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+          .initializer("$S", constant)
+          .build());
+    }
+
+    Modifier[] modifiers = { Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL };
     nodeFactory.addField(FieldSpec.builder(Object.class, RETIRED_STRONG_KEY, modifiers)
         .initializer("new Object()")
         .build());

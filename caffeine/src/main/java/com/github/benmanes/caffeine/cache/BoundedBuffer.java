@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Consumer;
 
@@ -136,14 +138,7 @@ final class BBHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the read count. */
   abstract static class ReadCounterRef extends PadReadCounter {
-    static final long READ_OFFSET =
-        UnsafeAccess.objectFieldOffset(ReadCounterRef.class, "readCounter");
-
     volatile long readCounter;
-
-    void lazySetReadCounter(long count) {
-      UnsafeAccess.UNSAFE.putOrderedLong(this, READ_OFFSET, count);
-    }
   }
 
   abstract static class PadWriteCounter extends ReadCounterRef {
@@ -166,21 +161,34 @@ final class BBHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the write count. */
   abstract static class ReadAndWriteCounterRef extends PadWriteCounter {
-    static final long WRITE_OFFSET =
-        UnsafeAccess.objectFieldOffset(ReadAndWriteCounterRef.class, "writeCounter");
+    static final VarHandle READ, WRITE;
 
     volatile long writeCounter;
 
     ReadAndWriteCounterRef() {
-      UnsafeAccess.UNSAFE.putOrderedLong(this, WRITE_OFFSET, 1);
+      WRITE.setOpaque(this, 1);
+    }
+
+    void lazySetReadCounter(long count) {
+      READ.setOpaque(this, count);
     }
 
     long relaxedWriteCounter() {
-      return UnsafeAccess.UNSAFE.getLong(this, WRITE_OFFSET);
+      return (long) WRITE.get(this);
     }
 
     boolean casWriteCounter(long expect, long update) {
-      return UnsafeAccess.UNSAFE.compareAndSwapLong(this, WRITE_OFFSET, expect, update);
+      return WRITE.compareAndSet(this, expect, update);
+    }
+
+    static {
+      var lookup = MethodHandles.lookup();
+      try {
+        READ = lookup.findVarHandle(ReadCounterRef.class, "readCounter", long.class);
+        WRITE = lookup.findVarHandle(ReadAndWriteCounterRef.class, "writeCounter", long.class);
+      } catch (ReflectiveOperationException e) {
+        throw new ExceptionInInitializerError(e);
+      }
     }
   }
 }
