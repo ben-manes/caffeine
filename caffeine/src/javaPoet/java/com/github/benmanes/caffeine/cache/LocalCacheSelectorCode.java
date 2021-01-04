@@ -22,7 +22,6 @@ import static com.github.benmanes.caffeine.cache.Specifications.LOCAL_CACHE_FACT
 
 import java.lang.reflect.Constructor;
 
-import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.TypeName;
 
@@ -35,8 +34,8 @@ public final class LocalCacheSelectorCode {
 
   private LocalCacheSelectorCode() {
     block = CodeBlock.builder()
-        .addStatement("$1T sb = new $1T(\"$2N.\")", StringBuilder.class,
-            ((ClassName)LOCAL_CACHE_FACTORY).packageName());
+        .addStatement("$1T sb = new $1T(\"$2N.\")",
+            StringBuilder.class, LOCAL_CACHE_FACTORY.packageName());
   }
 
   private LocalCacheSelectorCode keys() {

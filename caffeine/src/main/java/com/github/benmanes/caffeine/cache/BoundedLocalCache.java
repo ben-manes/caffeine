@@ -31,6 +31,8 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -3929,8 +3931,7 @@ final class BLCHeader {
 
   /** Enforces a memory layout to avoid false sharing by padding the drain status. */
   abstract static class DrainStatusRef<K, V> extends PadDrainStatus<K, V> {
-    static final long DRAIN_STATUS_OFFSET =
-        UnsafeAccess.objectFieldOffset(DrainStatusRef.class, "drainStatus");
+    static final VarHandle DRAIN_STATUS;
 
     /** A drain is not taking place. */
     static final int IDLE = 0;
@@ -3964,15 +3965,24 @@ final class BLCHeader {
     }
 
     int drainStatus() {
-      return UnsafeAccess.UNSAFE.getInt(this, DRAIN_STATUS_OFFSET);
+      return (int) DRAIN_STATUS.get(this);
     }
 
     void lazySetDrainStatus(int drainStatus) {
-      UnsafeAccess.UNSAFE.putOrderedInt(this, DRAIN_STATUS_OFFSET, drainStatus);
+      DRAIN_STATUS.setOpaque(this, drainStatus);
     }
 
     boolean casDrainStatus(int expect, int update) {
-      return UnsafeAccess.UNSAFE.compareAndSwapInt(this, DRAIN_STATUS_OFFSET, expect, update);
+      return DRAIN_STATUS.compareAndSet(this, expect, update);
+    }
+
+    static {
+      try {
+        DRAIN_STATUS = MethodHandles.lookup()
+            .findVarHandle(DrainStatusRef.class, "drainStatus", int.class);
+      } catch (ReflectiveOperationException e) {
+        throw new ExceptionInInitializerError(e);
+      }
     }
   }
 }

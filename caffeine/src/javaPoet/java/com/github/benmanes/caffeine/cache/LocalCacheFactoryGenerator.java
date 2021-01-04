@@ -140,10 +140,10 @@ public final class LocalCacheFactoryGenerator {
 
     for (TypeSpec typeSpec : factoryTypes) {
       JavaFile.builder(getClass().getPackage().getName(), typeSpec)
-              .addFileComment(header, Year.now(timeZone))
-              .indent("  ")
-              .build()
-              .writeTo(directory);
+          .addFileComment(header, Year.now(timeZone))
+          .indent("  ")
+          .build()
+          .writeTo(directory);
     }
   }
 

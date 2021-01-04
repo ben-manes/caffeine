@@ -15,6 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.node;
 
+import static com.github.benmanes.caffeine.cache.Specifications.LOOKUP;
+import static com.github.benmanes.caffeine.cache.Specifications.METHOD_HANDLES;
+
+import com.squareup.javapoet.CodeBlock;
+
 /**
  * Finishes construction of the node.
  *
@@ -33,5 +38,23 @@ public class Finalize extends NodeRule {
         .addMethod(context.constructorDefault.build())
         .addMethod(context.constructorByKey.build())
         .addMethod(context.constructorByKeyRef.build());
+    addStaticBlock();
+  }
+
+  public void addStaticBlock() {
+    if (context.varHandles.isEmpty()) {
+      return;
+    }
+    var codeBlock = CodeBlock.builder()
+        .addStatement("$T lookup = $T.lookup()", LOOKUP, METHOD_HANDLES)
+        .beginControlFlow("try");
+    for (var varHandle : context.varHandles) {
+      varHandle.accept(codeBlock);
+    }
+    codeBlock
+        .nextControlFlow("catch ($T e)", ReflectiveOperationException.class)
+          .addStatement("throw new ExceptionInInitializerError(e)")
+        .endControlFlow();
+    context.nodeSubtype.addStaticBlock(codeBlock.build());
   }
 }

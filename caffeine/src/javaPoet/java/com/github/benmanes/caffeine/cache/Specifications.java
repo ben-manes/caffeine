@@ -15,13 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.lang.ref.ReferenceQueue;
 
-import javax.lang.model.element.Modifier;
-
-import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -63,10 +61,11 @@ public final class Specifications {
   public static final ParameterSpec valueRefQueueSpec =
       ParameterSpec.builder(vRefQueueType, "valueReferenceQueue").build();
 
-  public static final TypeName UNSAFE_ACCESS =
-      ClassName.get("com.github.benmanes.caffeine.cache", "UnsafeAccess");
+  public static final TypeName METHOD_HANDLES = ClassName.get(MethodHandles.class);
+  public static final TypeName LOOKUP = ClassName.get(MethodHandles.Lookup.class);
+  public static final TypeName VAR_HANDLE = ClassName.get(VarHandle.class);
 
-  public static final TypeName LOCAL_CACHE_FACTORY =
+  public static final ClassName LOCAL_CACHE_FACTORY =
       ClassName.get(PACKAGE_NAME, "LocalCacheFactory");
   public static final ParameterizedTypeName NODE_FACTORY = ParameterizedTypeName.get(
       ClassName.get(PACKAGE_NAME, "NodeFactory"), kTypeVar, vTypeVar);
@@ -109,20 +108,4 @@ public final class Specifications {
       ClassName.get(PACKAGE_NAME, "FrequencySketch"), kTypeVar);
 
   private Specifications() {}
-
-  /** Returns the offset constant to this variable. */
-  public static String offsetName(String varName) {
-    return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName) + "_OFFSET";
-  }
-
-  /** Creates a public static field with an Unsafe address offset. */
-  public static FieldSpec newFieldOffset(String className, String varName) {
-    String fieldName = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, varName);
-    return FieldSpec
-        .builder(long.class, offsetName(varName),
-            Modifier.PROTECTED, Modifier.STATIC, Modifier.FINAL)
-        .initializer("$T.objectFieldOffset($T.class, $L.$L)", UNSAFE_ACCESS,
-            ClassName.bestGuess(className),  LOCAL_CACHE_FACTORY, fieldName)
-        .build();
-  }
 }
