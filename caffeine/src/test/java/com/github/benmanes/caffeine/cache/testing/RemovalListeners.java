@@ -75,7 +75,7 @@ public final class RemovalListeners {
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    private final List<RemovalNotification<K, V>> removed;
+    private final CopyOnWriteArrayList<RemovalNotification<K, V>> removed;
 
     public ConsumingRemovalListener() {
       this.removed = new CopyOnWriteArrayList<>();

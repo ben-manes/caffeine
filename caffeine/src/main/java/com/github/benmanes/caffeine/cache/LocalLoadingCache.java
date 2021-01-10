@@ -116,45 +116,46 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
     if (reloading[0] != null) {
       reloading[0].whenComplete((newValue, error) -> {
+        boolean removed = cache().refreshes().remove(keyReference, reloading[0]);
         long loadTime = cache().statsTicker().read() - startTime[0];
         if (error != null) {
           logger.log(Level.WARNING, "Exception thrown during refresh", error);
-          cache().refreshes().remove(keyReference, reloading[0]);
           cache().statsCounter().recordLoadFailure(loadTime);
           return;
         }
 
         boolean[] discard = new boolean[1];
-        cache().compute(key, (k, currentValue) -> {
-          if (currentValue == null) {
-            if (newValue == null) {
-              return null;
-            } else if (cache().refreshes().get(keyReference) == reloading[0]) {
-              return newValue;
-            }
-          } else if (currentValue == oldValue[0]) {
-            long expectedWriteTime = writeTime[0];
-            if (cache().hasWriteTime()) {
-              cache().getIfPresentQuietly(key, writeTime);
-            }
-            if (writeTime[0] == expectedWriteTime) {
-              return newValue;
+        var value = cache().compute(key, (k, currentValue) -> {
+          if (currentValue == oldValue[0]) {
+            if (currentValue == null) {
+              if (newValue == null) {
+                return null;
+              } else if (removed) {
+                return newValue;
+              }
+            } else {
+              long expectedWriteTime = writeTime[0];
+              if (cache().hasWriteTime()) {
+                cache().getIfPresentQuietly(key, writeTime);
+              }
+              if (writeTime[0] == expectedWriteTime) {
+                return newValue;
+              }
             }
           }
           discard[0] = true;
           return currentValue;
         }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
 
-        if (discard[0] && cache().hasRemovalListener()) {
-          cache().notifyRemoval(key, newValue, RemovalCause.REPLACED);
+        if (discard[0] && (newValue != null) && cache().hasRemovalListener()) {
+          var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+          cache().notifyRemoval(key, newValue, cause);
         }
         if (newValue == null) {
           cache().statsCounter().recordLoadFailure(loadTime);
         } else {
           cache().statsCounter().recordLoadSuccess(loadTime);
         }
-
-        cache().refreshes().remove(keyReference, reloading[0]);
       });
     }
 
