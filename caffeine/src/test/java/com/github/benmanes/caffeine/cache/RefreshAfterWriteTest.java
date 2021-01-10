@@ -30,10 +30,8 @@ import static org.hamcrest.Matchers.sameInstance;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.testng.annotations.Listeners;
@@ -209,19 +207,13 @@ public final class RefreshAfterWriteTest {
   public void get_slowRefresh(CacheContext context) {
     Integer key = context.absentKey();
     Integer originalValue = context.absentValue();
-    AtomicBoolean reloaded = new AtomicBoolean();
-    AtomicInteger reloading = new AtomicInteger();
-    ThreadPoolExecutor executor = (ThreadPoolExecutor)
-        ((TrackingExecutor) context.executor()).delegate();
-    LoadingCache<Integer, Integer> cache = context.build(new CacheLoader<Integer, Integer>() {
-      @Override public Integer load(Integer key) {
-        throw new AssertionError();
-      }
-      @Override public Integer reload(Integer key, Integer oldValue) {
-        int count = reloading.incrementAndGet();
-        await().untilTrue(reloaded);
-        return count;
-      }
+    Integer refreshedValue = originalValue + 1;
+    AtomicBoolean started = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    LoadingCache<Integer, Integer> cache = context.build(k -> {
+      started.set(true);
+      await().untilTrue(done);
+      return refreshedValue;
     });
 
     cache.put(key, originalValue);
@@ -229,17 +221,14 @@ public final class RefreshAfterWriteTest {
     context.ticker().advance(2, TimeUnit.MINUTES);
     assertThat(cache.get(key), is(originalValue));
 
-    await().untilAtomic(reloading, is(1));
+    await().untilTrue(started);
     assertThat(cache.getIfPresent(key), is(originalValue));
 
     context.ticker().advance(2, TimeUnit.MINUTES);
     assertThat(cache.get(key), is(originalValue));
 
-    reloaded.set(true);
-    await().until(() -> cache.get(key), is(not(originalValue)));
-    await().until(executor::getQueue, is(empty()));
-    assertThat(reloading.get(), is(1));
-    assertThat(cache.get(key), is(1));
+    done.set(true);
+    await().until(() -> cache.policy().getIfPresentQuietly(key), is(refreshedValue));
   }
 
   @Test(dataProvider = "caches")

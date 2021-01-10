@@ -209,45 +209,46 @@ abstract class LocalAsyncLoadingCache<K, V>
       var castedFuture = (CompletableFuture<V>) future;
       if (refreshed[0]) {
         castedFuture.whenComplete((newValue, error) -> {
+          boolean removed = asyncCache.cache().refreshes().remove(keyReference, castedFuture);
           long loadTime = asyncCache.cache().statsTicker().read() - startTime[0];
           if (error != null) {
             logger.log(Level.WARNING, "Exception thrown during refresh", error);
-            asyncCache.cache().refreshes().remove(keyReference, castedFuture);
             asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
             return;
           }
 
           boolean[] discard = new boolean[1];
-          asyncCache.cache().compute(key, (ignored, currentValue) -> {
-            if (currentValue == null) {
-              if (newValue == null) {
-                return null;
-              } else if (asyncCache.cache().refreshes().get(key) == castedFuture) {
-                return castedFuture;
-              }
-            } else if (currentValue == oldValueFuture[0]) {
-              long expectedWriteTime = writeTime[0];
-              if (asyncCache.cache().hasWriteTime()) {
-                asyncCache.cache().getIfPresentQuietly(key, writeTime);
-              }
-              if (writeTime[0] == expectedWriteTime) {
-                return (newValue == null) ? null : castedFuture;
+          var value = asyncCache.cache().compute(key, (ignored, currentValue) -> {
+            if (currentValue == oldValueFuture[0]) {
+              if (currentValue == null) {
+                if (newValue == null) {
+                  return null;
+                } else if (removed) {
+                  return castedFuture;
+                }
+              } else {
+                long expectedWriteTime = writeTime[0];
+                if (asyncCache.cache().hasWriteTime()) {
+                  asyncCache.cache().getIfPresentQuietly(key, writeTime);
+                }
+                if (writeTime[0] == expectedWriteTime) {
+                  return (newValue == null) ? null : castedFuture;
+                }
               }
             }
             discard[0] = true;
             return currentValue;
           }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
 
-          if (discard[0] && asyncCache.cache().hasRemovalListener()) {
-            asyncCache.cache().notifyRemoval(key, castedFuture, RemovalCause.REPLACED);
+          if (discard[0] && (newValue != null) && asyncCache.cache().hasRemovalListener()) {
+            var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;
+            asyncCache.cache().notifyRemoval(key, castedFuture, cause);
           }
           if (newValue == null) {
             asyncCache.cache().statsCounter().recordLoadFailure(loadTime);
           } else {
             asyncCache.cache().statsCounter().recordLoadSuccess(loadTime);
           }
-
-          asyncCache.cache().refreshes().remove(keyReference, castedFuture);
         });
       }
       return castedFuture;

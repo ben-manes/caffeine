@@ -21,6 +21,8 @@ import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.either;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -39,6 +41,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Assert;
@@ -49,6 +52,8 @@ import com.github.benmanes.caffeine.cache.testing.CacheContext;
 import com.github.benmanes.caffeine.cache.testing.CacheProvider;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
 import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
@@ -367,8 +372,7 @@ public final class LoadingCacheTest {
 
   @CheckNoWriter
   @Test(dataProvider = "caches")
-  @CacheSpec(implementation = Implementation.Caffeine,
-      executor = CacheExecutor.DIRECT, loader = Loader.NULL,
+  @CacheSpec(implementation = Implementation.Caffeine, loader = Loader.NULL,
       population = { Population.SINGLETON, Population.PARTIAL, Population.FULL })
   public void refresh_remove(LoadingCache<Integer, Integer> cache, CacheContext context) {
     var future = cache.refresh(context.firstKey());
@@ -376,6 +380,17 @@ public final class LoadingCacheTest {
     assertThat(cache.estimatedSize(), is(context.initialSize() - 1));
     assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
+  }
+
+  @CheckNoWriter
+  @Test(dataProvider = "caches")
+  @CacheSpec(implementation = Implementation.Caffeine,
+      loader = Loader.NULL, population = Population.EMPTY)
+  public void refresh_ignored(LoadingCache<Integer, Integer> cache, CacheContext context) {
+    var future = cache.refresh(context.absentKey());
+    assertThat(future.join(), is(nullValue()));
+    assertThat(cache.estimatedSize(), is(0L));
+    assertThat(context.removalNotifications(), is(empty()));
   }
 
   @CheckNoWriter
@@ -529,11 +544,12 @@ public final class LoadingCacheTest {
   @Test(dataProvider = "caches")
   @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
       removalListener = Listener.CONSUMING)
-  public void refresh_invalidate(CacheContext context) {
+  public void refresh_put(CacheContext context) {
     AtomicBoolean refresh = new AtomicBoolean();
     Integer key = context.absentKey();
     Integer original = 1;
     Integer refreshed = 2;
+    Integer updated = 3;
     LoadingCache<Integer, Integer> cache = context.build(k -> {
       await().untilTrue(refresh);
       return refreshed;
@@ -541,14 +557,132 @@ public final class LoadingCacheTest {
 
     cache.put(key, original);
     var future = cache.refresh(key);
-    cache.invalidate(key);
+    cache.put(key, updated);
 
     refresh.set(true);
     future.join();
 
+    await().until(() -> cache.getIfPresent(key), is(updated));
+    await().until(() -> context.removalNotifications(), hasSize(2));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(2, RemovalCause.REPLACED));
+    verifyStats(context, verifier -> verifier.success(1).failures(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
+      removalListener = Listener.CONSUMING)
+  public void refresh_invalidate(CacheContext context) {
+    AtomicBoolean started = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    Integer key = context.absentKey();
+    Integer original = 1;
+    Integer refreshed = 2;
+    LoadingCache<Integer, Integer> cache = context.build(k -> {
+      started.set(true);
+      await().untilTrue(done);
+      return refreshed;
+    });
+
+    cache.put(key, original);
+    var future = cache.refresh(key);
+    await().untilTrue(started);
+
+    cache.invalidate(key);
+    done.set(true);
+    future.join();
+
+    if (context.implementation() == Implementation.Guava) {
+      await().until(() -> cache.getIfPresent(key), is(either(nullValue()).or(is(refreshed))));
+      await().until(() -> context.removalNotifications(), hasSize(1));
+      verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
+    } else {
+      // linearizable
+      await().until(() -> cache.getIfPresent(key), is(nullValue()));
+      await().until(() -> context.removalNotifications(), hasSize(2));
+      verifyRemovalListener(context, verifier -> verifier.hasOnly(2, RemovalCause.EXPLICIT));
+    }
+    verifyStats(context, verifier -> verifier.success(1).failures(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
+      expireAfterWrite = Expire.ONE_MINUTE, removalListener = Listener.CONSUMING)
+  public void refresh_expired(CacheContext context) {
+    AtomicBoolean started = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    Integer key = context.absentKey();
+    Integer original = 1;
+    Integer refreshed = 2;
+    LoadingCache<Integer, Integer> cache = context.build(k -> {
+      started.set(true);
+      await().untilTrue(done);
+      return refreshed;
+    });
+
+    cache.put(key, original);
+    var future = cache.refresh(key);
+
+    await().untilTrue(started);
+    context.ticker().advance(10, TimeUnit.MINUTES);
     assertThat(cache.getIfPresent(key), is(nullValue()));
-    await().until(() -> context.removalNotifications(), hasSize(1));
-    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
+
+    done.set(true);
+    future.join();
+
+    if (context.implementation() == Implementation.Guava) {
+      await().until(() -> cache.getIfPresent(key), is(refreshed));
+      await().until(() -> context.removalNotifications(), hasSize(1));
+      verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPIRED));
+    } else {
+      // linearizable
+      await().until(() -> cache.getIfPresent(key), is(nullValue()));
+      await().until(() -> context.removalNotifications(), hasSize(2));
+      verifyRemovalListener(context, verifier -> verifier.hasCount(1, RemovalCause.EXPIRED));
+      verifyRemovalListener(context, verifier -> verifier.hasCount(1, RemovalCause.EXPLICIT));
+    }
+    verifyStats(context, verifier -> verifier.success(1).failures(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(population = Population.EMPTY, executor = CacheExecutor.THREADED,
+      maximumSize = Maximum.ONE, weigher = CacheWeigher.DEFAULT,
+      removalListener = Listener.CONSUMING)
+  public void refresh_evicted(CacheContext context) {
+    AtomicBoolean started = new AtomicBoolean();
+    AtomicBoolean done = new AtomicBoolean();
+    Integer key1 = context.absentKey();
+    Integer key2 = key1 + 1;
+    Integer original = 1;
+    Integer refreshed = 2;
+    LoadingCache<Integer, Integer> cache = context.build(k -> {
+      started.set(true);
+      await().forever().untilTrue(done);
+      return refreshed;
+    });
+
+    cache.put(key1, original);
+    var future = cache.refresh(key1);
+
+    await().untilTrue(started);
+    cache.put(key2, original);
+    await().until(() -> cache.getIfPresent(key1), is(nullValue()));
+
+    done.set(true);
+    future.join();
+
+    if (context.implementation() == Implementation.Guava) {
+      await().until(() -> cache.getIfPresent(key1), is(refreshed));
+      await().until(() -> cache.getIfPresent(key2), is(nullValue()));
+      await().until(() -> context.removalNotifications(), hasSize(2));
+      verifyRemovalListener(context, verifier -> verifier.hasOnly(2, RemovalCause.SIZE));
+    } else {
+      // linearizable
+      await().until(() -> cache.getIfPresent(key1), is(nullValue()));
+      await().until(() -> cache.getIfPresent(key2), is(original));
+      await().until(() -> context.removalNotifications(), hasSize(2));
+      verifyRemovalListener(context, verifier -> verifier.hasCount(1, RemovalCause.SIZE));
+      verifyRemovalListener(context, verifier -> verifier.hasCount(1, RemovalCause.EXPLICIT));
+    }
     verifyStats(context, verifier -> verifier.success(1).failures(0));
   }
 
