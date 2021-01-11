@@ -186,8 +186,11 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public Map<K, V> getAllPresent(Iterable<?> keys) {
-      return cache.getAllPresent(ImmutableSet.copyOf(keys));
+    public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
+      for (K key : keys) {
+        requireNonNull(key);
+      }
+      return cache.getAllPresent(keys);
     }
 
     @Override

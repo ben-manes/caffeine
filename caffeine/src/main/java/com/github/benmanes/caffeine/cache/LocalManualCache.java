@@ -53,7 +53,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
   }
 
   @Override
-  default @Nullable V getIfPresent(Object key) {
+  default @Nullable V getIfPresent(K key) {
     return cache().getIfPresent(key, /* recordStats */ true);
   }
 
@@ -63,7 +63,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
   }
 
   @Override
-  default Map<K, V> getAllPresent(Iterable<?> keys) {
+  default Map<K, V> getAllPresent(Iterable<? extends K> keys) {
     return cache().getAllPresent(keys);
   }
 

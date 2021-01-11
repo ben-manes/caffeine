@@ -72,22 +72,22 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   Object referenceKey(K key);
 
   /**
-   * See {@link Cache#getIfPresent(Object)}. This method differs by accepting a parameter of whether
+   * See {@link Cache#getIfPresent(K)}. This method differs by accepting a parameter of whether
    * to record the hit and miss statistics based on the success of this operation.
    */
   @Nullable
-  V getIfPresent(@NonNull Object key, boolean recordStats);
+  V getIfPresent(@NonNull K key, boolean recordStats);
 
   /**
-   * See {@link Cache#getIfPresent(Object)}. This method differs by not recording the access with
+   * See {@link Cache#getIfPresent(K)}. This method differs by not recording the access with
    * the statistics nor the eviction policy, and populates the write time if known.
    */
   @Nullable
-  V getIfPresentQuietly(@NonNull Object key, @NonNull long[/* 1 */] writeTime);
+  V getIfPresentQuietly(@NonNull K key, @NonNull long[/* 1 */] writeTime);
 
   /** See {@link Cache#getAllPresent}. */
   @NonNull
-  Map<K, V> getAllPresent(@NonNull Iterable<?> keys);
+  Map<K, V> getAllPresent(@NonNull Iterable<? extends K> keys);
 
   /**
    * See {@link Cache#put(Object, Object)}. This method differs by allowing the operation to not
