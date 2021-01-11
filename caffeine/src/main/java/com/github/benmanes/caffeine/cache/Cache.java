@@ -103,7 +103,7 @@ public interface Cache<K, V> {
    * present in the cache. All entries returned by {@code mappingFunction} will be stored in the
    * cache, over-writing any previously cached values. If another call to {@link #get} tries to load
    * the value for a key in {@code keys}, implementations may either have that thread load the entry
-   * or simply wait for this thread to finish and returns the loaded value. In the case of
+   * or simply wait for this thread to finish and return the loaded value. In the case of
    * overlapping non-blocking loads, the last load to complete will replace the existing entry. Note
    * that multiple threads can concurrently load values for distinct keys.
    * <p>
@@ -114,7 +114,7 @@ public interface Cache<K, V> {
    * @param mappingFunction the function to compute the values
    * @return an unmodifiable mapping of keys to values for the specified keys in this cache
    * @throws NullPointerException if the specified collection is null or contains a null element, or
-   *         if the mao returned by the mappingFunction is null
+   *         if the map returned by the mappingFunction is null
    * @throws RuntimeException or Error if the mappingFunction does so, in which case the mapping is
    *         left unestablished
    */
