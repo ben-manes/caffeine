@@ -63,7 +63,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   Policy<K, V> policy();
 
   @Override
-  default @Nullable CompletableFuture<V> getIfPresent(@NonNull Object key) {
+  default @Nullable CompletableFuture<V> getIfPresent(@NonNull K key) {
     return cache().getIfPresent(key, /* recordStats */ true);
   }
 
@@ -466,13 +466,13 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     abstract LocalAsyncCache<K, V> asyncCache();
 
     @Override
-    public @Nullable V getIfPresent(Object key) {
+    public @Nullable V getIfPresent(K key) {
       CompletableFuture<V> future = asyncCache().cache().getIfPresent(key, /* recordStats */ true);
       return Async.getIfReady(future);
     }
 
     @Override
-    public Map<K, V> getAllPresent(Iterable<?> keys) {
+    public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
       Map<Object, Object> result = new LinkedHashMap<>();
       for (Object key : keys) {
         result.put(key, null);

@@ -51,7 +51,7 @@ public interface Cache<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
-  V getIfPresent(@NonNull @CompatibleWith("K") Object key);
+  V getIfPresent(@NonNull K key);
 
   /**
    * Returns the value associated with the {@code key} in this cache, obtaining that value from the
@@ -93,7 +93,7 @@ public interface Cache<K, V> {
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
   @NonNull
-  Map<@NonNull K, @NonNull V> getAllPresent(@NonNull Iterable<@NonNull ?> keys);
+  Map<@NonNull K, @NonNull V> getAllPresent(@NonNull Iterable<? extends K> keys);
 
   /**
    * Returns a map of the values associated with the {@code keys}, creating or retrieving those

@@ -26,8 +26,6 @@ import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.google.errorprone.annotations.CompatibleWith;
-
 /**
  * An access point for inspecting and performing low-level operations based on the cache's runtime
  * characteristics. These operations are optional and dependent on how the cache was constructed
@@ -56,7 +54,7 @@ public interface Policy<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
-  V getIfPresentQuietly(@NonNull @CompatibleWith("K") Object key);
+  V getIfPresentQuietly(@NonNull K key);
 
   /**
    * Returns access to perform operations based on the maximum size or maximum weight eviction

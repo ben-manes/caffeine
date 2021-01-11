@@ -56,7 +56,9 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
 
   @Override @Nullable
   public V getIfPresent(Object key) {
-    return cache.getIfPresent(key);
+    @SuppressWarnings("unchecked")
+    K castedKey = (K) key;
+    return cache.getIfPresent(castedKey);
   }
 
   @Override
@@ -91,7 +93,9 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
 
   @Override
   public ImmutableMap<K, V> getAllPresent(Iterable<?> keys) {
-    return ImmutableMap.copyOf(cache.getAllPresent(keys));
+    @SuppressWarnings("unchecked")
+    var castedKeys = (Iterable<? extends K>) keys;
+    return ImmutableMap.copyOf(cache.getAllPresent(castedKeys));
   }
 
   @Override

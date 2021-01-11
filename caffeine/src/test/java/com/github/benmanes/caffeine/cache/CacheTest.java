@@ -256,8 +256,15 @@ public final class CacheTest {
         context.original().keySet(), context.original().keySet());
     Map<Integer, Integer> result = cache.getAllPresent(keys);
 
-    int misses = context.absentKeys().size();
-    int hits = context.original().keySet().size();
+    long hits, misses;
+    if (context.implementation() == Implementation.Guava) {
+      // Guava does not skip duplicates
+      hits = 2L * context.initialSize();
+      misses = 2L * context.absentKeys().size();
+    } else {
+      hits = context.initialSize();
+      misses = context.absentKeys().size();
+    }
     assertThat(result, is(equalTo(context.original())));
     verifyStats(context, verifier -> verifier.hits(hits).misses(misses).success(0).failures(0));
   }
@@ -404,16 +411,16 @@ public final class CacheTest {
     Map<Integer, Integer> result = cache.getAll(keys, bulkMappingFunction());
     assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
 
-    long hitCount, missCount;
+    long hits, misses;
     if (context.implementation() == Implementation.Guava) {
       // Guava does not skip duplicates
-      hitCount = 2L * context.initialSize();
-      missCount = 2L * absentKeys.size();
+      hits = 2L * context.initialSize();
+      misses = 2L * absentKeys.size();
     } else {
-      hitCount = context.initialSize();
-      missCount = absentKeys.size();
+      hits = context.initialSize();
+      misses = absentKeys.size();
     }
-    verifyStats(context, verifier -> verifier.hits(hitCount).misses(missCount));
+    verifyStats(context, verifier -> verifier.hits(hits).misses(misses));
   }
 
   @CheckNoWriter

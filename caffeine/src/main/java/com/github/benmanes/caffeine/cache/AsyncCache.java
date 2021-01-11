@@ -26,8 +26,6 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.google.errorprone.annotations.CompatibleWith;
-
 /**
  * A semi-persistent mapping from keys to values. Cache entries are manually added using
  * {@link #get(Object, Function)} or {@link #put(Object, CompletableFuture)}, and are stored in the
@@ -52,7 +50,7 @@ public interface AsyncCache<K, V> {
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
-  CompletableFuture<V> getIfPresent(@NonNull @CompatibleWith("K") Object key);
+  CompletableFuture<V> getIfPresent(@NonNull K key);
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from

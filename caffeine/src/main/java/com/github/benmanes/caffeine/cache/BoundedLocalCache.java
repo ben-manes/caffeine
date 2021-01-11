@@ -1953,7 +1953,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @Override
-  public @Nullable V getIfPresentQuietly(Object key, long[/* 1 */] writeTime) {
+  public @Nullable V getIfPresentQuietly(K key, long[/* 1 */] writeTime) {
     V value;
     Node<K, V> node = data.get(nodeFactory.newLookupKey(key));
     if ((node == null) || ((value = node.getValue()) == null)
@@ -1965,7 +1965,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   }
 
   @Override
-  public Map<K, V> getAllPresent(Iterable<?> keys) {
+  public Map<K, V> getAllPresent(Iterable<? extends K> keys) {
     Map<Object, Object> result = new LinkedHashMap<>();
     for (Object key : keys) {
       result.put(key, null);
@@ -3463,7 +3463,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     @Override public boolean isRecordingStats() {
       return cache.isRecordingStats();
     }
-    @Override public @Nullable V getIfPresentQuietly(Object key) {
+    @Override public @Nullable V getIfPresentQuietly(K key) {
       Node<K, V> node = cache.data.get(cache.nodeFactory.newLookupKey(key));
       if ((node == null) || cache.hasExpired(node, cache.expirationTicker().read())) {
         return null;
