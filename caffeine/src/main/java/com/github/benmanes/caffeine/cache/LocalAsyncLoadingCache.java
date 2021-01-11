@@ -22,6 +22,7 @@ import java.lang.System.Logger.Level;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
@@ -56,17 +57,17 @@ abstract class LocalAsyncLoadingCache<K, V>
       if (loader instanceof CacheLoader<?, ?>) {
         defaultLoaderClass = CacheLoader.class;
 
-        Method classLoadAll = loader.getClass().getMethod("loadAll", Iterable.class);
-        Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Iterable.class);
+        Method classLoadAll = loader.getClass().getMethod("loadAll", Set.class);
+        Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Set.class);
         if (!classLoadAll.equals(defaultLoadAll)) {
           return true;
         }
       }
 
       Method classAsyncLoadAll = loader.getClass().getMethod(
-          "asyncLoadAll", Iterable.class, Executor.class);
+          "asyncLoadAll", Set.class, Executor.class);
       Method defaultAsyncLoadAll = defaultLoaderClass.getMethod(
-          "asyncLoadAll", Iterable.class, Executor.class);
+          "asyncLoadAll", Set.class, Executor.class);
       return !classAsyncLoadAll.equals(defaultAsyncLoadAll);
     } catch (NoSuchMethodException | SecurityException e) {
       logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);

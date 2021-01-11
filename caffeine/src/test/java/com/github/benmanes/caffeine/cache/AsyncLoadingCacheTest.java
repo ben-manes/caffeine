@@ -322,7 +322,7 @@ public final class AsyncLoadingCacheTest {
         throw new IllegalStateException();
       }
       @Override public CompletableFuture<Map<Integer, Integer>> asyncLoadAll(
-          Iterable<? extends Integer> keys, Executor executor) {
+          Set<? extends Integer> keys, Executor executor) {
         throw new LoadAllException();
       }
     };
@@ -401,7 +401,7 @@ public final class AsyncLoadingCacheTest {
   public void asyncLoadAll() {
     AsyncCacheLoader<Integer, Integer> loader =
         (key, executor) -> CompletableFuture.completedFuture(-key);
-    loader.asyncLoadAll(Collections.emptyList(), Runnable::run).join();
+    loader.asyncLoadAll(Set.of(), Runnable::run).join();
   }
 
   @Test

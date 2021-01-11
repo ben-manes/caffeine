@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -84,7 +85,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    */
   @NonNull
   default Map<@NonNull K, @NonNull V> loadAll(
-      @NonNull Iterable<? extends @NonNull K> keys) throws Exception {
+      @NonNull Set<? extends @NonNull K> keys) throws Exception {
     throw new UnsupportedOperationException();
   }
 
@@ -130,7 +131,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    */
   @Override @NonNull
   default CompletableFuture<Map<@NonNull K, @NonNull V>> asyncLoadAll(
-      @NonNull Iterable<? extends K> keys, @NonNull Executor executor) {
+      @NonNull Set<? extends K> keys, @NonNull Executor executor) {
     requireNonNull(keys);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {

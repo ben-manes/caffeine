@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -125,7 +126,7 @@ public interface AsyncCache<K, V> {
    */
   @NonNull
   CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
-      @NonNull Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction);
+      @NonNull Function<Set<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction);
 
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
@@ -152,7 +153,7 @@ public interface AsyncCache<K, V> {
    */
   @NonNull
   CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys,
-      @NonNull BiFunction<Iterable<? extends @NonNull K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction);
+      @NonNull BiFunction<Set<? extends @NonNull K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction);
 
   /**
    * Associates {@code value} with {@code key} in this cache. If the cache previously contained a

@@ -691,7 +691,7 @@ public final class LoadingCacheTest {
   @Test(expectedExceptions = UnsupportedOperationException.class)
   public void loadAll() throws Exception {
     CacheLoader<Object, ?> loader = key -> key;
-    loader.loadAll(Collections.emptyList());
+    loader.loadAll(Set.of());
   }
 
   @Test
@@ -726,12 +726,12 @@ public final class LoadingCacheTest {
         throw new AssertionError();
       }
       @Override public Map<Integer, Integer> loadAll(
-          Iterable<? extends Integer> keys) throws Exception {
+          Set<? extends Integer> keys) throws Exception {
         throw e;
       }
     };
     try {
-      loader.asyncLoadAll(Arrays.asList(1), Runnable::run).join();
+      loader.asyncLoadAll(Set.of(1), Runnable::run).join();
     } catch (CompletionException ex) {
       assertThat(ex.getCause(), is(sameInstance(e)));
     }
@@ -741,7 +741,7 @@ public final class LoadingCacheTest {
   public void asyncLoadAll() throws Throwable {
     CacheLoader<Object, ?> loader = key -> key;
     try {
-      loader.asyncLoadAll(Collections.emptyList(), Runnable::run).get();
+      loader.asyncLoadAll(Set.of(), Runnable::run).get();
     } catch (ExecutionException e) {
       throw e.getCause();
     }

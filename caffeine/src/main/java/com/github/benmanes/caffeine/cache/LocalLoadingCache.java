@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
@@ -45,7 +46,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   Function<K, V> mappingFunction();
 
   /** Returns the {@link CacheLoader#loadAll} as a mapping function, if implemented. */
-  @Nullable Function<Iterable<? extends K>, Map<K, V>> bulkMappingFunction();
+  @Nullable Function<Set<? extends K>, Map<K, V>> bulkMappingFunction();
 
   @Override
   default @Nullable V get(K key) {
@@ -54,7 +55,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
 
   @Override
   default Map<K, V> getAll(Iterable<? extends K> keys) {
-    Function<Iterable<? extends K>, Map<K, V>> mappingFunction = bulkMappingFunction();
+    Function<Set<? extends K>, Map<K, V>> mappingFunction = bulkMappingFunction();
     return (mappingFunction == null)
         ? loadSequentially(keys)
         : getAll(keys, mappingFunction);
@@ -181,7 +182,7 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   }
 
   /** Returns a mapping function that adapts to {@link CacheLoader#loadAll}, if implemented. */
-  static <K, V> @Nullable Function<Iterable<? extends K>, Map<K, V>> newBulkMappingFunction(
+  static <K, V> @Nullable Function<Set<? extends K>, Map<K, V>> newBulkMappingFunction(
       CacheLoader<? super K, V> cacheLoader) {
     if (!hasLoadAll(cacheLoader)) {
       return null;
@@ -205,8 +206,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
   /** Returns whether the supplied cache loader has bulk load functionality. */
   static boolean hasLoadAll(CacheLoader<?, ?> loader) {
     try {
-      Method classLoadAll = loader.getClass().getMethod("loadAll", Iterable.class);
-      Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Iterable.class);
+      Method classLoadAll = loader.getClass().getMethod("loadAll", Set.class);
+      Method defaultLoadAll = CacheLoader.class.getMethod("loadAll", Set.class);
       return !classLoadAll.equals(defaultLoadAll);
     } catch (NoSuchMethodException | SecurityException e) {
       logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);

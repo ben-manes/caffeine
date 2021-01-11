@@ -27,11 +27,11 @@ import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -481,7 +481,7 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
         return null;
       }
     },
@@ -489,7 +489,7 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
         Map<Integer, Integer> result = new HashMap<>(Iterables.size(keys));
         for (Integer key : keys) {
           result.put(key, key);
@@ -501,7 +501,7 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
         Map<Integer, Integer> result = new HashMap<>(Iterables.size(keys));
         for (Integer key : keys) {
           result.put(key, interner.get().computeIfAbsent(key, k -> -k));
@@ -514,10 +514,9 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys)
-          throws Exception {
-        List<Integer> moreKeys = new ArrayList<>(Iterables.size(keys) + 10);
-        Iterables.addAll(moreKeys, keys);
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) throws Exception {
+        Set<Integer> moreKeys = new LinkedHashSet<>(keys.size() + 10);
+        moreKeys.addAll(keys);
         for (int i = 0; i < 10; i++) {
           moreKeys.add(ThreadLocalRandom.current().nextInt());
         }
@@ -529,7 +528,7 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Iterable<? extends Integer> keys) {
+      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) {
         throw new IllegalStateException();
       }
     },
@@ -594,7 +593,7 @@ public @interface CacheSpec {
         throw new IllegalStateException();
       }
       @Override public CompletableFuture<Map<Integer, Integer>> asyncLoadAll(
-          Iterable<? extends Integer> keys, Executor executor) {
+          Set<? extends Integer> keys, Executor executor) {
         return loader.asyncLoadAll(keys, executor);
       }
     }

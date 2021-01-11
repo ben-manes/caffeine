@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
@@ -120,7 +121,7 @@ public interface Cache<K, V> {
    */
   @NonNull
   Map<K, V> getAll(@NonNull Iterable<? extends @NonNull K> keys,
-      @NonNull Function<Iterable<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction);
+      @NonNull Function<Set<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction);
 
   /**
    * Associates the {@code value} with the {@code key} in this cache. If the cache previously

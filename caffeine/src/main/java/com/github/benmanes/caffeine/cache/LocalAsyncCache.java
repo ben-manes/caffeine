@@ -99,7 +99,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
   @Override
   default CompletableFuture<Map<K, V>> getAll(Iterable<? extends @NonNull K> keys,
-      Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
+      Function<Set<? extends K>, Map<K, V>> mappingFunction) {
     requireNonNull(mappingFunction);
     return getAll(keys, (keysToLoad, executor) ->
         CompletableFuture.supplyAsync(() -> mappingFunction.apply(keysToLoad), executor));
@@ -108,7 +108,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   default CompletableFuture<Map<K, V>> getAll(Iterable<? extends @NonNull K> keys,
-      BiFunction<Iterable<? extends K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
+      BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
     requireNonNull(mappingFunction);
     requireNonNull(keys);
 
@@ -505,7 +505,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Map<K, V> getAll(Iterable<? extends K> keys,
-        Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
+        Function<Set<? extends K>, Map<K, V>> mappingFunction) {
       return resolve(asyncCache().getAll(keys, mappingFunction));
     }
 

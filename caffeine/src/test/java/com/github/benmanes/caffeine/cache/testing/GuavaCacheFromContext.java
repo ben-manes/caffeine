@@ -192,7 +192,7 @@ public final class GuavaCacheFromContext {
 
     @Override
     public Map<K, V> getAll(Iterable<? extends K> keys,
-        Function<Iterable<? extends K>, Map<K, V>> mappingFunction) {
+        Function<Set<? extends K>, Map<K, V>> mappingFunction) {
       keys.forEach(Objects::requireNonNull);
       requireNonNull(mappingFunction);
 
@@ -586,7 +586,9 @@ public final class GuavaCacheFromContext {
 
     @Override
     public Map<K, V> loadAll(Iterable<? extends K> keys) throws Exception {
-      return delegate.loadAll(keys);
+      @SuppressWarnings("unchecked")
+      var keysToLoad = (keys instanceof Set) ? (Set<K>) keys : ImmutableSet.copyOf(keys);
+      return delegate.loadAll(keysToLoad);
     }
   }
 

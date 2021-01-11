@@ -3731,7 +3731,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     private static final long serialVersionUID = 1;
 
     final Function<K, V> mappingFunction;
-    @Nullable final Function<Iterable<? extends K>, Map<K, V>> bulkMappingFunction;
+    @Nullable final Function<Set<? extends K>, Map<K, V>> bulkMappingFunction;
 
     BoundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder, loader);
@@ -3752,7 +3752,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     }
 
     @Override
-    public @Nullable Function<Iterable<? extends K>, Map<K, V>> bulkMappingFunction() {
+    public @Nullable Function<Set<? extends K>, Map<K, V>> bulkMappingFunction() {
       return bulkMappingFunction;
     }
 
