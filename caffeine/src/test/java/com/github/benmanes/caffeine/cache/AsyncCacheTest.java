@@ -20,7 +20,6 @@ import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
-import static com.google.common.collect.Streams.stream;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anEmptyMap;
@@ -373,7 +372,7 @@ public final class AsyncCacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getAllFunction_nullKeys_nullFunction(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
-    cache.getAll(null, (Function<Iterable<? extends Integer>, Map<Integer, Integer>>) null);
+    cache.getAll(null, (Function<Set<? extends Integer>, Map<Integer, Integer>>) null);
   }
 
   @CheckNoWriter @CheckNoStats
@@ -382,7 +381,7 @@ public final class AsyncCacheTest {
   public void getAllFunction_nullFunction(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
     cache.getAll(context.original().keySet(),
-        (Function<Iterable<? extends Integer>, Map<Integer, Integer>>) null);
+        (Function<Set<? extends Integer>, Map<Integer, Integer>>) null);
   }
 
   @CheckNoWriter @CheckNoStats
@@ -428,7 +427,7 @@ public final class AsyncCacheTest {
     expect.put(context.lastKey(), -context.lastKey());
     Map<Integer, Integer> result = cache.getAll(expect.keySet(), keys -> {
       assertThat(Iterables.size(keys), is(lessThan(expect.keySet().size())));
-      return stream(keys).collect(toMap(key -> key, key -> -key));
+      return keys.stream().collect(toMap(key -> key, key -> -key));
     }).join();
 
     assertThat(result, is(equalTo(expect)));
@@ -465,7 +464,7 @@ public final class AsyncCacheTest {
     Map<Integer, Integer> result = cache.getAll(keys, keysToLoad -> {
       assertThat(ImmutableList.copyOf(keysToLoad),
           is(equalTo(ImmutableSet.copyOf(keysToLoad).asList())));
-      return stream(keysToLoad).collect(toMap(key -> key, key -> -key));
+      return keysToLoad.stream().collect(toMap(key -> key, key -> -key));
     }).join();
 
     verifyStats(context, verifier ->
@@ -483,7 +482,7 @@ public final class AsyncCacheTest {
     Collections.shuffle(keys);
 
     List<Integer> result = ImmutableList.copyOf(cache.getAll(keys, keysToLoad -> {
-      return stream(keysToLoad).collect(toMap(key -> key, key -> -key));
+      return keysToLoad.stream().collect(toMap(key -> key, key -> -key));
     }).join().keySet());
     assertThat(result, is(equalTo(keys)));
   }
@@ -499,7 +498,7 @@ public final class AsyncCacheTest {
     Collections.shuffle(keys);
 
     List<Integer> result = ImmutableList.copyOf(cache.getAll(keys, keysToLoad -> {
-      return stream(keysToLoad).collect(toMap(key -> key, key -> -key));
+      return keysToLoad.stream().collect(toMap(key -> key, key -> -key));
     }).join().keySet());
     assertThat(result, is(equalTo(keys)));
   }
@@ -565,7 +564,7 @@ public final class AsyncCacheTest {
   public void getAllBifunction_nullKeys_nullBifunction(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
     @SuppressWarnings("unused")
-    BiFunction<Iterable<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f;
+    BiFunction<Set<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f;
     cache.getAll(null, (f = null));
   }
 
@@ -575,7 +574,7 @@ public final class AsyncCacheTest {
   public void getAllBifunction_nullBifunction(
       AsyncCache<Integer, Integer> cache, CacheContext context) {
     @SuppressWarnings("unused")
-    BiFunction<Iterable<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f;
+    BiFunction<Set<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f;
     cache.getAll(context.original().keySet(), (f = null));
   }
 
@@ -612,7 +611,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllFunction_immutable(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAll(context.absentKeys(),
-        keys -> stream(keys).collect(toMap(key -> key, key -> key))).join();
+        keys -> keys.stream().collect(toMap(key -> key, key -> key))).join();
     result.clear();
   }
 
@@ -621,7 +620,7 @@ public final class AsyncCacheTest {
   @Test(dataProvider = "caches", expectedExceptions = UnsupportedOperationException.class)
   public void getAllBifunction_immutable(AsyncCache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAll(context.absentKeys(), (keys, executor) -> {
-      return CompletableFuture.completedFuture(stream(keys).collect(toMap(key -> key, key -> key)));
+      return CompletableFuture.completedFuture(keys.stream().collect(toMap(key -> key, key -> key)));
     }).join();
     result.clear();
   }
@@ -693,7 +692,7 @@ public final class AsyncCacheTest {
     Map<Integer, Integer> result = cache.getAll(expect.keySet(), (keys, executor) -> {
       assertThat(Iterables.size(keys), is(lessThan(expect.keySet().size())));
       return CompletableFuture.completedFuture(
-          stream(keys).collect(toMap(key -> key, key -> -key)));
+          keys.stream().collect(toMap(key -> key, key -> -key)));
     }).join();
 
     assertThat(result, is(equalTo(expect)));
@@ -733,7 +732,7 @@ public final class AsyncCacheTest {
       assertThat(ImmutableList.copyOf(keysToLoad),
           is(equalTo(ImmutableSet.copyOf(keysToLoad).asList())));
       return CompletableFuture.completedFuture(
-          stream(keysToLoad).collect(toMap(key -> key, key -> -key)));
+          keysToLoad.stream().collect(toMap(key -> key, key -> -key)));
     }).join();
 
     verifyStats(context, verifier ->
@@ -753,7 +752,7 @@ public final class AsyncCacheTest {
     List<Integer> result = ImmutableList.copyOf(cache.getAll(keys, (keysToLoad, executor) -> {
       assertThat(ImmutableSet.copyOf(keysToLoad), is(equalTo(context.absentKeys())));
       return CompletableFuture.completedFuture(
-          stream(keysToLoad).collect(toMap(key -> key, key -> -key)));
+          keysToLoad.stream().collect(toMap(key -> key, key -> -key)));
     }).join().keySet());
     assertThat(result, is(equalTo(keys)));
   }
@@ -771,7 +770,7 @@ public final class AsyncCacheTest {
     List<Integer> result = ImmutableList.copyOf(cache.getAll(keys, (keysToLoad, executor) -> {
       assertThat(ImmutableSet.copyOf(keysToLoad), is(equalTo(context.absentKeys())));
       return CompletableFuture.completedFuture(
-          stream(keysToLoad).collect(toMap(key -> key, key -> -key)));
+          keysToLoad.stream().collect(toMap(key -> key, key -> -key)));
     }).join().keySet());
     assertThat(result, is(equalTo(keys)));
   }

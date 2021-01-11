@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -70,7 +71,7 @@ public interface AsyncCacheLoader<K, V> {
    */
   @NonNull
   default CompletableFuture<Map<@NonNull K, @NonNull V>> asyncLoadAll(
-      @NonNull Iterable<? extends @NonNull K> keys, @NonNull Executor executor) {
+      @NonNull Set<? extends @NonNull K> keys, @NonNull Executor executor) {
     throw new UnsupportedOperationException();
   }
 

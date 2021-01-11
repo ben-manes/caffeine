@@ -993,7 +993,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
 
     final Function<K, V> mappingFunction;
     final CacheLoader<? super K, V> loader;
-    @Nullable final Function<Iterable<? extends K>, Map<K, V>> bulkMappingFunction;
+    @Nullable final Function<Set<? extends K>, Map<K, V>> bulkMappingFunction;
 
     UnboundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
       super(builder);
@@ -1013,7 +1013,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     }
 
     @Override
-    public @Nullable Function<Iterable<? extends K>, Map<K, V>>  bulkMappingFunction() {
+    public @Nullable Function<Set<? extends K>, Map<K, V>>  bulkMappingFunction() {
       return bulkMappingFunction;
     }
 

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -175,7 +176,7 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
     }
 
     @Override
-    public Map<K, V> loadAll(Iterable<? extends K> keys) {
+    public Map<K, V> loadAll(Set<? extends K> keys) {
       try {
         Map<K, V> loaded = cacheLoader.loadAll(keys);
         if (loaded == null) {
