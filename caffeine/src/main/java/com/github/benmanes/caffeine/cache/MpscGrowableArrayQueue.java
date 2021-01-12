@@ -15,11 +15,10 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.Caffeine.ceilingPowerOfTwo;
 import static com.github.benmanes.caffeine.cache.UnsafeAccess.UNSAFE;
-import static com.github.benmanes.caffeine.cache.UnsafeRefArrayAccess.REF_ARRAY_BASE;
-import static com.github.benmanes.caffeine.cache.UnsafeRefArrayAccess.REF_ELEMENT_SHIFT;
-import static com.github.benmanes.caffeine.cache.UnsafeRefArrayAccess.lvElement;
-import static com.github.benmanes.caffeine.cache.UnsafeRefArrayAccess.soElement;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
 import java.util.AbstractQueue;
 import java.util.Iterator;
@@ -35,7 +34,7 @@ import java.util.Iterator;
  *
  * @author nitsanw@yahoo.com (Nitsan Wakart)
  */
-final class MpscGrowableArrayQueue<E> extends MpscChunkedArrayQueue<E> {
+class MpscGrowableArrayQueue<E> extends MpscChunkedArrayQueue<E> {
 
   /**
    * @param initialCapacity the queue initial capacity. If chunk size is fixed this will be the
@@ -198,35 +197,11 @@ abstract class BaseMpscLinkedArrayQueueColdProducerFields<E>
   protected E[] producerBuffer;
 }
 
-@SuppressWarnings({"PMD", "NullAway", "restriction"})
+@SuppressWarnings({"PMD", "NullAway"})
 abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdProducerFields<E> {
+  static final MpscAccess ACCESS = makeAccess();
+
   // No post padding here, subclasses must add
-
-  private final static long P_INDEX_OFFSET;
-  private final static long C_INDEX_OFFSET;
-  private final static long P_LIMIT_OFFSET;
-
-  static {
-    try {
-      Field iField = BaseMpscLinkedArrayQueueProducerFields.class.getDeclaredField("producerIndex");
-      P_INDEX_OFFSET = UNSAFE.objectFieldOffset(iField);
-    } catch (NoSuchFieldException e) {
-      throw new RuntimeException(e);
-    }
-    try {
-      Field iField = BaseMpscLinkedArrayQueueConsumerFields.class.getDeclaredField("consumerIndex");
-      C_INDEX_OFFSET = UNSAFE.objectFieldOffset(iField);
-    } catch (NoSuchFieldException e) {
-      throw new RuntimeException(e);
-    }
-    try {
-      Field iField =
-          BaseMpscLinkedArrayQueueColdProducerFields.class.getDeclaredField("producerLimit");
-      P_LIMIT_OFFSET = UNSAFE.objectFieldOffset(iField);
-    } catch (NoSuchFieldException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   private final static Object JUMP = new Object();
 
@@ -248,7 +223,19 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     producerMask = mask;
     consumerBuffer = buffer;
     consumerMask = mask;
-    soProducerLimit(mask); // we know it's all empty to start with
+    getAccess().soProducerLimit(this, mask); // we know it's all empty to start with
+  }
+
+  protected MpscAccess getAccess() {
+    return ACCESS;
+  }
+
+  static MpscAccess makeAccess() {
+    try {
+      return new UnsafeMpscAccess();
+    } catch (Throwable ignored) {
+      return new VarHandleMpscAccess();
+    }
   }
 
   @Override
@@ -274,7 +261,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
     while (true) {
       long producerLimit = lvProducerLimit();
-      pIndex = lvProducerIndex();
+      pIndex = getAccess().lvProducerIndex(this);
       // lower bit is indicative of resize, if we see it we spin until it's cleared
       if ((pIndex & 1) == 1) {
         continue;
@@ -302,13 +289,13 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
         }
       }
 
-      if (casProducerIndex(pIndex, pIndex + 2)) {
+      if (getAccess().casProducerIndex(this, pIndex, pIndex + 2)) {
         break;
       }
     }
     // INDEX visible before ELEMENT, consistent with consumer expectation
-    final long offset = modifiedCalcElementOffset(pIndex, mask);
-    soElement(buffer, offset, e);
+    final long offset = getAccess().modifiedCalcElementOffset(pIndex, mask);
+    getAccess().soElement(buffer, offset, e);
     return true;
   }
 
@@ -317,11 +304,11 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
    */
   private int offerSlowPath(long mask, long pIndex, long producerLimit) {
     int result;
-    final long cIndex = lvConsumerIndex();
+    final long cIndex = getAccess().lvConsumerIndex(this);
     long bufferCapacity = getCurrentBufferCapacity(mask);
     result = 0;// 0 - goto pIndex CAS
     if (cIndex + bufferCapacity > pIndex) {
-      if (!casProducerLimit(producerLimit, cIndex + bufferCapacity)) {
+      if (!getAccess().casProducerLimit(this, producerLimit, cIndex + bufferCapacity)) {
         result = 1;// retry from top
       }
     }
@@ -330,7 +317,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
       result = 2;// -> return false;
     }
     // grab index for resize -> set lower bit
-    else if (casProducerIndex(pIndex, pIndex + 1)) {
+    else if (getAccess().casProducerIndex(this, pIndex, pIndex + 1)) {
       result = 3;// -> resize
     } else {
       result = 1;// failed resize attempt, retry from top
@@ -344,15 +331,6 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   protected abstract long availableInQueue(long pIndex, final long cIndex);
 
   /**
-   * This method assumes index is actually (index << 1) because lower bit is used for resize. This
-   * is compensated for by reducing the element shift. The computation is constant folded, so
-   * there's no cost.
-   */
-  private static long modifiedCalcElementOffset(long index, long mask) {
-    return REF_ARRAY_BASE + ((index & mask) << (REF_ELEMENT_SHIFT - 1));
-  }
-
-  /**
    * {@inheritDoc}
    * <p>
    * This implementation is correct for single consumer thread use only.
@@ -364,16 +342,16 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     final long index = consumerIndex;
     final long mask = consumerMask;
 
-    final long offset = modifiedCalcElementOffset(index, mask);
-    Object e = lvElement(buffer, offset);// LoadLoad
+    final long offset = getAccess().modifiedCalcElementOffset(index, mask);
+    Object e = getAccess().lvElement(buffer, offset);// LoadLoad
     if (e == null) {
-      if (index != lvProducerIndex()) {
+      if (index != getAccess().lvProducerIndex(this)) {
         // poll() == null iff queue is empty, null element is not strong enough indicator, so we
         // must
         // check the producer index. If the queue is indeed not empty we spin until element is
         // visible.
         do {
-          e = lvElement(buffer, offset);
+          e = getAccess().lvElement(buffer, offset);
         } while (e == null);
       } else {
         return null;
@@ -383,8 +361,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
       final E[] nextBuffer = getNextBuffer(buffer, mask);
       return newBufferPoll(nextBuffer, index);
     }
-    soElement(buffer, offset, null);
-    soConsumerIndex(index + 2);
+    getAccess().soElement(buffer, offset, null);
+    getAccess().soConsumerIndex(this, index + 2);
     return (E) e;
   }
 
@@ -400,13 +378,13 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     final long index = consumerIndex;
     final long mask = consumerMask;
 
-    final long offset = modifiedCalcElementOffset(index, mask);
-    Object e = lvElement(buffer, offset);// LoadLoad
-    if (e == null && index != lvProducerIndex()) {
+    final long offset = getAccess().modifiedCalcElementOffset(index, mask);
+    Object e = getAccess().lvElement(buffer, offset);// LoadLoad
+    if (e == null && index != getAccess().lvProducerIndex(this)) {
       // peek() == null iff queue is empty, null element is not strong enough indicator, so we must
       // check the producer index. If the queue is indeed not empty we spin until element is
       // visible.
-      while ((e = lvElement(buffer, offset)) == null) {
+      while ((e = getAccess().lvElement(buffer, offset)) == null) {
         ;
       }
     }
@@ -419,29 +397,29 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   @SuppressWarnings("unchecked")
   private E[] getNextBuffer(final E[] buffer, final long mask) {
     final long nextArrayOffset = nextArrayOffset(mask);
-    final E[] nextBuffer = (E[]) lvElement(buffer, nextArrayOffset);
-    soElement(buffer, nextArrayOffset, null);
+    final E[] nextBuffer = (E[]) getAccess().lvElement(buffer, nextArrayOffset);
+    getAccess().soElement(buffer, nextArrayOffset, null);
     return nextBuffer;
   }
 
-  private static long nextArrayOffset(final long mask) {
-    return modifiedCalcElementOffset(mask + 2, Long.MAX_VALUE);
+  private long nextArrayOffset(final long mask) {
+    return getAccess().modifiedCalcElementOffset(mask + 2, Long.MAX_VALUE);
   }
 
   private E newBufferPoll(E[] nextBuffer, final long index) {
     final long offsetInNew = newBufferAndOffset(nextBuffer, index);
-    final E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
+    final E n = getAccess().lvElement(nextBuffer, offsetInNew);// LoadLoad
     if (n == null) {
       throw new IllegalStateException("new buffer must have at least one element");
     }
-    soElement(nextBuffer, offsetInNew, null);// StoreStore
-    soConsumerIndex(index + 2);
+    getAccess().soElement(nextBuffer, offsetInNew, null);// StoreStore
+    getAccess().soConsumerIndex(this, index + 2);
     return n;
   }
 
   private E newBufferPeek(E[] nextBuffer, final long index) {
     final long offsetInNew = newBufferAndOffset(nextBuffer, index);
-    final E n = lvElement(nextBuffer, offsetInNew);// LoadLoad
+    final E n = getAccess().lvElement(nextBuffer, offsetInNew);// LoadLoad
     if (null == n) {
       throw new IllegalStateException("new buffer must have at least one element");
     }
@@ -451,7 +429,7 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   private long newBufferAndOffset(E[] nextBuffer, final long index) {
     consumerBuffer = nextBuffer;
     consumerMask = (nextBuffer.length - 2L) << 1;
-    final long offsetInNew = modifiedCalcElementOffset(index, consumerMask);
+    final long offsetInNew = getAccess().modifiedCalcElementOffset(index, consumerMask);
     return offsetInNew;
   }
 
@@ -465,20 +443,19 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
      * In the event of concurrent polls/offers to this method the size is OVER estimated as we read
      * consumer index BEFORE the producer index.
      */
-    long after = lvConsumerIndex();
+    long after = getAccess().lvConsumerIndex(this);
     long size;
     while (true) {
       final long before = after;
-      final long currentProducerIndex = lvProducerIndex();
-      after = lvConsumerIndex();
+      final long currentProducerIndex = getAccess().lvProducerIndex(this);
+      after = getAccess().lvConsumerIndex(this);
       if (before == after) {
         size = ((currentProducerIndex - after) >> 1);
         break;
       }
     }
     // Long overflow is impossible, so size is always positive. Integer overflow is possible for the
-    // unbounded
-    // indexed queues.
+    // unbounded indexed queues.
     if (size > Integer.MAX_VALUE) {
       return Integer.MAX_VALUE;
     } else {
@@ -491,49 +468,20 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     // Order matters!
     // Loading consumer before producer allows for producer increments after consumer index is read.
     // This ensures this method is conservative in it's estimate. Note that as this is an MPMC there
-    // is
-    // nothing we can do to make this an exact method.
-    return (this.lvConsumerIndex() == this.lvProducerIndex());
-  }
-
-  private long lvProducerIndex() {
-    return UNSAFE.getLongVolatile(this, P_INDEX_OFFSET);
-  }
-
-  private long lvConsumerIndex() {
-    return UNSAFE.getLongVolatile(this, C_INDEX_OFFSET);
-  }
-
-  private void soProducerIndex(long v) {
-    UNSAFE.putOrderedLong(this, P_INDEX_OFFSET, v);
-  }
-
-  private boolean casProducerIndex(long expect, long newValue) {
-    return UNSAFE.compareAndSwapLong(this, P_INDEX_OFFSET, expect, newValue);
-  }
-
-  private void soConsumerIndex(long v) {
-    UNSAFE.putOrderedLong(this, C_INDEX_OFFSET, v);
+    // is nothing we can do to make this an exact method.
+    return (getAccess().lvConsumerIndex(this) == getAccess().lvProducerIndex(this));
   }
 
   private long lvProducerLimit() {
     return producerLimit;
   }
 
-  private boolean casProducerLimit(long expect, long newValue) {
-    return UNSAFE.compareAndSwapLong(this, P_LIMIT_OFFSET, expect, newValue);
-  }
-
-  private void soProducerLimit(long v) {
-    UNSAFE.putOrderedLong(this, P_LIMIT_OFFSET, v);
-  }
-
   public long currentProducerIndex() {
-    return lvProducerIndex() / 2;
+    return getAccess().lvProducerIndex(this) / 2;
   }
 
   public long currentConsumerIndex() {
-    return lvConsumerIndex() / 2;
+    return getAccess().lvConsumerIndex(this) / 2;
   }
 
   public abstract int capacity();
@@ -548,8 +496,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     final long index = consumerIndex;
     final long mask = consumerMask;
 
-    final long offset = modifiedCalcElementOffset(index, mask);
-    Object e = lvElement(buffer, offset);// LoadLoad
+    final long offset = getAccess().modifiedCalcElementOffset(index, mask);
+    Object e = getAccess().lvElement(buffer, offset);// LoadLoad
     if (e == null) {
       return null;
     }
@@ -557,8 +505,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
       final E[] nextBuffer = getNextBuffer(buffer, mask);
       return newBufferPoll(nextBuffer, index);
     }
-    soElement(buffer, offset, null);
-    soConsumerIndex(index + 2);
+    getAccess().soElement(buffer, offset, null);
+    getAccess().soConsumerIndex(this, index + 2);
     return (E) e;
   }
 
@@ -568,8 +516,8 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     final long index = consumerIndex;
     final long mask = consumerMask;
 
-    final long offset = modifiedCalcElementOffset(index, mask);
-    Object e = lvElement(buffer, offset);// LoadLoad
+    final long offset = getAccess().modifiedCalcElementOffset(index, mask);
+    Object e = getAccess().lvElement(buffer, offset);// LoadLoad
     if (e == JUMP) {
       return newBufferPeek(getNextBuffer(buffer, mask), index);
     }
@@ -584,15 +532,15 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
     final int newMask = (newBufferLength - 2) << 1;
     producerMask = newMask;
 
-    final long offsetInOld = modifiedCalcElementOffset(pIndex, oldMask);
-    final long offsetInNew = modifiedCalcElementOffset(pIndex, newMask);
+    final long offsetInOld = getAccess().modifiedCalcElementOffset(pIndex, oldMask);
+    final long offsetInNew = getAccess().modifiedCalcElementOffset(pIndex, newMask);
 
 
-    soElement(newBuffer, offsetInNew, e);// element in new array
-    soElement(oldBuffer, nextArrayOffset(oldMask), newBuffer);// buffer linked
+    getAccess().soElement(newBuffer, offsetInNew, e);// element in new array
+    getAccess().soElement(oldBuffer, nextArrayOffset(oldMask), newBuffer);// buffer linked
 
     // ASSERT code
-    final long cIndex = lvConsumerIndex();
+    final long cIndex = getAccess().lvConsumerIndex(this);
     final long availableInQueue = availableInQueue(pIndex, cIndex);
     if (availableInQueue <= 0) {
       throw new IllegalStateException();
@@ -600,15 +548,15 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
 
     // Invalidate racing CASs
     // We never set the limit beyond the bounds of a buffer
-    soProducerLimit(pIndex + Math.min(newMask, availableInQueue));
+    getAccess().soProducerLimit(this, pIndex + Math.min(newMask, availableInQueue));
 
     // make resize visible to the other producers
-    soProducerIndex(pIndex + 2);
+    getAccess().soProducerIndex(this, pIndex + 2);
 
     // INDEX visible before ELEMENT, consistent with consumer expectation
 
     // make resize visible to consumer
-    soElement(oldBuffer, offsetInOld, JUMP);
+    getAccess().soElement(oldBuffer, offsetInOld, JUMP);
   }
 
   @SuppressWarnings("unchecked")
@@ -627,24 +575,153 @@ abstract class BaseMpscLinkedArrayQueue<E> extends BaseMpscLinkedArrayQueueColdP
   protected abstract long getCurrentBufferCapacity(long mask);
 }
 
+interface MpscAccess {
+  long lvProducerIndex(BaseMpscLinkedArrayQueue<?> self);
+  long lvConsumerIndex(BaseMpscLinkedArrayQueue<?> self);
+  void soProducerIndex(BaseMpscLinkedArrayQueue<?> self, long v);
+  boolean casProducerIndex(BaseMpscLinkedArrayQueue<?> self, long expect, long newValue);
+  void soConsumerIndex(BaseMpscLinkedArrayQueue<?> self, long v);
+  boolean casProducerLimit(BaseMpscLinkedArrayQueue<?> self, long expect, long newValue);
+  void soProducerLimit(BaseMpscLinkedArrayQueue<?> self, long v);
 
-/**
- * A concurrent access enabling class used by circular array based queues this class exposes an
- * offset computation method along with differently memory fenced load/store methods into the
- * underlying array. The class is pre-padded and the array is padded on either side to help with
- * False sharing prvention. It is expected theat subclasses handle post padding.
- * <p>
- * Offset calculation is separate from access to enable the reuse of a give compute offset.
- * <p>
- * Load/Store methods using a <i>buffer</i> parameter are provided to allow the prevention of final
- * field reload after a LoadLoad barrier.
- * <p>
- */
+  /**
+   * A concurrent access enabling class used by circular array based queues this class exposes an
+   * offset computation method along with differently memory fenced load/store methods into the
+   * underlying array. The class is pre-padded and the array is padded on either side to help with
+   * False sharing prevention. It is expected that subclasses handle post padding.
+   * <p>
+   * Offset calculation is separate from access to enable the reuse of a give compute offset.
+   * <p>
+   * Load/Store methods using a <i>buffer</i> parameter are provided to allow the prevention of
+   * final field reload after a LoadLoad barrier.
+   * <p>
+   */
+
+  /**
+   * A plain store (no ordering/fences) of an element to a given offset
+   *
+   * @param buffer this.buffer
+   * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset(long)}
+   * @param e an orderly kitty
+   */
+  <E> void spElement(E[] buffer, long offset, E e);
+
+  /**
+   * An ordered store(store + StoreStore barrier) of an element to a given offset
+   *
+   * @param buffer this.buffer
+   * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset}
+   * @param e an orderly kitty
+   */
+  <E> void soElement(E[] buffer, long offset, E e);
+
+  /**
+   * A plain load (no ordering/fences) of an element from a given offset.
+   *
+   * @param buffer this.buffer
+   * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset(long)}
+   * @return the element at the offset
+   */
+  <E> E lpElement(E[] buffer, long offset);
+
+  /**
+   * A volatile load (load + LoadLoad barrier) of an element from a given offset.
+   *
+   * @param buffer this.buffer
+   * @param offset computed via {@link org.jctools.util.UnsafeRefArrayAccess#calcElementOffset(long)}
+   * @return the element at the offset
+   */
+  <E> E lvElement(E[] buffer, long offset);
+
+  /**
+   * @param index desirable element index
+   * @return the offset in bytes within the array for a given index.
+   */
+  long calcElementOffset(long index);
+
+  /**
+   * This method assumes index is actually (index << 1) because lower bit is used for resize. This
+   * is compensated for by reducing the element shift. The computation is constant folded, so
+   * there's no cost.
+   */
+  long modifiedCalcElementOffset(long index, long mask);
+}
+
 @SuppressWarnings("restriction")
-final class UnsafeRefArrayAccess {
-  public static final long REF_ARRAY_BASE;
-  public static final int REF_ELEMENT_SHIFT;
+final class UnsafeMpscAccess implements MpscAccess {
+  static final long P_INDEX_OFFSET;
+  static final long C_INDEX_OFFSET;
+  static final long P_LIMIT_OFFSET;
+
+  static final long REF_ARRAY_BASE;
+  static final int REF_ELEMENT_SHIFT;
+
+  @Override public long lvProducerIndex(BaseMpscLinkedArrayQueue<?> self) {
+    return UNSAFE.getLongVolatile(self, P_INDEX_OFFSET);
+  }
+  @Override public long lvConsumerIndex(BaseMpscLinkedArrayQueue<?> self) {
+    return UNSAFE.getLongVolatile(self, C_INDEX_OFFSET);
+  }
+  @Override public void soProducerIndex(BaseMpscLinkedArrayQueue<?> self, long v) {
+    UNSAFE.putOrderedLong(self, P_INDEX_OFFSET, v);
+  }
+  @Override public boolean casProducerIndex(
+      BaseMpscLinkedArrayQueue<?> self, long expect, long newValue) {
+    return UNSAFE.compareAndSwapLong(self, P_INDEX_OFFSET, expect, newValue);
+  }
+  @Override public void soConsumerIndex(BaseMpscLinkedArrayQueue<?> self, long v) {
+    UNSAFE.putOrderedLong(self, C_INDEX_OFFSET, v);
+  }
+  @Override public boolean casProducerLimit(
+      BaseMpscLinkedArrayQueue<?> self, long expect, long newValue) {
+    return UNSAFE.compareAndSwapLong(self, P_LIMIT_OFFSET, expect, newValue);
+  }
+  @Override public void soProducerLimit(BaseMpscLinkedArrayQueue<?> self, long v) {
+    UNSAFE.putOrderedLong(self, P_LIMIT_OFFSET, v);
+  }
+
+  @Override public <E> void spElement(E[] buffer, long offset, E e) {
+    UNSAFE.putObject(buffer, offset, e);
+  }
+  @Override public <E> void soElement(E[] buffer, long offset, E e) {
+    UNSAFE.putOrderedObject(buffer, offset, e);
+  }
+  @SuppressWarnings("unchecked")
+  @Override public <E> E lpElement(E[] buffer, long offset) {
+    return (E) UNSAFE.getObject(buffer, offset);
+  }
+  @SuppressWarnings("unchecked")
+  @Override public <E> E lvElement(E[] buffer, long offset) {
+    return (E) UNSAFE.getObjectVolatile(buffer, offset);
+  }
+  @Override public long calcElementOffset(long index) {
+    return REF_ARRAY_BASE + (index << REF_ELEMENT_SHIFT);
+  }
+  @Override public long modifiedCalcElementOffset(long index, long mask) {
+    return REF_ARRAY_BASE + ((index & mask) << (REF_ELEMENT_SHIFT - 1));
+  }
+
   static {
+    try {
+      Field iField = BaseMpscLinkedArrayQueueProducerFields.class.getDeclaredField("producerIndex");
+      P_INDEX_OFFSET = UNSAFE.objectFieldOffset(iField);
+    } catch (NoSuchFieldException e) {
+      throw new RuntimeException(e);
+    }
+    try {
+      Field iField = BaseMpscLinkedArrayQueueConsumerFields.class.getDeclaredField("consumerIndex");
+      C_INDEX_OFFSET = UNSAFE.objectFieldOffset(iField);
+    } catch (NoSuchFieldException e) {
+      throw new RuntimeException(e);
+    }
+    try {
+      Field iField =
+          BaseMpscLinkedArrayQueueColdProducerFields.class.getDeclaredField("producerLimit");
+      P_LIMIT_OFFSET = UNSAFE.objectFieldOffset(iField);
+    } catch (NoSuchFieldException e) {
+      throw new RuntimeException(e);
+    }
+
     final int scale = UNSAFE.arrayIndexScale(Object[].class);
     if (4 == scale) {
       REF_ELEMENT_SHIFT = 2;
@@ -655,60 +732,77 @@ final class UnsafeRefArrayAccess {
     }
     REF_ARRAY_BASE = UNSAFE.arrayBaseOffset(Object[].class);
   }
+}
 
-  private UnsafeRefArrayAccess() {}
+final class VarHandleMpscAccess implements MpscAccess {
+  static final VarHandle REF_ARRAY;
+  static final VarHandle P_INDEX;
+  static final VarHandle C_INDEX;
+  static final VarHandle P_LIMIT;
 
-  /**
-   * A plain store (no ordering/fences) of an element to a given offset
-   *
-   * @param buffer this.buffer
-   * @param offset computed via {@link UnsafeRefArrayAccess#calcElementOffset(long)}
-   * @param e an orderly kitty
-   */
-  public static <E> void spElement(E[] buffer, long offset, E e) {
-    UNSAFE.putObject(buffer, offset, e);
+  @Override public long lvProducerIndex(BaseMpscLinkedArrayQueue<?> self) {
+    return (long) P_INDEX.getVolatile(self);
+  }
+  @Override public long lvConsumerIndex(BaseMpscLinkedArrayQueue<?> self) {
+    return (long) C_INDEX.getVolatile(self);
+  }
+  @Override public void soProducerIndex(BaseMpscLinkedArrayQueue<?> self, long v) {
+    P_INDEX.setRelease(self, v);
+  }
+  @Override public boolean casProducerIndex(
+      BaseMpscLinkedArrayQueue<?> self, long expect, long newValue) {
+    return P_INDEX.compareAndSet(self, expect, newValue);
+  }
+  @Override public void soConsumerIndex(BaseMpscLinkedArrayQueue<?> self, long v) {
+    C_INDEX.setRelease(self, v);
+  }
+  @Override public boolean casProducerLimit(
+      BaseMpscLinkedArrayQueue<?> self, long expect, long newValue) {
+    return P_LIMIT.compareAndSet(self, expect, newValue);
+  }
+  @Override public void soProducerLimit(BaseMpscLinkedArrayQueue<?> self, long v) {
+    P_LIMIT.setRelease(self, v);
   }
 
-  /**
-   * An ordered store(store + StoreStore barrier) of an element to a given offset
-   *
-   * @param buffer this.buffer
-   * @param offset computed via {@link UnsafeRefArrayAccess#calcElementOffset}
-   * @param e an orderly kitty
-   */
-  public static <E> void soElement(E[] buffer, long offset, E e) {
-    UNSAFE.putOrderedObject(buffer, offset, e);
+  @Override public <E> void spElement(E[] buffer, long offset, E e) {
+    REF_ARRAY.set(buffer, (int) offset, e);
   }
-
-  /**
-   * A plain load (no ordering/fences) of an element from a given offset.
-   *
-   * @param buffer this.buffer
-   * @param offset computed via {@link UnsafeRefArrayAccess#calcElementOffset(long)}
-   * @return the element at the offset
-   */
+  @Override public <E> void soElement(E[] buffer, long offset, E e) {
+    REF_ARRAY.setRelease(buffer, (int) offset, e);
+  }
   @SuppressWarnings("unchecked")
-  public static <E> E lpElement(E[] buffer, long offset) {
-    return (E) UNSAFE.getObject(buffer, offset);
+  @Override public <E> E lpElement(E[] buffer, long offset) {
+    return (E) REF_ARRAY.get(buffer, (int) offset);
   }
-
-  /**
-   * A volatile load (load + LoadLoad barrier) of an element from a given offset.
-   *
-   * @param buffer this.buffer
-   * @param offset computed via {@link UnsafeRefArrayAccess#calcElementOffset(long)}
-   * @return the element at the offset
-   */
   @SuppressWarnings("unchecked")
-  public static <E> E lvElement(E[] buffer, long offset) {
-    return (E) UNSAFE.getObjectVolatile(buffer, offset);
+  @Override public <E> E lvElement(E[] buffer, long offset) {
+    return (E) REF_ARRAY.getVolatile(buffer, (int) offset);
+  }
+  @Override public long calcElementOffset(long index) {
+    return (index >> 1);
+  }
+  @Override public long modifiedCalcElementOffset(long index, long mask) {
+    return (index & mask) >> 1;
   }
 
-  /**
-   * @param index desirable element index
-   * @return the offset in bytes within the array for a given index.
-   */
-  public static long calcElementOffset(long index) {
-    return REF_ARRAY_BASE + (index << REF_ELEMENT_SHIFT);
+  static {
+    try {
+      Lookup pIndexLookup = MethodHandles.privateLookupIn(
+          BaseMpscLinkedArrayQueueProducerFields.class, MethodHandles.lookup());
+      Lookup cIndexLookup = MethodHandles.privateLookupIn(
+          BaseMpscLinkedArrayQueueConsumerFields.class, MethodHandles.lookup());
+      Lookup pLimitLookup = MethodHandles.privateLookupIn(
+          BaseMpscLinkedArrayQueueColdProducerFields.class, MethodHandles.lookup());
+
+      P_INDEX = pIndexLookup.findVarHandle(
+          BaseMpscLinkedArrayQueueProducerFields.class, "producerIndex", long.class);
+      C_INDEX = cIndexLookup.findVarHandle(
+          BaseMpscLinkedArrayQueueConsumerFields.class, "consumerIndex", long.class);
+      P_LIMIT = pLimitLookup.findVarHandle(
+          BaseMpscLinkedArrayQueueColdProducerFields.class, "producerLimit", long.class);
+      REF_ARRAY = MethodHandles.arrayElementVarHandle(Object[].class);
+    } catch (ReflectiveOperationException e) {
+      throw new ExceptionInInitializerError(e);
+    }
   }
 }
