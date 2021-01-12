@@ -15,6 +15,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Queue;
 
 import org.junit.runner.RunWith;
@@ -34,13 +35,51 @@ public final class MpscGrowableQueueSanityTest extends QueueSanityTest {
 
   @Parameterized.Parameters
   public static Collection<Object[]> parameters() {
-    ArrayList<Object[]> list = new ArrayList<Object[]>();
+    List<Object[]> list = new ArrayList<Object[]>();
+    addVarHandle(list);
+    addUnsafe(list);
+    return list;
+  }
+
+  private static void addVarHandle(List<Object[]> list) {
     // MPSC size 1
     list.add(makeQueue(0, 1, 4, org.jctools.queues.spec.Ordering.FIFO,
-        new MpscGrowableArrayQueue<>(2, 4)));
+        new VarHandleMpscGrowableArrayQueue<>(2, 4)));
     // MPSC size SIZE
     list.add(makeQueue(0, 1, SIZE, org.jctools.queues.spec.Ordering.FIFO,
-        new MpscGrowableArrayQueue<>(8, SIZE)));
-    return list;
+        new VarHandleMpscGrowableArrayQueue<>(8, SIZE)));
+  }
+
+  private static void addUnsafe(List<Object[]> list) {
+    // MPSC size 1
+    list.add(makeQueue(0, 1, 4, org.jctools.queues.spec.Ordering.FIFO,
+        new UnsafeMpscGrowableArrayQueue<>(2, 4)));
+    // MPSC size SIZE
+    list.add(makeQueue(0, 1, SIZE, org.jctools.queues.spec.Ordering.FIFO,
+        new UnsafeMpscGrowableArrayQueue<>(8, SIZE)));
+  }
+
+  static final class VarHandleMpscGrowableArrayQueue<E> extends MpscGrowableArrayQueue<E> {
+    static final MpscAccess ACCESS = new VarHandleMpscAccess();
+
+    VarHandleMpscGrowableArrayQueue(int initialCapacity, int maxCapacity) {
+      super(initialCapacity, maxCapacity);
+    }
+    @Override
+    protected MpscAccess getAccess() {
+      return ACCESS;
+    }
+  }
+
+  static final class UnsafeMpscGrowableArrayQueue<E> extends MpscGrowableArrayQueue<E> {
+    static final MpscAccess ACCESS = new UnsafeMpscAccess();
+
+    UnsafeMpscGrowableArrayQueue(int initialCapacity, int maxCapacity) {
+      super(initialCapacity, maxCapacity);
+    }
+    @Override
+    protected MpscAccess getAccess() {
+      return ACCESS;
+    }
   }
 }
