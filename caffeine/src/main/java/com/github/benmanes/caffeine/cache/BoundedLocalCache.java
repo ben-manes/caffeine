@@ -3130,7 +3130,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           next = iterator.next();
           value = next.getValue();
           key = next.getKey();
-          if (cache.hasExpired(next, now) || (key == null) || (value == null) || !next.isAlive()) {
+
+          boolean evictable = cache.hasExpired(next, now) || (key == null) || (value == null);
+          if (evictable || !next.isAlive()) {
+            if (evictable) {
+              cache.scheduleDrainBuffers();
+            }
             value = null;
             next = null;
             key = null;

@@ -21,6 +21,7 @@ import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.AF
 import static com.github.benmanes.caffeine.cache.testing.CacheSpec.Expiration.VARIABLE;
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
 import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.aMapWithSize;
@@ -1425,6 +1426,24 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      implementation = Implementation.Caffeine)
+  public void keySet_iterator(Map<Integer, Integer> map, CacheContext context) {
+    context.ticker().advance(10, TimeUnit.MINUTES);
+    assertThat(map.keySet().iterator().hasNext(), is(false));
+    assertThat(map, is(emptyMap()));
+    assertThat(map, hasRemovalNotifications(context,
+        context.original().size(), RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
@@ -1437,6 +1456,24 @@ public final class ExpirationTest {
 
   @Test(dataProvider = "caches")
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      implementation = Implementation.Caffeine)
+  public void values_iterator(Map<Integer, Integer> map, CacheContext context) {
+    context.ticker().advance(10, TimeUnit.MINUTES);
+    assertThat(map.values().iterator().hasNext(), is(false));
+    assertThat(map, is(emptyMap()));
+    assertThat(map, hasRemovalNotifications(context,
+        context.original().size(), RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPIRED));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
       mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
       expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
       expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
@@ -1445,6 +1482,24 @@ public final class ExpirationTest {
     context.ticker().advance(2 * context.expiryTime().timeNanos(), TimeUnit.NANOSECONDS);
     assertThat(map.entrySet().toArray(new Map.Entry<?, ?>[0]), arrayWithSize(0));
     assertThat(map.entrySet().toArray(), arrayWithSize(0));
+  }
+
+  @Test(dataProvider = "caches")
+  @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING },
+      population = { Population.SINGLETON, Population.PARTIAL, Population.FULL },
+      mustExpireWithAnyOf = { AFTER_ACCESS, AFTER_WRITE, VARIABLE },
+      expiry = { CacheExpiry.DISABLED, CacheExpiry.CREATE, CacheExpiry.WRITE, CacheExpiry.ACCESS },
+      expireAfterAccess = {Expire.DISABLED, Expire.ONE_MINUTE},
+      expireAfterWrite = {Expire.DISABLED, Expire.ONE_MINUTE}, expiryTime = Expire.ONE_MINUTE,
+      implementation = Implementation.Caffeine)
+  public void entrySet_iterator(Map<Integer, Integer> map, CacheContext context) {
+    context.ticker().advance(10, TimeUnit.MINUTES);
+    assertThat(map.keySet().iterator().hasNext(), is(false));
+    assertThat(map, is(emptyMap()));
+    assertThat(map, hasRemovalNotifications(context,
+        context.original().size(), RemovalCause.EXPIRED));
+    verifyWriter(context, (verifier, writer) ->
+        verifier.deletedAll(context.original(), RemovalCause.EXPIRED));
   }
 
   /**
