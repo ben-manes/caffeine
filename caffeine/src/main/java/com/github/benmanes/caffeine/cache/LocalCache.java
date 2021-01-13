@@ -59,6 +59,9 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   /** Returns whether the cache captures the write time of the entry. */
   boolean hasWriteTime();
 
+  /** Returns the {@link Expiry} used by this cache. */
+  @Nullable Expiry<K, V> expiry();
+
   /** Returns the {@link Ticker} used by this cache for expiration. */
   @NonNull Ticker expirationTicker();
 
@@ -99,8 +102,8 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Override
   default @Nullable V compute(K key,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-    return compute(key, remappingFunction, /* recordMiss */ false,
-        /* recordLoad */ true, /* recordLoadFailure */ true);
+    return compute(key, remappingFunction, expiry(),
+        /* recordMiss */ false, /* recordLoad */ true, /* recordLoadFailure */ true);
   }
 
   /**
@@ -108,7 +111,8 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * whether to record miss and load statistics based on the success of this operation.
    */
   @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean recordMiss, boolean recordLoad, boolean recordLoadFailure);
+      @Nullable Expiry<K, V> expiry, boolean recordMiss,
+      boolean recordLoad, boolean recordLoadFailure);
 
   @Override
   default @Nullable V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
