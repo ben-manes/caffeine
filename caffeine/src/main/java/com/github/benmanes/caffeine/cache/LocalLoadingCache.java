@@ -146,7 +146,8 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
           }
           discard[0] = true;
           return currentValue;
-        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
+        }, cache().expiry(), /* recordMiss */ false,
+            /* recordLoad */ false, /* recordLoadFailure */ true);
 
         if (discard[0] && (newValue != null) && cache().hasRemovalListener()) {
           var cause = (value == null) ? RemovalCause.EXPLICIT : RemovalCause.REPLACED;

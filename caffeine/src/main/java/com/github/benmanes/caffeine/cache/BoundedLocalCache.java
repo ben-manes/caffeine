@@ -462,8 +462,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     return expiresAfterWrite() || refreshAfterWrite();
   }
 
+  @Override
   @SuppressWarnings("NullAway")
-  protected Expiry<K, V> expiry() {
+  public Expiry<K, V> expiry() {
     return null;
   }
 
@@ -1270,7 +1271,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
             }
             discard[0] = true;
             return currentValue;
-          }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
+          }, expiry(), /* recordMiss */ false,
+              /* recordLoad */ false, /* recordLoadFailure */ true);
 
           if (discard[0] && hasRemovalListener()) {
             notifyRemoval(key, value, RemovalCause.REPLACED);
@@ -2355,7 +2357,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     for (K key : keySet()) {
       long[] now = { expirationTicker().read() };
       Object lookupKey = nodeFactory.newLookupKey(key);
-      remap(key, lookupKey, remappingFunction, now, /* computeIfAbsent */ false);
+      remap(key, lookupKey, remappingFunction, expiry(), now, /* computeIfAbsent */ false);
     }
   }
 
@@ -2499,12 +2501,14 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         statsAware(remappingFunction, /* recordMiss */ false,
             /* recordLoad */ true, /* recordLoadFailure */ true);
     return remap(key, lookupKey, statsAwareRemappingFunction,
-        new long[] { now }, /* computeIfAbsent */ false);
+        expiry(), new long[] { now }, /* computeIfAbsent */ false);
   }
 
   @Override
+  @SuppressWarnings("NullAway")
   public @Nullable V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean recordMiss, boolean recordLoad, boolean recordLoadFailure) {
+      @Nullable Expiry<K, V> expiry, boolean recordMiss,
+      boolean recordLoad, boolean recordLoadFailure) {
     requireNonNull(key);
     requireNonNull(remappingFunction);
 
@@ -2512,7 +2516,8 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super V, ? extends V> statsAwareRemappingFunction =
         statsAware(remappingFunction, recordMiss, recordLoad, recordLoadFailure);
-    return remap(key, keyRef, statsAwareRemappingFunction, now, /* computeIfAbsent */ true);
+    return remap(key, keyRef, statsAwareRemappingFunction,
+        expiry, now, /* computeIfAbsent */ true);
   }
 
   @Override
@@ -2526,7 +2531,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     Object keyRef = nodeFactory.newReferenceKey(key, keyReferenceQueue());
     BiFunction<? super K, ? super V, ? extends V> mergeFunction = (k, oldValue) ->
         (oldValue == null) ? value : statsAware(remappingFunction).apply(oldValue, value);
-    return remap(key, keyRef, mergeFunction, now, /* computeIfAbsent */ true);
+    return remap(key, keyRef, mergeFunction, expiry(), now, /* computeIfAbsent */ true);
   }
 
   /**
@@ -2540,6 +2545,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @param key key with which the specified value is to be associated
    * @param keyRef the key to associate with or a lookup only key if not <tt>computeIfAbsent</tt>
    * @param remappingFunction the function to compute a value
+   * @param expiry the calculator for the expiration time
    * @param now the current time, according to the ticker
    * @param computeIfAbsent if an absent entry can be computed
    * @return the new value associated with the specified key, or null if none
@@ -2547,7 +2553,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   @SuppressWarnings("PMD.EmptyIfStmt")
   @Nullable V remap(K key, Object keyRef,
       BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      long[/* 1 */] now, boolean computeIfAbsent) {
+      Expiry<K, V> expiry, long[/* 1 */] now, boolean computeIfAbsent) {
     @SuppressWarnings("unchecked")
     K[] nodeKey = (K[]) new Object[1];
     @SuppressWarnings("unchecked")
@@ -2573,7 +2579,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         weight[1] = weigher.weigh(key, newValue[0]);
         n = nodeFactory.newNode(keyRef, newValue[0],
             valueReferenceQueue(), weight[1], now[0]);
-        setVariableTime(n, expireAfterCreate(key, newValue[0], expiry(), now[0]));
+        setVariableTime(n, expireAfterCreate(key, newValue[0], expiry, now[0]));
         return n;
       }
 
@@ -2613,9 +2619,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           if (newValue[0] != oldValue[0]) {
             cause[0] = RemovalCause.REPLACED;
           }
-          setVariableTime(n, expireAfterUpdate(n, key, newValue[0], expiry(), now[0]));
+          setVariableTime(n, expireAfterUpdate(n, key, newValue[0], expiry, now[0]));
         } else {
-          setVariableTime(n, expireAfterCreate(key, newValue[0], expiry(), now[0]));
+          setVariableTime(n, expireAfterCreate(key, newValue[0], expiry, now[0]));
         }
         n.setValue(newValue[0], valueReferenceQueue());
         n.setWeight(weight[1]);
@@ -2647,7 +2653,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         afterWrite(new UpdateTask(node, weightedDifference));
       } else {
         if ((cause[0] == null) && !isComputingAsync(node)) {
-          tryExpireAfterRead(node, key, newValue[0], expiry(), now[0]);
+          tryExpireAfterRead(node, key, newValue[0], expiry, now[0]);
           setAccessTime(node, now[0]);
         }
         afterRead(node, now[0], /* recordHit */ false);
@@ -3654,47 +3660,95 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           cache.afterRead(node, now, /* recordHit */ false);
         }
       }
-      @Override public void put(K key, V value, long duration, TimeUnit unit) {
-        put(key, value, duration, unit, /* onlyIfAbsent */ false);
+      @Override public @Nullable V put(K key, V value, long duration, TimeUnit unit) {
+        return cache.isAsync
+            ? putAsync(key, value, duration, unit, /* onlyIfAbsent */ false)
+            : putSync(key, value, duration, unit, /* onlyIfAbsent */ false);
       }
-      @Override public boolean putIfAbsent(K key, V value, long duration, TimeUnit unit) {
-        V previous = put(key, value, duration, unit, /* onlyIfAbsent */ true);
-        return (previous == null);
+      @Override public @Nullable V putIfAbsent(K key, V value, long duration, TimeUnit unit) {
+        return cache.isAsync
+            ? putAsync(key, value, duration, unit, /* onlyIfAbsent */ true)
+            : putSync(key, value, duration, unit, /* onlyIfAbsent */ true);
       }
-      @Nullable V put(K key, V value, long duration, TimeUnit unit, boolean onlyIfAbsent) {
+      @Nullable V putSync(K key, V value, long duration, TimeUnit unit, boolean onlyIfAbsent) {
         requireNonNull(unit);
         requireNonNull(value);
         requireArgument(duration >= 0);
-        Expiry<K, V> expiry = new Expiry<K, V>() {
-          @Override
-          public long expireAfterCreate(K key, V value, long currentTime) {
-            return unit.toNanos(duration);
-          }
-          @Override
-          public long expireAfterUpdate(K key, V value, long currentTime, long currentDuration) {
-            return unit.toNanos(duration);
-          }
-          @Override
-          public long expireAfterRead(K key, V value, long currentTime, long currentDuration) {
-            return currentDuration;
-          }
-        };
-        if (cache.isAsync) {
-          @SuppressWarnings("unchecked")
-          Expiry<K, V> asyncExpiry = (Expiry<K, V>) new AsyncExpiry<>(expiry);
-          expiry = asyncExpiry;
-
-          @SuppressWarnings("unchecked")
-          V asyncValue = (V) CompletableFuture.completedFuture(value);
-          value = asyncValue;
-        }
+        var expiry = new FixedExpiry<K, V>(duration, unit);
         return cache.put(key, value, expiry, /* notifyWriter */ true, onlyIfAbsent);
+      }
+      @SuppressWarnings("unchecked")
+      @Nullable V putAsync(K key, V value, long duration, TimeUnit unit, boolean onlyIfAbsent) {
+        requireNonNull(unit);
+        requireNonNull(value);
+        requireArgument(duration >= 0);
+        var expiry = (Expiry<K, V>) new AsyncExpiry<>(new FixedExpiry<>(duration, unit));
+        V asyncValue = (V) CompletableFuture.completedFuture(value);
+
+        if (!onlyIfAbsent) {
+          var oldValueFuture = (CompletableFuture<V>) cache.put(
+              key, asyncValue, expiry, /* notifyWriter */ true, onlyIfAbsent);
+          return Async.getWhenSuccessful(oldValueFuture);
+        }
+
+        for (;;) {
+          var priorFuture = (CompletableFuture<V>) cache.getIfPresent(key, /* recordStats */ false);
+          if (priorFuture != null) {
+            if (!priorFuture.isDone()) {
+              Async.getWhenSuccessful(priorFuture);
+              continue;
+            }
+
+            V prior = Async.getWhenSuccessful(priorFuture);
+            if (prior != null) {
+              return prior;
+            }
+          }
+
+          boolean[] added = { false };
+          var computed = (CompletableFuture<V>) cache.compute(key, (k, oldValue) -> {
+            var oldValueFuture = (CompletableFuture<V>) oldValue;
+            added[0] = (oldValueFuture == null)
+                || (oldValueFuture.isDone() && (Async.getIfReady(oldValueFuture) == null));
+            return added[0] ? asyncValue : oldValue;
+          }, expiry, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+
+          if (added[0]) {
+            return null;
+          } else {
+            V prior = Async.getWhenSuccessful(computed);
+            if (prior != null) {
+              return prior;
+            }
+          }
+        }
       }
       @Override public Map<K, V> oldest(int limit) {
         return cache.variableSnapshot(/* ascending */ true, limit, transformer);
       }
       @Override public Map<K, V> youngest(int limit) {
         return cache.variableSnapshot(/* ascending */ false, limit, transformer);
+      }
+    }
+
+    static final class FixedExpiry<K, V> implements Expiry<K, V> {
+      final long duration;
+      final TimeUnit unit;
+
+      FixedExpiry(long duration, TimeUnit unit) {
+        this.duration = duration;
+        this.unit = unit;
+      }
+      @Override public long expireAfterCreate(K key, V value, long currentTime) {
+        return unit.toNanos(duration);
+      }
+      @Override public long expireAfterUpdate(
+          K key, V value, long currentTime, long currentDuration) {
+        return unit.toNanos(duration);
+      }
+      @Override public long expireAfterRead(
+          K key, V value, long currentTime, long currentDuration) {
+        return currentDuration;
       }
     }
 

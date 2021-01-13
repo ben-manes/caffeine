@@ -382,7 +382,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       asyncCache.cache().compute(key, (k, oldValue) -> {
         result[0] = (oldValue == null) ? null : remappingFunction.apply(k, oldValue);
         return result[0];
-      }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+      }, asyncCache.cache().expiry(), /* recordMiss */ false,
+          /* recordLoad */ false, /* recordLoadFailure */ false);
 
       if (result[0] != null) {
         asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss */ false);
@@ -399,7 +400,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       asyncCache.cache().compute(key, (k, oldValue) -> {
         result[0] = remappingFunction.apply(k, oldValue);
         return result[0];
-      }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+      }, asyncCache.cache().expiry(), /* recordMiss */ false,
+          /* recordLoad */ false, /* recordLoadFailure */ false);
 
       if (result[0] != null) {
         asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss */ false);
@@ -418,7 +420,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       asyncCache.cache().compute(key, (k, oldValue) -> {
         result[0] = (oldValue == null) ? value : remappingFunction.apply(oldValue, value);
         return result[0];
-      }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+      }, asyncCache.cache().expiry(), /* recordMiss */ false,
+          /* recordLoad */ false, /* recordLoadFailure */ false);
 
       if (result[0] != null) {
         asyncCache.handleCompletion(key, result[0], startTime, /* recordMiss */ false);
@@ -649,7 +652,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           added[0] = (valueFuture == null)
               || (valueFuture.isDone() && (Async.getIfReady(valueFuture) == null));
           return added[0] ? CompletableFuture.completedFuture(value) : valueFuture;
-        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+        }, delegate.expiry(), /* recordMiss */ false,
+            /* recordLoad */ false, /* recordLoadFailure */ false);
 
         if (added[0]) {
           return null;
@@ -706,7 +710,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           V oldValue = Async.getIfReady(oldValueFuture);
           removed[0] = value.equals(oldValue);
           return (oldValue == null) || removed[0] ? null : oldValueFuture;
-        }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ true);
+        }, delegate.expiry(), /* recordStats */ false,
+            /* recordLoad */ false, /* recordLoadFailure */ true);
 
         if (done[0]) {
           return removed[0];
@@ -739,7 +744,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           done[0] = true;
           oldValue[0] = Async.getIfReady(oldValueFuture);
           return (oldValue[0] == null) ? null : CompletableFuture.completedFuture(value);
-        }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+        }, delegate.expiry(), /* recordStats */ false,
+            /* recordLoad */ false, /* recordLoadFailure */ false);
 
         if (done[0]) {
           return oldValue[0];
@@ -772,7 +778,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           done[0] = true;
           replaced[0] = oldValue.equals(Async.getIfReady(oldValueFuture));
           return replaced[0] ? CompletableFuture.completedFuture(newValue) : oldValueFuture;
-        }, /* recordStats */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+        }, delegate.expiry(), /* recordStats */ false,
+            /* recordLoad */ false, /* recordLoadFailure */ false);
 
         if (done[0]) {
           return replaced[0];
@@ -813,7 +820,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           }
           future[0] = CompletableFuture.completedFuture(newValue);
           return future[0];
-        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+        }, delegate.expiry(), /* recordMiss */ false,
+            /* recordLoad */ false, /* recordLoadFailure */ false);
 
         V result = Async.getWhenSuccessful(computed);
         if ((computed == future[0]) || (result != null)) {
@@ -875,7 +883,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
               /* recordLoadFailure */ true);
           newValue[0] = function.apply(key, oldValue);
           return (newValue[0] == null) ? null : CompletableFuture.completedFuture(newValue[0]);
-        }, /* recordMiss */ false, /* recordLoad */ false, /* recordLoadFailure */ false);
+        }, delegate.expiry(), /* recordMiss */ false,
+            /* recordLoad */ false, /* recordLoadFailure */ false);
 
         if (newValue[0] != null) {
           return newValue[0];

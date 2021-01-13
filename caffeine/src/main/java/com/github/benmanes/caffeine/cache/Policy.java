@@ -402,10 +402,11 @@ public interface Policy<K, V> {
      * @param value value to be associated with the specified key
      * @param duration the length of time from now when the entry should be automatically removed
      * @param unit the unit that {@code duration} is expressed in
-     * @return {@code true} if this cache did not already contain the specified entry
+     * @return the previous value associated with the specified key, or {@code null} if there was no
+     *         mapping for the key.
      * @throws IllegalArgumentException if {@code duration} is negative
      */
-    boolean putIfAbsent(@NonNull K key, @NonNull V value,
+    @Nullable V putIfAbsent(@NonNull K key, @NonNull V value,
         @NonNegative long duration, @NonNull TimeUnit unit);
 
     /**
@@ -417,18 +418,19 @@ public interface Policy<K, V> {
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
      * @param duration the length of time from now when the entry should be automatically removed
-     * @return {@code true} if this cache did not already contain the specified entry
+     * @return the previous value associated with the specified key, or {@code null} if there was no
+     *         mapping for the key.
      * @throws IllegalArgumentException if {@code duration} is negative
      */
-    default boolean putIfAbsent(@NonNull K key, @NonNull V value, @NonNull Duration duration) {
+    default @Nullable V putIfAbsent(@NonNull K key, @NonNull V value, @NonNull Duration duration) {
       return putIfAbsent(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
     }
 
     /**
      * Associates the {@code value} with the {@code key} in this cache. If the cache previously
      * contained a value associated with the {@code key}, the old value is replaced by the new
-     * {@code value}. This method differs from {@link Cache#put} by substituting the
-     * configured {@link Expiry} with the specified write duration.
+     * {@code value}. This method differs from {@link Cache#put} by substituting the configured
+     * {@link Expiry} with the specified write duration.
      * <p>
      * This method is scheduled for removal in version 3.0.0.
      *
@@ -436,10 +438,13 @@ public interface Policy<K, V> {
      * @param value value to be associated with the specified key
      * @param duration the length of time from now when the entry should be automatically removed
      * @param unit the unit that {@code duration} is expressed in
+     * @return the previous value associated with {@code key}, or {@code null} if there was no
+     *         mapping for {@code key}.
      * @throws IllegalArgumentException if {@code duration} is negative
      * @throws NullPointerException if the specified key or value is null
      */
-    void put(@NonNull K key, @NonNull V value, @NonNegative long duration, @NonNull TimeUnit unit);
+    @Nullable V put(@NonNull K key, @NonNull V value,
+        @NonNegative long duration, @NonNull TimeUnit unit);
 
     /**
      * Associates the {@code value} with the {@code key} in this cache. If the cache previously
@@ -450,10 +455,13 @@ public interface Policy<K, V> {
      * @param key the key with which the specified value is to be associated
      * @param value value to be associated with the specified key
      * @param duration the length of time from now when the entry should be automatically removed
+     * @return the previous value associated with {@code key}, or {@code null} if there was no
+     *         mapping for {@code key}.
      * @throws IllegalArgumentException if {@code duration} is negative
+     * @throws NullPointerException if the specified key or value is null
      */
-    default void put(@NonNull K key, @NonNull V value, @NonNull Duration duration) {
-      put(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
+    default @Nullable V put(@NonNull K key, @NonNull V value, @NonNull Duration duration) {
+      return put(key, value, duration.toNanos(), TimeUnit.NANOSECONDS);
     }
 
     /**
