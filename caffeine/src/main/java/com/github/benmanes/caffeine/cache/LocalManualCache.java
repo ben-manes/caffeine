@@ -136,12 +136,12 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
   }
 
   @Override
-  default void invalidate(Object key) {
+  default void invalidate(K key) {
     cache().remove(key);
   }
 
   @Override
-  default void invalidateAll(Iterable<?> keys) {
+  default void invalidateAll(Iterable<? extends K> keys) {
     cache().invalidateAll(keys);
   }
 

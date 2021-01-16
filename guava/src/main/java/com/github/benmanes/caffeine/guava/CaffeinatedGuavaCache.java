@@ -110,12 +110,16 @@ class CaffeinatedGuavaCache<K, V> implements Cache<K, V>, Serializable {
 
   @Override
   public void invalidate(Object key) {
-    cache.invalidate(key);
+    @SuppressWarnings("unchecked")
+    K castedKey = (K) key;
+    cache.invalidate(castedKey);
   }
 
   @Override
   public void invalidateAll(Iterable<?> keys) {
-    cache.invalidateAll(keys);
+    @SuppressWarnings("unchecked")
+    var castedKeys = (Iterable<? extends K>) keys;
+    cache.invalidateAll(castedKeys);
   }
 
   @Override

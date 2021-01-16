@@ -25,7 +25,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import com.google.errorprone.annotations.CompatibleWith;
 
 /**
  * A semi-persistent mapping from keys to values. Cache entries are manually added using
@@ -156,7 +155,7 @@ public interface Cache<K, V> {
    * @param key the key whose mapping is to be removed from the cache
    * @throws NullPointerException if the specified key is null
    */
-  void invalidate(@NonNull @CompatibleWith("K") Object key);
+  void invalidate(@NonNull K key);
 
   /**
    * Discards any cached values for the {@code keys}. The behavior of this operation is undefined
@@ -165,7 +164,7 @@ public interface Cache<K, V> {
    * @param keys the keys whose associated values are to be removed
    * @throws NullPointerException if the specified collection is null or contains a null element
    */
-  void invalidateAll(@NonNull Iterable<@NonNull ?> keys);
+  void invalidateAll(@NonNull Iterable<? extends @NonNull K> keys);
 
   /**
    * Discards all entries in the cache. The behavior of this operation is undefined for an entry

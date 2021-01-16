@@ -543,12 +543,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    public void invalidate(Object key) {
+    public void invalidate(K key) {
       asyncCache().cache().remove(key);
     }
 
     @Override
-    public void invalidateAll(Iterable<?> keys) {
+    public void invalidateAll(Iterable<? extends K> keys) {
       asyncCache().cache().invalidateAll(keys);
     }
 
