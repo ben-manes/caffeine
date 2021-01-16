@@ -243,12 +243,12 @@ public final class GuavaCacheFromContext {
     }
 
     @Override
-    public void invalidate(Object key) {
+    public void invalidate(K key) {
       cache.invalidate(key);
     }
 
     @Override
-    public void invalidateAll(Iterable<?> keys) {
+    public void invalidateAll(Iterable<? extends K> keys) {
       keys.forEach(this::invalidate);
     }
 
