@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -183,7 +184,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    */
   @Override @NonNull
   default CompletableFuture<V> asyncReload(
-      @NonNull K key, @NonNull V oldValue, @NonNull Executor executor) {
+      @NonNull K key, @NonNull V oldValue, @NonNull Executor executor) throws Exception {
     requireNonNull(key);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {
@@ -195,5 +196,32 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
         throw new CompletionException(e);
       }
     }, executor);
+  }
+
+  /**
+   * Returns a cache loader that delegates to the supplied mapping function for retrieving the
+   * values. Note that {@link #load(} will discard any additional mappings loaded when retrieving
+   * the {@code key} prior to returning to the value to the cache.
+   * <p>
+   * Usage example:
+   * <pre>{@code
+   *   CacheLoader<Key, Graph> loader = CacheLoader.bulk(keys -> createExpensiveGraphs(keys));
+   *   LoadingCache<Key, Graph> cache = Caffeine.newBuilder().build(loader);
+   * }</pre>
+   *
+   * @param mappingFunction the function to compute the values
+   * @return a cache loader that delegates to the supplied {@code mappingFunction}
+   * @throws NullPointerException if the mappingFunction is null
+   */
+  static <K, V> CacheLoader<K, V> bulk(Function<Set<? extends K>, Map<K, V>> mappingFunction) {
+    requireNonNull(mappingFunction);
+    return new CacheLoader<K, V>() {
+      @Override public @Nullable V load(K key) {
+        return loadAll(Set.of(key)).get(key);
+      }
+      @Override public Map<K, V> loadAll(Set<? extends K> keys) {
+        return mappingFunction.apply(keys);
+      }
+    };
   }
 }
