@@ -513,7 +513,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @SuppressWarnings({"PMD.AvoidThrowingNullPointerException", "PMD.PreserveStackTrace"})
-    protected static <T> T resolve(CompletableFuture<T> future) throws Error {
+    protected static <T> T resolve(CompletableFuture<T> future) {
       try {
         return future.get();
       } catch (ExecutionException e) {
@@ -526,6 +526,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
         }
         throw new CompletionException(e.getCause());
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new CompletionException(e);
       }
     }

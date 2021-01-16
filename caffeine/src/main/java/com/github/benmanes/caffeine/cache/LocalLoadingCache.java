@@ -106,13 +106,22 @@ interface LocalLoadingCache<K, V> extends LocalManualCache<K, V>, LoadingCache<K
         return existing;
       }
 
-      startTime[0] = cache().statsTicker().read();
-      oldValue[0] = cache().getIfPresentQuietly(key, writeTime);
-      CompletableFuture<V> refreshFuture = (oldValue[0] == null)
-          ? cacheLoader().asyncLoad(key, cache().executor())
-          : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
-      reloading[0] = refreshFuture;
-      return refreshFuture;
+      try {
+        startTime[0] = cache().statsTicker().read();
+        oldValue[0] = cache().getIfPresentQuietly(key, writeTime);
+        CompletableFuture<V> refreshFuture = (oldValue[0] == null)
+            ? cacheLoader().asyncLoad(key, cache().executor())
+            : cacheLoader().asyncReload(key, oldValue[0], cache().executor());
+        reloading[0] = refreshFuture;
+        return refreshFuture;
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CompletionException(e);
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
     });
 
     if (reloading[0] != null) {

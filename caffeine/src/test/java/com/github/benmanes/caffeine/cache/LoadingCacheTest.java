@@ -18,7 +18,9 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.either;
@@ -765,5 +767,27 @@ public final class LoadingCacheTest {
     CacheLoader<Integer, Integer> loader = key -> -key;
     CompletableFuture<?> future = loader.asyncReload(1, 2, Runnable::run);
     assertThat(future.get(), is(-1));
+  }
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void bulk_null() {
+    CacheLoader.bulk(null);
+  }
+
+  @Test
+  public void bulk_absent() throws Exception {
+    CacheLoader<Integer, Integer> loader = CacheLoader.bulk(keys -> Map.of());
+    assertThat(loader.loadAll(Set.of(1)), is(Map.of()));
+    assertThat(loader.load(1), is(nullValue()));
+  }
+
+  @Test
+  public void bulk_present() throws Exception {
+    CacheLoader<Integer, Integer> loader = CacheLoader.bulk(keys -> {
+      Map<Integer, Integer> results = keys.stream().collect(toMap(identity(), identity()));
+      return results;
+    });
+    assertThat(loader.loadAll(Set.of(1, 2)), is(Map.of(1, 1, 2, 2)));
+    assertThat(loader.load(1), is(1));
   }
 }

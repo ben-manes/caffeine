@@ -55,6 +55,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -1225,24 +1226,33 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @SuppressWarnings({"unchecked", "rawtypes"})
       CompletableFuture<V>[] refreshFuture = new CompletableFuture[1];
       refreshes().computeIfAbsent(keyReference, k -> {
-        startTime[0] = statsTicker().read();
-        if (isAsync) {
-          @SuppressWarnings("unchecked")
-          CompletableFuture<V> future = (CompletableFuture<V>) oldValue;
-          if (Async.isReady(future)) {
-            @SuppressWarnings("NullAway")
-            var refresh = cacheLoader.asyncReload(key, future.join(), executor);
-            refreshFuture[0] = refresh;
+        try {
+          startTime[0] = statsTicker().read();
+          if (isAsync) {
+            @SuppressWarnings("unchecked")
+            CompletableFuture<V> future = (CompletableFuture<V>) oldValue;
+            if (Async.isReady(future)) {
+              @SuppressWarnings("NullAway")
+              var refresh = cacheLoader.asyncReload(key, future.join(), executor);
+              refreshFuture[0] = refresh;
+            } else {
+              // no-op if load is pending
+              return future;
+            }
           } else {
-            // no-op if load is pending
-            return future;
+            @SuppressWarnings("NullAway")
+            var refresh = cacheLoader.asyncReload(key, oldValue, executor);
+            refreshFuture[0] = refresh;
           }
-        } else {
-          @SuppressWarnings("NullAway")
-          var refresh = cacheLoader.asyncReload(key, oldValue, executor);
-          refreshFuture[0] = refresh;
+          return refreshFuture[0];
+        } catch (RuntimeException e) {
+          throw e;
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new CompletionException(e);
+        } catch (Exception e) {
+          throw new CompletionException(e);
         }
-        return refreshFuture[0];
       });
 
       if (refreshFuture[0] != null) {
@@ -3956,17 +3966,18 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         this.loader = requireNonNull(loader);
       }
 
-      @Override public V load(K key) {
+      @Override public V load(K key) throws Exception {
         @SuppressWarnings("unchecked")
         V newValue = (V) loader.asyncLoad(key, executor);
         return newValue;
       }
-      @Override public V reload(K key, V oldValue) {
+      @Override public V reload(K key, V oldValue) throws Exception {
         @SuppressWarnings("unchecked")
         V newValue = (V) loader.asyncReload(key, oldValue, executor);
         return newValue;
       }
-      @Override public CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) {
+      @Override public CompletableFuture<V> asyncReload(
+          K key, V oldValue, Executor executor) throws Exception {
         return loader.asyncReload(key, oldValue, executor);
       }
     }

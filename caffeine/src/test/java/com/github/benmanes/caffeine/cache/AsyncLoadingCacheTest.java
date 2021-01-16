@@ -19,6 +19,8 @@ import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier
 import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -37,6 +39,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.testng.Assert;
 import org.testng.annotations.Listeners;
@@ -398,17 +402,50 @@ public final class AsyncLoadingCacheTest {
   /* --------------- AsyncCacheLoader --------------- */
 
   @Test(expectedExceptions = UnsupportedOperationException.class)
-  public void asyncLoadAll() {
+  public void asyncLoadAll() throws Exception {
     AsyncCacheLoader<Integer, Integer> loader =
         (key, executor) -> CompletableFuture.completedFuture(-key);
     loader.asyncLoadAll(Set.of(), Runnable::run).join();
   }
 
   @Test
-  public void asyncReload() {
+  public void asyncReload() throws Exception {
     AsyncCacheLoader<Integer, Integer> loader =
         (key, executor) -> CompletableFuture.completedFuture(-key);
     CompletableFuture<?> future = loader.asyncReload(1, 2, Runnable::run);
     assertThat(future.join(), is(-1));
+  }
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void bulk_function_null_() {
+    Function<Set<? extends Integer>, Map<Integer, Integer>> f = null;
+    AsyncCacheLoader.bulk(f);
+  }
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void bulk_bifunction_null_() {
+    BiFunction<Set<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f = null;
+    AsyncCacheLoader.bulk(f);
+  }
+
+  @Test
+  public void bulk_absent() throws Exception {
+    BiFunction<Set<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f =
+        (keys, executor) -> CompletableFuture.completedFuture(Map.of());
+    AsyncCacheLoader<Integer, Integer> loader = AsyncCacheLoader.bulk(f);
+    assertThat(loader.asyncLoadAll(Set.of(), Runnable::run).join(), is(Map.of()));
+    assertThat(loader.asyncLoad(1, Runnable::run).join(), is(nullValue()));
+  }
+
+  @Test
+  public void bulk_present() throws Exception {
+    BiFunction<Set<? extends Integer>, Executor, CompletableFuture<Map<Integer, Integer>>> f =
+        (keys, executor) -> {
+          Map<Integer, Integer> results = keys.stream().collect(toMap(identity(), identity()));
+          return CompletableFuture.completedFuture(results);
+        };
+    AsyncCacheLoader<Integer, Integer> loader = AsyncCacheLoader.bulk(f);
+    assertThat(loader.asyncLoadAll(Set.of(1, 2), Runnable::run).join(), is(Map.of(1, 1, 2, 2)));
+    assertThat(loader.asyncLoad(1, Runnable::run).join(), is(1));
   }
 }

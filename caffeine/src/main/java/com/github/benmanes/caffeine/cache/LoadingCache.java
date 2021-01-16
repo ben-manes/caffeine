@@ -110,5 +110,6 @@ public interface LoadingCache<K, V> extends Cache<K, V> {
    * @return the future that is loading the value
    * @throws NullPointerException if the specified key is null
    */
+  @NonNull
   CompletableFuture<V> refresh(@NonNull K key);
 }

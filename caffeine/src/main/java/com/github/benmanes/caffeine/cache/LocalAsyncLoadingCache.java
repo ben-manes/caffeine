@@ -24,7 +24,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -39,19 +41,66 @@ abstract class LocalAsyncLoadingCache<K, V>
     implements LocalAsyncCache<K, V>, AsyncLoadingCache<K, V> {
   static final Logger logger = System.getLogger(LocalAsyncLoadingCache.class.getName());
 
-  final boolean canBulkLoad;
+  @Nullable
+  final BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> bulkMappingFunction;
+  final BiFunction<K, Executor, CompletableFuture<V>> mappingFunction;
   final AsyncCacheLoader<K, V> loader;
 
   @Nullable LoadingCacheView<K, V> cacheView;
 
   @SuppressWarnings("unchecked")
   LocalAsyncLoadingCache(AsyncCacheLoader<? super K, V> loader) {
+    this.bulkMappingFunction = newBulkMappingFunction(loader);
+    this.mappingFunction = newMappingFunction(loader);
     this.loader = (AsyncCacheLoader<K, V>) loader;
-    this.canBulkLoad = canBulkLoad(loader);
+  }
+
+  /** Returns a mapping function that adapts to {@link AsyncCacheLoader#asyncLoad}. */
+  BiFunction<K, Executor, CompletableFuture<V>> newMappingFunction(
+      AsyncCacheLoader<? super K, V> cacheLoader) {
+    return (key, executor) -> {
+      try {
+        return cacheLoader.asyncLoad(key, executor);
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CompletionException(e);
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
+    };
+  }
+
+  /**
+   * Returns a mapping function that adapts to {@link AsyncCacheLoader#asyncLoadAll}, if
+   * implemented.
+   */
+  @Nullable
+  BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> newBulkMappingFunction(
+      AsyncCacheLoader<? super K, V> cacheLoader) {
+    if (!canBulkLoad(cacheLoader)) {
+      return null;
+    }
+    return (keysToLoad, executor) -> {
+      try {
+        @SuppressWarnings("unchecked")
+        var loaded = (CompletableFuture<Map<K, V>>) (Object) cacheLoader
+            .asyncLoadAll(keysToLoad, executor);
+        return loaded;
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new CompletionException(e);
+      } catch (Exception e) {
+        throw new CompletionException(e);
+      }
+    };
   }
 
   /** Returns whether the supplied cache loader has bulk load functionality. */
-  private static boolean canBulkLoad(AsyncCacheLoader<?, ?> loader) {
+  boolean canBulkLoad(AsyncCacheLoader<?, ?> loader) {
     try {
       Class<?> defaultLoaderClass = AsyncCacheLoader.class;
       if (loader instanceof CacheLoader<?, ?>) {
@@ -77,13 +126,13 @@ abstract class LocalAsyncLoadingCache<K, V>
 
   @Override
   public CompletableFuture<V> get(K key) {
-    return get(key, loader::asyncLoad);
+    return get(key, mappingFunction);
   }
 
   @Override
   public CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys) {
-    if (canBulkLoad) {
-      return getAll(keys, loader::asyncLoadAll);
+    if (bulkMappingFunction != null) {
+      return getAll(keys, bulkMappingFunction);
     }
 
     Map<K, CompletableFuture<V>> result = new LinkedHashMap<>();
@@ -166,8 +215,7 @@ abstract class LocalAsyncLoadingCache<K, V>
         if (oldValueFuture != null) {
           asyncCache.cache().remove(key, asyncCache);
         }
-        var future = asyncCache.get(key,
-            asyncCache.loader::asyncLoad, /* recordStats */ false);
+        var future = asyncCache.get(key, asyncCache.mappingFunction, /* recordStats */ false);
         @SuppressWarnings("unchecked")
         var prior = (CompletableFuture<V>) asyncCache.cache()
             .refreshes().putIfAbsent(keyReference, future);
@@ -198,7 +246,16 @@ abstract class LocalAsyncLoadingCache<K, V>
 
         refreshed[0] = true;
         startTime[0] = asyncCache.cache().statsTicker().read();
-        return asyncCache.loader.asyncReload(key, oldValue, asyncCache.cache().executor());
+        try {
+          return asyncCache.loader.asyncReload(key, oldValue, asyncCache.cache().executor());
+        } catch (RuntimeException e) {
+          throw e;
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new CompletionException(e);
+        } catch (Exception e) {
+          throw new CompletionException(e);
+        }
       });
 
       if (future == null) {
