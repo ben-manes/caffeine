@@ -20,10 +20,10 @@ import static java.util.Objects.requireNonNull;
 import java.io.Serializable;
 import java.util.Objects;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A customized expiration policy.
@@ -37,7 +37,7 @@ public final class JCacheExpiryPolicy implements ExpiryPolicy, Serializable {
   private final @Nullable Duration update;
   private final @Nullable Duration access;
 
-  public JCacheExpiryPolicy(@NonNull Duration creation,
+  public JCacheExpiryPolicy(Duration creation,
       @Nullable Duration update, @Nullable Duration access) {
     this.creation = requireNonNull(creation);
     this.update = update;

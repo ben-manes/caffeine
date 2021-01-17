@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.lang.ref.ReferenceQueue;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
@@ -42,7 +41,6 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
    * Returns the reference that the cache is holding the entry by. This is either the key if
    * strongly held or a {@link java.lang.ref.WeakReference} to that key.
    */
-  @NonNull
   public abstract Object getKeyReference();
 
   /** Return the value or {@code null} if it has been reclaimed by the garbage collector. */
@@ -53,7 +51,6 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
    * Returns the reference to the value. This is either the value if strongly held or a
    * {@link java.lang.ref.Reference} to that value.
    */
-  @NonNull
   public abstract Object getValueReference();
 
   /**
@@ -61,13 +58,13 @@ abstract class Node<K, V> implements AccessOrder<Node<K, V>>, WriteOrder<Node<K,
    * and rely on the memory fence when the lock is released.
    */
   @GuardedBy("this")
-  public abstract void setValue(@NonNull V value, @Nullable ReferenceQueue<V> referenceQueue);
+  public abstract void setValue(V value, @Nullable ReferenceQueue<V> referenceQueue);
 
   /**
    * Returns {@code true} if the given objects are considered equivalent. A strongly held value is
    * compared by equality and a weakly or softly held value is compared by identity.
    */
-  public abstract boolean containsValue(@NonNull Object value);
+  public abstract boolean containsValue(Object value);
 
   /** Returns the weight of this entry from the entry's perspective. */
   @NonNegative

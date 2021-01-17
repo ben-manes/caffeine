@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache.stats;
 import java.util.Objects;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -115,7 +114,6 @@ public final class CacheStats {
    *
    * @return an empty statistics instance
    */
-  @NonNull
   public static CacheStats empty() {
     return EMPTY_STATS;
   }
@@ -308,8 +306,7 @@ public final class CacheStats {
    * @param other the statistics to subtract with
    * @return the difference between this instance and {@code other}
    */
-  @NonNull
-  public CacheStats minus(@NonNull CacheStats other) {
+  public CacheStats minus(CacheStats other) {
     return CacheStats.of(
         Math.max(0L, saturatedSubtract(hitCount, other.hitCount)),
         Math.max(0L, saturatedSubtract(missCount, other.missCount)),
@@ -331,8 +328,7 @@ public final class CacheStats {
    * @param other the statistics to add with
    * @return the sum of the statistics
    */
-  @NonNull
-  public CacheStats plus(@NonNull CacheStats other) {
+  public CacheStats plus(CacheStats other) {
     return CacheStats.of(
         saturatedAdd(hitCount, other.hitCount),
         saturatedAdd(missCount, other.missCount),

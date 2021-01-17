@@ -70,7 +70,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
@@ -755,12 +754,12 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       K victimKey = victim.getKey();
       K candidateKey = candidate.getKey();
       if (victimKey == null) {
-        @NonNull Node<K, V> evict = victim;
+        Node<K, V> evict = victim;
         victim = victim.getNextInAccessOrder();
         evictEntry(evict, RemovalCause.COLLECTED, 0L);
         continue;
       } else if (candidateKey == null) {
-        @NonNull Node<K, V> evict = candidate;
+        Node<K, V> evict = candidate;
         candidate = (candidates > 0)
             ? candidate.getPreviousInAccessOrder()
             : candidate.getNextInAccessOrder();
@@ -3558,7 +3557,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       @Override public boolean isWeighted() {
         return isWeighted;
       }
-      @Override public OptionalInt weightOf(@NonNull K key) {
+      @Override public OptionalInt weightOf(K key) {
         requireNonNull(key);
         if (!isWeighted) {
           return OptionalInt.empty();

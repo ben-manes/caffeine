@@ -23,8 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
@@ -113,7 +111,7 @@ final class CaffeinatedGuavaLoadingCache<K, V> extends CaffeinatedGuavaCache<K, 
 
   @Override
   @SuppressWarnings("NullAway")
-  public V apply(@NonNull K key) {
+  public V apply(K key) {
     return cache.get(key);
   }
 

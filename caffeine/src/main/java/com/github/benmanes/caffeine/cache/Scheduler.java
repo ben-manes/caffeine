@@ -28,9 +28,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.checkerframework.checker.index.qual.Positive;
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 /**
  * A scheduler that submits a task to an executor after a given delay.
  *
@@ -48,15 +45,14 @@ public interface Scheduler {
    * @param unit a {@code TimeUnit} determining how to interpret the {@code delay} parameter
    * @return a scheduled future representing pending submission of the task
    */
-  @NonNull Future<?> schedule(@NonNull Executor executor,
-      @NonNull Runnable command, @Positive long delay, @NonNull TimeUnit unit);
+  Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit);
 
   /**
    * Returns a scheduler that always returns a successfully completed future.
    *
    * @return a scheduler that always returns a successfully completed future
    */
-  static @NonNull Scheduler disabledScheduler() {
+  static Scheduler disabledScheduler() {
     return DisabledScheduler.INSTANCE;
   }
 
@@ -66,7 +62,7 @@ public interface Scheduler {
    *
    * @return a scheduler that uses the system-wide scheduling thread
    */
-  static @NonNull Scheduler systemScheduler() {
+  static Scheduler systemScheduler() {
     return SystemScheduler.INSTANCE;
   }
 
@@ -76,8 +72,7 @@ public interface Scheduler {
    * @param scheduledExecutorService the executor to schedule on
    * @return a scheduler that delegates to the a {@link ScheduledExecutorService}
    */
-  static @NonNull Scheduler forScheduledExecutorService(
-      @NonNull ScheduledExecutorService scheduledExecutorService) {
+  static Scheduler forScheduledExecutorService(ScheduledExecutorService scheduledExecutorService) {
     return new ExecutorServiceScheduler(scheduledExecutorService);
   }
 
@@ -88,7 +83,7 @@ public interface Scheduler {
    * @param scheduler the scheduler to delegate to
    * @return an scheduler that suppresses and logs any exception thrown by the delegate
    */
-  static @NonNull Scheduler guardedScheduler(@NonNull Scheduler scheduler) {
+  static Scheduler guardedScheduler(Scheduler scheduler) {
     return (scheduler instanceof GuardedScheduler) ? scheduler : new GuardedScheduler(scheduler);
   }
 }
@@ -144,8 +139,7 @@ final class GuardedScheduler implements Scheduler, Serializable {
   }
 
   @Override
-  public @NonNull Future<?> schedule(@NonNull Executor executor,
-      @NonNull Runnable command, long delay, @NonNull TimeUnit unit) {
+  public Future<?> schedule(Executor executor, Runnable command, long delay, TimeUnit unit) {
     try {
       Future<?> future = delegate.schedule(executor, command, delay, unit);
       return (future == null) ? DisabledFuture.INSTANCE : future;

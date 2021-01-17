@@ -41,7 +41,6 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.LocalAsyncCache.AsyncBulkCompleter.NullMapCompletionException;
@@ -63,13 +62,12 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   Policy<K, V> policy();
 
   @Override
-  default @Nullable CompletableFuture<V> getIfPresent(@NonNull K key) {
+  default @Nullable CompletableFuture<V> getIfPresent(K key) {
     return cache().getIfPresent(key, /* recordStats */ true);
   }
 
   @Override
-  default CompletableFuture<V> get(@NonNull K key,
-      @NonNull Function<? super K, ? extends V> mappingFunction) {
+  default CompletableFuture<V> get(K key, Function<? super K, ? extends V> mappingFunction) {
     requireNonNull(mappingFunction);
     return get(key, (k1, executor) -> CompletableFuture.supplyAsync(
         () -> mappingFunction.apply(key), executor));
@@ -98,7 +96,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   }
 
   @Override
-  default CompletableFuture<Map<K, V>> getAll(Iterable<? extends @NonNull K> keys,
+  default CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys,
       Function<Set<? extends K>, Map<K, V>> mappingFunction) {
     requireNonNull(mappingFunction);
     return getAll(keys, (keysToLoad, executor) ->
@@ -107,7 +105,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
-  default CompletableFuture<Map<K, V>> getAll(Iterable<? extends @NonNull K> keys,
+  default CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys,
       BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
     requireNonNull(mappingFunction);
     requireNonNull(keys);
