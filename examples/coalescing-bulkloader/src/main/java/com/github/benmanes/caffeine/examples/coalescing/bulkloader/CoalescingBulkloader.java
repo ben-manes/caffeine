@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * An implementation of {@link AsyncCacheLoader} that delays fetching a bit until "enough" keys are collected
@@ -141,7 +140,7 @@ public class CoalescingBulkloader<Key, Value> implements AsyncCacheLoader<Key, V
         this.maxDelay = maxDelay;
     }
 
-    @Override public @NonNull CompletableFuture<Value> asyncLoad(@NonNull Key key, @NonNull Executor executor) {
+    @Override public CompletableFuture<Value> asyncLoad(Key key, Executor executor) {
         final WaitingKey waitingKey = new WaitingKey();
         waitingKey.key = key;
         waitingKey.future = new CompletableFuture<>();

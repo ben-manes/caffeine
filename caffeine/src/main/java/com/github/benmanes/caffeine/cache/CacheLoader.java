@@ -24,7 +24,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -59,7 +58,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    *         caught, the thread's interrupt status is set
    */
   @Nullable
-  V load(@NonNull K key) throws Exception;
+  V load(K key) throws Exception;
 
   /**
    * Computes or retrieves the values corresponding to {@code keys}. This method is called by
@@ -84,9 +83,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  @NonNull
-  default Map<@NonNull K, @NonNull V> loadAll(
-      @NonNull Set<? extends @NonNull K> keys) throws Exception {
+  default Map<K, V> loadAll(Set<? extends K> keys) throws Exception {
     throw new UnsupportedOperationException();
   }
 
@@ -97,8 +94,8 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    * @param executor the executor that asynchronously loads the entry
    * @return the future value associated with {@code key}
    */
-  @Override @NonNull
-  default CompletableFuture<V> asyncLoad(@NonNull K key, @NonNull Executor executor) {
+  @Override
+  default CompletableFuture<V> asyncLoad(K key, Executor executor) {
     requireNonNull(key);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {
@@ -130,9 +127,8 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    * @return a future containing the map from each key in {@code keys} to the value associated with
    *         that key; <b>may not contain null values</b>
    */
-  @Override @NonNull
-  default CompletableFuture<Map<@NonNull K, @NonNull V>> asyncLoadAll(
-      @NonNull Set<? extends K> keys, @NonNull Executor executor) {
+  @Override
+  default CompletableFuture<Map<K, V>> asyncLoadAll(Set<? extends K> keys, Executor executor) {
     requireNonNull(keys);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {
@@ -164,7 +160,7 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    *         caught, the thread's interrupt status is set
    */
   @Nullable
-  default V reload(@NonNull K key, @NonNull V oldValue) throws Exception {
+  default V reload(K key, V oldValue) throws Exception {
     return load(key);
   }
 
@@ -182,9 +178,8 @@ public interface CacheLoader<K, V> extends AsyncCacheLoader<K, V> {
    * @return a future containing the new value associated with {@code key}, or containing
    *         {@code null} if the mapping is to be removed
    */
-  @Override @NonNull
-  default CompletableFuture<V> asyncReload(
-      @NonNull K key, @NonNull V oldValue, @NonNull Executor executor) throws Exception {
+  @Override
+  default CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) throws Exception {
     requireNonNull(key);
     requireNonNull(executor);
     return CompletableFuture.supplyAsync(() -> {

@@ -18,8 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache
  * asynchronously, and are stored in the cache until either evicted or manually invalidated.
@@ -49,8 +47,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    * @throws RuntimeException or Error if the {@link AsyncCacheLoader} does when constructing the
    *         future, in which case the mapping is left unestablished
    */
-  @NonNull
-  CompletableFuture<V> get(@NonNull K key);
+  CompletableFuture<V> get(K key);
 
   /**
    * Returns the future of a map of the values associated with {@code keys}, creating or retrieving
@@ -78,8 +75,7 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *         {@link AsyncCacheLoader#asyncLoadAll} returns {@code null}, or fails when constructing
    *         the future, in which case the mapping is left unestablished
    */
-  @NonNull
-  CompletableFuture<Map<K, V>> getAll(@NonNull Iterable<? extends @NonNull K> keys);
+  CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys);
 
   /**
    * Returns a view of the entries stored in this cache as a synchronous {@link LoadingCache}. A
@@ -89,7 +85,6 @@ public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
    *
    * @return a thread-safe synchronous view of this cache
    */
-  @NonNull
   @Override
   LoadingCache<K, V> synchronous();
 }

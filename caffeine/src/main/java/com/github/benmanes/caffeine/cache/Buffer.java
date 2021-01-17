@@ -17,8 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.function.Consumer;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 /**
  * A multiple-producer / single-consumer buffer that rejects new elements if it is full or
  * fails spuriously due to contention. Unlike a queue and stack, a buffer does not guarantee an
@@ -50,7 +48,7 @@ interface Buffer<E> {
    * @param e the element to add
    * @return {@code 1} if the buffer is full, {@code -1} if the CAS failed, or {@code 0} if added
    */
-  int offer(@NonNull E e);
+  int offer(E e);
 
   /**
    * Drains the buffer, sending each element to the consumer for processing. The caller must ensure
@@ -58,7 +56,7 @@ interface Buffer<E> {
    *
    * @param consumer the action to perform on each element
    */
-  void drainTo(@NonNull Consumer<E> consumer);
+  void drainTo(Consumer<E> consumer);
 
   /**
    * Returns the number of elements residing in the buffer.

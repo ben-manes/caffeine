@@ -35,8 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Policy;
@@ -435,7 +433,7 @@ public final class GuavaCacheFromContext {
         @Override public boolean isRecordingStats() {
           return isRecordingStats;
         }
-        @Override public V getIfPresentQuietly(@NonNull Object key) {
+        @Override public V getIfPresentQuietly(K key) {
           return cache.asMap().get(key);
         }
         @Override public Optional<Eviction<K, V>> eviction() {

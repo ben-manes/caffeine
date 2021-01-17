@@ -26,7 +26,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -58,6 +57,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
   }
 
   @Override
+  @SuppressWarnings("NullAway")
   default @Nullable V get(K key, Function<? super K, ? extends V> mappingFunction) {
     return cache().computeIfAbsent(key, mappingFunction);
   }
@@ -95,7 +95,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
    * during the load are replaced when the loaded entries are inserted into the cache.
    */
   default void bulkLoad(Set<K> keysToLoad, Map<K, V> result,
-      Function<Set<? extends @NonNull K>, @NonNull Map<K, V>> mappingFunction) {
+      Function<Set<? extends K>, Map<K, V>> mappingFunction) {
     boolean success = false;
     long startTime = cache().statsTicker().read();
     try {

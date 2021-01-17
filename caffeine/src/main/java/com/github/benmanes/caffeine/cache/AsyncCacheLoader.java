@@ -24,8 +24,6 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 /**
  * Computes or retrieves values asynchronously, based on a key, for use in populating a
  * {@link AsyncLoadingCache}.
@@ -57,8 +55,7 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  @NonNull
-  CompletableFuture<V> asyncLoad(@NonNull K key, @NonNull Executor executor) throws Exception;
+  CompletableFuture<V> asyncLoad(K key, Executor executor) throws Exception;
 
   /**
    * Asynchronously computes or retrieves the values corresponding to {@code keys}. This method is
@@ -82,9 +79,8 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  @NonNull
-  default CompletableFuture<Map<@NonNull K, @NonNull V>> asyncLoadAll(
-      @NonNull Set<? extends @NonNull K> keys, @NonNull Executor executor) throws Exception {
+  default CompletableFuture<Map<K, V>> asyncLoadAll(
+      Set<? extends K> keys, Executor executor) throws Exception {
     throw new UnsupportedOperationException();
   }
 
@@ -106,9 +102,7 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  @NonNull
-  default CompletableFuture<V> asyncReload(
-      @NonNull K key, @NonNull V oldValue, @NonNull Executor executor) throws Exception {
+  default CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) throws Exception {
     return asyncLoad(key, executor);
   }
 
@@ -128,7 +122,6 @@ public interface AsyncCacheLoader<K, V> {
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
    */
-  @NonNull
   static <K, V> AsyncCacheLoader<K, V> bulk(Function<Set<? extends K>, Map<K, V>> mappingFunction) {
     return CacheLoader.bulk(mappingFunction);
   }
@@ -149,7 +142,6 @@ public interface AsyncCacheLoader<K, V> {
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
    */
-  @NonNull
   static <K, V> AsyncCacheLoader<K, V> bulk(
       BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
     requireNonNull(mappingFunction);

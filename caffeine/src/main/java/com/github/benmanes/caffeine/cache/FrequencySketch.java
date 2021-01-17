@@ -18,7 +18,6 @@ package com.github.benmanes.caffeine.cache;
 import static com.github.benmanes.caffeine.cache.Caffeine.requireArgument;
 
 import org.checkerframework.checker.index.qual.NonNegative;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * A probabilistic multiset for estimating the popularity of an element within a time window. The
@@ -107,7 +106,7 @@ final class FrequencySketch<E> {
    * @return the estimated number of occurrences of the element; possibly zero but never negative
    */
   @NonNegative
-  public int frequency(@NonNull E e) {
+  public int frequency(E e) {
     if (isNotInitialized()) {
       return 0;
     }
@@ -130,7 +129,7 @@ final class FrequencySketch<E> {
    *
    * @param e the element to add
    */
-  public void increment(@NonNull E e) {
+  public void increment(E e) {
     if (isNotInitialized()) {
       return;
     }

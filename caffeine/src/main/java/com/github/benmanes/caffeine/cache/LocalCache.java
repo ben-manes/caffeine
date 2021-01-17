@@ -22,7 +22,6 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
@@ -39,7 +38,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   boolean isRecordingStats();
 
   /** Returns the {@link StatsCounter} used by this cache. */
-  @NonNull StatsCounter statsCounter();
+  StatsCounter statsCounter();
 
   /** Returns whether this cache notifies when an entry is removed. */
   boolean hasRemovalListener();
@@ -51,7 +50,7 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause);
 
   /** Returns the {@link Executor} used by this cache. */
-  @NonNull Executor executor();
+  Executor executor();
 
   /** Returns the map of in-flight refresh operations. */
   ConcurrentMap<Object, CompletableFuture<?>> refreshes();
@@ -63,10 +62,10 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
   @Nullable Expiry<K, V> expiry();
 
   /** Returns the {@link Ticker} used by this cache for expiration. */
-  @NonNull Ticker expirationTicker();
+  Ticker expirationTicker();
 
   /** Returns the {@link Ticker} used by this cache for statistics. */
-  @NonNull Ticker statsTicker();
+  Ticker statsTicker();
 
   /** See {@link Cache#estimatedSize()}. */
   long estimatedSize();
@@ -79,25 +78,24 @@ interface LocalCache<K, V> extends ConcurrentMap<K, V> {
    * to record the hit and miss statistics based on the success of this operation.
    */
   @Nullable
-  V getIfPresent(@NonNull K key, boolean recordStats);
+  V getIfPresent(K key, boolean recordStats);
 
   /**
    * See {@link Cache#getIfPresent(K)}. This method differs by not recording the access with
    * the statistics nor the eviction policy, and populates the write time if known.
    */
   @Nullable
-  V getIfPresentQuietly(@NonNull K key, @NonNull long[/* 1 */] writeTime);
+  V getIfPresentQuietly(K key, long[/* 1 */] writeTime);
 
   /** See {@link Cache#getAllPresent}. */
-  @NonNull
-  Map<K, V> getAllPresent(@NonNull Iterable<? extends K> keys);
+  Map<K, V> getAllPresent(Iterable<? extends K> keys);
 
   /**
    * See {@link Cache#put(Object, Object)}. This method differs by allowing the operation to not
    * notify the writer when an entry was inserted or updated.
    */
   @Nullable
-  V put(@NonNull K key, @NonNull V value, boolean notifyWriter);
+  V put(K key, V value, boolean notifyWriter);
 
   @Override
   default @Nullable V compute(K key,
