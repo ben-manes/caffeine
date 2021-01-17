@@ -34,7 +34,7 @@ public class AccessEvent {
   }
 
   /** Returns the key. */
-  public Long key() {
+  public long key() {
     return key;
   }
 
@@ -66,10 +66,10 @@ public class AccessEvent {
       return false;
     }
     AccessEvent event = (AccessEvent) o;
-    return Objects.equals(key(), event.key())
-        && Objects.equals(weight(), event.weight())
-        && Objects.equals(hitPenalty(), event.hitPenalty())
-        && Objects.equals(missPenalty(), event.missPenalty());
+    return (key() == event.key())
+        && (weight() == event.weight())
+        && (hitPenalty() == event.hitPenalty())
+        && (missPenalty() == event.missPenalty());
   }
 
   @Override

@@ -58,7 +58,7 @@ public final class UnboundedPolicy implements Policy {
   @Override
   public void record(AccessEvent event) {
     policyStats.recordOperation();
-    if (data.add(event.key().longValue())) {
+    if (data.add(event.key())) {
       policyStats.recordWeightedMiss(event.weight());
     } else {
       policyStats.recordWeightedHit(event.weight());

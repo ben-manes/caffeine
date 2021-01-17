@@ -49,7 +49,7 @@ import java.util.regex.Pattern;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("JdkObsolete")
+@SuppressWarnings({"JdkObsolete", "JavaUtilDate"})
 public abstract class AbstractCopier<A> implements Copier {
   private static final Map<Class<?>, Function<Object, Object>> JAVA_DEEP_COPY;
   private static final Set<Class<?>> JAVA_IMMUTABLE;

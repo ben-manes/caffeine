@@ -142,6 +142,7 @@ public final class CaffeineTest {
   }
 
   @Test
+  @SuppressWarnings("UnnecessaryMethodReference")
   public void async_asyncLoader() {
     Caffeine.newBuilder().buildAsync(loader::asyncLoad);
   }

@@ -23,6 +23,7 @@
     <trusted-key id='62ee8529396cdc00' group='com.clearspring.analytics' />
     <trusted-key id='c9fbaa83a8753994' group='com.fasterxml.jackson.core' />
     <trusted-key id='c9fbaa83a8753994' group='com.fasterxml.jackson.dataformat' />
+    <trusted-key id='07d3516820bcf6b1' group='com.github.ben-manes.caffeine' />
     <trusted-key id='3c0a8f4744f37328' group='com.github.ben-manes.caffeine' />
     <trusted-key id='935869efbf04b2a9' group='com.github.h908714124' />
     <trusted-key id='53dfc5afe188b729' group='com.github.jbellis' />
@@ -92,6 +93,7 @@
     <trusted-key id='a41f13c999945293' group='commons-logging' />
     <trusted-key id='379ce192d401ab61' group='info.picocli' />
     <trusted-key id='0d9cb5ee96b7bc22' group='io.airlift' />
+    <trusted-key id='a6ea2e2bf22e0543' group='io.github.java-diff-utils' />
     <trusted-key id='94b291aef984a085' group='io.reactivex.rxjava3' />
     <trusted-key id='5e2f2b3d474efe6b' group='it.unimi.dsi' />
     <trusted-key id='823dba283a93ee3c' group='it.unimi.dsi' />
@@ -484,6 +486,9 @@
       <sha512>18519D5F13C5FEF9AE97F388362B3F62798F268D07B37FC5DF3F01741C259B8D91D33E477718D0C9D2D204069D9E9C0B5806E48C392314ED2AA8D71DE6D15A44</sha512>
       <sha512>A056FCE66EA9664D1CF22C64D948FE7BFB809253ABAB646EB6C9DFAA5B2894377D2E403A40B5F965C4BFDFA83EAC06F0CC9511CBFA7FA4E8DB3F3F0C59716CCD</sha512>
       <sha512>AFC41AFD611214C500CACA4D826652E38D5DDD1BCF182D935AFFD2B5B8DF26650DFEB76E4C06C2D46593E1FB86BB4D093438E8E862666E64AB32FB4B6EFEA30D</sha512>
+    </dependency>
+    <dependency group='org.sonarsource.scanner.gradle' module='sonarqube-gradle-plugin' version='3.1'>
+      <sha512>EB7805D2B2321B4C0537C4BC228E2485EF374ED22F37001AAAA4790A983B6DE3642E19DFDF3ADECFC5921BAEA0FFBD092901955D8184AA67969C5B32A912108E</sha512>
     </dependency>
     <dependency group='org.testng' module='testng' version='7.0.0'>
       <sha512>D31295F9998A446F62AE7BA9B7EE39A0F898D9B185047800920B72EE53632EC54A7BDD9E5BE4BB41EFAFE9D4C209DC4227CE6C9CC230301FE762875EFBC3F7C9</sha512>

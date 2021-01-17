@@ -338,15 +338,15 @@ public final class CaffeineSpec {
       return false;
     }
     CaffeineSpec spec = (CaffeineSpec) o;
-    return Objects.equals(initialCapacity, spec.initialCapacity)
-        && Objects.equals(maximumSize, spec.maximumSize)
-        && Objects.equals(maximumWeight, spec.maximumWeight)
-        && Objects.equals(keyStrength, spec.keyStrength)
-        && Objects.equals(valueStrength, spec.valueStrength)
-        && Objects.equals(recordStats, spec.recordStats)
-        && Objects.equals(expireAfterWrite, spec.expireAfterWrite)
+    return Objects.equals(refreshAfterWrite, spec.refreshAfterWrite)
         && Objects.equals(expireAfterAccess, spec.expireAfterAccess)
-        && Objects.equals(refreshAfterWrite, spec.refreshAfterWrite);
+        && Objects.equals(expireAfterWrite, spec.expireAfterWrite)
+        && (initialCapacity == spec.initialCapacity)
+        && (maximumWeight == spec.maximumWeight)
+        && (valueStrength == spec.valueStrength)
+        && (keyStrength == spec.keyStrength)
+        && (maximumSize == spec.maximumSize)
+        && (recordStats == spec.recordStats);
   }
 
   @Override

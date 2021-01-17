@@ -69,10 +69,10 @@ public final class ClairvoyantPolicy implements Policy {
 
     tick++;
     recorder.add(event);
-    IntPriorityQueue times = accessTimes.get(event.key().longValue());
+    IntPriorityQueue times = accessTimes.get(event.key());
     if (times == null) {
       times = new IntArrayFIFOQueue();
-      accessTimes.put(event.key().longValue(), times);
+      accessTimes.put(event.key(), times);
     }
     times.enqueue(tick);
   }
@@ -133,7 +133,7 @@ public final class ClairvoyantPolicy implements Policy {
       future = new LongArrayFIFOQueue(maximumSize);
     }
     @Override public void add(AccessEvent event) {
-      future.enqueue(event.key().longValue());
+      future.enqueue(event.key());
     }
     @Override public void process() {
       while (!future.isEmpty()) {

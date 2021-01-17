@@ -915,7 +915,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
    * @param outer the outermost error, or null if unset
    * @return the outermost error, or null if unset and successful
    */
-  private static @Nullable Throwable tryClose(Object o, @Nullable Throwable outer) {
+  private static @Nullable Throwable tryClose(@Nullable Object o, @Nullable Throwable outer) {
     if (o instanceof Closeable) {
       try {
         ((Closeable) o).close();
