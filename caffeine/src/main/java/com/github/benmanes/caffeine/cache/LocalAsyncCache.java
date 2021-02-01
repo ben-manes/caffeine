@@ -74,20 +74,22 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   }
 
   @Override
-  default CompletableFuture<V> get(K key,
-      BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction) {
+  default CompletableFuture<V> get(K key, BiFunction<? super K, ? super Executor,
+      ? extends CompletableFuture<? extends V>> mappingFunction) {
     return get(key, mappingFunction, /* recordStats */ true);
   }
 
   @SuppressWarnings({"FutureReturnValueIgnored", "NullAway"})
   default CompletableFuture<V> get(K key,
-      BiFunction<? super K, Executor, CompletableFuture<V>> mappingFunction, boolean recordStats) {
+      BiFunction<? super K, ? super Executor, ? extends CompletableFuture<? extends V>> mappingFunction, boolean recordStats) {
     long startTime = cache().statsTicker().read();
     @SuppressWarnings({"unchecked", "rawtypes"})
-    CompletableFuture<V>[] result = new CompletableFuture[1];
+    CompletableFuture<? extends V>[] result = new CompletableFuture[1];
     CompletableFuture<V> future = cache().computeIfAbsent(key, k -> {
-      result[0] = mappingFunction.apply(key, cache().executor());
-      return requireNonNull(result[0]);
+      @SuppressWarnings("unchecked")
+      var castedResult = (CompletableFuture<V>) mappingFunction.apply(key, cache().executor());
+      result[0] = castedResult;
+      return requireNonNull(castedResult);
     }, recordStats, /* recordLoad */ false);
     if (result[0] != null) {
       handleCompletion(key, result[0], startTime, /* recordMiss */ false);
@@ -97,7 +99,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
   @Override
   default CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys,
-      Function<Set<? extends K>, Map<K, V>> mappingFunction) {
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);
     return getAll(keys, (keysToLoad, executor) ->
         CompletableFuture.supplyAsync(() -> mappingFunction.apply(keysToLoad), executor));
@@ -106,7 +108,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   default CompletableFuture<Map<K, V>> getAll(Iterable<? extends K> keys,
-      BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
+      BiFunction<? super Set<? extends K>, ? super Executor,
+          ? extends CompletableFuture<? extends Map<? extends K, ? extends V>>> mappingFunction) {
     requireNonNull(mappingFunction);
     requireNonNull(keys);
 
@@ -168,7 +171,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
-  default void put(K key, CompletableFuture<V> valueFuture) {
+  default void put(K key, CompletableFuture<? extends V> valueFuture) {
     if (valueFuture.isCompletedExceptionally()
         || (valueFuture.isDone() && (valueFuture.join() == null))) {
       cache().statsCounter().recordLoadFailure(0L);
@@ -176,12 +179,15 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
       return;
     }
     long startTime = cache().statsTicker().read();
-    cache().put(key, valueFuture);
+
+    @SuppressWarnings("unchecked")
+    var castedFuture = (CompletableFuture<V>) valueFuture;
+    cache().put(key, castedFuture);
     handleCompletion(key, valueFuture, startTime, /* recordMiss */ false);
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  default void handleCompletion(K key, CompletableFuture<V> valueFuture,
+  default void handleCompletion(K key, CompletableFuture<? extends V> valueFuture,
       long startTime, boolean recordMiss) {
     AtomicBoolean completed = new AtomicBoolean();
     valueFuture.whenComplete((value, error) -> {
@@ -200,8 +206,11 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
           cache().statsCounter().recordMisses(1);
         }
       } else {
+        @SuppressWarnings("unchecked")
+        var castedFuture = (CompletableFuture<V>) valueFuture;
+
         // update the weight and expiration timestamps
-        cache().replace(key, valueFuture, valueFuture);
+        cache().replace(key, castedFuture, castedFuture);
         cache().statsCounter().recordLoadSuccess(loadTime);
         if (recordMiss) {
           cache().statsCounter().recordMisses(1);
@@ -211,7 +220,8 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
   }
 
   /** A function executed asynchronously after a bulk load completes. */
-  final class AsyncBulkCompleter<K, V> implements BiConsumer<Map<K, V>, Throwable> {
+  final class AsyncBulkCompleter<K, V>
+      implements BiConsumer<Map<? extends K, ? extends V>, Throwable> {
     private final LocalCache<K, CompletableFuture<V>> cache;
     private final Map<K, CompletableFuture<V>> proxies;
     private final long startTime;
@@ -224,7 +234,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     @Override
-    public void accept(@Nullable Map<K, V> result, @Nullable Throwable error) {
+    public void accept(@Nullable Map<? extends K, ? extends V> result, @Nullable Throwable error) {
       long loadTime = cache.statsTicker().read() - startTime;
 
       if (result == null) {
@@ -245,7 +255,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     /** Populates the proxies with the computed result. */
-    private void fillProxies(Map<K, V> result) {
+    private void fillProxies(Map<? extends K, ? extends V> result) {
       proxies.forEach((key, future) -> {
         V value = result.get(key);
         future.obtrudeValue(value);
@@ -259,7 +269,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
     }
 
     /** Adds to the cache any extra entries computed that were not requested. */
-    private void addNewEntries(Map<K, V> result) {
+    private void addNewEntries(Map<? extends K, ? extends V> result) {
       if (proxies.size() == result.size()) {
         return;
       }
@@ -506,7 +516,7 @@ interface LocalAsyncCache<K, V> extends AsyncCache<K, V> {
 
     @Override
     public Map<K, V> getAll(Iterable<? extends K> keys,
-        Function<Set<? extends K>, Map<K, V>> mappingFunction) {
+        Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
       return resolve(asyncCache().getAll(keys, mappingFunction));
     }
 

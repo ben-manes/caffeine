@@ -1,6 +1,5 @@
 import net.ltgt.gradle.errorprone.CheckSeverity
 
-apply plugin: 'com.github.mjdetullio.gradle.coverity'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'com.github.kt3k.coveralls'
 apply plugin: 'jacoco'

@@ -15,6 +15,7 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -22,7 +23,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface BasicCache<K, V> {
+public interface BasicCache<K extends @NonNull Object, V extends @NonNull Object> {
 
   /** Returns the value stored in the cache, or null if not present. */
   @Nullable V get(K key);

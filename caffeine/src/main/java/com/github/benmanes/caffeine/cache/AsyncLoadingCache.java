@@ -18,6 +18,8 @@ package com.github.benmanes.caffeine.cache;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache
  * asynchronously, and are stored in the cache until either evicted or manually invalidated.
@@ -29,7 +31,8 @@ import java.util.concurrent.CompletableFuture;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-public interface AsyncLoadingCache<K, V> extends AsyncCache<K, V> {
+public interface AsyncLoadingCache<K extends @NonNull Object, V extends @NonNull Object>
+    extends AsyncCache<K, V> {
 
   /**
    * Returns the future associated with {@code key} in this cache, obtaining that value from

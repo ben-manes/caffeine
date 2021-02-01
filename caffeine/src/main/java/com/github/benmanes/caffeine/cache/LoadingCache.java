@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -32,7 +33,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
-public interface LoadingCache<K, V> extends Cache<K, V> {
+public interface LoadingCache<K extends @NonNull Object, V extends @NonNull Object>
+    extends Cache<K, V> {
 
   /**
    * Returns the value associated with the {@code key} in this cache, obtaining that value from

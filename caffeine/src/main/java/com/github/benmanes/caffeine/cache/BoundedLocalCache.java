@@ -1223,7 +1223,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         && !refreshes().containsKey(keyReference)) {
       long[] startTime = new long[1];
       @SuppressWarnings({"unchecked", "rawtypes"})
-      CompletableFuture<V>[] refreshFuture = new CompletableFuture[1];
+      CompletableFuture<? extends V>[] refreshFuture = new CompletableFuture[1];
       refreshes().computeIfAbsent(keyReference, k -> {
         try {
           startTime[0] = statsTicker().read();
@@ -3975,7 +3975,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         V newValue = (V) loader.asyncReload(key, oldValue, executor);
         return newValue;
       }
-      @Override public CompletableFuture<V> asyncReload(
+      @Override public CompletableFuture<? extends V> asyncReload(
           K key, V oldValue, Executor executor) throws Exception {
         return loader.asyncReload(key, oldValue, executor);
       }

@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.checkerframework.checker.index.qual.NonNegative;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.github.benmanes.caffeine.cache.Async.AsyncExpiry;
@@ -135,7 +136,7 @@ import com.google.errorprone.annotations.FormatMethod;
  *     normally {@code Object} unless it is constrained by using a method like {@code
  *     #removalListener}
  */
-public final class Caffeine<K, V> {
+public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object> {
   static final Logger logger = System.getLogger(Caffeine.class.getName());
   static final Supplier<StatsCounter> ENABLED_STATS_COUNTER_SUPPLIER = ConcurrentStatsCounter::new;
 
@@ -1150,8 +1151,8 @@ public final class Caffeine<K, V> {
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
     return isBounded() || refreshAfterWrite()
-        ? new BoundedLocalCache.BoundedLocalAsyncLoadingCache<>(self, loader)
-        : new UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<>(self, loader);
+        ? new BoundedLocalCache.BoundedLocalAsyncLoadingCache<K1, V1>(self, loader)
+        : new UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K1, V1>(self, loader);
   }
 
   void requireNonLoadingCache() {

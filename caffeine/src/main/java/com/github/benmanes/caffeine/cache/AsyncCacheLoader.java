@@ -24,6 +24,8 @@ import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 /**
  * Computes or retrieves values asynchronously, based on a key, for use in populating a
  * {@link AsyncLoadingCache}.
@@ -42,7 +44,7 @@ import java.util.function.Function;
  */
 @FunctionalInterface
 @SuppressWarnings("PMD.SignatureDeclareThrowsException")
-public interface AsyncCacheLoader<K, V> {
+public interface AsyncCacheLoader<K extends @NonNull Object, V extends @NonNull Object> {
 
   /**
    * Asynchronously computes or retrieves the value corresponding to {@code key}.
@@ -55,7 +57,7 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  CompletableFuture<V> asyncLoad(K key, Executor executor) throws Exception;
+  CompletableFuture<? extends V> asyncLoad(K key, Executor executor) throws Exception;
 
   /**
    * Asynchronously computes or retrieves the values corresponding to {@code keys}. This method is
@@ -79,7 +81,7 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  default CompletableFuture<Map<K, V>> asyncLoadAll(
+  default CompletableFuture<? extends Map<? extends K, ? extends V>> asyncLoadAll(
       Set<? extends K> keys, Executor executor) throws Exception {
     throw new UnsupportedOperationException();
   }
@@ -102,7 +104,8 @@ public interface AsyncCacheLoader<K, V> {
    *         treated like any other {@code Exception} in all respects except that, when it is
    *         caught, the thread's interrupt status is set
    */
-  default CompletableFuture<V> asyncReload(K key, V oldValue, Executor executor) throws Exception {
+  default CompletableFuture<? extends V> asyncReload(
+      K key, V oldValue, Executor executor) throws Exception {
     return asyncLoad(key, executor);
   }
 
@@ -122,14 +125,15 @@ public interface AsyncCacheLoader<K, V> {
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
    */
-  static <K, V> AsyncCacheLoader<K, V> bulk(Function<Set<? extends K>, Map<K, V>> mappingFunction) {
+  static <K extends Object, V extends Object> AsyncCacheLoader<K, V> bulk(
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     return CacheLoader.bulk(mappingFunction);
   }
 
   /**
    * Returns an asynchronous cache loader that delegates to the supplied mapping function for
-   * retrieving the values. Note that {@link #asyncLoad} will discard any additional mappings
-   * loaded when retrieving the {@code key} prior to returning to the value to the cache.
+   * retrieving the values. Note that {@link #asyncLoad} will silently discard any additional
+   * mappings loaded when retrieving the {@code key} prior to returning to the value to the cache.
    * <p>
    * Usage example:
    * <pre>{@code
@@ -142,8 +146,9 @@ public interface AsyncCacheLoader<K, V> {
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
    */
-  static <K, V> AsyncCacheLoader<K, V> bulk(
-      BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> mappingFunction) {
+  static <K extends Object, V extends Object> AsyncCacheLoader<K, V> bulk(
+      BiFunction<? super Set<? extends K>, ? super Executor,
+      ? extends CompletableFuture<? extends Map<? extends K, ? extends V>>> mappingFunction) {
     requireNonNull(mappingFunction);
     return new AsyncCacheLoader<>() {
       @Override public CompletableFuture<V> asyncLoad(K key, Executor executor) {
@@ -154,7 +159,9 @@ public interface AsyncCacheLoader<K, V> {
           Set<? extends K> keys, Executor executor) {
         requireNonNull(keys);
         requireNonNull(executor);
-        return mappingFunction.apply(keys, executor);
+        @SuppressWarnings("unchecked")
+        var future = (CompletableFuture<Map<K, V>>) mappingFunction.apply(keys, executor);
+        return future;
       }
     };
   }

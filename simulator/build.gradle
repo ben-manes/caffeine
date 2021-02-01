@@ -50,10 +50,6 @@ if (!(gradle.startParameter.taskNames ==~ /.*uploadArchives.*/)) {
   }
 }
 
-coverity {
-  skip = true
-}
-
 sonarqube {
   skipProject = true
 }
