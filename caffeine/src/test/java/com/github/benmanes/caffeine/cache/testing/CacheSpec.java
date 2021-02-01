@@ -514,7 +514,8 @@ public @interface CacheSpec {
       @Override public Integer load(Integer key) {
         throw new UnsupportedOperationException();
       }
-      @Override public Map<Integer, Integer> loadAll(Set<? extends Integer> keys) throws Exception {
+      @Override public Map<? extends Integer, ? extends Integer> loadAll(
+          Set<? extends Integer> keys) throws Exception {
         Set<Integer> moreKeys = new LinkedHashSet<>(keys.size() + 10);
         moreKeys.addAll(keys);
         for (int i = 0; i < 10; i++) {
@@ -575,7 +576,8 @@ public @interface CacheSpec {
       SeriazableAsyncCacheLoader(Loader loader) {
         this.loader = loader;
       }
-      @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
+      @Override
+      public CompletableFuture<? extends Integer> asyncLoad(Integer key, Executor executor) {
         return loader.asyncLoad(key, executor);
       }
       private Object readResolve() throws ObjectStreamException {
@@ -592,7 +594,8 @@ public @interface CacheSpec {
       @Override public CompletableFuture<Integer> asyncLoad(Integer key, Executor executor) {
         throw new IllegalStateException();
       }
-      @Override public CompletableFuture<Map<Integer, Integer>> asyncLoadAll(
+      @Override
+      public CompletableFuture<? extends Map<? extends Integer, ? extends Integer>> asyncLoadAll(
           Set<? extends Integer> keys, Executor executor) {
         return loader.asyncLoadAll(keys, executor);
       }

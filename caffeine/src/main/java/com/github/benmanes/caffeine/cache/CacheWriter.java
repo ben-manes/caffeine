@@ -17,6 +17,7 @@ package com.github.benmanes.caffeine.cache;
 
 import java.util.Map;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -35,7 +36,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *             eviction.
  */
 @Deprecated
-public interface CacheWriter<K, V> {
+public interface CacheWriter<K extends @NonNull Object, V extends @NonNull Object> {
 
   /***
    * Writes the value corresponding to the {@code key} to the external resource. The cache will

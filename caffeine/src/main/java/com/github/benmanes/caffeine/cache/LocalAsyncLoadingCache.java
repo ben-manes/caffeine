@@ -41,9 +41,10 @@ abstract class LocalAsyncLoadingCache<K, V>
     implements LocalAsyncCache<K, V>, AsyncLoadingCache<K, V> {
   static final Logger logger = System.getLogger(LocalAsyncLoadingCache.class.getName());
 
-  @Nullable
-  final BiFunction<Set<? extends K>, Executor, CompletableFuture<Map<K, V>>> bulkMappingFunction;
-  final BiFunction<K, Executor, CompletableFuture<V>> mappingFunction;
+  final @Nullable BiFunction<? super Set<? extends K>, ? super Executor,
+      ? extends CompletableFuture<? extends Map<? extends K, ? extends V>>> bulkMappingFunction;
+  final BiFunction<? super K, ? super Executor,
+      ? extends CompletableFuture<? extends V>> mappingFunction;
   final AsyncCacheLoader<K, V> loader;
 
   @Nullable LoadingCacheView<K, V> cacheView;
@@ -56,7 +57,7 @@ abstract class LocalAsyncLoadingCache<K, V>
   }
 
   /** Returns a mapping function that adapts to {@link AsyncCacheLoader#asyncLoad}. */
-  BiFunction<K, Executor, CompletableFuture<V>> newMappingFunction(
+  BiFunction<? super K, ? super Executor, ? extends CompletableFuture<? extends V>> newMappingFunction(
       AsyncCacheLoader<? super K, V> cacheLoader) {
     return (key, executor) -> {
       try {

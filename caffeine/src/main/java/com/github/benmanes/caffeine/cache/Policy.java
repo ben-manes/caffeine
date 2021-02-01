@@ -23,6 +23,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
 import org.checkerframework.checker.index.qual.NonNegative;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -32,7 +33,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface Policy<K, V> {
+public interface Policy<K extends @NonNull Object, V extends @NonNull Object> {
 
   /**
    * Returns whether the cache statistics are being accumulated.

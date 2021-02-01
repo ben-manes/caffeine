@@ -69,7 +69,7 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
 
   @Override
   default Map<K, V> getAll(Iterable<? extends K> keys,
-      Function<Set<? extends K>, Map<K, V>> mappingFunction) {
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     requireNonNull(mappingFunction);
 
     Set<K> keysToLoad = new LinkedHashSet<>();
@@ -95,11 +95,11 @@ interface LocalManualCache<K, V> extends Cache<K, V> {
    * during the load are replaced when the loaded entries are inserted into the cache.
    */
   default void bulkLoad(Set<K> keysToLoad, Map<K, V> result,
-      Function<Set<? extends K>, Map<K, V>> mappingFunction) {
+      Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     boolean success = false;
     long startTime = cache().statsTicker().read();
     try {
-      Map<K, V> loaded = mappingFunction.apply(keysToLoad);
+      var loaded = mappingFunction.apply(keysToLoad);
       loaded.forEach((key, value) ->
           cache().put(key, value, /* notifyWriter */ false));
       for (K key : keysToLoad) {

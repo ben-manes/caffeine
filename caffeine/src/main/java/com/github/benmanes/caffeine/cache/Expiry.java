@@ -16,6 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import org.checkerframework.checker.index.qual.NonNegative;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * Calculates when cache entries expire. A single expiration time is retained so that the lifetime
@@ -23,7 +24,7 @@ import org.checkerframework.checker.index.qual.NonNegative;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public interface Expiry<K, V> {
+public interface Expiry<K extends @NonNull Object, V extends @NonNull Object> {
 
   /**
    * Specifies that the entry should be automatically removed from the cache once the duration has

@@ -5,13 +5,14 @@ import static org.gradle.util.GradleVersion.version
 
 apply plugin: 'org.kordamp.gradle.jandex'
 apply plugin: 'org.kordamp.gradle.stats'
+apply plugin: 'org.checkerframework'
 apply plugin: 'com.github.spotbugs'
 apply plugin: 'net.ltgt.errorprone'
 apply plugin: 'net.ltgt.nullaway'
 apply plugin: 'org.sonarqube'
+apply plugin: 'java-library'
 apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
-apply plugin: 'java'
 apply plugin: 'pmd'
 
 configurations {
@@ -25,6 +26,7 @@ repositories {
 }
 
 dependencies {
+  checkerFramework libraries.checkerFramework
   checkstyleConfig gradlePlugins.checkstyle
   errorproneJavac libraries.errorproneJavac
   errorprone libraries.errorproneCore
@@ -54,6 +56,14 @@ jar {
   metaInf {
     from "${rootDir}/LICENSE"
   }
+}
+
+checkerFramework {
+  checkers = [
+    'org.checkerframework.checker.nullness.NullnessChecker',
+  ]
+  extraJavacArgs = [ '-Werror' ]
+  excludeTests = true
 }
 
 checkstyle {
@@ -107,7 +117,7 @@ sonarqube {
 }
 tasks.sonarqube.dependsOn(jacocoMerge)
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
   dependsOn downloadCaffeineLocal
   options.compilerArgs << '-Xlint:all,-auxiliaryclass'
   options.encoding = 'UTF-8'
@@ -138,6 +148,7 @@ tasks.withType(JavaCompile) {
       annotatedPackages.add('com.github.benmanes.caffeine')
     }
   }
+  checkerFramework.skipCheckerFramework = true
 }
 
 tasks.named('compileTestJava').configure {
