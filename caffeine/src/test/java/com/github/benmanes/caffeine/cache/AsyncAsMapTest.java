@@ -15,11 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.google.common.collect.Maps.immutableEntry;
@@ -27,7 +24,6 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
@@ -789,10 +785,9 @@ public final class AsyncAsMapTest {
           key -> { throw new IllegalStateException(); });
       Assert.fail();
     } catch (IllegalStateException e) {}
-    assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
 
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
     assertThat(cache.asMap().computeIfAbsent(context.absentKey(),
         key -> CompletableFuture.completedFuture(key)).join(), is(context.absentKey()));
   }
@@ -807,8 +802,7 @@ public final class AsyncAsMapTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.asMap().size(), is(context.original().size()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(count).misses(0).success(0).failures(0));
   }
 
   @Test(dataProvider = "caches")
@@ -817,8 +811,8 @@ public final class AsyncAsMapTest {
   public void computeIfAbsent_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
     assertThat(cache.asMap().computeIfAbsent(context.absentKey(), key -> value), is(value));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(1).failures(0));
+
     assertThat(cache.asMap().get(context.absentKey()), is(value));
     assertThat(cache.asMap().size(), is(1 + context.original().size()));
   }
@@ -907,9 +901,8 @@ public final class AsyncAsMapTest {
       Assert.fail();
     } catch (IllegalStateException e) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
     assertThat(cache.asMap().computeIfPresent(context.firstKey(),
         (k, v) -> CompletableFuture.completedFuture(-k)).join(), is(-context.firstKey()));
   }
@@ -932,8 +925,7 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().computeIfPresent(key, (k, v) -> value), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(cache.synchronous().asMap().get(key), is(key));
@@ -1013,9 +1005,8 @@ public final class AsyncAsMapTest {
       Assert.fail();
     } catch (IllegalStateException e) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
     assertThat(cache.asMap().computeIfPresent(context.absentKey(),
         (k, v) -> CompletableFuture.completedFuture(-k)), is(nullValue()));
   }
@@ -1034,8 +1025,8 @@ public final class AsyncAsMapTest {
   public void compute_absent(AsyncCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> value = CompletableFuture.completedFuture(context.absentValue());
     assertThat(cache.asMap().compute(context.absentKey(), (k, v) -> value), is(value));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(1).failures(0));
+
     assertThat(cache.asMap().size(), is(1 + context.original().size()));
     assertThat(cache.asMap().get(context.absentKey()), is(value));
   }
@@ -1048,8 +1039,7 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().compute(key, (k, v) -> v), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       Integer value = context.original().get(key);
@@ -1067,8 +1057,8 @@ public final class AsyncAsMapTest {
       assertThat(cache.asMap().compute(key, (k, v) -> value), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
+
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(cache.synchronous().asMap().get(key), is(key));
     }
@@ -1163,9 +1153,8 @@ public final class AsyncAsMapTest {
       Assert.fail();
     } catch (IllegalStateException e) {}
     assertThat(cache.synchronous().asMap(), is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
 
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
     assertThat(cache.asMap().merge(context.firstKey(), cache.asMap().get(context.firstKey()),
         (oldValue, value) -> CompletableFuture.completedFuture(context.absentValue())).join(),
         is(context.absentValue()));
@@ -1191,8 +1180,8 @@ public final class AsyncAsMapTest {
           (oldValue, v) -> oldValue), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
+
     for (Integer key : context.firstMiddleLastKeys()) {
       Integer value = context.original().get(key);
       assertThat(cache.synchronous().asMap().get(key), is(value));
@@ -1209,8 +1198,7 @@ public final class AsyncAsMapTest {
           CompletableFuture.completedFuture(oldValue.join() + v.join())).join(), is(0));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(cache.synchronous().asMap().get(key), is(0));

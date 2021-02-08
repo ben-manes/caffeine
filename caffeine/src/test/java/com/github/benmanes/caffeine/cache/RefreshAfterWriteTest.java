@@ -15,15 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
@@ -333,7 +331,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache.getIfPresent(key), is(updated));
     assertThat(removed, containsInAnyOrder(original, refreshed));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(2, RemovalCause.REPLACED));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.success(1).failures(0));
   }
 
   /* --------------- invalidate --------------- */
@@ -360,7 +358,7 @@ public final class RefreshAfterWriteTest {
 
     await().until(() -> cache.getIfPresent(key), is(refreshed));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.success(1).failures(0));
   }
 
   /* --------------- Policy --------------- */

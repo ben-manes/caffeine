@@ -21,8 +21,8 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCES
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -267,7 +267,7 @@ public final class BoundedLocalCacheTest {
     // evict 12, 13, 14
     checkEvict(cache, asList(13, 14, 15), 15, 3, 4, 5, 0, 1, 2, 6, 7, 8);
 
-    assertThat(context, hasEvictionCount(6));
+    verifyStats(context, verifier -> verifier.evictions(6));
   }
 
   private void checkReorder(Cache<Integer, Integer> cache, List<Integer> keys, Integer... expect) {

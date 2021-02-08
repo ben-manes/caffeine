@@ -16,17 +16,13 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyIterable.deeplyEmpty;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.google.common.collect.Maps.immutableEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
@@ -1098,8 +1094,7 @@ public final class AsMapTest {
   public void computeIfAbsent_nullValue(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.computeIfAbsent(context.absentKey(), key -> null), is(nullValue()));
     assertThat(map.size(), is(context.original().size()));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
   }
 
   // FIXME: Requires JDK8 release with JDK-8062841 fix
@@ -1136,8 +1131,7 @@ public final class AsMapTest {
       map.computeIfAbsent(context.absentKey(), key -> { throw new Error(); });
     } catch (Error e) {}
     assertThat(map, is(equalTo(context.original())));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
     assertThat(map.computeIfAbsent(context.absentKey(), key -> key), is(context.absentKey()));
   }
 
@@ -1152,8 +1146,7 @@ public final class AsMapTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(count).misses(0).success(0).failures(0));
   }
 
   @CheckNoWriter
@@ -1162,8 +1155,7 @@ public final class AsMapTest {
   public void computeIfAbsent_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.computeIfAbsent(context.absentKey(),
         key -> context.absentValue()), is(context.absentValue()));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(1).failures(0));
     assertThat(map.get(context.absentKey()), is(context.absentValue()));
     assertThat(map.size(), is(1 + context.original().size()));
   }
@@ -1220,8 +1212,7 @@ public final class AsMapTest {
 
     int count = context.firstMiddleLastKeys().size();
     assertThat(map.size(), is(context.original().size() - count));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(count)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(count));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
@@ -1275,8 +1266,7 @@ public final class AsMapTest {
       map.computeIfPresent(context.firstKey(), (key, value) -> { throw new Error(); });
     } catch (Error e) {}
     assertThat(map, is(equalTo(context.original())));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(1));
     assertThat(map.computeIfPresent(context.firstKey(), (k, v) -> -k), is(-context.firstKey()));
   }
 
@@ -1297,8 +1287,7 @@ public final class AsMapTest {
       assertThat(map.computeIfPresent(key, (k, v) -> k), is(key));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(key));
@@ -1358,10 +1347,8 @@ public final class AsMapTest {
     }
 
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(count)));
-
     assertThat(map.size(), is(context.original().size() - count));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(count));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
@@ -1401,8 +1388,7 @@ public final class AsMapTest {
       map.compute(context.absentKey(), (key, value) -> { throw new Error(); });
     } catch (Error e) {}
     assertThat(map, is(equalTo(context.original())));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(1));
     assertThat(map.computeIfPresent(context.absentKey(), (k, v) -> -k), is(nullValue()));
   }
 
@@ -1411,8 +1397,7 @@ public final class AsMapTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void compute_absent_nullValue(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.compute(context.absentKey(), (key, value) -> null), is(nullValue()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(1));
     assertThat(map.get(context.absentKey()), is(nullValue()));
     assertThat(map.size(), is(context.original().size()));
   }
@@ -1423,8 +1408,7 @@ public final class AsMapTest {
   public void compute_absent(Map<Integer, Integer> map, CacheContext context) {
     assertThat(map.compute(context.absentKey(),
         (key, value) -> context.absentValue()), is(context.absentValue()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(1).failures(0));
     assertThat(map.get(context.absentKey()), is(context.absentValue()));
     assertThat(map.size(), is(1 + context.original().size()));
   }
@@ -1438,8 +1422,7 @@ public final class AsMapTest {
       assertThat(map.compute(key, (k, v) -> v), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       Integer value = context.original().get(key);
@@ -1463,8 +1446,8 @@ public final class AsMapTest {
       assertThat(map.compute(key, (k, v) -> k), is(key));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
+
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(key));
     }
@@ -1530,10 +1513,8 @@ public final class AsMapTest {
       assertThat(map.merge(key, value, (oldValue, v) -> null), is(nullValue()));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(count)));
-
     assertThat(map.size(), is(context.original().size() - count));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(count));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
@@ -1582,9 +1563,8 @@ public final class AsMapTest {
       map.merge(context.firstKey(), context.original().get(context.firstKey()),
           (oldValue, value) -> { throw new Error(); });
     } catch (Error e) {}
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
     assertThat(map, is(equalTo(context.original())));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(1));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -1608,8 +1588,8 @@ public final class AsMapTest {
       assertThat(map.merge(key, -key, (oldValue, v) -> oldValue), is(value));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
+
     for (Integer key : context.firstMiddleLastKeys()) {
       Integer value = context.original().get(key);
       assertThat(map.get(key), is(value));
@@ -1632,8 +1612,7 @@ public final class AsMapTest {
       assertThat(map.merge(key, key, (oldValue, v) -> oldValue + v), is(0));
     }
     int count = context.firstMiddleLastKeys().size();
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(count).failures(0));
 
     for (Integer key : context.firstMiddleLastKeys()) {
       assertThat(map.get(key), is(0));

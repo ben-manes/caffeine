@@ -15,15 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
@@ -113,8 +109,7 @@ public final class AsyncLoadingCacheTest {
 
     await().untilTrue(done);
     await().until(() -> !cache.synchronous().asMap().containsKey(context.absentKey()));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
 
     assertThat(valueFuture.isCompletedExceptionally(), is(true));
     assertThat(cache.getIfPresent(key), is(nullValue()));
@@ -128,8 +123,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.get(context.firstKey()), futureOf(-context.firstKey()));
     assertThat(cache.get(context.middleKey()), futureOf(-context.middleKey()));
     assertThat(cache.get(context.lastKey()), futureOf(-context.lastKey()));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(3).misses(0).success(0).failures(0));
   }
 
   /* --------------- getAll --------------- */
@@ -177,10 +171,9 @@ public final class AsyncLoadingCacheTest {
       cache.getAll(context.absentKeys()).join();
     } finally {
       int misses = context.absentKeys().size();
-      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
-
       int loadFailures = context.loader().isBulk() ? 1 : (context.isAsync() ? misses : 1);
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(loadFailures)));
+      verifyStats(context, verifier ->
+          verifier.hits(0).misses(misses).success(0).failures(loadFailures));
     }
   }
 
@@ -196,8 +189,8 @@ public final class AsyncLoadingCacheTest {
       int loadFailures = context.loader().isBulk()
           ? 1
           : (context.isAsync() ? misses : 1);
-      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(loadFailures)));
+      verifyStats(context, verifier ->
+          verifier.hits(0).misses(misses).success(0).failures(loadFailures));
     }
   }
 
@@ -211,8 +204,7 @@ public final class AsyncLoadingCacheTest {
     int count = context.absentKeys().size();
     int loads = context.loader().isBulk() ? 1 : count;
     assertThat(result.size(), is(count));
-    assertThat(context, both(hasMissCount(count)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(count).success(loads).failures(0));
   }
 
   @CheckNoWriter
@@ -229,8 +221,7 @@ public final class AsyncLoadingCacheTest {
     Map<Integer, Integer> result = cache.getAll(expect.keySet()).join();
 
     assertThat(result, is(equalTo(expect)));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(expect.size())));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
   }
 
   @CheckNoWriter
@@ -243,9 +234,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(result.keySet(), equalTo(context.absentKeys()));
     assertThat(cache.synchronous().estimatedSize(),
         is(greaterThan(context.initialSize() + context.absentKeys().size())));
-
-    assertThat(context, both(hasMissCount(result.size())).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(result.size()).success(1).failures(0));
   }
 
   @CheckNoWriter
@@ -259,13 +248,11 @@ public final class AsyncLoadingCacheTest {
     Iterable<Integer> keys = Iterables.concat(absentKeys, absentKeys,
         context.original().keySet(), context.original().keySet());
     Map<Integer, Integer> result = cache.getAll(keys).join();
-
-    assertThat(context, hasMissCount(absentKeys.size()));
-    assertThat(context, hasHitCount(context.initialSize()));
     assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
 
     int loads = context.loader().isBulk() ? 1 : absentKeys.size();
-    assertThat(context, both(hasLoadSuccessCount(loads)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier ->
+        verifier.hits(context.initialSize()).misses(absentKeys.size()).success(loads).failures(0));
   }
 
   @CheckNoWriter
