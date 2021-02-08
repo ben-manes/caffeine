@@ -23,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -498,6 +499,7 @@ public final class LoadingCacheTest {
 
     refresh.set(true);
     await().until(() -> cache.getIfPresent(key), is(refreshed));
+    await().until(() -> context.removalNotifications(), hasSize(1));
     verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
     verifyStats(context, verifier -> verifier.success(1).failures(0));
   }
