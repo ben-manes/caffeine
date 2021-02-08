@@ -76,20 +76,20 @@ public final class RemovalListeners {
       implements RemovalListener<K, V>, Serializable {
     private static final long serialVersionUID = 1L;
 
-    private final List<RemovalNotification<K, V>> evicted;
+    private final List<RemovalNotification<K, V>> removed;
 
     public ConsumingRemovalListener() {
-      this.evicted = Collections.synchronizedList(new ArrayList<>());
+      this.removed = Collections.synchronizedList(new ArrayList<>());
     }
 
     @Override
     public void onRemoval(K key, V value, RemovalCause cause) {
       validate(key, value, cause);
-      evicted.add(new RemovalNotification<>(key, value, cause));
+      removed.add(new RemovalNotification<>(key, value, cause));
     }
 
-    public List<RemovalNotification<K, V>> evicted() {
-      return evicted;
+    public List<RemovalNotification<K, V>> removed() {
+      return removed;
     }
   }
 }

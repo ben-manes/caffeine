@@ -76,7 +76,7 @@ public final class Issue412Test {
     timeTasks(NUM_THREADS, this::addRemoveAndExpire);
     shutdownAndAwaitTermination(executor, 1, TimeUnit.MINUTES);
 
-    Multiset<RemovalCause> causes = listener.evicted().stream()
+    Multiset<RemovalCause> causes = listener.removed().stream()
         .map(RemovalNotification::getCause)
         .collect(toImmutableMultiset());
     assertThat(causes, not(hasItem(RemovalCause.COLLECTED)));

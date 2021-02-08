@@ -16,7 +16,9 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyEvictionListener;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static java.util.stream.Collectors.toMap;
@@ -119,8 +121,8 @@ public final class ReferenceTest {
     if (context.population() != Population.SINGLETON) {
       assertThat(count, is(greaterThan(1L)));
     }
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -162,7 +164,7 @@ public final class ReferenceTest {
     cache.put(context.firstKey(), context.absentValue());
     cache.put(context.absentKey(), context.absentValue());
     Mockito.reset(new Object[] { context.cacheWriter() });
-    context.consumedNotifications().clear();
+    context.removalNotifications().clear();
 
     context.clear();
     GcFinalization.awaitFullGc();
@@ -171,8 +173,8 @@ public final class ReferenceTest {
     assertThat(cache.estimatedSize(), is(0L));
 
     long count = context.initialSize() + 1;
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -209,8 +211,8 @@ public final class ReferenceTest {
     assertThat(cache.estimatedSize(), is(3L));
 
     long count = context.initialSize() - 2;
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -250,8 +252,8 @@ public final class ReferenceTest {
     assertThat(cache.estimatedSize(), is(0L));
 
     long count = context.initialSize() - 1;
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -287,8 +289,8 @@ public final class ReferenceTest {
     assertThat(cache.estimatedSize(), is(0L));
 
     long count = context.initialSize() - (context.isWeakKeys() ? keys.size() : 0);
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -322,8 +324,8 @@ public final class ReferenceTest {
     assertThat(cache.estimatedSize(), is(0L));
 
     cache.invalidateAll();
-    assertThat(cache, hasRemovalNotifications(context, 0L, RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(0L, RemovalCause.EXPLICIT));
+    verifyListeners(context, verifier -> verifier.hasOnly(0L, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(0L, RemovalCause.EXPLICIT));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -356,8 +358,8 @@ public final class ReferenceTest {
     assertThat(cache.estimatedSize(), is(0L));
 
     long count = context.initialSize();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches")
@@ -392,8 +394,8 @@ public final class ReferenceTest {
     assertThat(cache.get(key), is(value));
 
     long count = context.initialSize() - 1;
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -430,8 +432,8 @@ public final class ReferenceTest {
     long count = context.initialSize() - (context.isStrongValues() ? keys.size() : 0);
 
     assertThat(cache.estimatedSize(), is((long) keys.size()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -470,9 +472,9 @@ public final class ReferenceTest {
     assertThat(cache.getIfPresent(key), is(not(value)));
 
     long count = context.initialSize() - 1;
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> {
+    verifyRemovalListener(context, verifier -> verifier.hasCount(1, RemovalCause.REPLACED));
+    verifyEvictionListener(context, verifier -> verifier.hasCount(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> {
       verifier.deletions(count, RemovalCause.COLLECTED);
     });
   }
@@ -522,8 +524,8 @@ public final class ReferenceTest {
     assertThat(cache.get(context.absentKey()), is(futureOf(context.absentKey())));
 
     long count = context.initialSize();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches")
@@ -542,8 +544,8 @@ public final class ReferenceTest {
     long count = context.initialSize() - cache.synchronous().estimatedSize() + 1;
 
     assertThat(count, is(greaterThan((long) keys.size())));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches")
@@ -559,7 +561,7 @@ public final class ReferenceTest {
 
     long count = context.initialSize();
     assertThat(cache.synchronous().estimatedSize(), is(1L));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
   }
 
   /* --------------- Map --------------- */
@@ -634,8 +636,8 @@ public final class ReferenceTest {
     long count = context.initialSize();
 
     assertThat(map.size(), is(0));
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -672,8 +674,8 @@ public final class ReferenceTest {
     assertThat(map.size(), is(1));
 
     long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -711,8 +713,8 @@ public final class ReferenceTest {
     assertThat(map.size(), is(1));
 
     long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -780,8 +782,8 @@ public final class ReferenceTest {
     assertThat(map.size(), is(0));
 
     long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -819,8 +821,8 @@ public final class ReferenceTest {
     assertThat(map.size(), is(0));
 
     long count = context.initialSize() - 1;
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   // removeConditionally_writerFail: Not needed due to removal being impossible
@@ -841,8 +843,8 @@ public final class ReferenceTest {
     assertThat(map.size(), is(1));
 
     long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -879,8 +881,8 @@ public final class ReferenceTest {
     assertThat(map.size(), is(context.isStrongValues() ? 1 : 0));
 
     long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   // computeIfPresent_writerFail: Not needed due to exiting without side-effects
@@ -904,8 +906,8 @@ public final class ReferenceTest {
     assertThat(map.size(), is(1));
 
     long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)
@@ -946,8 +948,8 @@ public final class ReferenceTest {
     assertThat(map.size(), is(1));
 
     long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.COLLECTED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 
   @Test(dataProvider = "caches", expectedExceptions = DeleteException.class)

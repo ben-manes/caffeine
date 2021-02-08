@@ -76,7 +76,9 @@ import com.google.common.testing.FakeTicker;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("deprecation")
 public final class CacheContext {
+  final RemovalListener<Integer, Integer> evictionListener;
   final RemovalListener<Integer, Integer> removalListener;
   final CacheWriter<Integer, Integer> cacheWriter;
   final InitialCapacity initialCapacity;
@@ -84,6 +86,7 @@ public final class CacheContext {
   final Map<Integer, Integer> original;
   final Implementation implementation;
   final CacheScheduler cacheScheduler;
+  final Listener evictionListenerType;
   final Listener removalListenerType;
   final CacheExecutor cacheExecutor;
   final ReferenceType valueStrength;
@@ -127,8 +130,9 @@ public final class CacheContext {
       Maximum maximumSize, CacheExpiry expiryType, Expire afterAccess, Expire afterWrite,
       Expire refresh, Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
       CacheExecutor cacheExecutor, CacheScheduler cacheScheduler, Listener removalListenerType,
-      Population population, boolean isLoading, boolean isAsyncLoading, Compute compute,
-      Loader loader, Writer writer, Implementation implementation, CacheSpec cacheSpec) {
+      Listener evictionListenerType, Population population, boolean isLoading,
+      boolean isAsyncLoading, Compute compute, Loader loader, Writer writer,
+      Implementation implementation, CacheSpec cacheSpec) {
     this.initialCapacity = requireNonNull(initialCapacity);
     this.stats = requireNonNull(stats);
     this.weigher = requireNonNull(weigher);
@@ -145,6 +149,8 @@ public final class CacheContext {
     this.scheduler = cacheScheduler.create();
     this.removalListenerType = removalListenerType;
     this.removalListener = removalListenerType.create();
+    this.evictionListenerType = evictionListenerType;
+    this.evictionListener = evictionListenerType.create();
     this.population = requireNonNull(population);
     this.loader = isLoading ? requireNonNull(loader) : null;
     this.isAsyncLoading = isAsyncLoading;
@@ -351,9 +357,23 @@ public final class CacheContext {
     return requireNonNull(removalListener);
   }
 
-  public List<RemovalNotification<Integer, Integer>> consumedNotifications() {
+  public List<RemovalNotification<Integer, Integer>> removalNotifications() {
     return (removalListenerType() == Listener.CONSUMING)
-        ? ((ConsumingRemovalListener<Integer, Integer>) removalListener).evicted()
+        ? ((ConsumingRemovalListener<Integer, Integer>) removalListener).removed()
+        : Collections.emptyList();
+  }
+
+  public Listener evictionListenerType() {
+    return evictionListenerType;
+  }
+
+  public RemovalListener<Integer, Integer> evictionListener() {
+    return requireNonNull(evictionListener);
+  }
+
+  public List<RemovalNotification<Integer, Integer>> evictionNotifications() {
+    return (evictionListenerType() == Listener.CONSUMING)
+        ? ((ConsumingRemovalListener<Integer, Integer>) evictionListener).removed()
         : Collections.emptyList();
   }
 
@@ -486,6 +506,7 @@ public final class CacheContext {
         .add("cacheExecutor", cacheExecutor)
         .add("cacheScheduler", cacheScheduler)
         .add("removalListener", removalListenerType)
+        .add("evictionListener", evictionListenerType)
         .add("initialCapacity", initialCapacity)
         .add("stats", stats)
         .add("implementation", implementation)

@@ -110,7 +110,8 @@ final class CacheGenerator {
       asyncLoading = ImmutableSet.of(false);
     }
 
-    if (computations.isEmpty() || implementations.isEmpty() || keys.isEmpty() || values.isEmpty()) {
+    if (computations.isEmpty() || implementations.isEmpty()
+        || keys.isEmpty() || values.isEmpty()) {
       return ImmutableSet.of();
     }
     return Sets.cartesianProduct(
@@ -128,6 +129,7 @@ final class CacheGenerator {
         ImmutableSet.copyOf(cacheSpec.executor()),
         ImmutableSet.copyOf(cacheSpec.scheduler()),
         ImmutableSet.copyOf(cacheSpec.removalListener()),
+        ImmutableSet.copyOf(cacheSpec.evictionListener()),
         ImmutableSet.copyOf(cacheSpec.population()),
         ImmutableSet.of(true, isLoadingOnly),
         ImmutableSet.copyOf(asyncLoading),
@@ -165,6 +167,7 @@ final class CacheGenerator {
         (CacheExecutor) combination.get(index++),
         (CacheScheduler) combination.get(index++),
         (Listener) combination.get(index++),
+        (Listener) combination.get(index++),
         (Population) combination.get(index++),
         (Boolean) combination.get(index++),
         (Boolean) combination.get(index++),
@@ -193,12 +196,18 @@ final class CacheGenerator {
         && !Arrays.stream(cacheSpec.mustExpireWithAnyOf()).anyMatch(context::expires);
     boolean schedulerIgnored = (context.cacheScheduler != CacheScheduler.DEFAULT)
         && !context.expires();
+    boolean writerIncompatible = context.writes()
+        && ((context.implementation() != Implementation.Caffeine)
+            || context.isAsync() || (context.evictionListenerType() != Listener.DEFAULT));
+    boolean evictionListenerIncompatible = (context.evictionListenerType() != Listener.DEFAULT)
+        && ((context.implementation() != Implementation.Caffeine)
+            || (context.isAsync() && !context.isStrongValues()));
 
     boolean skip = asyncIncompatible || asyncLoaderIncompatible
+        || writerIncompatible || evictionListenerIncompatible
         || refreshIncompatible || weigherIncompatible
         || expiryIncompatible || expirationIncompatible
-        || referenceIncompatible
-        || schedulerIgnored;
+        || referenceIncompatible || schedulerIgnored;
     return !skip;
   }
 

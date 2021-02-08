@@ -46,11 +46,12 @@ final class SerializationProxy<K, V> implements Serializable {
   @Nullable Ticker ticker;
   @Nullable Expiry<?, ?> expiry;
   @Nullable Weigher<?, ?> weigher;
+  @SuppressWarnings("deprecation")
   @Nullable CacheWriter<?, ?> writer;
   @Nullable AsyncCacheLoader<?, ?> loader;
   @Nullable RemovalListener<?, ?> removalListener;
 
-  @SuppressWarnings({"unchecked", "PreferJavaTimeOverload"})
+  @SuppressWarnings({"unchecked", "PreferJavaTimeOverload", "deprecation"})
   Caffeine<Object, Object> recreateCaffeine() {
     Caffeine<Object, Object> builder = Caffeine.newBuilder();
     if (ticker != null) {

@@ -17,11 +17,11 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.IsCacheReserializable.reserializable;
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.google.common.base.Predicates.in;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -539,7 +539,7 @@ public final class CacheTest {
     int count = context.firstMiddleLastKeys().size();
 
     if (context.isGuava() || context.isAsync()) {
-      assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+      verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
     }
   }
 
@@ -549,14 +549,14 @@ public final class CacheTest {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.put(key, context.absentValue());
       assertThat(cache.getIfPresent(key), is(context.absentValue()));
-      verifyWriter(context, (verifier, writer) -> {
+      verifyWriter(context, verifier -> {
         verifier.wrote(key, context.absentValue());
       });
     }
     assertThat(cache.estimatedSize(), is(context.initialSize()));
 
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -617,7 +617,7 @@ public final class CacheTest {
     cache.putAll(entries);
     assertThat(cache.estimatedSize(), is(100 + context.initialSize()));
 
-    verifyWriter(context, (verifier, writer) -> {
+    verifyWriter(context, verifier -> {
       verifier.wroteAll(entries);
     });
   }
@@ -630,9 +630,10 @@ public final class CacheTest {
     entries.replaceAll((key, value) -> value + 1);
     cache.putAll(entries);
     assertThat(cache.asMap(), is(equalTo(entries)));
-    assertThat(cache, hasRemovalNotifications(context, entries.size(), RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier ->
+        verifier.hasOnly(entries.size(), RemovalCause.REPLACED));
 
-    verifyWriter(context, (verifier, writer) -> {
+    verifyWriter(context, verifier -> {
       verifier.wroteAll(entries);
     });
   }
@@ -654,9 +655,10 @@ public final class CacheTest {
     cache.putAll(entries);
     assertThat(cache.asMap(), is(equalTo(entries)));
     Map<Integer, Integer> expect = (context.isGuava() || context.isAsync()) ? entries : replaced;
-    assertThat(cache, hasRemovalNotifications(context, expect.size(), RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier ->
+        verifier.hasOnly(expect.size(), RemovalCause.REPLACED));
 
-    verifyWriter(context, (verifier, writer) -> {
+    verifyWriter(context, verifier -> {
       verifier.wroteAll(replaced);
     });
   }
@@ -716,13 +718,13 @@ public final class CacheTest {
   public void invalidate_present(Cache<Integer, Integer> cache, CacheContext context) {
     for (Integer key : context.firstMiddleLastKeys()) {
       cache.invalidate(key);
-      verifyWriter(context, (verifier, writer) -> {
+      verifyWriter(context, verifier -> {
         verifier.deleted(key, context.original().get(key), RemovalCause.EXPLICIT);
       });
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.estimatedSize(), is(context.initialSize() - count));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter @CheckNoStats
@@ -752,9 +754,9 @@ public final class CacheTest {
   public void invalidateAll(Cache<Integer, Integer> cache, CacheContext context) {
     cache.invalidateAll();
     assertThat(cache.estimatedSize(), is(0L));
-    assertThat(cache, hasRemovalNotifications(context,
-        context.original().size(), RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> {
+    verifyRemovalListener(context, verifier ->
+        verifier.hasOnly(context.initialSize(), RemovalCause.EXPLICIT));
+    verifyWriter(context, verifier -> {
       verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
     });
   }
@@ -774,9 +776,9 @@ public final class CacheTest {
         .collect(Collectors.toList());
     cache.invalidateAll(keys);
     assertThat(cache.estimatedSize(), is(context.initialSize() - keys.size()));
-    assertThat(cache, hasRemovalNotifications(context, keys.size(), RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(keys.size(), RemovalCause.EXPLICIT));
 
-    verifyWriter(context, (verifier, writer) -> {
+    verifyWriter(context, verifier -> {
       verifier.deletedAll(Maps.filterKeys(context.original(), in(keys)), RemovalCause.EXPLICIT);
     });
   }
@@ -786,9 +788,9 @@ public final class CacheTest {
   public void invalidateAll_full(Cache<Integer, Integer> cache, CacheContext context) {
     cache.invalidateAll(context.original().keySet());
     assertThat(cache.estimatedSize(), is(0L));
-    assertThat(cache, hasRemovalNotifications(context,
-        context.original().size(), RemovalCause.EXPLICIT));
-    verifyWriter(context, (verifier, writer) -> {
+    verifyRemovalListener(context, verifier ->
+        verifier.hasOnly(context.initialSize(), RemovalCause.EXPLICIT));
+    verifyWriter(context, verifier -> {
       verifier.deletedAll(context.original(), RemovalCause.EXPLICIT);
     });
   }

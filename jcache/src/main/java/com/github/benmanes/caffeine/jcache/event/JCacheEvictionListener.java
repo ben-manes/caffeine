@@ -17,21 +17,22 @@ package com.github.benmanes.caffeine.jcache.event;
 
 import static java.util.Objects.requireNonNull;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import javax.cache.Cache;
 
-import com.github.benmanes.caffeine.cache.CacheWriter;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.jcache.Expirable;
 import com.github.benmanes.caffeine.jcache.management.JCacheStatisticsMXBean;
 
 /**
- * A Caffeine {@link CacheWriter} that provides an adapter to publish events in the order of the
- * actions being performed on a key.
+ * A listener that provides an adapter to publish events in the order of the actions being performed
+ * on a key.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-public final class JCacheEvictionListener<K, V> implements CacheWriter<K, Expirable<V>> {
+public final class JCacheEvictionListener<K, V> implements RemovalListener<K, Expirable<V>> {
   private final JCacheStatisticsMXBean statistics;
   private final EventDispatcher<K, V> dispatcher;
 
@@ -54,11 +55,9 @@ public final class JCacheEvictionListener<K, V> implements CacheWriter<K, Expira
   }
 
   @Override
-  public void write(K key, Expirable<V> value) {}
-
-  @Override
-  public void delete(K key, @Nullable Expirable<V> expirable, RemovalCause cause) {
-    if (cause.wasEvicted() && (expirable != null)) {
+  @SuppressWarnings("NullAway")
+  public void onRemoval(K key, @Nullable Expirable<V> expirable, RemovalCause cause) {
+    if (expirable != null) {
       V value = expirable.get();
       if (cause == RemovalCause.EXPIRED) {
         dispatcher.publishExpiredQuietly(cache, key, value);

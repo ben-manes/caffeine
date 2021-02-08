@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -373,7 +373,7 @@ public final class LoadingCacheTest {
     cache.refresh(context.firstKey());
     assertThat(cache.estimatedSize(), is(context.initialSize() - 1));
     assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter
@@ -426,7 +426,7 @@ public final class LoadingCacheTest {
       assertThat(cache.getIfPresent(key), is(nullValue()));
     }
     assertThat(cache.estimatedSize(), is(context.initialSize() - count));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   @CheckNoWriter
@@ -445,7 +445,7 @@ public final class LoadingCacheTest {
       assertThat(cache.get(key), is(context.original().get(key)));
     }
     assertThat(cache.estimatedSize(), is(context.initialSize()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   @CheckNoWriter
@@ -461,7 +461,7 @@ public final class LoadingCacheTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.estimatedSize(), is(context.initialSize()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
     assertThat(context, both(hasMissCount(0)).and(hasHitCount(count)));
     assertThat(context, both(hasLoadSuccessCount(count)).and(hasLoadFailureCount(0)));
   }
@@ -485,13 +485,13 @@ public final class LoadingCacheTest {
     assertThat(cache.asMap().put(key, updated), is(original));
 
     refresh.set(true);
-    await().until(() -> context.consumedNotifications().size(), is(2));
-    List<Integer> removed = context.consumedNotifications().stream()
+    await().until(() -> context.removalNotifications().size(), is(2));
+    List<Integer> removed = context.removalNotifications().stream()
         .map(RemovalNotification::getValue).collect(toList());
 
     assertThat(cache.getIfPresent(key), is(updated));
     assertThat(removed, containsInAnyOrder(original, refreshed));
-    assertThat(cache, hasRemovalNotifications(context, 2, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(2, RemovalCause.REPLACED));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
@@ -514,7 +514,7 @@ public final class LoadingCacheTest {
 
     refresh.set(true);
     await().until(() -> cache.getIfPresent(key), is(refreshed));
-    await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 

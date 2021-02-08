@@ -44,7 +44,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"PreferJavaTimeOverload", "deprecation"})
 public final class CaffeineTest {
   @Mock StatsCounter statsCounter;
   @Mock Expiry<Object, Object> expiry;
@@ -692,6 +692,26 @@ public final class CaffeineTest {
     RemovalListener<Object, Object> removalListener = (k, v, c) -> {};
     Caffeine<?, ?> builder = Caffeine.newBuilder().removalListener(removalListener);
     assertThat(builder.getRemovalListener(false), is(removalListener));
+    builder.build();
+  }
+
+  /* --------------- removalListener --------------- */
+
+  @Test(expectedExceptions = NullPointerException.class)
+  public void evictionListener_null() {
+    Caffeine.newBuilder().evictionListener(null);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void evictionListener_twice() {
+    Caffeine.newBuilder().evictionListener((k, v, c) -> {}).evictionListener((k, v, c) -> {});
+  }
+
+  @Test
+  public void evictionListener() {
+    RemovalListener<Object, Object> removalListener = (k, v, c) -> {};
+    Caffeine<?, ?> builder = Caffeine.newBuilder().evictionListener(removalListener);
+    assertThat(builder.evictionListener, is(removalListener));
     builder.build();
   }
 

@@ -16,7 +16,7 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
@@ -115,7 +115,7 @@ public final class ExpireAfterVarTest {
 
     cache.put(context.firstKey(), context.absentValue());
     cache.put(context.absentKey(), context.absentValue());
-    context.consumedNotifications().clear(); // Ignore replacement notification
+    context.removalNotifications().clear(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
@@ -124,8 +124,8 @@ public final class ExpireAfterVarTest {
     assertThat(cache.estimatedSize(), is(1L));
 
     long count = context.initialSize();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -137,7 +137,7 @@ public final class ExpireAfterVarTest {
 
     cache.put(context.firstKey(), future);
     cache.put(context.absentKey(), future);
-    context.consumedNotifications().clear(); // Ignore replacement notification
+    context.removalNotifications().clear(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
@@ -146,8 +146,8 @@ public final class ExpireAfterVarTest {
     assertThat(cache.synchronous().estimatedSize(), is(1L));
 
     long count = context.initialSize();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -158,7 +158,7 @@ public final class ExpireAfterVarTest {
 
     assertThat(map.put(context.firstKey(), context.absentValue()), is(not(nullValue())));
     assertThat(map.put(context.absentKey(), context.absentValue()), is(nullValue()));
-    context.consumedNotifications().clear(); // Ignore replacement notification
+    context.removalNotifications().clear(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(map.get(context.firstKey()), is(nullValue()));
@@ -167,8 +167,8 @@ public final class ExpireAfterVarTest {
     assertThat(map.size(), is(1));
 
     long count = context.initialSize();
-    assertThat(map, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -180,7 +180,7 @@ public final class ExpireAfterVarTest {
     cache.putAll(ImmutableMap.of(
         context.firstKey(), context.absentValue(),
         context.absentKey(), context.absentValue()));
-    context.consumedNotifications().clear(); // Ignore replacement notification
+    context.removalNotifications().clear(); // Ignore replacement notification
 
     context.ticker().advance(45, TimeUnit.SECONDS);
     assertThat(cache.getIfPresent(context.firstKey()), is(nullValue()));
@@ -189,8 +189,8 @@ public final class ExpireAfterVarTest {
     assertThat(cache.estimatedSize(), is(1L));
 
     long count = context.initialSize();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPIRED));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count, RemovalCause.EXPIRED));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPIRED));
+    verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.EXPIRED));
   }
 
   @Test(dataProvider = "caches")
@@ -204,7 +204,7 @@ public final class ExpireAfterVarTest {
     context.cleanUp();
     assertThat(map.size(), is(0));
     long count = context.initialSize();
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
+    verifyWriter(context, verifier -> verifier.deletions(count));
   }
 
   @Test(dataProvider = "caches")
@@ -219,7 +219,7 @@ public final class ExpireAfterVarTest {
     context.cleanUp();
     assertThat(map, is(emptyMap()));
     long count = context.initialSize();
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(count));
+    verifyWriter(context, verifier -> verifier.deletions(count));
   }
 
   /* --------------- Exceptional --------------- */
@@ -239,6 +239,7 @@ public final class ExpireAfterVarTest {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.FULL,
       expiry = CacheExpiry.MOCKITO, writer = Writer.MOCKITO, removalListener = Listener.REJECTING)
   @Test(dataProvider = "caches", expectedExceptions = ExpirationException.class)

@@ -21,11 +21,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import com.github.benmanes.caffeine.cache.CacheWriter;
-
 /**
- * A test method with this annotation has indicated that no {@link CacheWriter} operations
- * occurred and the {@link CacheValidationListener} should verify that expectation.
+ * A test method with this annotation has indicated that no
+ * {@link com.github.benmanes.caffeine.cache.CacheWriter} operations occurred and the
+ * {@link CacheValidationListener} should verify that expectation.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */

@@ -89,6 +89,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
  */
+@SuppressWarnings("deprecation")
 abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     implements LocalCache<K, V> {
 
@@ -892,7 +893,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
    * @return if the entry was evicted
    */
   @GuardedBy("evictionLock")
-  @SuppressWarnings({"PMD.CollapsibleIfStatements", "GuardedByChecker"})
+  @SuppressWarnings({"PMD.CollapsibleIfStatements", "GuardedByChecker", "NullAway"})
   boolean evictEntry(Node<K, V> node, RemovalCause cause, long now) {
     K key = node.getKey();
     @SuppressWarnings("unchecked")
@@ -932,9 +933,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
           }
         }
 
-        if (key != null) {
-          writer.delete(key, value[0], actualCause[0]);
-        }
+        writer.delete(key, value[0], actualCause[0]);
         makeDead(n);
       }
       removed[0] = true;

@@ -63,7 +63,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("ImmutableEnumChecker")
+@SuppressWarnings({"ImmutableEnumChecker", "deprecation"})
 @Target(METHOD) @Retention(RUNTIME)
 public @interface CacheSpec {
 
@@ -403,6 +403,12 @@ public @interface CacheSpec {
     Listener.DEFAULT,
   };
 
+  /** The eviction listeners, each resulting in a new combination. */
+  Listener[] evictionListener() default {
+    Listener.CONSUMING,
+    Listener.DEFAULT,
+  };
+
   enum Listener {
     /** A flag indicating that no removal listener is configured. */
     DEFAULT {
@@ -582,8 +588,8 @@ public @interface CacheSpec {
 
   /* --------------- CacheWriter --------------- */
 
-  /** Ignored if weak keys are configured. */
   Writer[] writer() default {
+    Writer.DISABLED,
     Writer.MOCKITO,
   };
 
