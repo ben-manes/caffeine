@@ -1866,7 +1866,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public @Nullable V get(Object key) {
-    return getIfPresent(key, /* recordStats */ false);
+    return getIfPresent(key, /* recordStats */ isRecordingStats());
   }
 
   @Override
