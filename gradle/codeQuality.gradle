@@ -36,7 +36,7 @@ dependencies {
 // Instead we have to download and trick the build to put the jar on the compiler's classpath
 // See the downloadCaffeineLocal() task and https://github.com/gradle/gradle/issues/11625
 task downloadCaffeineLocal() {
-  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.8.0/caffeine-2.8.0.jar'
+  def url = 'https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/2.8.8/caffeine-2.8.8.jar'
   def local = file("${rootDir}/build/libs/caffeine_local.jar")
   if (!local.exists()) {
     local.parentFile.mkdirs()

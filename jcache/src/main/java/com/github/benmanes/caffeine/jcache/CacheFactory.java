@@ -177,7 +177,7 @@ final class CacheFactory {
       JCacheEvictionListener<K, V> evictionListener = null;
       if (evicts || expires) {
         evictionListener = new JCacheEvictionListener<>(dispatcher, statistics);
-        caffeine.writer(evictionListener);
+        caffeine.evictionListener(evictionListener);
       }
 
       CacheProxy<K, V> cache;

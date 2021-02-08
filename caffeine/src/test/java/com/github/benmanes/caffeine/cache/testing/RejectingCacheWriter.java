@@ -23,6 +23,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("deprecation")
 public final class RejectingCacheWriter<K, V> implements CacheWriter<K, V>, Serializable {
   private static final long serialVersionUID = 1L;
 

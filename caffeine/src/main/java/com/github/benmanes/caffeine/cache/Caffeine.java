@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
@@ -156,8 +157,10 @@ public final class Caffeine<K, V> {
   long expireAfterAccessNanos = UNSET_INT;
   long refreshAfterWriteNanos = UNSET_INT;
 
+  @Nullable RemovalListener<? super K, ? super V> evictionListener;
   @Nullable RemovalListener<? super K, ? super V> removalListener;
   @Nullable Supplier<StatsCounter> statsCounterSupplier;
+  @SuppressWarnings("deprecation")
   @Nullable CacheWriter<? super K, ? super V> writer;
   @Nullable Weigher<? super K, ? super V> weigher;
   @Nullable Expiry<? super K, ? super V> expiry;
@@ -575,7 +578,8 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc.
+   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * removal of expired entries.
    *
    * @param duration the length of time after an entry is created that it should be automatically
    *        removed
@@ -595,7 +599,8 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc.
+   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * removal of expired entries.
    * <p>
    * If you can represent the duration as a {@link java.time.Duration} (which should be preferred
    * when feasible), use {@link #expireAfterWrite(Duration)} instead.
@@ -634,7 +639,8 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc.
+   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * removal of expired entries.
    *
    * @param duration the length of time after an entry is last accessed that it should be
    *        automatically removed
@@ -657,7 +663,8 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc.
+   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * removal of expired entries.
    * <p>
    * If you can represent the duration as a {@link java.time.Duration} (which should be preferred
    * when feasible), use {@link #expireAfterAccess(Duration)} instead.
@@ -696,7 +703,17 @@ public final class Caffeine<K, V> {
    * <p>
    * Expired entries may be counted in {@link Cache#estimatedSize()}, but will never be visible to
    * read or write operations. Expired entries are cleaned up as part of the routine maintenance
-   * described in the class javadoc.
+   * described in the class javadoc. A {@link #scheduler(Scheduler)} may be configured for a prompt
+   * removal of expired entries.
+   * <p>
+   * <b>Important note:</b> after invoking this method, do not continue to use <i>this</i> cache
+   * builder reference; instead use the reference this method <i>returns</i>. At runtime, these
+   * point to the same instance, but only the returned reference has the correct generic type
+   * information so as to ensure type safety. For best results, use the standard method-chaining
+   * idiom illustrated in the class documentation above, configuring a builder and building your
+   * cache in a single statement. Failure to heed this advice can result in a
+   * {@link ClassCastException} being thrown by a cache operation at some <i>undefined</i> point in
+   * the future.
    *
    * @param expiry the expiry to use in calculating the expiration time of cache entries
    * @param <K1> key type of the weigher
@@ -824,17 +841,66 @@ public final class Caffeine<K, V> {
   }
 
   /**
-   * Specifies a listener instance that caches should notify each time an entry is removed for any
-   * {@linkplain RemovalCause reason}. Each cache created by this builder will invoke this listener
-   * as part of the routine maintenance described in the class documentation above.
+   * Specifies a listener instance that caches should notify each time an entry is evicted. The
+   * cache will invoke this listener during the atomic operation to remove the entry. In the case of
+   * expiration or reference collection, the entry may be pending removal and will be discarded as
+   * as part of the routine maintenance described in the class documentation above. For a more
+   * prompt notification on expiration a {@link #scheduler(Scheduler)} may be configured. A
+   * {@link #removalListener(RemovalListener)} may be preferred when the listener should be invoked
+   * for any {@linkplain RemovalCause reason}, be performed outside of the atomic operation to
+   * remove the entry, and delegated to the configured {@link #executor(Executor)}.
    * <p>
-   * <b>Warning:</b> after invoking this method, do not continue to use <i>this</i> cache builder
-   * reference; instead use the reference this method <i>returns</i>. At runtime, these point to the
-   * same instance, but only the returned reference has the correct generic type information so as
-   * to ensure type safety. For best results, use the standard method-chaining idiom illustrated in
-   * the class documentation above, configuring a builder and building your cache in a single
-   * statement. Failure to heed this advice can result in a {@link ClassCastException} being thrown
-   * by a cache operation at some <i>undefined</i> point in the future.
+   * <b>Important note:</b> after invoking this method, do not continue to use <i>this</i> cache
+   * builder reference; instead use the reference this method <i>returns</i>. At runtime, these
+   * point to the same instance, but only the returned reference has the correct generic type
+   * information so as to ensure type safety. For best results, use the standard method-chaining
+   * idiom illustrated in the class documentation above, configuring a builder and building your
+   * cache in a single statement. Failure to heed this advice can result in a
+   * {@link ClassCastException} being thrown by a cache operation at some <i>undefined</i> point in
+   * the future.
+   * <p>
+   * <b>Warning:</b> any exception thrown by {@code listener} will <i>not</i> be propagated to the
+   * {@code Cache} user, only logged via a {@link Logger}.
+   *
+   * @param evictionListener a listener instance that caches should notify each time an entry is
+   *        being automatically removed due to eviction
+   * @param <K1> the key type of the listener
+   * @param <V1> the value type of the listener
+   * @return the cache builder reference that should be used instead of {@code this} for any
+   *         remaining configuration and cache building
+   * @throws IllegalStateException if a removal listener was already set
+   * @throws NullPointerException if the specified removal listener is null
+   */
+  @NonNull
+  public <K1 extends K, V1 extends V> Caffeine<K1, V1> evictionListener(
+      @NonNull RemovalListener<? super K1, ? super V1> evictionListener) {
+    requireState(this.evictionListener == null,
+        "eviction listener was already set to %s", this.evictionListener);
+
+    @SuppressWarnings("unchecked")
+    Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
+    self.evictionListener = requireNonNull(evictionListener);
+    return self;
+  }
+
+  /**
+   * Specifies a listener instance that caches should notify each time an entry is removed for any
+   * {@linkplain RemovalCause reason}. The cache will invoke this listener on the configured
+   * {@link #executor(Executor)} after the entry's removal operation has completed. In the case of
+   * expiration or reference collection, the entry may be pending removal and will be discarded as
+   * as part of the routine maintenance described in the class documentation above. For a more
+   * prompt notification on expiration a {@link #scheduler(Scheduler)} may be configured. An
+   * {@link #evictionListener(RemovalListener)} may be preferred when the listener should be invoked
+   * as part of the atomic operation to remove the entry.
+   * <p>
+   * <b>Important note:</b> after invoking this method, do not continue to use <i>this</i> cache
+   * builder reference; instead use the reference this method <i>returns</i>. At runtime, these
+   * point to the same instance, but only the returned reference has the correct generic type
+   * information so as to ensure type safety. For best results, use the standard method-chaining
+   * idiom illustrated in the class documentation above, configuring a builder and building your
+   * cache in a single statement. Failure to heed this advice can result in a
+   * {@link ClassCastException} being thrown by a cache operation at some <i>undefined</i> point in
+   * the future.
    * <p>
    * <b>Warning:</b> any exception thrown by {@code listener} will <i>not</i> be propagated to the
    * {@code Cache} user, only logged via a {@link Logger}.
@@ -874,13 +940,14 @@ public final class Caffeine<K, V> {
    * when an entry is loaded or computed. Each cache created by this builder will invoke this writer
    * as part of the atomic operation that modifies the cache.
    * <p>
-   * <b>Warning:</b> after invoking this method, do not continue to use <i>this</i> cache builder
-   * reference; instead use the reference this method <i>returns</i>. At runtime, these point to the
-   * same instance, but only the returned reference has the correct generic type information so as
-   * to ensure type safety. For best results, use the standard method-chaining idiom illustrated in
-   * the class documentation above, configuring a builder and building your cache in a single
-   * statement. Failure to heed this advice can result in a {@link ClassCastException} being thrown
-   * by a cache operation at some <i>undefined</i> point in the future.
+   * <b>Important note:</b> after invoking this method, do not continue to use <i>this</i> cache
+   * builder reference; instead use the reference this method <i>returns</i>. At runtime, these
+   * point to the same instance, but only the returned reference has the correct generic type
+   * information so as to ensure type safety. For best results, use the standard method-chaining
+   * idiom illustrated in the class documentation above, configuring a builder and building your
+   * cache in a single statement. Failure to heed this advice can result in a
+   * {@link ClassCastException} being thrown by a cache operation at some <i>undefined</i> point in
+   * the future.
    * <p>
    * <b>Warning:</b> any exception thrown by {@code writer} will be propagated to the {@code Cache}
    * user.
@@ -895,8 +962,12 @@ public final class Caffeine<K, V> {
    *         remaining configuration and cache building
    * @throws IllegalStateException if a writer was already set or if the key strength is weak
    * @throws NullPointerException if the specified writer is null
+   * @deprecated Scheduled for removal in version 3.0.0. Consider instead using {@link Map} compute
+   *             methods for extending manual write and remove operations, and using
+   *             {@link #evictionListener(RemovalListener)} for extending removals due to eviction.
    */
   @NonNull
+  @Deprecated
   public <K1 extends K, V1 extends V> Caffeine<K1, V1> writer(
       @NonNull CacheWriter<? super K1, ? super V1> writer) {
     requireState(this.writer == null, "Writer was already set to %s", this.writer);
@@ -908,9 +979,14 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  <K1 extends K, V1 extends V> CacheWriter<K1, V1> getCacheWriter() {
-    @SuppressWarnings("unchecked")
-    CacheWriter<K1, V1> castedWriter = (CacheWriter<K1, V1>) writer;
+  @SuppressWarnings({"deprecation", "unchecked"})
+  <K1 extends K, V1 extends V> CacheWriter<K1, V1> getCacheWriter(boolean async) {
+    CacheWriter<K1, V1> castedWriter;
+    if (evictionListener == null) {
+      castedWriter = (CacheWriter<K1, V1>) writer;
+    } else {
+      castedWriter = new CacheWriterAdapter<>(evictionListener, async);
+    }
     return (castedWriter == null) ? CacheWriter.disabledWriter() : castedWriter;
   }
 
@@ -1151,7 +1227,7 @@ public final class Caffeine<K, V> {
    */
   @Override
   public String toString() {
-    StringBuilder s = new StringBuilder(64);
+    StringBuilder s = new StringBuilder(75);
     s.append(getClass().getSimpleName()).append('{');
     int baseLength = s.length();
     if (initialCapacity != UNSET_INT) {
@@ -1181,6 +1257,9 @@ public final class Caffeine<K, V> {
     if (valueStrength != null) {
       s.append("valueStrength=").append(valueStrength.toString().toLowerCase(US)).append(", ");
     }
+    if (evictionListener != null) {
+      s.append("evictionListener, ");
+    }
     if (removalListener != null) {
       s.append("removalListener, ");
     }
@@ -1191,5 +1270,36 @@ public final class Caffeine<K, V> {
       s.deleteCharAt(s.length() - 2);
     }
     return s.append('}').toString();
+  }
+
+  @SuppressWarnings("deprecation")
+  static final class CacheWriterAdapter<K, V> implements CacheWriter<K, V>, Serializable {
+    private static final long serialVersionUID = 1;
+
+    final RemovalListener<? super K, ? super  V> delegate;
+    final boolean isAsync;
+
+    CacheWriterAdapter(RemovalListener<? super K, ? super  V> delegate, boolean isAsync) {
+      this.delegate = delegate;
+      this.isAsync = isAsync;
+    }
+
+    @Override public void write(K key, V value) {}
+
+    @Override
+    public void delete(K key, @Nullable V value, RemovalCause cause) {
+      if (cause.wasEvicted()) {
+        try {
+          if (isAsync && (value != null)) {
+            @SuppressWarnings("unchecked")
+            CompletableFuture<V> future = (CompletableFuture<V>) value;
+            value = Async.getIfReady(future);
+          }
+          delegate.onRemoval(key, value, cause);
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown by eviction listener", t);
+        }
+      }
+    }
   }
 }

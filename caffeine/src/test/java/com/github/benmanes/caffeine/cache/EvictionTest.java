@@ -16,9 +16,9 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionWeight;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
@@ -75,6 +75,7 @@ import com.google.common.collect.Maps;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("deprecation")
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class EvictionTest {
@@ -115,9 +116,9 @@ public final class EvictionTest {
     }
     int count = context.absentKeys().size();
     assertThat(context, hasEvictionCount(count));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.SIZE));
+    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.SIZE));
 
-    verifyWriter(context, (verifier, writer) -> {
+    verifyWriter(context, verifier -> {
       Map<Integer, Integer> all = new HashMap<>(context.original());
       all.putAll(context.absent());
       MapDifference<Integer, Integer> diff = Maps.difference(all, cache.asMap());
@@ -128,7 +129,8 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine, population = Population.EMPTY,
       initialCapacity = InitialCapacity.EXCESSIVE, maximumSize = Maximum.TEN,
-      weigher = CacheWeigher.COLLECTION, keys = ReferenceType.STRONG, values = ReferenceType.STRONG)
+      weigher = CacheWeigher.COLLECTION, keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      writer = Writer.MOCKITO)
   public void evict_weighted(Cache<Integer, List<Integer>> cache,
       CacheContext context, Eviction<?, ?> eviction) {
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -161,7 +163,7 @@ public final class EvictionTest {
     await().until(cache::estimatedSize, is(4L));
     assertThat(cache.asMap().containsKey(1), is(false));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
-    verifyWriter(context, (verifier, ignored) -> {
+    verifyWriter(context, verifier -> {
       verify(writer).delete(1, value1, RemovalCause.SIZE);
       verifier.deletions(1, RemovalCause.SIZE);
     });
@@ -170,7 +172,7 @@ public final class EvictionTest {
     cache.put(5, value5);
     await().until(cache::estimatedSize, is(4L));
     assertThat(eviction.weightedSize().getAsLong(), is(8L));
-    verifyWriter(context, (verifier, ignored) -> {
+    verifyWriter(context, verifier -> {
       verify(writer).delete(5, value5, RemovalCause.SIZE);
       verifier.deletions(2);
     });
@@ -195,7 +197,7 @@ public final class EvictionTest {
     cache.policy().eviction().ifPresent(eviction -> {
       assertThat(eviction.weightedSize().getAsLong(), is(10L));
     });
-    assertThat(context.consumedNotifications(), is(equalTo(ImmutableList.of(
+    assertThat(context.removalNotifications(), is(equalTo(ImmutableList.of(
         new RemovalNotification<>(20, 20, RemovalCause.SIZE)))));
     if (context.isCaffeine()) {
       assertThat(context, hasEvictionWeight(20L));
@@ -226,13 +228,13 @@ public final class EvictionTest {
 
     ready.set(true);
     await().untilTrue(done);
-    await().until(context::consumedNotifications, hasSize(1));
+    await().until(context::removalNotifications, hasSize(1));
     await().until(() -> cache.synchronous().estimatedSize(), is(2L));
     await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
 
     assertThat(context, hasEvictionWeight(5L));
-    assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
+    verifyListeners(context, verifier -> verifier.hasOnly(1, RemovalCause.SIZE));
+    verifyWriter(context, verifier -> verifier.deletions(1, RemovalCause.SIZE));
   }
 
   @Test(dataProvider = "caches")
@@ -259,8 +261,8 @@ public final class EvictionTest {
     await().until(() -> eviction.weightedSize().getAsLong(), is(0L));
     await().until(() -> cache.synchronous().estimatedSize(), is(0L));
 
-    assertThat(context, hasRemovalNotifications(context, 1, RemovalCause.SIZE));
-    verifyWriter(context, (verifier, writer) -> verifier.deletions(1, RemovalCause.SIZE));
+    verifyListeners(context, verifier -> verifier.hasOnly(1, RemovalCause.SIZE));
+    verifyWriter(context, verifier -> verifier.deletions(1, RemovalCause.SIZE));
   }
 
   @CheckNoStats
@@ -294,7 +296,7 @@ public final class EvictionTest {
   @Test(dataProvider = "caches")
   public void put_zeroWeight(Cache<Integer, Integer> cache, CacheContext context) {
     cache.put(context.absentKey(), context.absentValue());
-    verifyWriter(context, (verifier, writer) -> {
+    verifyWriter(context, verifier -> {
       verifier.wrote(context.absentKey(), context.absentValue());
     });
   }
@@ -338,7 +340,7 @@ public final class EvictionTest {
     assertThat(cache.estimatedSize(), is(2L));
     assertThat(eviction.weightedSize().getAsLong(), is(5L));
 
-    verifyWriter(context, (verifier, ignored) -> {
+    verifyWriter(context, verifier -> {
       verify(writer).write("a", asList(1, 2, 3));
       verify(writer).write("b", asList(1));
       verify(writer).write("a", asList(-1, -2, -3, -4));
@@ -563,18 +565,17 @@ public final class EvictionTest {
     if (context.initialSize() > newSize) {
       if (context.isZeroWeighted()) {
         assertThat(cache.estimatedSize(), is(context.initialSize()));
-        assertThat(cache, hasRemovalNotifications(context, 0, RemovalCause.SIZE));
+        verifyListeners(context, verifier -> verifier.noInteractions());
       } else {
         assertThat(cache.estimatedSize(), is(newSize));
-        assertThat(cache, hasRemovalNotifications(context, newSize, RemovalCause.SIZE));
+        verifyListeners(context, verifier -> verifier.hasOnly(newSize, RemovalCause.SIZE));
       }
     }
   }
 
   @Test(dataProvider = "caches")
   @CacheSpec(implementation = Implementation.Caffeine,
-      maximumSize = Maximum.FULL, weigher = { CacheWeigher.DEFAULT, CacheWeigher.TEN },
-      removalListener = { Listener.DEFAULT, Listener.CONSUMING })
+      maximumSize = Maximum.FULL, weigher = { CacheWeigher.DEFAULT, CacheWeigher.TEN })
   public void maximumSize_decrease_min(Cache<Integer, Integer> cache,
       CacheContext context, Eviction<Integer, Integer> eviction) {
     eviction.setMaximum(0);
@@ -583,7 +584,8 @@ public final class EvictionTest {
       long expect = context.isZeroWeighted() ? context.initialSize() : 0;
       assertThat(cache.estimatedSize(), is(expect));
     }
-    assertThat(cache, hasRemovalNotifications(context, context.initialSize(), RemovalCause.SIZE));
+    verifyListeners(context, verifier ->
+        verifier.hasOnly(context.initialSize(), RemovalCause.SIZE));
   }
 
   @CacheSpec(implementation = Implementation.Caffeine, maximumSize = Maximum.FULL,
@@ -595,7 +597,7 @@ public final class EvictionTest {
       eviction.setMaximum(-1);
     } finally {
       assertThat(eviction.getMaximum(), is(context.maximumWeightOrSize()));
-      assertThat(cache, hasRemovalNotifications(context, 0, RemovalCause.SIZE));
+      verifyListeners(context, verifier -> verifier.noInteractions());
     }
   }
 

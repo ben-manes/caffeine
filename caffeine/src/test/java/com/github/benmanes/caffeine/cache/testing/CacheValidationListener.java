@@ -226,7 +226,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
 
     assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
-    verifyWriter(context, (verifier, writer) -> verifier.zeroInteractions());
+    verifyWriter(context, verifier -> verifier.zeroInteractions());
   }
 
   /** Checks the statistics if {@link CheckNoStats} is found. */

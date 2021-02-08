@@ -22,18 +22,20 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.mockito.Mockito;
 
 import com.github.benmanes.caffeine.cache.CacheWriter;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.Writer;
 
 /**
  * A utility for verifying that the {@link CacheWriter} mock was operated on correctly.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
+@SuppressWarnings("deprecation")
 public final class CacheWriterVerifier {
   private final CacheContext context;
 
@@ -91,13 +93,13 @@ public final class CacheWriterVerifier {
   }
 
   /** Runs the verification block iff the cache writer is enabled. */
-  public static void verifyWriter(CacheContext context,
-      BiConsumer<CacheWriterVerifier, CacheWriter<Integer, Integer>> consumer) {
+  public static void verifyWriter(CacheContext context, Consumer<CacheWriterVerifier> consumer) {
     boolean mayVerify = context.isCaffeine()
+        && (context.writer() == Writer.MOCKITO)
         && context.isStrongKeys()
         && !context.isAsync();
     if (mayVerify) {
-      consumer.accept(new CacheWriterVerifier(context), context.cacheWriter());
+      consumer.accept(new CacheWriterVerifier(context));
     }
   }
 }

@@ -16,11 +16,11 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.IsCacheReserializable.reserializable;
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static com.google.common.collect.Streams.stream;
@@ -962,13 +962,13 @@ public final class AsyncCacheTest {
     }
     int count = context.firstMiddleLastKeys().size();
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize() - count));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.EXPLICIT));
   }
 
   /* --------------- misc --------------- */
 
   @Test(dataProvider = "caches")
-  @CacheSpec(population = Population.EMPTY, removalListener = Listener.MOCK)
+  @CacheSpec(population = Population.EMPTY, removalListener = Listener.MOCKITO)
   public void removalListener_nullValue(AsyncCache<Integer, Integer> cache, CacheContext context) {
     CompletableFuture<Integer> future = new CompletableFuture<>();
     cache.put(context.absentKey(), future);

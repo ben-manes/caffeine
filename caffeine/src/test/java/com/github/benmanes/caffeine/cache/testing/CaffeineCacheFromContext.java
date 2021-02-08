@@ -37,7 +37,7 @@ import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("PreferJavaTimeOverload")
+@SuppressWarnings({"PreferJavaTimeOverload", "deprecation"})
 public final class CaffeineCacheFromContext {
   interface SerializableTicker extends Ticker, Serializable {}
 
@@ -95,6 +95,9 @@ public final class CaffeineCacheFromContext {
     }
     if (context.removalListenerType != Listener.DEFAULT) {
       builder.removalListener(context.removalListener);
+    }
+    if (context.evictionListenerType != Listener.DEFAULT) {
+      builder.evictionListener(context.evictionListener);
     }
     if (context.isStrongKeys() && !context.isAsync()) {
       builder.writer(context.cacheWriter());

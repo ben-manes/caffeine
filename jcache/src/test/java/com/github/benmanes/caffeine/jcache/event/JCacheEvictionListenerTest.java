@@ -74,13 +74,14 @@ public final class JCacheEvictionListenerTest {
   @DataProvider
   public Iterator<Object[]> notifications() {
     return Arrays.stream(RemovalCause.values())
+        .filter(RemovalCause::wasEvicted)
         .map(cause -> new Object[] { 1, new Expirable<>(2, 3), cause })
         .iterator();
   }
 
   @Test(dataProvider = "notifications")
   public void publishIfEvicted(Integer key, Expirable<Integer> value, RemovalCause cause) {
-    listener.delete(key, value, cause);
+    listener.onRemoval(key, value, cause);
 
     if (cause.wasEvicted()) {
       if (cause == RemovalCause.EXPIRED) {

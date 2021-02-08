@@ -15,9 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
@@ -91,7 +91,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache.getIfPresent(context.middleKey()), is(-context.middleKey()));
 
     assertThat(cache.estimatedSize(), is(context.initialSize()));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   @CheckNoWriter
@@ -105,7 +105,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache.getIfPresent(context.middleKey()), is(futureOf(-context.middleKey())));
 
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   /* --------------- getAllPresent --------------- */
@@ -122,7 +122,7 @@ public final class RefreshAfterWriteTest {
     assertThat(cache.getAllPresent(context.firstMiddleLastKeys()).size(), is(count));
 
     assertThat(cache.estimatedSize(), is(context.initialSize()));
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* --------------- getFunc --------------- */
@@ -139,7 +139,7 @@ public final class RefreshAfterWriteTest {
     cache.get(context.lastKey(), mappingFunction); // refreshed
 
     assertThat(cache.estimatedSize(), is(context.initialSize()));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   @CheckNoWriter
@@ -155,7 +155,7 @@ public final class RefreshAfterWriteTest {
     cache.get(context.lastKey(), mappingFunction); // refreshed
 
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   /* --------------- get --------------- */
@@ -171,7 +171,7 @@ public final class RefreshAfterWriteTest {
     context.ticker().advance(45, TimeUnit.SECONDS);
 
     assertThat(cache.getIfPresent(context.firstKey()), is(-context.firstKey()));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   @CheckNoWriter
@@ -186,7 +186,7 @@ public final class RefreshAfterWriteTest {
     context.ticker().advance(45, TimeUnit.SECONDS);
 
     assertThat(cache.getIfPresent(context.firstKey()), is(futureOf(-context.firstKey())));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   @Test(dataProvider = "caches")
@@ -279,7 +279,7 @@ public final class RefreshAfterWriteTest {
     // Ensure new values are present
     assertThat(cache.getAll(keys), is(ImmutableMap.of(context.firstKey(), context.firstKey(),
         context.absentKey(), context.absentKey())));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   @CheckNoWriter
@@ -300,7 +300,7 @@ public final class RefreshAfterWriteTest {
     // Ensure new values are present
     assertThat(cache.getAll(keys), is(futureOf(ImmutableMap.of(context.firstKey(),
         context.firstKey(), context.absentKey(), context.absentKey()))));
-    assertThat(cache, hasRemovalNotifications(context, 1, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.REPLACED));
   }
 
   /* --------------- put --------------- */
@@ -326,13 +326,13 @@ public final class RefreshAfterWriteTest {
     assertThat(cache.asMap().put(key, updated), is(original));
     refresh.set(true);
 
-    await().until(() -> context.consumedNotifications().size(), is(2));
-    List<Integer> removed = context.consumedNotifications().stream()
+    await().until(() -> context.removalNotifications().size(), is(2));
+    List<Integer> removed = context.removalNotifications().stream()
         .map(RemovalNotification::getValue).collect(toList());
 
     assertThat(cache.getIfPresent(key), is(updated));
     assertThat(removed, containsInAnyOrder(original, refreshed));
-    assertThat(cache, hasRemovalNotifications(context, 2, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(2, RemovalCause.REPLACED));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 
@@ -359,7 +359,7 @@ public final class RefreshAfterWriteTest {
     refresh.set(true);
 
     await().until(() -> cache.getIfPresent(key), is(refreshed));
-    await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
     assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
   }
 

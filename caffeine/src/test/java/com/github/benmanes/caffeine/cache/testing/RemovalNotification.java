@@ -67,4 +67,9 @@ public final class RemovalNotification<K, V> extends SimpleImmutableEntry<K, V> 
   public boolean wasEvicted() {
     return cause.wasEvicted();
   }
+
+  @Override
+  public String toString() {
+    return getKey() + "=" + getValue() + " [" + cause + "]";
+  }
 }

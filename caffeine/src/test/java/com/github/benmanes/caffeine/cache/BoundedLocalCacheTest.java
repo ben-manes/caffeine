@@ -21,8 +21,8 @@ import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.PROCES
 import static com.github.benmanes.caffeine.cache.BLCHeader.DrainStatusRef.REQUIRED;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.EXPIRE_WRITE_TOLERANCE;
 import static com.github.benmanes.caffeine.cache.BoundedLocalCache.PERCENT_MAIN_PROTECTED;
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -80,7 +80,7 @@ import com.google.common.testing.GcFinalization;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings("GuardedBy")
+@SuppressWarnings({"GuardedBy", "deprecation"})
 @Listeners(CacheValidationListener.class)
 @Test(dataProviderClass = CacheProvider.class)
 public final class BoundedLocalCacheTest {
@@ -203,6 +203,7 @@ public final class BoundedLocalCacheTest {
     Map.Entry<Integer, Integer> oldEntry = Iterables.get(context.absent().entrySet(), 0);
     Map.Entry<Integer, Integer> newEntry = Iterables.get(context.absent().entrySet(), 1);
 
+    AtomicBoolean removed = new AtomicBoolean();
     localCache.put(oldEntry.getKey(), oldEntry.getValue());
     localCache.evictionLock.lock();
     try {
@@ -212,8 +213,10 @@ public final class BoundedLocalCacheTest {
       ConcurrentTestHarness.execute(() -> {
         localCache.put(newEntry.getKey(), newEntry.getValue());
         assertThat(localCache.remove(oldEntry.getKey()), is(oldEntry.getValue()));
+        removed.set(true);
       });
       await().until(() -> localCache.containsKey(oldEntry.getKey()), is(false));
+      await().untilTrue(removed);
       await().until(() -> {
         synchronized (node) {
           return !node.isAlive();
@@ -224,7 +227,7 @@ public final class BoundedLocalCacheTest {
 
       checkStatus(node, Status.DEAD);
       assertThat(localCache.containsKey(newEntry.getKey()), is(true));
-      await().until(() -> cache, hasRemovalNotifications(context, 1, RemovalCause.EXPLICIT));
+      verifyRemovalListener(context, verifier -> verifier.hasOnly(1, RemovalCause.EXPLICIT));
     } finally {
       localCache.evictionLock.unlock();
     }

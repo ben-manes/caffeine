@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalLoadingCache;
 import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalManualCache;
+import com.github.benmanes.caffeine.cache.Caffeine.CacheWriterAdapter;
 import com.github.benmanes.caffeine.cache.LocalAsyncLoadingCache.LoadingCacheView;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalLoadingCache;
@@ -154,9 +155,15 @@ public final class IsCacheReserializable<T> extends TypeSafeDiagnosingMatcher<T>
       UnboundedLocalCache<K, V> copy, DescriptionBuilder desc) {
     desc.expectThat("estimated empty", copy.estimatedSize(), is(0L));
     desc.expectThat("same ticker", copy.ticker, is(original.ticker));
-    desc.expectThat("same writer", copy.writer, is(original.writer));
     desc.expectThat("same isRecordingStats",
         copy.isRecordingStats, is(original.isRecordingStats));
+
+    if (original.writer instanceof CacheWriterAdapter) {
+      desc.expectThat("same writer", ((CacheWriterAdapter<?, ?>) copy.writer).delegate.getClass(),
+          is(((CacheWriterAdapter<?, ?>) original.writer).delegate.getClass()));
+    } else {
+      desc.expectThat("same writer", copy.writer, is(original.writer));
+    }
 
     if (original.removalListener == null) {
       desc.expectThat("same removalListener", copy.removalListener, is(nullValue()));

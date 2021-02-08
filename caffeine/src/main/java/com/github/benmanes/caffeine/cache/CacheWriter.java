@@ -15,6 +15,8 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import java.util.Map;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -28,7 +30,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *        key is acceptable
  * @param <V> the most general type of values this write can write; for example {@code Object} if
  *        any value is acceptable
+ * @deprecated Scheduled for removal in version 3.0.0. Consider instead using {@link Map} compute
+ *             methods for extending manual write and remove operations, and using
+ *             {@link Caffeine#evictionListener(RemovalListener)} for extending removals due to
+ *             eviction.
  */
+@Deprecated
 public interface CacheWriter<K, V> {
 
   /***
@@ -67,6 +74,7 @@ public interface CacheWriter<K, V> {
   }
 }
 
+@SuppressWarnings("deprecation")
 enum DisabledWriter implements CacheWriter<Object, Object> {
   INSTANCE;
 

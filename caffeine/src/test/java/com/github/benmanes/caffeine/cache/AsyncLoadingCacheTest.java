@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.testing.HasRemovalNotifications.hasRemovalNotifications;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
 import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.IsFutureValue.futureOf;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -365,7 +365,7 @@ public final class AsyncLoadingCacheTest {
     assertThat(cache.synchronous().estimatedSize(), is(context.initialSize()));
 
     int count = context.firstMiddleLastKeys().size();
-    assertThat(cache, hasRemovalNotifications(context, count, RemovalCause.REPLACED));
+    verifyRemovalListener(context, verifier -> verifier.hasOnly(count, RemovalCause.REPLACED));
   }
 
   /* --------------- refresh --------------- */
