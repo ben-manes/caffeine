@@ -17,7 +17,6 @@ package com.github.benmanes.caffeine.cache;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Consumer;
 
 /**
@@ -56,12 +55,13 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
   }
 
   static final class RingBuffer<E> extends BBHeader.ReadAndWriteCounterRef implements Buffer<E> {
-    final AtomicReferenceArray<E> buffer;
+    static final VarHandle BUFFER = MethodHandles.arrayElementVarHandle(Object[].class);
 
-    @SuppressWarnings({"unchecked", "cast", "rawtypes"})
+    final Object[] buffer;
+
     public RingBuffer(E e) {
-      buffer = new AtomicReferenceArray<>(BUFFER_SIZE);
-      buffer.lazySet(0, e);
+      buffer = new Object[BUFFER_SIZE];
+      BUFFER.set(buffer, 0, e);
     }
 
     @Override
@@ -74,7 +74,7 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
       }
       if (casWriteCounter(tail, tail + 1)) {
         int index = (int) (tail & MASK);
-        buffer.lazySet(index, e);
+        BUFFER.setRelease(buffer, index, e);
         return Buffer.SUCCESS;
       }
       return Buffer.FAILED;
@@ -90,12 +90,12 @@ final class BoundedBuffer<E> extends StripedBuffer<E> {
       }
       do {
         int index = (int) (head & MASK);
-        E e = buffer.get(index);
+        E e = (E) BUFFER.getVolatile(buffer, index);
         if (e == null) {
           // not published yet
           break;
         }
-        buffer.lazySet(index, null);
+        BUFFER.setRelease(buffer, index, null);
         consumer.accept(e);
         head++;
       } while (head != tail);
