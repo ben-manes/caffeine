@@ -221,6 +221,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
   final Weigher<K, V> weigher;
   final Executor executor;
   final boolean isAsync;
+  final boolean recordStats;
 
   // The collection views
   @Nullable transient Set<K> keySet;
@@ -238,6 +239,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     writer = builder.getCacheWriter(isAsync);
     drainBuffersTask = new PerformCleanupTask(this);
     nodeFactory = NodeFactory.newFactory(builder, isAsync);
+    recordStats = isRecordingStats();
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());
     readBuffer = evicts() || collectKeys() || collectValues() || expiresAfterAccess()
         ? new BoundedBuffer<>()
@@ -1866,7 +1868,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
 
   @Override
   public @Nullable V get(Object key) {
-    return getIfPresent(key, /* recordStats */ isRecordingStats());
+    return getIfPresent(key, /* recordStats */ recordStats);
   }
 
   @Override
