@@ -238,6 +238,7 @@ public class CacheBuilderTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("CheckReturnValue")
   public void testTimeToLive_small() {
     CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1, NANOSECONDS), identityLoader());
@@ -284,6 +285,7 @@ public class CacheBuilderTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("CheckReturnValue")
   public void testTimeToIdle_small() {
     CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterAccess(1, NANOSECONDS), identityLoader());
@@ -312,6 +314,7 @@ public class CacheBuilderTest extends TestCase {
     }
   }
 
+  @SuppressWarnings("CheckReturnValue")
   public void testTimeToIdleAndToLive() {
     CaffeinatedGuava.build(Caffeine.newBuilder()
         .expireAfterWrite(1, NANOSECONDS)

@@ -46,6 +46,7 @@ import com.github.benmanes.caffeine.cache.Async.AsyncWeigher;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.ConcurrentStatsCounter;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 
 /**
@@ -224,6 +225,7 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    *
    * @return a new instance with default settings
    */
+  @CheckReturnValue
   public static Caffeine<Object, Object> newBuilder() {
     return new Caffeine<>();
   }
@@ -234,6 +236,7 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * @param spec the specification to build from
    * @return a new instance with the specification's settings
    */
+  @CheckReturnValue
   public static Caffeine<Object, Object> from(CaffeineSpec spec) {
     Caffeine<Object, Object> builder = spec.toBuilder();
     builder.strictParsing = false;
@@ -246,6 +249,7 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * @param spec a String in the format specified by {@link CaffeineSpec}
    * @return a new instance with the specification's settings
    */
+  @CheckReturnValue
   public static Caffeine<Object, Object> from(String spec) {
     return from(CaffeineSpec.parse(spec));
   }
@@ -1038,6 +1042,7 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
+  @CheckReturnValue
   public <K1 extends K, V1 extends V> Cache<K1, V1> build() {
     requireWeightWithWeigher();
     requireNonLoadingCache();
@@ -1063,6 +1068,7 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
+  @CheckReturnValue
   public <K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       CacheLoader<? super K1, V1> loader) {
     requireWeightWithWeigher();
@@ -1095,6 +1101,7 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * @param <V1> the value type of the cache
    * @return a cache having the requested features
    */
+  @CheckReturnValue
   public <K1 extends K, V1 extends V> AsyncCache<K1, V1> buildAsync() {
     requireState(valueStrength == null, "Weak or soft values can not be combined with AsyncCache");
     requireState(writer == null, "CacheWriter can not be combined with AsyncCache");
@@ -1129,6 +1136,7 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
+  @CheckReturnValue
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       CacheLoader<? super K1, V1> loader) {
     return buildAsync((AsyncCacheLoader<? super K1, V1>) loader);
@@ -1153,6 +1161,7 @@ public final class Caffeine<K extends @NonNull Object, V extends @NonNull Object
    * @param <V1> the value type of the loader
    * @return a cache having the requested features
    */
+  @CheckReturnValue
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       AsyncCacheLoader<? super K1, V1> loader) {
     requireState(valueStrength == null,

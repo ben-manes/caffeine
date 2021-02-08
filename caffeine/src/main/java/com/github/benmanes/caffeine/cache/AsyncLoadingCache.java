@@ -20,6 +20,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 /**
  * A semi-persistent mapping from keys to values. Values are automatically loaded by the cache
  * asynchronously, and are stored in the cache until either evicted or manually invalidated.
@@ -89,5 +91,6 @@ public interface AsyncLoadingCache<K extends @NonNull Object, V extends @NonNull
    * @return a thread-safe synchronous view of this cache
    */
   @Override
+  @CheckReturnValue
   LoadingCache<K, V> synchronous();
 }

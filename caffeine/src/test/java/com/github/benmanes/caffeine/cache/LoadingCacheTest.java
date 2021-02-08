@@ -761,6 +761,7 @@ public final class LoadingCacheTest {
     assertThat(future.get(), is(-1));
   }
 
+  @SuppressWarnings("CheckReturnValue")
   @Test(expectedExceptions = NullPointerException.class)
   public void bulk_null() {
     CacheLoader.bulk(null);

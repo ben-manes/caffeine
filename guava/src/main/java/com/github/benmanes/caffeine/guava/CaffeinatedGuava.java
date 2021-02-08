@@ -23,6 +23,7 @@ import com.github.benmanes.caffeine.guava.CaffeinatedGuavaLoadingCache.SingleLoa
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
  * An adapter to expose a Caffeine cache through the Guava interfaces.
@@ -39,6 +40,7 @@ public final class CaffeinatedGuava {
    * @param builder the configured cache builder
    * @return a cache exposed under the Guava APIs
    */
+  @CheckReturnValue
   public static <K, V, K1 extends K, V1 extends V> Cache<K1, V1> build(Caffeine<K, V> builder) {
     return new CaffeinatedGuavaCache<>(builder.build());
   }
@@ -50,6 +52,7 @@ public final class CaffeinatedGuava {
    * @param loader the cache loader used to obtain new values
    * @return a cache exposed under the Guava APIs
    */
+  @CheckReturnValue
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       Caffeine<K, V> builder, CacheLoader<? super K1, V1> loader) {
     @SuppressWarnings("unchecked")
@@ -66,6 +69,7 @@ public final class CaffeinatedGuava {
    * @param loader the cache loader used to obtain new values
    * @return a cache exposed under the Guava APIs
    */
+  @CheckReturnValue
   public static <K, V, K1 extends K, V1 extends V> LoadingCache<K1, V1> build(
       Caffeine<K, V> builder,
       com.github.benmanes.caffeine.cache.CacheLoader<? super K1, V1> loader) {

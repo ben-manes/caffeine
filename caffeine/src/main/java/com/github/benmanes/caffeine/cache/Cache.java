@@ -26,6 +26,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import com.google.errorprone.annotations.CheckReturnValue;
 
 /**
  * A semi-persistent mapping from keys to values. Cache entries are manually added using
@@ -180,6 +181,7 @@ public interface Cache<K extends @NonNull Object, V extends @NonNull Object> {
    * @return the estimated number of mappings
    */
   @NonNegative
+  @CheckReturnValue
   long estimatedSize();
 
   /**
@@ -191,6 +193,7 @@ public interface Cache<K extends @NonNull Object, V extends @NonNull Object> {
    *
    * @return the current snapshot of the statistics of this cache
    */
+  @CheckReturnValue
   CacheStats stats();
 
   /**
@@ -208,6 +211,7 @@ public interface Cache<K extends @NonNull Object, V extends @NonNull Object> {
    *
    * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
    */
+  @CheckReturnValue
   ConcurrentMap<K, V> asMap();
 
   /**
@@ -223,5 +227,6 @@ public interface Cache<K extends @NonNull Object, V extends @NonNull Object> {
    *
    * @return access to inspect and perform advanced operations based on the cache's characteristics
    */
+  @CheckReturnValue
   Policy<K, V> policy();
 }

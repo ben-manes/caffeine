@@ -26,6 +26,8 @@ import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 /**
  * Computes or retrieves values asynchronously, based on a key, for use in populating a
  * {@link AsyncLoadingCache}.
@@ -125,6 +127,7 @@ public interface AsyncCacheLoader<K extends @NonNull Object, V extends @NonNull 
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
    */
+  @CheckReturnValue
   static <K extends Object, V extends Object> AsyncCacheLoader<K, V> bulk(
       Function<? super Set<? extends K>, ? extends Map<? extends K, ? extends V>> mappingFunction) {
     return CacheLoader.bulk(mappingFunction);
@@ -146,6 +149,7 @@ public interface AsyncCacheLoader<K extends @NonNull Object, V extends @NonNull 
    * @return an asynchronous cache loader that delegates to the supplied {@code mappingFunction}
    * @throws NullPointerException if the mappingFunction is null
    */
+  @CheckReturnValue
   static <K extends Object, V extends Object> AsyncCacheLoader<K, V> bulk(
       BiFunction<? super Set<? extends K>, ? super Executor,
       ? extends CompletableFuture<? extends Map<? extends K, ? extends V>>> mappingFunction) {
