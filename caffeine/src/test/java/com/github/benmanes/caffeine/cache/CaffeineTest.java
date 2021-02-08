@@ -44,7 +44,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@SuppressWarnings({"PreferJavaTimeOverload", "deprecation"})
+@SuppressWarnings({"PreferJavaTimeOverload", "deprecation", "CheckReturnValue"})
 public final class CaffeineTest {
   @Mock StatsCounter statsCounter;
   @Mock Expiry<Object, Object> expiry;

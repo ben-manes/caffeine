@@ -26,6 +26,8 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.google.errorprone.annotations.CheckReturnValue;
+
 /**
  * A semi-persistent mapping from keys to values. Cache entries are manually added using
  * {@link #get(Object, Function)} or {@link #put(Object, CompletableFuture)}, and are stored in the
@@ -178,6 +180,7 @@ public interface AsyncCache<K extends @NonNull Object, V extends @NonNull Object
    *
    * @return a thread-safe view of this cache supporting all of the optional {@link Map} operations
    */
+  @CheckReturnValue
   ConcurrentMap<K, CompletableFuture<V>> asMap();
 
   /**
@@ -188,5 +191,6 @@ public interface AsyncCache<K extends @NonNull Object, V extends @NonNull Object
    *
    * @return a thread-safe synchronous view of this cache
    */
+  @CheckReturnValue
   Cache<K, V> synchronous();
 }
