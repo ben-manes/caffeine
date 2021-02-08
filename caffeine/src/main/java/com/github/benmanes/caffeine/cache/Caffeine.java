@@ -18,6 +18,7 @@ package com.github.benmanes.caffeine.cache;
 import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 
+import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
@@ -979,23 +980,12 @@ public final class Caffeine<K, V> {
   }
 
   @SuppressWarnings({"deprecation", "unchecked"})
-  <K1 extends K, V1 extends V> CacheWriter<K1, V1> getCacheWriter() {
+  <K1 extends K, V1 extends V> CacheWriter<K1, V1> getCacheWriter(boolean async) {
     CacheWriter<K1, V1> castedWriter;
     if (evictionListener == null) {
       castedWriter = (CacheWriter<K1, V1>) writer;
     } else {
-      RemovalListener<? super K, ? super  V> delegate = evictionListener;
-      castedWriter = new CacheWriter<K1, V1>() {
-        @Override public void write(K1 key, V1 value) {}
-        @Override public void delete(K1 key, @Nullable V1 value, RemovalCause cause) {
-          if (cause.wasEvicted()) {
-            try {
-              delegate.onRemoval(key, value, cause);
-            } catch (Throwable t) {
-              logger.log(Level.WARNING, "Exception thrown by eviction listener", t);
-            }
-          }
-        }};
+      castedWriter = new CacheWriterAdapter<>(evictionListener, async);
     }
     return (castedWriter == null) ? CacheWriter.disabledWriter() : castedWriter;
   }
@@ -1280,5 +1270,36 @@ public final class Caffeine<K, V> {
       s.deleteCharAt(s.length() - 2);
     }
     return s.append('}').toString();
+  }
+
+  @SuppressWarnings("deprecation")
+  static final class CacheWriterAdapter<K, V> implements CacheWriter<K, V>, Serializable {
+    private static final long serialVersionUID = 1;
+
+    final RemovalListener<? super K, ? super  V> delegate;
+    final boolean isAsync;
+
+    CacheWriterAdapter(RemovalListener<? super K, ? super  V> delegate, boolean isAsync) {
+      this.delegate = delegate;
+      this.isAsync = isAsync;
+    }
+
+    @Override public void write(K key, V value) {}
+
+    @Override
+    public void delete(K key, @Nullable V value, RemovalCause cause) {
+      if (cause.wasEvicted()) {
+        try {
+          if (isAsync && (value != null)) {
+            @SuppressWarnings("unchecked")
+            CompletableFuture<V> future = (CompletableFuture<V>) value;
+            value = Async.getIfReady(future);
+          }
+          delegate.onRemoval(key, value, cause);
+        } catch (Throwable t) {
+          logger.log(Level.WARNING, "Exception thrown by eviction listener", t);
+        }
+      }
+    }
   }
 }

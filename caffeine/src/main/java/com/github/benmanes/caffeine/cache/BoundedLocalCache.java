@@ -233,9 +233,9 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
     this.isAsync = isAsync;
     this.cacheLoader = cacheLoader;
     executor = builder.getExecutor();
-    writer = builder.getCacheWriter();
     evictionLock = new ReentrantLock();
     weigher = builder.getWeigher(isAsync);
+    writer = builder.getCacheWriter(isAsync);
     drainBuffersTask = new PerformCleanupTask(this);
     nodeFactory = NodeFactory.newFactory(builder, isAsync);
     data = new ConcurrentHashMap<>(builder.getInitialCapacity());

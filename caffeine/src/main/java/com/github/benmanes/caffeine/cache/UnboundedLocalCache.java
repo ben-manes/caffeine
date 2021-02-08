@@ -72,7 +72,7 @@ final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
     this.statsCounter = builder.getStatsCounterSupplier().get();
     this.removalListener = builder.getRemovalListener(async);
     this.isRecordingStats = builder.isRecordingStats();
-    this.writer = builder.getCacheWriter();
+    this.writer = builder.getCacheWriter(async);
     this.executor = builder.getExecutor();
     this.ticker = builder.getTicker();
   }

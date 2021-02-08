@@ -735,7 +735,7 @@ public final class CaffeineTest {
   @Test
   public void writer() {
     Caffeine<?, ?> builder = Caffeine.newBuilder().writer(writer);
-    assertThat(builder.getCacheWriter(), is(writer));
+    assertThat(builder.getCacheWriter(false), is(writer));
     builder.build();
   }
 }

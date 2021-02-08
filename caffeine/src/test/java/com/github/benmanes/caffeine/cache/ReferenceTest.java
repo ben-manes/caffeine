@@ -906,7 +906,7 @@ public final class ReferenceTest {
     assertThat(map.size(), is(1));
 
     long count = context.initialSize() - (context.isStrongValues() ? 1 : 0);
-    verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.COLLECTED));
+    verifyListeners(context, verifier -> verifier.hasCount(count, RemovalCause.COLLECTED));
     verifyWriter(context, verifier -> verifier.deletions(count, RemovalCause.COLLECTED));
   }
 

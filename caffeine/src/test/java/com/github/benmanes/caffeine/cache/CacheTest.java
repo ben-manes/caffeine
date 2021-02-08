@@ -822,7 +822,7 @@ public final class CacheTest {
 
   @CheckNoStats
   @Test(dataProvider = "caches")
-  @CacheSpec(writer = Writer.EXCEPTIONAL)
+  @CacheSpec(writer = {Writer.DISABLED, Writer.EXCEPTIONAL})
   public void serialize(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache, is(reserializable()));
   }

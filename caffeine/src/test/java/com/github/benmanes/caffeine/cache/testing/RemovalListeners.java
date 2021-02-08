@@ -18,9 +18,8 @@ package com.github.benmanes.caffeine.cache.testing;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -79,7 +78,7 @@ public final class RemovalListeners {
     private final List<RemovalNotification<K, V>> removed;
 
     public ConsumingRemovalListener() {
-      this.removed = Collections.synchronizedList(new ArrayList<>());
+      this.removed = new CopyOnWriteArrayList<>();
     }
 
     @Override

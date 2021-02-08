@@ -57,7 +57,8 @@ public final class MultiThreadedTest {
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, removalListener = Listener.DEFAULT,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      writer = Writer.DISABLED, evictionListener = Listener.DEFAULT)
   public void concurrent_unbounded(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Threads.runTest(cache, operations);
   }
@@ -67,7 +68,8 @@ public final class MultiThreadedTest {
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       removalListener = Listener.DEFAULT, expireAfterWrite = Expire.FOREVER,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED,
+      evictionListener = Listener.DEFAULT)
   public void concurrent_bounded(LoadingCache<Integer, Integer> cache, CacheContext context) {
     Threads.runTest(cache, operations);
   }
@@ -77,7 +79,8 @@ public final class MultiThreadedTest {
       population = Population.EMPTY, expireAfterAccess = Expire.DISABLED,
       expireAfterWrite = Expire.DISABLED, removalListener = Listener.DEFAULT,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      writer = Writer.DISABLED, evictionListener = Listener.DEFAULT)
   public void async_concurrent_unbounded(
       AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Threads.runTest(cache, asyncOperations);
@@ -88,7 +91,8 @@ public final class MultiThreadedTest {
       stats = Stats.DISABLED, population = Population.EMPTY, expireAfterAccess = Expire.FOREVER,
       expireAfterWrite = Expire.FOREVER, removalListener = Listener.DEFAULT,
       refreshAfterWrite = { Expire.DISABLED, Expire.ONE_MILLISECOND },
-      keys = ReferenceType.STRONG, values = ReferenceType.STRONG, writer = Writer.DISABLED)
+      keys = ReferenceType.STRONG, values = ReferenceType.STRONG,
+      writer = Writer.DISABLED, evictionListener = Listener.DEFAULT)
   public void async_concurrent_bounded(
       AsyncLoadingCache<Integer, Integer> cache, CacheContext context) {
     Threads.runTest(cache, asyncOperations);
