@@ -3,7 +3,6 @@
  */
 import static org.gradle.util.GradleVersion.version
 
-apply plugin: 'org.kordamp.gradle.jandex'
 apply plugin: 'org.kordamp.gradle.stats'
 apply plugin: 'org.checkerframework'
 apply plugin: 'com.github.spotbugs'

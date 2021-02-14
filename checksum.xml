@@ -156,6 +156,7 @@
     <trusted-key id='41321490758aad6f' group='org.codehaus.groovy' />
     <trusted-key id='873a8e86b4372146' group='org.codehaus.mojo' />
     <trusted-key id='9b7d32f2d50582e6' group='org.codehaus.mojo' />
+    <trusted-key id='105de36038d8c6c5' group='org.codehaus.plexus' />
     <trusted-key id='8b0378a57cd8e243' group='org.codehaus.plexus' />
     <trusted-key id='ae5a7fb608a0221c' group='org.codehaus.plexus' />
     <trusted-key id='79e193516be7998f' group='org.dom4j' />
