@@ -1100,7 +1100,6 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
       }
 
       quota -= weight;
-      setMainProtectedWeightedSize(mainProtectedWeightedSize() + weight);
       setWindowWeightedSize(windowWeightedSize() - weight);
       accessOrderWindowDeque().remove(candidate);
       accessOrderProbationDeque().add(candidate);
@@ -1735,7 +1734,7 @@ abstract class BoundedLocalCache<K, V> extends BLCHeader.DrainStatusRef<K, V>
         if (node.inWindow()) {
           setWindowWeightedSize(windowWeightedSize() + weightDifference);
         } else if (node.inMainProtected()) {
-          setMainProtectedWeightedSize(mainProtectedMaximum() + weightDifference);
+          setMainProtectedWeightedSize(mainProtectedWeightedSize() + weightDifference);
         }
         setWeightedSize(weightedSize() + weightDifference);
         node.setPolicyWeight(node.getPolicyWeight() + weightDifference);
