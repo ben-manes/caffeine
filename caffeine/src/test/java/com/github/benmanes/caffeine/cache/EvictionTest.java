@@ -16,9 +16,8 @@
 package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasEvictionWeight;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyListeners;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static com.github.benmanes.caffeine.testing.ConcurrentTestHarness.executor;
 import static com.github.benmanes.caffeine.testing.IsEmptyMap.emptyMap;
@@ -115,7 +114,7 @@ public final class EvictionTest {
       assertThat(cache.estimatedSize(), is(context.maximumSize()));
     }
     int count = context.absentKeys().size();
-    assertThat(context, hasEvictionCount(count));
+    verifyStats(context, verifier -> verifier.evictions(count));
     verifyListeners(context, verifier -> verifier.hasOnly(count, RemovalCause.SIZE));
 
     verifyWriter(context, verifier -> {
@@ -176,8 +175,7 @@ public final class EvictionTest {
       verify(writer).delete(5, value5, RemovalCause.SIZE);
       verifier.deletions(2);
     });
-    assertThat(context, hasEvictionCount(2L));
-    assertThat(context, hasEvictionWeight(12L));
+    verifyStats(context, verifier -> verifier.evictions(2).evictionWeight(12));
   }
 
   @Test(dataProvider = "caches")
@@ -200,7 +198,7 @@ public final class EvictionTest {
     assertThat(context.removalNotifications(), is(equalTo(ImmutableList.of(
         new RemovalNotification<>(20, 20, RemovalCause.SIZE)))));
     if (context.isCaffeine()) {
-      assertThat(context, hasEvictionWeight(20L));
+      verifyStats(context, verifier -> verifier.evictionWeight(20));
     }
   }
 
@@ -232,9 +230,9 @@ public final class EvictionTest {
     await().until(() -> cache.synchronous().estimatedSize(), is(2L));
     await().until(() -> eviction.weightedSize().getAsLong(), is(10L));
 
-    assertThat(context, hasEvictionWeight(5L));
     verifyListeners(context, verifier -> verifier.hasOnly(1, RemovalCause.SIZE));
     verifyWriter(context, verifier -> verifier.deletions(1, RemovalCause.SIZE));
+    verifyStats(context, verifier -> verifier.evictionWeight(5));
   }
 
   @Test(dataProvider = "caches")

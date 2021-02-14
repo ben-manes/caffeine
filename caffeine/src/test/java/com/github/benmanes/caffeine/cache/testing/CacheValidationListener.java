@@ -19,10 +19,7 @@ import static com.github.benmanes.caffeine.cache.IsValidAsyncCache.validAsyncCac
 import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
 import static com.github.benmanes.caffeine.cache.IsValidMapView.validAsMap;
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.github.benmanes.caffeine.testing.Awaits.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
@@ -238,10 +235,7 @@ public final class CacheValidationListener implements ISuiteListener, IInvokedMe
     }
 
     assertThat("Test requires CacheContext param for validation", context, is(not(nullValue())));
-    assertThat(context, hasHitCount(0));
-    assertThat(context, hasMissCount(0));
-    assertThat(context, hasLoadSuccessCount(0));
-    assertThat(context, hasLoadFailureCount(0));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0).success(0).failures(0));
   }
 
   /** Free memory by clearing unused resources after test execution. */

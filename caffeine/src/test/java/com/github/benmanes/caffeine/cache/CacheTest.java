@@ -17,17 +17,13 @@ package com.github.benmanes.caffeine.cache;
 
 import static com.github.benmanes.caffeine.cache.IsCacheReserializable.reserializable;
 import static com.github.benmanes.caffeine.cache.testing.CacheWriterVerifier.verifyWriter;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
 import static com.github.benmanes.caffeine.cache.testing.RemovalListenerVerifier.verifyRemovalListener;
+import static com.github.benmanes.caffeine.cache.testing.StatsVerifier.verifyStats;
 import static com.google.common.base.Predicates.in;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.aMapWithSize;
-import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
@@ -105,8 +101,7 @@ public final class CacheTest {
   @CacheSpec(removalListener = { Listener.DEFAULT, Listener.REJECTING })
   public void getIfPresent_absent(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.getIfPresent(context.absentKey()), is(nullValue()));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(0));
   }
 
   @CheckNoWriter
@@ -117,8 +112,7 @@ public final class CacheTest {
     assertThat(cache.getIfPresent(context.firstKey()), is(not(nullValue())));
     assertThat(cache.getIfPresent(context.middleKey()), is(not(nullValue())));
     assertThat(cache.getIfPresent(context.lastKey()), is(not(nullValue())));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(3).misses(0).success(0).failures(0));
   }
 
   /* --------------- get --------------- */
@@ -151,8 +145,7 @@ public final class CacheTest {
     try {
       cache.get(context.absentKey(), key -> { throw new IllegalStateException(); });
     } finally {
-      assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+      verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
     }
   }
 
@@ -161,8 +154,7 @@ public final class CacheTest {
   @Test(dataProvider = "caches")
   public void get_absent_null(Cache<Integer, Integer> cache, CacheContext context) {
     assertThat(cache.get(context.absentKey(), k -> null), is(nullValue()));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(0).failures(1));
   }
 
   @CacheSpec
@@ -172,8 +164,7 @@ public final class CacheTest {
     Integer key = context.absentKey();
     Integer value = cache.get(key, k -> context.absentValue());
     assertThat(value, is(context.absentValue()));
-    assertThat(context, both(hasMissCount(1)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(1).success(1).failures(0));
   }
 
   @CheckNoWriter
@@ -187,9 +178,7 @@ public final class CacheTest {
         is(context.original().get(context.middleKey())));
     assertThat(cache.get(context.lastKey(), loader),
         is(context.original().get(context.lastKey())));
-
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(3)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(3).misses(0).success(0).failures(0));
   }
 
   /* --------------- getAllPresent --------------- */
@@ -224,8 +213,7 @@ public final class CacheTest {
     assertThat(result.size(), is(0));
 
     int count = context.absentKeys().size();
-    assertThat(context, both(hasMissCount(count)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(count).success(0).failures(0));
   }
 
   @CacheSpec
@@ -246,8 +234,7 @@ public final class CacheTest {
     expect.put(context.lastKey(), context.original().get(context.lastKey()));
     Map<Integer, Integer> result = cache.getAllPresent(expect.keySet());
     assertThat(result, is(equalTo(expect)));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(expect.size())));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
   }
 
   @CheckNoWriter
@@ -257,8 +244,7 @@ public final class CacheTest {
   public void getAllPresent_present_full(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAllPresent(context.original().keySet());
     assertThat(result, is(equalTo(context.original())));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(result.size()).misses(0).success(0).failures(0));
   }
 
   @CheckNoWriter
@@ -274,8 +260,7 @@ public final class CacheTest {
     int misses = context.absentKeys().size();
     int hits = context.original().keySet().size();
     assertThat(result, is(equalTo(context.original())));
-    assertThat(context, both(hasMissCount(misses)).and(hasHitCount(hits)));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(hits).misses(misses).success(0).failures(0));
   }
 
   @CheckNoWriter
@@ -336,7 +321,7 @@ public final class CacheTest {
     Map<Integer, Integer> result = cache.getAll(ImmutableList.of(),
         keys -> { throw new AssertionError(); });
     assertThat(result.size(), is(0));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(0));
   }
 
   @CheckNoWriter
@@ -368,8 +353,7 @@ public final class CacheTest {
       cache.getAll(context.absentKeys(), keys -> { throw new IllegalStateException(); });
     } finally {
       int misses = context.absentKeys().size();
-      assertThat(context, both(hasMissCount(misses)).and(hasHitCount(0)));
-      assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(1)));
+      verifyStats(context, verifier -> verifier.hits(0).misses(misses).success(0).failures(1));
     }
   }
 
@@ -381,8 +365,7 @@ public final class CacheTest {
 
     int count = context.absentKeys().size();
     assertThat(result, aMapWithSize(count));
-    assertThat(context, both(hasMissCount(count)).and(hasHitCount(0)));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(0).misses(count).success(1).failures(0));
   }
 
   @CheckNoWriter
@@ -397,8 +380,7 @@ public final class CacheTest {
     Map<Integer, Integer> result = cache.getAll(expect.keySet(), bulkMappingFunction());
 
     assertThat(result, is(equalTo(expect)));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(expect.size())));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(expect.size()).misses(0).success(0).failures(0));
   }
 
   @CheckNoWriter
@@ -408,8 +390,7 @@ public final class CacheTest {
   public void getAll_present_full(Cache<Integer, Integer> cache, CacheContext context) {
     Map<Integer, Integer> result = cache.getAll(context.original().keySet(), bulkMappingFunction());
     assertThat(result, is(equalTo(context.original())));
-    assertThat(context, both(hasMissCount(0)).and(hasHitCount(result.size())));
-    assertThat(context, both(hasLoadSuccessCount(0)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier -> verifier.hits(result.size()).misses(0).success(0).failures(0));
   }
 
   @CheckNoWriter
@@ -424,10 +405,9 @@ public final class CacheTest {
         context.original().keySet(), context.original().keySet());
     Map<Integer, Integer> result = cache.getAll(keys, bulkMappingFunction());
 
-    assertThat(context, hasMissCount(absentKeys.size()));
-    assertThat(context, hasHitCount(context.initialSize()));
     assertThat(result.keySet(), is(equalTo(ImmutableSet.copyOf(keys))));
-    assertThat(context, both(hasLoadSuccessCount(1)).and(hasLoadFailureCount(0)));
+    verifyStats(context, verifier ->
+        verifier.hits(context.initialSize()).misses(absentKeys.size()).success(1).failures(0));
   }
 
   @CheckNoWriter
