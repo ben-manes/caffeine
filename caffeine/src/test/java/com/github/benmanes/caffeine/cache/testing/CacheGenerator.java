@@ -198,10 +198,11 @@ final class CacheGenerator {
         && !context.expires();
     boolean writerIncompatible = context.writes()
         && ((context.implementation() != Implementation.Caffeine)
-            || context.isAsync() || (context.evictionListenerType() != Listener.DEFAULT));
+            || (context.evictionListenerType() != Listener.DEFAULT)
+            || context.isAsync() || context.isWeakKeys());
     boolean evictionListenerIncompatible = (context.evictionListenerType() != Listener.DEFAULT)
         && ((context.implementation() != Implementation.Caffeine)
-            || (context.isAsync() && !context.isStrongValues()));
+            || (context.isAsync() && context.isWeakKeys()));
 
     boolean skip = asyncIncompatible || asyncLoaderIncompatible
         || writerIncompatible || evictionListenerIncompatible

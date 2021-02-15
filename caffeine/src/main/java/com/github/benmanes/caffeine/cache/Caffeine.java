@@ -492,6 +492,9 @@ public final class Caffeine<K, V> {
    * entries are cleaned up as part of the routine maintenance described in the class javadoc.
    * <p>
    * This feature cannot be used in conjunction with {@link #writer}.
+   * <p>
+   * This feature cannot be used in conjunction with {@link #writer} or when {@link #weakKeys()} is
+   * combined with {@link #buildAsync}.
    *
    * @return this {@code Caffeine} instance (for chaining)
    * @throws IllegalStateException if the key strength was already set or the writer was set
@@ -861,6 +864,9 @@ public final class Caffeine<K, V> {
    * <p>
    * <b>Warning:</b> any exception thrown by {@code listener} will <i>not</i> be propagated to the
    * {@code Cache} user, only logged via a {@link Logger}.
+   * <p>
+   * This feature cannot be used in conjunction when {@link #weakKeys()} is combined with
+   * {@link #buildAsync}.
    *
    * @param evictionListener a listener instance that caches should notify each time an entry is
    *        being automatically removed due to eviction
@@ -952,7 +958,8 @@ public final class Caffeine<K, V> {
    * <b>Warning:</b> any exception thrown by {@code writer} will be propagated to the {@code Cache}
    * user.
    * <p>
-   * This feature cannot be used in conjunction with {@link #weakKeys()} or {@link #buildAsync}.
+   * This feature cannot be used in conjunction with {@link #weakKeys()},
+   * {@link #evictionListener(RemovalListener)}, or {@link #buildAsync}.
    *
    * @param writer a writer instance that caches should notify each time an entry is explicitly
    *        created or modified, or removed for any reason
@@ -972,6 +979,7 @@ public final class Caffeine<K, V> {
       @NonNull CacheWriter<? super K1, ? super V1> writer) {
     requireState(this.writer == null, "Writer was already set to %s", this.writer);
     requireState(keyStrength == null, "Weak keys may not be used with CacheWriter");
+    requireState(evictionListener == null, "Eviction listener may not be used with CacheWriter");
 
     @SuppressWarnings("unchecked")
     Caffeine<K1, V1> self = (Caffeine<K1, V1>) this;
@@ -1111,8 +1119,9 @@ public final class Caffeine<K, V> {
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
    * <p>
-   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or
-   * {@link #writer(CacheWriter)}.
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()},
+   * {@link #writer(CacheWriter)}, or when {@link #weakKeys()} are combined with
+   * {@link #evictionListener(RemovalListener)}.
    *
    * @param <K1> the key type of the cache
    * @param <V1> the value type of the cache
@@ -1122,6 +1131,8 @@ public final class Caffeine<K, V> {
   public <K1 extends K, V1 extends V> AsyncCache<K1, V1> buildAsync() {
     requireState(valueStrength == null, "Weak or soft values can not be combined with AsyncCache");
     requireState(writer == null, "CacheWriter can not be combined with AsyncCache");
+    requireState(isStrongKeys() || (evictionListener == null),
+        "Weak keys cannot be combined eviction listener and with AsyncLoadingCache");
     requireWeightWithWeigher();
     requireNonLoadingCache();
 
@@ -1142,8 +1153,9 @@ public final class Caffeine<K, V> {
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
    * <p>
-   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or
-   * {@link #writer(CacheWriter)}.
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()},
+   * {@link #writer(CacheWriter)}, or when {@link #weakKeys()} are combined with
+   * {@link #evictionListener(RemovalListener)}.
    *
    * @param loader the cache loader used to obtain new values
    * @param <K1> the key type of the loader
@@ -1166,8 +1178,9 @@ public final class Caffeine<K, V> {
    * This method does not alter the state of this {@code Caffeine} instance, so it can be invoked
    * again to create multiple independent caches.
    * <p>
-   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()}, or
-   * {@link #writer(CacheWriter)}.
+   * This construction cannot be used with {@link #weakValues()}, {@link #softValues()},
+   * {@link #writer(CacheWriter)}, or when {@link #weakKeys()} are combined with
+   * {@link #evictionListener(RemovalListener)}.
    *
    * @param loader the cache loader used to obtain new values
    * @param <K1> the key type of the loader
@@ -1177,9 +1190,11 @@ public final class Caffeine<K, V> {
   @NonNull
   public <K1 extends K, V1 extends V> AsyncLoadingCache<K1, V1> buildAsync(
       @NonNull AsyncCacheLoader<? super K1, V1> loader) {
-    requireState(valueStrength == null,
-        "Weak or soft values can not be combined with AsyncLoadingCache");
-    requireState(writer == null, "CacheWriter can not be combined with AsyncLoadingCache");
+    requireState(isStrongValues(),"Weak or soft values cannot be combined with AsyncLoadingCache");
+    requireState(writer == null, "CacheWriter cannot be combined with AsyncLoadingCache");
+    requireState(isStrongKeys() || (evictionListener == null),
+        "Weak keys cannot be combined eviction listener and with AsyncLoadingCache");
+
     requireWeightWithWeigher();
     requireNonNull(loader);
 

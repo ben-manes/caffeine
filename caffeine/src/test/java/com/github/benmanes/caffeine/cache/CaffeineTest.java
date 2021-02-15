@@ -128,25 +128,6 @@ public final class CaffeineTest {
 
   /* --------------- async --------------- */
 
-  @Test
-  public void async_nullLoader() {
-    try {
-      Caffeine.newBuilder().buildAsync((CacheLoader<Object, Object>) null);
-      Assert.fail();
-    } catch (NullPointerException expected) {}
-
-    try {
-      Caffeine.newBuilder().buildAsync((AsyncCacheLoader<Object, Object>) null);
-      Assert.fail();
-    } catch (NullPointerException expected) {}
-  }
-
-  @Test
-  @SuppressWarnings("UnnecessaryMethodReference")
-  public void async_asyncLoader() {
-    Caffeine.newBuilder().buildAsync(loader::asyncLoad);
-  }
-
   @Test(expectedExceptions = IllegalStateException.class)
   public void async_weakValues() {
     Caffeine.newBuilder().weakValues().buildAsync(loader);
@@ -160,6 +141,54 @@ public final class CaffeineTest {
   @Test(expectedExceptions = IllegalStateException.class)
   public void async_writer() {
     Caffeine.newBuilder().writer(writer).buildAsync(loader);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void async_weakKeys_evictionListener() {
+    RemovalListener<Object, Object> evictionListener = (k, v, c) -> {};
+    Caffeine.newBuilder().weakKeys().evictionListener(evictionListener).buildAsync();
+  }
+
+  /* --------------- async loader --------------- */
+
+  @Test
+  public void asyncLoader_nullLoader() {
+    try {
+      Caffeine.newBuilder().buildAsync((CacheLoader<Object, Object>) null);
+      Assert.fail();
+    } catch (NullPointerException expected) {}
+
+    try {
+      Caffeine.newBuilder().buildAsync((AsyncCacheLoader<Object, Object>) null);
+      Assert.fail();
+    } catch (NullPointerException expected) {}
+  }
+
+  @Test
+  @SuppressWarnings("UnnecessaryMethodReference")
+  public void asyncLoader() {
+    Caffeine.newBuilder().buildAsync(loader::asyncLoad);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void asyncLoader_weakValues() {
+    Caffeine.newBuilder().weakValues().buildAsync(loader);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void asyncLoader_softValues() {
+    Caffeine.newBuilder().softValues().buildAsync(loader);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void asyncLoader_writer() {
+    Caffeine.newBuilder().writer(writer).buildAsync(loader);
+  }
+
+  @Test(expectedExceptions = IllegalStateException.class)
+  public void async_asyncLoader_weakKeys_evictionListener() {
+    RemovalListener<Object, Object> evictionListener = (k, v, c) -> {};
+    Caffeine.newBuilder().weakKeys().evictionListener(evictionListener).buildAsync(loader);
   }
 
   /* --------------- initialCapacity --------------- */
